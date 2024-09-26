@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { LogOut, User, Settings, Home, Calendar, Users } from "lucide-react"
 import { usePathname } from "next/navigation"
+import { ModeToggle } from "./mode-toggle"
 
 export function Navbar() {
   const { data: session, status } = useSession()
@@ -45,6 +46,7 @@ export function Navbar() {
         ) : session?.user ? (
           <div className="flex items-center space-x-4">
             <span className="hidden md:inline">{session.user.runescapeName || session.user.name}</span>
+            <ModeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">

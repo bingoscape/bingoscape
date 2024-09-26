@@ -1,5 +1,6 @@
 import { Navbar } from "@/components/navbar";
 import { RunescapeLinkPrompt } from "@/components/runescape-link-prompt";
+import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/server/sessionwrapper";
 import "@/styles/globals.css";
@@ -20,10 +21,12 @@ export default function RootLayout({
     <html lang="en" className={`font-sans`}>
       <AuthProvider>
         <body>
-          <Navbar />
-          <RunescapeLinkPrompt />
-          {children}
-          <Toaster />
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <Navbar />
+            <RunescapeLinkPrompt />
+            {children}
+            <Toaster />
+          </ThemeProvider >
         </body>
       </AuthProvider>
     </html >
