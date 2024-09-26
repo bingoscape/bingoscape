@@ -17,9 +17,6 @@ export async function POST(
 
 	const { clanId } = params
 
-	const clan = await db.query.clans.findFirst({
-		where: eq(clans.id, clanId)
-	})
 
 	// Check if the user is the clan owner or an admin
 	const userMembership = await db.query.clanMembers.findFirst({

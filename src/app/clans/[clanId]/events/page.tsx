@@ -1,26 +1,91 @@
+'use client'
+
 import { notFound } from "next/navigation";
 import { getClanEvents } from "@/app/actions/clan";
+import { joinEvent } from "@/app/actions/events";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { CalendarIcon, UserIcon } from "lucide-react";
-import { getServerAuthSession } from "@/server/auth";
+import { useState, useEffect } from "react";
+import { toast } from "@/hooks/use-toast";
+import { useSession } from "next-auth/react";
 
-export default async function ClanEventsPage({ params }: { params: { clanId: string } }) {
-	const session = await getServerAuthSession();
-	if (!session || !session.user) {
-		notFound();
-	}
+type Event = {
+	id: string;
+	title: string;
+	description: string | null;
+	startDate: Date;
+	endDate: Date;
+	creatorId: string;
+	createdAt: Date;
+	updatedAt: Date;
+	clanId: string | null;
+	creator: {
+		name: string | null;
+	};
+	eventParticipants: {
+		userId: string;
+	}[];
+};
 
-	let clanEvents;
-	try {
-		clanEvents = await getClanEvents(params.clanId);
-	} catch (error) {
-		if (error instanceof Error && error.message === "You are not a member of this clan") {
-			notFound();
+export default function ClanEventsPage({ params }: { params: { clanId: string } }) {
+	const [clanEvents, setClanEvents] = useState<Event[]>([]);
+	const [userId, setUserId] = useState<string | null>(null);
+	const { data } = useSession()
+
+	useEffect(() => {
+		const fetchData = async () => {
+			try {
+				const session = data;
+				if (!session || !session.user) {
+					notFound();
+				}
+				setUserId(session.user.id);
+
+				const events = await getClanEvents(params.clanId);
+				setClanEvents(events);
+			} catch (error) {
+				if (error instanceof Error && error.message === "You are not a member of this clan") {
+					notFound();
+				}
+				toast({
+					title: "Error",
+					description: "Failed to load clan events.",
+					variant: "destructive",
+				});
+			}
+		};
+
+		fetchData();
+	}, [params.clanId]);
+
+	const handleJoinEvent = async (eventId: string) => {
+		try {
+			await joinEvent(eventId);
+			setClanEvents(prevEvents =>
+				prevEvents.map(event =>
+					event.id === eventId
+						? { ...event, eventParticipants: [...event.eventParticipants, { userId: userId! }] }
+						: event
+				)
+			);
+			toast({
+				title: "Success",
+				description: "You have successfully joined the event.",
+			});
+		} catch (error) {
+			toast({
+				title: "Error",
+				description: error instanceof Error ? error.message : "Failed to join the event.",
+				variant: "destructive",
+			});
 		}
-		throw error;
-	}
+	};
+
+	const isParticipant = (event: Event) => {
+		return event.eventParticipants.some(participant => participant.userId === userId);
+	};
 
 	return (
 		<div className="container mx-auto py-10">
@@ -47,10 +112,13 @@ export default async function ClanEventsPage({ params }: { params: { clanId: str
 									<span className="text-sm">Created by: {event.creator.name}</span>
 								</div>
 							</CardContent>
-							<CardFooter>
+							<CardFooter className="flex justify-between">
 								<Link href={`/events/${event.id}`} passHref>
-									<Button variant="outline" className="w-full">View Event</Button>
+									<Button variant="outline">View Event</Button>
 								</Link>
+								{!isParticipant(event) && (
+									<Button onClick={() => handleJoinEvent(event.id)}>Join Event</Button>
+								)}
 							</CardFooter>
 						</Card>
 					))}
@@ -59,4 +127,3 @@ export default async function ClanEventsPage({ params }: { params: { clanId: str
 		</div>
 	);
 }
-

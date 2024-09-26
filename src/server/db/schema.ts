@@ -184,6 +184,7 @@ export const teamMembers = createTable('team_members', {
   id: uuid('id').defaultRandom().primaryKey(),
   teamId: uuid('team_id').notNull().references(() => teams.id),
   userId: uuid('user_id').notNull().references(() => users.id),
+  isLeader: boolean('is_leader').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

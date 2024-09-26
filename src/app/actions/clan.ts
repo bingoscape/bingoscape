@@ -4,7 +4,6 @@ import { getServerAuthSession } from "@/server/auth";
 import { db } from "@/server/db";
 import { clans, clanMembers, users, events } from "@/server/db/schema";
 import { eq, and, count, sql } from "drizzle-orm";
-import { getServerSession } from "next-auth/next";
 
 export async function createClan(name: string, description: string) {
   const session = await getServerAuthSession();
@@ -84,7 +83,7 @@ export async function getUserClans() {
     clan: clans,
     isMain: clanMembers.isMain,
     owner: users,
-    memberCount: sql<number>`count(distinct ${clanMembers.userId})`.as('memberCount'),
+    memberCount: count(clanMembers.id),
   })
     .from(clans)
     .innerJoin(clanMembers, eq(clans.id, clanMembers.clanId))
@@ -117,12 +116,18 @@ export async function getClanEvents(clanId: string) {
     where: eq(events.clanId, clanId),
     with: {
       creator: true,
+      eventParticipants: {
+        columns: {
+          userId: true,
+        },
+      },
     },
     orderBy: (events, { desc }) => [desc(events.startDate)],
   });
 
   return clanEvents;
 }
+
 export async function getClanDetails(clanId: string) {
   const session = await getServerAuthSession();
   if (!session || !session.user) {
@@ -201,3 +206,13 @@ export async function getClanMembers(clanId: string) {
   return members;
 }
 
+export async function updateMemberRole(clanId: string, memberId: string, newRole: 'admin' | 'management' | 'member' | 'guest') {
+  await db.update(clanMembers)
+    .set({ role: newRole })
+    .where(
+      and(
+        eq(clanMembers.clanId, clanId),
+        eq(clanMembers.userId, memberId)
+      )
+    );
+}

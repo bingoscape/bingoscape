@@ -9,7 +9,7 @@ import { getEventWithBingos } from "@/app/actions/events"
 import { UUID } from "crypto"
 import { getUserClans } from "@/app/actions/clan"
 import AssignEventToClanModal from "@/components/assign-event-to-clan-modal"
-
+import { TeamManagement } from "@/components/team-management"
 
 export default async function EventBingosPage({ params }: { params: { id: UUID } }) {
 	const session = await getServerAuthSession()
@@ -17,7 +17,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 		notFound()
 	}
 
-	const data = await getEventWithBingos(params.id, session.user.id)
+	const data = await getEventWithBingos(params.id, session.user.id as UUID)
 
 	if (!data) {
 		notFound()
@@ -45,6 +45,8 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 				</div>
 			</div>
 			<p className="text-muted-foreground mb-8">{event.description}</p>
+
+			<h2 className="text-2xl font-bold mb-4">Bingos</h2>
 			{bingos.length === 0 ? (
 				<p>No bingos have been created for this event yet.</p>
 			) : (
@@ -64,8 +66,6 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 									columns={bingo.columns}
 									tiles={bingo.tiles}
 									isEventAdmin={isEventAdmin}
-									onTileUpdate={updateTile}
-									onTilesReorder={reorderTiles}
 								/>
 							</CardContent>
 							<CardFooter>
@@ -75,6 +75,15 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 					))}
 				</div>
 			)}
+
+			<div className="mt-12">
+				<h2 className="text-2xl font-bold mb-4">Teams</h2>
+				{isEventAdmin ? (
+					<TeamManagement eventId={event.id} />
+				) : (
+					<p>Only event administrators can manage teams.</p>
+				)}
+			</div>
 		</div>
 	)
 }

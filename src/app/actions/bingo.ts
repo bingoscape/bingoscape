@@ -4,6 +4,7 @@ import { db } from "@/server/db"
 import { bingos, tiles } from "@/server/db/schema"
 import { UUID } from "crypto"
 import { eq } from "drizzle-orm"
+
 export async function updateTile(tileId: string, updatedTile: Partial<typeof tiles.$inferInsert>) {
   try {
     await db.update(tiles)
@@ -17,6 +18,7 @@ export async function updateTile(tileId: string, updatedTile: Partial<typeof til
 }
 
 export async function reorderTiles(reorderedTiles: Array<{ id: string; index: number }>) {
+  console.log(reorderedTiles)
   try {
     await db.transaction(async (tx) => {
       for (const tile of reorderedTiles) {

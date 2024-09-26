@@ -6,9 +6,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { useSession } from "next-auth/react"
 import Sortable from 'sortablejs'
 import { toast } from '@/hooks/use-toast'
+import { updateTile, reorderTiles } from '@/app/actions/bingo'
 
 interface Tile {
   id: string
@@ -23,11 +23,10 @@ interface BingoGridProps {
   columns: number
   tiles: Tile[]
   isEventAdmin: boolean
-  onTileUpdate: (tileId: string, updatedTile: Partial<Tile>) => Promise<{ success: boolean; error?: string }>
-  onTilesReorder: (reorderedTiles: Array<{ id: string; index: number }>) => Promise<{ success: boolean; error?: string }>
 }
 
-export default function BingoGrid({ rows, columns, tiles, isEventAdmin, onTileUpdate, onTilesReorder }: BingoGridProps) {
+export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventAdmin }: BingoGridProps) {
+  const [tiles, setTiles] = useState(initialTiles)
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editedTile, setEditedTile] = useState<Partial<Tile>>({})
@@ -43,8 +42,9 @@ export default function BingoGrid({ rows, columns, tiles, isEventAdmin, onTileUp
             id: tile.id,
             index: index
           }))
-          const result = await onTilesReorder(updatedTiles)
+          const result = await reorderTiles(updatedTiles)
           if (result.success) {
+            setTiles(prevTiles => prevTiles.map((tile, index) => ({ ...tile, index })))
             toast({
               title: "Tiles reordered",
               description: "The tiles have been successfully reordered.",
@@ -63,7 +63,7 @@ export default function BingoGrid({ rows, columns, tiles, isEventAdmin, onTileUp
         sortable.destroy()
       }
     }
-  }, [tiles, isEventAdmin, onTilesReorder])
+  }, [tiles, isEventAdmin])
 
   const handleTileClick = (tile: Tile) => {
     setSelectedTile(tile)
@@ -73,8 +73,11 @@ export default function BingoGrid({ rows, columns, tiles, isEventAdmin, onTileUp
 
   const handleTileUpdate = async () => {
     if (selectedTile && editedTile) {
-      const result = await onTileUpdate(selectedTile.id, editedTile)
+      const result = await updateTile(selectedTile.id, editedTile)
       if (result.success) {
+        setTiles(prevTiles => prevTiles.map(tile =>
+          tile.id === selectedTile.id ? { ...tile, ...editedTile } : tile
+        ))
         setIsDialogOpen(false)
         toast({
           title: "Tile updated",

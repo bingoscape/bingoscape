@@ -1,27 +1,130 @@
+'use client'
+
 import { notFound } from "next/navigation";
-import { getClanDetails, getClanMembers } from "@/app/actions/clan";
+import { getClanDetails, getClanMembers, updateMemberRole } from "@/app/actions/clan";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { getServerAuthSession } from "@/server/auth";
+import { useState, useEffect } from "react";
+import { toast } from "@/hooks/use-toast";
+import { useSession } from "next-auth/react";
 
-export default async function ClanMembersPage({ params }: { params: { clanId: string } }) {
-	const session = await getServerAuthSession();
-	if (!session || !session.user) {
-		notFound();
-	}
+type ClanMember = {
+	id: string;
+	name: string | null;
+	runescapeName: string | null;
+	image: string | null;
+	role: 'admin' | 'management' | 'member' | 'guest';
+};
 
-	let clanDetails;
-	try {
-		clanDetails = await getClanDetails(params.clanId);
-	} catch (error) {
-		if (error instanceof Error && error.message === "You are not a member of this clan") {
-			notFound();
+type ClanDetails = {
+	id: string;
+	name: string;
+	description: string;
+	ownerId: string;
+	memberCount: number;
+	eventCount: number;
+	userMembership: {
+		id: string;
+		userId: string;
+		clanId: string;
+		role: 'admin' | 'management' | 'member' | 'guest';
+		isMain: boolean;
+		joinedAt: Date;
+	};
+	owner: {
+		id: string;
+		name: string | null;
+		image: string | null;
+		runescapeName: string | null;
+	};
+};
+
+type Role = 'admin' | 'management' | 'member' | 'guest';
+
+export default function ClanMembersPage({ params }: { params: { clanId: string } }) {
+	const [members, setMembers] = useState<ClanMember[]>([]);
+	const [clanDetails, setClanDetails] = useState<ClanDetails | null>(null);
+	const [isLoading, setIsLoading] = useState(true);
+	const { data } = useSession();
+
+	useEffect(() => {
+		const fetchData = async () => {
+			try {
+				const session = data;
+				if (!session || !session.user) {
+					notFound();
+				}
+
+				const details = await getClanDetails(params.clanId);
+				if (details && details.id) {
+					setClanDetails(details as ClanDetails);
+				} else {
+					throw new Error("Invalid clan details");
+				}
+
+				const membersList = await getClanMembers(params.clanId);
+				setMembers(membersList);
+			} catch (error) {
+				if (error instanceof Error && error.message === "You are not a member of this clan") {
+					notFound();
+				}
+				toast({
+					title: "Error",
+					description: "Failed to load clan details and members.",
+					variant: "destructive",
+				});
+			} finally {
+				setIsLoading(false);
+			}
+		};
+
+		fetchData();
+	}, [params.clanId]);
+
+	const handleRoleUpdate = async (memberId: string, newRole: Role) => {
+		try {
+			await updateMemberRole(params.clanId, memberId, newRole);
+			const updatedMembers = await getClanMembers(params.clanId);
+			setMembers(updatedMembers);
+			toast({
+				title: "Role Updated",
+				description: `The member's role has been successfully updated to ${newRole}.`,
+			});
+		} catch (error) {
+			toast({
+				title: "Error",
+				description: "Failed to update member's role. Please try again.",
+				variant: "destructive",
+			});
 		}
-		throw error;
+	};
+
+	const canChangeRole = (userRole: Role, memberRole: Role) => {
+		const roles: Role[] = ['guest', 'member', 'management', 'admin'];
+		const userRoleIndex = roles.indexOf(userRole);
+		const memberRoleIndex = roles.indexOf(memberRole);
+		return userRoleIndex > memberRoleIndex;
+	};
+
+	const getAdjacentRoles = (currentRole: Role): { promote: Role | null, demote: Role | null } => {
+		const roles: Role[] = ['guest', 'member', 'management', 'admin'];
+		const currentIndex = roles.indexOf(currentRole);
+		return {
+			promote: currentIndex < roles.length - 1 ? roles[currentIndex + 1] : null,
+			demote: currentIndex > 0 ? roles[currentIndex - 1] : null,
+		};
+	};
+
+	if (isLoading) {
+		return <div>Loading...</div>;
 	}
 
-	const members = await getClanMembers(params.clanId);
+	if (!clanDetails) {
+		return <div>Clan not found</div>;
+	}
 
 	return (
 		<div className="container mx-auto py-10">
@@ -45,7 +148,31 @@ export default async function ClanMembersPage({ params }: { params: { clanId: st
 										)}
 									</div>
 								</div>
-								<Badge variant={getRoleBadgeVariant(member.role)}>{member.role}</Badge>
+								<div className="flex items-center space-x-2">
+									<Badge variant={getRoleBadgeVariant(member.role)}>{member.role}</Badge>
+									{canChangeRole(clanDetails.userMembership.role, member.role) && (
+										<div className="flex space-x-2">
+											{getAdjacentRoles(member.role).promote && (
+												<Button
+													variant="outline"
+													size="sm"
+													onClick={() => handleRoleUpdate(member.id, getAdjacentRoles(member.role).promote!)}
+												>
+													Promote to {getAdjacentRoles(member.role).promote}
+												</Button>
+											)}
+											{getAdjacentRoles(member.role).demote && (
+												<Button
+													variant="outline"
+													size="sm"
+													onClick={() => handleRoleUpdate(member.id, getAdjacentRoles(member.role).demote!)}
+												>
+													Demote to {getAdjacentRoles(member.role).demote}
+												</Button>
+											)}
+										</div>
+									)}
+								</div>
 							</li>
 						))}
 					</ul>
@@ -55,7 +182,7 @@ export default async function ClanMembersPage({ params }: { params: { clanId: st
 	);
 }
 
-function getRoleBadgeVariant(role: string): "default" | "secondary" | "destructive" | "outline" {
+function getRoleBadgeVariant(role: Role): "default" | "secondary" | "destructive" | "outline" {
 	switch (role) {
 		case 'admin':
 			return "destructive";
@@ -69,4 +196,3 @@ function getRoleBadgeVariant(role: string): "default" | "secondary" | "destructi
 			return "secondary";
 	}
 }
-

@@ -3,7 +3,7 @@ import { getServerAuthSession } from "@/server/auth";
 import { db } from "@/server/db";
 import { events, bingos, tiles, eventParticipants, clanMembers } from "@/server/db/schema";
 import { UUID } from "crypto";
-import { eq, and, inArray, or } from "drizzle-orm";
+import { eq, and, inArray, or, asc } from "drizzle-orm";
 
 export async function createEvent(formData: FormData) {
   const session = await getServerAuthSession()
@@ -46,13 +46,16 @@ export async function createEvent(formData: FormData) {
     return { success: false, error: "Failed to create event" }
   }
 }
+
 export async function getEventWithBingos(eventId: UUID, userId: UUID) {
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
     with: {
       bingos: {
         with: {
-          tiles: true,
+          tiles: {
+            orderBy: [asc(tiles.index)],
+          },
         },
       },
       clan: true,
@@ -116,3 +119,28 @@ export async function getEvents(userId: string) {
   })
 }
 
+export async function joinEvent(eventId: string) {
+  const session = await getServerAuthSession();
+  if (!session || !session.user) {
+    throw new Error("You must be logged in to join an event");
+  }
+
+  const existingParticipant = await db.query.eventParticipants.findFirst({
+    where: (ep, { and, eq }) => and(
+      eq(ep.eventId, eventId),
+      eq(ep.userId, session.user.id)
+    ),
+  });
+
+  if (existingParticipant) {
+    throw new Error("You are already a participant in this event");
+  }
+
+  await db.insert(eventParticipants).values({
+    eventId,
+    userId: session.user.id,
+    role: 'user',
+  });
+
+  return { success: true };
+}
