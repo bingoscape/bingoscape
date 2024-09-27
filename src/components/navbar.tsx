@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, User, Settings, Home, Calendar, Users } from "lucide-react"
+import { LogOut, User, Home, Calendar, Users } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { ModeToggle } from "./mode-toggle"
 
@@ -26,7 +26,7 @@ export function Navbar() {
   ]
 
   return (
-    <nav className="bg-primary text-primary-foreground sticky top-0 z-50">
+    <nav className="sticky top-0 z-50 border-b bg-background">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center space-x-4">
           <Link href="/" className="text-xl font-bold">BingoScape</Link>
@@ -34,7 +34,7 @@ export function Navbar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`hidden md:flex items-center space-x-1 hover:text-primary-foreground/80 transition-colors ${pathname === item.href ? 'font-semibold' : ''}`}
+              className={`hidden md:flex items-center space-x-1 hover:text-foreground/80 transition-colors ${pathname === item.href ? 'font-semibold' : ''}`}
             >
               <item.icon className="h-4 w-4" />
               <span>{item.label}</span>
@@ -42,7 +42,7 @@ export function Navbar() {
           ))}
         </div>
         {status === "loading" ? (
-          <div className="h-8 w-8 animate-pulse bg-primary-foreground/20 rounded-full" />
+          <div className="h-8 w-8 animate-pulse bg-muted rounded-full" />
         ) : session?.user ? (
           <div className="flex items-center space-x-4">
             <span className="hidden md:inline">{session.user.runescapeName || session.user.name}</span>

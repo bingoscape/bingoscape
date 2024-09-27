@@ -6,18 +6,21 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { createBingo } from '@/app/actions/bingo'
+import { ForwardRefEditor } from './forward-ref-editor'
+import '@mdxeditor/editor/style.css'
 
 export function CreateBingoModal({ eventId }: { eventId: string }) {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [description, setDescription] = useState('')
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
     formData.append('eventId', eventId)
+    formData.append('description', description)
 
     try {
       await createBingo(formData)
@@ -32,12 +35,16 @@ export function CreateBingoModal({ eventId }: { eventId: string }) {
     }
   }
 
+  const handleEditorChange = (content: string) => {
+    setDescription(content)
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>Create New Bingo</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
           <DialogTitle>Create New Bingo</DialogTitle>
           <DialogDescription>Set up the basic structure for your new bingo game. Tiles will be automatically created.</DialogDescription>
@@ -55,8 +62,14 @@ export function CreateBingoModal({ eventId }: { eventId: string }) {
           </div>
 
           <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea id="description" name="description" />
+            <Label htmlFor="bingoDescription">Description</Label>
+            <div className="h-[200px] overflow-y-auto border rounded-md">
+              <ForwardRefEditor
+                onChange={handleEditorChange}
+                markdown={description}
+                contentEditableClassName="prose max-w-full"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

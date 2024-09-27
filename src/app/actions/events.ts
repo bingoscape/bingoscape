@@ -1,9 +1,10 @@
 'use server'
 import { getServerAuthSession } from "@/server/auth";
 import { db } from "@/server/db";
-import { events, bingos, tiles, eventParticipants, clanMembers } from "@/server/db/schema";
+import { events, tiles, eventParticipants, clanMembers, eventInvites } from "@/server/db/schema";
 import { UUID } from "crypto";
-import { eq, and, inArray, or, asc } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
+import { nanoid } from 'nanoid';
 
 export async function createEvent(formData: FormData) {
   const session = await getServerAuthSession()
@@ -59,6 +60,12 @@ export async function getEventWithBingos(eventId: UUID, userId: UUID) {
         },
       },
       clan: true,
+      teams: {
+        columns: {
+          id: true,
+          name: true
+        }
+      },
     },
   });
 
@@ -139,8 +146,65 @@ export async function joinEvent(eventId: string) {
   await db.insert(eventParticipants).values({
     eventId,
     userId: session.user.id,
-    role: 'user',
+    role: 'participant',
   });
 
   return { success: true };
+}
+
+export async function generateEventInviteLink(eventId: UUID) {
+  const session = await getServerAuthSession();
+
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+  });
+
+  if (!event || event.creatorId !== session?.user.id) {
+    throw new Error("Unauthorized to generate invite link for this event");
+  }
+
+  const inviteCode = nanoid(10);
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 7); // Invite expires in 7 days
+
+  const [invite] = await db.insert(eventInvites).values({
+    eventId,
+    inviteCode,
+    expiresAt,
+  }).returning();
+
+  return invite;
+}
+
+export async function joinEventViaInvite(inviteCode: string) {
+  const invite = await db.query.eventInvites.findFirst({
+    where: eq(eventInvites.inviteCode, inviteCode),
+    with: {
+      event: true,
+    },
+  });
+
+  const session = await getServerAuthSession()
+  if (!invite || (invite.expiresAt && invite.expiresAt < new Date())) {
+    throw new Error("Invalid or expired invite code");
+  }
+
+  const existingParticipant = await db.query.eventParticipants.findFirst({
+    where: and(
+      eq(eventParticipants.eventId, invite.eventId),
+      eq(eventParticipants.userId, session?.user.id as UUID)
+    ),
+  });
+
+  if (existingParticipant) {
+    throw new Error("You are already a participant in this event");
+  }
+
+  await db.insert(eventParticipants).values({
+    eventId: invite.eventId,
+    userId: session!.user.id,
+    role: 'participant',
+  });
+
+  return invite.event;
 }

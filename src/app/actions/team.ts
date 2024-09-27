@@ -90,7 +90,6 @@ export async function getEventParticipants(eventId: string) {
   return participants;
 }
 
-
 export async function updateTeamMember(teamId: string, userId: string, isLeader: boolean) {
   const [updatedMember] = await db
     .update(teamMembers)

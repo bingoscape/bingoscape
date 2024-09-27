@@ -148,6 +148,25 @@ export function TeamManagement({ eventId }: { eventId: string }) {
     }
   }
 
+  const renderMember = (team: Team, member: TeamMember) => (
+    <li key={member.user.id} className="flex items-center justify-between">
+      <div className="flex items-center space-x-2">
+        <Avatar className="h-8 w-8">
+          <AvatarImage src={member.user.image || undefined} alt={member.user.name || ''} />
+          <AvatarFallback>{member.user.name?.[0] || 'U'}</AvatarFallback>
+        </Avatar>
+        <span>{member.user.runescapeName || member.user.name}</span>
+        {member.isLeader && <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full ml-2">Leader</span>}
+      </div>
+      <div className="space-x-2">
+        <Button variant="outline" size="sm" onClick={() => handleToggleTeamLeader(team.id, member.user.id, member.isLeader)}>
+          {member.isLeader ? 'Remove Leader' : 'Make Leader'}
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => handleRemoveUserFromTeam(team.id, member.user.id)}>Remove</Button>
+      </div>
+    </li>
+  )
+
   if (loading) {
     return <div>Loading teams...</div>
   }
@@ -164,54 +183,43 @@ export function TeamManagement({ eventId }: { eventId: string }) {
         <Button onClick={handleCreateTeam}>Create Team</Button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {teams.map((team) => (
-          <Card key={team.id}>
-            <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                {team.name}
-                <Button variant="destructive" size="sm" onClick={() => handleDeleteTeam(team.id)}>Delete</Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                {team.teamMembers.map((member) => (
-                  <li key={member.user.id} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={member.user.image || undefined} alt={member.user.name || ''} />
-                        <AvatarFallback>{member.user.name?.[0] || 'U'}</AvatarFallback>
-                      </Avatar>
-                      <span>{member.user.runescapeName || member.user.name}</span>
-                      {member.isLeader && <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full ml-2">Leader</span>}
-                    </div>
-                    <div className="space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => handleToggleTeamLeader(team.id, member.user.id, member.isLeader)}>
-                        {member.isLeader ? 'Remove Leader' : 'Make Leader'}
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleRemoveUserFromTeam(team.id, member.user.id)}>Remove</Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-4">
-                <select
-                  className="w-full p-2 border rounded"
-                  onChange={(e) => handleAddUserToTeam(team.id, e.target.value)}
-                  value=""
-                >
-                  <option value="" disabled>Add participant</option>
-                  {participants
-                    .filter((p) => !team.teamMembers.some((m) => m.user.id === p.id))
-                    .map((participant) => (
-                      <option key={participant.id} value={participant.id}>
-                        {participant.runescapeName || participant.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {teams.map((team) => {
+          const leader = team.teamMembers.find(member => member.isLeader)
+          const members = team.teamMembers.filter(member => !member.isLeader)
+
+          return (
+            <Card key={team.id}>
+              <CardHeader>
+                <CardTitle className="flex justify-between items-center">
+                  {team.name}
+                  <Button variant="destructive" size="sm" onClick={() => handleDeleteTeam(team.id)}>Delete</Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {leader && renderMember(team, leader)}
+                  {members.map(member => renderMember(team, member))}
+                </ul>
+                <div className="mt-4">
+                  <select
+                    className="w-full p-2 border rounded"
+                    onChange={(e) => handleAddUserToTeam(team.id, e.target.value)}
+                    value=""
+                  >
+                    <option value="" disabled>Add participant</option>
+                    {participants
+                      .filter((p) => !team.teamMembers.some((m) => m.user.id === p.id))
+                      .map((participant) => (
+                        <option key={participant.id} value={participant.id}>
+                          {participant.runescapeName || participant.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
     </div>
   )

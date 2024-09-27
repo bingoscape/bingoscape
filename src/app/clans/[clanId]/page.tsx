@@ -1,12 +1,11 @@
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth/next";
 import { getClanDetails } from "@/app/actions/clan";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { UserIcon, CalendarIcon, Users } from "lucide-react";
-import { GenerateInviteLink } from "@/components/generate-invite-link";
+import { GenerateClanInviteLink } from "@/components/generate-clan-invite-link";
 import { getServerAuthSession } from "@/server/auth";
 
 export default async function ClanDetailPage({ params }: { params: { clanId: string } }) {
@@ -55,7 +54,7 @@ export default async function ClanDetailPage({ params }: { params: { clanId: str
           {isOwnerOrAdmin && (
             <div className="mt-6">
               <h3 className="text-lg font-semibold mb-2">Invite Members</h3>
-              <GenerateInviteLink clanId={params.clanId} />
+              <GenerateClanInviteLink clanId={params.clanId} />
             </div>
           )}
         </CardContent>

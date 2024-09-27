@@ -119,6 +119,7 @@ export const userRoleEnum = pgEnum('user_role', ['user', 'admin', 'management'])
 export const submissionStatusEnum = pgEnum('submission_status', ['pending', 'accepted', 'requires_interaction', 'declined']);
 
 export const clanRoleEnum = pgEnum('clan_role', ['admin', 'management', 'member', 'guest']);
+export const eventRoleEnum = pgEnum('event_role', ['admin', 'management', 'participant']);
 
 export const events = createTable("events", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -139,7 +140,9 @@ export const eventsRelations = relations(events, ({ many, one }) => ({
     fields: [events.creatorId],
     references: [users.id],
   }),
+  teams: many(teams),
   clan: one(clans, { fields: [events.clanId], references: [clans.id] }),
+  invites: many(eventInvites)
 }));
 
 // Bingos table
@@ -177,6 +180,7 @@ export const teamsRelations = relations(teams, ({ many, one }) => ({
     fields: [teams.eventId],
     references: [events.id],
   }),
+  goalProgress: many(teamGoalProgress),
 }));
 
 // Team Members table
@@ -205,6 +209,7 @@ export const tiles = createTable('tiles', {
   id: uuid('id').defaultRandom().primaryKey(),
   bingoId: uuid('bingo_id').notNull().references(() => bingos.id),
   headerImage: varchar('header_image', { length: 255 }),
+  title: text('title').notNull(),
   description: text('description').notNull(),
   weight: integer('weight').notNull(),
   index: integer('index').notNull(),
@@ -231,19 +236,22 @@ export const goals = createTable('goals', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-export const goalsRelations = relations(goals, ({ one }) => ({
+// Update goalsRelations
+export const goalsRelations = relations(goals, ({ one, many }) => ({
   tile: one(tiles, {
     fields: [goals.tileId],
     references: [tiles.id],
   }),
+  teamProgress: many(teamGoalProgress),
 }));
+
 
 // Submissions table
 export const submissions = createTable('submissions', {
   id: uuid('id').defaultRandom().primaryKey(),
   tileId: uuid('tile_id').notNull().references(() => tiles.id),
   teamId: uuid('team_id').notNull().references(() => teams.id),
-  imagePath: varchar('image_path', { length: 255 }).notNull(),
+  imageId: uuid('image_id').notNull().references(() => images.id),
   status: submissionStatusEnum('status').default('pending').notNull(),
   reviewedBy: uuid('reviewed_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -263,6 +271,10 @@ export const submissionsRelations = relations(submissions, ({ one }) => ({
     fields: [submissions.reviewedBy],
     references: [users.id],
   }),
+  image: one(images, {
+    fields: [submissions.imageId],
+    references: [images.id],
+  }),
 }));
 
 // Event Participants table
@@ -270,7 +282,7 @@ export const eventParticipants = createTable('event_participants', {
   id: uuid('id').defaultRandom().primaryKey(),
   eventId: uuid('event_id').notNull().references(() => events.id),
   userId: uuid('user_id').notNull().references(() => users.id),
-  role: userRoleEnum('role').default('user').notNull(),
+  role: eventRoleEnum('role').default('participant').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -315,6 +327,17 @@ export const clanMembers = createTable("clan_members", {
   }
 });
 
+export const clanMembersRelations = relations(clanMembers, ({ one }) => ({
+  clan: one(clans, {
+    fields: [clanMembers.clanId],
+    references: [clans.id],
+  }),
+  user: one(users, {
+    fields: [clanMembers.userId],
+    references: [users.id],
+  }),
+}));
+
 export const clanInvites = createTable("clan_invites", {
   id: uuid("id").defaultRandom().primaryKey(),
   clanId: uuid("clan_id").notNull().references(() => clans.id),
@@ -325,4 +348,47 @@ export const clanInvites = createTable("clan_invites", {
 
 export const clanInvitesRelations = relations(clanInvites, ({ one }) => ({
   clan: one(clans, { fields: [clanInvites.clanId], references: [clans.id] }),
+}));
+
+export const eventInvites = createTable("event_invites", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventId: uuid("event_id").notNull().references(() => events.id),
+  inviteCode: varchar("invite_code", { length: 10 }).notNull().unique(),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const eventInvitesRelations = relations(eventInvites, ({ one }) => ({
+  event: one(events, { fields: [eventInvites.eventId], references: [events.id] }),
+}));
+//
+// New Images table
+export const images = createTable('images', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  path: varchar('path', { length: 4096 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const imagesRelations = relations(images, ({ many }) => ({
+  submissions: many(submissions),
+}));
+
+export const teamGoalProgress = createTable('team_goal_progress', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  teamId: uuid('team_id').notNull().references(() => teams.id),
+  goalId: uuid('goal_id').notNull().references(() => goals.id),
+  currentValue: integer('current_value').notNull().default(0),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const teamGoalProgressRelations = relations(teamGoalProgress, ({ one }) => ({
+  team: one(teams, {
+    fields: [teamGoalProgress.teamId],
+    references: [teams.id],
+  }),
+  goal: one(goals, {
+    fields: [teamGoalProgress.goalId],
+    references: [goals.id],
+  }),
 }));

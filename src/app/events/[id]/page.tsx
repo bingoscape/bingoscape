@@ -3,13 +3,15 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button"
 import { CreateBingoModal } from "@/components/create-bingo-modal"
 import BingoGrid from "@/components/bingogrid"
-import { updateTile, reorderTiles } from '@/app/actions/bingo'
 import { getServerAuthSession } from "@/server/auth"
 import { getEventWithBingos } from "@/app/actions/events"
 import { UUID } from "crypto"
 import { getUserClans } from "@/app/actions/clan"
 import AssignEventToClanModal from "@/components/assign-event-to-clan-modal"
 import { TeamManagement } from "@/components/team-management"
+import { GenerateEventInviteLink } from "@/components/generate-event-invite-link"
+import { TeamDisplay } from "@/components/team-display"
+import { DeleteBingoButton } from "@/components/delete-bingo-button"
 
 export default async function EventBingosPage({ params }: { params: { id: UUID } }) {
 	const session = await getServerAuthSession()
@@ -33,7 +35,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 					<h1 className="text-3xl font-bold">{event.title}</h1>
 					{event.clan && (
 						<p className="text-sm text-muted-foreground mt-2">
-							Assigned to clan: {event.clan.name}
+							Clan: {event.clan.name}
 						</p>
 					)}
 				</div>
@@ -42,6 +44,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 						<AssignEventToClanModal eventId={event.id} clans={userClans.map(uc => ({ id: uc.clan.id, name: uc.clan.name }))} />
 					)}
 					{isEventAdmin && <CreateBingoModal eventId={event.id} />}
+					{isEventAdmin && <GenerateEventInviteLink eventId={event.id as UUID} />}
 				</div>
 			</div>
 			<p className="text-muted-foreground mb-8">{event.description}</p>
@@ -54,10 +57,10 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 					{bingos.map((bingo) => (
 						<Card key={bingo.id}>
 							<CardHeader>
-								<CardTitle>{bingo.title}</CardTitle>
-								<CardDescription>
-									{bingo.description}
-								</CardDescription>
+								<div className="flex justify-between items-center">
+									<CardTitle>{bingo.title}</CardTitle>
+									{isEventAdmin && <DeleteBingoButton bingoId={bingo.id as UUID} />}
+								</div>
 							</CardHeader>
 							<CardContent>
 								<p className="text-sm text-muted-foreground mb-4">{bingo.description}</p>
@@ -65,6 +68,8 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 									rows={bingo.rows}
 									columns={bingo.columns}
 									tiles={bingo.tiles}
+									teams={event.teams}
+									userRole="admin"
 									isEventAdmin={isEventAdmin}
 								/>
 							</CardContent>
@@ -81,7 +86,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 				{isEventAdmin ? (
 					<TeamManagement eventId={event.id} />
 				) : (
-					<p>Only event administrators can manage teams.</p>
+					<TeamDisplay eventId={event.id} />
 				)}
 			</div>
 		</div>
