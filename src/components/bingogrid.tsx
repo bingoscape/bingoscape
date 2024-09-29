@@ -62,8 +62,6 @@ interface BingoGridProps {
   tiles: Tile[]
   isEventAdmin: boolean
   userRole: 'participant' | 'management' | 'admin'
-  userTeamId: string
-  userTeamName: string
   teams: { id: string; name: string }[]
 }
 

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { createTeam, getEventTeams, addUserToTeam, removeUserFromTeam, deleteTeam, getEventParticipants, updateTeamMember } from "@/app/actions/team"
+import { createTeam, getTeamsByEventId, addUserToTeam, removeUserFromTeam, deleteTeam, getEventParticipants, updateTeamMember } from "@/app/actions/team"
 import { toast } from "@/hooks/use-toast"
 
 type TeamMember = {
@@ -45,7 +45,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
     setLoading(true)
     try {
       const [fetchedTeams, fetchedParticipants] = await Promise.all([
-        getEventTeams(eventId),
+        getTeamsByEventId(eventId),
         getEventParticipants(eventId)
       ])
       setTeams(fetchedTeams)

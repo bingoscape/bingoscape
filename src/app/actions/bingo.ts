@@ -5,6 +5,29 @@ import { bingos, goals, teamGoalProgress, tiles } from "@/server/db/schema"
 import { UUID } from "crypto"
 import { eq } from "drizzle-orm"
 
+// Define the types based on the schema
+interface Tile {
+  id: string;
+  title: string;
+  headerImage: string | null;
+  description: string;
+  weight: number;
+  index: number;
+  goals: Goal[];
+}
+
+interface Goal {
+  id: string;
+  description: string;
+  targetValue: number;
+  teamProgress: TeamProgress[];
+}
+
+interface TeamProgress {
+  teamId: string;
+  teamName: string;
+  currentValue: number;
+}
 export async function updateTile(tileId: string, updatedTile: Partial<typeof tiles.$inferInsert>) {
   try {
     await db.update(tiles)
@@ -154,3 +177,51 @@ export async function getTileGoalsAndProgress(tileId: string) {
 
   return tileGoals;
 }
+
+export async function getBingoById(bingoId: string) {
+  try {
+    const result = await db.query.bingos.findFirst({
+      where: eq(bingos.id, bingoId),
+      with: {
+        tiles: {
+          with: {
+            goals: true,
+          },
+        },
+      },
+    });
+
+    if (!result) {
+      return null;
+    }
+
+    // Transform the result to match the expected Tile and Goal interfaces
+    const transformedTiles: Tile[] = result.tiles.map((tile) => ({
+      id: tile.id,
+      title: tile.title,
+      headerImage: tile.headerImage,
+      description: tile.description,
+      weight: tile.weight,
+      index: tile.index,
+      goals: tile.goals.map((goal) => ({
+        id: goal.id,
+        description: goal.description,
+        targetValue: goal.targetValue,
+        teamProgress: [], // This will be populated in the BingoGrid component
+      })),
+    }));
+
+    return {
+      id: result.id,
+      title: result.title,
+      description: result.description,
+      rows: result.rows,
+      columns: result.columns,
+      tiles: transformedTiles,
+    };
+  } catch (error) {
+    console.error("Error fetching bingo:", error);
+    throw new Error("Failed to fetch bingo");
+  }
+}
+

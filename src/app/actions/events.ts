@@ -6,6 +6,8 @@ import { UUID } from "crypto";
 import { eq, and, asc } from "drizzle-orm";
 import { nanoid } from 'nanoid';
 
+export type EventRole = 'admin' | 'management' | 'participant';
+
 export async function createEvent(formData: FormData) {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
@@ -48,7 +50,8 @@ export async function createEvent(formData: FormData) {
   }
 }
 
-export async function getEventWithBingos(eventId: UUID, userId: UUID) {
+export async function getEventById(eventId: UUID) {
+  const session = await getServerAuthSession();
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
     with: {
@@ -73,7 +76,7 @@ export async function getEventWithBingos(eventId: UUID, userId: UUID) {
     return null;
   }
 
-  const isEventAdmin = event.creatorId === userId;
+  const isEventAdmin = event.creatorId === session?.user.id; // TODO: Get event_participation
 
   return {
     event,
@@ -207,4 +210,46 @@ export async function joinEventViaInvite(inviteCode: string) {
   });
 
   return invite.event;
+}
+
+export async function getUserRole(eventId: string): Promise<EventRole> {
+
+  const session = await getServerAuthSession();
+
+  if (!session || !session.user) {
+    throw new Error("User not authenticated");
+  }
+
+  try {
+    // First, check if the user is the event creator (admin)
+    const event = await db.query.events.findFirst({
+      where: and(
+        eq(events.id, eventId),
+        eq(events.creatorId, session.user.id)
+      ),
+    });
+
+    if (event) {
+      return 'admin';
+    }
+
+    // If not the creator, check the event_participants table
+    const participant = await db.query.eventParticipants.findFirst({
+      where: and(
+        eq(eventParticipants.eventId, eventId),
+        eq(eventParticipants.userId, session.user.id)
+      ),
+    });
+
+    if (participant) {
+      return participant.role as EventRole;
+    }
+
+    // If the user is not found in event_participants, they're not associated with this event
+    throw new Error("User is not associated with this event");
+
+  } catch (error) {
+    console.error("Error fetching user role:", error);
+    throw new Error("Failed to fetch user role");
+  }
 }
