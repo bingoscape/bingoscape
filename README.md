@@ -1,6 +1,3 @@
-Here's the updated README for the Bingoscape project:
-
-```markdown
 # Bingoscape
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/T6T5108046)
 
