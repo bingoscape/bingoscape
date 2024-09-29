@@ -2,7 +2,7 @@
 import { getServerAuthSession } from "@/server/auth";
 import { db } from "@/server/db";
 import { events, tiles, eventParticipants, clanMembers, eventInvites } from "@/server/db/schema";
-import { UUID } from "crypto";
+import { type UUID } from "crypto";
 import { eq, and, asc } from "drizzle-orm";
 import { nanoid } from 'nanoid';
 

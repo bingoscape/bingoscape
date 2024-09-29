@@ -31,7 +31,7 @@ export async function createClan(name: string, description: string) {
   return newClan;
 }
 
-export async function joinClan(clanId: string, isMain: boolean = false) {
+export async function joinClan(clanId: string, isMain = false) {
   const session = await getServerAuthSession();
   if (!session || !session.user) {
     throw new Error("You must be logged in to join a clan");

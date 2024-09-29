@@ -33,6 +33,7 @@ export function TeamDisplay({ eventId }: { eventId: string }) {
         const fetchedTeams = await getTeamsByEventId(eventId)
         setTeams(fetchedTeams)
       } catch (error) {
+        console.error(error)
         toast({
           title: "Error",
           description: "Failed to fetch teams",
@@ -43,7 +44,7 @@ export function TeamDisplay({ eventId }: { eventId: string }) {
       }
     }
 
-    fetchTeams()
+    fetchTeams().then(() => console.log("done fetching teams")).catch(e => console.error(e));
   }, [eventId])
 
   if (loading) {
@@ -53,10 +54,10 @@ export function TeamDisplay({ eventId }: { eventId: string }) {
   const renderMember = (member: TeamMember) => (
     <li key={member.user.id} className="flex items-center space-x-2">
       <Avatar className="h-8 w-8">
-        <AvatarImage src={member.user.image || undefined} alt={member.user.runescapeName || ''} />
-        <AvatarFallback>{member.user.runescapeName?.[0] || 'U'}</AvatarFallback>
+        <AvatarImage src={member.user.image ?? undefined} alt={member.user.runescapeName ?? ''} />
+        <AvatarFallback>{member.user.runescapeName?.[0] ?? 'U'}</AvatarFallback>
       </Avatar>
-      <span>{member.user.runescapeName || member.user.name}</span>
+      <span>{member.user.runescapeName ?? member.user.name}</span>
       {member.isLeader && <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full ml-2">Leader</span>}
     </li>
   )

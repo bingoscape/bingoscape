@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
-import Sortable from 'sortablejs'
+import Sortable, { type SortableEvent } from 'sortablejs'
 import { toast } from '@/hooks/use-toast'
 import { updateTile, reorderTiles, addGoal, deleteGoal, getTileGoalsAndProgress, updateGoalProgress } from '@/app/actions/bingo'
 import { BingoTile } from './bingo-tile'
@@ -78,26 +78,30 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
       const sortable = new Sortable(gridRef.current, {
         animation: 150,
         ghostClass: 'bg-blue-100',
-        onEnd: async (evt) => {
-          const updatedTiles = tiles.map((tile, index) => ({
-            id: tile.id,
-            index: index
-          }))
-          const result = await reorderTiles(updatedTiles)
-          if (result.success) {
-            setTiles(prevTiles => prevTiles.map((tile, index) => ({ ...tile, index })))
-            toast({
-              title: "Tiles reordered",
-              description: "The tiles have been successfully reordered.",
-            })
-          } else {
-            toast({
-              title: "Error",
-              description: result.error || "Failed to reorder tiles",
-              variant: "destructive",
-            })
-          }
-        },
+        onEnd: (_: SortableEvent) => {
+          (async () => {
+            const updatedTiles = tiles.map((tile, index) => ({
+              id: tile.id,
+              index: index
+            }))
+            const result = await reorderTiles(updatedTiles)
+            if (result.success) {
+              setTiles(prevTiles => prevTiles.map((tile, index) => ({ ...tile, index })))
+              toast({
+                title: "Tiles reordered",
+                description: "The tiles have been successfully reordered.",
+              })
+            } else {
+              toast({
+                title: "Error",
+                description: result.error ?? "Failed to reorder tiles",
+                variant: "destructive",
+              })
+            }
+          })().then(() =>
+            console.log("done")
+          ).catch(e => console.error(e));
+        }
       })
 
       return () => {
@@ -151,7 +155,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to update tile",
+          description: result.error ?? "Failed to update tile",
           variant: "destructive",
         })
       }
@@ -180,14 +184,14 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
           if (prev) {
             return {
               ...prev,
-              goals: [...(prev.goals || []), updatedGoal]
+              goals: [...(prev.goals ?? []), updatedGoal]
             }
           }
           return null
         })
         setTiles(prevTiles => prevTiles.map(tile =>
           tile.id === selectedTile.id
-            ? { ...tile, goals: [...(tile.goals || []), updatedGoal] }
+            ? { ...tile, goals: [...(tile.goals ?? []), updatedGoal] }
             : tile
         ))
         setNewGoal({})
@@ -198,7 +202,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to add goal",
+          description: result.error ?? "Failed to add goal",
           variant: "destructive",
         })
       }
@@ -220,7 +224,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to delete goal",
+          description: result.error ?? "Failed to delete goal",
           variant: "destructive",
         })
       }
@@ -231,7 +235,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
     const result = await updateGoalProgress(goalId, teamId, newValue)
     if (result.success) {
       setSelectedTile(prev => {
-        if (prev && prev.goals) {
+        if (prev?.goals) {
           return {
             ...prev,
             goals: prev.goals.map(goal =>
@@ -257,7 +261,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
     } else {
       toast({
         title: "Error",
-        description: result.error || "Failed to update goal progress",
+        description: result.error ?? "Failed to update goal progress",
         variant: "destructive",
       })
     }
@@ -287,13 +291,13 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
           <div className="space-y-2">
             <Input
               placeholder="Goal description"
-              value={newGoal.description || ''}
+              value={newGoal.description ?? ''}
               onChange={(e) => setNewGoal({ ...newGoal, description: e.target.value })}
             />
             <Input
               type="number"
               placeholder="Target value"
-              value={newGoal.targetValue || ''}
+              value={newGoal.targetValue ?? ''}
               onChange={(e) => setNewGoal({ ...newGoal, targetValue: parseInt(e.target.value) })}
             />
             <Button onClick={handleAddGoal}>Add Goal</Button>
@@ -318,10 +322,10 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
                 <div key={goal.id} className="space-y-1">
                   <div className="flex justify-between text-sm">
                     <span>{goal.description}</span>
-                    <span>{teamProgress?.currentValue || 0} / {goal.targetValue}</span>
+                    <span>{teamProgress?.currentValue ?? 0} / {goal.targetValue}</span>
                   </div>
                   <Progress
-                    value={(teamProgress?.currentValue || 0) / goal.targetValue * 100}
+                    value={(teamProgress?.currentValue ?? 0) / goal.targetValue * 100}
                     className="h-2"
                     aria-label={`Progress for ${team.name} on ${goal.description}`}
                   />
@@ -360,7 +364,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
                 </label>
                 <Input
                   id="title"
-                  value={editedTile.title || ''}
+                  value={editedTile.title ?? ''}
                   onChange={(e) => setEditedTile({ ...editedTile, title: e.target.value })}
                   className="col-span-3"
                 />
@@ -372,7 +376,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
                 <div className="col-span-3 h-[200px] overflow-y-auto border rounded-md">
                   <ForwardRefEditor
                     onChange={handleEditorChange}
-                    markdown={editedTile.description || ''}
+                    markdown={editedTile.description ?? ''}
                     contentEditableClassName="prose max-w-full"
                   />
                 </div>
@@ -384,7 +388,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
                 <Input
                   id="weight"
                   type="number"
-                  value={editedTile.weight || ''}
+                  value={editedTile.weight ?? ''}
                   onChange={(e) => setEditedTile({ ...editedTile, weight: parseInt(e.target.value) })}
                   className="col-span-3"
                 />
@@ -395,7 +399,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
                 </label>
                 <Input
                   id="headerImage"
-                  value={editedTile.headerImage || ''}
+                  value={editedTile.headerImage ?? ''}
                   onChange={(e) => setEditedTile({ ...editedTile, headerImage: e.target.value })}
                   className="col-span-3"
                 />
@@ -407,7 +411,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
           ) : (
             <>
               <h3 className="text-lg font-semibold">{selectedTile?.title}</h3>
-              <div className="prose max-w-full" dangerouslySetInnerHTML={{ __html: selectedTile?.description || '' }} />
+              <div className="prose max-w-full" dangerouslySetInnerHTML={{ __html: selectedTile?.description ?? '' }} />
               <p>Weight: {selectedTile?.weight}</p>
             </>
           )}

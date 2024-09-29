@@ -5,7 +5,7 @@ import { CreateBingoModal } from "@/components/create-bingo-modal"
 import BingoGrid from "@/components/bingogrid"
 import { getServerAuthSession } from "@/server/auth"
 import { getEventById } from "@/app/actions/events"
-import { UUID } from "crypto"
+import { type UUID } from "crypto"
 import { getUserClans } from "@/app/actions/clan"
 import AssignEventToClanModal from "@/components/assign-event-to-clan-modal"
 import { TeamManagement } from "@/components/team-management"
@@ -78,7 +78,6 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 								<Link href={`/events/${bingo.eventId}/bingos/${bingo.id}`} passHref>
 									<Button variant="outline">View Bingo</Button>
 								</Link>
-								<Button variant="outline">View Bingo</Button>
 							</CardFooter>
 						</Card>
 					))}
