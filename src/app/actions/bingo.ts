@@ -2,7 +2,7 @@
 
 import { db } from "@/server/db"
 import { bingos, goals, teamGoalProgress, tiles } from "@/server/db/schema"
-import { UUID } from "crypto"
+import { type UUID } from "crypto"
 import { eq } from "drizzle-orm"
 
 // Define the types based on the schema

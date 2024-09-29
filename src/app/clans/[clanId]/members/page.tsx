@@ -59,7 +59,7 @@ export default function ClanMembersPage({ params }: { params: { clanId: string }
 				}
 
 				const details = await getClanDetails(params.clanId);
-				if (details && details.id) {
+				if (details?.id) {
 					setClanDetails(details as ClanDetails);
 				} else {
 					throw new Error("Invalid clan details");

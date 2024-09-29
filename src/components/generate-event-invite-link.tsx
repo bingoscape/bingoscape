@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/hooks/use-toast"
 import { generateEventInviteLink } from "@/app/actions/events"
-import { UUID } from "crypto"
+import { type UUID } from "crypto"
 
 export function GenerateEventInviteLink({ eventId }: { eventId: UUID }) {
   const [inviteLink, setInviteLink] = useState<string | null>(null)

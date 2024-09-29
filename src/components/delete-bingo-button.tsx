@@ -7,7 +7,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { deleteBingo } from "@/app/actions/bingo"
 import { toast } from "@/hooks/use-toast"
 import { Trash2 } from "lucide-react"
-import { UUID } from "crypto"
+import { type UUID } from "crypto"
 
 interface DeleteBingoButtonProps {
   bingoId: UUID

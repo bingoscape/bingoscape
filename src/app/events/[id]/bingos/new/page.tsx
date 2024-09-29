@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { db } from "@/server/db"
 import { getServerAuthSession } from "@/server/auth"
-import { UUID } from "crypto"
+import { type UUID } from "crypto"
 
 async function getEvent(eventId: UUID, userId: string) {
 	'use server'
