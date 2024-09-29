@@ -10,7 +10,7 @@ export async function createTeam(eventId: string, name: string) {
   return team;
 }
 
-export async function getEventTeams(eventId: string) {
+export async function getTeamsByEventId(eventId: string) {
   const eventTeams = await db.query.teams.findMany({
     where: eq(teams.eventId, eventId),
     with: {
@@ -89,6 +89,7 @@ export async function getEventParticipants(eventId: string) {
 
   return participants;
 }
+
 
 export async function updateTeamMember(teamId: string, userId: string, isLeader: boolean) {
   const [updatedMember] = await db

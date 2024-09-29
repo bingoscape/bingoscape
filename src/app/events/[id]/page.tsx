@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { CreateBingoModal } from "@/components/create-bingo-modal"
 import BingoGrid from "@/components/bingogrid"
 import { getServerAuthSession } from "@/server/auth"
-import { getEventWithBingos } from "@/app/actions/events"
+import { getEventById } from "@/app/actions/events"
 import { UUID } from "crypto"
 import { getUserClans } from "@/app/actions/clan"
 import AssignEventToClanModal from "@/components/assign-event-to-clan-modal"
@@ -12,6 +12,7 @@ import { TeamManagement } from "@/components/team-management"
 import { GenerateEventInviteLink } from "@/components/generate-event-invite-link"
 import { TeamDisplay } from "@/components/team-display"
 import { DeleteBingoButton } from "@/components/delete-bingo-button"
+import Link from "next/link"
 
 export default async function EventBingosPage({ params }: { params: { id: UUID } }) {
 	const session = await getServerAuthSession()
@@ -19,7 +20,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 		notFound()
 	}
 
-	const data = await getEventWithBingos(params.id, session.user.id as UUID)
+	const data = await getEventById(params.id)
 
 	if (!data) {
 		notFound()
@@ -74,6 +75,9 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 								/>
 							</CardContent>
 							<CardFooter>
+								<Link href={`/events/${bingo.eventId}/bingos/${bingo.id}`} passHref>
+									<Button variant="outline">View Bingo</Button>
+								</Link>
 								<Button variant="outline">View Bingo</Button>
 							</CardFooter>
 						</Card>

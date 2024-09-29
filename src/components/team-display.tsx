@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { getEventTeams } from "@/app/actions/team"
+import { getTeamsByEventId } from "@/app/actions/team"
 import { toast } from "@/hooks/use-toast"
 
 type TeamMember = {
@@ -30,7 +30,7 @@ export function TeamDisplay({ eventId }: { eventId: string }) {
     const fetchTeams = async () => {
       setLoading(true)
       try {
-        const fetchedTeams = await getEventTeams(eventId)
+        const fetchedTeams = await getTeamsByEventId(eventId)
         setTeams(fetchedTeams)
       } catch (error) {
         toast({
