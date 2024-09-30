@@ -13,7 +13,7 @@ import { GenerateEventInviteLink } from "@/components/generate-event-invite-link
 import { TeamDisplay } from "@/components/team-display"
 import { DeleteBingoButton } from "@/components/delete-bingo-button"
 import Link from "next/link"
-import { Users } from "lucide-react"
+import { Users, EyeOff } from "lucide-react"
 
 export default async function EventBingosPage({ params }: { params: { id: UUID } }) {
 	const session = await getServerAuthSession()
@@ -74,14 +74,24 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 							</CardHeader>
 							<CardContent>
 								<p className="text-sm text-muted-foreground mb-4">{bingo.description}</p>
-								<BingoGrid
-									rows={bingo.rows}
-									columns={bingo.columns}
-									tiles={bingo.tiles}
-									teams={event.teams}
-									userRole="admin"
-									isEventAdmin={isEventAdmin}
-								/>
+								<div className="relative">
+									{bingo.visible && (
+										<BingoGrid
+											rows={bingo.rows}
+											columns={bingo.columns}
+											tiles={bingo.tiles}
+											teams={event.teams}
+											userRole="admin"
+											isEventAdmin={isEventAdmin}
+										/>
+									)}
+									{!bingo.visible && (
+										<div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+											<EyeOff className="w-16 h-16 text-muted-foreground" />
+											<span className="sr-only">This bingo is currently hidden</span>
+										</div>
+									)}
+								</div>
 							</CardContent>
 							<CardFooter>
 								<Link href={`/events/${bingo.eventId}/bingos/${bingo.id}`} passHref>

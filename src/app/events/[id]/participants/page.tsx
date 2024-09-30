@@ -74,7 +74,7 @@ export default function EventParticipantPool() {
 
   const handleTeamAssignment = async (participantId: string, teamId: string | null) => {
     try {
-      await assignParticipantToTeam(eventId as string, participantId, teamId as string)
+      await assignParticipantToTeam(eventId as string, participantId, teamId!)
       setParticipants(participants.map(p =>
         p.id === participantId ? { ...p, teamId } : p
       ))
