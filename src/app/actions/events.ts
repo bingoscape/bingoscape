@@ -1,7 +1,7 @@
 'use server'
 import { getServerAuthSession } from "@/server/auth";
 import { db } from "@/server/db";
-import { events, tiles, eventParticipants, clanMembers, eventInvites } from "@/server/db/schema";
+import { events, tiles, eventParticipants, clanMembers, eventInvites, teamMembers, teams } from "@/server/db/schema";
 import { type UUID } from "crypto";
 import { eq, and, asc } from "drizzle-orm";
 import { nanoid } from 'nanoid';
@@ -35,13 +35,20 @@ export async function createEvent(formData: FormData) {
   }
 
   try {
-    await db.insert(events).values({
+    const [createdEvent] = await db.insert(events).values({
       title: title,
       description: description || '',
       startDate,
       endDate,
       creatorId: session.user.id,
-    })
+    }).returning();
+
+    // Add the user as an admin participant
+    await db.insert(eventParticipants).values({
+      eventId: createdEvent!.id,
+      userId: session.user.id,
+      role: 'admin',
+    });
 
     return { success: true }
   } catch (error) {
@@ -253,3 +260,117 @@ export async function getUserRole(eventId: string): Promise<EventRole> {
     throw new Error("Failed to fetch user role");
   }
 }
+
+export async function getEventParticipants(eventId: string) {
+  try {
+    const participants = await db.query.eventParticipants.findMany({
+      where: eq(eventParticipants.eventId, eventId),
+      with: {
+        user: true,
+      },
+    });
+
+    return participants.map(p => ({
+      id: p.userId,
+      name: p.user.name || '',
+      email: p.user.email,
+      role: p.role,
+      teamId: null, // We'll need to fetch this separately or join with teamMembers
+    }));
+  } catch (error) {
+    console.error("Error fetching event participants:", error);
+    throw new Error("Failed to fetch event participants");
+  }
+}
+
+export async function updateParticipantRole(eventId: string, userId: string, newRole: 'admin' | 'management' | 'participant') {
+  try {
+    await db.update(eventParticipants)
+      .set({ role: newRole })
+      .where(and(
+        eq(eventParticipants.eventId, eventId),
+        eq(eventParticipants.userId, userId)
+      ));
+  } catch (error) {
+    console.error("Error updating participant role:", error);
+    throw new Error("Failed to update participant role");
+  }
+}
+
+
+export async function assignParticipantToTeam(eventId: string, userId: string, teamId: string) {
+  try {
+    // First, remove the user from any existing team in this event
+    const existingTeamMember = await db.query.teamMembers.findFirst({
+      where: eq(teamMembers.userId, userId),
+      with: {
+        team: true,
+      },
+    });
+
+    if (existingTeamMember && existingTeamMember.team.eventId === eventId) {
+      await db.delete(teamMembers).where(eq(teamMembers.id, existingTeamMember.id));
+    }
+
+    // Then, add the user to the new team
+    if (teamId) {
+      // Verify that the new team belongs to the correct event
+      const newTeam = await db.query.teams.findFirst({
+        where: and(
+          eq(teams.id, teamId),
+          eq(teams.eventId, eventId)
+        ),
+      });
+
+      if (!newTeam) {
+        throw new Error("Invalid team for this event");
+      }
+
+      await db.insert(teamMembers).values({
+        teamId,
+        userId,
+        isLeader: false,
+      });
+    }
+  } catch (error) {
+    console.error("Error assigning participant to team:", error);
+    throw new Error("Failed to assign participant to team");
+  }
+}
+
+export async function getEventParticipantsWithTeams(eventId: string) {
+  try {
+    const participants = await db.query.eventParticipants.findMany({
+      where: eq(eventParticipants.eventId, eventId),
+      with: {
+        user: true,
+      },
+    });
+
+    const teamMemberships = await db.query.teamMembers.findMany({
+      with: {
+        team: true,
+      },
+    });
+
+    const eventTeams = await db.query.teams.findMany({
+      where: eq(teams.eventId, eventId),
+    });
+
+    return participants.map(p => {
+      const teamMembership = teamMemberships.find(tm => tm.userId === p.userId && eventTeams.some(et => et.id === tm.teamId));
+      return {
+        id: p.userId,
+        name: p.user.name || '',
+        email: p.user.email,
+        role: p.role,
+        teamId: teamMembership?.teamId ?? null,
+        teamName: teamMembership?.team.name ?? null,
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching event participants with teams:", error);
+    throw new Error("Failed to fetch event participants with teams");
+  }
+}
+

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CreateBingoModal } from "@/components/create-bingo-modal"
 import BingoGrid from "@/components/bingogrid"
@@ -13,6 +13,7 @@ import { GenerateEventInviteLink } from "@/components/generate-event-invite-link
 import { TeamDisplay } from "@/components/team-display"
 import { DeleteBingoButton } from "@/components/delete-bingo-button"
 import Link from "next/link"
+import { Users } from "lucide-react"
 
 export default async function EventBingosPage({ params }: { params: { id: UUID } }) {
 	const session = await getServerAuthSession()
@@ -46,6 +47,14 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 					)}
 					{isEventAdmin && <CreateBingoModal eventId={event.id} />}
 					{isEventAdmin && <GenerateEventInviteLink eventId={event.id as UUID} />}
+					{isEventAdmin && (
+						<Link href={`/events/${event.id}/participants`} passHref>
+							<Button variant="outline">
+								<Users className="mr-2 h-4 w-4" />
+								Manage Participants
+							</Button>
+						</Link>
+					)}
 				</div>
 			</div>
 			<p className="text-muted-foreground mb-8">{event.description}</p>

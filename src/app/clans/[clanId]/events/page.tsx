@@ -21,10 +21,10 @@ type Event = {
 	createdAt: Date;
 	updatedAt: Date;
 	clanId: string | null;
-	creator: {
-		name: string | null;
+	creator?: {
+		runescapeName: string | null;
 	};
-	eventParticipants: {
+	eventParticipants?: {
 		userId: string;
 	}[];
 };
@@ -66,7 +66,13 @@ export default function ClanEventsPage({ params }: { params: { clanId: string } 
 			setClanEvents(prevEvents =>
 				prevEvents.map(event =>
 					event.id === eventId
-						? { ...event, eventParticipants: [...event.eventParticipants, { userId: userId! }] }
+						? {
+							...event,
+							eventParticipants: [
+								...(event.eventParticipants || []),
+								{ userId: userId! }
+							]
+						}
 						: event
 				)
 			);
@@ -84,7 +90,7 @@ export default function ClanEventsPage({ params }: { params: { clanId: string } 
 	};
 
 	const isParticipant = (event: Event) => {
-		return event.eventParticipants.some(participant => participant.userId === userId);
+		return event.eventParticipants?.some(participant => participant.userId === userId);
 	};
 
 	return (
@@ -109,7 +115,7 @@ export default function ClanEventsPage({ params }: { params: { clanId: string } 
 								<p className="text-sm text-muted-foreground mb-4">{event.description}</p>
 								<div className="flex items-center space-x-2">
 									<UserIcon className="h-4 w-4" />
-									<span className="text-sm">Created by: {event.creator.name}</span>
+									<span className="text-sm">Created by: {event.creator?.runescapeName}</span>
 								</div>
 							</CardContent>
 							<CardFooter className="flex justify-between">
