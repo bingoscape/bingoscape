@@ -131,6 +131,8 @@ export const events = createTable("events", {
   clanId: uuid("clan_id").references(() => clans.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  locked: boolean("locked").default(false).notNull(),
+  visible: boolean("visible").default(false).notNull(),
 });
 
 export const eventsRelations = relations(events, ({ many, one }) => ({
@@ -155,6 +157,8 @@ export const bingos = createTable('bingos', {
   columns: integer('columns').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  locked: boolean("locked").default(false).notNull(),
+  visible: boolean("visible").default(false).notNull(),
 });
 
 export const bingosRelations = relations(bingos, ({ one, many }) => ({
