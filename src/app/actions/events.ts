@@ -35,22 +35,28 @@ export async function createEvent(formData: FormData) {
   }
 
   try {
-    const [createdEvent] = await db.insert(events).values({
-      title: title,
-      description: description || '',
-      startDate,
-      endDate,
-      creatorId: session.user.id,
-    }).returning();
 
-    // Add the user as an admin participant
-    await db.insert(eventParticipants).values({
-      eventId: createdEvent!.id,
-      userId: session.user.id,
-      role: 'admin',
+    const newEvent = await db.transaction(async (tx) => {
+
+      const [createdEvent] = await tx.insert(events).values({
+        title: title,
+        description: description || '',
+        startDate,
+        endDate,
+        creatorId: session.user.id,
+      }).returning();
+
+      // Add the user as an admin participant
+      await tx.insert(eventParticipants).values({
+        eventId: createdEvent!.id,
+        userId: session.user.id,
+        role: 'admin',
+      });
+
+      return createdEvent;
     });
 
-    return { success: true }
+    return { success: !!newEvent }
   } catch (error) {
     console.error("Error creating event:", error)
     return { success: false, error: "Failed to create event" }
@@ -83,7 +89,8 @@ export async function getEventById(eventId: UUID) {
     return null;
   }
 
-  const isEventAdmin = event.creatorId === session?.user.id; // TODO: Get event_participation
+  const userRole = await getUserRole(eventId)
+  const isEventAdmin = userRole === 'admin' || userRole === 'management'
 
   return {
     event,
@@ -272,8 +279,7 @@ export async function getEventParticipants(eventId: string) {
 
     return participants.map(p => ({
       id: p.userId,
-      name: p.user.name || '',
-      email: p.user.email,
+      runescapeName: p.user.runescapeName || '',
       role: p.role,
       teamId: null, // We'll need to fetch this separately or join with teamMembers
     }));

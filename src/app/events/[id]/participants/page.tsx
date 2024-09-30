@@ -12,8 +12,7 @@ import { getTeamsByEventId } from '@/app/actions/team'
 
 interface Participant {
   id: string
-  name: string
-  email: string
+  runescapeName: string
   role: 'admin' | 'management' | 'participant'
   teamId: string | null
 }
@@ -94,8 +93,7 @@ export default function EventParticipantPool() {
   }
 
   const filteredParticipants = participants.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.email.toLowerCase().includes(searchTerm.toLowerCase())
+    p.runescapeName.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   if (loading) {
@@ -119,8 +117,7 @@ export default function EventParticipantPool() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
+            <TableHead>Runescape Name</TableHead>
             <TableHead>Role</TableHead>
             <TableHead>Team</TableHead>
           </TableRow>
@@ -128,8 +125,7 @@ export default function EventParticipantPool() {
         <TableBody>
           {filteredParticipants.map((participant) => (
             <TableRow key={participant.id}>
-              <TableCell>{participant.name}</TableCell>
-              <TableCell>{participant.email}</TableCell>
+              <TableCell>{participant.runescapeName}</TableCell>
               <TableCell>
                 <Select
                   value={participant.role}
