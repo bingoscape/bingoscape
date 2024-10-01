@@ -60,12 +60,11 @@ interface BingoGridProps {
   rows: number
   columns: number
   tiles: Tile[]
-  isEventAdmin: boolean
   userRole: 'participant' | 'management' | 'admin'
   teams: { id: string; name: string }[]
 }
 
-export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventAdmin, userRole, teams }: BingoGridProps) {
+export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole, teams }: BingoGridProps) {
   const [tiles, setTiles] = useState<Tile[]>(initialTiles)
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -74,7 +73,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
   const gridRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (gridRef.current && isEventAdmin) {
+    if (gridRef.current && (userRole === 'admin' || userRole == 'management')) {
       const sortable = new Sortable(gridRef.current, {
         animation: 150,
         ghostClass: 'bg-blue-100',
@@ -108,7 +107,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
         sortable.destroy()
       }
     }
-  }, [tiles, isEventAdmin])
+  }, [tiles, hasSufficientRights()])
 
   const handleTileClick = async (tile: Tile) => {
     try {
@@ -231,6 +230,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleProgressUpdate = async (goalId: string, teamId: string, newValue: number) => {
     const result = await updateGoalProgress(goalId, teamId, newValue)
     if (result.success) {
@@ -356,7 +356,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
           )}
         </div>
         <div className="w-2/3 space-y-4">
-          {isEventAdmin ? (
+          {(userRole === 'admin' || userRole === 'management') ? (
             <>
               <div className="grid grid-cols-4 items-center gap-4">
                 <label htmlFor="title" className="text-right">
@@ -457,4 +457,8 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, isEventA
       </Dialog>
     </div>
   )
+
+  function hasSufficientRights(): boolean {
+    return userRole === 'admin' || userRole == 'management'
+  }
 }

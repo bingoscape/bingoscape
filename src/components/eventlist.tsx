@@ -1,9 +1,6 @@
-import { eq, or } from "drizzle-orm"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { eventParticipants, events } from "@/server/db/schema"
-import { db } from "@/server/db"
 import { CreateEventModal } from "./create-event-modal"
 import { getEvents } from "@/app/actions/events"
 
@@ -18,10 +15,10 @@ export default async function EventList({ userId }: { userId: string }) {
         <CreateEventModal />
       </div>
       {userEvents.length === 0 ? (
-        <p>You don't have any events yet. Create one to get started!</p>
+        <p>You don&apos;t have any events yet. Create one to get started!</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {userEvents.map((event: any) => (
+          {userEvents.map((event) => (
             <Card key={event.id}>
               <CardHeader>
                 <CardTitle>{event.title}</CardTitle>

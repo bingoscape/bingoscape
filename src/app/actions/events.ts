@@ -64,7 +64,6 @@ export async function createEvent(formData: FormData) {
 }
 
 export async function getEventById(eventId: UUID) {
-  const session = await getServerAuthSession();
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
     with: {
@@ -90,12 +89,11 @@ export async function getEventById(eventId: UUID) {
   }
 
   const userRole = await getUserRole(eventId)
-  const isEventAdmin = userRole === 'admin' || userRole === 'management'
 
   return {
     event,
     bingos: event.bingos,
-    isEventAdmin,
+    userRole,
   };
 }
 
@@ -279,7 +277,7 @@ export async function getEventParticipants(eventId: string) {
 
     return participants.map(p => ({
       id: p.userId,
-      runescapeName: p.user.runescapeName || '',
+      runescapeName: p.user.runescapeName ?? '',
       role: p.role,
       teamId: null, // We'll need to fetch this separately or join with teamMembers
     }));
@@ -367,7 +365,7 @@ export async function getEventParticipantsWithTeams(eventId: string) {
       const teamMembership = teamMemberships.find(tm => tm.userId === p.userId && eventTeams.some(et => et.id === tm.teamId));
       return {
         id: p.userId,
-        name: p.user.name || '',
+        name: p.user.name ?? '',
         email: p.user.email,
         role: p.role,
         teamId: teamMembership?.teamId ?? null,

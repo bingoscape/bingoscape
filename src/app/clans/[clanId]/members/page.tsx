@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getServerAuthSession } from "@/server/auth";
 import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useSession } from "next-auth/react";
@@ -81,7 +80,7 @@ export default function ClanMembersPage({ params }: { params: { clanId: string }
 			}
 		};
 
-		fetchData();
+		fetchData().then(() => console.log("Done fetching data")).catch(err => console.error(err));
 	}, [params.clanId]);
 
 	const handleRoleUpdate = async (memberId: string, newRole: Role) => {
@@ -93,7 +92,7 @@ export default function ClanMembersPage({ params }: { params: { clanId: string }
 				title: "Role Updated",
 				description: `The member's role has been successfully updated to ${newRole}.`,
 			});
-		} catch (error) {
+		} catch (_) {
 			toast({
 				title: "Error",
 				description: "Failed to update member's role. Please try again.",
@@ -113,8 +112,8 @@ export default function ClanMembersPage({ params }: { params: { clanId: string }
 		const roles: Role[] = ['guest', 'member', 'management', 'admin'];
 		const currentIndex = roles.indexOf(currentRole);
 		return {
-			promote: currentIndex < roles.length - 1 ? roles[currentIndex + 1] : null,
-			demote: currentIndex > 0 ? roles[currentIndex - 1] : null,
+			promote: currentIndex < roles.length - 1 ? roles[currentIndex + 1]! : null,
+			demote: currentIndex > 0 ? roles[currentIndex - 1]! : null,
 		};
 	};
 
@@ -138,11 +137,11 @@ export default function ClanMembersPage({ params }: { params: { clanId: string }
 							<li key={member.id} className="flex items-center justify-between p-4 bg-secondary rounded-lg">
 								<div className="flex items-center space-x-4">
 									<Avatar className="h-10 w-10">
-										<AvatarImage src={member.image || undefined} alt={member.name || ''} />
-										<AvatarFallback>{member.name?.[0] || 'U'}</AvatarFallback>
+										<AvatarImage src={member.image ?? undefined} alt={member.name ?? ''} />
+										<AvatarFallback>{member.name?.[0] ?? 'U'}</AvatarFallback>
 									</Avatar>
 									<div>
-										<p className="font-medium">{member.runescapeName || member.name}</p>
+										<p className="font-medium">{member.runescapeName ?? member.name}</p>
 										{member.runescapeName && member.name !== member.runescapeName && (
 											<p className="text-sm text-muted-foreground">{member.name}</p>
 										)}

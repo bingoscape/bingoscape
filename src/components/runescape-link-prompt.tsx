@@ -43,7 +43,7 @@ export function RunescapeLinkPrompt() {
         description: "Your RuneScape account has been successfully linked.",
       })
       router.refresh()
-    } catch (error) {
+    } catch (_) {
       toast({
         title: "Error",
         description: "Failed to link RuneScape account. Please try again.",

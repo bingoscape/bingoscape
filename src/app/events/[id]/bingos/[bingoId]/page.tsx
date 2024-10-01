@@ -7,8 +7,6 @@ import { getTeamsByEventId } from '@/app/actions/team'
 import { Skeleton } from '@/components/ui/skeleton'
 import { type UUID } from 'crypto'
 
-export const dynamic = 'force-dynamic'
-
 export default async function BingoDetailPage({ params }: { params: { id: UUID; bingoId: string } }) {
 	const { id: eventId, bingoId } = params
 	const bingo = await getBingoById(bingoId)
@@ -20,7 +18,6 @@ export default async function BingoDetailPage({ params }: { params: { id: UUID; 
 	}
 
 	const userRole = await getUserRole(eventId)
-	const isEventAdmin = userRole === 'admin' || userRole === 'management'
 
 	return (
 		<div className="container mx-auto px-4 py-8">
@@ -31,7 +28,6 @@ export default async function BingoDetailPage({ params }: { params: { id: UUID; 
 						rows={bingo.rows}
 						columns={bingo.columns}
 						tiles={bingo.tiles}
-						isEventAdmin={isEventAdmin}
 						userRole={userRole}
 						teams={teams}
 					/>

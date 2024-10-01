@@ -38,7 +38,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchTeamsAndParticipants()
+    fetchTeamsAndParticipants().then(() => console.log("Done fetching participants")).catch(err => console.error(err))
   }, [eventId])
 
   const fetchTeamsAndParticipants = async () => {
@@ -50,7 +50,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
       ])
       setTeams(fetchedTeams)
       setParticipants(fetchedParticipants)
-    } catch (error) {
+    } catch (_) {
       toast({
         title: "Error",
         description: "Failed to fetch teams and participants",
@@ -71,7 +71,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
         title: "Team created",
         description: `Team "${newTeamName}" has been created successfully.`,
       })
-    } catch (error) {
+    } catch (_) {
       toast({
         title: "Error",
         description: "Failed to create team",
@@ -88,7 +88,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
         title: "User added",
         description: "User has been added to the team successfully.",
       })
-    } catch (error) {
+    } catch (_) {
       toast({
         title: "Error",
         description: "Failed to add user to team",
@@ -105,7 +105,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
         title: "User removed",
         description: "User has been removed from the team successfully.",
       })
-    } catch (error) {
+    } catch (_) {
       toast({
         title: "Error",
         description: "Failed to remove user from team",
@@ -122,7 +122,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
         title: "Team deleted",
         description: "Team has been deleted successfully.",
       })
-    } catch (error) {
+    } catch (_) {
       toast({
         title: "Error",
         description: "Failed to delete team",
@@ -139,7 +139,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
         title: "Team leader updated",
         description: `User has been ${currentIsLeader ? 'removed as' : 'set as'} team leader.`,
       })
-    } catch (error) {
+    } catch (_) {
       toast({
         title: "Error",
         description: "Failed to update team leader",
@@ -152,10 +152,10 @@ export function TeamManagement({ eventId }: { eventId: string }) {
     <li key={member.user.id} className="flex items-center justify-between">
       <div className="flex items-center space-x-2">
         <Avatar className="h-8 w-8">
-          <AvatarImage src={member.user.image || undefined} alt={member.user.name || ''} />
-          <AvatarFallback>{member.user.name?.[0] || 'U'}</AvatarFallback>
+          <AvatarImage src={member.user.image ?? undefined} alt={member.user.name ?? ''} />
+          <AvatarFallback>{member.user.name?.[0] ?? 'U'}</AvatarFallback>
         </Avatar>
-        <span>{member.user.runescapeName || member.user.name}</span>
+        <span>{member.user.runescapeName ?? member.user.name}</span>
         {member.isLeader && <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full ml-2">Leader</span>}
       </div>
       <div className="space-x-2">
@@ -211,7 +211,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
                       .filter((p) => !team.teamMembers.some((m) => m.user.id === p.id))
                       .map((participant) => (
                         <option key={participant.id} value={participant.id}>
-                          {participant.runescapeName || participant.name}
+                          {participant.runescapeName ?? participant.name}
                         </option>
                       ))}
                   </select>

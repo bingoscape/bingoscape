@@ -43,10 +43,10 @@ export default async function ClansPage() {
                 <Crown className="h-4 w-4" />
                 <span className="text-sm font-medium">Owner:</span>
                 <Avatar className="h-6 w-6">
-                  <AvatarImage src={userClan.owner.image || undefined} alt={userClan.owner.name || ''} />
-                  <AvatarFallback>{userClan.owner.runescapeName?.[0] || 'O'}</AvatarFallback>
+                  <AvatarImage src={userClan.owner.image ?? undefined} alt={userClan.owner.name ?? ''} />
+                  <AvatarFallback>{userClan.owner.runescapeName?.[0] ?? 'O'}</AvatarFallback>
                 </Avatar>
-                <span className="text-sm">{userClan.owner.runescapeName || userClan.owner.name}</span>
+                <span className="text-sm">{userClan.owner.runescapeName ?? userClan.owner.name}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Users className="h-4 w-4" />

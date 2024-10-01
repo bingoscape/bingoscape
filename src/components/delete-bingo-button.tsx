@@ -25,7 +25,7 @@ export function DeleteBingoButton({ bingoId }: DeleteBingoButtonProps) {
         description: "The bingo has been successfully deleted.",
       })
       router.refresh()
-    } catch (error) {
+    } catch (_) {
       toast({
         title: "Error",
         description: "Failed to delete bingo",
