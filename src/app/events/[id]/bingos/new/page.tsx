@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation"
-import { events, bingos, eventParticipants, tiles } from "@/server/db/schema"
-import { eq, and } from "drizzle-orm"
+import { events, bingos, tiles } from "@/server/db/schema"
+import { eq } from "drizzle-orm"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,40 +9,7 @@ import { Button } from "@/components/ui/button"
 import { db } from "@/server/db"
 import { getServerAuthSession } from "@/server/auth"
 import { type UUID } from "crypto"
-
-async function getEvent(eventId: UUID, userId: string) {
-	'use server'
-	const eventData = await db
-		.select({
-			id: events.id,
-			title: events.title,
-		})
-		.from(events)
-		.where(eq(events.id, eventId))
-		.limit(1)
-
-	console.table(eventData)
-	if (eventData.length === 0) {
-		return null
-	}
-
-	const isEventAdmin = await db
-		.select()
-		.from(eventParticipants)
-		.where(
-			and(
-				eq(eventParticipants.eventId, eventId),
-				eq(eventParticipants.userId, userId),
-				eq(eventParticipants.role, 'admin')
-			)
-		)
-		.limit(1)
-
-	return {
-		event: eventData[0],
-		isEventAdmin: true//isEventAdmin.length > 0
-	}
-}
+import { getEventById, getUserRole } from "@/app/actions/events"
 
 async function createBingo(formData: FormData) {
 	'use server'
@@ -50,8 +17,6 @@ async function createBingo(formData: FormData) {
 	const eventId = formData.get('eventId') as string
 	const title = formData.get('title') as string
 	const description = formData.get('description') as string
-	const startDate = new Date(formData.get('startDate') as string)
-	const endDate = new Date(formData.get('endDate') as string)
 	const rows = parseInt(formData.get('rows') as string)
 	const columns = parseInt(formData.get('columns') as string)
 
@@ -59,10 +24,8 @@ async function createBingo(formData: FormData) {
 		eventId,
 		title,
 		description,
-		startDate,
-		endDate,
 		rows,
-		columns
+		columns,
 	}).returning({ id: bingos.id })
 
 	const bingoId = newBingo[0]!.id
@@ -74,10 +37,10 @@ async function createBingo(formData: FormData) {
 			tilesToInsert.push({
 				bingoId,
 				headerImage: '/placeholder.svg?height=100&width=100', // Default placeholder image
+				title: `Tile ${row * columns + col + 1}`,
 				description: `Tile ${row * columns + col + 1}`,
 				weight: 1,
 				index: row * columns + col,
-				columnIndex: col,
 			})
 		}
 	}
@@ -93,24 +56,24 @@ export default async function Page({ params }: { params: { id: UUID } }) {
 		notFound()
 	}
 
-	const data = await getEvent(params.id, session.user.id)
+	const data = await getEventById(params.id)
 
-	//if (!data || !data.isEventAdmin) {
-	//	//notFound()
-	//}
+	if (!data || !(data.userRole === 'admin' || data.userRole === 'management')) {
+		notFound()
+	}
 
-	const { event, isEventAdmin } = data
+	const { event } = data
 
 	return (
 		<div className="container mx-auto py-10">
 			<Card>
 				<CardHeader>
-					<CardTitle>Create New Bingo for {event!.title}</CardTitle>
+					<CardTitle>Create New Bingo for {event.title}</CardTitle>
 					<CardDescription>Set up the basic structure for your new bingo game.</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<form action={createBingo} className="space-y-4">
-						<input type="hidden" name="eventId" value={event!.id} />
+						<input type="hidden" name="eventId" value={event.id} />
 
 						<div>
 							<Label htmlFor="title">Title</Label>

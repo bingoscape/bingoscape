@@ -1,16 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "@/hooks/use-toast"
+import type { JoinClanResponse } from '@/app/api/clans/join/route'
+import { Loader2 } from "lucide-react"
 
-export default function JoinClanPage() {
+function JoinClanContent({ inviteCode }: { inviteCode: string | null }) {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
-  const inviteCode = searchParams.get('code')
 
   useEffect(() => {
     if (!inviteCode) {
@@ -33,7 +33,7 @@ export default function JoinClanPage() {
         },
         body: JSON.stringify({ inviteCode }),
       })
-      const data = await response.json()
+      const data = await response.json() as JoinClanResponse
       if (response.ok) {
         toast({
           title: "Joined clan",
@@ -41,7 +41,7 @@ export default function JoinClanPage() {
         })
         router.push('/clans')
       } else {
-        throw new Error(data.error)
+        throw new Error("Could not join clan")
       }
     } catch (error) {
       toast({
@@ -59,22 +59,43 @@ export default function JoinClanPage() {
   }
 
   return (
+    <Card className="max-w-md mx-auto">
+      <CardHeader>
+        <CardTitle>Join Clan</CardTitle>
+        <CardDescription>You&apos;ve been invited to join a clan!</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p>Click the button below to accept the invitation and join the clan.</p>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={handleJoin} disabled={isLoading} className="w-full">
+          {isLoading ? "Joining..." : "Join Clan"}
+        </Button>
+      </CardFooter>
+    </Card>
+  )
+}
+
+function JoinClanWrapper() {
+  const searchParams = useSearchParams()
+  const inviteCode = searchParams.get('code')
+
+  return <JoinClanContent inviteCode={inviteCode} />
+}
+
+export default function JoinClanPage() {
+  return (
     <div className="container mx-auto py-10">
-      <Card className="max-w-md mx-auto">
-        <CardHeader>
-          <CardTitle>Join Clan</CardTitle>
-          <CardDescription>You've been invited to join a clan!</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p>Click the button below to accept the invitation and join the clan.</p>
-        </CardContent>
-        <CardFooter>
-          <Button onClick={handleJoin} disabled={isLoading} className="w-full">
-            {isLoading ? "Joining..." : "Join Clan"}
-          </Button>
-        </CardFooter>
-      </Card>
+      <Suspense fallback={
+        <div className="flex justify-center items-center h-[50vh]">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      }>
+        <JoinClanWrapper />
+      </Suspense>
     </div>
   )
 }
+
+
 

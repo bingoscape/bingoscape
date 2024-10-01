@@ -13,6 +13,9 @@ export function GenerateEventInviteLink({ eventId }: { eventId: UUID }) {
   const handleGenerateInvite = async () => {
     try {
       const invite = await generateEventInviteLink(eventId) // Replace 'userId' with actual user ID
+      if (!invite) {
+        throw new Error("No invite has been created")
+      }
       const link = `${window.location.origin}/events/join/${invite.inviteCode}`
       setInviteLink(link)
       toast({

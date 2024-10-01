@@ -13,7 +13,7 @@ import { GenerateEventInviteLink } from "@/components/generate-event-invite-link
 import { TeamDisplay } from "@/components/team-display"
 import { DeleteBingoButton } from "@/components/delete-bingo-button"
 import Link from "next/link"
-import { Users, EyeOff } from "lucide-react"
+import { Users } from "lucide-react"
 
 export default async function EventBingosPage({ params }: { params: { id: UUID } }) {
 	const session = await getServerAuthSession()
@@ -27,7 +27,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 		notFound()
 	}
 
-	const { event, bingos, isEventAdmin } = data
+	const { event, bingos, userRole } = data
 	const userClans = await getUserClans()
 
 	return (
@@ -42,12 +42,12 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 					)}
 				</div>
 				<div className="flex space-x-4">
-					{isEventAdmin && !event.clan && (
+					{(userRole === 'admin' || userRole === 'management') && !event.clan && (
 						<AssignEventToClanModal eventId={event.id} clans={userClans.map(uc => ({ id: uc.clan.id, name: uc.clan.name }))} />
 					)}
-					{isEventAdmin && <CreateBingoModal eventId={event.id} />}
-					{isEventAdmin && <GenerateEventInviteLink eventId={event.id as UUID} />}
-					{isEventAdmin && (
+					{(userRole === 'admin' || userRole === 'management') && <CreateBingoModal eventId={event.id} />}
+					{(userRole === 'admin' || userRole === 'management') && <GenerateEventInviteLink eventId={event.id as UUID} />}
+					{(userRole === 'admin' || userRole === 'management') && (
 						<Link href={`/events/${event.id}/participants`} passHref>
 							<Button variant="outline">
 								<Users className="mr-2 h-4 w-4" />
@@ -69,28 +69,19 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 							<CardHeader>
 								<div className="flex justify-between items-center">
 									<CardTitle>{bingo.title}</CardTitle>
-									{isEventAdmin && <DeleteBingoButton bingoId={bingo.id as UUID} />}
+									{(userRole === 'admin' || userRole === 'management') && <DeleteBingoButton bingoId={bingo.id as UUID} />}
 								</div>
 							</CardHeader>
 							<CardContent>
 								<p className="text-sm text-muted-foreground mb-4">{bingo.description}</p>
 								<div className="relative">
-									{bingo.visible && (
-										<BingoGrid
-											rows={bingo.rows}
-											columns={bingo.columns}
-											tiles={bingo.tiles}
-											teams={event.teams}
-											userRole="admin"
-											isEventAdmin={isEventAdmin}
-										/>
-									)}
-									{!bingo.visible && (
-										<div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-											<EyeOff className="w-16 h-16 text-muted-foreground" />
-											<span className="sr-only">This bingo is currently hidden</span>
-										</div>
-									)}
+									<BingoGrid
+										rows={bingo.rows}
+										columns={bingo.columns}
+										tiles={bingo.tiles}
+										teams={event.teams}
+										userRole={userRole}
+									/>
 								</div>
 							</CardContent>
 							<CardFooter>
@@ -105,7 +96,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 
 			<div className="mt-12">
 				<h2 className="text-2xl font-bold mb-4">Teams</h2>
-				{isEventAdmin ? (
+				{(userRole === 'admin' || userRole === 'management') ? (
 					<TeamManagement eventId={event.id} />
 				) : (
 					<TeamDisplay eventId={event.id} />

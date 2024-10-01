@@ -4,6 +4,13 @@ import { clanMembers, clanInvites } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
 import { getServerAuthSession } from '@/server/auth'
 
+
+export interface JoinClanResponse {
+	success: boolean,
+	clanName: string,
+	isMainClan: boolean,
+}
+
 export async function POST(req: Request) {
 	const session = await getServerAuthSession()
 
@@ -11,6 +18,7 @@ export async function POST(req: Request) {
 		return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 	const { inviteCode } = await req.json()
 
 	if (!inviteCode) {
@@ -19,7 +27,7 @@ export async function POST(req: Request) {
 
 	// Find the invite
 	const invite = await db.query.clanInvites.findFirst({
-		where: eq(clanInvites.inviteCode, inviteCode),
+		where: eq(clanInvites.inviteCode, inviteCode as string),
 		with: {
 			clan: true,
 		},

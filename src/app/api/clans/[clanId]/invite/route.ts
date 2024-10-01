@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server'
 import { db } from "@/server/db"
-import { clans, clanMembers, clanInvites } from "@/server/db/schema"
+import { clanMembers, clanInvites } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
 import { nanoid } from 'nanoid'
 import { getServerAuthSession } from '@/server/auth'
 
+export interface GenerateInviteResponse {
+	inviteCode: string
+}
+
+
 export async function POST(
-	req: Request,
+	_: Request,
 	{ params }: { params: { clanId: string } }
 ) {
 	const session = await getServerAuthSession()

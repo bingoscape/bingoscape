@@ -57,7 +57,7 @@ export default function ClanEventsPage({ params }: { params: { clanId: string } 
 			}
 		};
 
-		fetchData();
+		fetchData().then(() => console.log("Done fetching data")).catch(err => console.error(err));
 	}, [params.clanId]);
 
 	const handleJoinEvent = async (eventId: string) => {
@@ -69,7 +69,7 @@ export default function ClanEventsPage({ params }: { params: { clanId: string } 
 						? {
 							...event,
 							eventParticipants: [
-								...(event.eventParticipants || []),
+								...(event.eventParticipants ?? []),
 								{ userId: userId! }
 							]
 						}

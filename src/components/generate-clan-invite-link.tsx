@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/hooks/use-toast"
+import { GenerateInviteResponse } from '@/app/api/clans/[clanId]/invite/route'
 
 export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
   const [inviteLink, setInviteLink] = useState('')
@@ -15,7 +16,7 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
       const response = await fetch(`/api/clans/${clanId}/invite`, {
         method: 'POST',
       })
-      const data = await response.json()
+      const data = await response.json() as GenerateInviteResponse;
       if (response.ok) {
         const link = `${window.location.origin}/clans/join?code=${data.inviteCode}`
         setInviteLink(link)
@@ -24,7 +25,7 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
           description: "The invite link has been created successfully.",
         })
       } else {
-        throw new Error(data.error)
+        throw new Error("Failed to generate invite link")
       }
     } catch (error) {
       toast({
@@ -37,8 +38,8 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
     }
   }
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(inviteLink)
+  const copyToClipboard = async () => {
+    await navigator.clipboard.writeText(inviteLink)
     toast({
       title: "Copied to clipboard",
       description: "The invite link has been copied to your clipboard.",

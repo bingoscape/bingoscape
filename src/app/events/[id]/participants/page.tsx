@@ -49,7 +49,7 @@ export default function EventParticipantPool() {
         setLoading(false)
       }
     }
-    fetchData()
+    fetchData().then(() => console.log("Done fetching data")).catch(err => console.error(err))
   }, [eventId])
 
   const handleRoleChange = async (participantId: string, newRole: string) => {
@@ -143,7 +143,7 @@ export default function EventParticipantPool() {
               </TableCell>
               <TableCell>
                 <Select
-                  value={participant.teamId || 'no-team'}
+                  value={participant.teamId ?? 'no-team'}
                   onValueChange={(value) => handleTeamAssignment(participant.id, value === 'no-team' ? null : value)}
                 >
                   <SelectTrigger className="w-[180px]">

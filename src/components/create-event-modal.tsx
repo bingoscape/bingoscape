@@ -30,7 +30,7 @@ export function CreateEventModal() {
         })
         router.refresh()
       } else {
-        throw new Error(result.error || "Failed to create event")
+        throw new Error(result.error ?? "Failed to create event")
       }
     } catch (error) {
       toast({

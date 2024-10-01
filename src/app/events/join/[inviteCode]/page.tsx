@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
 import { joinEventViaInvite } from "@/app/actions/events"
-import { useSession } from 'next-auth/react'
 
 export default function JoinEventPage({ params }: { params: { inviteCode: string } }) {
 	const [isJoining, setIsJoining] = useState(false)
@@ -14,7 +13,7 @@ export default function JoinEventPage({ params }: { params: { inviteCode: string
 	const handleJoinEvent = async () => {
 		setIsJoining(true)
 		try {
-			const event = await joinEventViaInvite(params.inviteCode) // Replace 'userId' with actual user ID
+			const event = await joinEventViaInvite(params.inviteCode)
 			toast({
 				title: "Joined event",
 				description: `You have successfully joined the event: ${event.title}`,

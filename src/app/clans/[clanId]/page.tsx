@@ -46,10 +46,10 @@ export default async function ClanDetailPage({ params }: { params: { clanId: str
             <UserIcon className="h-4 w-4" />
             <span>Owner:</span>
             <Avatar className="h-8 w-8">
-              <AvatarImage src={clanDetails.owner.image || undefined} alt={clanDetails.owner.runescapeName || ''} />
-              <AvatarFallback>{clanDetails.owner?.runescapeName?.[0] || 'O'}</AvatarFallback>
+              <AvatarImage src={clanDetails.owner!.image ?? undefined} alt={clanDetails.owner!.runescapeName ?? ''} />
+              <AvatarFallback>{clanDetails.owner?.runescapeName?.[0] ?? 'O'}</AvatarFallback>
             </Avatar>
-            <span>{clanDetails.owner?.runescapeName || clanDetails.owner?.name}</span>
+            <span>{clanDetails.owner?.runescapeName ?? clanDetails.owner?.name}</span>
           </div>
           {isOwnerOrAdmin && (
             <div className="mt-6">
