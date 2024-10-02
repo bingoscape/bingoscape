@@ -664,7 +664,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
         }}
       >
         {tiles.map((tile) => (
-          <BingoTile key={tile.id} tile={tile} onClick={() => handleTileClick(tile)} />
+          <BingoTile key={tile.id} tile={tile} userRole={userRole} onClick={() => handleTileClick(tile)} />
         ))}
       </div>
 
