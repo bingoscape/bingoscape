@@ -1,11 +1,22 @@
 'use server'
 
 import { db } from "@/server/db"
-import { bingos, goals, teamGoalProgress, tiles } from "@/server/db/schema"
+import { bingos, goals, teamGoalProgress, tiles, submissions, images, teams, teamTileSubmissions } from "@/server/db/schema"
 import { type UUID } from "crypto"
 import { eq } from "drizzle-orm"
+import { revalidatePath } from "next/cache"
+import { nanoid } from "nanoid"
+import fs from 'fs/promises'
+import path from 'path'
 
-// Define the types based on the schema
+interface TeamTileSubmission {
+  id: string
+  teamId: string
+  teamName: string
+  status: 'pending' | 'accepted' | 'requires_interaction' | 'declined'
+  submissions: Submission[]
+}
+
 interface Tile {
   id: string;
   title: string;
@@ -28,6 +39,24 @@ interface TeamProgress {
   teamName: string;
   currentValue: number;
 }
+
+interface Submission {
+  id: string
+  imagePath: string
+  createdAt: Date
+}
+
+const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
+
+// Utility function to ensure the upload directory exists
+async function ensureUploadDir() {
+  try {
+    await fs.access(UPLOAD_DIR);
+  } catch {
+    await fs.mkdir(UPLOAD_DIR, { recursive: true });
+  }
+}
+
 export async function updateTile(tileId: string, updatedTile: Partial<typeof tiles.$inferInsert>) {
   try {
     await db.update(tiles)
@@ -39,6 +68,7 @@ export async function updateTile(tileId: string, updatedTile: Partial<typeof til
     return { success: false, error: "Failed to update tile" }
   }
 }
+
 export async function reorderTiles(reorderedTiles: Array<{ id: string; index: number }>) {
   try {
     await db.transaction(async (tx) => {
@@ -62,6 +92,7 @@ export async function createBingo(formData: FormData) {
   const description = formData.get('description') as string
   const rowsStr = formData.get('rows') as string
   const columnsStr = formData.get('columns') as string
+  const codephrase = formData.get('codephrase') as string
 
   console.log(formData)
 
@@ -81,6 +112,7 @@ export async function createBingo(formData: FormData) {
     title,
     description: description || '',
     rows,
+    codephrase,
     columns
   }).returning({ id: bingos.id })
 
@@ -218,6 +250,7 @@ export async function getBingoById(bingoId: string) {
       rows: result.rows,
       columns: result.columns,
       tiles: transformedTiles,
+      codephrase: result.codephrase
     };
   } catch (error) {
     console.error("Error fetching bingo:", error);
@@ -225,3 +258,160 @@ export async function getBingoById(bingoId: string) {
   }
 }
 
+
+export async function getSubmissions(tileId: string): Promise<TeamTileSubmission[]> {
+  try {
+    const result = await db
+      .select({
+        id: teamTileSubmissions.id,
+        teamId: teamTileSubmissions.teamId,
+        teamName: teams.name,
+        status: teamTileSubmissions.status,
+        submissionId: submissions.id,
+        imagePath: images.path,
+        submissionCreatedAt: submissions.createdAt,
+      })
+      .from(teamTileSubmissions)
+      .leftJoin(submissions, eq(submissions.teamTileSubmissionId, teamTileSubmissions.id))
+      .leftJoin(images, eq(images.id, submissions.imageId))
+      .leftJoin(teams, eq(teams.id, teamTileSubmissions.teamId))
+      .where(eq(teamTileSubmissions.tileId, tileId))
+      .execute()
+
+    // Group submissions by team
+    const teamTileSubmissionsMap: Record<string, TeamTileSubmission> = {}
+
+    for (const row of result) {
+      if (!teamTileSubmissionsMap[row.id]) {
+        teamTileSubmissionsMap[row.id] = {
+          id: row.id,
+          teamId: row.teamId,
+          teamName: row.teamName ?? '',
+          status: row.status,
+          submissions: [],
+        }
+      }
+      if (row.submissionId) {
+        teamTileSubmissionsMap[row.id]!.submissions.push({
+          id: row.submissionId,
+          imagePath: row.imagePath!,
+          createdAt: row.submissionCreatedAt!,
+        })
+      }
+    }
+
+    return Object.values(teamTileSubmissionsMap)
+  } catch (error) {
+    console.error("Error fetching submissions:", error)
+    throw new Error("Failed to fetch submissions")
+  }
+}
+
+export async function submitImage(formData: FormData) {
+  try {
+    const tileId = formData.get('tileId') as string
+    const teamId = formData.get('teamId') as string
+    const image = formData.get('image') as File
+
+    if (!tileId || !teamId || !image) {
+      throw new Error("Missing required fields")
+    }
+
+    // Check if the tile exists
+    const tileExists = await db.select({ id: tiles.id })
+      .from(tiles)
+      .where(eq(tiles.id, tileId))
+      .execute()
+
+    if (tileExists.length === 0) {
+      throw new Error("Tile not found")
+    }
+
+    // Check if the team exists
+    const teamExists = await db.select({ id: teams.id })
+      .from(teams)
+      .where(eq(teams.id, teamId))
+      .execute()
+
+    if (teamExists.length === 0) {
+      throw new Error("Team not found")
+    }
+
+    // Ensure the upload directory exists
+    await ensureUploadDir();
+
+    // Generate a unique filename
+    const filename = `${nanoid()}-${image.name}`
+    const filePath = path.join(UPLOAD_DIR, filename)
+
+    // Write the file to the server
+    const buffer = Buffer.from(await image.arrayBuffer())
+    await fs.writeFile(filePath, buffer)
+
+    // Calculate the relative path for storage and serving
+    const relativePath = path.join('/uploads', filename).replace(/\\/g, '/')
+
+    const newSubmission = await db.transaction(async (tx) => {
+      // Get or create teamTileSubmission
+      const [teamTileSubmission] = await tx
+        .insert(teamTileSubmissions)
+        .values({
+          tileId,
+          teamId,
+          status: 'pending',
+        })
+        .onConflictDoUpdate({
+          target: [teamTileSubmissions.tileId, teamTileSubmissions.teamId],
+          set: {
+            updatedAt: new Date(),
+            status: 'pending', // Reset status to pending when a new submission is made
+          },
+        })
+        .returning()
+
+      // Insert the image record
+      const [insertedImage] = await tx.insert(images)
+        .values({
+          path: relativePath,
+        })
+        .returning()
+
+      // Insert the submission record
+      const [insertedSubmission] = await tx.insert(submissions)
+        .values({
+          teamTileSubmissionId: teamTileSubmission!.id,
+          imageId: insertedImage!.id,
+        })
+        .returning()
+
+      return insertedSubmission
+    })
+
+    // Revalidate the bingo page
+    revalidatePath('/bingo')
+
+    return { success: true, submission: newSubmission }
+  } catch (error) {
+    console.error("Error submitting image:", error)
+    return { success: false, error: (error as Error).message }
+  }
+}
+
+export async function updateTeamTileSubmissionStatus(teamTileSubmissionId: string, newStatus: 'accepted' | 'requires_interaction' | 'declined') {
+  try {
+    const [updatedTeamTileSubmission] = await db
+      .update(teamTileSubmissions)
+      .set({ status: newStatus })
+      .where(eq(teamTileSubmissions.id, teamTileSubmissionId))
+      .returning()
+
+    if (!updatedTeamTileSubmission) {
+      throw new Error("Team tile submission not found")
+    }
+
+    return { success: true, teamTileSubmission: updatedTeamTileSubmission }
+  } catch (error) {
+    console.error("Error updating team tile submission status:", error)
+    return { success: false, error: "Failed to update team tile submission status" }
+  }
+}

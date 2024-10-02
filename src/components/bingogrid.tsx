@@ -8,12 +8,12 @@ import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import Sortable, { type SortableEvent } from 'sortablejs'
 import { toast } from '@/hooks/use-toast'
-import { updateTile, reorderTiles, addGoal, deleteGoal, getTileGoalsAndProgress, updateGoalProgress } from '@/app/actions/bingo'
+import { updateTile, reorderTiles, addGoal, deleteGoal, getTileGoalsAndProgress, updateGoalProgress, submitImage, getSubmissions, updateTeamTileSubmissionStatus } from '@/app/actions/bingo'
 import { BingoTile } from './bingo-tile'
 import { ForwardRefEditor } from './forward-ref-editor'
 import '@mdxeditor/editor/style.css'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Trash2, Lock, Unlock } from 'lucide-react'
+import { Trash2, Lock, Unlock, Upload, X, Clock, Check } from 'lucide-react'
 
 interface ServerTeamProgress {
   id: string
@@ -46,6 +46,20 @@ interface Goal {
   teamProgress: TeamProgress[]
 }
 
+interface Submission {
+  id: string
+  imagePath: string
+  createdAt: Date
+}
+
+interface TeamTileSubmission {
+  id: string
+  teamId: string
+  teamName: string
+  status: 'pending' | 'accepted' | 'requires_interaction' | 'declined'
+  submissions: Submission[]
+}
+
 interface Tile {
   id: string
   title: string
@@ -54,6 +68,7 @@ interface Tile {
   weight: number
   index: number
   goals?: Goal[]
+  teamTileSubmissions?: TeamTileSubmission[]
 }
 
 interface BingoGridProps {
@@ -62,15 +77,18 @@ interface BingoGridProps {
   tiles: Tile[]
   userRole: 'participant' | 'management' | 'admin'
   teams: { id: string; name: string }[]
+  currentTeamId: string | undefined
+  codephrase: string
 }
 
-export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole, teams }: BingoGridProps) {
+export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole, teams, currentTeamId, codephrase }: BingoGridProps) {
   const [tiles, setTiles] = useState<Tile[]>(initialTiles)
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editedTile, setEditedTile] = useState<Partial<Tile>>({})
   const [newGoal, setNewGoal] = useState<Partial<Goal>>({})
   const [isOrderingEnabled, setIsOrderingEnabled] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const sortableRef = useRef<Sortable | null>(null)
 
@@ -159,15 +177,16 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
           }
         })
       }))
-      const updatedTile: Tile = { ...tile, goals }
+      const teamTileSubmissions = await getSubmissions(tile.id)
+      const updatedTile: Tile = { ...tile, goals, teamTileSubmissions }
       setSelectedTile(updatedTile)
       setEditedTile(updatedTile)
       setIsDialogOpen(true)
     } catch (error) {
-      console.error("Error fetching goals:", error)
+      console.error("Error fetching tile data:", error)
       toast({
         title: "Error",
-        description: "Failed to fetch goals",
+        description: "Failed to fetch tile data",
         variant: "destructive",
       })
     }
@@ -299,6 +318,47 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
       })
     }
   }
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      setSelectedImage(file)
+    }
+  }
+
+  const handleImageSubmit = async () => {
+    if (selectedTile && selectedImage) {
+      const formData = new FormData()
+      formData.append('image', selectedImage)
+      formData.append('tileId', selectedTile.id)
+      formData.append('teamId', currentTeamId!)
+
+      const result = await submitImage(formData)
+      if (result.success) {
+        setSelectedImage(null)
+        toast({
+          title: "Image submitted",
+          description: "Your image has been successfully submitted for review.",
+        })
+        // Refresh submissions
+        const submissions = await getSubmissions(selectedTile.id)
+        setSelectedTile(prev => prev ? { ...prev, submissions } : null)
+      } else {
+        toast({
+          title: "Error",
+          description: result.error ?? "Failed to submit image",
+          variant: "destructive",
+        })
+      }
+    }
+  }
+
+  const renderCodephrase = () => (
+    <div className="bg-primary text-primary-foreground p-4 rounded-lg shadow-md mb-6">
+      <h2 className="text-2xl font-bold mb-2">Codephrase</h2>
+      <p className="text-xl">{codephrase}</p>
+    </div>
+  )
 
   const renderGoals = () => (
     <div className="space-y-4">
@@ -453,9 +513,139 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
       {renderTileProgress()}
     </div>
   )
+  const renderSubmissions = () => (
+    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
+      <h3 className="text-lg font-semibold sticky top-0 bg-background z-10 py-2">Submissions</h3>
+      {currentTeamId ? (
+        <div className="space-y-4">
+          <Input type="file" accept="image/*" onChange={handleImageChange} />
+          <Button onClick={handleImageSubmit} disabled={!selectedImage}>
+            <Upload className="mr-2 h-4 w-4" />
+            Submit Image
+          </Button>
+          <div className="grid grid-cols-2 gap-4">
+            {selectedTile?.teamTileSubmissions
+              ?.find(tts => tts.teamId === currentTeamId)
+              ?.submissions.map(submission => (
+                <div key={submission.id} className="border rounded-md p-4">
+                  <Image
+                    src={submission.imagePath}
+                    alt={`Submission for ${selectedTile.title}`}
+                    width={200}
+                    height={200}
+                    className="object-cover rounded-md"
+                  />
+                  <p className="mt-2 text-sm">Submitted: {new Date(submission.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+          </div>
+        </div>
+      ) : (
+        <p>You need to be part of a team to submit images.</p>
+      )}
+      {hasSufficientRights() && (
+        <div className="mt-8 space-y-4">
+          <h4 className="text-lg font-semibold sticky top-12 bg-background z-10 py-2">All Team Submissions</h4>
+          {teams.map(team => {
+            const teamTileSubmission = selectedTile?.teamTileSubmissions?.find(tts => tts.teamId === team.id)
+            const hasSubmissions = teamTileSubmission?.submissions.length ?? 0 > 0
+            return (
+              <div key={team.id} className="space-y-2">
+                <h5 className="font-medium sticky top-24 bg-background z-10 py-2">{team.name}</h5>
+                <div className="flex items-center space-x-2 mb-2 sticky top-32 bg-background z-10 py-2">
+                  <p className="text-sm">Status: {teamTileSubmission?.status ?? 'No submission'}</p>
+                  {hasSubmissions && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, 'accepted')}
+                      >
+                        <Check className="h-4 w-4 text-green-500" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, 'requires_interaction')}
+                      >
+                        <Clock className="h-4 w-4 text-yellow-500" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, 'declined')}
+                      >
+                        <X className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  {teamTileSubmission?.submissions.map(submission => (
+                    <div key={submission.id} className="border rounded-md p-4">
+                      <Image
+                        src={submission.imagePath}
+                        alt={`Submission for ${selectedTile?.title} by ${team.name}`}
+                        width={200}
+                        height={200}
+                        className="object-cover rounded-md"
+                      />
+                      <p className="mt-2 text-sm">Submitted: {new Date(submission.createdAt).toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+
+  const handleTeamTileSubmissionStatusUpdate = async (teamTileSubmissionId: string | undefined, newStatus: 'accepted' | 'requires_interaction' | 'declined') => {
+    if (!teamTileSubmissionId) {
+      toast({
+        title: "Error",
+        description: "No submission found for this team",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const result = await updateTeamTileSubmissionStatus(teamTileSubmissionId, newStatus)
+      if (result.success) {
+        setSelectedTile(prev => {
+          if (prev) {
+            return {
+              ...prev,
+              teamTileSubmissions: prev.teamTileSubmissions?.map(tts =>
+                tts.id === teamTileSubmissionId ? { ...tts, status: newStatus } : tts
+              )
+            }
+          }
+          return null
+        })
+        toast({
+          title: "Submission status updated",
+          description: `The team's submission status has been set to ${newStatus}.`,
+        })
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (error) {
+      console.error("Error updating team tile submission status:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update team tile submission status",
+        variant: "destructive",
+      })
+    }
+  }
 
   return (
     <div className="space-y-4">
+      {renderCodephrase()}
       {hasSufficientRights() && (
         <div className="flex justify-end">
           <Button onClick={toggleOrdering} variant="outline">
@@ -479,21 +669,25 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[900px]">
+        <DialogContent className="sm:max-w-[900px] max-h-[80vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>{selectedTile?.title}</DialogTitle>
             <DialogDescription>Weight: {selectedTile?.weight}</DialogDescription>
           </DialogHeader>
-          <Tabs defaultValue="details">
+          <Tabs defaultValue="details" className="h-full">
             <TabsList>
               <TabsTrigger value="details">Tile Details</TabsTrigger>
               <TabsTrigger value="goals">Goals</TabsTrigger>
+              <TabsTrigger value="submissions">Submissions</TabsTrigger>
             </TabsList>
-            <TabsContent value="details">
+            <TabsContent value="details" className="h-full overflow-y-auto">
               {renderTileDetails()}
             </TabsContent>
-            <TabsContent value="goals">
+            <TabsContent value="goals" className="h-full overflow-y-auto">
               {renderGoals()}
+            </TabsContent>
+            <TabsContent value="submissions" className="h-full overflow-y-auto">
+              {renderSubmissions()}
             </TabsContent>
           </Tabs>
         </DialogContent>

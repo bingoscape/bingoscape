@@ -60,7 +60,10 @@ export function CreateBingoModal({ eventId }: { eventId: string }) {
             <Label htmlFor="title">Title</Label>
             <Input id="title" name="title" required />
           </div>
-
+          <div>
+            <Label htmlFor="codephrase">Codephrase</Label>
+            <Input id="codephrase" name="codephrase" required />
+          </div>
           <div>
             <Label htmlFor="bingoDescription">Description</Label>
             <div className="h-[200px] overflow-y-auto border rounded-md">

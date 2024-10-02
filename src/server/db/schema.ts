@@ -155,6 +155,7 @@ export const bingos = createTable('bingos', {
   description: text('description'),
   rows: integer('rows').notNull(),
   columns: integer('columns').notNull(),
+  codephrase: varchar('codephrase', { length: 255 }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   locked: boolean("locked").default(false).notNull(),
@@ -249,37 +250,43 @@ export const goalsRelations = relations(goals, ({ one, many }) => ({
   teamProgress: many(teamGoalProgress),
 }));
 
-
-// Submissions table
-export const submissions = createTable('submissions', {
+export const teamTileSubmissions = createTable('team_tile_submissions', {
   id: uuid('id').defaultRandom().primaryKey(),
   tileId: uuid('tile_id').notNull().references(() => tiles.id),
   teamId: uuid('team_id').notNull().references(() => teams.id),
-  imageId: uuid('image_id').notNull().references(() => images.id),
   status: submissionStatusEnum('status').default('pending').notNull(),
   reviewedBy: uuid('reviewed_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => {
+  return {
+    tileTeamUnique: uniqueIndex('tile_team_unique').on(table.tileId, table.teamId),
+  }
 });
 
-export const submissionsRelations = relations(submissions, ({ one }) => ({
+export const teamTileSubmissionsRelations = relations(teamTileSubmissions, ({ one, many }) => ({
   tile: one(tiles, {
-    fields: [submissions.tileId],
+    fields: [teamTileSubmissions.tileId],
     references: [tiles.id],
   }),
   team: one(teams, {
-    fields: [submissions.teamId],
+    fields: [teamTileSubmissions.teamId],
     references: [teams.id],
   }),
   reviewer: one(users, {
-    fields: [submissions.reviewedBy],
+    fields: [teamTileSubmissions.reviewedBy],
     references: [users.id],
   }),
-  image: one(images, {
-    fields: [submissions.imageId],
-    references: [images.id],
-  }),
+  submissions: many(submissions),
 }));
+
+export const submissions = createTable('submissions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  teamTileSubmissionId: uuid('team_tile_submission_id').notNull().references(() => teamTileSubmissions.id),
+  imageId: uuid('image_id').notNull().references(() => images.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
 
 // Event Participants table
 export const eventParticipants = createTable('event_participants', {
