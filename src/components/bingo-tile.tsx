@@ -83,8 +83,7 @@ export function BingoTile({ tile, onClick, userRole, currentTeamId }: BingoTileP
           <span className="text-primary-foreground text-lg font-semibold">{tile.title}</span>
         </div>
       )}
-      <div className="absolute inset-0 bg-black bg-opacity-10 flex flex-col justify-between p-2">
-        <div className="text-white text-sm font-semibold">{tile.title}</div>
+      <div className="absolute inset-0 flex flex-col justify-between p-2">
         {isManagement && submissionCounts && (
           <div className="flex justify-between text-xs text-white">
             <span>A: {submissionCounts.accepted}</span>

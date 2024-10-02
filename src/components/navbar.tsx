@@ -43,7 +43,7 @@ export function Navbar() {
         </div>
         {status === "loading" ? (
           <div className="h-8 w-8 animate-pulse bg-muted rounded-full" />
-        ) : session?.user ? (
+        ) : session?.user && (
           <div className="flex items-center space-x-4">
             <span className="hidden md:inline">{session.user.runescapeName || session.user.name}</span>
             <ModeToggle />
@@ -80,10 +80,6 @@ export function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        ) : (
-          <Button asChild variant="secondary">
-            <Link href="/api/auth/signin">Sign In</Link>
-          </Button>
         )}
       </div>
     </nav>
