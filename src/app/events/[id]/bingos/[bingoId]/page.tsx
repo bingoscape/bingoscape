@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import BingoGrid from '@/components/bingogrid'
 import { getBingoById } from '@/app/actions/bingo'
 import { getEventById, getUserRole } from '@/app/actions/events'
-import { getTeamsByEventId } from '@/app/actions/team'
+import { getTeamsByEventId, getCurrentTeamForUser } from '@/app/actions/team'
 import { Skeleton } from '@/components/ui/skeleton'
 import { type UUID } from 'crypto'
 
@@ -12,6 +12,7 @@ export default async function BingoDetailPage({ params }: { params: { id: UUID; 
 	const bingo = await getBingoById(bingoId)
 	const event = await getEventById(eventId)
 	const teams = await getTeamsByEventId(eventId)
+	const currentTeam = await getCurrentTeamForUser(eventId)
 
 	if (!bingo || !event) {
 		notFound()
@@ -29,7 +30,9 @@ export default async function BingoDetailPage({ params }: { params: { id: UUID; 
 						columns={bingo.columns}
 						tiles={bingo.tiles}
 						userRole={userRole}
+						currentTeamId={currentTeam?.id}
 						teams={teams}
+						codephrase={bingo.codephrase}
 					/>
 				</Suspense>
 			</div>

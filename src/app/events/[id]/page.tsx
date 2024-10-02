@@ -14,6 +14,7 @@ import { TeamDisplay } from "@/components/team-display"
 import { DeleteBingoButton } from "@/components/delete-bingo-button"
 import Link from "next/link"
 import { Users } from "lucide-react"
+import { getCurrentTeamForUser } from "@/app/actions/team"
 
 export default async function EventBingosPage({ params }: { params: { id: UUID } }) {
 	const session = await getServerAuthSession()
@@ -29,6 +30,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 
 	const { event, bingos, userRole } = data
 	const userClans = await getUserClans()
+	const currentTeam = await getCurrentTeamForUser(params.id)
 
 	return (
 		<div className="container mx-auto py-10">
@@ -78,9 +80,11 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 									<BingoGrid
 										rows={bingo.rows}
 										columns={bingo.columns}
+										currentTeamId={currentTeam?.id}
 										tiles={bingo.tiles}
 										teams={event.teams}
 										userRole={userRole}
+										codephrase={bingo.codephrase}
 									/>
 								</div>
 							</CardContent>

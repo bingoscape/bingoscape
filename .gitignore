@@ -42,5 +42,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
-# idea files
-.idea
+/public/uploads/**/*
