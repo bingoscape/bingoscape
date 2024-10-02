@@ -13,7 +13,7 @@ import { BingoTile } from './bingo-tile'
 import { ForwardRefEditor } from './forward-ref-editor'
 import '@mdxeditor/editor/style.css'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Trash2 } from 'lucide-react'
+import { Trash2, Lock, Unlock } from 'lucide-react'
 
 interface ServerTeamProgress {
   id: string
@@ -70,44 +70,78 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editedTile, setEditedTile] = useState<Partial<Tile>>({})
   const [newGoal, setNewGoal] = useState<Partial<Goal>>({})
+  const [isOrderingEnabled, setIsOrderingEnabled] = useState(false)
   const gridRef = useRef<HTMLDivElement>(null)
+  const sortableRef = useRef<Sortable | null>(null)
 
   useEffect(() => {
-    if (gridRef.current && (userRole === 'admin' || userRole == 'management')) {
-      const sortable = new Sortable(gridRef.current, {
+    if (gridRef.current && hasSufficientRights() && isOrderingEnabled) {
+      sortableRef.current = new Sortable(gridRef.current, {
         animation: 150,
         ghostClass: 'bg-blue-100',
-        onEnd: (_: SortableEvent) => {
-          (async () => {
-            const updatedTiles = tiles.map((tile, index) => ({
-              id: tile.id,
-              index: index
+        onEnd: (event: SortableEvent) => {
+          const { oldIndex, newIndex } = event
+          if (oldIndex !== newIndex) {
+            const updatedTiles = [...tiles]
+            const [movedTile] = updatedTiles.splice(oldIndex!, 1)
+            updatedTiles.splice(newIndex!, 0, movedTile!)
+
+            const reorderedTiles = updatedTiles.map((tile, index) => ({
+              ...tile,
+              index
             }))
-            const result = await reorderTiles(updatedTiles)
-            if (result.success) {
-              setTiles(prevTiles => prevTiles.map((tile, index) => ({ ...tile, index })))
-              toast({
-                title: "Tiles reordered",
-                description: "The tiles have been successfully reordered.",
-              })
-            } else {
-              toast({
-                title: "Error",
-                description: result.error ?? "Failed to reorder tiles",
-                variant: "destructive",
-              })
-            }
-          })().then(() =>
-            console.log("done")
-          ).catch(e => console.error(e));
+
+            setTiles(reorderedTiles)
+            void handleReorderTiles(reorderedTiles)
+          }
         }
       })
 
       return () => {
-        sortable.destroy()
+        if (sortableRef.current) {
+          sortableRef.current.destroy()
+          sortableRef.current = null
+        }
       }
     }
-  }, [tiles, hasSufficientRights()])
+  }, [tiles, userRole, isOrderingEnabled])
+
+  const toggleOrdering = () => {
+    setIsOrderingEnabled(!isOrderingEnabled)
+    if (!isOrderingEnabled) {
+      toast({
+        title: "Tile ordering enabled",
+        description: "You can now drag and drop tiles to reorder them.",
+      })
+    } else {
+      toast({
+        title: "Tile ordering disabled",
+        description: "Tile ordering has been locked.",
+      })
+    }
+  }
+
+  const handleReorderTiles = async (reorderedTiles: Tile[]) => {
+    const updatedTiles = reorderedTiles.map((tile, index) => ({
+      id: tile.id,
+      index
+    }))
+
+    const result = await reorderTiles(updatedTiles)
+    if (result.success) {
+      toast({
+        title: "Tiles reordered",
+        description: "The tiles have been successfully reordered and saved.",
+      })
+    } else {
+      toast({
+        title: "Error",
+        description: result.error ?? "Failed to reorder tiles",
+        variant: "destructive",
+      })
+      setTiles(initialTiles) // Revert to original order if server update fails
+    }
+  }
 
   const handleTileClick = async (tile: Tile) => {
     try {
@@ -230,7 +264,6 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleProgressUpdate = async (goalId: string, teamId: string, newValue: number) => {
     const result = await updateGoalProgress(goalId, teamId, newValue)
     if (result.success) {
@@ -273,7 +306,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
       {selectedTile?.goals?.map(goal => (
         <div key={goal.id} className="flex justify-between items-center">
           <span>{goal.description} (Target: {goal.targetValue})</span>
-          {(userRole === 'management' || userRole === 'admin') && (
+          {hasSufficientRights() && (
             <Button
               variant="ghost"
               size="sm"
@@ -285,7 +318,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
           )}
         </div>
       ))}
-      {(userRole === 'management' || userRole === 'admin') && (
+      {hasSufficientRights() && (
         <>
           <h3 className="text-lg font-semibold">Add New Goal</h3>
           <div className="space-y-2">
@@ -356,7 +389,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
           )}
         </div>
         <div className="w-2/3 space-y-4">
-          {(userRole === 'admin' || userRole === 'management') ? (
+          {hasSufficientRights() ? (
             <>
               <div className="grid grid-cols-4 items-center gap-4">
                 <label htmlFor="title" className="text-right">
@@ -422,18 +455,28 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
   )
 
   return (
-    <div
-      ref={gridRef}
-      className="grid gap-2 w-full h-full"
-      style={{
-        gridTemplateColumns: `repeat(${columns}, 1fr)`,
-        gridTemplateRows: `repeat(${rows}, 1fr)`,
-        aspectRatio: `${columns} / ${rows}`
-      }}
-    >
-      {tiles.map((tile) => (
-        <BingoTile key={tile.id} tile={tile} onClick={() => handleTileClick(tile)} />
-      ))}
+    <div className="space-y-4">
+      {hasSufficientRights() && (
+        <div className="flex justify-end">
+          <Button onClick={toggleOrdering} variant="outline">
+            {isOrderingEnabled ? <Lock className="mr-2 h-4 w-4" /> : <Unlock className="mr-2 h-4 w-4" />}
+            {isOrderingEnabled ? 'Lock Ordering' : 'Unlock Ordering'}
+          </Button>
+        </div>
+      )}
+      <div
+        ref={gridRef}
+        className="grid gap-2 w-full h-full"
+        style={{
+          gridTemplateColumns: `repeat(${columns}, 1fr)`,
+          gridTemplateRows: `repeat(${rows}, 1fr)`,
+          aspectRatio: `${columns} / ${rows}`
+        }}
+      >
+        {tiles.map((tile) => (
+          <BingoTile key={tile.id} tile={tile} onClick={() => handleTileClick(tile)} />
+        ))}
+      </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[900px]">
@@ -459,6 +502,6 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
   )
 
   function hasSufficientRights(): boolean {
-    return userRole === 'admin' || userRole == 'management'
+    return userRole === 'admin' || userRole === 'management'
   }
 }
