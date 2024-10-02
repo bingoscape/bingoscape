@@ -341,7 +341,7 @@ export async function submitImage(formData: FormData) {
     await ensureUploadDir();
 
     // Generate a unique filename
-    const filename = `${nanoid()}-${image.name}`
+    const filename = `${nanoid()}`
     const filePath = path.join(UPLOAD_DIR, filename)
 
     // Write the file to the server
