@@ -19,11 +19,13 @@ async function createBingo(formData: FormData) {
 	const description = formData.get('description') as string
 	const rows = parseInt(formData.get('rows') as string)
 	const columns = parseInt(formData.get('columns') as string)
+	const codephrase = formData.get('codephrase') as string
 
 	const newBingo = await db.insert(bingos).values({
 		eventId,
 		title,
 		description,
+		codephrase,
 		rows,
 		columns,
 	}).returning({ id: bingos.id })
