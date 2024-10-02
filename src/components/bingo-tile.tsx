@@ -73,6 +73,7 @@ export function BingoTile({ tile, onClick, userRole, currentTeamId }: BingoTileP
     >
       {tile.headerImage ? (
         <Image
+          unoptimized
           src={tile.headerImage}
           alt={tile.title}
           fill
