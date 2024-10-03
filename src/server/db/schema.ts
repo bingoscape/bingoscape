@@ -228,7 +228,8 @@ export const tilesRelations = relations(tiles, ({ one, many }) => ({
     references: [bingos.id],
   }),
   goals: many(goals),
-  submissions: many(submissions),
+  //submissions: many(submissions),
+  teamTileSubmissions: many(teamTileSubmissions)
 }));
 
 // Goals table
