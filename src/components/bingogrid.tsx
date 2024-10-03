@@ -89,6 +89,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
   const [newGoal, setNewGoal] = useState<Partial<Goal>>({})
   const [isOrderingEnabled, setIsOrderingEnabled] = useState(false)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [fullSizeImage, setFullSizeImage] = useState<{ src: string; alt: string } | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const sortableRef = useRef<Sortable | null>(null)
 
@@ -513,6 +514,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
       {renderTileProgress()}
     </div>
   )
+
   const renderSubmissions = () => (
     <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
       <h3 className="text-lg font-semibold sticky top-0 bg-background z-10 py-2">Submissions</h3>
@@ -533,7 +535,8 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
                     alt={`Submission for ${selectedTile.title}`}
                     width={200}
                     height={200}
-                    className="object-cover rounded-md"
+                    className="object-cover rounded-md cursor-pointer"
+                    onClick={() => setFullSizeImage({ src: submission.imagePath, alt: `Submission for ${selectedTile.title}` })}
                   />
                   <p className="mt-2 text-sm">Submitted: {new Date(submission.createdAt).toLocaleString()}</p>
                 </div>
@@ -588,7 +591,8 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
                         alt={`Submission for ${selectedTile?.title} by ${team.name}`}
                         width={200}
                         height={200}
-                        className="object-cover rounded-md"
+                        className="object-cover rounded-md cursor-pointer"
+                        onClick={() => setFullSizeImage({ src: submission.imagePath, alt: `Submission for ${selectedTile?.title} by ${team.name}` })}
                       />
                       <p className="mt-2 text-sm">Submitted: {new Date(submission.createdAt).toLocaleString()}</p>
                     </div>
@@ -664,7 +668,13 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
         }}
       >
         {tiles.map((tile) => (
-          <BingoTile key={tile.id} tile={tile} userRole={userRole} onClick={() => handleTileClick(tile)} />
+          <BingoTile
+            key={tile.id}
+            tile={tile}
+            onClick={() => handleTileClick(tile)}
+            userRole={userRole}
+            currentTeamId={currentTeamId}
+          />
         ))}
       </div>
 
@@ -690,6 +700,21 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
               {renderSubmissions()}
             </TabsContent>
           </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!fullSizeImage} onOpenChange={() => setFullSizeImage(null)}>
+        <DialogContent className="sm:max-w-[90vw] sm:max-h-[90vh] p-0">
+          {fullSizeImage && (
+            <div className="relative w-full h-full">
+              <Image
+                src={fullSizeImage.src}
+                alt={fullSizeImage.alt}
+                layout="fill"
+                objectFit="contain"
+              />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
