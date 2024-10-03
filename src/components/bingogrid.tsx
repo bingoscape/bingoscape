@@ -24,7 +24,7 @@ interface BingoGridProps {
 }
 
 export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: BingoGridProps) {
-  const [tiles, setTiles] = useState<Tile[]>(bingo.tiles)
+const [tiles, setTiles] = useState<Tile[]>(bingo.tiles)
   const [rows, setRows] = useState(bingo.rows)
   const [columns, setColumns] = useState(bingo.columns)
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null)
@@ -667,7 +667,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
   }
 
   const handleTeamTileSubmissionStatusUpdate = async (teamTileSubmissionId: string | undefined, newStatus: 'accepted' | 'requires_interaction' | 'declined') => {
-    if (!teamTileSubmissionId) {
+    if (!teamTileSubmissionId || !selectedTile) {
       toast({
         title: "Error",
         description: "No submission found for this team",
@@ -679,17 +679,32 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
     try {
       const result = await updateTeamTileSubmissionStatus(teamTileSubmissionId, newStatus)
       if (result.success) {
+        // Update the selectedTile state
         setSelectedTile(prev => {
           if (prev) {
+            const updatedTeamTileSubmissions = prev.teamTileSubmissions?.map(tts =>
+              tts.id === teamTileSubmissionId ? { ...tts, status: newStatus } : tts
+            )
             return {
               ...prev,
-              teamTileSubmissions: prev.teamTileSubmissions?.map(tts =>
-                tts.id === teamTileSubmissionId ? { ...tts, status: newStatus } : tts
-              )
+              teamTileSubmissions: updatedTeamTileSubmissions
             }
           }
           return null
         })
+
+        // Update the tiles state to trigger a re-render of the BingoGrid
+        setTiles(prevTiles => prevTiles.map(tile =>
+          tile.id === selectedTile.id
+            ? {
+              ...tile,
+              teamTileSubmissions: tile.teamTileSubmissions?.map(tts =>
+                tts.id === teamTileSubmissionId ? { ...tts, status: newStatus } : tts
+              )
+            }
+            : tile
+        ))
+
         toast({
           title: "Submission status updated",
           description: `The team's submission status has been set to ${newStatus}.`,
