@@ -9,14 +9,16 @@ import { type UUID } from 'crypto'
 
 export default async function BingoDetailPage({ params }: { params: { id: UUID; bingoId: string } }) {
 	const { id: eventId, bingoId } = params
-	const bingo = await getBingoById(bingoId)
-	const event = await getEventById(eventId)
+	const data = await getEventById(eventId)
 	const teams = await getTeamsByEventId(eventId)
 	const currentTeam = await getCurrentTeamForUser(eventId)
 
-	if (!bingo || !event) {
+	if (!data) {
 		notFound()
 	}
+
+	const { bingos } = data
+	const bingo = bingos.find(b => b.id == bingoId)!
 
 	const userRole = await getUserRole(eventId)
 
