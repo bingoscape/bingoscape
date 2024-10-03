@@ -1,15 +1,17 @@
 'use client'
 
-import { notFound } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import { getClanEvents } from "@/app/actions/clan";
 import { joinEvent } from "@/app/actions/events";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { CalendarIcon, UserIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useSession } from "next-auth/react";
+import { createArray } from "@/lib/utils";
 
 type Event = {
 	id: string;
@@ -31,18 +33,20 @@ type Event = {
 
 export default function ClanEventsPage({ params }: { params: { clanId: string } }) {
 	const [clanEvents, setClanEvents] = useState<Event[]>([]);
-	const [userId, setUserId] = useState<string | null>(null);
-	const { data } = useSession()
+	const [isLoading, setIsLoading] = useState(true);
+	const { data: session, status } = useSession();
+	const router = useRouter();
 
 	useEffect(() => {
 		const fetchData = async () => {
-			try {
-				const session = data;
-				if (!session || !session.user) {
-					notFound();
-				}
-				setUserId(session.user.id);
+			if (status === 'loading') return;
 
+			if (status === 'unauthenticated') {
+				router.push('/login');
+				return;
+			}
+
+			try {
 				const events = await getClanEvents(params.clanId);
 				setClanEvents(events);
 			} catch (error) {
@@ -54,13 +58,24 @@ export default function ClanEventsPage({ params }: { params: { clanId: string } 
 					description: "Failed to load clan events.",
 					variant: "destructive",
 				});
+			} finally {
+				setIsLoading(false);
 			}
 		};
 
-		fetchData().then(() => console.log("Done fetching data")).catch(err => console.error(err));
-	}, [params.clanId]);
+		fetchData().then(() => console.log("done")).catch(err => console.error(err));
+	}, [params.clanId, status, router]);
 
 	const handleJoinEvent = async (eventId: string) => {
+		if (!session?.user?.id) {
+			toast({
+				title: "Error",
+				description: "You must be logged in to join an event.",
+				variant: "destructive",
+			});
+			return;
+		}
+
 		try {
 			await joinEvent(eventId);
 			setClanEvents(prevEvents =>
@@ -70,7 +85,7 @@ export default function ClanEventsPage({ params }: { params: { clanId: string } 
 							...event,
 							eventParticipants: [
 								...(event.eventParticipants ?? []),
-								{ userId: userId! }
+								{ userId: session.user.id }
 							]
 						}
 						: event
@@ -90,8 +105,38 @@ export default function ClanEventsPage({ params }: { params: { clanId: string } 
 	};
 
 	const isParticipant = (event: Event) => {
-		return event.eventParticipants?.some(participant => participant.userId === userId);
+		return event.eventParticipants?.some(participant => participant.userId === session?.user?.id);
 	};
+
+	if (status === 'loading' || isLoading) {
+		return (
+			<div className="container mx-auto py-10">
+				<Skeleton className="h-10 w-48 mb-6" />
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+					{createArray(6).map(index => (
+						<Card key={index}>
+							<CardHeader>
+								<Skeleton className="h-6 w-3/4 mb-2" />
+								<Skeleton className="h-4 w-1/2" />
+							</CardHeader>
+							<CardContent>
+								<Skeleton className="h-16 w-full mb-4" />
+								<Skeleton className="h-4 w-1/3" />
+							</CardContent>
+							<CardFooter className="flex justify-between">
+								<Skeleton className="h-9 w-24" />
+								<Skeleton className="h-9 w-24" />
+							</CardFooter>
+						</Card>
+					))}
+				</div>
+			</div>
+		);
+	}
+
+	if (status === 'unauthenticated') {
+		return null; // The useEffect will handle the redirect
+	}
 
 	return (
 		<div className="container mx-auto py-10">

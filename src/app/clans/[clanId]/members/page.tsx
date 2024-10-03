@@ -6,9 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useSession } from "next-auth/react";
+import { createArray } from "@/lib/utils";
 
 type ClanMember = {
 	id: string;
@@ -83,16 +85,8 @@ export default function ClanMembersPage({ params }: { params: { clanId: string }
 			}
 		};
 
-		fetchData().then(() => console.log("Done")).catch(err => console.error(err));
+		fetchData().then(() => console.log("done")).catch(err => console.error(err));
 	}, [params.clanId, status, router]);
-
-	if (status === 'loading' || isLoading) {
-		return <div>Loading...</div>;
-	}
-
-	if (status === 'unauthenticated') {
-		return null; // The useEffect will handle the redirect
-	}
 
 	if (!clanDetails) {
 		return <div>Clan not found</div>;
@@ -132,8 +126,39 @@ export default function ClanMembersPage({ params }: { params: { clanId: string }
 		};
 	};
 
-	if (isLoading) {
-		return <div>Loading...</div>;
+	if (status === 'loading' || isLoading) {
+		return (
+			<div className="container mx-auto py-10">
+				<Card>
+					<CardHeader>
+						<Skeleton className="h-8 w-1/3" />
+					</CardHeader>
+					<CardContent>
+						<ul className="space-y-4">
+							{createArray(5).map(index => (
+								<li key={index} className="flex items-center justify-between p-4 bg-secondary rounded-lg">
+									<div className="flex items-center space-x-4">
+										<Skeleton className="h-10 w-10 rounded-full" />
+										<div>
+											<Skeleton className="h-4 w-24" />
+											<Skeleton className="h-3 w-16 mt-1" />
+										</div>
+									</div>
+									<div className="flex items-center space-x-2">
+										<Skeleton className="h-6 w-16" />
+										<Skeleton className="h-8 w-24" />
+									</div>
+								</li>
+							))}
+						</ul>
+					</CardContent>
+				</Card>
+			</div>
+		);
+	}
+
+	if (status === 'unauthenticated') {
+		return null; // The useEffect will handle the redirect
 	}
 
 	if (!clanDetails) {
