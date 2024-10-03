@@ -61,8 +61,8 @@ export interface Tile {
   createdAt: Date;
   updatedAt: Date;
   bingoId: string;
-  teamTileSubmissions: TeamTileSubmission[];
-  goals: Goal[];
+  teamTileSubmissions?: TeamTileSubmission[];
+  goals?: Goal[];
 }
 
 export interface Bingo {

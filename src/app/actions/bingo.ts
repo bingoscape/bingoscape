@@ -8,9 +8,21 @@ import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import fs from 'fs/promises'
 import path from 'path'
-import { type TeamTileSubmission } from "./events"
+import { type Tile, type TeamTileSubmission } from "./events"
 
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
+
+interface AddRowOrColumnSuccessResult {
+  success: true;
+  tiles: Tile[];
+}
+
+interface AddRowOrColumnErrorResult {
+  success: false;
+  error: string;
+}
+
+type AddRowOrColumnResult = AddRowOrColumnSuccessResult | AddRowOrColumnErrorResult;
 
 // Utility function to ensure the upload directory exists
 async function ensureUploadDir() {
@@ -99,14 +111,16 @@ export async function createBingo(formData: FormData) {
   return { success: true }
 }
 
-export async function deleteBingo(bingoId: UUID) {
+export async function deleteBingo(bingoId: string) {
   try {
     await db.transaction(async (tx) => {
       // Delete all tiles associated with the bingo
-      await tx.delete(tiles).where(eq(tiles.bingoId, bingoId))
+      const tilesDeleted = await tx.delete(tiles).where(eq(tiles.bingoId, bingoId))
 
       // Delete the bingo itself
-      await tx.delete(bingos).where(eq(bingos.id, bingoId))
+      const bingosDeleted = await tx.delete(bingos).where(eq(bingos.id, bingoId))
+      console.table(tilesDeleted, bingosDeleted)
+
     })
 
     return { success: true }
@@ -331,3 +345,46 @@ export async function updateTeamTileSubmissionStatus(teamTileSubmissionId: strin
     return { success: false, error: "Failed to update team tile submission status" }
   }
 }
+
+export async function addRowOrColumn(bingoId: string, type: 'row' | 'column'): Promise<AddRowOrColumnResult> {
+  try {
+    return await db.transaction(async (tx) => {
+      const [bingo] = await tx.select().from(bingos).where(eq(bingos.id, bingoId))
+      if (!bingo) throw new Error("Bingo not found")
+
+      const newSize = type === 'row' ? bingo.rows + 1 : bingo.columns + 1
+      const totalTiles = type === 'row' ? newSize * bingo.columns : bingo.rows * newSize
+
+      // Update bingo size
+      await tx.update(bingos).set({ [type === 'row' ? 'rows' : 'columns']: newSize }).where(eq(bingos.id, bingoId))
+
+      // Get existing tiles
+      const existingTiles = await tx.select().from(tiles).where(eq(tiles.bingoId, bingoId))
+
+      // Create new tiles
+      const newTiles = []
+      for (let i = existingTiles.length; i < totalTiles; i++) {
+        newTiles.push({
+          bingoId,
+          title: `New Tile ${i + 1}`,
+          description: '',
+          weight: 1,
+          index: i,
+        })
+      }
+
+      if (newTiles.length > 0) {
+        await tx.insert(tiles).values(newTiles)
+      }
+
+      // Fetch all tiles after update
+      const updatedTiles = await tx.select().from(tiles).where(eq(tiles.bingoId, bingoId))
+
+      return { success: true, tiles: updatedTiles }
+    })
+  } catch (error) {
+    console.error("Error adding row or column:", error)
+    return { success: false, error: "Failed to add row or column" }
+  }
+}
+
