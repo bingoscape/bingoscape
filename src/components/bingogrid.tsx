@@ -31,14 +31,14 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editedTile, setEditedTile] = useState<Partial<Tile>>({})
   const [newGoal, setNewGoal] = useState<Partial<Goal>>({})
-  const [isOrderingEnabled, setIsOrderingEnabled] = useState(false)
+  const [isLocked, setIsOrderingEnabled] = useState(false)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [fullSizeImage, setFullSizeImage] = useState<{ src: string; alt: string } | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const sortableRef = useRef<Sortable | null>(null)
 
   useEffect(() => {
-    if (gridRef.current && hasSufficientRights() && isOrderingEnabled) {
+    if (gridRef.current && hasSufficientRights() && isLocked) {
       sortableRef.current = new Sortable(gridRef.current, {
         animation: 150,
         ghostClass: 'bg-blue-100',
@@ -67,11 +67,11 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
         }
       }
     }
-  }, [tiles, userRole, isOrderingEnabled])
+  }, [tiles, userRole, isLocked])
 
   const toggleOrdering = () => {
-    setIsOrderingEnabled(!isOrderingEnabled)
-    if (!isOrderingEnabled) {
+    setIsOrderingEnabled(!isLocked)
+    if (!isLocked) {
       toast({
         title: "Tile ordering enabled",
         description: "You can now drag and drop tiles to reorder them.",
@@ -668,8 +668,8 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
       {hasSufficientRights() && (
         <div className="flex justify-end space-x-2">
           <Button onClick={toggleOrdering} variant="outline">
-            {isOrderingEnabled ? <Lock className="mr-2 h-4 w-4" /> : <Unlock className="mr-2 h-4 w-4" />}
-            {isOrderingEnabled ? 'Lock Ordering' : 'Unlock Ordering'}
+            {isLocked ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
+            {isLocked ? 'Lock' : 'Unlock'}
           </Button>
         </div>
       )}
@@ -692,7 +692,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
           />
         ))}
       </div>
-      {hasSufficientRights() && (
+      {hasSufficientRights() && isLocked && (
         <div className="flex justify-end space-x-2">
           <Button onClick={handleAddRow} variant="outline">
             <PlusSquare className="mr-2 h-4 w-4" />
