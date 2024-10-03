@@ -704,9 +704,10 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
       </Dialog>
 
       <Dialog open={!!fullSizeImage} onOpenChange={() => setFullSizeImage(null)}>
+        <DialogTitle>Submission</DialogTitle>
         <DialogContent className="sm:max-w-[90vw] sm:max-h-[90vh] p-0">
           {fullSizeImage && (
-            <div className="relative w-full h-full">
+            <div className="relative w-full h-full min-h-[50vh]">
               <Image
                 src={fullSizeImage.src}
                 alt={fullSizeImage.alt}
