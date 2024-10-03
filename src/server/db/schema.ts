@@ -14,12 +14,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { type AdapterAccount } from "next-auth/adapters";
 
-/**
- * This is an example of how to use the multi-project schema feature of Drizzle ORM. Use the same
- * database instance for multiple projects.
- *
- * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
- */
 export const createTable = pgTableCreator((name) => `bingoscape-next_${name}`);
 
 export const users = createTable("user", {
@@ -45,10 +39,9 @@ export const usersRelations = relations(users, ({ many }) => ({
 export const accounts = createTable(
   "account",
   {
-
     userId: uuid("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "cascade" }),
     type: varchar("type", { length: 255 })
       .$type<AdapterAccount["type"]>()
       .notNull(),
@@ -84,7 +77,7 @@ export const sessions = createTable(
       .primaryKey(),
     userId: uuid("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "cascade" }),
     expires: timestamp("expires", {
       mode: "date",
       withTimezone: true,
@@ -117,7 +110,6 @@ export const verificationTokens = createTable(
 // Enums
 export const userRoleEnum = pgEnum('user_role', ['user', 'admin', 'management']);
 export const submissionStatusEnum = pgEnum('submission_status', ['pending', 'accepted', 'requires_interaction', 'declined']);
-
 export const clanRoleEnum = pgEnum('clan_role', ['admin', 'management', 'member', 'guest']);
 export const eventRoleEnum = pgEnum('event_role', ['admin', 'management', 'participant']);
 
@@ -127,8 +119,8 @@ export const events = createTable("events", {
   description: varchar("description", { length: 1000 }),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
-  creatorId: uuid("creator_id").notNull().references(() => users.id),
-  clanId: uuid("clan_id").references(() => clans.id),
+  creatorId: uuid("creator_id").notNull().references(() => users.id, { onDelete: "set null" }),
+  clanId: uuid("clan_id").references(() => clans.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   locked: boolean("locked").default(false).notNull(),
@@ -147,10 +139,9 @@ export const eventsRelations = relations(events, ({ many, one }) => ({
   invites: many(eventInvites)
 }));
 
-// Bingos table
 export const bingos = createTable('bingos', {
   id: uuid('id').defaultRandom().primaryKey(),
-  eventId: uuid('event_id').notNull().references(() => events.id),
+  eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: "cascade" }),
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description'),
   rows: integer('rows').notNull(),
@@ -170,10 +161,9 @@ export const bingosRelations = relations(bingos, ({ one, many }) => ({
   tiles: many(tiles),
 }));
 
-// Teams table
 export const teams = createTable('teams', {
   id: uuid('id').defaultRandom().primaryKey(),
-  eventId: uuid('event_id').notNull().references(() => events.id),
+  eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: "cascade" }),
   name: varchar('name', { length: 255 }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -188,11 +178,10 @@ export const teamsRelations = relations(teams, ({ many, one }) => ({
   goalProgress: many(teamGoalProgress),
 }));
 
-// Team Members table
 export const teamMembers = createTable('team_members', {
   id: uuid('id').defaultRandom().primaryKey(),
-  teamId: uuid('team_id').notNull().references(() => teams.id),
-  userId: uuid('user_id').notNull().references(() => users.id),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: "cascade" }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: "cascade" }),
   isLeader: boolean('is_leader').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -209,10 +198,9 @@ export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
   }),
 }));
 
-// Tiles table
 export const tiles = createTable('tiles', {
   id: uuid('id').defaultRandom().primaryKey(),
-  bingoId: uuid('bingo_id').notNull().references(() => bingos.id),
+  bingoId: uuid('bingo_id').notNull().references(() => bingos.id, { onDelete: "cascade" }),
   headerImage: varchar('header_image', { length: 255 }),
   title: text('title').notNull(),
   description: text('description').notNull(),
@@ -228,21 +216,18 @@ export const tilesRelations = relations(tiles, ({ one, many }) => ({
     references: [bingos.id],
   }),
   goals: many(goals),
-  //submissions: many(submissions),
   teamTileSubmissions: many(teamTileSubmissions)
 }));
 
-// Goals table
 export const goals = createTable('goals', {
   id: uuid('id').defaultRandom().primaryKey(),
-  tileId: uuid('tile_id').notNull().references(() => tiles.id),
+  tileId: uuid('tile_id').notNull().references(() => tiles.id, { onDelete: "cascade" }),
   description: text('description').notNull(),
   targetValue: integer('target_value').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// Update goalsRelations
 export const goalsRelations = relations(goals, ({ one, many }) => ({
   tile: one(tiles, {
     fields: [goals.tileId],
@@ -253,10 +238,10 @@ export const goalsRelations = relations(goals, ({ one, many }) => ({
 
 export const teamTileSubmissions = createTable('team_tile_submissions', {
   id: uuid('id').defaultRandom().primaryKey(),
-  tileId: uuid('tile_id').notNull().references(() => tiles.id),
-  teamId: uuid('team_id').notNull().references(() => teams.id),
+  tileId: uuid('tile_id').notNull().references(() => tiles.id, { onDelete: "cascade" }),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: "cascade" }),
   status: submissionStatusEnum('status').default('pending').notNull(),
-  reviewedBy: uuid('reviewed_by').references(() => users.id),
+  reviewedBy: uuid('reviewed_by').references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => {
@@ -283,8 +268,8 @@ export const teamTileSubmissionsRelations = relations(teamTileSubmissions, ({ on
 
 export const submissions = createTable('submissions', {
   id: uuid('id').defaultRandom().primaryKey(),
-  teamTileSubmissionId: uuid('team_tile_submission_id').notNull().references(() => teamTileSubmissions.id),
-  imageId: uuid('image_id').notNull().references(() => images.id),
+  teamTileSubmissionId: uuid('team_tile_submission_id').notNull().references(() => teamTileSubmissions.id, { onDelete: "cascade" }),
+  imageId: uuid('image_id').notNull().references(() => images.id, { onDelete: "cascade" }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -300,11 +285,10 @@ export const submissionsRelations = relations(submissions, ({ one }) => ({
   })
 }));
 
-// Event Participants table
 export const eventParticipants = createTable('event_participants', {
   id: uuid('id').defaultRandom().primaryKey(),
-  eventId: uuid('event_id').notNull().references(() => events.id),
-  userId: uuid('user_id').notNull().references(() => users.id),
+  eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: "cascade" }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: "cascade" }),
   role: eventRoleEnum('role').default('participant').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -321,12 +305,11 @@ export const eventParticipantsRelations = relations(eventParticipants, ({ one })
   }),
 }));
 
-
 export const clans = createTable("clans", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   description: varchar("description", { length: 1000 }),
-  ownerId: uuid("owner_id").notNull().references(() => users.id),
+  ownerId: uuid("owner_id").notNull().references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -339,8 +322,8 @@ export const clansRelations = relations(clans, ({ many }) => ({
 
 export const clanMembers = createTable("clan_members", {
   id: uuid("id").defaultRandom().primaryKey(),
-  clanId: uuid("clan_id").notNull().references(() => clans.id),
-  userId: uuid("user_id").notNull().references(() => users.id),
+  clanId: uuid("clan_id").notNull().references(() => clans.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   isMain: boolean("is_main").notNull().default(false),
   role: clanRoleEnum('role').default('guest').notNull(),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
@@ -363,7 +346,7 @@ export const clanMembersRelations = relations(clanMembers, ({ one }) => ({
 
 export const clanInvites = createTable("clan_invites", {
   id: uuid("id").defaultRandom().primaryKey(),
-  clanId: uuid("clan_id").notNull().references(() => clans.id),
+  clanId: uuid("clan_id").notNull().references(() => clans.id, { onDelete: "cascade" }),
   inviteCode: varchar("invite_code", { length: 10 }).notNull().unique(),
   expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -375,7 +358,7 @@ export const clanInvitesRelations = relations(clanInvites, ({ one }) => ({
 
 export const eventInvites = createTable("event_invites", {
   id: uuid("id").defaultRandom().primaryKey(),
-  eventId: uuid("event_id").notNull().references(() => events.id),
+  eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
   inviteCode: varchar("invite_code", { length: 10 }).notNull().unique(),
   expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -384,8 +367,7 @@ export const eventInvites = createTable("event_invites", {
 export const eventInvitesRelations = relations(eventInvites, ({ one }) => ({
   event: one(events, { fields: [eventInvites.eventId], references: [events.id] }),
 }));
-//
-// New Images table
+
 export const images = createTable('images', {
   id: uuid('id').defaultRandom().primaryKey(),
   path: varchar('path', { length: 4096 }).notNull(),
@@ -399,8 +381,8 @@ export const imagesRelations = relations(images, ({ many }) => ({
 
 export const teamGoalProgress = createTable('team_goal_progress', {
   id: uuid('id').defaultRandom().primaryKey(),
-  teamId: uuid('team_id').notNull().references(() => teams.id),
-  goalId: uuid('goal_id').notNull().references(() => goals.id),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: "cascade" }),
+  goalId: uuid('goal_id').notNull().references(() => goals.id, { onDelete: "cascade" }),
   currentValue: integer('current_value').notNull().default(0),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

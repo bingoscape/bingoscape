@@ -1,8 +1,6 @@
 import EventList from "@/components/eventlist";
 import { LoginCard } from "@/components/login";
 import { getServerAuthSession } from "@/server/auth";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 
 export default async function HomePage() {
   const session = await getServerAuthSession()

@@ -8,12 +8,12 @@ import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import Sortable, { type SortableEvent } from 'sortablejs'
 import { toast } from '@/hooks/use-toast'
-import { updateTile, reorderTiles, addGoal, deleteGoal, getTileGoalsAndProgress, updateGoalProgress, submitImage, getSubmissions, updateTeamTileSubmissionStatus } from '@/app/actions/bingo'
+import { updateTile, reorderTiles, addGoal, deleteGoal, getTileGoalsAndProgress, updateGoalProgress, submitImage, getSubmissions, updateTeamTileSubmissionStatus, addRowOrColumn } from '@/app/actions/bingo'
 import { BingoTile } from './bingo-tile'
 import { ForwardRefEditor } from './forward-ref-editor'
 import '@mdxeditor/editor/style.css'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Trash2, Lock, Unlock, Upload, X, Clock, Check } from 'lucide-react'
+import { Trash2, Lock, Unlock, Upload, X, Clock, Check, PlusSquare } from 'lucide-react'
 import type { Bingo, Tile, Team, EventRole, Goal } from '@/app/actions/events'
 
 interface BingoGridProps {
@@ -24,8 +24,9 @@ interface BingoGridProps {
 }
 
 export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: BingoGridProps) {
-  console.log(bingo)
   const [tiles, setTiles] = useState<Tile[]>(bingo.tiles)
+  const [rows, setRows] = useState(bingo.rows)
+  const [columns, setColumns] = useState(bingo.columns)
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editedTile, setEditedTile] = useState<Partial<Tile>>({})
@@ -79,6 +80,52 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
       toast({
         title: "Tile ordering disabled",
         description: "Tile ordering has been locked.",
+      })
+    }
+  }
+
+  const handleAddRow = async () => {
+    try {
+      const result = await addRowOrColumn(bingo.id, 'row')
+      if (result.success) {
+        setRows(rows + 1)
+        setTiles(result.tiles)
+        toast({
+          title: "Row added",
+          description: "A new row has been added to the bingo board.",
+        })
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (error) {
+      console.error("Error adding row:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add row",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleAddColumn = async () => {
+    try {
+      const result = await addRowOrColumn(bingo.id, 'column')
+      if (result.success) {
+        setColumns(columns + 1)
+        setTiles(result.tiles)
+        toast({
+          title: "Column added",
+          description: "A new column has been added to the bingo board.",
+        })
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (error) {
+      console.error("Error adding column:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add column",
+        variant: "destructive",
       })
     }
   }
@@ -478,7 +525,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
       return (<p>No tile selected</p>)
     }
 
-    const teamSubmissions = selectedTile.teamTileSubmissions.find(tts => tts.teamId === currentTeamId)?.submissions
+    const teamSubmissions = selectedTile.teamTileSubmissions?.find(tts => tts.teamId === currentTeamId)?.submissions ?? []
 
     return (
       <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
@@ -619,7 +666,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
     <div className="space-y-4">
       {renderCodephrase()}
       {hasSufficientRights() && (
-        <div className="flex justify-end">
+        <div className="flex justify-end space-x-2">
           <Button onClick={toggleOrdering} variant="outline">
             {isOrderingEnabled ? <Lock className="mr-2 h-4 w-4" /> : <Unlock className="mr-2 h-4 w-4" />}
             {isOrderingEnabled ? 'Lock Ordering' : 'Unlock Ordering'}
@@ -630,9 +677,9 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
         ref={gridRef}
         className="grid gap-2 w-full h-full"
         style={{
-          gridTemplateColumns: `repeat(${bingo.columns}, 1fr)`,
-          gridTemplateRows: `repeat(${bingo.rows}, 1fr)`,
-          aspectRatio: `${bingo.columns} / ${bingo.rows}`
+          gridTemplateColumns: `repeat(${columns}, 1fr)`,
+          gridTemplateRows: `repeat(${rows}, 1fr)`,
+          aspectRatio: `${columns} / ${rows}`
         }}
       >
         {tiles.map((tile) => (
@@ -645,6 +692,18 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
           />
         ))}
       </div>
+      {hasSufficientRights() && (
+        <div className="flex justify-end space-x-2">
+          <Button onClick={handleAddRow} variant="outline">
+            <PlusSquare className="mr-2 h-4 w-4" />
+            Add Row
+          </Button>
+          <Button onClick={handleAddColumn} variant="outline">
+            <PlusSquare className="mr-2 h-4 w-4" />
+            Add Column
+          </Button>
+        </div>
+      )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[900px] max-h-[80vh] overflow-hidden">
