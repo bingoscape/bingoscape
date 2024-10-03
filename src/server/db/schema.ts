@@ -289,6 +289,17 @@ export const submissions = createTable('submissions', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+export const submissionsRelations = relations(submissions, ({ one }) => ({
+  image: one(images, {
+    fields: [submissions.imageId],
+    references: [images.id]
+  }),
+  teamTileSubmission: one(teamTileSubmissions, {
+    fields: [submissions.teamTileSubmissionId],
+    references: [teamTileSubmissions.id]
+  })
+}));
+
 // Event Participants table
 export const eventParticipants = createTable('event_participants', {
   id: uuid('id').defaultRandom().primaryKey(),
