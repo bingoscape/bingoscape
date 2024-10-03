@@ -62,11 +62,11 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 			<p className="text-muted-foreground mb-8">{event.description}</p>
 
 			<h2 className="text-2xl font-bold mb-4">Bingos</h2>
-			{event.bingos.length === 0 ? (
+			{(!!event.bingos && event.bingos.length === 0) ? (
 				<p>No bingos have been created for this event yet.</p>
 			) : (
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-					{event.bingos.map((bingo) => (
+					{event.bingos!.map((bingo) => (
 						<Card key={bingo.id}>
 							<CardHeader>
 								<div className="flex justify-between items-center">
@@ -80,7 +80,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 									<BingoGrid
 										bingo={bingo}
 										currentTeamId={currentTeam?.id}
-										teams={event.teams}
+										teams={event.teams ?? []}
 										userRole={userRole}
 									/>
 								</div>

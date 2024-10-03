@@ -18,7 +18,7 @@ export default async function BingoDetailPage({ params }: { params: { id: UUID; 
 	}
 
 	const { event } = data
-	const bingo = event.bingos.find(b => b.id == bingoId)!
+	const bingo = event.bingos!.find(b => b.id == bingoId)!
 
 	const userRole = await getUserRole(eventId)
 

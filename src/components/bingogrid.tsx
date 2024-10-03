@@ -15,7 +15,6 @@ import '@mdxeditor/editor/style.css'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Trash2, Lock, Unlock, Upload, X, Clock, Check } from 'lucide-react'
 import type { Bingo, Tile, Team, EventRole, Goal } from '@/app/actions/events'
-import { teamTileSubmissions } from '@/server/db/schema'
 
 interface BingoGridProps {
   bingo: Bingo
