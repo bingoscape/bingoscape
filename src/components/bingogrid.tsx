@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -33,6 +33,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
   const [newGoal, setNewGoal] = useState<Partial<Goal>>({})
   const [isLocked, setIsOrderingEnabled] = useState(false)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [pastedImage, setPastedImage] = useState<File | null>(null)
   const [fullSizeImage, setFullSizeImage] = useState<{ src: string; alt: string } | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const sortableRef = useRef<Sortable | null>(null)
@@ -334,15 +335,16 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
   }
 
   const handleImageSubmit = async () => {
-    if (selectedTile && selectedImage && currentTeamId) {
+    if (selectedTile && (selectedImage || pastedImage) && currentTeamId) {
       const formData = new FormData()
-      formData.append('image', selectedImage)
+      formData.append('image', selectedImage ?? pastedImage!)
       formData.append('tileId', selectedTile.id)
       formData.append('teamId', currentTeamId)
 
       const result = await submitImage(formData)
       if (result.success) {
         setSelectedImage(null)
+        setPastedImage(null)
         toast({
           title: "Image submitted",
           description: "Your image has been successfully submitted for review.",
@@ -358,6 +360,35 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
       }
     }
   }
+
+  const handlePaste = useCallback((event: ClipboardEvent) => {
+    event.preventDefault()
+    const items = event.clipboardData?.items
+    if (items) {
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const blob = item.getAsFile()
+          if (blob) {
+            const file = new File([blob], 'pasted-image.png', { type: blob.type })
+            setPastedImage(file)
+            setSelectedImage(file)
+            toast({
+              title: "Image pasted",
+              description: "Your pasted image is ready to be submitted.",
+            })
+            break
+          }
+        }
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    document.addEventListener('paste', handlePaste)
+    return () => {
+      document.removeEventListener('paste', handlePaste)
+    }
+  }, [handlePaste])
 
   const renderCodephrase = () => (
     <div className="bg-primary text-primary-foreground p-4 rounded-lg shadow-md mb-6">
@@ -532,28 +563,42 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
         <h3 className="text-lg font-semibold sticky top-0 bg-background z-10 py-2">Submissions</h3>
         {currentTeamId ? (
           <div className="space-y-4">
-            <Input type="file" accept="image/*" onChange={handleImageChange} />
-            <Button onClick={handleImageSubmit} disabled={!selectedImage}>
+            <div
+              className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer"
+              onClick={() => document.getElementById('file-input')?.click()}
+            >
+              <p>Click to select an image or paste an image here</p>
+              {(selectedImage ?? pastedImage) && (
+                <p className="mt-2 text-sm text-green-600">Image ready to submit</p>
+              )}
+            </div>
+            <Input
+              id="file-input"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="hidden"
+            />
+            <Button onClick={handleImageSubmit} disabled={!selectedImage && !pastedImage}>
               <Upload className="mr-2 h-4 w-4" />
               Submit Image
             </Button>
             <div className="grid grid-cols-2 gap-4">
-              {(teamSubmissions ?? [])
-                .map(submission => (
-                  <div key={submission.id} className="border rounded-md p-4">
-                    <div className="relative w-full h-48">
-                      <Image
-                        src={submission.image.path}
-                        alt={`Submission for ${selectedTile.title}`}
-                        layout="fill"
-                        objectFit="cover"
-                        className="rounded-md cursor-pointer"
-                        onClick={() => setFullSizeImage({ src: submission.image.path, alt: `Submission for ${selectedTile.title}` })}
-                      />
-                    </div>
-                    <p className="mt-2 text-sm">Submitted: {new Date(submission.createdAt).toLocaleString()}</p>
+              {teamSubmissions.map(submission => (
+                <div key={submission.id} className="border rounded-md p-4">
+                  <div className="relative w-full h-48">
+                    <Image
+                      src={submission.image.path}
+                      alt={`Submission for ${selectedTile.title}`}
+                      layout="fill"
+                      objectFit="cover"
+                      className="rounded-md cursor-pointer"
+                      onClick={() => setFullSizeImage({ src: submission.image.path, alt: `Submission for ${selectedTile.title}` })}
+                    />
                   </div>
-                ))}
+                  <p className="mt-2 text-sm">Submitted: {new Date(submission.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
             </div>
           </div>
         ) : (
@@ -745,7 +790,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   )
 
   function hasSufficientRights(): boolean {
