@@ -140,6 +140,9 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
     }
   }
 
+
+
+
   const handleReorderTiles = async (reorderedTiles: Tile[]) => {
     const updatedTiles = reorderedTiles.map((tile, index) => ({
       id: tile.id,
@@ -327,12 +330,39 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
     }
   }
 
+  const refreshSubmissions = async (tileId: string) => {
+    try {
+      const submissions = await getSubmissions(tileId)
+      setSelectedTile(prev => {
+        if (prev && prev.id === tileId) {
+          return {
+            ...prev,
+            teamTileSubmissions: submissions
+          }
+        }
+        return prev
+      })
+      setTiles(prevTiles => prevTiles.map(tile =>
+        tile.id === tileId
+          ? { ...tile, teamTileSubmissions: submissions }
+          : tile
+      ))
+    } catch (error) {
+      console.error("Error refreshing submissions:", error)
+      toast({
+        title: "Error",
+        description: "Failed to refresh submissions",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleImageSubmit = async () => {
-    if (selectedTile && selectedImage) {
+    if (selectedTile && selectedImage && currentTeamId) {
       const formData = new FormData()
       formData.append('image', selectedImage)
       formData.append('tileId', selectedTile.id)
-      formData.append('teamId', currentTeamId!)
+      formData.append('teamId', currentTeamId)
 
       const result = await submitImage(formData)
       if (result.success) {
@@ -341,9 +371,8 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
           title: "Image submitted",
           description: "Your image has been successfully submitted for review.",
         })
-        // Refresh submissions
-        const submissions = await getSubmissions(selectedTile.id)
-        setSelectedTile(prev => prev ? { ...prev, submissions } : null)
+        // Refresh submissions immediately after successful upload
+        await refreshSubmissions(selectedTile.id)
       } else {
         toast({
           title: "Error",
@@ -530,14 +559,16 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
               ?.find(tts => tts.teamId === currentTeamId)
               ?.submissions.map(submission => (
                 <div key={submission.id} className="border rounded-md p-4">
-                  <Image
-                    src={submission.imagePath}
-                    alt={`Submission for ${selectedTile.title}`}
-                    width={200}
-                    height={200}
-                    className="object-cover rounded-md cursor-pointer"
-                    onClick={() => setFullSizeImage({ src: submission.imagePath, alt: `Submission for ${selectedTile.title}` })}
-                  />
+                  <div className="relative w-full h-48">
+                    <Image
+                      src={submission.imagePath}
+                      alt={`Submission for ${selectedTile.title}`}
+                      layout="fill"
+                      objectFit="cover"
+                      className="rounded-md cursor-pointer"
+                      onClick={() => setFullSizeImage({ src: submission.imagePath, alt: `Submission for ${selectedTile.title}` })}
+                    />
+                  </div>
                   <p className="mt-2 text-sm">Submitted: {new Date(submission.createdAt).toLocaleString()}</p>
                 </div>
               ))}
@@ -546,6 +577,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
       ) : (
         <p>You need to be part of a team to submit images.</p>
       )}
+
       {hasSufficientRights() && (
         <div className="mt-8 space-y-4">
           <h4 className="text-lg font-semibold sticky top-12 bg-background z-10 py-2">All Team Submissions</h4>
