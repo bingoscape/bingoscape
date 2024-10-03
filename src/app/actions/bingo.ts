@@ -3,7 +3,7 @@
 import { db } from "@/server/db"
 import { bingos, goals, teamGoalProgress, tiles, submissions, images, teams, teamTileSubmissions } from "@/server/db/schema"
 import { type UUID } from "crypto"
-import { eq } from "drizzle-orm"
+import { asc, eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import fs from 'fs/promises'
@@ -219,6 +219,7 @@ export async function getBingoById(bingoId: string) {
           with: {
             goals: true,
           },
+          orderBy: [asc(tiles.index)],
         },
       },
     });
