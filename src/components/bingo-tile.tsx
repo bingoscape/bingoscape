@@ -53,6 +53,8 @@ export function BingoTile({ tile, onClick, userRole, currentTeamId }: BingoTileP
     return tile.teamTileSubmissions.find(tts => tts.teamId === currentTeamId)
   }, [currentTeamId, tile.teamTileSubmissions])
 
+  console.log(tile)
+
   const renderStatusIcon = (status: string) => {
     switch (status) {
       case 'accepted':
@@ -84,15 +86,6 @@ export function BingoTile({ tile, onClick, userRole, currentTeamId }: BingoTileP
           <span className="text-primary-foreground text-lg font-semibold">{tile.title}</span>
         </div>
       )}
-      <div className="absolute inset-0 flex flex-col justify-between p-2">
-        {isManagement && submissionCounts && (
-          <div className="flex justify-between text-xs text-white">
-            <span>A: {submissionCounts.accepted}</span>
-            <span>P: {submissionCounts.pending}</span>
-            <span>R: {submissionCounts.requires_interaction}</span>
-          </div>
-        )}
-      </div>
       {currentTeamSubmission && (
         <div className="absolute top-2 right-2 z-10">
           {renderStatusIcon(currentTeamSubmission.status)}
