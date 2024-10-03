@@ -1,6 +1,6 @@
 'use client'
 
-import { notFound } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import { getClanDetails, getClanMembers, updateMemberRole } from "@/app/actions/clan";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -47,16 +47,19 @@ export default function ClanMembersPage({ params }: { params: { clanId: string }
 	const [members, setMembers] = useState<ClanMember[]>([]);
 	const [clanDetails, setClanDetails] = useState<ClanDetails | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
-	const { data } = useSession();
+	const { data: session, status } = useSession();
+	const router = useRouter();
 
 	useEffect(() => {
 		const fetchData = async () => {
-			try {
-				const session = data;
-				if (!session || !session.user) {
-					notFound();
-				}
+			if (status === 'loading') return;
 
+			if (status === 'unauthenticated') {
+				router.push('/login');
+				return;
+			}
+
+			try {
 				const details = await getClanDetails(params.clanId);
 				if (details?.id) {
 					setClanDetails(details as ClanDetails);
@@ -80,8 +83,20 @@ export default function ClanMembersPage({ params }: { params: { clanId: string }
 			}
 		};
 
-		fetchData().then(() => console.log("Done fetching data")).catch(err => console.error(err));
-	}, [params.clanId]);
+		fetchData().then(() => console.log("Done")).catch(err => console.error(err));
+	}, [params.clanId, status, router]);
+
+	if (status === 'loading' || isLoading) {
+		return <div>Loading...</div>;
+	}
+
+	if (status === 'unauthenticated') {
+		return null; // The useEffect will handle the redirect
+	}
+
+	if (!clanDetails) {
+		return <div>Clan not found</div>;
+	}
 
 	const handleRoleUpdate = async (memberId: string, newRole: Role) => {
 		try {
