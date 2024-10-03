@@ -71,6 +71,9 @@ export async function getEventById(eventId: UUID) {
         with: {
           tiles: {
             orderBy: [asc(tiles.index)],
+            with: {
+              teamTileSubmissions: true
+            }
           },
         },
       },
