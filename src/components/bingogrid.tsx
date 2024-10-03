@@ -15,6 +15,7 @@ import '@mdxeditor/editor/style.css'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Trash2, Lock, Unlock, Upload, X, Clock, Check } from 'lucide-react'
 import type { Bingo, Tile, Team, EventRole, Goal } from '@/app/actions/events'
+import { teamTileSubmissions } from '@/server/db/schema'
 
 interface BingoGridProps {
   bingo: Bingo
@@ -478,6 +479,8 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
       return (<p>No tile selected</p>)
     }
 
+    const teamSubmissions = selectedTile.teamTileSubmissions.find(tts => tts.teamId === currentTeamId)?.submissions
+
     return (
       <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
         <h3 className="text-lg font-semibold sticky top-0 bg-background z-10 py-2">Submissions</h3>
@@ -489,10 +492,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
               Submit Image
             </Button>
             <div className="grid grid-cols-2 gap-4">
-              {selectedTile
-                .teamTileSubmissions
-                .find(tts => tts.teamId === currentTeamId)!
-                .submissions
+              {(teamSubmissions ?? [])
                 .map(submission => (
                   <div key={submission.id} className="border rounded-md p-4">
                     <div className="relative w-full h-48">
