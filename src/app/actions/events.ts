@@ -1,7 +1,7 @@
 'use server'
 import { getServerAuthSession } from "@/server/auth";
 import { db } from "@/server/db";
-import { events, tiles, eventParticipants, clanMembers, eventInvites, teamMembers, teams, images } from "@/server/db/schema";
+import { events, tiles, eventParticipants, clanMembers, eventInvites, teamMembers, teams } from "@/server/db/schema";
 import { eq, and, asc } from "drizzle-orm";
 import { nanoid } from 'nanoid';
 
@@ -105,9 +105,9 @@ export interface Event {
   updatedAt: Date;
   locked: boolean;
   visible: boolean;
-  bingos: Bingo[];
-  clan: Clan | null;
-  teams: Team[];
+  bingos?: Bingo[];
+  clan?: Clan | null;
+  teams?: Team[];
 }
 
 export interface GetEventByIdResult {
@@ -253,11 +253,36 @@ export async function assignEventToClan(eventId: string, clanId: string) {
   return { success: true };
 }
 
-export async function getEvents(userId: string) {
-  return await db.query.events.findMany({
-    where: eq(events.creatorId, userId),
-    orderBy: events.createdAt,
-  })
+export async function getEvents(userId: string): Promise<Event[]> {
+  try {
+    const userEvents = await db.query.events.findMany({
+      where: (events, { or, eq, exists }) => or(
+        eq(events.creatorId, userId),
+        exists(
+          db.select()
+            .from(eventParticipants)
+            .where(and(
+              eq(eventParticipants.eventId, events.id),
+              eq(eventParticipants.userId, userId)
+            ))
+        )
+      ),
+      with: {
+        eventParticipants: {
+          where: eq(eventParticipants.userId, userId),
+        },
+      },
+      orderBy: events.createdAt,
+    });
+
+    return userEvents.map(event => ({
+      ...event,
+      role: event.creatorId === userId ? 'admin' : event.eventParticipants[0]?.role ?? 'participant',
+    }));
+  } catch (error) {
+    console.error("Error fetching events:", error);
+    throw new Error("Failed to fetch events");
+  }
 }
 
 export async function joinEvent(eventId: string) {
