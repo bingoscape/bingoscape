@@ -79,12 +79,17 @@ export async function getUserClans() {
     throw new Error("You must be logged in to view your clans");
   }
 
-  const userClans = await db.select({
-    clan: clans,
-    isMain: clanMembers.isMain,
-    owner: users,
-    memberCount: count(clanMembers.id),
-  })
+  const userClans = await db
+    .select({
+      clan: clans,
+      isMain: clanMembers.isMain,
+      owner: users,
+      memberCount: sql<number>`(
+        SELECT COUNT(*)
+        FROM ${clanMembers} AS cm
+        WHERE cm.clan_id = ${clans.id}
+      )`.as('memberCount'),
+    })
     .from(clans)
     .innerJoin(clanMembers, eq(clans.id, clanMembers.clanId))
     .innerJoin(users, eq(users.id, clans.ownerId))
@@ -127,7 +132,6 @@ export async function getClanEvents(clanId: string) {
 
   return clanEvents;
 }
-
 export async function getClanDetails(clanId: string) {
   const session = await getServerAuthSession();
   if (!session || !session.user) {
@@ -145,27 +149,35 @@ export async function getClanDetails(clanId: string) {
     throw new Error("You are not a member of this clan");
   }
 
-  const clanDetails = await db.select({
-    id: clans.id,
-    name: clans.name,
-    description: clans.description,
-    ownerId: clans.ownerId,
-    memberCount: count(clanMembers.id),
-    eventCount: count(events.id),
-  })
+  const clanDetailsQuery = await db
+    .select({
+      id: clans.id,
+      name: clans.name,
+      description: clans.description,
+      ownerId: clans.ownerId,
+    })
     .from(clans)
-    .leftJoin(clanMembers, eq(clans.id, clanMembers.clanId))
-    .leftJoin(events, eq(clans.id, events.clanId))
     .where(eq(clans.id, clanId))
-    .groupBy(clans.id)
     .limit(1);
 
-  if (clanDetails.length === 0) {
+  if (clanDetailsQuery.length === 0) {
     throw new Error("Clan not found");
   }
 
+  const clanDetails = clanDetailsQuery[0]!;
+
+  const memberCountQuery = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(clanMembers)
+    .where(eq(clanMembers.clanId, clanId));
+
+  const eventCountQuery = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(events)
+    .where(eq(events.clanId, clanId));
+
   const owner = await db.query.users.findFirst({
-    where: eq(users.id, clanDetails[0]!.ownerId),
+    where: eq(users.id, clanDetails.ownerId),
     columns: {
       id: true,
       name: true,
@@ -175,7 +187,9 @@ export async function getClanDetails(clanId: string) {
   });
 
   return {
-    ...clanDetails[0],
+    ...clanDetails,
+    memberCount: memberCountQuery[0]?.count ?? 0,
+    eventCount: eventCountQuery[0]?.count ?? 0,
     userMembership,
     owner,
   };
