@@ -1,30 +1,7 @@
 import React from 'react'
 import Image from 'next/image'
 import { Check, Clock, X } from 'lucide-react'
-
-interface Submission {
-  id: string
-  imagePath: string
-  createdAt: Date
-}
-
-interface TeamTileSubmission {
-  id: string
-  teamId: string
-  teamName: string
-  status: 'pending' | 'accepted' | 'requires_interaction' | 'declined'
-  submissions: Submission[]
-}
-
-interface Tile {
-  id: string
-  title: string
-  headerImage: string | null
-  description: string
-  weight: number
-  index: number
-  teamTileSubmissions?: TeamTileSubmission[]
-}
+import { type Tile } from '@/app/actions/events'
 
 interface BingoTileProps {
   tile: Tile

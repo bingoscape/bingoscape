@@ -1,13 +1,121 @@
 'use server'
 import { getServerAuthSession } from "@/server/auth";
 import { db } from "@/server/db";
-import { events, tiles, eventParticipants, clanMembers, eventInvites, teamMembers, teams } from "@/server/db/schema";
-import { type UUID } from "crypto";
+import { events, tiles, eventParticipants, clanMembers, eventInvites, teamMembers, teams, images } from "@/server/db/schema";
 import { eq, and, asc } from "drizzle-orm";
 import { nanoid } from 'nanoid';
 
-export type EventRole = 'admin' | 'management' | 'participant';
+export interface Image {
+  id: string;
+  path: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
 
+export interface Submission {
+  id: string;
+  teamTileSubmissionId: string;
+  image: Image;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TeamTileSubmission {
+  id: string;
+  teamId: string;
+  status: 'pending' | 'accepted' | 'requires_interaction' | 'declined';
+  createdAt: Date;
+  updatedAt: Date;
+  tileId: string;
+  reviewedBy: string | null;
+  submissions: Submission[];
+  team: Team;
+}
+
+
+export interface TeamProgress {
+  id?: string;
+  updatedAt?: Date;
+  teamId: string;
+  goalId: string;
+  currentValue: number;
+}
+
+export interface Goal {
+  id: string;
+  description: string;
+  targetValue: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+  tileId: string;
+  teamProgress: TeamProgress[];
+}
+
+export interface Tile {
+  id: string;
+  title: string;
+  description: string;
+  headerImage: string | null;
+  weight: number;
+  index: number;
+  createdAt: Date;
+  updatedAt: Date;
+  bingoId: string;
+  teamTileSubmissions: TeamTileSubmission[];
+  goals: Goal[];
+}
+
+export interface Bingo {
+  id: string;
+  eventId: string;
+  title: string;
+  description: string | null;
+  rows: number;
+  columns: number;
+  codephrase: string;
+  createdAt: Date;
+  updatedAt: Date;
+  locked: boolean;
+  visible: boolean;
+  tiles: Tile[];
+}
+
+export interface Clan {
+  id: string;
+  name: string;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  eventId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Event {
+  id: string;
+  title: string;
+  description: string | null;
+  startDate: Date;
+  endDate: Date;
+  creatorId: string;
+  clanId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  locked: boolean;
+  visible: boolean;
+  bingos: Bingo[];
+  clan: Clan | null;
+  teams: Team[];
+}
+
+export interface GetEventByIdResult {
+  event: Event;
+  userRole: EventRole;
+}
+
+export type EventRole = 'admin' | 'management' | 'participant';
 export async function createEvent(formData: FormData) {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
@@ -63,7 +171,7 @@ export async function createEvent(formData: FormData) {
   }
 }
 
-export async function getEventById(eventId: UUID) {
+export async function getEventById(eventId: string): Promise<GetEventByIdResult | null> {
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
     with: {
@@ -72,18 +180,27 @@ export async function getEventById(eventId: UUID) {
           tiles: {
             orderBy: [asc(tiles.index)],
             with: {
-              teamTileSubmissions: true
+              teamTileSubmissions: {
+                with: {
+                  submissions: {
+                    with: {
+                      image: true
+                    }
+                  },
+                  team: true
+                }
+              },
+              goals: {
+                with: {
+                  teamProgress: true
+                }
+              }
             }
           },
         },
       },
       clan: true,
-      teams: {
-        columns: {
-          id: true,
-          name: true
-        }
-      },
+      teams: true,
     },
   });
 
@@ -95,7 +212,6 @@ export async function getEventById(eventId: UUID) {
 
   return {
     event,
-    bingos: event.bingos,
     userRole,
   };
 }
@@ -170,7 +286,7 @@ export async function joinEvent(eventId: string) {
   return { success: true };
 }
 
-export async function generateEventInviteLink(eventId: UUID) {
+export async function generateEventInviteLink(eventId: string) {
   const session = await getServerAuthSession();
 
   const event = await db.query.events.findFirst({
@@ -210,7 +326,7 @@ export async function joinEventViaInvite(inviteCode: string) {
   const existingParticipant = await db.query.eventParticipants.findFirst({
     where: and(
       eq(eventParticipants.eventId, invite.eventId),
-      eq(eventParticipants.userId, session?.user.id as UUID)
+      eq(eventParticipants.userId, session!.user.id)
     ),
   });
 

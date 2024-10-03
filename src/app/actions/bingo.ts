@@ -8,43 +8,7 @@ import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import fs from 'fs/promises'
 import path from 'path'
-
-interface TeamTileSubmission {
-  id: string
-  teamId: string
-  teamName: string
-  status: 'pending' | 'accepted' | 'requires_interaction' | 'declined'
-  submissions: Submission[]
-}
-
-interface Tile {
-  id: string;
-  title: string;
-  headerImage: string | null;
-  description: string;
-  weight: number;
-  index: number;
-  goals: Goal[];
-}
-
-interface Goal {
-  id: string;
-  description: string;
-  targetValue: number;
-  teamProgress: TeamProgress[];
-}
-
-interface TeamProgress {
-  teamId: string;
-  teamName: string;
-  currentValue: number;
-}
-
-interface Submission {
-  id: string
-  imagePath: string
-  createdAt: Date
-}
+import { type TeamTileSubmission } from "./events"
 
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 
@@ -228,31 +192,9 @@ export async function getBingoById(bingoId: string) {
       return null;
     }
 
-    // Transform the result to match the expected Tile and Goal interfaces
-    const transformedTiles: Tile[] = result.tiles.map((tile) => ({
-      id: tile.id,
-      title: tile.title,
-      headerImage: tile.headerImage,
-      description: tile.description,
-      weight: tile.weight,
-      index: tile.index,
-      goals: tile.goals.map((goal) => ({
-        id: goal.id,
-        description: goal.description,
-        targetValue: goal.targetValue,
-        teamProgress: [], // This will be populated in the BingoGrid component
-      })),
-    }));
 
-    return {
-      id: result.id,
-      title: result.title,
-      description: result.description,
-      rows: result.rows,
-      columns: result.columns,
-      tiles: transformedTiles,
-      codephrase: result.codephrase
-    };
+    return result;
+
   } catch (error) {
     console.error("Error fetching bingo:", error);
     throw new Error("Failed to fetch bingo");
@@ -262,46 +204,19 @@ export async function getBingoById(bingoId: string) {
 
 export async function getSubmissions(tileId: string): Promise<TeamTileSubmission[]> {
   try {
-    const result = await db
-      .select({
-        id: teamTileSubmissions.id,
-        teamId: teamTileSubmissions.teamId,
-        teamName: teams.name,
-        status: teamTileSubmissions.status,
-        submissionId: submissions.id,
-        imagePath: images.path,
-        submissionCreatedAt: submissions.createdAt,
-      })
-      .from(teamTileSubmissions)
-      .leftJoin(submissions, eq(submissions.teamTileSubmissionId, teamTileSubmissions.id))
-      .leftJoin(images, eq(images.id, submissions.imageId))
-      .leftJoin(teams, eq(teams.id, teamTileSubmissions.teamId))
-      .where(eq(teamTileSubmissions.tileId, tileId))
-      .execute()
+    const result = await db.query.teamTileSubmissions.findMany({
+      with: {
+        submissions: {
+          with: {
+            image: true
+          }
+        },
+        team: true
+      },
+      where: eq(teamTileSubmissions.tileId, tileId)
+    })
 
-    // Group submissions by team
-    const teamTileSubmissionsMap: Record<string, TeamTileSubmission> = {}
-
-    for (const row of result) {
-      if (!teamTileSubmissionsMap[row.id]) {
-        teamTileSubmissionsMap[row.id] = {
-          id: row.id,
-          teamId: row.teamId,
-          teamName: row.teamName ?? '',
-          status: row.status,
-          submissions: [],
-        }
-      }
-      if (row.submissionId) {
-        teamTileSubmissionsMap[row.id]!.submissions.push({
-          id: row.submissionId,
-          imagePath: row.imagePath!,
-          createdAt: row.submissionCreatedAt!,
-        })
-      }
-    }
-
-    return Object.values(teamTileSubmissionsMap)
+    return result
   } catch (error) {
     console.error("Error fetching submissions:", error)
     throw new Error("Failed to fetch submissions")

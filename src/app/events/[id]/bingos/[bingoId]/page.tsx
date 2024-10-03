@@ -17,8 +17,8 @@ export default async function BingoDetailPage({ params }: { params: { id: UUID; 
 		notFound()
 	}
 
-	const { bingos } = data
-	const bingo = bingos.find(b => b.id == bingoId)!
+	const { event } = data
+	const bingo = event.bingos.find(b => b.id == bingoId)!
 
 	const userRole = await getUserRole(eventId)
 
@@ -36,13 +36,10 @@ export default async function BingoDetailPage({ params }: { params: { id: UUID; 
 			<div className="aspect-square w-full max-w-[80vh] mx-auto">
 				<Suspense fallback={<Skeleton className="w-full h-full" />}>
 					<BingoGrid
-						rows={bingo.rows}
-						columns={bingo.columns}
-						tiles={bingo.tiles}
+						bingo={bingo}
 						userRole={userRole}
 						currentTeamId={currentTeam?.id}
 						teams={teams}
-						codephrase={bingo.codephrase}
 					/>
 				</Suspense>
 			</div>

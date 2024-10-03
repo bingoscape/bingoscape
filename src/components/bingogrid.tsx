@@ -14,75 +14,18 @@ import { ForwardRefEditor } from './forward-ref-editor'
 import '@mdxeditor/editor/style.css'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Trash2, Lock, Unlock, Upload, X, Clock, Check } from 'lucide-react'
-
-interface ServerTeamProgress {
-  id: string
-  updatedAt: Date
-  teamId: string
-  goalId: string
-  currentValue: number
-}
-
-interface ServerGoal {
-  id: string
-  description: string
-  targetValue: number
-  createdAt: Date
-  updatedAt: Date
-  tileId: string
-  teamProgress: ServerTeamProgress[]
-}
-
-interface TeamProgress {
-  teamId: string
-  teamName: string
-  currentValue: number
-}
-
-interface Goal {
-  id: string
-  description: string
-  targetValue: number
-  teamProgress: TeamProgress[]
-}
-
-interface Submission {
-  id: string
-  imagePath: string
-  createdAt: Date
-}
-
-interface TeamTileSubmission {
-  id: string
-  teamId: string
-  teamName: string
-  status: 'pending' | 'accepted' | 'requires_interaction' | 'declined'
-  submissions: Submission[]
-}
-
-interface Tile {
-  id: string
-  title: string
-  headerImage: string | null
-  description: string
-  weight: number
-  index: number
-  goals?: Goal[]
-  teamTileSubmissions?: TeamTileSubmission[]
-}
+import type { Bingo, Tile, Team, EventRole, Goal } from '@/app/actions/events'
 
 interface BingoGridProps {
-  rows: number
-  columns: number
-  tiles: Tile[]
-  userRole: 'participant' | 'management' | 'admin'
-  teams: { id: string; name: string }[]
+  bingo: Bingo
+  userRole: EventRole
+  teams: Team[]
   currentTeamId: string | undefined
-  codephrase: string
 }
 
-export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole, teams, currentTeamId, codephrase }: BingoGridProps) {
-  const [tiles, setTiles] = useState<Tile[]>(initialTiles)
+export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: BingoGridProps) {
+  console.log(bingo)
+  const [tiles, setTiles] = useState<Tile[]>(bingo.tiles)
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editedTile, setEditedTile] = useState<Partial<Tile>>({})
@@ -140,9 +83,6 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
     }
   }
 
-
-
-
   const handleReorderTiles = async (reorderedTiles: Tile[]) => {
     const updatedTiles = reorderedTiles.map((tile, index) => ({
       id: tile.id,
@@ -161,26 +101,13 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
         description: result.error ?? "Failed to reorder tiles",
         variant: "destructive",
       })
-      setTiles(initialTiles) // Revert to original order if server update fails
+      setTiles(bingo.tiles) // Revert to original order if server update fails
     }
   }
 
   const handleTileClick = async (tile: Tile) => {
     try {
-      const serverGoals = await getTileGoalsAndProgress(tile.id)
-      const goals: Goal[] = serverGoals.map((serverGoal: ServerGoal) => ({
-        id: serverGoal.id,
-        description: serverGoal.description,
-        targetValue: serverGoal.targetValue,
-        teamProgress: teams.map(team => {
-          const progress = serverGoal.teamProgress.find(p => p.teamId === team.id)
-          return {
-            teamId: team.id,
-            teamName: team.name,
-            currentValue: progress ? progress.currentValue : 0
-          }
-        })
-      }))
+      const goals = await getTileGoalsAndProgress(tile.id)
       const teamTileSubmissions = await getSubmissions(tile.id)
       const updatedTile: Tile = { ...tile, goals, teamTileSubmissions }
       setSelectedTile(updatedTile)
@@ -228,11 +155,13 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
       if (result.success && result.goal) {
         const updatedGoal: Goal = {
           id: result.goal.id,
+          tileId: result.goal.tileId,
           description: result.goal.description,
           targetValue: result.goal.targetValue,
           teamProgress: teams.map(team => ({
             teamId: team.id,
             teamName: team.name,
+            goalId: result.goal!.id,
             currentValue: 0
           }))
         }
@@ -386,7 +315,7 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
   const renderCodephrase = () => (
     <div className="bg-primary text-primary-foreground p-4 rounded-lg shadow-md mb-6">
       <h2 className="text-2xl font-bold mb-2">Codephrase</h2>
-      <p className="text-xl">{codephrase}</p>
+      <p className="text-xl">{bingo.codephrase}</p>
     </div>
   )
 
@@ -544,99 +473,107 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
     </div>
   )
 
-  const renderSubmissions = () => (
-    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
-      <h3 className="text-lg font-semibold sticky top-0 bg-background z-10 py-2">Submissions</h3>
-      {currentTeamId ? (
-        <div className="space-y-4">
-          <Input type="file" accept="image/*" onChange={handleImageChange} />
-          <Button onClick={handleImageSubmit} disabled={!selectedImage}>
-            <Upload className="mr-2 h-4 w-4" />
-            Submit Image
-          </Button>
-          <div className="grid grid-cols-2 gap-4">
-            {selectedTile?.teamTileSubmissions
-              ?.find(tts => tts.teamId === currentTeamId)
-              ?.submissions.map(submission => (
-                <div key={submission.id} className="border rounded-md p-4">
-                  <div className="relative w-full h-48">
-                    <Image
-                      src={submission.imagePath}
-                      alt={`Submission for ${selectedTile.title}`}
-                      layout="fill"
-                      objectFit="cover"
-                      className="rounded-md cursor-pointer"
-                      onClick={() => setFullSizeImage({ src: submission.imagePath, alt: `Submission for ${selectedTile.title}` })}
-                    />
-                  </div>
-                  <p className="mt-2 text-sm">Submitted: {new Date(submission.createdAt).toLocaleString()}</p>
-                </div>
-              ))}
-          </div>
-        </div>
-      ) : (
-        <p>You need to be part of a team to submit images.</p>
-      )}
+  const renderSubmissions = () => {
+    if (!selectedTile) {
+      return (<p>No tile selected</p>)
+    }
 
-      {hasSufficientRights() && (
-        <div className="mt-8 space-y-4">
-          <h4 className="text-lg font-semibold sticky top-12 bg-background z-10 py-2">All Team Submissions</h4>
-          {teams.map(team => {
-            const teamTileSubmission = selectedTile?.teamTileSubmissions?.find(tts => tts.teamId === team.id)
-            const hasSubmissions = teamTileSubmission?.submissions.length ?? 0 > 0
-            return (
-              <div key={team.id} className="space-y-2">
-                <h5 className="font-medium sticky top-24 bg-background z-10 py-2">{team.name}</h5>
-                <div className="flex items-center space-x-2 mb-2 sticky top-32 bg-background z-10 py-2">
-                  <p className="text-sm">Status: {teamTileSubmission?.status ?? 'No submission'}</p>
-                  {hasSubmissions && (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, 'accepted')}
-                      >
-                        <Check className="h-4 w-4 text-green-500" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, 'requires_interaction')}
-                      >
-                        <Clock className="h-4 w-4 text-yellow-500" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, 'declined')}
-                      >
-                        <X className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  {teamTileSubmission?.submissions.map(submission => (
-                    <div key={submission.id} className="border rounded-md p-4">
+    return (
+      <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
+        <h3 className="text-lg font-semibold sticky top-0 bg-background z-10 py-2">Submissions</h3>
+        {currentTeamId ? (
+          <div className="space-y-4">
+            <Input type="file" accept="image/*" onChange={handleImageChange} />
+            <Button onClick={handleImageSubmit} disabled={!selectedImage}>
+              <Upload className="mr-2 h-4 w-4" />
+              Submit Image
+            </Button>
+            <div className="grid grid-cols-2 gap-4">
+              {selectedTile
+                .teamTileSubmissions
+                .find(tts => tts.teamId === currentTeamId)!
+                .submissions
+                .map(submission => (
+                  <div key={submission.id} className="border rounded-md p-4">
+                    <div className="relative w-full h-48">
                       <Image
-                        src={submission.imagePath}
-                        alt={`Submission for ${selectedTile?.title} by ${team.name}`}
-                        width={200}
-                        height={200}
-                        className="object-cover rounded-md cursor-pointer"
-                        onClick={() => setFullSizeImage({ src: submission.imagePath, alt: `Submission for ${selectedTile?.title} by ${team.name}` })}
+                        src={submission.image.path}
+                        alt={`Submission for ${selectedTile.title}`}
+                        layout="fill"
+                        objectFit="cover"
+                        className="rounded-md cursor-pointer"
+                        onClick={() => setFullSizeImage({ src: submission.image.path, alt: `Submission for ${selectedTile.title}` })}
                       />
-                      <p className="mt-2 text-sm">Submitted: {new Date(submission.createdAt).toLocaleString()}</p>
                     </div>
-                  ))}
+                    <p className="mt-2 text-sm">Submitted: {new Date(submission.createdAt).toLocaleString()}</p>
+                  </div>
+                ))}
+            </div>
+          </div>
+        ) : (
+          <p>You need to be part of a team to submit images.</p>
+        )}
+
+        {hasSufficientRights() && (
+          <div className="mt-8 space-y-4">
+            <h4 className="text-lg font-semibold sticky top-12 bg-background z-10 py-2">All Team Submissions</h4>
+            {teams.map(team => {
+              const teamTileSubmission = selectedTile?.teamTileSubmissions?.find(tts => tts.teamId === team.id)
+              const hasSubmissions = teamTileSubmission?.submissions.length ?? 0 > 0
+              return (
+                <div key={team.id} className="space-y-2">
+                  <h5 className="font-medium sticky top-24 bg-background z-10 py-2">{team.name}</h5>
+                  <div className="flex items-center space-x-2 mb-2 sticky top-32 bg-background z-10 py-2">
+                    <p className="text-sm">Status: {teamTileSubmission?.status ?? 'No submission'}</p>
+                    {hasSubmissions && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, 'accepted')}
+                        >
+                          <Check className="h-4 w-4 text-green-500" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, 'requires_interaction')}
+                        >
+                          <Clock className="h-4 w-4 text-yellow-500" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, 'declined')}
+                        >
+                          <X className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    {teamTileSubmission?.submissions.map(submission => (
+                      <div key={submission.id} className="border rounded-md p-4">
+                        <Image
+                          src={submission.image.path}
+                          alt={`Submission for ${selectedTile?.title} by ${team.name}`}
+                          width={200}
+                          height={200}
+                          className="object-cover rounded-md cursor-pointer"
+                          onClick={() => setFullSizeImage({ src: submission.image.path, alt: `Submission for ${selectedTile?.title} by ${team.name}` })}
+                        />
+                        <p className="mt-2 text-sm">Submitted: {new Date(submission.createdAt).toLocaleString()}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   const handleTeamTileSubmissionStatusUpdate = async (teamTileSubmissionId: string | undefined, newStatus: 'accepted' | 'requires_interaction' | 'declined') => {
     if (!teamTileSubmissionId) {
@@ -694,9 +631,9 @@ export default function BingoGrid({ rows, columns, tiles: initialTiles, userRole
         ref={gridRef}
         className="grid gap-2 w-full h-full"
         style={{
-          gridTemplateColumns: `repeat(${columns}, 1fr)`,
-          gridTemplateRows: `repeat(${rows}, 1fr)`,
-          aspectRatio: `${columns} / ${rows}`
+          gridTemplateColumns: `repeat(${bingo.columns}, 1fr)`,
+          gridTemplateRows: `repeat(${bingo.rows}, 1fr)`,
+          aspectRatio: `${bingo.columns} / ${bingo.rows}`
         }}
       >
         {tiles.map((tile) => (
