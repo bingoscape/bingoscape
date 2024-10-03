@@ -161,10 +161,6 @@ export default function ClanMembersPage({ params }: { params: { clanId: string }
 		return null; // The useEffect will handle the redirect
 	}
 
-	if (!clanDetails) {
-		return <div>Clan not found</div>;
-	}
-
 	return (
 		<div className="container mx-auto py-10">
 			<Card>
