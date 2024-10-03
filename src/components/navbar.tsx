@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, User, Home, Calendar, Users } from "lucide-react"
+import { LogOut, User, Home, Users } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { ModeToggle } from "./mode-toggle"
 
@@ -21,7 +21,6 @@ export function Navbar() {
 
   const navItems = [
     { href: "/", label: "Home", icon: Home },
-    { href: "/events", label: "Events", icon: Calendar },
     { href: "/clans", label: "Clans", icon: Users },
   ]
 
