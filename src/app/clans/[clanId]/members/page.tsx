@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useSession } from "next-auth/react";
 import { createArray } from "@/lib/utils";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 
 type ClanMember = {
 	id: string;
@@ -161,8 +162,16 @@ export default function ClanMembersPage({ params }: { params: { clanId: string }
 		return null; // The useEffect will handle the redirect
 	}
 
+	const breadcrumbItems = [
+		{ label: 'Home', href: '/' },
+		{ label: 'Clans', href: '/' },
+		{ label: clanDetails.name, href: `/clans/${clanDetails.id}` },
+		{ label: 'Members', href: `/clans/${clanDetails.id}/members` },
+	]
+
 	return (
 		<div className="container mx-auto py-10">
+			<Breadcrumbs items={breadcrumbItems} />
 			<Card>
 				<CardHeader>
 					<CardTitle>{clanDetails.name} - Members</CardTitle>

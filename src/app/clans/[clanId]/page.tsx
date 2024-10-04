@@ -7,6 +7,7 @@ import Link from "next/link";
 import { UserIcon, CalendarIcon, Users } from "lucide-react";
 import { GenerateClanInviteLink } from "@/components/generate-clan-invite-link";
 import { getServerAuthSession } from "@/server/auth";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 
 export default async function ClanDetailPage({ params }: { params: { clanId: string } }) {
   const session = await getServerAuthSession();
@@ -26,8 +27,15 @@ export default async function ClanDetailPage({ params }: { params: { clanId: str
 
   const isOwnerOrAdmin = clanDetails.userMembership.role == 'admin' || clanDetails.userMembership.role == 'management'
 
+  const breadcrumbItems = [
+    { label: 'Home', href: '/' },
+    { label: 'Clans', href: '/' },
+    { label: clanDetails.name, href: `/clans/${clanDetails.id}` },
+  ]
+
   return (
     <div className="container mx-auto py-10">
+      <Breadcrumbs items={breadcrumbItems} />
       <Card>
         <CardHeader>
           <CardTitle>{clanDetails.name}</CardTitle>
@@ -67,7 +75,7 @@ export default async function ClanDetailPage({ params }: { params: { clanId: str
           </Link>
         </CardFooter>
       </Card>
-    </div>
+    </div >
   );
 }
 
