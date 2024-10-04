@@ -4,6 +4,7 @@ import { db } from "@/server/db";
 import { events, tiles, eventParticipants, clanMembers, eventInvites, teamMembers, teams, eventBuyIns, users } from "@/server/db/schema";
 import { eq, and, asc, sum, sql } from "drizzle-orm";
 import { nanoid } from 'nanoid';
+import { revalidatePath } from "next/cache";
 
 export interface Image {
   id: string;
@@ -628,10 +629,47 @@ export async function updateParticipantBuyIn(eventId: string, participantId: str
           amount: buyIn,
         })
     }
+    revalidatePath(`/events/${eventId}`)
+    revalidatePath(`/`)
 
     return { success: true }
   } catch (error) {
     console.error("Error updating participant buy-in:", error)
     throw error
+  }
+}
+
+export async function updateEvent(eventId: string, eventData: {
+  title: string
+  description: string | null
+  startDate: string
+  endDate: string
+  minimumBuyIn: number
+  basePrizePool: number
+  locked?: boolean
+  visible?: boolean
+}) {
+  try {
+    await db.update(events)
+      .set({
+        title: eventData.title,
+        description: eventData.description,
+        startDate: new Date(eventData.startDate),
+        endDate: new Date(eventData.endDate),
+        minimumBuyIn: eventData.minimumBuyIn,
+        basePrizePool: eventData.basePrizePool,
+        locked: eventData.locked,
+        visible: eventData.visible,
+        updatedAt: new Date(),
+      })
+      .where(eq(events.id, eventId))
+
+    // Revalidate the event page to reflect the changes
+    revalidatePath(`/events/${eventId}`)
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error updating event:", error)
+    throw new Error("Failed to update event")
   }
 }

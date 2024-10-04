@@ -20,7 +20,9 @@ export default async function EventList({ userId }: { userId: string }) {
         {eventsList.map(async (event) => (
           < Card key={event.id} >
             <CardHeader>
-              <CardTitle>{event.title}</CardTitle>
+              <CardTitle>
+                {event.title}
+              </CardTitle>
               <CardDescription>{new Date(event.createdAt).toLocaleDateString()}</CardDescription>
             </CardHeader>
             <CardContent>
