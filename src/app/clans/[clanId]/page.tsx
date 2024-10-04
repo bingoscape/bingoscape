@@ -52,7 +52,7 @@ export default function ClanDetailPage({ params }: { params: { clanId: string } 
   const [members, setMembers] = useState<ClanMember[]>([]);
   const [clanDetails, setClanDetails] = useState<ClanDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
 
   useEffect(() => {
@@ -191,16 +191,16 @@ export default function ClanDetailPage({ params }: { params: { clanId: string } 
                 <span>{clanDetails.owner?.runescapeName ?? clanDetails.owner?.name}</span>
               </div>
             </div>
-            {isOwnerOrAdmin && (
-              <GenerateClanInviteLink clanId={params.clanId} />
-            )}
+            <div className="flex flex-col space-y-2">
+              {isOwnerOrAdmin && (
+                <GenerateClanInviteLink clanId={params.clanId} />
+              )}
+              <Link href={`/clans/${params.clanId}/events`} passHref>
+                <Button variant="outline" className="w-full">View Events</Button>
+              </Link>
+            </div>
           </div>
         </CardContent>
-        <CardFooter className="flex justify-between">
-          <Link href={`/clans/${params.clanId}/events`} passHref>
-            <Button variant="outline">View Events</Button>
-          </Link>
-        </CardFooter>
       </Card>
 
       <h3 className="text-lg font-semibold mb-4">Members</h3>
