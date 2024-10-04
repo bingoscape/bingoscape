@@ -196,7 +196,10 @@ export default function ClanDetailPage({ params }: { params: { clanId: string } 
                 <GenerateClanInviteLink clanId={params.clanId} />
               )}
               <Link href={`/clans/${params.clanId}/events`} passHref>
-                <Button variant="outline" className="w-full">View Events</Button>
+                <Button variant="outline" className="w-full">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  View Events
+                </Button>
               </Link>
             </div>
           </div>
