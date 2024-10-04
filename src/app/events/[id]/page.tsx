@@ -60,7 +60,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 					{isAdminOrManagement && <GenerateEventInviteLink eventId={event.id as UUID}>Generate Invite Link</GenerateEventInviteLink>}
 					{isAdminOrManagement && (
 						<Link href={`/events/${event.id}/participants`} passHref>
-							<Button variant="outline">
+							<Button variant="outline" className="w-full">
 								<Users className="mr-2 h-4 w-4" />
 								Manage Participants
 							</Button>
