@@ -1,6 +1,6 @@
 import React from 'react'
 import Image from 'next/image'
-import { Check, Clock, X } from 'lucide-react'
+import { Check, Clock, Send, X } from 'lucide-react'
 import { type Tile } from '@/app/actions/events'
 
 interface BingoTileProps {
@@ -32,7 +32,7 @@ export function BingoTile({ tile, onClick, userRole, currentTeamId }: BingoTileP
 
   console.log(tile)
 
-  const renderStatusIcon = (status: string) => {
+  const renderStatusIcon = (status: 'accepted' | 'requires_interaction' | 'declined' | 'pending' | undefined) => {
     switch (status) {
       case 'accepted':
         return <Check className="h-6 w-6 text-green-500" />
@@ -40,6 +40,8 @@ export function BingoTile({ tile, onClick, userRole, currentTeamId }: BingoTileP
         return <Clock className="h-6 w-6 text-yellow-500" />
       case 'declined':
         return <X className="h-6 w-6 text-red-500" />
+      case 'pending':
+        return <Send className='h-6 w-6 text-blue-500' />
       default:
         return null
     }

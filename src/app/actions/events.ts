@@ -423,13 +423,25 @@ export async function getUserRole(eventId: string): Promise<EventRole> {
 
 export async function getEventParticipants(eventId: string) {
   try {
+    // Subquery to get the latest team for each participant
+    const latestTeam = db
+      .select({
+        userId: teamMembers.userId,
+        teamId: teamMembers.teamId,
+      })
+      .from(teamMembers)
+      .innerJoin(teams, eq(teamMembers.teamId, teams.id))
+      .where(eq(teams.eventId, eventId))
+      .groupBy(teamMembers.userId)
+      .as('latestTeam');
+
     const participants = await db
       .select({
         userId: eventParticipants.userId,
         runescapeName: users.runescapeName,
         role: eventParticipants.role,
         buyIn: eventBuyIns.amount,
-        teamId: teamMembers.teamId,
+        teamId: latestTeam.teamId,
         teamName: teams.name,
       })
       .from(eventParticipants)
@@ -441,8 +453,8 @@ export async function getEventParticipants(eventId: string) {
           eq(eventBuyIns.userId, eventParticipants.userId)
         )
       )
-      .leftJoin(teamMembers, eq(eventParticipants.userId, teamMembers.userId))
-      .leftJoin(teams, eq(teamMembers.teamId, teams.id))
+      .leftJoin(latestTeam, eq(eventParticipants.userId, latestTeam.userId))
+      .leftJoin(teams, eq(latestTeam.teamId, teams.id))
       .where(eq(eventParticipants.eventId, eventId));
 
     return participants.map(p => ({

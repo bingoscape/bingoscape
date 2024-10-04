@@ -55,9 +55,6 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 					)}
 				</div>
 				<div className="flex flex-col space-y-1">
-					{isAdminOrManagement && !event.clan && (
-						<AssignEventToClanModal eventId={event.id} clans={userClans.map(uc => ({ id: uc.clan.id, name: uc.clan.name }))} />
-					)}
 					{isAdminOrManagement && <CreateBingoModal eventId={event.id} />}
 					{isAdminOrManagement && <GenerateEventInviteLink eventId={event.id as UUID}>Generate Invite Link</GenerateEventInviteLink>}
 					{isAdminOrManagement && (
@@ -67,6 +64,9 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 								Manage Participants
 							</Button>
 						</Link>
+					)}
+					{isAdminOrManagement && !event.clan && (
+						<AssignEventToClanModal eventId={event.id} clans={userClans.map(uc => ({ id: uc.clan.id, name: uc.clan.name }))} />
 					)}
 					<PrizePoolDisplay prizePool={prizePool} />
 				</div>
