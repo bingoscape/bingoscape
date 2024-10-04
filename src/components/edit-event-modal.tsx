@@ -24,8 +24,8 @@ interface Event {
   description: string | null
   startDate: Date
   endDate: Date
-  minimumBuyIn: number
-  basePrizePool: number
+  minimumBuyIn: number | undefined
+  basePrizePool: number | undefined
 }
 
 export function EditEventModal({ event }: { event: Event }) {
@@ -35,8 +35,8 @@ export function EditEventModal({ event }: { event: Event }) {
     description: event.description ?? '',
     startDate: event.startDate.toISOString().split('T')[0]!,
     endDate: event.endDate.toISOString().split('T')[0]!,
-    minimumBuyIn: event.minimumBuyIn,
-    basePrizePool: event.basePrizePool,
+    minimumBuyIn: event.minimumBuyIn!,
+    basePrizePool: event.basePrizePool!,
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
