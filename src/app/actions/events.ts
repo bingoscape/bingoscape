@@ -428,9 +428,9 @@ export async function getEventParticipants(eventId: string) {
         userId: eventParticipants.userId,
         runescapeName: users.runescapeName,
         role: eventParticipants.role,
-        buyIn: eventBuyIns.amount,
-        teamId: teamMembers.teamId,
-        teamName: teams.name,
+        buyIn: sql<number>`COALESCE(SUM(${eventBuyIns.amount}), 0)`.as('buyIn'),
+        teamIds: sql<string>`STRING_AGG(DISTINCT ${teamMembers.teamId}::text, ',')`.as('teamIds'),
+        teamNames: sql<string>`STRING_AGG(DISTINCT ${teams.name}, ',')`.as('teamNames'),
       })
       .from(eventParticipants)
       .leftJoin(users, eq(eventParticipants.userId, users.id))
@@ -444,14 +444,15 @@ export async function getEventParticipants(eventId: string) {
       .leftJoin(teamMembers, eq(eventParticipants.userId, teamMembers.userId))
       .leftJoin(teams, eq(teamMembers.teamId, teams.id))
       .where(eq(eventParticipants.eventId, eventId))
+      .groupBy(eventParticipants.userId, users.runescapeName, eventParticipants.role)
 
     return participants.map(p => ({
       id: p.userId,
       runescapeName: p.runescapeName ?? '',
       role: p.role,
-      teamId: p.teamId ?? null,
-      teamName: p.teamName ?? null,
-      buyIn: p.buyIn ?? 0,
+      teamId: p.teamIds ? p.teamIds.split(',')[0] : null,
+      teamName: p.teamNames ? p.teamNames.split(',')[0] : null,
+      buyIn: p.buyIn,
     }))
   } catch (error) {
     console.error("Error fetching event participants:", error)
