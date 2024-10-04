@@ -4,52 +4,52 @@ import {
   boolean,
   index,
   integer,
-  pgEnum,
-  pgTableCreator,
-  primaryKey,
+  pgenum,
+  pgtablecreator,
+  primarykey,
   text,
   timestamp,
-  uniqueIndex,
+  uniqueindex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { type AdapterAccount } from "next-auth/adapters";
+import { type adapteraccount } from "next-auth/adapters";
 
-export const createTable = pgTableCreator((name) => `bingoscape-next_${name}`);
+export const createtable = pgtablecreator((name) => `bingoscape-next_${name}`);
 
-export const users = createTable("user", {
-  id: uuid("id").defaultRandom().primaryKey(),
+export const users = createtable("user", {
+  id: uuid("id").defaultrandom().primarykey(),
   name: varchar("name", { length: 255 }),
-  email: varchar("email", { length: 255 }).notNull(),
-  emailVerified: timestamp("email_verified", {
+  email: varchar("email", { length: 255 }).notnull(),
+  emailverified: timestamp("email_verified", {
     mode: "date",
-    withTimezone: true,
-  }).default(sql`CURRENT_TIMESTAMP`),
+    withtimezone: true,
+  }).default(sql`current_timestamp`),
   image: varchar("image", { length: 255 }),
-  runescapeName: varchar("runescapeName", { length: 255 })
+  runescapename: varchar("runescapename", { length: 255 })
 });
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersrelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
-  eventParticipants: many(eventParticipants),
-  teamMembers: many(teamMembers),
-  createdEvents: many(events),
-  clanMemberships: many(clanMembers),
+  eventparticipants: many(eventparticipants),
+  teammembers: many(teammembers),
+  createdevents: many(events),
+  clanmemberships: many(clanmembers),
 }));
 
-export const accounts = createTable(
+export const accounts = createtable(
   "account",
   {
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    userid: uuid("user_id")
+      .notnull()
+      .references(() => users.id, { ondelete: "cascade" }),
     type: varchar("type", { length: 255 })
-      .$type<AdapterAccount["type"]>()
-      .notNull(),
-    provider: varchar("provider", { length: 255 }).notNull(),
-    providerAccountId: varchar("provider_account_id", {
+      .$type<adapteraccount["type"]>()
+      .notnull(),
+    provider: varchar("provider", { length: 255 }).notnull(),
+    provideraccountid: varchar("provider_account_id", {
       length: 255,
-    }).notNull(),
+    }).notnull(),
     refresh_token: text("refresh_token"),
     access_token: text("access_token"),
     expires_at: integer("expires_at"),
@@ -59,369 +59,369 @@ export const accounts = createTable(
     session_state: varchar("session_state", { length: 255 }),
   },
   (account) => ({
-    compoundKey: primaryKey({
-      columns: [account.provider, account.providerAccountId],
+    compoundkey: primarykey({
+      columns: [account.provider, account.provideraccountid],
     }),
-    userIdIdx: index("account_user_id_idx").on(account.userId),
+    userididx: index("account_user_id_idx").on(account.userid),
   })
 );
 
-export const accountsRelations = relations(accounts, ({ one }) => ({
-  user: one(users, { fields: [accounts.userId], references: [users.id] }),
+export const accountsrelations = relations(accounts, ({ one }) => ({
+  user: one(users, { fields: [accounts.userid], references: [users.id] }),
 }));
 
-export const sessions = createTable(
+export const sessions = createtable(
   "session",
   {
-    sessionToken: varchar("session_token", { length: 255 })
-      .notNull()
-      .primaryKey(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    sessiontoken: varchar("session_token", { length: 255 })
+      .notnull()
+      .primarykey(),
+    userid: uuid("user_id")
+      .notnull()
+      .references(() => users.id, { ondelete: "cascade" }),
     expires: timestamp("expires", {
       mode: "date",
-      withTimezone: true,
-    }).notNull(),
+      withtimezone: true,
+    }).notnull(),
   },
   (session) => ({
-    userIdIdx: index("session_user_id_idx").on(session.userId),
+    userididx: index("session_user_id_idx").on(session.userid),
   })
 );
 
-export const sessionsRelations = relations(sessions, ({ one }) => ({
-  user: one(users, { fields: [sessions.userId], references: [users.id] }),
+export const sessionsrelations = relations(sessions, ({ one }) => ({
+  user: one(users, { fields: [sessions.userid], references: [users.id] }),
 }));
 
-export const verificationTokens = createTable(
+export const verificationtokens = createtable(
   "verification_token",
   {
-    identifier: varchar("identifier", { length: 255 }).notNull(),
-    token: varchar("token", { length: 255 }).notNull(),
+    identifier: varchar("identifier", { length: 255 }).notnull(),
+    token: varchar("token", { length: 255 }).notnull(),
     expires: timestamp("expires", {
       mode: "date",
-      withTimezone: true,
-    }).notNull(),
+      withtimezone: true,
+    }).notnull(),
   },
   (vt) => ({
-    compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
+    compoundkey: primarykey({ columns: [vt.identifier, vt.token] }),
   })
 );
 
-// Enums
-export const userRoleEnum = pgEnum('user_role', ['user', 'admin', 'management']);
-export const submissionStatusEnum = pgEnum('submission_status', ['pending', 'accepted', 'requires_interaction', 'declined']);
-export const clanRoleEnum = pgEnum('clan_role', ['admin', 'management', 'member', 'guest']);
-export const eventRoleEnum = pgEnum('event_role', ['admin', 'management', 'participant']);
+// enums
+export const userroleenum = pgenum('user_role', ['user', 'admin', 'management']);
+export const submissionstatusenum = pgenum('submission_status', ['pending', 'accepted', 'requires_interaction', 'declined']);
+export const clanroleenum = pgenum('clan_role', ['admin', 'management', 'member', 'guest']);
+export const eventroleenum = pgenum('event_role', ['admin', 'management', 'participant']);
 
-export const events = createTable("events", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  title: varchar("name", { length: 255 }).notNull(),
+export const events = createtable("events", {
+  id: uuid("id").defaultrandom().primarykey(),
+  title: varchar("name", { length: 255 }).notnull(),
   description: varchar("description", { length: 1000 }),
-  startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
-  creatorId: uuid("creator_id").notNull().references(() => users.id, { onDelete: "set null" }),
-  clanId: uuid("clan_id").references(() => clans.id, { onDelete: "set null" }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  locked: boolean("locked").default(false).notNull(),
-  visible: boolean("visible").default(false).notNull(),
-  basePrizePool: bigint('basePrizePool', { mode: 'number' }).default(0).notNull(),
-  minimumBuyIn: bigint("minimumBuyIn", { mode: 'number' }).default(0).notNull()
+  startdate: timestamp("start_date").notnull(),
+  enddate: timestamp("end_date").notnull(),
+  creatorid: uuid("creator_id").notnull().references(() => users.id, { ondelete: "set null" }),
+  clanid: uuid("clan_id").references(() => clans.id, { ondelete: "set null" }),
+  createdat: timestamp("created_at").defaultnow().notnull(),
+  updatedat: timestamp("updated_at").defaultnow().notnull(),
+  locked: boolean("locked").default(false).notnull(),
+  visible: boolean("visible").default(false).notnull(),
+  baseprizepool: bigint('baseprizepool', { mode: 'number' }).default(0).notnull(),
+  minimumbuyin: bigint("minimumbuyin", { mode: 'number' }).default(0).notnull()
 });
 
-export const eventsRelations = relations(events, ({ many, one }) => ({
+export const eventsrelations = relations(events, ({ many, one }) => ({
   bingos: many(bingos),
-  eventParticipants: many(eventParticipants),
+  eventparticipants: many(eventparticipants),
   creator: one(users, {
-    fields: [events.creatorId],
+    fields: [events.creatorid],
     references: [users.id],
   }),
   teams: many(teams),
-  clan: one(clans, { fields: [events.clanId], references: [clans.id] }),
-  invites: many(eventInvites),
-  buyIns: many(eventBuyIns)
+  clan: one(clans, { fields: [events.clanid], references: [clans.id] }),
+  invites: many(eventinvites),
+  buyins: many(eventbuyins)
 }));
 
-export const bingos = createTable('bingos', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: "cascade" }),
-  title: varchar('title', { length: 255 }).notNull(),
+export const bingos = createtable('bingos', {
+  id: uuid('id').defaultrandom().primarykey(),
+  eventid: uuid('event_id').notnull().references(() => events.id, { ondelete: "cascade" }),
+  title: varchar('title', { length: 255 }).notnull(),
   description: text('description'),
-  rows: integer('rows').notNull(),
-  columns: integer('columns').notNull(),
-  codephrase: varchar('codephrase', { length: 255 }).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-  locked: boolean("locked").default(false).notNull(),
-  visible: boolean("visible").default(false).notNull(),
+  rows: integer('rows').notnull(),
+  columns: integer('columns').notnull(),
+  codephrase: varchar('codephrase', { length: 255 }).notnull(),
+  createdat: timestamp('created_at').defaultnow().notnull(),
+  updatedat: timestamp('updated_at').defaultnow().notnull(),
+  locked: boolean("locked").default(false).notnull(),
+  visible: boolean("visible").default(false).notnull(),
 });
 
-export const bingosRelations = relations(bingos, ({ one, many }) => ({
+export const bingosrelations = relations(bingos, ({ one, many }) => ({
   event: one(events, {
-    fields: [bingos.eventId],
+    fields: [bingos.eventid],
     references: [events.id],
   }),
   tiles: many(tiles),
 }));
 
-export const teams = createTable('teams', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: "cascade" }),
-  name: varchar('name', { length: 255 }).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+export const teams = createtable('teams', {
+  id: uuid('id').defaultrandom().primarykey(),
+  eventid: uuid('event_id').notnull().references(() => events.id, { ondelete: "cascade" }),
+  name: varchar('name', { length: 255 }).notnull(),
+  createdat: timestamp('created_at').defaultnow().notnull(),
+  updatedat: timestamp('updated_at').defaultnow().notnull(),
 });
 
-export const teamsRelations = relations(teams, ({ many, one }) => ({
-  teamMembers: many(teamMembers),
+export const teamsrelations = relations(teams, ({ many, one }) => ({
+  teammembers: many(teammembers),
   event: one(events, {
-    fields: [teams.eventId],
+    fields: [teams.eventid],
     references: [events.id],
   }),
-  goalProgress: many(teamGoalProgress),
+  goalprogress: many(teamgoalprogress),
 }));
 
-export const teamMembers = createTable('team_members', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: "cascade" }),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: "cascade" }),
-  isLeader: boolean('is_leader').default(false).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+export const teammembers = createtable('team_members', {
+  id: uuid('id').defaultrandom().primarykey(),
+  teamid: uuid('team_id').notnull().references(() => teams.id, { ondelete: "cascade" }),
+  userid: uuid('user_id').notnull().references(() => users.id, { ondelete: "cascade" }),
+  isleader: boolean('is_leader').default(false).notnull(),
+  createdat: timestamp('created_at').defaultnow().notnull(),
+  updatedat: timestamp('updated_at').defaultnow().notnull(),
 });
 
-export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
+export const teammembersrelations = relations(teammembers, ({ one }) => ({
   team: one(teams, {
-    fields: [teamMembers.teamId],
+    fields: [teammembers.teamid],
     references: [teams.id],
   }),
   user: one(users, {
-    fields: [teamMembers.userId],
+    fields: [teammembers.userid],
     references: [users.id],
   }),
 }));
 
-export const tiles = createTable('tiles', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  bingoId: uuid('bingo_id').notNull().references(() => bingos.id, { onDelete: "cascade" }),
-  headerImage: varchar('header_image', { length: 255 }),
-  title: text('title').notNull(),
-  description: text('description').notNull(),
-  weight: integer('weight').notNull(),
-  index: integer('index').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+export const tiles = createtable('tiles', {
+  id: uuid('id').defaultrandom().primarykey(),
+  bingoid: uuid('bingo_id').notnull().references(() => bingos.id, { ondelete: "cascade" }),
+  headerimage: varchar('header_image', { length: 255 }),
+  title: text('title').notnull(),
+  description: text('description').notnull(),
+  weight: integer('weight').notnull(),
+  index: integer('index').notnull(),
+  createdat: timestamp('created_at').defaultnow().notnull(),
+  updatedat: timestamp('updated_at').defaultnow().notnull(),
 });
 
-export const tilesRelations = relations(tiles, ({ one, many }) => ({
+export const tilesrelations = relations(tiles, ({ one, many }) => ({
   bingo: one(bingos, {
-    fields: [tiles.bingoId],
+    fields: [tiles.bingoid],
     references: [bingos.id],
   }),
   goals: many(goals),
-  teamTileSubmissions: many(teamTileSubmissions)
+  teamtilesubmissions: many(teamtilesubmissions)
 }));
 
-export const goals = createTable('goals', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  tileId: uuid('tile_id').notNull().references(() => tiles.id, { onDelete: "cascade" }),
-  description: text('description').notNull(),
-  targetValue: integer('target_value').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+export const goals = createtable('goals', {
+  id: uuid('id').defaultrandom().primarykey(),
+  tileid: uuid('tile_id').notnull().references(() => tiles.id, { ondelete: "cascade" }),
+  description: text('description').notnull(),
+  targetvalue: integer('target_value').notnull(),
+  createdat: timestamp('created_at').defaultnow().notnull(),
+  updatedat: timestamp('updated_at').defaultnow().notnull(),
 });
 
-export const goalsRelations = relations(goals, ({ one, many }) => ({
+export const goalsrelations = relations(goals, ({ one, many }) => ({
   tile: one(tiles, {
-    fields: [goals.tileId],
+    fields: [goals.tileid],
     references: [tiles.id],
   }),
-  teamProgress: many(teamGoalProgress),
+  teamprogress: many(teamgoalprogress),
 }));
 
-export const teamTileSubmissions = createTable('team_tile_submissions', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  tileId: uuid('tile_id').notNull().references(() => tiles.id, { onDelete: "cascade" }),
-  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: "cascade" }),
-  status: submissionStatusEnum('status').default('pending').notNull(),
-  reviewedBy: uuid('reviewed_by').references(() => users.id, { onDelete: "set null" }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+export const teamtilesubmissions = createtable('team_tile_submissions', {
+  id: uuid('id').defaultrandom().primarykey(),
+  tileid: uuid('tile_id').notnull().references(() => tiles.id, { ondelete: "cascade" }),
+  teamid: uuid('team_id').notnull().references(() => teams.id, { ondelete: "cascade" }),
+  status: submissionstatusenum('status').default('pending').notnull(),
+  reviewedby: uuid('reviewed_by').references(() => users.id, { ondelete: "set null" }),
+  createdat: timestamp('created_at').defaultnow().notnull(),
+  updatedat: timestamp('updated_at').defaultnow().notnull(),
 }, (table) => {
   return {
-    tileTeamUnique: uniqueIndex('tile_team_unique').on(table.tileId, table.teamId),
+    tileteamunique: uniqueindex('tile_team_unique').on(table.tileid, table.teamid),
   }
 });
 
-export const teamTileSubmissionsRelations = relations(teamTileSubmissions, ({ one, many }) => ({
+export const teamtilesubmissionsrelations = relations(teamtilesubmissions, ({ one, many }) => ({
   tile: one(tiles, {
-    fields: [teamTileSubmissions.tileId],
+    fields: [teamtilesubmissions.tileid],
     references: [tiles.id],
   }),
   team: one(teams, {
-    fields: [teamTileSubmissions.teamId],
+    fields: [teamtilesubmissions.teamid],
     references: [teams.id],
   }),
   reviewer: one(users, {
-    fields: [teamTileSubmissions.reviewedBy],
+    fields: [teamtilesubmissions.reviewedby],
     references: [users.id],
   }),
   submissions: many(submissions),
 }));
 
-export const submissions = createTable('submissions', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  teamTileSubmissionId: uuid('team_tile_submission_id').notNull().references(() => teamTileSubmissions.id, { onDelete: "cascade" }),
-  imageId: uuid('image_id').notNull().references(() => images.id, { onDelete: "cascade" }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+export const submissions = createtable('submissions', {
+  id: uuid('id').defaultrandom().primarykey(),
+  teamtilesubmissionid: uuid('team_tile_submission_id').notnull().references(() => teamtilesubmissions.id, { ondelete: "cascade" }),
+  imageid: uuid('image_id').notnull().references(() => images.id, { ondelete: "cascade" }),
+  createdat: timestamp('created_at').defaultnow().notnull(),
+  updatedat: timestamp('updated_at').defaultnow().notnull(),
 });
 
-export const submissionsRelations = relations(submissions, ({ one }) => ({
+export const submissionsrelations = relations(submissions, ({ one }) => ({
   image: one(images, {
-    fields: [submissions.imageId],
+    fields: [submissions.imageid],
     references: [images.id]
   }),
-  teamTileSubmission: one(teamTileSubmissions, {
-    fields: [submissions.teamTileSubmissionId],
-    references: [teamTileSubmissions.id]
+  teamtilesubmission: one(teamtilesubmissions, {
+    fields: [submissions.teamtilesubmissionid],
+    references: [teamtilesubmissions.id]
   })
 }));
 
-export const eventParticipants = createTable('event_participants', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: "cascade" }),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: "cascade" }),
-  role: eventRoleEnum('role').default('participant').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+export const eventparticipants = createtable('event_participants', {
+  id: uuid('id').defaultrandom().primarykey(),
+  eventid: uuid('event_id').notnull().references(() => events.id, { ondelete: "cascade" }),
+  userid: uuid('user_id').notnull().references(() => users.id, { ondelete: "cascade" }),
+  role: eventroleenum('role').default('participant').notnull(),
+  createdat: timestamp('created_at').defaultnow().notnull(),
+  updatedat: timestamp('updated_at').defaultnow().notnull(),
 });
 
-export const eventParticipantsRelations = relations(eventParticipants, ({ one }) => ({
+export const eventparticipantsrelations = relations(eventparticipants, ({ one }) => ({
   event: one(events, {
-    fields: [eventParticipants.eventId],
+    fields: [eventparticipants.eventid],
     references: [events.id],
   }),
   user: one(users, {
-    fields: [eventParticipants.userId],
+    fields: [eventparticipants.userid],
     references: [users.id],
   }),
 }));
 
-export const clans = createTable("clans", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
+export const clans = createtable("clans", {
+  id: uuid("id").defaultrandom().primarykey(),
+  name: varchar("name", { length: 255 }).notnull(),
   description: varchar("description", { length: 1000 }),
-  ownerId: uuid("owner_id").notNull().references(() => users.id, { onDelete: "set null" }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  ownerid: uuid("owner_id").notnull().references(() => users.id, { ondelete: "set null" }),
+  createdat: timestamp("created_at").defaultnow().notnull(),
+  updatedat: timestamp("updated_at").defaultnow().notnull(),
 });
 
-export const clansRelations = relations(clans, ({ many }) => ({
-  members: many(clanMembers),
+export const clansrelations = relations(clans, ({ many }) => ({
+  members: many(clanmembers),
   events: many(events),
-  invites: many(clanInvites),
+  invites: many(claninvites),
 }));
 
-export const clanMembers = createTable("clan_members", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  clanId: uuid("clan_id").notNull().references(() => clans.id, { onDelete: "cascade" }),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  isMain: boolean("is_main").notNull().default(false),
-  role: clanRoleEnum('role').default('guest').notNull(),
-  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+export const clanmembers = createtable("clan_members", {
+  id: uuid("id").defaultrandom().primarykey(),
+  clanid: uuid("clan_id").notnull().references(() => clans.id, { ondelete: "cascade" }),
+  userid: uuid("user_id").notnull().references(() => users.id, { ondelete: "cascade" }),
+  ismain: boolean("is_main").notnull().default(false),
+  role: clanroleenum('role').default('guest').notnull(),
+  joinedat: timestamp("joined_at").defaultnow().notnull(),
 }, (table) => {
   return {
-    uniqUserMainClan: uniqueIndex("uniq_user_main_clan").on(table.userId),
+    uniqusermainclan: uniqueindex("uniq_user_main_clan").on(table.userid),
   }
 });
 
-export const clanMembersRelations = relations(clanMembers, ({ one }) => ({
+export const clanmembersrelations = relations(clanmembers, ({ one }) => ({
   clan: one(clans, {
-    fields: [clanMembers.clanId],
+    fields: [clanmembers.clanid],
     references: [clans.id],
   }),
   user: one(users, {
-    fields: [clanMembers.userId],
+    fields: [clanmembers.userid],
     references: [users.id],
   }),
 }));
 
-export const clanInvites = createTable("clan_invites", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  clanId: uuid("clan_id").notNull().references(() => clans.id, { onDelete: "cascade" }),
-  inviteCode: varchar("invite_code", { length: 10 }).notNull().unique(),
-  expiresAt: timestamp("expires_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+export const claninvites = createtable("clan_invites", {
+  id: uuid("id").defaultrandom().primarykey(),
+  clanid: uuid("clan_id").notnull().references(() => clans.id, { ondelete: "cascade" }),
+  invitecode: varchar("invite_code", { length: 10 }).notnull().unique(),
+  expiresat: timestamp("expires_at"),
+  createdat: timestamp("created_at").defaultnow().notnull(),
 });
 
-export const clanInvitesRelations = relations(clanInvites, ({ one }) => ({
-  clan: one(clans, { fields: [clanInvites.clanId], references: [clans.id] }),
+export const claninvitesrelations = relations(claninvites, ({ one }) => ({
+  clan: one(clans, { fields: [claninvites.clanid], references: [clans.id] }),
 }));
 
-export const eventInvites = createTable("event_invites", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
-  inviteCode: varchar("invite_code", { length: 10 }).notNull().unique(),
-  expiresAt: timestamp("expires_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+export const eventinvites = createtable("event_invites", {
+  id: uuid("id").defaultrandom().primarykey(),
+  eventid: uuid("event_id").notnull().references(() => events.id, { ondelete: "cascade" }),
+  invitecode: varchar("invite_code", { length: 10 }).notnull().unique(),
+  expiresat: timestamp("expires_at"),
+  createdat: timestamp("created_at").defaultnow().notnull(),
 });
 
-export const eventInvitesRelations = relations(eventInvites, ({ one }) => ({
-  event: one(events, { fields: [eventInvites.eventId], references: [events.id] }),
+export const eventinvitesrelations = relations(eventinvites, ({ one }) => ({
+  event: one(events, { fields: [eventinvites.eventid], references: [events.id] }),
 }));
 
-export const images = createTable('images', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  path: varchar('path', { length: 4096 }).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+export const images = createtable('images', {
+  id: uuid('id').defaultrandom().primarykey(),
+  path: varchar('path', { length: 4096 }).notnull(),
+  createdat: timestamp('created_at').defaultnow().notnull(),
+  updatedat: timestamp('updated_at').defaultnow().notnull(),
 });
 
-export const imagesRelations = relations(images, ({ many }) => ({
+export const imagesrelations = relations(images, ({ many }) => ({
   submissions: many(submissions),
 }));
 
-export const teamGoalProgress = createTable('team_goal_progress', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: "cascade" }),
-  goalId: uuid('goal_id').notNull().references(() => goals.id, { onDelete: "cascade" }),
-  currentValue: integer('current_value').notNull().default(0),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+export const teamgoalprogress = createtable('team_goal_progress', {
+  id: uuid('id').defaultrandom().primarykey(),
+  teamid: uuid('team_id').notnull().references(() => teams.id, { ondelete: "cascade" }),
+  goalid: uuid('goal_id').notnull().references(() => goals.id, { ondelete: "cascade" }),
+  currentvalue: integer('current_value').notnull().default(0),
+  updatedat: timestamp('updated_at').defaultnow().notnull(),
 });
 
-export const teamGoalProgressRelations = relations(teamGoalProgress, ({ one }) => ({
+export const teamgoalprogressrelations = relations(teamgoalprogress, ({ one }) => ({
   team: one(teams, {
-    fields: [teamGoalProgress.teamId],
+    fields: [teamgoalprogress.teamid],
     references: [teams.id],
   }),
   goal: one(goals, {
-    fields: [teamGoalProgress.goalId],
+    fields: [teamgoalprogress.goalid],
     references: [goals.id],
   }),
 }));
 
-export const eventBuyIns = createTable('event_buy_ins', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: "cascade" }),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: "cascade" }),
-  amount: bigint('amount', { mode: 'number' }).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+export const eventbuyins = createtable('event_buy_ins', {
+  id: uuid('id').defaultrandom().primarykey(),
+  eventid: uuid('event_id').notnull().references(() => events.id, { ondelete: "cascade" }),
+  userid: uuid('user_id').notnull().references(() => users.id, { ondelete: "cascade" }),
+  amount: bigint('amount', { mode: 'number' }).notnull(),
+  createdat: timestamp('created_at').defaultnow().notnull(),
+  updatedat: timestamp('updated_at').defaultnow().notnull(),
 }, (table) => {
   return {
-    eventUserIdx: uniqueIndex('event_user_idx').on(table.eventId, table.userId),
+    eventuseridx: uniqueindex('event_user_idx').on(table.eventid, table.userid),
   }
 });
 
-export const eventBuyInsRelations = relations(eventBuyIns, ({ one }) => ({
+export const eventbuyinsrelations = relations(eventbuyins, ({ one }) => ({
   event: one(events, {
-    fields: [eventBuyIns.eventId],
+    fields: [eventbuyins.eventid],
     references: [events.id],
   }),
   user: one(users, {
-    fields: [eventBuyIns.userId],
+    fields: [eventbuyins.userid],
     references: [users.id],
   }),
 }));
