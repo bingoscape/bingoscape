@@ -11,6 +11,8 @@ import { getEventParticipants, updateParticipantRole, assignParticipantToTeam, u
 import { getTeamsByEventId } from '@/app/actions/team'
 import { getEventById } from '@/app/actions/events'
 import { formatRunescapeGold } from '@/lib/utils'
+import { UUID } from 'crypto'
+import { Breadcrumbs } from '@/components/breadcrumbs'
 
 interface Participant {
   id: string
@@ -25,25 +27,26 @@ interface Team {
   name: string
 }
 
-export default function EventParticipantPool() {
-  const { id: eventId } = useParams()
+export default function EventParticipantPool({ params }: { params: { id: UUID } }) {
   const [participants, setParticipants] = useState<Participant[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [minimumBuyIn, setMinimumBuyIn] = useState(0)
+  const [eventName, setEventName] = useState('')
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [participantsData, teamsData, eventData] = await Promise.all([
-          getEventParticipants(eventId as string),
-          getTeamsByEventId(eventId as string),
-          getEventById(eventId as string)
+          getEventParticipants(params.id as string),
+          getTeamsByEventId(params.id as string),
+          getEventById(params.id as string)
         ])
         setParticipants(participantsData)
         setTeams(teamsData)
         setMinimumBuyIn(eventData?.event.minimumBuyIn ?? 0)
+        setEventName(eventData?.event.title!)
       } catch (error) {
         console.error('Error fetching data:', error)
         toast({
@@ -56,11 +59,11 @@ export default function EventParticipantPool() {
       }
     }
     fetchData().then(() => console.log("Done fetching data")).catch(err => console.error(err))
-  }, [eventId])
+  }, [params.id])
 
   const handleRoleChange = async (participantId: string, newRole: string) => {
     try {
-      await updateParticipantRole(eventId as string, participantId, newRole as 'admin' | 'management' | 'participant')
+      await updateParticipantRole(params.id as string, participantId, newRole as 'admin' | 'management' | 'participant')
       setParticipants(participants.map(p =>
         p.id === participantId ? { ...p, role: newRole as 'admin' | 'management' | 'participant' } : p
       ))
@@ -80,7 +83,7 @@ export default function EventParticipantPool() {
 
   const handleBuyInChange = async (participantId: string, newBuyIn: number) => {
     try {
-      await updateParticipantBuyIn(eventId as string, participantId, newBuyIn)
+      await updateParticipantBuyIn(params.id as string, participantId, newBuyIn)
       setParticipants(participants.map(p =>
         p.id === participantId ? { ...p, buyIn: newBuyIn } : p
       ))
@@ -100,7 +103,7 @@ export default function EventParticipantPool() {
 
   const handleTeamAssignment = async (participantId: string, teamId: string | null) => {
     try {
-      await assignParticipantToTeam(eventId as string, participantId, teamId!)
+      await assignParticipantToTeam(params.id as string, participantId, teamId!)
       setParticipants(participants.map(p =>
         p.id === participantId ? { ...p, teamId } : p
       ))
@@ -130,8 +133,17 @@ export default function EventParticipantPool() {
     )
   }
 
+
+  const breadcrumbItems = [
+    { label: 'Home', href: '/' },
+    { label: 'Events', href: '/' },
+    { label: eventName, href: `/events/${params.id}` },
+    { label: 'Participants', href: `/events/${params.id}/participants` },
+  ]
+
   return (
     <div className="container mx-auto px-4 py-8">
+      <Breadcrumbs items={breadcrumbItems} />
       <h1 className="text-2xl font-bold mb-4">Event Participant Pool</h1>
       <p className="mb-4">Minimum Buy-In: {formatRunescapeGold(minimumBuyIn)} GP</p>
       <Input
