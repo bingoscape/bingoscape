@@ -109,8 +109,8 @@ export interface Event {
   bingos?: Bingo[];
   clan?: Clan | null;
   teams?: Team[];
-  minimumBuyIn?: number;
-  basePrizePool?: number;
+  minimumBuyIn: number;
+  basePrizePool: number;
 }
 
 export interface GetEventByIdResult {
