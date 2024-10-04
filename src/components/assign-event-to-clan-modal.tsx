@@ -57,7 +57,7 @@ export default function AssignEventToClanModal({ eventId, clans }: AssignEventTo
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Assign to Clan</Button>
+        <Button variant="outline" className='w-full'>Assign to Clan</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>

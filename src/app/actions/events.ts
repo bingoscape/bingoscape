@@ -1,8 +1,8 @@
 'use server'
 import { getServerAuthSession } from "@/server/auth";
 import { db } from "@/server/db";
-import { events, tiles, eventParticipants, clanMembers, eventInvites, teamMembers, teams } from "@/server/db/schema";
-import { eq, and, asc } from "drizzle-orm";
+import { events, tiles, eventParticipants, clanMembers, eventInvites, teamMembers, teams, eventBuyIns, users } from "@/server/db/schema";
+import { eq, and, asc, sum, sql } from "drizzle-orm";
 import { nanoid } from 'nanoid';
 
 export interface Image {
@@ -108,6 +108,8 @@ export interface Event {
   bingos?: Bingo[];
   clan?: Clan | null;
   teams?: Team[];
+  minimumBuyIn?: number;
+  basePrizePool?: number;
 }
 
 export interface GetEventByIdResult {
@@ -116,6 +118,7 @@ export interface GetEventByIdResult {
 }
 
 export type EventRole = 'admin' | 'management' | 'participant';
+
 export async function createEvent(formData: FormData) {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
@@ -126,6 +129,8 @@ export async function createEvent(formData: FormData) {
   const description = formData.get('description') as string
   const startDateStr = formData.get('startDate') as string
   const endDateStr = formData.get('endDate') as string
+  const bpp = formData.get('basePrizePool') as string
+  const mbi = formData.get('minimumBuyIn') as string
 
   if (!title || !startDateStr || !endDateStr) {
     return { success: false, error: "Missing required fields" }
@@ -134,6 +139,7 @@ export async function createEvent(formData: FormData) {
   const startDate = new Date(startDateStr)
   const endDate = new Date(endDateStr)
 
+
   if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
     return { success: false, error: "Invalid date format" }
   }
@@ -141,6 +147,9 @@ export async function createEvent(formData: FormData) {
   if (endDate < startDate) {
     return { success: false, error: "End date must be after start date" }
   }
+
+  const basePrizePool = parseInt(bpp) ?? 0;
+  const minimumBuyIn = parseInt(mbi) ?? 0;
 
   try {
 
@@ -151,6 +160,8 @@ export async function createEvent(formData: FormData) {
         description: description || '',
         startDate,
         endDate,
+        basePrizePool,
+        minimumBuyIn,
         creatorId: session.user.id,
       }).returning();
 
@@ -412,18 +423,35 @@ export async function getUserRole(eventId: string): Promise<EventRole> {
 
 export async function getEventParticipants(eventId: string) {
   try {
-    const participants = await db.query.eventParticipants.findMany({
-      where: eq(eventParticipants.eventId, eventId),
-      with: {
-        user: true,
-      },
-    });
+    const participants = await db
+      .select({
+        userId: eventParticipants.userId,
+        runescapeName: users.runescapeName,
+        role: eventParticipants.role,
+        buyIn: eventBuyIns.amount,
+        teamId: teamMembers.teamId,
+        teamName: teams.name,
+      })
+      .from(eventParticipants)
+      .leftJoin(users, eq(eventParticipants.userId, users.id))
+      .leftJoin(
+        eventBuyIns,
+        and(
+          eq(eventBuyIns.eventId, eventParticipants.eventId),
+          eq(eventBuyIns.userId, eventParticipants.userId)
+        )
+      )
+      .leftJoin(teamMembers, eq(eventParticipants.userId, teamMembers.userId))
+      .leftJoin(teams, eq(teamMembers.teamId, teams.id))
+      .where(eq(eventParticipants.eventId, eventId));
 
     return participants.map(p => ({
       id: p.userId,
-      runescapeName: p.user.runescapeName ?? '',
+      runescapeName: p.runescapeName ?? '',
       role: p.role,
-      teamId: null, // We'll need to fetch this separately or join with teamMembers
+      teamId: p.teamId ?? null,
+      teamName: p.teamName ?? null,
+      buyIn: p.buyIn ?? 0,
     }));
   } catch (error) {
     console.error("Error fetching event participants:", error);
@@ -522,3 +550,63 @@ export async function getEventParticipantsWithTeams(eventId: string) {
   }
 }
 
+export async function getTotalBuyInsForEvent(eventId: string): Promise<number> {
+  try {
+    const result = await db
+      .select({ total: sum(eventBuyIns.amount) })
+      .from(eventBuyIns)
+      .where(eq(eventBuyIns.eventId, eventId))
+
+    // Convert the string result to a number, or return 0 if it's null
+    const total = result[0]?.total ? parseFloat(result[0].total) : 0
+
+    // Check if the parsed result is a valid number
+    if (isNaN(total)) {
+      console.error("Invalid sum result for event buy-ins")
+      return 0
+    }
+    const event = await db.query.events.findFirst({
+      where: eq(events.id, eventId)
+    })
+
+    return total + (event?.basePrizePool ?? 0)
+  } catch (error) {
+    console.error("Error calculating total buy-ins for event:", error)
+    return 0
+  }
+}
+
+export async function updateParticipantBuyIn(eventId: string, participantId: string, buyIn: number) {
+  try {
+    // First, get the minimum buy-in for the event
+    const event = await db.query.events.findFirst({
+      where: eq(events.id, eventId)
+    })
+
+    if (!event) {
+      throw new Error("Event not found")
+    }
+
+
+    // Proceed with the upsert operation
+    await db
+      .insert(eventBuyIns)
+      .values({
+        eventId,
+        userId: participantId,
+        amount: buyIn,
+      })
+      .onConflictDoUpdate({
+        target: [eventBuyIns.eventId, eventBuyIns.userId],
+        set: {
+          amount: buyIn,
+          updatedAt: sql`CURRENT_TIMESTAMP`,
+        },
+      })
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error updating participant buy-in:", error)
+    throw error
+  }
+}

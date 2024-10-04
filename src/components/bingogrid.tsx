@@ -24,7 +24,7 @@ interface BingoGridProps {
 }
 
 export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: BingoGridProps) {
-const [tiles, setTiles] = useState<Tile[]>(bingo.tiles)
+  const [tiles, setTiles] = useState<Tile[]>(bingo.tiles)
   const [rows, setRows] = useState(bingo.rows)
   const [columns, setColumns] = useState(bingo.columns)
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null)
@@ -791,8 +791,10 @@ const [tiles, setTiles] = useState<Tile[]>(bingo.tiles)
       </Dialog>
 
       <Dialog open={!!fullSizeImage} onOpenChange={() => setFullSizeImage(null)}>
-        <DialogTitle>Submission</DialogTitle>
         <DialogContent className="sm:max-w-[90vw] sm:max-h-[90vh] p-0">
+          <DialogHeader>
+            <DialogTitle>Submission</DialogTitle>
+          </DialogHeader>
           {fullSizeImage && (
             <div className="relative w-full h-full min-h-[50vh]">
               <Image
@@ -805,7 +807,7 @@ const [tiles, setTiles] = useState<Tile[]>(bingo.tiles)
           )}
         </DialogContent>
       </Dialog>
-    </div >
+    </div>
   )
 
   function hasSufficientRights(): boolean {

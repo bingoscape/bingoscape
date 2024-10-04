@@ -9,10 +9,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
 import { createEvent } from '@/app/actions/events'
+import { formatRunescapeGold } from '@/lib/utils'
 
 export function CreateEventModal() {
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [buyIn, setBuyIn] = useState(0)
+  const [basePool, setBasePool] = useState(0)
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -61,6 +64,20 @@ export function CreateEventModal() {
           <div>
             <Label htmlFor="description">Description</Label>
             <Textarea id="description" name="description" />
+          </div>
+          <div>
+            <Label htmlFor="basePrizePool">Base Prizepool</Label>
+            <Input id="basePrizePool" name="basePrizePool" type="number" required onChange={(e) => setBasePool(parseInt(e.target.value))} min={0} defaultValue={0} />
+            <span className="text-sm font-medium">
+              ({formatRunescapeGold(basePool)} GP)
+            </span>
+          </div>
+          <div>
+            <Label htmlFor="minimumBuyIn">Buy In</Label>
+            <Input id="minimumBuyIn" name="minimumBuyIn" type="number" required onChange={(e) => setBuyIn(parseInt(e.target.value))} min={0} defaultValue={0} />
+            <span className="text-sm font-medium">
+              ({formatRunescapeGold(buyIn)} GP)
+            </span>
           </div>
           <div>
             <Label htmlFor="startDate">Start Date</Label>
