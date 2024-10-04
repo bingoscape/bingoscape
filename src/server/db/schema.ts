@@ -140,7 +140,6 @@ export const eventsRelations = relations(events, ({ many, one }) => ({
   teams: many(teams),
   clan: one(clans, { fields: [events.clanId], references: [clans.id] }),
   invites: many(eventInvites),
-  buyIns: many(eventBuyIns)
 }));
 
 export const bingos = createTable('bingos', {
@@ -298,7 +297,7 @@ export const eventParticipants = createTable('event_participants', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-export const eventParticipantsRelations = relations(eventParticipants, ({ one }) => ({
+export const eventParticipantsRelations = relations(eventParticipants, ({ one, many }) => ({
   event: one(events, {
     fields: [eventParticipants.eventId],
     references: [events.id],
@@ -307,6 +306,7 @@ export const eventParticipantsRelations = relations(eventParticipants, ({ one })
     fields: [eventParticipants.userId],
     references: [users.id],
   }),
+  buyIns: many(eventBuyIns)
 }));
 
 export const clans = createTable("clans", {
@@ -404,24 +404,15 @@ export const teamGoalProgressRelations = relations(teamGoalProgress, ({ one }) =
 
 export const eventBuyIns = createTable('event_buy_ins', {
   id: uuid('id').defaultRandom().primaryKey(),
-  eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: "cascade" }),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: "cascade" }),
+  eventParticipantId: uuid('event_participant_id').notNull().references(() => eventParticipants.id, { onDelete: "cascade" }),
   amount: bigint('amount', { mode: 'number' }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => {
-  return {
-    eventUserIdx: uniqueIndex('event_user_idx').on(table.eventId, table.userId),
-  }
 });
 
 export const eventBuyInsRelations = relations(eventBuyIns, ({ one }) => ({
-  event: one(events, {
-    fields: [eventBuyIns.eventId],
-    references: [events.id],
-  }),
-  user: one(users, {
-    fields: [eventBuyIns.userId],
-    references: [users.id],
+  eventParticipant: one(eventParticipants, {
+    fields: [eventBuyIns.eventParticipantId],
+    references: [eventParticipants.id],
   }),
 }));
