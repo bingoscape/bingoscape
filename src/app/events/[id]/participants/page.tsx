@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -12,6 +12,7 @@ import { getEventById } from '@/app/actions/events'
 import { formatRunescapeGold } from '@/lib/utils'
 import { type UUID } from 'crypto'
 import { Breadcrumbs } from '@/components/breadcrumbs'
+import debounce from 'lodash/debounce'
 
 interface Participant {
   id: string
@@ -80,24 +81,36 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
     }
   }
 
-  const handleBuyInChange = async (participantId: string, newBuyIn: number) => {
-    try {
-      await updateParticipantBuyIn(params.id as string, participantId, newBuyIn)
-      setParticipants(participants.map(p =>
-        p.id === participantId ? { ...p, buyIn: newBuyIn } : p
-      ))
-      toast({
-        title: "Success",
-        description: "Participant buy-in updated",
-      })
-    } catch (error) {
-      console.error('Error updating buy-in:', error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update participant buy-in",
-        variant: "destructive",
-      })
-    }
+  const debouncedBuyInChange = useCallback(
+    debounce(async (participantId: string, newBuyIn: number) => {
+      try {
+        await updateParticipantBuyIn(params.id as string, participantId, newBuyIn)
+        setParticipants(participants => participants.map(p =>
+          p.id === participantId ? { ...p, buyIn: newBuyIn } : p
+        ))
+        toast({
+          title: "Success",
+          description: "Participant buy-in updated",
+        })
+      } catch (error) {
+        console.error('Error updating buy-in:', error)
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to update participant buy-in",
+          variant: "destructive",
+        })
+      }
+    }, 500),
+    [params.id]
+  )
+
+  const handleBuyInChange = (participantId: string, newBuyIn: number) => {
+    // Update the local state immediately for a responsive UI
+    setParticipants(participants.map(p =>
+      p.id === participantId ? { ...p, buyIn: newBuyIn } : p
+    ))
+    // Debounce the API call
+    debouncedBuyInChange(participantId, newBuyIn)?.then(() => console.log('done')).catch(err => console.error(err))
   }
 
   const handleTeamAssignment = async (participantId: string, teamId: string | null) => {
@@ -131,7 +144,6 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
       </div>
     )
   }
-
 
   const breadcrumbItems = [
     { label: 'Home', href: '/' },

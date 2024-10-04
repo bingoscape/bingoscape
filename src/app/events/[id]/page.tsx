@@ -18,6 +18,7 @@ import { Users } from "lucide-react"
 import { getCurrentTeamForUser } from "@/app/actions/team"
 import { PrizePoolDisplay } from "@/components/prize-pool-display"
 import { formatRunescapeGold } from '@/lib/utils'
+import { EditEventModal } from "@/components/edit-event-modal"
 
 export default async function EventBingosPage({ params }: { params: { id: UUID } }) {
 	const session = await getServerAuthSession()
@@ -68,6 +69,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 					{isAdminOrManagement && !event.clan && (
 						<AssignEventToClanModal eventId={event.id} clans={userClans.map(uc => ({ id: uc.clan.id, name: uc.clan.name }))} />
 					)}
+					{isAdminOrManagement && <EditEventModal event={event} />}
 					<PrizePoolDisplay prizePool={prizePool} />
 				</div>
 			</div>
