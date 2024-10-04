@@ -31,6 +31,29 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 border-b bg-background">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center space-x-4">
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon" className="md:hidden">
+                <Menu className="h-[1.2rem] w-[1.2rem]" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left">
+              <div className="flex flex-col space-y-4 mt-4">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center space-x-2 hover:text-foreground/80 transition-colors ${pathname === item.href ? 'font-semibold' : ''}`}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+            </SheetContent>
+          </Sheet>
           <Link href="/" className="text-xl font-bold">BingoScape</Link>
           {session?.user && (
             <>
@@ -46,29 +69,6 @@ export function Navbar() {
                   </Link>
                 ))}
               </div>
-              <Sheet open={isOpen} onOpenChange={setIsOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="icon" className="md:hidden">
-                    <Menu className="h-[1.2rem] w-[1.2rem]" />
-                    <span className="sr-only">Toggle menu</span>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left">
-                  <div className="flex flex-col space-y-4 mt-4">
-                    {navItems.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={`flex items-center space-x-2 hover:text-foreground/80 transition-colors ${pathname === item.href ? 'font-semibold' : ''}`}
-                        onClick={() => setIsOpen(false)}
-                      >
-                        <item.icon className="h-5 w-5" />
-                        <span>{item.label}</span>
-                      </Link>
-                    ))}
-                  </div>
-                </SheetContent>
-              </Sheet>
             </>
           )}
         </div>
