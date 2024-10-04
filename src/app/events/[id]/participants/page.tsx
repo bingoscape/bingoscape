@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -11,7 +10,7 @@ import { getEventParticipants, updateParticipantRole, assignParticipantToTeam, u
 import { getTeamsByEventId } from '@/app/actions/team'
 import { getEventById } from '@/app/actions/events'
 import { formatRunescapeGold } from '@/lib/utils'
-import { UUID } from 'crypto'
+import { type UUID } from 'crypto'
 import { Breadcrumbs } from '@/components/breadcrumbs'
 
 interface Participant {
@@ -46,7 +45,7 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
         setParticipants(participantsData)
         setTeams(teamsData)
         setMinimumBuyIn(eventData?.event.minimumBuyIn ?? 0)
-        setEventName(eventData?.event.title!)
+        setEventName(eventData?.event.title ?? '')
       } catch (error) {
         console.error('Error fetching data:', error)
         toast({
