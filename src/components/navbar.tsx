@@ -11,13 +11,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, User, Home, Users } from "lucide-react"
+import { LogOut, User, Home, Users, Menu } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { ModeToggle } from "./mode-toggle"
+import { useState } from "react"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
 export function Navbar() {
   const { data: session, status } = useSession()
   const pathname = usePathname()
+  const [isOpen, setIsOpen] = useState(false)
 
   const navItems = [
     { href: "/", label: "Home", icon: Home },
@@ -29,16 +32,45 @@ export function Navbar() {
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center space-x-4">
           <Link href="/" className="text-xl font-bold">BingoScape</Link>
-          {session?.user && navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`hidden md:flex items-center space-x-1 hover:text-foreground/80 transition-colors ${pathname === item.href ? 'font-semibold' : ''}`}
-            >
-              <item.icon className="h-4 w-4" />
-              <span>{item.label}</span>
-            </Link>
-          ))}
+          {session?.user && (
+            <>
+              <div className="hidden md:flex items-center space-x-4">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center space-x-1 hover:text-foreground/80 transition-colors ${pathname === item.href ? 'font-semibold' : ''}`}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+              <Sheet open={isOpen} onOpenChange={setIsOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" className="md:hidden">
+                    <Menu className="h-[1.2rem] w-[1.2rem]" />
+                    <span className="sr-only">Toggle menu</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left">
+                  <div className="flex flex-col space-y-4 mt-4">
+                    {navItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`flex items-center space-x-2 hover:text-foreground/80 transition-colors ${pathname === item.href ? 'font-semibold' : ''}`}
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <item.icon className="h-5 w-5" />
+                        <span>{item.label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </>
+          )}
         </div>
         {status === "loading" ? (
           <div className="h-8 w-8 animate-pulse bg-muted rounded-full" />
@@ -63,15 +95,6 @@ export function Navbar() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                {navItems.map((item) => (
-                  <DropdownMenuItem key={item.href} asChild className="md:hidden">
-                    <Link href={item.href} className="flex items-center">
-                      <item.icon className="mr-2 h-4 w-4" />
-                      <span>{item.label}</span>
-                    </Link>
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator className="md:hidden" />
                 <DropdownMenuItem onClick={() => signOut()} className="flex items-center">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>

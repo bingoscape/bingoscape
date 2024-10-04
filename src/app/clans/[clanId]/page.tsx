@@ -192,9 +192,7 @@ export default function ClanDetailPage({ params }: { params: { clanId: string } 
               </div>
             </div>
             {isOwnerOrAdmin && (
-              <div className="mb-6">
-                <GenerateClanInviteLink clanId={params.clanId} />
-              </div>
+              <GenerateClanInviteLink clanId={params.clanId} />
             )}
           </div>
         </CardContent>
