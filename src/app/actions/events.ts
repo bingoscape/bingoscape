@@ -420,7 +420,6 @@ export async function getUserRole(eventId: string): Promise<EventRole> {
     throw new Error("Failed to fetch user role");
   }
 }
-
 export async function getEventParticipants(eventId: string) {
   try {
     const participants = await db
@@ -428,30 +427,27 @@ export async function getEventParticipants(eventId: string) {
         userId: eventParticipants.userId,
         runescapeName: users.runescapeName,
         role: eventParticipants.role,
-        buyIn: sql<number>`COALESCE(SUM(${eventBuyIns.amount}), 0)`.as('buyIn'),
-        teamIds: sql<string>`STRING_AGG(DISTINCT ${teamMembers.teamId}::text, ',')`.as('teamIds'),
-        teamNames: sql<string>`STRING_AGG(DISTINCT ${teams.name}, ',')`.as('teamNames'),
+        buyIn: sql<number>`COALESCE(${eventBuyIns.amount}, 0)`.as('buyIn'),
+        teamId: teamMembers.teamId,
+        teamName: teams.name,
       })
       .from(eventParticipants)
       .leftJoin(users, eq(eventParticipants.userId, users.id))
       .leftJoin(
         eventBuyIns,
-        and(
-          eq(eventBuyIns.eventId, eventParticipants.eventId),
-          eq(eventBuyIns.userId, eventParticipants.userId)
-        )
+        eq(eventBuyIns.eventParticipantId, eventParticipants.id)
       )
       .leftJoin(teamMembers, eq(eventParticipants.userId, teamMembers.userId))
       .leftJoin(teams, eq(teamMembers.teamId, teams.id))
       .where(eq(eventParticipants.eventId, eventId))
-      .groupBy(eventParticipants.userId, users.runescapeName, eventParticipants.role)
+      .orderBy(eventParticipants.userId)
 
     return participants.map(p => ({
       id: p.userId,
       runescapeName: p.runescapeName ?? '',
       role: p.role,
-      teamId: p.teamIds ? p.teamIds.split(',')[0] : null,
-      teamName: p.teamNames ? p.teamNames.split(',')[0] : null,
+      teamId: p.teamId ?? null,
+      teamName: p.teamName ?? null,
       buyIn: p.buyIn,
     }))
   } catch (error) {
@@ -554,18 +550,25 @@ export async function getEventParticipantsWithTeams(eventId: string) {
 export async function getTotalBuyInsForEvent(eventId: string): Promise<number> {
   try {
     const result = await db
-      .select({ total: sum(eventBuyIns.amount) })
+      .select({
+        total: sum(eventBuyIns.amount)
+      })
       .from(eventBuyIns)
-      .where(eq(eventBuyIns.eventId, eventId))
+      .innerJoin(
+        eventParticipants,
+        eq(eventBuyIns.eventParticipantId, eventParticipants.id)
+      )
+      .where(eq(eventParticipants.eventId, eventId))
 
-    // Convert the string result to a number, or return 0 if it's null
-    const total = result[0]?.total ? parseFloat(result[0].total) : 0
+    // Convert the result to a number, or return 0 if it's null
+    const total = result[0]?.total ? Number(result[0].total) : 0
 
     // Check if the parsed result is a valid number
     if (isNaN(total)) {
       console.error("Invalid sum result for event buy-ins")
       return 0
     }
+
     const event = await db.query.events.findFirst({
       where: eq(events.id, eventId)
     })
@@ -576,6 +579,7 @@ export async function getTotalBuyInsForEvent(eventId: string): Promise<number> {
     return 0
   }
 }
+
 
 export async function updateParticipantBuyIn(eventId: string, participantId: string, buyIn: number) {
   try {
@@ -588,22 +592,41 @@ export async function updateParticipantBuyIn(eventId: string, participantId: str
       throw new Error("Event not found")
     }
 
+    // Find the eventParticipant
+    const eventParticipant = await db.query.eventParticipants.findFirst({
+      where: and(
+        eq(eventParticipants.eventId, eventId),
+        eq(eventParticipants.userId, participantId)
+      )
+    })
 
-    // Proceed with the upsert operation
-    await db
-      .insert(eventBuyIns)
-      .values({
-        eventId,
-        userId: participantId,
-        amount: buyIn,
-      })
-      .onConflictDoUpdate({
-        target: [eventBuyIns.eventId, eventBuyIns.userId],
-        set: {
+    if (!eventParticipant) {
+      throw new Error("Participant not found for this event")
+    }
+
+    // Check if a buy-in record already exists
+    const existingBuyIn = await db.query.eventBuyIns.findFirst({
+      where: eq(eventBuyIns.eventParticipantId, eventParticipant.id)
+    })
+
+    if (existingBuyIn) {
+      // Update existing record
+      await db
+        .update(eventBuyIns)
+        .set({
           amount: buyIn,
           updatedAt: sql`CURRENT_TIMESTAMP`,
-        },
-      })
+        })
+        .where(eq(eventBuyIns.id, existingBuyIn.id))
+    } else {
+      // Insert new record
+      await db
+        .insert(eventBuyIns)
+        .values({
+          eventParticipantId: eventParticipant.id,
+          amount: buyIn,
+        })
+    }
 
     return { success: true }
   } catch (error) {
