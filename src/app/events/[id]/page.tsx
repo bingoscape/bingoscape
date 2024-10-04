@@ -66,10 +66,10 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 							</Button>
 						</Link>
 					)}
-					{isAdminOrManagement && !event.clan && (
+					{userRole == 'admin' && !event.clan && (
 						<AssignEventToClanModal eventId={event.id} clans={userClans.map(uc => ({ id: uc.clan.id, name: uc.clan.name }))} />
 					)}
-					{isAdminOrManagement && <EditEventModal event={event} />}
+					{userRole === 'admin' && <EditEventModal event={event} />}
 					<PrizePoolDisplay prizePool={prizePool} />
 				</div>
 			</div>
