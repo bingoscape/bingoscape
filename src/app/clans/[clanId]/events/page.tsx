@@ -1,7 +1,7 @@
 'use client'
 
 import { notFound, useRouter } from "next/navigation";
-import { getClanEvents } from "@/app/actions/clan";
+import { getClanDetails, getClanEvents } from "@/app/actions/clan";
 import { joinEvent } from "@/app/actions/events";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useSession } from "next-auth/react";
 import { createArray } from "@/lib/utils";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 
 type Event = {
 	id: string;
@@ -33,6 +34,7 @@ type Event = {
 
 export default function ClanEventsPage({ params }: { params: { clanId: string } }) {
 	const [clanEvents, setClanEvents] = useState<Event[]>([]);
+	const [clanName, setClanName] = useState('');
 	const [isLoading, setIsLoading] = useState(true);
 	const { data: session, status } = useSession();
 	const router = useRouter();
@@ -49,6 +51,8 @@ export default function ClanEventsPage({ params }: { params: { clanId: string } 
 			try {
 				const events = await getClanEvents(params.clanId);
 				setClanEvents(events);
+				const clanDetails = await getClanDetails(params.clanId)
+				setClanName(clanDetails.name ?? '')
 			} catch (error) {
 				if (error instanceof Error && error.message === "You are not a member of this clan") {
 					notFound();
@@ -138,8 +142,17 @@ export default function ClanEventsPage({ params }: { params: { clanId: string } 
 		return null; // The useEffect will handle the redirect
 	}
 
+
+	const breadcrumbItems = [
+		{ label: 'Home', href: '/' },
+		{ label: 'Clans', href: '/' },
+		{ label: clanName, href: `/clans/${params.clanId}` },
+		{ label: 'Events', href: `/clans/${params.clanId}/events` },
+	]
+
 	return (
 		<div className="container mx-auto py-10">
+			<Breadcrumbs items={breadcrumbItems} />
 			<h1 className="text-3xl font-bold mb-6">Clan Events</h1>
 			{clanEvents.length === 0 ? (
 				<p className="text-muted-foreground">No events have been created for this clan yet.</p>

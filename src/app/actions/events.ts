@@ -282,6 +282,7 @@ export async function getEvents(userId: string): Promise<Event[]> {
         eventParticipants: {
           where: eq(eventParticipants.userId, userId),
         },
+        clan: true
       },
       orderBy: events.createdAt,
     });
