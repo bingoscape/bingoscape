@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   index,
   integer,
@@ -125,6 +126,8 @@ export const events = createTable("events", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   locked: boolean("locked").default(false).notNull(),
   visible: boolean("visible").default(false).notNull(),
+  basePrizePool: bigint('basePrizePool', { mode: 'number' }).default(0).notNull(),
+  minimumBuyIn: bigint("minimumBuyIn", { mode: 'number' }).default(0).notNull()
 });
 
 export const eventsRelations = relations(events, ({ many, one }) => ({
@@ -136,7 +139,8 @@ export const eventsRelations = relations(events, ({ many, one }) => ({
   }),
   teams: many(teams),
   clan: one(clans, { fields: [events.clanId], references: [clans.id] }),
-  invites: many(eventInvites)
+  invites: many(eventInvites),
+  buyIns: many(eventBuyIns)
 }));
 
 export const bingos = createTable('bingos', {
@@ -395,5 +399,29 @@ export const teamGoalProgressRelations = relations(teamGoalProgress, ({ one }) =
   goal: one(goals, {
     fields: [teamGoalProgress.goalId],
     references: [goals.id],
+  }),
+}));
+
+export const eventBuyIns = createTable('event_buy_ins', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: "cascade" }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: "cascade" }),
+  amount: bigint('amount', { mode: 'number' }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => {
+  return {
+    eventUserIdx: uniqueIndex('event_user_idx').on(table.eventId, table.userId),
+  }
+});
+
+export const eventBuyInsRelations = relations(eventBuyIns, ({ one }) => ({
+  event: one(events, {
+    fields: [eventBuyIns.eventId],
+    references: [events.id],
+  }),
+  user: one(users, {
+    fields: [eventBuyIns.userId],
+    references: [users.id],
   }),
 }));

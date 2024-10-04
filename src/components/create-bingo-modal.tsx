@@ -7,20 +7,17 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createBingo } from '@/app/actions/bingo'
-import { ForwardRefEditor } from './forward-ref-editor'
-import '@mdxeditor/editor/style.css'
+import { Textarea } from './ui/textarea'
 
 export function CreateBingoModal({ eventId }: { eventId: string }) {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [description, setDescription] = useState('')
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
     formData.append('eventId', eventId)
-    formData.append('description', description)
 
     try {
       await createBingo(formData)
@@ -35,14 +32,10 @@ export function CreateBingoModal({ eventId }: { eventId: string }) {
     }
   }
 
-  const handleEditorChange = (content: string) => {
-    setDescription(content)
-  }
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Create New Bingo</Button>
+        <Button className='w-full'>Create New Bingo</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
@@ -65,24 +58,18 @@ export function CreateBingoModal({ eventId }: { eventId: string }) {
             <Input id="codephrase" name="codephrase" required />
           </div>
           <div>
-            <Label htmlFor="bingoDescription">Description</Label>
-            <div className="h-[200px] overflow-y-auto border rounded-md">
-              <ForwardRefEditor
-                onChange={handleEditorChange}
-                markdown={description}
-                contentEditableClassName="prose max-w-full"
-              />
-            </div>
+            <Label htmlFor="description">Description</Label>
+            <Textarea id="description" name="description" className="max-w-full" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="rows">Number of Rows</Label>
-              <Input id="rows" name="rows" type="number" min="1" max="10" required />
+              <Input id="rows" name="rows" type="number" min="1" max="10" defaultValue={5} required />
             </div>
             <div>
               <Label htmlFor="columns">Number of Columns</Label>
-              <Input id="columns" name="columns" type="number" min="1" max="10" required />
+              <Input id="columns" name="columns" type="number" min="1" max="10" defaultValue={5} required />
             </div>
           </div>
 
