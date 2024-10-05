@@ -175,6 +175,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
     <div className="space-y-6">
       <div className="flex items-center space-x-2">
         <Input
+          id="nexTeam"
           type="text"
           placeholder="New team name"
           value={newTeamName}
