@@ -1,20 +1,20 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import Image from 'next/image'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Progress } from "@/components/ui/progress"
-import Sortable, { type SortableEvent } from 'sortablejs'
 import { toast } from '@/hooks/use-toast'
 import { updateTile, reorderTiles, addGoal, deleteGoal, getTileGoalsAndProgress, updateGoalProgress, submitImage, getSubmissions, updateTeamTileSubmissionStatus, addRowOrColumn } from '@/app/actions/bingo'
-import { BingoTile } from './bingo-tile'
-import { ForwardRefEditor } from './forward-ref-editor'
 import '@mdxeditor/editor/style.css'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Trash2, Lock, Unlock, Upload, X, Clock, Check, PlusSquare } from 'lucide-react'
 import type { Bingo, Tile, Team, EventRole, Goal } from '@/app/actions/events'
+import Sortable, { type SortableEvent } from 'sortablejs'
+import { CodephraseDisplay } from './codephrase-display'
+import { TileOrderingControls } from './tile-ordering-controls'
+import { BingoGridLayout } from './bingo-grid-layout'
+import { TileDetailsTab } from './tile-details-tab'
+import { GoalsTab } from './goals-tab'
+import { SubmissionsTab } from './submissions-tab'
+import { FullSizeImageDialog } from './full-size-image-dialog'
 
 interface BingoGridProps {
   bingo: Bingo
@@ -31,7 +31,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editedTile, setEditedTile] = useState<Partial<Tile>>({})
   const [newGoal, setNewGoal] = useState<Partial<Goal>>({})
-  const [isLocked, setIsOrderingEnabled] = useState(false)
+  const [isLocked, setIsLocked] = useState(true)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [pastedImage, setPastedImage] = useState<File | null>(null)
   const [fullSizeImage, setFullSizeImage] = useState<{ src: string; alt: string } | null>(null)
@@ -39,7 +39,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
   const sortableRef = useRef<Sortable | null>(null)
 
   useEffect(() => {
-    if (gridRef.current && hasSufficientRights() && isLocked) {
+    if (gridRef.current && hasSufficientRights() && !isLocked) {
       sortableRef.current = new Sortable(gridRef.current, {
         animation: 150,
         ghostClass: 'bg-blue-100',
@@ -71,19 +71,17 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
   }, [tiles, userRole, isLocked])
 
   const toggleOrdering = () => {
-    setIsOrderingEnabled(!isLocked)
-    if (!isLocked) {
-      toast({
-        title: "Tile ordering enabled",
-        description: "You can now drag and drop tiles to reorder them.",
-      })
-    } else {
-      toast({
-        title: "Tile ordering disabled",
-        description: "Tile ordering has been locked.",
-      })
-    }
+    setIsLocked(!isLocked)
+    toast({
+      title: isLocked ? "Tile ordering enabled" : "Tile ordering disabled",
+      description: isLocked ? "You can now drag and drop tiles to reorder them." : "Tile ordering has been locked.",
+    })
   }
+
+
+
+
+
 
   const handleAddRow = async () => {
     try {
@@ -390,282 +388,6 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
     }
   }, [handlePaste])
 
-  const renderCodephrase = () => (
-    <div className="bg-primary text-primary-foreground p-4 rounded-lg shadow-md mb-6">
-      <h2 className="text-2xl font-bold mb-2">Codephrase</h2>
-      <p className="text-xl">{bingo.codephrase}</p>
-    </div>
-  )
-
-  const renderGoals = () => (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Goals</h3>
-      {selectedTile?.goals?.map(goal => (
-        <div key={goal.id} className="flex justify-between items-center">
-          <span>{goal.description} (Target: {goal.targetValue})</span>
-          {hasSufficientRights() && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleDeleteGoal(goal.id)}
-              className="text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      ))}
-      {hasSufficientRights() && (
-        <>
-          <h3 className="text-lg font-semibold">Add New Goal</h3>
-          <div className="space-y-2">
-            <Input
-              placeholder="Goal description"
-              value={newGoal.description ?? ''}
-              onChange={(e) => setNewGoal({ ...newGoal, description: e.target.value })}
-            />
-            <Input
-              type="number"
-              placeholder="Target value"
-              value={newGoal.targetValue ?? ''}
-              onChange={(e) => setNewGoal({ ...newGoal, targetValue: parseInt(e.target.value) })}
-            />
-            <Button onClick={handleAddGoal}>Add Goal</Button>
-          </div>
-        </>
-      )}
-    </div>
-  )
-
-  const renderTileProgress = () => {
-    if (!selectedTile?.goals) return null
-
-    return (
-      <div className="space-y-6 mt-6">
-        <h3 className="text-lg font-semibold">Team Progress</h3>
-        {teams.map(team => (
-          <div key={team.id} className="space-y-2">
-            <h4 className="font-medium">{team.name}</h4>
-            {selectedTile.goals?.map(goal => {
-              const teamProgress = goal.teamProgress.find(progress => progress.teamId === team.id)
-              return (
-                <div key={goal.id} className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span>{goal.description}</span>
-                    <span>{teamProgress?.currentValue ?? 0} / {goal.targetValue}</span>
-                  </div>
-                  <Progress
-                    value={(teamProgress?.currentValue ?? 0) / goal.targetValue * 100}
-                    className="h-2"
-                    aria-label={`Progress for ${team.name} on ${goal.description}`}
-                  />
-                </div>
-              )
-            })}
-          </div>
-        ))}
-      </div>
-    )
-  }
-
-  const renderTileDetails = () => (
-    <div className="space-y-6">
-      <div className="flex gap-6">
-        <div className="w-1/3 relative aspect-square">
-          {selectedTile?.headerImage ? (
-            <Image
-              src={selectedTile.headerImage}
-              alt={selectedTile.title}
-              fill
-              className="object-contain rounded-md"
-            />
-          ) : (
-            <div className="w-full h-full bg-gray-200 rounded-md flex items-center justify-center">
-              <span className="text-gray-400">No image</span>
-            </div>
-          )}
-        </div>
-        <div className="w-2/3 space-y-4">
-          {hasSufficientRights() ? (
-            <>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="title" className="text-right">
-                  Title
-                </label>
-                <Input
-                  id="title"
-                  value={editedTile.title ?? ''}
-                  onChange={(e) => setEditedTile({ ...editedTile, title: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="description" className="text-right">
-                  Description
-                </label>
-                <div className="col-span-3 h-[200px] overflow-y-auto border rounded-md">
-                  <ForwardRefEditor
-                    onChange={handleEditorChange}
-                    markdown={editedTile.description ?? ''}
-                    contentEditableClassName="prose max-w-full"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="weight" className="text-right">
-                  Weight
-                </label>
-                <Input
-                  id="weight"
-                  type="number"
-                  value={editedTile.weight ?? ''}
-                  onChange={(e) => setEditedTile({ ...editedTile, weight: parseInt(e.target.value) })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="headerImage" className="text-right">
-                  Header Image URL
-                </label>
-                <Input
-                  id="headerImage"
-                  value={editedTile.headerImage ?? ''}
-                  onChange={(e) => setEditedTile({ ...editedTile, headerImage: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="flex justify-end">
-                <Button onClick={handleTileUpdate}>Update Tile</Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <h3 className="text-lg font-semibold">{selectedTile?.title}</h3>
-              <div className="prose max-w-full" dangerouslySetInnerHTML={{ __html: selectedTile?.description ?? '' }} />
-              <p>Weight: {selectedTile?.weight}</p>
-            </>
-          )}
-        </div>
-      </div>
-      {renderTileProgress()}
-    </div>
-  )
-
-  const renderSubmissions = () => {
-    if (!selectedTile) {
-      return (<p>No tile selected</p>)
-    }
-
-    const teamSubmissions = selectedTile.teamTileSubmissions?.find(tts => tts.teamId === currentTeamId)?.submissions ?? []
-
-    return (
-      <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
-        <h3 className="text-lg font-semibold sticky top-0 bg-background z-10 py-2">Submissions</h3>
-        {currentTeamId ? (
-          <div className="space-y-4">
-            <div
-              className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer"
-              onClick={() => document.getElementById('file-input')?.click()}
-            >
-              <p>Click to select an image or paste an image here</p>
-              {(selectedImage ?? pastedImage) && (
-                <p className="mt-2 text-sm text-green-600">Image ready to submit</p>
-              )}
-            </div>
-            <Input
-              id="file-input"
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="hidden"
-            />
-            <Button onClick={handleImageSubmit} disabled={!selectedImage && !pastedImage}>
-              <Upload className="mr-2 h-4 w-4" />
-              Submit Image
-            </Button>
-            <div className="grid grid-cols-2 gap-4">
-              {teamSubmissions.map(submission => (
-                <div key={submission.id} className="border rounded-md p-4">
-                  <div className="relative w-full h-48">
-                    <Image
-                      src={submission.image.path}
-                      alt={`Submission for ${selectedTile.title}`}
-                      layout="fill"
-                      objectFit="cover"
-                      className="rounded-md cursor-pointer"
-                      onClick={() => setFullSizeImage({ src: submission.image.path, alt: `Submission for ${selectedTile.title}` })}
-                    />
-                  </div>
-                  <p className="mt-2 text-sm">Submitted: {new Date(submission.createdAt).toLocaleString()}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <p>You need to be part of a team to submit images.</p>
-        )}
-
-        {hasSufficientRights() && (
-          <div className="mt-8 space-y-4">
-            <h4 className="text-lg font-semibold sticky top-12 bg-background z-10 py-2">All Team Submissions</h4>
-            {teams.map(team => {
-              const teamTileSubmission = selectedTile?.teamTileSubmissions?.find(tts => tts.teamId === team.id)
-              const hasSubmissions = teamTileSubmission?.submissions.length ?? 0 > 0
-              return (
-                <div key={team.id} className="space-y-2">
-                  <h5 className="font-medium sticky top-24 bg-background z-10 py-2">{team.name}</h5>
-                  <div className="flex items-center space-x-2 mb-2 sticky top-32 bg-background z-10 py-2">
-                    <p className="text-sm">Status: {teamTileSubmission?.status ?? 'No submission'}</p>
-                    {hasSubmissions && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, 'accepted')}
-                        >
-                          <Check className="h-4 w-4 text-green-500" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, 'requires_interaction')}
-                        >
-                          <Clock className="h-4 w-4 text-yellow-500" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, 'declined')}
-                        >
-                          <X className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    {teamTileSubmission?.submissions.map(submission => (
-                      <div key={submission.id} className="border rounded-md p-4">
-                        <Image
-                          src={submission.image.path}
-                          alt={`Submission for ${selectedTile?.title} by ${team.name}`}
-                          width={200}
-                          height={200}
-                          className="object-cover rounded-md cursor-pointer"
-                          onClick={() => setFullSizeImage({ src: submission.image.path, alt: `Submission for ${selectedTile?.title} by ${team.name}` })}
-                        />
-                        <p className="mt-2 text-sm">Submitted: {new Date(submission.createdAt).toLocaleString()}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-    )
-  }
-
   const handleTeamTileSubmissionStatusUpdate = async (teamTileSubmissionId: string | undefined, newStatus: 'accepted' | 'requires_interaction' | 'declined') => {
     if (!teamTileSubmissionId || !selectedTile) {
       toast({
@@ -724,46 +446,25 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
 
   return (
     <div className="space-y-4">
-      {renderCodephrase()}
+      <CodephraseDisplay codephrase={bingo.codephrase} />
       {hasSufficientRights() && (
-        <div className="flex justify-end space-x-2">
-          <Button onClick={toggleOrdering} variant="outline">
-            {isLocked ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
-            {isLocked ? 'Lock' : 'Unlock'}
-          </Button>
-        </div>
+        <TileOrderingControls
+          isLocked={isLocked}
+          onToggleOrdering={toggleOrdering}
+          onAddRow={handleAddRow}
+          onAddColumn={handleAddColumn}
+        />
       )}
-      <div
+      <BingoGridLayout
         ref={gridRef}
-        className="grid gap-2 w-full h-full"
-        style={{
-          gridTemplateColumns: `repeat(${columns}, 1fr)`,
-          gridTemplateRows: `repeat(${rows}, 1fr)`,
-          aspectRatio: `${columns} / ${rows}`
-        }}
-      >
-        {tiles.map((tile) => (
-          <BingoTile
-            key={tile.id}
-            tile={tile}
-            onClick={() => handleTileClick(tile)}
-            userRole={userRole}
-            currentTeamId={currentTeamId}
-          />
-        ))}
-      </div>
-      {hasSufficientRights() && isLocked && (
-        <div className="flex justify-end space-x-2">
-          <Button onClick={handleAddRow} variant="outline">
-            <PlusSquare className="mr-2 h-4 w-4" />
-            Add Row
-          </Button>
-          <Button onClick={handleAddColumn} variant="outline">
-            <PlusSquare className="mr-2 h-4 w-4" />
-            Add Column
-          </Button>
-        </div>
-      )}
+        tiles={tiles}
+        columns={columns}
+        rows={rows}
+        userRole={userRole}
+        currentTeamId={currentTeamId}
+        onTileClick={handleTileClick}
+        isLocked={isLocked}
+      />
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[900px] max-h-[80vh] overflow-hidden">
@@ -778,35 +479,50 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
               <TabsTrigger value="submissions">Submissions</TabsTrigger>
             </TabsList>
             <TabsContent value="details" className="h-full overflow-y-auto">
-              {renderTileDetails()}
+              <TileDetailsTab
+                selectedTile={selectedTile}
+                editedTile={editedTile}
+                userRole={userRole}
+                teams={teams}
+                onEditTile={(field, value) => setEditedTile({ ...editedTile, [field]: value })}
+                onUpdateTile={handleTileUpdate}
+                onEditorChange={handleEditorChange}
+              />
             </TabsContent>
             <TabsContent value="goals" className="h-full overflow-y-auto">
-              {renderGoals()}
+              <GoalsTab
+                selectedTile={selectedTile}
+                newGoal={newGoal}
+                hasSufficientRights={hasSufficientRights()}
+                onDeleteGoal={handleDeleteGoal}
+                onAddGoal={handleAddGoal}
+                onNewGoalChange={(field, value) => setNewGoal({ ...newGoal, [field]: value })}
+              />
             </TabsContent>
             <TabsContent value="submissions" className="h-full overflow-y-auto">
-              {renderSubmissions()}
+              <SubmissionsTab
+                selectedTile={selectedTile}
+                currentTeamId={currentTeamId}
+                teams={teams}
+                hasSufficientRights={hasSufficientRights()}
+                selectedImage={selectedImage}
+                pastedImage={pastedImage}
+                onImageChange={handleImageChange}
+                onImageSubmit={handleImageSubmit}
+                onFullSizeImageView={(src, alt) => setFullSizeImage({ src, alt })}
+                onTeamTileSubmissionStatusUpdate={handleTeamTileSubmissionStatusUpdate}
+              />
             </TabsContent>
           </Tabs>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!fullSizeImage} onOpenChange={() => setFullSizeImage(null)}>
-        <DialogContent className="sm:max-w-[90vw] sm:max-h-[90vh] p-0">
-          <DialogHeader>
-            <DialogTitle>Submission</DialogTitle>
-          </DialogHeader>
-          {fullSizeImage && (
-            <div className="relative w-full h-full min-h-[50vh]">
-              <Image
-                src={fullSizeImage.src}
-                alt={fullSizeImage.alt}
-                layout="fill"
-                objectFit="contain"
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <FullSizeImageDialog
+        isOpen={!!fullSizeImage}
+        onClose={() => setFullSizeImage(null)}
+        imageSrc={fullSizeImage?.src ?? ''}
+        imageAlt={fullSizeImage?.alt ?? ''}
+      />
     </div>
   )
 
