@@ -13,9 +13,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { LogOut, User, Home, Users, Menu } from "lucide-react"
 import { usePathname } from "next/navigation"
-import { ModeToggle } from "./mode-toggle"
 import { useState } from "react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import ModeToggle from "./mode-toggle"
 
 export function Navbar() {
   const { data: session, status } = useSession()
