@@ -112,6 +112,51 @@ export default function ClanEventsPage({ params }: { params: { clanId: string } 
 		return event.eventParticipants?.some(participant => participant.userId === session?.user?.id);
 	};
 
+	const categorizeEvents = (events: Event[]) => {
+		const now = new Date();
+		return events.reduce((acc, event) => {
+			const startDate = new Date(event.startDate);
+			const endDate = new Date(event.endDate);
+			if (now >= startDate && now <= endDate) {
+				acc.running.push(event);
+			} else if (now < startDate) {
+				acc.upcoming.push(event);
+			} else {
+				acc.past.push(event);
+			}
+			return acc;
+		}, { running: [], upcoming: [], past: [] } as { running: Event[], upcoming: Event[], past: Event[] });
+	};
+
+	const renderEventCard = (event: Event) => (
+		<Card key={event.id}>
+			<CardHeader>
+				<CardTitle>{event.title}</CardTitle>
+				<CardDescription>
+					<div className="flex items-center space-x-2">
+						<CalendarIcon className="h-4 w-4" />
+						<span>{new Date(event.startDate).toLocaleDateString()} - {new Date(event.endDate).toLocaleDateString()}</span>
+					</div>
+				</CardDescription>
+			</CardHeader>
+			<CardContent>
+				<p className="text-sm text-muted-foreground mb-4">{event.description}</p>
+				<div className="flex items-center space-x-2">
+					<UserIcon className="h-4 w-4" />
+					<span className="text-sm">Created by: {event.creator?.runescapeName}</span>
+				</div>
+			</CardContent>
+			<CardFooter className="flex justify-between">
+				<Link href={`/events/${event.id}`} passHref>
+					<Button variant="outline">View Event</Button>
+				</Link>
+				{!isParticipant(event) && (
+					<Button onClick={() => handleJoinEvent(event.id)}>Join Event</Button>
+				)}
+			</CardFooter>
+		</Card>
+	);
+
 	if (status === 'loading' || isLoading) {
 		return (
 			<div className="container mx-auto py-10">
@@ -142,13 +187,14 @@ export default function ClanEventsPage({ params }: { params: { clanId: string } 
 		return null; // The useEffect will handle the redirect
 	}
 
-
 	const breadcrumbItems = [
 		{ label: 'Home', href: '/' },
 		{ label: 'Clans', href: '/' },
 		{ label: clanName, href: `/clans/${params.clanId}` },
 		{ label: 'Events', href: `/clans/${params.clanId}/events` },
 	]
+
+	const { running, upcoming, past } = categorizeEvents(clanEvents);
 
 	return (
 		<div className="container mx-auto py-10">
@@ -157,35 +203,37 @@ export default function ClanEventsPage({ params }: { params: { clanId: string } 
 			{clanEvents.length === 0 ? (
 				<p className="text-muted-foreground">No events have been created for this clan yet.</p>
 			) : (
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-					{clanEvents.map((event) => (
-						<Card key={event.id}>
-							<CardHeader>
-								<CardTitle>{event.title}</CardTitle>
-								<CardDescription>
-									<div className="flex items-center space-x-2">
-										<CalendarIcon className="h-4 w-4" />
-										<span>{new Date(event.startDate).toLocaleDateString()} - {new Date(event.endDate).toLocaleDateString()}</span>
-									</div>
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<p className="text-sm text-muted-foreground mb-4">{event.description}</p>
-								<div className="flex items-center space-x-2">
-									<UserIcon className="h-4 w-4" />
-									<span className="text-sm">Created by: {event.creator?.runescapeName}</span>
-								</div>
-							</CardContent>
-							<CardFooter className="flex justify-between">
-								<Link href={`/events/${event.id}`} passHref>
-									<Button variant="outline">View Event</Button>
-								</Link>
-								{!isParticipant(event) && (
-									<Button onClick={() => handleJoinEvent(event.id)}>Join Event</Button>
-								)}
-							</CardFooter>
-						</Card>
-					))}
+				<div className="space-y-10">
+					<section>
+						<h2 className="text-2xl font-semibold mb-4">Running Events</h2>
+						{running.length === 0 ? (
+							<p className="text-muted-foreground">No events are currently running.</p>
+						) : (
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+								{running.map(renderEventCard)}
+							</div>
+						)}
+					</section>
+					<section>
+						<h2 className="text-2xl font-semibold mb-4">Upcoming Events</h2>
+						{upcoming.length === 0 ? (
+							<p className="text-muted-foreground">No upcoming events.</p>
+						) : (
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+								{upcoming.map(renderEventCard)}
+							</div>
+						)}
+					</section>
+					<section>
+						<h2 className="text-2xl font-semibold mb-4">Past Events</h2>
+						{past.length === 0 ? (
+							<p className="text-muted-foreground">No past events.</p>
+						) : (
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+								{past.map(renderEventCard)}
+							</div>
+						)}
+					</section>
 				</div>
 			)}
 		</div>
