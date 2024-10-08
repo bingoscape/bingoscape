@@ -387,4 +387,47 @@ export async function addRowOrColumn(bingoId: string, type: 'row' | 'column'): P
     return { success: false, error: "Failed to add row or column" }
   }
 }
+export async function deleteTile(tileId: string, bingoId: string) {
+  try {
+    await db.transaction(async (tx) => {
+      // Delete the tile
+      await tx.delete(tiles).where(eq(tiles.id, tileId));
+
+      // Get remaining tiles
+      const remainingTiles = await tx
+        .select()
+        .from(tiles)
+        .where(eq(tiles.bingoId, bingoId))
+        .orderBy(asc(tiles.index));
+
+      // Reorder remaining tiles
+      for (let i = 0; i < remainingTiles.length; i++) {
+        await tx
+          .update(tiles)
+          .set({ index: i })
+          .where(eq(tiles.id, remainingTiles[i]!.id));
+      }
+
+      // Update bingo dimensions
+      const [bingo] = await tx
+        .select()
+        .from(bingos)
+        .where(eq(bingos.id, bingoId));
+
+      const newTotalTiles = remainingTiles.length;
+      const newRows = Math.floor(Math.sqrt(newTotalTiles));
+      const newColumns = Math.ceil(newTotalTiles / newRows);
+
+      await tx
+        .update(bingos)
+        .set({ rows: newRows, columns: newColumns })
+        .where(eq(bingos.id, bingoId));
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting tile:", error);
+    return { success: false, error: "Failed to delete tile" };
+  }
+}
 
