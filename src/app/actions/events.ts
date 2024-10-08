@@ -5,6 +5,7 @@ import { events, tiles, eventParticipants, clanMembers, eventInvites, teamMember
 import { eq, and, asc, sum, sql } from "drizzle-orm";
 import { nanoid } from 'nanoid';
 import { revalidatePath } from "next/cache";
+import { notFound } from "next/navigation";
 
 export interface Image {
   id: string;
@@ -277,6 +278,47 @@ export async function assignEventToClan(eventId: string, clanId: string) {
 
   return { success: true };
 }
+
+
+export async function getUserCreatedEvents() {
+  const session = await getServerAuthSession();
+
+  try {
+    if (!session) {
+      throw new Error("User needs to be authenticated")
+    }
+    const userId = session.user.id;
+    const userEvents = await db.query.events.findMany({
+      where: (events, { eq }) => eq(events.creatorId, userId),
+      with: {
+        eventParticipants: {
+          where: eq(eventParticipants.userId, userId),
+        },
+        clan: true
+      },
+      orderBy: events.createdAt,
+    });
+
+    const eventDataPromises = userEvents.map(async (event) => {
+      const totalPrizePool = await getTotalBuyInsForEvent(event.id);
+      return {
+        event: {
+          ...event,
+          role: event.creatorId === userId ? 'admin' : event.eventParticipants[0]?.role ?? 'participant',
+        },
+        totalPrizePool,
+      };
+    });
+
+    return await Promise.all(eventDataPromises);
+  } catch (error) {
+    console.error("Error fetching events:", error);
+    throw new Error("Failed to fetch events");
+  }
+
+
+}
+
 
 export async function getEvents(userId: string): Promise<EventData[]> {
   try {

@@ -101,7 +101,7 @@ export default function ClanEventsClient({ initialEvents, clanId }: ClanEventsCl
                     key={eventData.event.id}
                     eventData={eventData}
                     onJoin={() => handleJoinEvent(eventData.event.id)}
-                    isParticipant={isParticipant(eventData)}
+                    isParticipant={isParticipant(eventData) ?? false}
                   />
                 ))}
               </div>
@@ -118,7 +118,7 @@ export default function ClanEventsClient({ initialEvents, clanId }: ClanEventsCl
                     key={eventData.event.id}
                     eventData={eventData}
                     onJoin={() => handleJoinEvent(eventData.event.id)}
-                    isParticipant={isParticipant(eventData)}
+                    isParticipant={isParticipant(eventData) ?? false}
                   />
                 ))}
               </div>
@@ -135,7 +135,7 @@ export default function ClanEventsClient({ initialEvents, clanId }: ClanEventsCl
                     key={eventData.event.id}
                     eventData={eventData}
                     onJoin={() => handleJoinEvent(eventData.event.id)}
-                    isParticipant={isParticipant(eventData)}
+                    isParticipant={isParticipant(eventData) ?? false}
                   />
                 ))}
               </div>
