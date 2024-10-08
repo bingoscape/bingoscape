@@ -1,49 +1,20 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { CreateEventModal } from "./create-event-modal"
-import { type Event, getEvents, getTotalBuyInsForEvent } from "@/app/actions/events"
-import { PrizePoolDisplay } from "./prize-pool-display"
+import { type EventData, getEvents } from "@/app/actions/events"
+import { EventCard } from "./event-card"
 
 export default async function EventList({ userId }: { userId: string }) {
   const allEvents = await getEvents(userId)
-  const userEvents = allEvents.filter(x => x.creatorId == userId)
-  const foreignEvents = allEvents.filter(x => x.creatorId != userId)
+  const userEvents = allEvents.filter(x => x.event.creatorId == userId)
+  const foreignEvents = allEvents.filter(x => x.event.creatorId != userId)
 
-  const renderEventList = (eventsList: Event[], noEventMessage: string) => {
+  const renderEventList = (eventsList: EventData[], noEventMessage: string) => {
     if (eventsList.length === 0) {
       return (<p>{noEventMessage}</p>)
     }
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {eventsList.map(async (event) => (
-          < Card key={event.id} >
-            <CardHeader>
-              <CardTitle>
-                {event.title}
-              </CardTitle>
-              <CardDescription>{new Date(event.createdAt).toLocaleDateString()}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-row justify-between">
-                <div>
-                  {event.clan && (
-                    <p>Clan: {event.clan?.name ?? ''}</p>
-                  )}
-                  <pre className="text-sm text-gray-600">{event.description}</pre>
-                </div>
-                <PrizePoolDisplay prizePool={await getTotalBuyInsForEvent(event.id)} />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Link href={`/events/${event.id}`}>
-                <Button variant="outline">View Event</Button>
-              </Link>
-            </CardFooter>
-          </Card>
-        ))
-        }
+        {eventsList.map(async (ed) => (<EventCard key={ed.event.id} eventData={ed} isParticipant={true} />))}
       </div >
     )
   }
@@ -63,7 +34,6 @@ export default async function EventList({ userId }: { userId: string }) {
         </div>
         {renderEventList(foreignEvents, "You do not participate in any events yet. Join one to see them here!")}
       </div>
-
     </>
   )
 }

@@ -33,6 +33,13 @@ export interface TeamTileSubmission {
   team: Team;
 }
 
+export interface EventParticipant {
+  eventId: string,
+  userId: string,
+  role: 'admin' | 'management' | 'participant',
+  createdAt: Date,
+  updatedAt: Date,
+}
 
 export interface TeamProgress {
   id?: string;
@@ -109,8 +116,14 @@ export interface Event {
   bingos?: Bingo[];
   clan?: Clan | null;
   teams?: Team[];
+  eventParticipants?: EventParticipant[];
   minimumBuyIn: number;
   basePrizePool: number;
+}
+
+export interface EventData {
+  event: Event;
+  totalPrizePool: number;
 }
 
 export interface GetEventByIdResult {
@@ -265,7 +278,7 @@ export async function assignEventToClan(eventId: string, clanId: string) {
   return { success: true };
 }
 
-export async function getEvents(userId: string): Promise<Event[]> {
+export async function getEvents(userId: string): Promise<EventData[]> {
   try {
     const userEvents = await db.query.events.findMany({
       where: (events, { or, eq, exists }) => or(
@@ -288,10 +301,18 @@ export async function getEvents(userId: string): Promise<Event[]> {
       orderBy: events.createdAt,
     });
 
-    return userEvents.map(event => ({
-      ...event,
-      role: event.creatorId === userId ? 'admin' : event.eventParticipants[0]?.role ?? 'participant',
-    }));
+    const eventDataPromises = userEvents.map(async (event) => {
+      const totalPrizePool = await getTotalBuyInsForEvent(event.id);
+      return {
+        event: {
+          ...event,
+          role: event.creatorId === userId ? 'admin' : event.eventParticipants[0]?.role ?? 'participant',
+        },
+        totalPrizePool,
+      };
+    });
+
+    return await Promise.all(eventDataPromises);
   } catch (error) {
     console.error("Error fetching events:", error);
     throw new Error("Failed to fetch events");
@@ -408,6 +429,7 @@ export async function getUserRole(eventId: string): Promise<EventRole> {
         eq(eventParticipants.eventId, eventId),
         eq(eventParticipants.userId, session.user.id)
       ),
+
     });
 
     if (participant) {
