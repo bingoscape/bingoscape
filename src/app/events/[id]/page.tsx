@@ -42,18 +42,67 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 	return (
 		<div className="container mx-auto py-10">
 			<div className="flex justify-between mb-6">
-				<div>
+				<div className="mr-5">
 					<h1 className="text-3xl font-bold">{event.title}</h1>
 					{event.clan && (
 						<p className="text-sm text-muted-foreground mt-2">
 							Clan: {event.clan.name}
 						</p>
 					)}
-					{event.minimumBuyIn && (
+					{event.minimumBuyIn ? (
 						<p className="text-sm text-muted-foreground mt-2">
 							Minimum BuyIn: {formatRunescapeGold(event.minimumBuyIn)} GP
 						</p>
+					) : (
+						<p className="text-sm text-muted-foreground mt-2">
+							No Buy-In!
+						</p>
 					)}
+
+					<h2 className="text-2xl font-bold mb-4">Bingos</h2>
+					{(!!event.bingos && event.bingos.length === 0) ? (
+						<p>No bingos have been created for this event yet.</p>
+					) : (
+						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+							{event.bingos!.map((bingo) => (
+								<Card key={bingo.id}>
+									<CardHeader>
+										<div className="flex justify-between items-center">
+											<CardTitle>{bingo.title}</CardTitle>
+											<div className="flex space-x-2">
+												<BingoInfoModal bingo={bingo} />
+												{isAdminOrManagement && <DeleteBingoButton bingoId={bingo.id as UUID} />}
+											</div>
+										</div>
+									</CardHeader>
+									<CardContent>
+										<div className="relative">
+											<BingoGrid
+												bingo={bingo}
+												currentTeamId={currentTeam?.id}
+												teams={event.teams ?? []}
+												userRole={userRole}
+											/>
+										</div>
+									</CardContent>
+									<CardFooter>
+										<Link href={`/events/${bingo.eventId}/bingos/${bingo.id}`} passHref>
+											<Button variant="outline">View Bingo</Button>
+										</Link>
+									</CardFooter>
+								</Card>
+							))}
+						</div>
+					)}
+
+					<div className="mt-12">
+						<h2 className="text-2xl font-bold mb-4">Teams</h2>
+						{isAdminOrManagement ? (
+							<TeamManagement eventId={event.id} />
+						) : (
+							<TeamDisplay eventId={event.id} />
+						)}
+					</div>
 				</div>
 				<div className="flex flex-col space-y-1">
 					{isAdminOrManagement && <CreateBingoModal eventId={event.id} />}
@@ -72,50 +121,6 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 					{userRole === 'admin' && <EditEventModal event={event} />}
 					<PrizePoolDisplay prizePool={prizePool} />
 				</div>
-			</div>
-			<h2 className="text-2xl font-bold mb-4">Bingos</h2>
-			{(!!event.bingos && event.bingos.length === 0) ? (
-				<p>No bingos have been created for this event yet.</p>
-			) : (
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-					{event.bingos!.map((bingo) => (
-						<Card key={bingo.id}>
-							<CardHeader>
-								<div className="flex justify-between items-center">
-									<CardTitle>{bingo.title}</CardTitle>
-									<div className="flex space-x-2">
-										<BingoInfoModal bingo={bingo} />
-										{isAdminOrManagement && <DeleteBingoButton bingoId={bingo.id as UUID} />}
-									</div>
-								</div>
-							</CardHeader>
-							<CardContent>
-								<div className="relative">
-									<BingoGrid
-										bingo={bingo}
-										currentTeamId={currentTeam?.id}
-										teams={event.teams ?? []}
-										userRole={userRole}
-									/>
-								</div>
-							</CardContent>
-							<CardFooter>
-								<Link href={`/events/${bingo.eventId}/bingos/${bingo.id}`} passHref>
-									<Button variant="outline">View Bingo</Button>
-								</Link>
-							</CardFooter>
-						</Card>
-					))}
-				</div>
-			)}
-
-			<div className="mt-12">
-				<h2 className="text-2xl font-bold mb-4">Teams</h2>
-				{isAdminOrManagement ? (
-					<TeamManagement eventId={event.id} />
-				) : (
-					<TeamDisplay eventId={event.id} />
-				)}
 			</div>
 		</div>
 	)

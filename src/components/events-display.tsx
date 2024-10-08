@@ -21,7 +21,7 @@ interface EventDisplayProps {
 
 export function EventDisplay({ initialEvents }: EventDisplayProps) {
   const [events, setEvents] = useState<EventData[]>(initialEvents)
-  const [isGridView, setIsGridView] = useState(true)
+  const [isGridView, setIsGridView] = useState(false)
 
   const categorizeEvents = (events: EventData[]) => {
     const now = new Date()
@@ -46,6 +46,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
       <TableHeader>
         <TableRow>
           <TableHead>Title</TableHead>
+          <TableHead># Bingos</TableHead>
           <TableHead>Start Date</TableHead>
           <TableHead>End Date</TableHead>
           <TableHead>Clan</TableHead>
@@ -57,6 +58,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
         {eventsList.map((ed) => (
           <TableRow key={ed.event.id}>
             <TableCell>{ed.event.title}</TableCell>
+            <TableCell>{ed.event.bingos?.length ?? 0}</TableCell>
             <TableCell>{new Date(ed.event.startDate).toLocaleDateString()}</TableCell>
             <TableCell>{new Date(ed.event.endDate).toLocaleDateString()}</TableCell>
             <TableCell>{ed.event.clan?.name ?? 'no clan'}</TableCell>
