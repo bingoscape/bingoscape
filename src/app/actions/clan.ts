@@ -4,6 +4,7 @@ import { getServerAuthSession } from "@/server/auth";
 import { db } from "@/server/db";
 import { clans, clanMembers, users, events } from "@/server/db/schema";
 import { eq, and, count, sql } from "drizzle-orm";
+import { EventData, getTotalBuyInsForEvent } from "./events";
 
 export async function createClan(name: string, description: string) {
   const session = await getServerAuthSession();
@@ -99,7 +100,7 @@ export async function getUserClans() {
   return userClans;
 }
 
-export async function getClanEvents(clanId: string) {
+export async function getClanEvents(clanId: string): Promise<EventData[]> {
   const session = await getServerAuthSession();
   if (!session || !session.user) {
     throw new Error("You must be logged in to view clan events");
@@ -121,17 +122,26 @@ export async function getClanEvents(clanId: string) {
     where: eq(events.clanId, clanId),
     with: {
       creator: true,
-      eventParticipants: {
-        columns: {
-          userId: true,
-        },
-      },
+      eventParticipants: true,
+      clan: true,
     },
     orderBy: (events, { desc }) => [desc(events.startDate)],
   });
 
-  return clanEvents;
+  const eventDataPromises = clanEvents.map(async (event) => {
+    const totalPrizePool = await getTotalBuyInsForEvent(event.id);
+    return {
+      event: {
+        ...event,
+        role: event.creatorId === session.user.id ? 'admin' : 'participant',
+      },
+      totalPrizePool,
+    };
+  });
+
+  return Promise.all(eventDataPromises);
 }
+
 export async function getClanDetails(clanId: string) {
   const session = await getServerAuthSession();
   if (!session || !session.user) {
