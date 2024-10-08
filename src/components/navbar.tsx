@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, User, Home, Users, Menu } from "lucide-react"
+import { LogOut, User, Home, Users, Menu, Calendar } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -25,6 +25,7 @@ export function Navbar() {
   const navItems = [
     { href: "/", label: "Home", icon: Home },
     { href: "/clans", label: "Clans", icon: Users },
+    { href: "/events/mine", label: "My Events", icon: Calendar },
   ]
 
   return (
