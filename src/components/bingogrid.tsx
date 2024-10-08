@@ -3,13 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { toast } from '@/hooks/use-toast'
-import { updateTile, reorderTiles, addGoal, deleteGoal, getTileGoalsAndProgress, updateGoalProgress, submitImage, getSubmissions, updateTeamTileSubmissionStatus, addRowOrColumn } from '@/app/actions/bingo'
+import { updateTile, reorderTiles, addGoal, deleteGoal, getTileGoalsAndProgress, updateGoalProgress, submitImage, getSubmissions, updateTeamTileSubmissionStatus, deleteTile } from '@/app/actions/bingo'
 import '@mdxeditor/editor/style.css'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Bingo, Tile, Team, EventRole, Goal } from '@/app/actions/events'
 import Sortable, { type SortableEvent } from 'sortablejs'
-import { CodephraseDisplay } from './codephrase-display'
-import { TileOrderingControls } from './tile-ordering-controls'
 import { BingoGridLayout } from './bingo-grid-layout'
 import { TileDetailsTab } from './tile-details-tab'
 import { GoalsTab } from './goals-tab'
@@ -21,17 +19,16 @@ interface BingoGridProps {
   userRole: EventRole
   teams: Team[]
   currentTeamId: string | undefined
+  isLocked: boolean
+  onReorderTiles: (reorderedTiles: Tile[]) => void
 }
 
-export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: BingoGridProps) {
-  const [tiles, setTiles] = useState<Tile[]>(bingo.tiles)
-  const [rows, setRows] = useState(bingo.rows)
-  const [columns, setColumns] = useState(bingo.columns)
+export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLocked, onReorderTiles }: BingoGridProps) {
+  const [tiles, setTiles] = useState<Tile[]>(bingo.tiles ?? [])
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editedTile, setEditedTile] = useState<Partial<Tile>>({})
   const [newGoal, setNewGoal] = useState<Partial<Goal>>({})
-  const [isLocked, setIsLocked] = useState(true)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [pastedImage, setPastedImage] = useState<File | null>(null)
   const [fullSizeImage, setFullSizeImage] = useState<{ src: string; alt: string } | null>(null)
@@ -56,7 +53,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
             }))
 
             setTiles(reorderedTiles)
-            void handleReorderTiles(reorderedTiles)
+            onReorderTiles(reorderedTiles)
           }
         }
       })
@@ -68,83 +65,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
         }
       }
     }
-  }, [tiles, userRole, isLocked])
-
-  const toggleOrdering = () => {
-    setIsLocked(!isLocked)
-    toast({
-      title: isLocked ? "Tile ordering enabled" : "Tile ordering disabled",
-      description: isLocked ? "You can now drag and drop tiles to reorder them." : "Tile ordering has been locked.",
-    })
-  }
-
-  const handleAddRow = async () => {
-    try {
-      const result = await addRowOrColumn(bingo.id, 'row')
-      if (result.success) {
-        setRows(rows + 1)
-        setTiles(result.tiles)
-        toast({
-          title: "Row added",
-          description: "A new row has been added to the bingo board.",
-        })
-      } else {
-        throw new Error(result.error)
-      }
-    } catch (error) {
-      console.error("Error adding row:", error)
-      toast({
-        title: "Error",
-        description: "Failed to add row",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleAddColumn = async () => {
-    try {
-      const result = await addRowOrColumn(bingo.id, 'column')
-      if (result.success) {
-        setColumns(columns + 1)
-        setTiles(result.tiles)
-        toast({
-          title: "Column added",
-          description: "A new column has been added to the bingo board.",
-        })
-      } else {
-        throw new Error(result.error)
-      }
-    } catch (error) {
-      console.error("Error adding column:", error)
-      toast({
-        title: "Error",
-        description: "Failed to add column",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleReorderTiles = async (reorderedTiles: Tile[]) => {
-    const updatedTiles = reorderedTiles.map((tile, index) => ({
-      id: tile.id,
-      index
-    }))
-
-    const result = await reorderTiles(updatedTiles)
-    if (result.success) {
-      toast({
-        title: "Tiles reordered",
-        description: "The tiles have been successfully reordered and saved.",
-      })
-    } else {
-      toast({
-        title: "Error",
-        description: result.error ?? "Failed to reorder tiles",
-        variant: "destructive",
-      })
-      setTiles(bingo.tiles ?? []) // Revert to original order if server update fails
-    }
-  }
+  }, [tiles, userRole, isLocked, onReorderTiles])
 
   const handleTileClick = async (tile: Tile) => {
     try {
@@ -342,7 +263,6 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
           title: "Image submitted",
           description: "Your image has been successfully submitted for review.",
         })
-        // Refresh submissions immediately after successful upload
         await refreshSubmissions(selectedTile.id)
       } else {
         toast({
@@ -396,7 +316,6 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
     try {
       const result = await updateTeamTileSubmissionStatus(teamTileSubmissionId, newStatus)
       if (result.success) {
-        // Update the selectedTile state
         setSelectedTile(prev => {
           if (prev) {
             const updatedTeamTileSubmissions = prev.teamTileSubmissions?.map(tts =>
@@ -410,7 +329,6 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
           return null
         })
 
-        // Update the tiles state to trigger a re-render of the BingoGrid
         setTiles(prevTiles => prevTiles.map(tile =>
           tile.id === selectedTile.id
             ? {
@@ -439,24 +357,44 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
     }
   }
 
+  const handleDeleteTile = async (tileId: string) => {
+    if (isLocked) return
+
+    const confirmDelete = window.confirm("Are you sure you want to delete this tile?")
+    if (!confirmDelete) return
+
+    try {
+      const result = await deleteTile(tileId, bingo.id)
+      if (result.success) {
+        setTiles(prevTiles => prevTiles.filter(tile => tile.id !== tileId))
+        toast({
+          title: "Tile deleted",
+          description: "The tile has been successfully deleted.",
+        })
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (error) {
+      console.error("Error deleting tile:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete tile",
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <div className="space-y-4">
-      {hasSufficientRights() && (
-        <TileOrderingControls
-          isLocked={isLocked}
-          onToggleOrdering={toggleOrdering}
-          onAddRow={handleAddRow}
-          onAddColumn={handleAddColumn}
-        />
-      )}
       <BingoGridLayout
         ref={gridRef}
         tiles={tiles}
-        columns={columns}
-        rows={rows}
+        columns={bingo.columns}
+        rows={bingo.rows}
         userRole={userRole}
         currentTeamId={currentTeamId}
         onTileClick={handleTileClick}
+        onDeleteTile={handleDeleteTile}
         isLocked={isLocked}
       />
 
@@ -475,6 +413,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
             <TabsContent value="details" className="h-full overflow-y-auto">
               <TileDetailsTab
                 selectedTile={selectedTile}
+
                 editedTile={editedTile}
                 userRole={userRole}
                 teams={teams}

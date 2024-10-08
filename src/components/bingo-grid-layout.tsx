@@ -9,11 +9,12 @@ interface BingoGridLayoutProps {
   userRole: EventRole
   currentTeamId: string | undefined
   onTileClick: (tile: Tile) => void
+  onDeleteTile: (tileId: string) => void
   isLocked: boolean
 }
 
 export const BingoGridLayout = forwardRef<HTMLDivElement, BingoGridLayoutProps>(
-  ({ tiles, columns, rows, userRole, currentTeamId, onTileClick, isLocked }, ref) => {
+  ({ tiles, columns, rows, userRole, currentTeamId, onTileClick, onDeleteTile, isLocked }, ref) => {
     return (
       <div
         ref={ref}
@@ -29,8 +30,10 @@ export const BingoGridLayout = forwardRef<HTMLDivElement, BingoGridLayoutProps>(
             key={tile.id}
             tile={tile}
             onClick={() => onTileClick(tile)}
+            onDelete={() => onDeleteTile(tile.id)}
             userRole={userRole}
             currentTeamId={currentTeamId}
+            isLocked={isLocked}
           />
         ))}
       </div>

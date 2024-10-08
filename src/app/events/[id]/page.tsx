@@ -41,7 +41,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 
 	return (
 		<div className="container mx-auto py-10">
-			<div className="flex justify-between mb-6">
+			<div className="flex justify-between mb-6 space-y-5">
 				<div className="mr-5">
 					<h1 className="text-3xl font-bold">{event.title}</h1>
 					{event.clan && (
@@ -81,6 +81,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 												bingo={bingo}
 												currentTeamId={currentTeam?.id}
 												teams={event.teams ?? []}
+												isLocked={true}
 												userRole={userRole}
 											/>
 										</div>
