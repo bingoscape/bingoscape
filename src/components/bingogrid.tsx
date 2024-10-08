@@ -78,11 +78,6 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
     })
   }
 
-
-
-
-
-
   const handleAddRow = async () => {
     try {
       const result = await addRowOrColumn(bingo.id, 'row')
@@ -147,7 +142,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
         description: result.error ?? "Failed to reorder tiles",
         variant: "destructive",
       })
-      setTiles(bingo.tiles) // Revert to original order if server update fails
+      setTiles(bingo.tiles ?? []) // Revert to original order if server update fails
     }
   }
 
@@ -446,7 +441,6 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId }: Bin
 
   return (
     <div className="space-y-4">
-      <CodephraseDisplay codephrase={bingo.codephrase} />
       {hasSufficientRights() && (
         <TileOrderingControls
           isLocked={isLocked}

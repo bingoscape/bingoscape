@@ -25,6 +25,8 @@ export function EventCard({ eventData, onJoin, isParticipant }: EventCardProps) 
             {eventData.event.clan && (
               <p>Clan: {eventData.event.clan?.name ?? ''}</p>
             )}
+            <pre className="text-sm text-gray-600">{eventData.event.bingos?.length ?
+              (`${eventData.event.bingos.length} Bingos`) : ('No bingos yet!')}</pre>
             <pre className="text-sm text-gray-600">{eventData.event.description}</pre>
           </div>
           <PrizePoolDisplay prizePool={eventData.totalPrizePool} />

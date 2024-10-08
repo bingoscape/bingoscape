@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { Info } from 'lucide-react'
 import { type Bingo } from '@/app/actions/events'
+import { CodephraseDisplay } from './codephrase-display'
 
 interface BingoInfoModalProps {
   bingo: Bingo
@@ -52,6 +53,7 @@ export function BingoInfoModal({ bingo }: BingoInfoModalProps) {
               <p>{new Date(bingo.createdAt).toLocaleString()}</p>
             </div>
           )}
+          <CodephraseDisplay codephrase={bingo.codephrase} />
         </div>
       </DialogContent>
     </Dialog>

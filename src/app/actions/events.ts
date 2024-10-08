@@ -5,7 +5,6 @@ import { events, tiles, eventParticipants, clanMembers, eventInvites, teamMember
 import { eq, and, asc, sum, sql } from "drizzle-orm";
 import { nanoid } from 'nanoid';
 import { revalidatePath } from "next/cache";
-import { notFound } from "next/navigation";
 
 export interface Image {
   id: string;
@@ -86,7 +85,7 @@ export interface Bingo {
   updatedAt: Date;
   locked: boolean;
   visible: boolean;
-  tiles: Tile[];
+  tiles?: Tile[];
 }
 
 export interface Clan {
@@ -294,7 +293,8 @@ export async function getUserCreatedEvents() {
         eventParticipants: {
           where: eq(eventParticipants.userId, userId),
         },
-        clan: true
+        clan: true,
+        bingos: true
       },
       orderBy: events.createdAt,
     });
@@ -315,10 +315,7 @@ export async function getUserCreatedEvents() {
     console.error("Error fetching events:", error);
     throw new Error("Failed to fetch events");
   }
-
-
 }
-
 
 export async function getEvents(userId: string): Promise<EventData[]> {
   try {
@@ -338,7 +335,8 @@ export async function getEvents(userId: string): Promise<EventData[]> {
         eventParticipants: {
           where: eq(eventParticipants.userId, userId),
         },
-        clan: true
+        clan: true,
+        bingos: true,
       },
       orderBy: events.createdAt,
     });
