@@ -409,11 +409,11 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
               <TabsTrigger value="details">Tile Details</TabsTrigger>
               <TabsTrigger value="goals">Goals</TabsTrigger>
               <TabsTrigger value="submissions">Submissions</TabsTrigger>
+
             </TabsList>
             <TabsContent value="details" className="h-full overflow-y-auto">
               <TileDetailsTab
                 selectedTile={selectedTile}
-
                 editedTile={editedTile}
                 userRole={userRole}
                 teams={teams}
