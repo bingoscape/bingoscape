@@ -3,7 +3,7 @@
 import { db } from "@/server/db"
 import { bingos, goals, teamGoalProgress, tiles, submissions, images, teams, teamTileSubmissions } from "@/server/db/schema"
 import { type UUID } from "crypto"
-import { asc, eq } from "drizzle-orm"
+import { asc, eq, inArray } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import fs from 'fs/promises'
@@ -467,5 +467,49 @@ export async function addTile(bingoId: string): Promise<AddRowOrColumnResult> {
   } catch (error) {
     console.error("Error adding tile:", error)
     return { success: false, error: "Failed to add tile" }
+  }
+}
+
+export async function deleteRowOrColumn(bingoId: string, type: 'row' | 'column'): Promise<AddRowOrColumnResult> {
+  try {
+    return await db.transaction(async (tx) => {
+      const [bingo] = await tx.select().from(bingos).where(eq(bingos.id, bingoId))
+      if (!bingo) throw new Error("Bingo not found")
+
+      if ((type === 'row' && bingo.rows <= 1) || (type === 'column' && bingo.columns <= 1)) {
+        throw new Error(`Cannot delete the last ${type}`)
+      }
+
+      const newSize = type === 'row' ? bingo.rows - 1 : bingo.columns - 1
+      const totalTiles = type === 'row' ? newSize * bingo.columns : bingo.rows * newSize
+
+      // Update bingo size
+      await tx.update(bingos).set({ [type === 'row' ? 'rows' : 'columns']: newSize }).where(eq(bingos.id, bingoId))
+
+      // Get existing tiles
+      const existingTiles = await tx.select().from(tiles).where(eq(tiles.bingoId, bingoId)).orderBy(asc(tiles.index))
+
+      // Delete tiles
+      const tilesToDelete = type === 'row'
+        ? existingTiles.slice(-bingo.columns)
+        : existingTiles.filter((_, index) => (index + 1) % bingo.columns === 0)
+
+      await tx.delete(tiles).where(inArray(tiles.id, tilesToDelete.map(tile => tile.id)))
+
+      // Reindex remaining tiles
+      const remainingTiles = existingTiles.filter(tile => !tilesToDelete.includes(tile))
+      for (let i = 0; i < remainingTiles.length; i++) {
+        await tx.update(tiles).set({ index: i }).where(eq(tiles.id, remainingTiles[i]!.id))
+      }
+
+      // Fetch updated bingo and tiles
+      const [updatedBingo] = await tx.select().from(bingos).where(eq(bingos.id, bingoId))
+      const updatedTiles = await tx.select().from(tiles).where(eq(tiles.bingoId, bingoId)).orderBy(asc(tiles.index))
+
+      return { success: true, tiles: updatedTiles, bingo: updatedBingo! }
+    })
+  } catch (error) {
+    console.error(`Error deleting ${type}:`, error)
+    return { success: false, error: `Failed to delete ${type}` }
   }
 }
