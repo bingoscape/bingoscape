@@ -13,6 +13,7 @@ import { TileDetailsTab } from './tile-details-tab'
 import { GoalsTab } from './goals-tab'
 import { SubmissionsTab } from './submissions-tab'
 import { FullSizeImageDialog } from './full-size-image-dialog'
+import { ScrollArea } from './ui/scroll-area'
 
 interface BingoGridProps {
   bingo: Bingo
@@ -100,13 +101,13 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
   }
 
   const handleTogglePlaceholder = async (tile: Tile) => {
-    const updatedTile = { ...tile, isPlaceholder: !tile.isHidden }
+    const updatedTile = { ...tile, isHidden: !tile.isHidden }
     const result = await updateTile(tile.id, updatedTile)
     if (result.success) {
       setTiles(prevTiles => prevTiles.map(t => t.id === tile.id ? updatedTile : t))
       toast({
         title: "Tile updated",
-        description: `The tile is now ${updatedTile.isPlaceholder ? 'a placeholder' : 'no longer a placeholder'}.`,
+        description: `The tile is now ${updatedTile.isHidden ? 'a placeholder' : 'no longer a placeholder'}.`,
       })
     } else {
       toast({
@@ -445,39 +446,45 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
               <TabsTrigger value="submissions">Submissions</TabsTrigger>
             </TabsList>
             <TabsContent value="details" className="h-full overflow-y-auto">
-              <TileDetailsTab
-                selectedTile={selectedTile}
-                editedTile={editedTile}
-                userRole={userRole}
-                teams={teams}
-                onEditTile={(field, value) => setEditedTile({ ...editedTile, [field]: value })}
-                onUpdateTile={handleTileUpdate}
-                onEditorChange={handleEditorChange}
-              />
+              <ScrollArea className="h-[80vh] w-full pr-4">
+                <TileDetailsTab
+                  selectedTile={selectedTile}
+                  editedTile={editedTile}
+                  userRole={userRole}
+                  teams={teams}
+                  onEditTile={(field, value) => setEditedTile({ ...editedTile, [field]: value })}
+                  onUpdateTile={handleTileUpdate}
+                  onEditorChange={handleEditorChange}
+                />
+              </ScrollArea>
             </TabsContent>
             <TabsContent value="goals" className="h-full overflow-y-auto">
-              <GoalsTab
-                selectedTile={selectedTile}
-                newGoal={newGoal}
-                hasSufficientRights={hasSufficientRights()}
-                onDeleteGoal={handleDeleteGoal}
-                onAddGoal={handleAddGoal}
-                onNewGoalChange={(field, value) => setNewGoal({ ...newGoal, [field]: value })}
-              />
+              <ScrollArea className="h-[80vh] w-full pr-4">
+                <GoalsTab
+                  selectedTile={selectedTile}
+                  newGoal={newGoal}
+                  hasSufficientRights={hasSufficientRights()}
+                  onDeleteGoal={handleDeleteGoal}
+                  onAddGoal={handleAddGoal}
+                  onNewGoalChange={(field, value) => setNewGoal({ ...newGoal, [field]: value })}
+                />
+              </ScrollArea>
             </TabsContent>
             <TabsContent value="submissions" className="h-full overflow-y-auto">
-              <SubmissionsTab
-                selectedTile={selectedTile}
-                currentTeamId={currentTeamId}
-                teams={teams}
-                hasSufficientRights={hasSufficientRights()}
-                selectedImage={selectedImage}
-                pastedImage={pastedImage}
-                onImageChange={handleImageChange}
-                onImageSubmit={handleImageSubmit}
-                onFullSizeImageView={(src, alt) => setFullSizeImage({ src, alt })}
-                onTeamTileSubmissionStatusUpdate={handleTeamTileSubmissionStatusUpdate}
-              />
+              <ScrollArea className="h-[80vh] w-full pr-4">
+                <SubmissionsTab
+                  selectedTile={selectedTile}
+                  currentTeamId={currentTeamId}
+                  teams={teams}
+                  hasSufficientRights={hasSufficientRights()}
+                  selectedImage={selectedImage}
+                  pastedImage={pastedImage}
+                  onImageChange={handleImageChange}
+                  onImageSubmit={handleImageSubmit}
+                  onFullSizeImageView={(src, alt) => setFullSizeImage({ src, alt })}
+                  onTeamTileSubmissionStatusUpdate={handleTeamTileSubmissionStatusUpdate}
+                />
+              </ScrollArea>
             </TabsContent>
           </Tabs>
         </DialogContent>
@@ -489,7 +496,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
         imageSrc={fullSizeImage?.src ?? ''}
         imageAlt={fullSizeImage?.alt ?? ''}
       />
-    </div>
+    </div >
   )
 
   function hasSufficientRights(): boolean {
