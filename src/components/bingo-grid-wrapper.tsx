@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import BingoGrid from '@/components/bingogrid'
 import { Button } from '@/components/ui/button'
 import { Lock, Unlock, PlusSquare } from 'lucide-react'
@@ -15,22 +15,29 @@ interface BingoGridWrapperProps {
   currentTeamId: string | undefined
 }
 
-export default function BingoGridWrapper({ bingo, userRole, teams, currentTeamId }: BingoGridWrapperProps) {
+export default function BingoGridWrapper({ bingo: initialBingo, userRole, teams, currentTeamId }: BingoGridWrapperProps) {
+  const [bingo, setBingo] = useState(initialBingo)
   const [isLocked, setIsLocked] = useState(bingo.locked)
 
-  const handleToggleLock = async () => {
+  const handleToggleLock = useCallback(async () => {
     // TODO: Implement the actual API call to toggle the lock state
-    setIsLocked(!isLocked)
+    setIsLocked(prevIsLocked => !prevIsLocked)
+    setBingo(prevBingo => ({ ...prevBingo, locked: !prevBingo.locked }))
     toast({
       title: isLocked ? "Bingo board unlocked" : "Bingo board locked",
       description: isLocked ? "You can now edit the bingo board." : "The bingo board is now locked.",
     })
-  }
+  }, [isLocked])
 
-  const handleAddRow = async () => {
+  const handleAddRow = useCallback(async () => {
     try {
       const result = await addRowOrColumn(bingo.id, 'row')
       if (result.success) {
+        setBingo(prevBingo => ({
+          ...prevBingo,
+          rows: prevBingo.rows + 1,
+          tiles: result.tiles
+        }))
         toast({
           title: "Row added",
           description: "A new row has been added to the bingo board.",
@@ -46,12 +53,17 @@ export default function BingoGridWrapper({ bingo, userRole, teams, currentTeamId
         variant: "destructive",
       })
     }
-  }
+  }, [bingo.id])
 
-  const handleAddColumn = async () => {
+  const handleAddColumn = useCallback(async () => {
     try {
       const result = await addRowOrColumn(bingo.id, 'column')
       if (result.success) {
+        setBingo(prevBingo => ({
+          ...prevBingo,
+          columns: prevBingo.columns + 1,
+          tiles: result.tiles
+        }))
         toast({
           title: "Column added",
           description: "A new column has been added to the bingo board.",
@@ -67,9 +79,9 @@ export default function BingoGridWrapper({ bingo, userRole, teams, currentTeamId
         variant: "destructive",
       })
     }
-  }
+  }, [bingo.id])
 
-  const handleReorderTiles = async (reorderedTiles: Tile[]) => {
+  const handleReorderTiles = useCallback(async (reorderedTiles: Tile[]) => {
     const updatedTiles = reorderedTiles.map((tile, index) => ({
       id: tile.id,
       index
@@ -77,6 +89,10 @@ export default function BingoGridWrapper({ bingo, userRole, teams, currentTeamId
 
     const result = await reorderTiles(updatedTiles)
     if (result.success) {
+      setBingo(prevBingo => ({
+        ...prevBingo,
+        tiles: reorderedTiles
+      }))
       toast({
         title: "Tiles reordered",
         description: "The tiles have been successfully reordered and saved.",
@@ -88,7 +104,7 @@ export default function BingoGridWrapper({ bingo, userRole, teams, currentTeamId
         variant: "destructive",
       })
     }
-  }
+  }, [])
 
   const isManagement = userRole === 'admin' || userRole === 'management'
 
@@ -111,6 +127,7 @@ export default function BingoGridWrapper({ bingo, userRole, teams, currentTeamId
         </div>
       )}
       <BingoGrid
+        key={`${bingo.rows}-${bingo.columns}`}
         bingo={bingo}
         userRole={userRole}
         currentTeamId={currentTeamId}
