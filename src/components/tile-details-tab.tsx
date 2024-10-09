@@ -7,13 +7,15 @@ import { type Tile, type Team } from '@/app/actions/events'
 import { Progress } from "@/components/ui/progress"
 import { Pencil, X } from 'lucide-react'
 import Markdown from 'react-markdown'
+import { Switch } from "@/components/ui/switch"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
-// Define a type for the editable fields of a Tile
 type EditableTileFields = {
   title: string;
   description: string;
   weight: number;
   headerImage: string;
+  isHidden: boolean;
 }
 
 interface TileDetailsTabProps {
@@ -75,6 +77,10 @@ export function TileDetailsTab({
       setImagePreview(pastedData)
       setIsValidImage(isValidImageUrl(pastedData))
     }
+  }, [onEditTile])
+
+  const handleIsHiddenChange = useCallback((checked: boolean) => {
+    onEditTile('isHidden', checked)
   }, [onEditTile])
 
   return (
@@ -167,6 +173,16 @@ export function TileDetailsTab({
                       Please enter a valid image URL (starting with http:// or https://)
                     </p>
                   )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="isHidden"
+                    checked={editedTile.isHidden ?? false}
+                    onCheckedChange={handleIsHiddenChange}
+                  />
+                  <label htmlFor="isHidden" className="text-sm font-medium text-gray-700">
+                    Hidden
+                  </label>
                 </div>
               </div>
               <div className="flex justify-end">
