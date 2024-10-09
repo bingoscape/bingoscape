@@ -430,4 +430,3 @@ export async function deleteTile(tileId: string, bingoId: string) {
     return { success: false, error: "Failed to delete tile" };
   }
 }
-
