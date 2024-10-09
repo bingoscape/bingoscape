@@ -156,6 +156,9 @@ export default function BingoGridWrapper({ bingo: initialBingo, userRole, teams,
   }, [updateBingoState, bingo])
 
   const highlightTilesToDelete = useCallback((type: 'row' | 'column') => {
+    if (!bingo.tiles) {
+      bingo.tiles = [];
+    }
     const tilesToHighlight = type === 'row'
       ? bingo.tiles.slice(-bingo.columns)
       : bingo.tiles.filter((_, index) => (index + 1) % bingo.columns === 0)
