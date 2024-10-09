@@ -6,12 +6,13 @@ import { type Tile } from '@/app/actions/events'
 interface BingoTileProps {
   tile: Tile
   onClick: (tile: Tile) => void
+  onTogglePlaceholder: (tile: Tile) => void
   userRole: 'participant' | 'management' | 'admin'
   currentTeamId?: string
   isLocked: boolean
 }
 
-export function BingoTile({ tile, onClick, userRole, currentTeamId, isLocked }: BingoTileProps) {
+export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, currentTeamId, isLocked }: BingoTileProps) {
   const isManagement = userRole === 'management' || userRole === 'admin'
 
   const submissionCounts = React.useMemo(() => {
@@ -46,27 +47,49 @@ export function BingoTile({ tile, onClick, userRole, currentTeamId, isLocked }: 
     }
   }
 
+  const tileClasses = `
+    relative rounded overflow-hidden aspect-square
+    ${tile.isHidden && isLocked ? '' : 'cursor-pointer'}
+    ${tile.isHidden && !isLocked ? 'border-2 border-dashed border-gray-300 bg-gray-100' : 'border-2 border-primary'}
+    ${!tile.isHidden ? 'transition-transform duration-300 ease-in-out hover:scale-105' : ''}
+    ${tile.isHidden && isLocked ? 'border-0 bg-transparent' : ''}
+  `
+
+  const handleClick = () => {
+    if (tile.isHidden && !isLocked && isManagement) {
+      onTogglePlaceholder(tile)
+    } else if (!tile.isHidden || !isLocked) {
+      onClick(tile)
+    }
+  }
+
   return (
-    <div
-      className="relative rounded overflow-hidden cursor-pointer border-2 border-primary transition-transform duration-300 ease-in-out hover:scale-105 aspect-square"
-      onClick={() => onClick(tile)}
-    >
-      {tile.headerImage ? (
-        <Image
-          unoptimized
-          src={tile.headerImage}
-          alt={tile.title}
-          fill
-          className="object-contain transition-transform duration-300 ease-in-out hover:scale-110"
-        />
-      ) : (
-        <div className="w-full h-full bg-primary flex items-center justify-center">
-          <span className="text-primary-foreground text-lg font-semibold">{tile.title}</span>
-        </div>
+    <div className={tileClasses} onClick={handleClick}>
+      {!tile.isHidden && (
+        <>
+          {tile.headerImage ? (
+            <Image
+              unoptimized
+              src={tile.headerImage}
+              alt={tile.title}
+              fill
+              className="object-contain transition-transform duration-300 ease-in-out hover:scale-110"
+            />
+          ) : (
+            <div className="w-full h-full bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground text-lg font-semibold">{tile.title}</span>
+            </div>
+          )}
+          {currentTeamSubmission && (
+            <div className="absolute top-2 left-2 z-10">
+              {renderStatusIcon(currentTeamSubmission.status)}
+            </div>
+          )}
+        </>
       )}
-      {currentTeamSubmission && (
-        <div className="absolute top-2 left-2 z-10">
-          {renderStatusIcon(currentTeamSubmission.status)}
+      {tile.isHidden && !isLocked && isManagement && (
+        <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+          Click to edit
         </div>
       )}
     </div>

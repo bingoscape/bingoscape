@@ -209,6 +209,7 @@ export const tiles = createTable('tiles', {
   description: text('description').notNull(),
   weight: integer('weight').notNull(),
   index: integer('index').notNull(),
+  isHidden: boolean('is_hidden').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
