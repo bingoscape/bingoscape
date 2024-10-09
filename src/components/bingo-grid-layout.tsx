@@ -9,32 +9,35 @@ interface BingoGridLayoutProps {
   userRole: EventRole
   currentTeamId: string | undefined
   onTileClick: (tile: Tile) => void
-  onDeleteTile: (tileId: string) => void
   isLocked: boolean
+  highlightedTiles: number[]
 }
 
-export const BingoGridLayout = forwardRef<HTMLDivElement, BingoGridLayoutProps>(
-  ({ tiles, columns, rows, userRole, currentTeamId, onTileClick, onDeleteTile, isLocked }, ref) => {
+
+export const BingoGridLayout = React.forwardRef<HTMLDivElement, BingoGridLayoutProps>(
+  ({ tiles, columns, rows, userRole, currentTeamId, onTileClick, isLocked, highlightedTiles }, ref) => {
     return (
       <div
         ref={ref}
-        className={`grid gap-2 w-full h-full ${isLocked ? '' : 'cursor-move'}`}
+        className={`grid gap-4`}
         style={{
-          gridTemplateColumns: `repeat(${columns}, 1fr)`,
-          gridTemplateRows: `repeat(${rows}, 1fr)`,
-          aspectRatio: `${columns} / ${rows}`
+          gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+          gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
         }}
       >
         {tiles.map((tile) => (
-          <BingoTile
+          <div
             key={tile.id}
-            tile={tile}
-            onClick={() => onTileClick(tile)}
-            onDelete={() => onDeleteTile(tile.id)}
-            userRole={userRole}
-            currentTeamId={currentTeamId}
-            isLocked={isLocked}
-          />
+            className={`relative ${highlightedTiles.includes(tile.index) ? 'ring-2 ring-red-500' : ''}`}
+          >
+            <BingoTile
+              tile={tile}
+              onClick={() => onTileClick(tile)}
+              userRole={userRole}
+              currentTeamId={currentTeamId}
+              isLocked={isLocked}
+            />
+          </div>
         ))}
       </div>
     )

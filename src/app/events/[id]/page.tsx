@@ -81,6 +81,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 												bingo={bingo}
 												currentTeamId={currentTeam?.id}
 												teams={event.teams ?? []}
+												highlightedTiles={[]}
 												isLocked={true}
 												userRole={userRole}
 											/>

@@ -1,19 +1,17 @@
 import React from 'react'
 import Image from 'next/image'
-import { Check, Clock, Send, X, Trash2 } from 'lucide-react'
+import { Check, Clock, Send, X } from 'lucide-react'
 import { type Tile } from '@/app/actions/events'
-import { Button } from "@/components/ui/button"
 
 interface BingoTileProps {
   tile: Tile
   onClick: (tile: Tile) => void
-  onDelete: (tileId: string) => void
   userRole: 'participant' | 'management' | 'admin'
   currentTeamId?: string
   isLocked: boolean
 }
 
-export function BingoTile({ tile, onClick, onDelete, userRole, currentTeamId, isLocked }: BingoTileProps) {
+export function BingoTile({ tile, onClick, userRole, currentTeamId, isLocked }: BingoTileProps) {
   const isManagement = userRole === 'management' || userRole === 'admin'
 
   const submissionCounts = React.useMemo(() => {
@@ -48,11 +46,6 @@ export function BingoTile({ tile, onClick, onDelete, userRole, currentTeamId, is
     }
   }
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    onDelete(tile.id)
-  }
-
   return (
     <div
       className="relative rounded overflow-hidden cursor-pointer border-2 border-primary transition-transform duration-300 ease-in-out hover:scale-105 aspect-square"
@@ -75,17 +68,6 @@ export function BingoTile({ tile, onClick, onDelete, userRole, currentTeamId, is
         <div className="absolute top-2 left-2 z-10">
           {renderStatusIcon(currentTeamSubmission.status)}
         </div>
-      )}
-      {!isLocked && isManagement && (
-        <Button
-          variant="destructive"
-          size="icon"
-          className="absolute top-2 right-2 z-20 h-8 w-8"
-          onClick={handleDelete}
-        >
-          <Trash2 className="h-4 w-4" />
-          <span className="sr-only">Delete</span>
-        </Button>
       )}
     </div>
   )

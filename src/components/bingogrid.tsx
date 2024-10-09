@@ -21,9 +21,10 @@ interface BingoGridProps {
   currentTeamId: string | undefined
   isLocked: boolean
   onReorderTiles?: (reorderedTiles: Tile[]) => void
+  highlightedTiles: number[]
 }
 
-export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLocked, onReorderTiles }: BingoGridProps) {
+export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLocked, onReorderTiles, highlightedTiles }: BingoGridProps) {
   const [tiles, setTiles] = useState<Tile[]>(bingo.tiles ?? [])
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -394,7 +395,8 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
         userRole={userRole}
         currentTeamId={currentTeamId}
         onTileClick={handleTileClick}
-        onDeleteTile={handleDeleteTile}
+        highlightedTiles={highlightedTiles}
+
         isLocked={isLocked}
       />
 

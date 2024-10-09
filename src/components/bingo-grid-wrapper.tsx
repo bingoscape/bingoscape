@@ -3,10 +3,11 @@
 import { useState, useCallback, useEffect } from 'react'
 import BingoGrid from '@/components/bingogrid'
 import { Button } from '@/components/ui/button'
-import { Lock, Unlock, PlusSquare } from 'lucide-react'
+import { Lock, Unlock, PlusSquare, MinusSquare } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
-import { addRowOrColumn, reorderTiles, addTile } from '@/app/actions/bingo'
+import { addRowOrColumn, reorderTiles, deleteRowOrColumn } from '@/app/actions/bingo'
 import type { Bingo, Tile, Team, EventRole } from '@/app/actions/events'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface BingoGridWrapperProps {
   bingo: Bingo
@@ -17,11 +18,11 @@ interface BingoGridWrapperProps {
 
 export default function BingoGridWrapper({ bingo: initialBingo, userRole, teams, currentTeamId }: BingoGridWrapperProps) {
   const [bingo, setBingo] = useState(initialBingo)
-  const [isLocked, setIsLocked] = useState(bingo.locked)
+  const [isLocked, setIsLocked] = useState(true)
   const [updateKey, setUpdateKey] = useState(0)
+  const [highlightedTiles, setHighlightedTiles] = useState<number[]>([])
 
   useEffect(() => {
-    // Force re-render when bingo state changes
     setUpdateKey(prev => prev + 1)
   }, [bingo])
 
@@ -35,11 +36,11 @@ export default function BingoGridWrapper({ bingo: initialBingo, userRole, teams,
     })
   }, [isLocked])
 
-  const updateBingoState = useCallback((newTiles: Tile[], bingo: Bingo) => {
+  const updateBingoState = useCallback((newTiles: Tile[], updatedBingo: Bingo) => {
     setBingo(prevBingo => ({
       ...prevBingo,
-      rows: bingo.rows,
-      columns: bingo.columns,
+      rows: updatedBingo.rows,
+      columns: updatedBingo.columns,
       tiles: newTiles
     }))
   }, [])
@@ -88,23 +89,45 @@ export default function BingoGridWrapper({ bingo: initialBingo, userRole, teams,
     }
   }, [bingo.id, updateBingoState])
 
-  const handleAddTile = useCallback(async () => {
+  const handleDeleteRow = useCallback(async () => {
     try {
-      const result = await addTile(bingo.id)
+      const result = await deleteRowOrColumn(bingo.id, 'row')
       if (result.success) {
         updateBingoState(result.tiles, result.bingo)
         toast({
-          title: "Tile added",
-          description: "A new tile has been added to the bingo board.",
+          title: "Row deleted",
+          description: "The last row has been deleted from the bingo board.",
         })
       } else {
         throw new Error(result.error)
       }
     } catch (error) {
-      console.error("Error adding tile:", error)
+      console.error("Error deleting row:", error)
       toast({
         title: "Error",
-        description: "Failed to add tile",
+        description: "Failed to delete row",
+        variant: "destructive",
+      })
+    }
+  }, [bingo.id, updateBingoState])
+
+  const handleDeleteColumn = useCallback(async () => {
+    try {
+      const result = await deleteRowOrColumn(bingo.id, 'column')
+      if (result.success) {
+        updateBingoState(result.tiles, result.bingo)
+        toast({
+          title: "Column deleted",
+          description: "The last column has been deleted from the bingo board.",
+        })
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (error) {
+      console.error("Error deleting column:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete column",
         variant: "destructive",
       })
     }
@@ -130,7 +153,18 @@ export default function BingoGridWrapper({ bingo: initialBingo, userRole, teams,
         variant: "destructive",
       })
     }
-  }, [updateBingoState])
+  }, [updateBingoState, bingo])
+
+  const highlightTilesToDelete = useCallback((type: 'row' | 'column') => {
+    const tilesToHighlight = type === 'row'
+      ? bingo.tiles.slice(-bingo.columns)
+      : bingo.tiles.filter((_, index) => (index + 1) % bingo.columns === 0)
+    setHighlightedTiles(tilesToHighlight.map(tile => tile.index))
+  }, [bingo.tiles, bingo.columns])
+
+  const clearHighlightedTiles = useCallback(() => {
+    setHighlightedTiles([])
+  }, [])
 
   const isManagement = userRole === 'admin' || userRole === 'management'
 
@@ -142,18 +176,48 @@ export default function BingoGridWrapper({ bingo: initialBingo, userRole, teams,
             {isLocked ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
             {isLocked ? 'Unlock Board' : 'Lock Board'}
           </Button>
-          <Button onClick={handleAddRow} className="flex items-center justify-center">
-            <PlusSquare className="mr-2 h-4 w-4" />
-            Add Row
-          </Button>
-          <Button onClick={handleAddColumn} className="flex items-center justify-center">
-            <PlusSquare className="mr-2 h-4 w-4" />
-            Add Column
-          </Button>
-          <Button onClick={handleAddTile} className="flex items-center justify-center">
-            <PlusSquare className="mr-2 h-4 w-4" />
-            Add Tile
-          </Button>
+          <AnimatePresence>
+            {!isLocked && (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="flex gap-2"
+              >
+                <div className="flex flex-col-1 gap-2">
+                  <Button onClick={handleAddRow} className="flex items-center justify-center">
+                    <PlusSquare className="mr-2 h-4 w-4" />
+                    Row
+                  </Button>
+                  <Button
+                    onClick={handleDeleteRow}
+                    onMouseEnter={() => highlightTilesToDelete('row')}
+                    onMouseLeave={clearHighlightedTiles}
+                    className="flex items-center justify-center"
+                  >
+                    <MinusSquare className="mr-2 h-4 w-4" />
+                    Row
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleAddColumn} className="flex items-center justify-center">
+                    <PlusSquare className="mr-2 h-4 w-4" />
+                    Column
+                  </Button>
+                  <Button
+                    onClick={handleDeleteColumn}
+                    onMouseEnter={() => highlightTilesToDelete('column')}
+                    onMouseLeave={clearHighlightedTiles}
+                    className="flex items-center justify-center"
+                  >
+                    <MinusSquare className="mr-2 h-4 w-4" />
+                    Column
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
       <BingoGrid
@@ -164,6 +228,7 @@ export default function BingoGridWrapper({ bingo: initialBingo, userRole, teams,
         teams={teams}
         isLocked={isLocked}
         onReorderTiles={handleReorderTiles}
+        highlightedTiles={highlightedTiles}
       />
     </div>
   )
