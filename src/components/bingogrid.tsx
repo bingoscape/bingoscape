@@ -20,7 +20,7 @@ interface BingoGridProps {
   teams: Team[]
   currentTeamId: string | undefined
   isLocked: boolean
-  onReorderTiles: (reorderedTiles: Tile[]) => void
+  onReorderTiles?: (reorderedTiles: Tile[]) => void
 }
 
 export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLocked, onReorderTiles }: BingoGridProps) {
@@ -53,7 +53,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
             }))
 
             setTiles(reorderedTiles)
-            onReorderTiles(reorderedTiles)
+            if (!!onReorderTiles) onReorderTiles(reorderedTiles)
           }
         }
       })
