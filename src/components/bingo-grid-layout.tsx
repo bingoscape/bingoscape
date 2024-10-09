@@ -1,6 +1,6 @@
-import React, { forwardRef } from 'react'
+import React from 'react'
 import { BingoTile } from './bingo-tile'
-import { type Tile, type EventRole } from '@/app/actions/events'
+import type { Tile, EventRole } from '@/app/actions/events'
 
 interface BingoGridLayoutProps {
   tiles: Tile[]
@@ -9,13 +9,13 @@ interface BingoGridLayoutProps {
   userRole: EventRole
   currentTeamId: string | undefined
   onTileClick: (tile: Tile) => void
+  onTogglePlaceholder: (tile: Tile) => void
   isLocked: boolean
   highlightedTiles: number[]
 }
 
-
 export const BingoGridLayout = React.forwardRef<HTMLDivElement, BingoGridLayoutProps>(
-  ({ tiles, columns, rows, userRole, currentTeamId, onTileClick, isLocked, highlightedTiles }, ref) => {
+  ({ tiles, columns, rows, userRole, currentTeamId, onTileClick, onTogglePlaceholder, isLocked, highlightedTiles }, ref) => {
     return (
       <div
         ref={ref}
@@ -27,12 +27,14 @@ export const BingoGridLayout = React.forwardRef<HTMLDivElement, BingoGridLayoutP
       >
         {tiles.map((tile) => (
           <div
+
             key={tile.id}
             className={`relative ${highlightedTiles.includes(tile.index) ? 'ring-2 ring-red-500' : ''}`}
           >
             <BingoTile
               tile={tile}
               onClick={() => onTileClick(tile)}
+              onTogglePlaceholder={() => onTogglePlaceholder(tile)}
               userRole={userRole}
               currentTeamId={currentTeamId}
               isLocked={isLocked}

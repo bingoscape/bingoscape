@@ -369,6 +369,7 @@ export async function addRowOrColumn(bingoId: string, type: 'row' | 'column'): P
         newTiles.push({
           bingoId,
           title: `New Tile ${i + 1}`,
+          headerImage: '/placeholder.svg?height=100&width=100',
           description: '',
           weight: 1,
           index: i,

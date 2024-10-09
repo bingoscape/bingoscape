@@ -40,6 +40,8 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
     if (gridRef.current && hasSufficientRights() && !isLocked) {
       sortableRef.current = new Sortable(gridRef.current, {
         animation: 150,
+        swap: true,
+        swapClass: 'bh-yellow-100',
         ghostClass: 'bg-blue-100',
         onEnd: (event: SortableEvent) => {
           const { oldIndex, newIndex } = event
@@ -48,13 +50,20 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
             const [movedTile] = updatedTiles.splice(oldIndex!, 1)
             updatedTiles.splice(newIndex!, 0, movedTile!)
 
-            const reorderedTiles = updatedTiles.map((tile, index) => ({
-              ...tile,
-              index
-            }))
+            // Update the indices of the swapped tiles
+            const minIndex = Math.min(oldIndex!, newIndex!)
+            const maxIndex = Math.max(oldIndex!, newIndex!)
+            for (let i = minIndex; i <= maxIndex; i++) {
+              updatedTiles[i] = { ...updatedTiles[i], index: i } as Tile
+            }
 
-            setTiles(reorderedTiles)
-            if (!!onReorderTiles) onReorderTiles(reorderedTiles)
+            setTiles(updatedTiles)
+            if (onReorderTiles) onReorderTiles(updatedTiles)
+
+            toast({
+              title: "Tiles swapped",
+              description: "The tiles have been successfully swapped.",
+            })
           }
         }
       })
@@ -69,6 +78,10 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
   }, [tiles, userRole, isLocked, onReorderTiles])
 
   const handleTileClick = async (tile: Tile) => {
+    if (tile.isHidden && !isLocked && hasSufficientRights()) {
+      await handleTogglePlaceholder(tile)
+      return
+    }
     try {
       const goals = await getTileGoalsAndProgress(tile.id)
       const teamTileSubmissions = await getSubmissions(tile.id)
@@ -81,6 +94,24 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
       toast({
         title: "Error",
         description: "Failed to fetch tile data",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleTogglePlaceholder = async (tile: Tile) => {
+    const updatedTile = { ...tile, isPlaceholder: !tile.isHidden }
+    const result = await updateTile(tile.id, updatedTile)
+    if (result.success) {
+      setTiles(prevTiles => prevTiles.map(t => t.id === tile.id ? updatedTile : t))
+      toast({
+        title: "Tile updated",
+        description: `The tile is now ${updatedTile.isPlaceholder ? 'a placeholder' : 'no longer a placeholder'}.`,
+      })
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to update tile",
         variant: "destructive",
       })
     }
@@ -390,13 +421,14 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
       <BingoGridLayout
         ref={gridRef}
         tiles={tiles}
+
         columns={bingo.columns}
         rows={bingo.rows}
         userRole={userRole}
         currentTeamId={currentTeamId}
         onTileClick={handleTileClick}
+        onTogglePlaceholder={handleTogglePlaceholder}
         highlightedTiles={highlightedTiles}
-
         isLocked={isLocked}
       />
 
@@ -411,7 +443,6 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
               <TabsTrigger value="details">Tile Details</TabsTrigger>
               <TabsTrigger value="goals">Goals</TabsTrigger>
               <TabsTrigger value="submissions">Submissions</TabsTrigger>
-
             </TabsList>
             <TabsContent value="details" className="h-full overflow-y-auto">
               <TileDetailsTab
