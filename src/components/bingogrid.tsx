@@ -422,7 +422,6 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
       <BingoGridLayout
         ref={gridRef}
         tiles={tiles}
-
         columns={bingo.columns}
         rows={bingo.rows}
         userRole={userRole}

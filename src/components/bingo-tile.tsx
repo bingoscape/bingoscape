@@ -49,10 +49,9 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
 
   const tileClasses = `
     relative rounded overflow-hidden aspect-square
-    ${tile.isHidden && isLocked ? '' : 'cursor-pointer'}
-    ${tile.isHidden && !isLocked ? 'border-2 border-dashed border-gray-300 bg-gray-100' : 'border-2 border-primary'}
-    ${!tile.isHidden ? 'transition-transform duration-300 ease-in-out hover:scale-105' : ''}
-    ${tile.isHidden && isLocked ? 'border-0 bg-transparent' : ''}
+    ${tile.isHidden && isLocked ? 'bg-transparent' : ''}
+    ${tile.isHidden && !isLocked ? 'border-2 border-dashed border-gray-300 bg-gray-100 cursor-pointer' : ''}
+    ${!tile.isHidden ? 'border-2 border-primary cursor-pointer transition-transform duration-300 ease-in-out hover:scale-105' : ''}
   `
 
   const handleClick = () => {
