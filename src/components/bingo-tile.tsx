@@ -88,7 +88,7 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
       )}
       {tile.isHidden && !isLocked && isManagement && (
         <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-          Click to edit
+          Click to reveal
         </div>
       )}
     </div>
