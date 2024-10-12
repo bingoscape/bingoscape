@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useSession } from "next-auth/react";
-import { createArray } from "@/lib/utils";
+import { createArray } from "@/lib/createArray";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 
 type ClanMember = {

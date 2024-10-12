@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
 import { createEvent } from '@/app/actions/events'
-import { formatRunescapeGold } from '@/lib/utils'
+import { formatRunescapeGold } from "@/lib/formatRunescapeGold"
 
 export function CreateEventModal() {
   const [open, setOpen] = useState(false)

@@ -17,7 +17,7 @@ import Link from "next/link"
 import { Users } from "lucide-react"
 import { getCurrentTeamForUser } from "@/app/actions/team"
 import { PrizePoolDisplay } from "@/components/prize-pool-display"
-import { formatRunescapeGold } from '@/lib/utils'
+import { formatRunescapeGold } from "@/lib/formatRunescapeGold"
 import { EditEventModal } from "@/components/edit-event-modal"
 
 export default async function EventBingosPage({ params }: { params: { id: UUID } }) {
