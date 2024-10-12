@@ -39,10 +39,14 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 
 	const isAdminOrManagement = userRole === 'admin' || userRole === 'management'
 
+	const bingoCount = event.bingos?.length ?? 0
+	const gridClass = bingoCount <= 1 ? "grid-cols-1" : "md:grid-cols-2 lg:grid-cols-2"
+	const cardClass = bingoCount <= 1 ? "max-w-3xl" : ""
+
 	return (
 		<div className="container mx-auto py-10">
-			<div className="flex justify-between mb-6 space-y-5">
-				<div className="mr-5">
+			<div className="flex flex-col lg:flex-row justify-between mb-6 space-y-5 lg:space-y-0">
+				<div className="lg:mr-5 flex-grow">
 					<h1 className="text-3xl font-bold">{event.title}</h1>
 					{event.clan && (
 						<p className="text-sm text-muted-foreground mt-2">
@@ -59,13 +63,13 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 						</p>
 					)}
 
-					<h2 className="text-2xl font-bold mb-4">Bingos</h2>
+					<h2 className="text-2xl font-bold mb-4 mt-6">Bingos</h2>
 					{(!!event.bingos && event.bingos.length === 0) ? (
 						<p>No bingos have been created for this event yet.</p>
 					) : (
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+						<div className={`grid ${gridClass} gap-6`}>
 							{event.bingos!.map((bingo) => (
-								<Card key={bingo.id}>
+								<Card key={bingo.id} className={cardClass}>
 									<CardHeader>
 										<div className="flex justify-between items-center">
 											<CardTitle>{bingo.title}</CardTitle>
@@ -106,7 +110,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 						)}
 					</div>
 				</div>
-				<div className="flex flex-col space-y-1">
+				<div className="flex flex-col space-y-4 lg:w-64">
 					{isAdminOrManagement && <CreateBingoModal eventId={event.id} />}
 					{isAdminOrManagement && <GenerateEventInviteLink eventId={event.id as UUID}>Generate Invite Link</GenerateEventInviteLink>}
 					{isAdminOrManagement && (
