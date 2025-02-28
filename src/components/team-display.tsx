@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { getTeamsByEventId } from "@/app/actions/team"
 import { toast } from "@/hooks/use-toast"
+import { Crown } from "lucide-react"
 
 type TeamMember = {
   user: {
@@ -58,7 +59,9 @@ export function TeamDisplay({ eventId }: { eventId: string }) {
         <AvatarFallback>{member.user.runescapeName?.[0] ?? 'U'}</AvatarFallback>
       </Avatar>
       <span>{member.user.runescapeName ?? member.user.name}</span>
-      {member.isLeader && <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full ml-2">Leader</span>}
+      {member.isLeader && (
+        <Crown className="h-4 w-4 text-yellow-500" aria-label="Team Leader" />
+      )}
     </li>
   )
 
