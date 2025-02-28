@@ -1,7 +1,5 @@
 import { useCallback } from "react"
-
 import { useState } from "react"
-
 import type React from "react"
 import Image from "next/image"
 import { Input } from "@/components/ui/input"
@@ -12,7 +10,7 @@ import { Progress } from "@/components/ui/progress"
 import { Pencil, X } from "lucide-react"
 import Markdown from "react-markdown"
 import { Switch } from "@/components/ui/switch"
-import { ProgressSlider } from "./progress-slider" // We'll create this component
+import { ProgressSlider } from "./progress-slider"
 
 type EditableTileFields = {
   title: string
@@ -210,7 +208,17 @@ export function TileDetailsTab({
           )}
         </div>
       </div>
-      <TileProgress selectedTile={selectedTile} teams={teams} onUpdateProgress={onUpdateProgress} userRole={userRole} />
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold mb-4">Team Progress</h3>
+        <div className="max-h-[400px] overflow-y-auto pr-4">
+          <TileProgress
+            selectedTile={selectedTile}
+            teams={teams}
+            onUpdateProgress={onUpdateProgress}
+            userRole={userRole}
+          />
+        </div>
+      </div>
     </div>
   )
 }
@@ -231,8 +239,7 @@ function TileProgress({
   const canUpdateProgress = userRole === "admin" || userRole === "management"
 
   return (
-    <div className="space-y-6 mt-6">
-      <h3 className="text-lg font-semibold">Team Progress</h3>
+    <div className="space-y-6">
       {teams.map((team) => (
         <div key={team.id} className="space-y-2">
           <h4 className="font-medium">{team.name}</h4>
@@ -259,7 +266,9 @@ function TileProgress({
                       className="h-2"
                       aria-label={`Progress for ${team.name} on ${goal.description}`}
                     />
-                    <span className="self-end ml-2 text-sm">{currentValue} / {goal.targetValue}</span>
+                    <span className="self-end ml-2 text-sm">
+                      {currentValue} / {goal.targetValue}
+                    </span>
                   </div>
                 )}
               </div>
@@ -270,3 +279,4 @@ function TileProgress({
     </div>
   )
 }
+
