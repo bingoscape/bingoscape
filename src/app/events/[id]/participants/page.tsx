@@ -9,7 +9,7 @@ import { Loader2, CheckCircle, CircleAlert } from "lucide-react"
 import { getEventParticipants, updateParticipantRole, assignParticipantToTeam, updateParticipantBuyIn } from '@/app/actions/events'
 import { getTeamsByEventId } from '@/app/actions/team'
 import { getEventById } from '@/app/actions/events'
-import { formatRunescapeGold } from "@/lib/formatRunescapeGold"
+import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import { type UUID } from 'crypto'
 import { Breadcrumbs } from '@/components/breadcrumbs'
 import debounce from 'lodash/debounce'

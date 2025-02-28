@@ -103,6 +103,7 @@ export async function createBingo(formData: FormData) {
       headerImage: '/placeholder.svg?height=100&width=100',
       description: `Tile ${idx + 1}`,
       weight: 1,
+      isHidden: false,
       index: idx,
     })
   }
