@@ -22,7 +22,7 @@ export function GoalsTab({
   onNewGoalChange
 }: GoalsTabProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
       <h3 className="text-lg font-semibold">Goals</h3>
       {selectedTile?.goals?.map(goal => (
         <div key={goal.id} className="flex justify-between items-center">

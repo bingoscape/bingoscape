@@ -1,19 +1,30 @@
-'use client'
+"use client"
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import type React from "react"
+
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { toast } from '@/hooks/use-toast'
-import { updateTile, reorderTiles, addGoal, deleteGoal, getTileGoalsAndProgress, updateGoalProgress, submitImage, getSubmissions, updateTeamTileSubmissionStatus, deleteTile } from '@/app/actions/bingo'
-import '@mdxeditor/editor/style.css'
+import { toast } from "@/hooks/use-toast"
+import {
+  updateTile,
+  addGoal,
+  deleteGoal,
+  getTileGoalsAndProgress,
+  updateGoalProgress,
+  submitImage,
+  getSubmissions,
+  updateTeamTileSubmissionStatus,
+  deleteTile,
+} from "@/app/actions/bingo"
+import "@mdxeditor/editor/style.css"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Bingo, Tile, Team, EventRole, Goal } from '@/app/actions/events'
-import Sortable, { type SortableEvent } from 'sortablejs'
-import { BingoGridLayout } from './bingo-grid-layout'
-import { TileDetailsTab } from './tile-details-tab'
-import { GoalsTab } from './goals-tab'
-import { SubmissionsTab } from './submissions-tab'
-import { FullSizeImageDialog } from './full-size-image-dialog'
-import { ScrollArea } from './ui/scroll-area'
+import type { Bingo, Tile, Team, EventRole, Goal } from "@/app/actions/events"
+import Sortable, { type SortableEvent } from "sortablejs"
+import { BingoGridLayout } from "./bingo-grid-layout"
+import { TileDetailsTab } from "./tile-details-tab"
+import { GoalsTab } from "./goals-tab"
+import { SubmissionsTab } from "./submissions-tab"
+import { FullSizeImageDialog } from "./full-size-image-dialog"
 
 interface BingoGridProps {
   bingo: Bingo
@@ -25,7 +36,15 @@ interface BingoGridProps {
   highlightedTiles: number[]
 }
 
-export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLocked, onReorderTiles, highlightedTiles }: BingoGridProps) {
+export default function BingoGrid({
+  bingo,
+  userRole,
+  teams,
+  currentTeamId,
+  isLocked,
+  onReorderTiles,
+  highlightedTiles,
+}: BingoGridProps) {
   const [tiles, setTiles] = useState<Tile[]>(bingo.tiles ?? [])
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -42,8 +61,8 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
       sortableRef.current = new Sortable(gridRef.current, {
         animation: 150,
         swap: true,
-        swapClass: 'bh-yellow-100',
-        ghostClass: 'bg-blue-100',
+        swapClass: "bh-yellow-100",
+        ghostClass: "bg-blue-100",
         onEnd: (event: SortableEvent) => {
           const { oldIndex, newIndex } = event
           if (oldIndex !== newIndex) {
@@ -66,7 +85,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
               description: "The tiles have been successfully swapped.",
             })
           }
-        }
+        },
       })
 
       return () => {
@@ -76,7 +95,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
         }
       }
     }
-  }, [tiles, userRole, isLocked, onReorderTiles])
+  }, [tiles, isLocked, onReorderTiles])
 
   const handleTileClick = async (tile: Tile) => {
     if (tile.isHidden && !isLocked && hasSufficientRights()) {
@@ -104,10 +123,10 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
     const updatedTile = { ...tile, isHidden: !tile.isHidden }
     const result = await updateTile(tile.id, updatedTile)
     if (result.success) {
-      setTiles(prevTiles => prevTiles.map(t => t.id === tile.id ? updatedTile : t))
+      setTiles((prevTiles) => prevTiles.map((t) => (t.id === tile.id ? updatedTile : t)))
       toast({
         title: "Tile updated",
-        description: `The tile is now ${updatedTile.isHidden ? 'a placeholder' : 'no longer a placeholder'}.`,
+        description: `The tile is now ${updatedTile.isHidden ? "a placeholder" : "no longer a placeholder"}.`,
       })
     } else {
       toast({
@@ -122,9 +141,9 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
     if (selectedTile && editedTile) {
       const result = await updateTile(selectedTile.id, editedTile)
       if (result.success) {
-        setTiles(prevTiles => prevTiles.map(tile =>
-          tile.id === selectedTile.id ? { ...tile, ...editedTile } : tile
-        ))
+        setTiles((prevTiles) =>
+          prevTiles.map((tile) => (tile.id === selectedTile.id ? { ...tile, ...editedTile } : tile)),
+        )
         setIsDialogOpen(false)
         toast({
           title: "Tile updated",
@@ -141,7 +160,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
   }
 
   const handleEditorChange = (content: string) => {
-    setEditedTile(prev => ({ ...prev, description: content }))
+    setEditedTile((prev) => ({ ...prev, description: content }))
   }
 
   const handleAddGoal = async () => {
@@ -153,27 +172,27 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
           tileId: result.goal.tileId,
           description: result.goal.description,
           targetValue: result.goal.targetValue,
-          teamProgress: teams.map(team => ({
+          teamProgress: teams.map((team) => ({
             teamId: team.id,
             teamName: team.name,
             goalId: result.goal!.id,
-            currentValue: 0
-          }))
+            currentValue: 0,
+          })),
         }
-        setSelectedTile(prev => {
+        setSelectedTile((prev) => {
           if (prev) {
             return {
               ...prev,
-              goals: [...(prev.goals ?? []), updatedGoal]
+              goals: [...(prev.goals ?? []), updatedGoal],
             }
           }
           return null
         })
-        setTiles(prevTiles => prevTiles.map(tile =>
-          tile.id === selectedTile.id
-            ? { ...tile, goals: [...(tile.goals ?? []), updatedGoal] }
-            : tile
-        ))
+        setTiles((prevTiles) =>
+          prevTiles.map((tile) =>
+            tile.id === selectedTile.id ? { ...tile, goals: [...(tile.goals ?? []), updatedGoal] } : tile,
+          ),
+        )
         setNewGoal({})
         toast({
           title: "Goal added",
@@ -193,10 +212,12 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
     if (selectedTile) {
       const result = await deleteGoal(goalId)
       if (result.success) {
-        setSelectedTile(prev => prev ? { ...prev, goals: prev.goals?.filter(g => g.id !== goalId) } : null)
-        setTiles(prevTiles => prevTiles.map(tile =>
-          tile.id === selectedTile.id ? { ...tile, goals: tile.goals?.filter(g => g.id !== goalId) } : tile
-        ))
+        setSelectedTile((prev) => (prev ? { ...prev, goals: prev.goals?.filter((g) => g.id !== goalId) } : null))
+        setTiles((prevTiles) =>
+          prevTiles.map((tile) =>
+            tile.id === selectedTile.id ? { ...tile, goals: tile.goals?.filter((g) => g.id !== goalId) } : tile,
+          ),
+        )
         toast({
           title: "Goal deleted",
           description: "The goal has been successfully deleted from the tile.",
@@ -214,22 +235,20 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
   const handleProgressUpdate = async (goalId: string, teamId: string, newValue: number) => {
     const result = await updateGoalProgress(goalId, teamId, newValue)
     if (result.success) {
-      setSelectedTile(prev => {
+      setSelectedTile((prev) => {
         if (prev?.goals) {
           return {
             ...prev,
-            goals: prev.goals.map(goal =>
+            goals: prev.goals.map((goal) =>
               goal.id === goalId
                 ? {
                   ...goal,
-                  teamProgress: goal.teamProgress.map(progress =>
-                    progress.teamId === teamId
-                      ? { ...progress, currentValue: newValue }
-                      : progress
-                  )
+                  teamProgress: goal.teamProgress.map((progress) =>
+                    progress.teamId === teamId ? { ...progress, currentValue: newValue } : progress,
+                  ),
                 }
-                : goal
-            )
+                : goal,
+            ),
           }
         }
         return prev
@@ -257,20 +276,18 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
   const refreshSubmissions = async (tileId: string) => {
     try {
       const submissions = await getSubmissions(tileId)
-      setSelectedTile(prev => {
+      setSelectedTile((prev) => {
         if (prev && prev.id === tileId) {
           return {
             ...prev,
-            teamTileSubmissions: submissions
+            teamTileSubmissions: submissions,
           }
         }
         return prev
       })
-      setTiles(prevTiles => prevTiles.map(tile =>
-        tile.id === tileId
-          ? { ...tile, teamTileSubmissions: submissions }
-          : tile
-      ))
+      setTiles((prevTiles) =>
+        prevTiles.map((tile) => (tile.id === tileId ? { ...tile, teamTileSubmissions: submissions } : tile)),
+      )
     } catch (error) {
       console.error("Error refreshing submissions:", error)
       toast({
@@ -284,9 +301,9 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
   const handleImageSubmit = async () => {
     if (selectedTile && (selectedImage || pastedImage) && currentTeamId) {
       const formData = new FormData()
-      formData.append('image', selectedImage ?? pastedImage!)
-      formData.append('tileId', selectedTile.id)
-      formData.append('teamId', currentTeamId)
+      formData.append("image", selectedImage ?? pastedImage!)
+      formData.append("tileId", selectedTile.id)
+      formData.append("teamId", currentTeamId)
 
       const result = await submitImage(formData)
       if (result.success) {
@@ -312,10 +329,10 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
     const items = event.clipboardData?.items
     if (items) {
       for (const item of items) {
-        if (item.type.startsWith('image/')) {
+        if (item.type.startsWith("image/")) {
           const blob = item.getAsFile()
           if (blob) {
-            const file = new File([blob], 'pasted-image.png', { type: blob.type })
+            const file = new File([blob], "pasted-image.png", { type: blob.type })
             setPastedImage(file)
             setSelectedImage(file)
             toast({
@@ -330,13 +347,16 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
   }, [])
 
   useEffect(() => {
-    document.addEventListener('paste', handlePaste)
+    document.addEventListener("paste", handlePaste)
     return () => {
-      document.removeEventListener('paste', handlePaste)
+      document.removeEventListener("paste", handlePaste)
     }
   }, [handlePaste])
 
-  const handleTeamTileSubmissionStatusUpdate = async (teamTileSubmissionId: string | undefined, newStatus: 'accepted' | 'requires_interaction' | 'declined') => {
+  const handleTeamTileSubmissionStatusUpdate = async (
+    teamTileSubmissionId: string | undefined,
+    newStatus: "accepted" | "requires_interaction" | "declined",
+  ) => {
     if (!teamTileSubmissionId || !selectedTile) {
       toast({
         title: "Error",
@@ -349,29 +369,31 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
     try {
       const result = await updateTeamTileSubmissionStatus(teamTileSubmissionId, newStatus)
       if (result.success) {
-        setSelectedTile(prev => {
+        setSelectedTile((prev) => {
           if (prev) {
-            const updatedTeamTileSubmissions = prev.teamTileSubmissions?.map(tts =>
-              tts.id === teamTileSubmissionId ? { ...tts, status: newStatus } : tts
+            const updatedTeamTileSubmissions = prev.teamTileSubmissions?.map((tts) =>
+              tts.id === teamTileSubmissionId ? { ...tts, status: newStatus } : tts,
             )
             return {
               ...prev,
-              teamTileSubmissions: updatedTeamTileSubmissions
+              teamTileSubmissions: updatedTeamTileSubmissions,
             }
           }
           return null
         })
 
-        setTiles(prevTiles => prevTiles.map(tile =>
-          tile.id === selectedTile.id
-            ? {
-              ...tile,
-              teamTileSubmissions: tile.teamTileSubmissions?.map(tts =>
-                tts.id === teamTileSubmissionId ? { ...tts, status: newStatus } : tts
-              )
-            }
-            : tile
-        ))
+        setTiles((prevTiles) =>
+          prevTiles.map((tile) =>
+            tile.id === selectedTile.id
+              ? {
+                ...tile,
+                teamTileSubmissions: tile.teamTileSubmissions?.map((tts) =>
+                  tts.id === teamTileSubmissionId ? { ...tts, status: newStatus } : tts,
+                ),
+              }
+              : tile,
+          ),
+        )
 
         toast({
           title: "Submission status updated",
@@ -399,7 +421,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
     try {
       const result = await deleteTile(tileId, bingo.id)
       if (result.success) {
-        setTiles(prevTiles => prevTiles.filter(tile => tile.id !== tileId))
+        setTiles((prevTiles) => prevTiles.filter((tile) => tile.id !== tileId))
         toast({
           title: "Tile deleted",
           description: "The tile has been successfully deleted.",
@@ -433,58 +455,52 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
       />
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[900px] max-h-[80vh] overflow-hidden">
+        <DialogContent className="sm:max-w-[900px] h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>{selectedTile?.title}</DialogTitle>
             <DialogDescription>Weight: {selectedTile?.weight}</DialogDescription>
           </DialogHeader>
-          <Tabs defaultValue="details" className="h-full">
+          <Tabs defaultValue="details" className="flex-1 flex flex-col">
             <TabsList>
               <TabsTrigger value="details">Tile Details</TabsTrigger>
               <TabsTrigger value="goals">Goals</TabsTrigger>
               <TabsTrigger value="submissions">Submissions</TabsTrigger>
             </TabsList>
-            <TabsContent value="details" className="h-full overflow-y-auto">
-              <ScrollArea className="h-[80vh] w-full pr-4">
-                <TileDetailsTab
-                  selectedTile={selectedTile}
-                  editedTile={editedTile}
-                  userRole={userRole}
-                  teams={teams}
-                  onEditTile={(field, value) => setEditedTile({ ...editedTile, [field]: value })}
-                  onUpdateTile={handleTileUpdate}
-                  onEditorChange={handleEditorChange}
-                  onUpdateProgress={handleProgressUpdate}
-                />
-              </ScrollArea>
+            <TabsContent value="details" className="flex-1 overflow-y-auto">
+              <TileDetailsTab
+                selectedTile={selectedTile}
+                editedTile={editedTile}
+                userRole={userRole}
+                teams={teams}
+                onEditTile={(field, value) => setEditedTile({ ...editedTile, [field]: value })}
+                onUpdateTile={handleTileUpdate}
+                onEditorChange={handleEditorChange}
+                onUpdateProgress={handleProgressUpdate}
+              />
             </TabsContent>
-            <TabsContent value="goals" className="h-full overflow-y-auto">
-              <ScrollArea className="h-[80vh] w-full pr-4">
-                <GoalsTab
-                  selectedTile={selectedTile}
-                  newGoal={newGoal}
-                  hasSufficientRights={hasSufficientRights()}
-                  onDeleteGoal={handleDeleteGoal}
-                  onAddGoal={handleAddGoal}
-                  onNewGoalChange={(field, value) => setNewGoal({ ...newGoal, [field]: value })}
-                />
-              </ScrollArea>
+            <TabsContent value="goals" className="flex-1 overflow-y-auto">
+              <GoalsTab
+                selectedTile={selectedTile}
+                newGoal={newGoal}
+                hasSufficientRights={hasSufficientRights()}
+                onDeleteGoal={handleDeleteGoal}
+                onAddGoal={handleAddGoal}
+                onNewGoalChange={(field, value) => setNewGoal({ ...newGoal, [field]: value })}
+              />
             </TabsContent>
-            <TabsContent value="submissions" className="h-full overflow-y-auto">
-              <ScrollArea className="h-[80vh] w-full pr-4">
-                <SubmissionsTab
-                  selectedTile={selectedTile}
-                  currentTeamId={currentTeamId}
-                  teams={teams}
-                  hasSufficientRights={hasSufficientRights()}
-                  selectedImage={selectedImage}
-                  pastedImage={pastedImage}
-                  onImageChange={handleImageChange}
-                  onImageSubmit={handleImageSubmit}
-                  onFullSizeImageView={(src, alt) => setFullSizeImage({ src, alt })}
-                  onTeamTileSubmissionStatusUpdate={handleTeamTileSubmissionStatusUpdate}
-                />
-              </ScrollArea>
+            <TabsContent value="submissions" className="flex-1 overflow-y-auto">
+              <SubmissionsTab
+                selectedTile={selectedTile}
+                currentTeamId={currentTeamId}
+                teams={teams}
+                hasSufficientRights={hasSufficientRights()}
+                selectedImage={selectedImage}
+                pastedImage={pastedImage}
+                onImageChange={handleImageChange}
+                onImageSubmit={handleImageSubmit}
+                onFullSizeImageView={(src, alt) => setFullSizeImage({ src, alt })}
+                onTeamTileSubmissionStatusUpdate={handleTeamTileSubmissionStatusUpdate}
+              />
             </TabsContent>
           </Tabs>
         </DialogContent>
@@ -493,13 +509,15 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
       <FullSizeImageDialog
         isOpen={!!fullSizeImage}
         onClose={() => setFullSizeImage(null)}
-        imageSrc={fullSizeImage?.src ?? ''}
-        imageAlt={fullSizeImage?.alt ?? ''}
+        imageSrc={fullSizeImage?.src ?? ""}
+        imageAlt={fullSizeImage?.alt ?? ""}
       />
-    </div >
+    </div>
   )
 
   function hasSufficientRights(): boolean {
-    return userRole === 'admin' || userRole === 'management'
+    return userRole === "admin" || userRole === "management"
   }
 }
+
+
