@@ -13,7 +13,7 @@ import { updateProfile } from '@/app/actions/profile'
 interface User {
   id: string
   name: string | null
-  email: string
+  email: string | null
   image: string | null
   runescapeName: string | null
 }
