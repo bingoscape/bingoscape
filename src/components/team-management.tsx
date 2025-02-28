@@ -1,12 +1,22 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { createTeam, getTeamsByEventId, addUserToTeam, removeUserFromTeam, deleteTeam, getEventParticipants, updateTeamMember } from "@/app/actions/team"
+import {
+  createTeam,
+  getTeamsByEventId,
+  addUserToTeam,
+  removeUserFromTeam,
+  deleteTeam,
+  getEventParticipants,
+  updateTeamMember,
+  updateTeamName,
+} from "@/app/actions/team"
 import { toast } from "@/hooks/use-toast"
+import { Crown, Edit2 } from "lucide-react"
 
 type TeamMember = {
   user: {
@@ -34,19 +44,23 @@ type Participant = {
 export function TeamManagement({ eventId }: { eventId: string }) {
   const [teams, setTeams] = useState<Team[]>([])
   const [participants, setParticipants] = useState<Participant[]>([])
-  const [newTeamName, setNewTeamName] = useState('')
+  const [newTeamName, setNewTeamName] = useState("")
   const [loading, setLoading] = useState(true)
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null)
+  const [editedTeamName, setEditedTeamName] = useState("")
 
   useEffect(() => {
-    fetchTeamsAndParticipants().then(() => console.log("Done fetching participants")).catch(err => console.error(err))
-  }, [eventId])
+    fetchTeamsAndParticipants()
+      .then(() => console.log("Done fetching participants"))
+      .catch((err) => console.error(err))
+  }, [])
 
   const fetchTeamsAndParticipants = async () => {
     setLoading(true)
     try {
       const [fetchedTeams, fetchedParticipants] = await Promise.all([
         getTeamsByEventId(eventId),
-        getEventParticipants(eventId)
+        getEventParticipants(eventId),
       ])
       setTeams(fetchedTeams)
       setParticipants(fetchedParticipants)
@@ -65,7 +79,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
     if (!newTeamName.trim()) return
     try {
       await createTeam(eventId, newTeamName)
-      setNewTeamName('')
+      setNewTeamName("")
       await fetchTeamsAndParticipants()
       toast({
         title: "Team created",
@@ -137,7 +151,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
       await fetchTeamsAndParticipants()
       toast({
         title: "Team leader updated",
-        description: `User has been ${currentIsLeader ? 'removed as' : 'set as'} team leader.`,
+        description: `User has been ${currentIsLeader ? "removed as" : "set as"} team leader.`,
       })
     } catch (_) {
       toast({
@@ -148,21 +162,51 @@ export function TeamManagement({ eventId }: { eventId: string }) {
     }
   }
 
+  const handleEditTeamName = (teamId: string, currentName: string) => {
+    setEditingTeamId(teamId)
+    setEditedTeamName(currentName)
+  }
+
+  const handleSaveTeamName = async (teamId: string) => {
+    if (!editedTeamName.trim()) return
+    try {
+      await updateTeamName(teamId, editedTeamName)
+      await fetchTeamsAndParticipants()
+      setEditingTeamId(null)
+      toast({
+        title: "Team name updated",
+        description: `Team name has been updated successfully.`,
+      })
+    } catch (_) {
+      toast({
+        title: "Error",
+        description: "Failed to update team name",
+        variant: "destructive",
+      })
+    }
+  }
+
   const renderMember = (team: Team, member: TeamMember) => (
     <li key={member.user.id} className="flex items-center justify-between">
       <div className="flex items-center space-x-2">
         <Avatar className="h-8 w-8">
-          <AvatarImage src={member.user.image ?? undefined} alt={member.user.name ?? ''} />
-          <AvatarFallback>{member.user.name?.[0] ?? 'U'}</AvatarFallback>
+          <AvatarImage src={member.user.image ?? undefined} alt={member.user.name ?? ""} />
+          <AvatarFallback>{member.user.name?.[0] ?? "U"}</AvatarFallback>
         </Avatar>
         <span>{member.user.runescapeName ?? member.user.name}</span>
-        {member.isLeader && <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full ml-2">Leader</span>}
+        {member.isLeader && <Crown className="h-4 w-4 text-yellow-500" aria-label="Team Leader" />}
       </div>
       <div className="space-x-2">
-        <Button variant="outline" size="sm" onClick={() => handleToggleTeamLeader(team.id, member.user.id, member.isLeader)}>
-          {member.isLeader ? 'Remove Leader' : 'Make Leader'}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleToggleTeamLeader(team.id, member.user.id, member.isLeader)}
+        >
+          {member.isLeader ? "Remove Leader" : "Make Leader"}
         </Button>
-        <Button variant="outline" size="sm" onClick={() => handleRemoveUserFromTeam(team.id, member.user.id)}>Remove</Button>
+        <Button variant="outline" size="sm" onClick={() => handleRemoveUserFromTeam(team.id, member.user.id)}>
+          Remove
+        </Button>
       </div>
     </li>
   )
@@ -175,7 +219,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
     <div className="space-y-6">
       <div className="flex items-center space-x-2">
         <Input
-          id="nexTeam"
+          id="newTeam"
           type="text"
           placeholder="New team name"
           value={newTeamName}
@@ -185,21 +229,37 @@ export function TeamManagement({ eventId }: { eventId: string }) {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {teams.map((team) => {
-          const leader = team.teamMembers.find(member => member.isLeader)
-          const members = team.teamMembers.filter(member => !member.isLeader)
+          const leader = team.teamMembers.find((member) => member.isLeader)
+          const members = team.teamMembers.filter((member) => !member.isLeader)
 
           return (
             <Card key={team.id}>
               <CardHeader>
                 <CardTitle className="flex justify-between items-center">
-                  {team.name}
-                  <Button variant="destructive" size="sm" onClick={() => handleDeleteTeam(team.id)}>Delete</Button>
+                  {editingTeamId === team.id ? (
+                    <Input
+                      value={editedTeamName}
+                      onChange={(e) => setEditedTeamName(e.target.value)}
+                      onBlur={() => handleSaveTeamName(team.id)}
+                      onKeyPress={(e) => e.key === "Enter" && handleSaveTeamName(team.id)}
+                    />
+                  ) : (
+                    <>
+                      {team.name}
+                      <Button variant="ghost" size="sm" onClick={() => handleEditTeamName(team.id, team.name)}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+                  <Button variant="destructive" size="sm" onClick={() => handleDeleteTeam(team.id)}>
+                    Delete
+                  </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
                   {leader && renderMember(team, leader)}
-                  {members.map(member => renderMember(team, member))}
+                  {members.map((member) => renderMember(team, member))}
                 </ul>
                 <div className="mt-4">
                   <select
@@ -207,7 +267,9 @@ export function TeamManagement({ eventId }: { eventId: string }) {
                     onChange={(e) => handleAddUserToTeam(team.id, e.target.value)}
                     value=""
                   >
-                    <option value="" disabled>Add participant</option>
+                    <option value="" disabled>
+                      Add participant
+                    </option>
                     {participants
                       .filter((p) => !team.teamMembers.some((m) => m.user.id === p.id))
                       .map((participant) => (
@@ -225,3 +287,5 @@ export function TeamManagement({ eventId }: { eventId: string }) {
     </div>
   )
 }
+
+
