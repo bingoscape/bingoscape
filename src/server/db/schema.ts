@@ -20,7 +20,7 @@ export const createTable = pgTableCreator((name) => `bingoscape-next_${name}`);
 export const users = createTable("user", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 255 }),
-  email: varchar("email", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }),
   emailVerified: timestamp("email_verified", {
     mode: "date",
     withTimezone: true,
