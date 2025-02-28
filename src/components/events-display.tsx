@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatRunescapeGold } from "@/lib/formatRunescapeGold"
+import formatRunescapeGold from "@/lib/formatRunescapeGold"
 
 interface EventDisplayProps {
   initialEvents: EventData[]

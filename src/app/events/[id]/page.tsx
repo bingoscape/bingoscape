@@ -17,117 +17,117 @@ import Link from "next/link"
 import { Users } from "lucide-react"
 import { getCurrentTeamForUser } from "@/app/actions/team"
 import { PrizePoolDisplay } from "@/components/prize-pool-display"
-import { formatRunescapeGold } from "@/lib/formatRunescapeGold"
+import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import { EditEventModal } from "@/components/edit-event-modal"
 
 export default async function EventBingosPage({ params }: { params: { id: UUID } }) {
-	const session = await getServerAuthSession()
-	if (!session || !session.user) {
-		notFound()
-	}
+    const session = await getServerAuthSession()
+    if (!session || !session.user) {
+        notFound()
+    }
 
-	const data = await getEventById(params.id)
+    const data = await getEventById(params.id)
 
-	if (!data) {
-		notFound()
-	}
+    if (!data) {
+        notFound()
+    }
 
-	const { event, userRole } = data
-	const userClans = await getUserClans()
-	const currentTeam = await getCurrentTeamForUser(params.id)
-	const prizePool = await getTotalBuyInsForEvent(params.id)
+    const { event, userRole } = data
+    const userClans = await getUserClans()
+    const currentTeam = await getCurrentTeamForUser(params.id)
+    const prizePool = await getTotalBuyInsForEvent(params.id)
 
-	const isAdminOrManagement = userRole === 'admin' || userRole === 'management'
+    const isAdminOrManagement = userRole === 'admin' || userRole === 'management'
 
-	const bingoCount = event.bingos?.length ?? 0
-	const gridClass = bingoCount <= 1 ? "grid-cols-1" : "md:grid-cols-2 lg:grid-cols-2"
-	const cardClass = bingoCount <= 1 ? "max-w-3xl" : ""
+    const bingoCount = event.bingos?.length ?? 0
+    const gridClass = bingoCount <= 1 ? "grid-cols-1" : "md:grid-cols-2 lg:grid-cols-2"
+    const cardClass = bingoCount <= 1 ? "max-w-3xl" : ""
 
-	return (
-		<div className="container mx-auto py-10">
-			<div className="flex flex-col lg:flex-row justify-between mb-6 space-y-5 lg:space-y-0">
-				<div className="lg:mr-5 flex-grow">
-					<h1 className="text-3xl font-bold">{event.title}</h1>
-					{event.clan && (
-						<p className="text-sm text-muted-foreground mt-2">
-							Clan: {event.clan.name}
-						</p>
-					)}
-					{event.minimumBuyIn ? (
-						<p className="text-sm text-muted-foreground mt-2">
-							Minimum BuyIn: {formatRunescapeGold(event.minimumBuyIn)} GP
-						</p>
-					) : (
-						<p className="text-sm text-muted-foreground mt-2">
-							No Buy-In!
-						</p>
-					)}
+    return (
+        <div className="container mx-auto py-10">
+            <div className="flex flex-col lg:flex-row justify-between mb-6 space-y-5 lg:space-y-0">
+                <div className="lg:mr-5 flex-grow">
+                    <h1 className="text-3xl font-bold">{event.title}</h1>
+                    {event.clan && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                            Clan: {event.clan.name}
+                        </p>
+                    )}
+                    {event.minimumBuyIn ? (
+                        <p className="text-sm text-muted-foreground mt-2">
+                            Minimum BuyIn: {formatRunescapeGold(event.minimumBuyIn)} GP
+                        </p>
+                    ) : (
+                        <p className="text-sm text-muted-foreground mt-2">
+                            No Buy-In!
+                        </p>
+                    )}
 
-					<h2 className="text-2xl font-bold mb-4 mt-6">Bingos</h2>
-					{(!!event.bingos && event.bingos.length === 0) ? (
-						<p>No bingos have been created for this event yet.</p>
-					) : (
-						<div className={`grid ${gridClass} gap-6`}>
-							{event.bingos!.map((bingo) => (
-								<Card key={bingo.id} className={cardClass}>
-									<CardHeader>
-										<div className="flex justify-between items-center">
-											<CardTitle>{bingo.title}</CardTitle>
-											<div className="flex space-x-2">
-												<BingoInfoModal bingo={bingo} />
-												{isAdminOrManagement && <DeleteBingoButton bingoId={bingo.id as UUID} />}
-											</div>
-										</div>
-									</CardHeader>
-									<CardContent>
-										<div className="relative">
-											<BingoGrid
-												bingo={bingo}
-												currentTeamId={currentTeam?.id}
-												teams={event.teams ?? []}
-												highlightedTiles={[]}
-												isLocked={true}
-												userRole={userRole}
-											/>
-										</div>
-									</CardContent>
-									<CardFooter>
-										<Link href={`/events/${bingo.eventId}/bingos/${bingo.id}`} passHref>
-											<Button variant="outline">View Bingo</Button>
-										</Link>
-									</CardFooter>
-								</Card>
-							))}
-						</div>
-					)}
+                    <h2 className="text-2xl font-bold mb-4 mt-6">Bingos</h2>
+                    {(!!event.bingos && event.bingos.length === 0) ? (
+                        <p>No bingos have been created for this event yet.</p>
+                    ) : (
+                        <div className={`grid ${gridClass} gap-6`}>
+                            {event.bingos!.map((bingo) => (
+                                <Card key={bingo.id} className={cardClass}>
+                                    <CardHeader>
+                                        <div className="flex justify-between items-center">
+                                            <CardTitle>{bingo.title}</CardTitle>
+                                            <div className="flex space-x-2">
+                                                <BingoInfoModal bingo={bingo} />
+                                                {isAdminOrManagement && <DeleteBingoButton bingoId={bingo.id as UUID} />}
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="relative">
+                                            <BingoGrid
+                                                bingo={bingo}
+                                                currentTeamId={currentTeam?.id}
+                                                teams={event.teams ?? []}
+                                                highlightedTiles={[]}
+                                                isLocked={true}
+                                                userRole={userRole}
+                                            />
+                                        </div>
+                                    </CardContent>
+                                    <CardFooter>
+                                        <Link href={`/events/${bingo.eventId}/bingos/${bingo.id}`} passHref>
+                                            <Button variant="outline">View Bingo</Button>
+                                        </Link>
+                                    </CardFooter>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
 
-					<div className="mt-12">
-						<h2 className="text-2xl font-bold mb-4">Teams</h2>
-						{isAdminOrManagement ? (
-							<TeamManagement eventId={event.id} />
-						) : (
-							<TeamDisplay eventId={event.id} />
-						)}
-					</div>
-				</div>
-				<div className="flex flex-col space-y-4 lg:w-64">
-					{isAdminOrManagement && <CreateBingoModal eventId={event.id} />}
-					{isAdminOrManagement && <GenerateEventInviteLink eventId={event.id as UUID}>Generate Invite Link</GenerateEventInviteLink>}
-					{isAdminOrManagement && (
-						<Link href={`/events/${event.id}/participants`} passHref>
-							<Button variant="outline" className="w-full">
-								<Users className="mr-2 h-4 w-4" />
-								Manage Participants
-							</Button>
-						</Link>
-					)}
-					{userRole == 'admin' && !event.clan && (
-						<AssignEventToClanModal eventId={event.id} clans={userClans.map(uc => ({ id: uc.clan.id, name: uc.clan.name }))} />
-					)}
-					{userRole === 'admin' && <EditEventModal event={event} />}
-					<PrizePoolDisplay prizePool={prizePool} />
-				</div>
-			</div>
-		</div>
-	)
+                    <div className="mt-12">
+                        <h2 className="text-2xl font-bold mb-4">Teams</h2>
+                        {isAdminOrManagement ? (
+                            <TeamManagement eventId={event.id} />
+                        ) : (
+                            <TeamDisplay eventId={event.id} />
+                        )}
+                    </div>
+                </div>
+                <div className="flex flex-col space-y-4 lg:w-64">
+                    {isAdminOrManagement && <CreateBingoModal eventId={event.id} />}
+                    {isAdminOrManagement && <GenerateEventInviteLink eventId={event.id as UUID}>Generate Invite Link</GenerateEventInviteLink>}
+                    {isAdminOrManagement && (
+                        <Link href={`/events/${event.id}/participants`} passHref>
+                            <Button variant="outline" className="w-full">
+                                <Users className="mr-2 h-4 w-4" />
+                                Manage Participants
+                            </Button>
+                        </Link>
+                    )}
+                    {userRole == 'admin' && !event.clan && (
+                        <AssignEventToClanModal eventId={event.id} clans={userClans.map(uc => ({ id: uc.clan.id, name: uc.clan.name }))} />
+                    )}
+                    {userRole === 'admin' && <EditEventModal event={event} />}
+                    <PrizePoolDisplay prizePool={prizePool} />
+                </div>
+            </div>
+        </div>
+    )
 }

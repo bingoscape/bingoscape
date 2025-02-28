@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Edit } from "lucide-react"
-import { formatRunescapeGold } from "@/lib/formatRunescapeGold"
+import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import { Label } from "@/components/ui/label"
 
 interface Event {
