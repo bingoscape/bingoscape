@@ -92,6 +92,22 @@ export async function getEventParticipants(eventId: string) {
 }
 
 
+export async function updateTeamName(teamId: string, newName: string) {
+  try {
+    const [updatedTeam] = await db.update(teams).set({ name: newName }).where(eq(teams.id, teamId)).returning()
+
+    if (updatedTeam) {
+      revalidatePath(`/events/${updatedTeam.eventId}`)
+      return updatedTeam
+    } else {
+      throw new Error("Team not found")
+    }
+  } catch (error) {
+    console.error("Error updating team name:", error)
+    throw new Error("Failed to update team name")
+  }
+}
+
 export async function updateTeamMember(teamId: string, userId: string, isLeader: boolean) {
   const [updatedMember] = await db
     .update(teamMembers)
