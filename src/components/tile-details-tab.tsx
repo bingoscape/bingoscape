@@ -253,11 +253,14 @@ function TileProgress({
                     onUpdateProgress={onUpdateProgress}
                   />
                 ) : (
-                  <Progress
-                    value={(currentValue / goal.targetValue) * 100}
-                    className="h-2"
-                    aria-label={`Progress for ${team.name} on ${goal.description}`}
-                  />
+                  <div className="flex flex-col space-y-1">
+                    <Progress
+                      value={(currentValue / goal.targetValue) * 100}
+                      className="h-2"
+                      aria-label={`Progress for ${team.name} on ${goal.description}`}
+                    />
+                    <span className="self-end ml-2 text-sm">{currentValue} / {goal.targetValue}</span>
+                  </div>
                 )}
               </div>
             )
@@ -267,4 +270,3 @@ function TileProgress({
     </div>
   )
 }
-
