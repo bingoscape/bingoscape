@@ -454,6 +454,7 @@ export default function BingoGrid({ bingo, userRole, teams, currentTeamId, isLoc
                   onEditTile={(field, value) => setEditedTile({ ...editedTile, [field]: value })}
                   onUpdateTile={handleTileUpdate}
                   onEditorChange={handleEditorChange}
+                  onUpdateProgress={handleProgressUpdate}
                 />
               </ScrollArea>
             </TabsContent>

@@ -390,6 +390,10 @@ export const teamGoalProgress = createTable('team_goal_progress', {
   goalId: uuid('goal_id').notNull().references(() => goals.id, { onDelete: "cascade" }),
   currentValue: integer('current_value').notNull().default(0),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => {
+  return {
+    goalTeamUnique: uniqueIndex('goal_team_unique').on(table.goalId, table.teamId),
+  }
 });
 
 export const teamGoalProgressRelations = relations(teamGoalProgress, ({ one }) => ({

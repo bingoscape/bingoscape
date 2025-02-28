@@ -10,7 +10,7 @@ interface GoalsTabProps {
   hasSufficientRights: boolean
   onDeleteGoal: (goalId: string) => void
   onAddGoal: () => void
-  onNewGoalChange: (field: keyof Goal, value: number) => void
+  onNewGoalChange: (field: keyof Goal, value: number | string) => void
 }
 
 export function GoalsTab({
@@ -46,7 +46,7 @@ export function GoalsTab({
             <Input
               placeholder="Goal description"
               value={newGoal.description ?? ''}
-              onChange={(e) => onNewGoalChange('description', parseInt(e.target.value))}
+              onChange={(e) => onNewGoalChange('description', e.target.value)}
             />
             <Input
               type="number"

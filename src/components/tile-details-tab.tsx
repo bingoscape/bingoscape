@@ -25,6 +25,7 @@ interface TileDetailsTabProps {
   onEditTile: <K extends keyof EditableTileFields>(field: K, value: EditableTileFields[K]) => void
   onUpdateTile: () => void
   onEditorChange: (content: string) => void
+  onUpdateProgress: (goalId: string, teamId: string, newValue: number) => void
 }
 
 function isValidImageUrl(url: string): boolean {
@@ -43,14 +44,19 @@ export function TileDetailsTab({
   teams,
   onEditTile,
   onUpdateTile,
-  onEditorChange
+  onEditorChange,
+  onUpdateProgress
 }: TileDetailsTabProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isValidImage, setIsValidImage] = useState(true)
   const canEdit = userRole === 'admin' || userRole === 'management'
 
-  const toggleEdit = () => {
+  const toggleEdit = (isCancelled: boolean) => {
+    if (isCancelled) {
+      setIsEditing(false)
+      return;
+    }
     setIsEditing(!isEditing)
     if (isEditing) {
       onUpdateTile()
@@ -112,7 +118,7 @@ export function TileDetailsTab({
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">{selectedTile?.title}</h3>
             {canEdit && (
-              <Button onClick={toggleEdit} variant="outline" size="sm">
+              <Button onClick={() => toggleEdit(isEditing)} variant="outline" size="sm">
                 {isEditing ? <X className="h-4 w-4 mr-2" /> : <Pencil className="h-4 w-4 mr-2" />}
                 {isEditing ? 'Cancel' : 'Edit'}
               </Button>
@@ -196,30 +202,75 @@ export function TileDetailsTab({
           )}
         </div>
       </div>
-      <TileProgress selectedTile={selectedTile} teams={teams} />
+      <TileProgress selectedTile={selectedTile} teams={teams} onUpdateProgress={onUpdateProgress} userRole={userRole} />
     </div>
   )
 }
 
-function TileProgress({ selectedTile, teams }: { selectedTile: Tile | null, teams: Team[] }) {
+
+function TileProgress({
+  selectedTile,
+  teams,
+  onUpdateProgress,
+  userRole,
+}: {
+  selectedTile: Tile | null
+  teams: Team[]
+  onUpdateProgress: (goalId: string, teamId: string, newValue: number) => void
+  userRole: "admin" | "management" | "participant"
+}) {
   if (!selectedTile?.goals) return null
+
+  const canUpdateProgress = userRole === "admin" || userRole === "management"
 
   return (
     <div className="space-y-6 mt-6">
       <h3 className="text-lg font-semibold">Team Progress</h3>
-      {teams.map(team => (
+      {teams.map((team) => (
         <div key={team.id} className="space-y-2">
           <h4 className="font-medium">{team.name}</h4>
-          {selectedTile.goals?.map(goal => {
-            const teamProgress = goal.teamProgress.find(progress => progress.teamId === team.id)
+          {selectedTile.goals?.map((goal) => {
+            const teamProgress = goal.teamProgress.find((progress) => progress.teamId === team.id)
             return (
               <div key={goal.id} className="space-y-1">
                 <div className="flex justify-between text-sm">
                   <span>{goal.description}</span>
-                  <span>{teamProgress?.currentValue ?? 0} / {goal.targetValue}</span>
+                  <div className="flex items-center gap-2">
+                    {canUpdateProgress && (
+                      <button
+                        onClick={() => {
+                          const currentValue = teamProgress?.currentValue ?? 0
+                          if (currentValue > 0) {
+                            onUpdateProgress(goal.id, team.id, currentValue - 1)
+                          }
+                        }}
+                        className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300"
+                        aria-label="Decrease progress"
+                      >
+                        -
+                      </button>
+                    )}
+                    <span>
+                      {teamProgress?.currentValue ?? 0} / {goal.targetValue}
+                    </span>
+                    {canUpdateProgress && (
+                      <button
+                        onClick={() => {
+                          const currentValue = teamProgress?.currentValue ?? 0
+                          if (currentValue < goal.targetValue) {
+                            onUpdateProgress(goal.id, team.id, currentValue + 1)
+                          }
+                        }}
+                        className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300"
+                        aria-label="Increase progress"
+                      >
+                        +
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <Progress
-                  value={(teamProgress?.currentValue ?? 0) / goal.targetValue * 100}
+                  value={((teamProgress?.currentValue ?? 0) / goal.targetValue) * 100}
                   className="h-2"
                   aria-label={`Progress for ${team.name} on ${goal.description}`}
                 />
@@ -231,3 +282,5 @@ function TileProgress({ selectedTile, teams }: { selectedTile: Tile | null, team
     </div>
   )
 }
+
+
