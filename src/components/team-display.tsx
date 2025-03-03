@@ -88,4 +88,3 @@ export function TeamDisplay({ eventId }: { eventId: string }) {
     </div>
   )
 }
-
