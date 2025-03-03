@@ -1,3 +1,4 @@
+
 "use client"
 
 import type React from "react"
@@ -25,6 +26,9 @@ import { TileDetailsTab } from "./tile-details-tab"
 import { GoalsTab } from "./goals-tab"
 import { SubmissionsTab } from "./submissions-tab"
 import { FullSizeImageDialog } from "./full-size-image-dialog"
+import { StatsDialog } from "./stats-dialog"
+import { BarChart } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface BingoGridProps {
   bingo: Bingo
@@ -55,6 +59,7 @@ export default function BingoGrid({
   const [fullSizeImage, setFullSizeImage] = useState<{ src: string; alt: string } | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const sortableRef = useRef<Sortable | null>(null)
+  const [isStatsDialogOpen, setIsStatsDialogOpen] = useState(false)
 
   useEffect(() => {
     if (gridRef.current && hasSufficientRights() && !isLocked) {
@@ -441,6 +446,17 @@ export default function BingoGrid({
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-between items-center mb-4">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-2"
+          onClick={() => setIsStatsDialogOpen(true)}
+        >
+          <BarChart className="h-4 w-4" />
+          Stats
+        </Button>
+      </div>
       <BingoGridLayout
         ref={gridRef}
         tiles={tiles}
@@ -512,6 +528,14 @@ export default function BingoGrid({
         imageSrc={fullSizeImage?.src ?? ""}
         imageAlt={fullSizeImage?.alt ?? ""}
       />
+      <StatsDialog
+        isOpen={isStatsDialogOpen}
+        onOpenChange={setIsStatsDialogOpen}
+        userRole={userRole}
+        currentTeamId={currentTeamId}
+        teams={teams}
+        bingoId={bingo.id}
+      />
     </div>
   )
 
@@ -519,5 +543,4 @@ export default function BingoGrid({
     return userRole === "admin" || userRole === "management"
   }
 }
-
 
