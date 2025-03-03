@@ -16,6 +16,7 @@ import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import ModeToggle from "./mode-toggle"
+import { NotificationBell } from "./notification-bell"
 
 export function Navbar() {
   const { data: session, status } = useSession()
@@ -102,6 +103,7 @@ export function Navbar() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <NotificationBell userId={session.user.id} />
           </div>
         )}
       </div>

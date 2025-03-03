@@ -421,3 +421,41 @@ export const eventBuyInsRelations = relations(eventBuyIns, ({ one }) => ({
     references: [eventParticipants.id],
   }),
 }));
+
+export const notifications = createTable("notifications", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  eventId: uuid("event_id")
+    .notNull()
+    .references(() => events.id, { onDelete: "cascade" }),
+  tileId: uuid("tile_id")
+    .notNull()
+    .references(() => tiles.id, { onDelete: "cascade" }),
+  teamId: uuid("team_id")
+    .notNull()
+    .references(() => teams.id, { onDelete: "cascade" }),
+  message: text("message").notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+  event: one(events, {
+    fields: [notifications.eventId],
+    references: [events.id],
+  }),
+  tile: one(tiles, {
+    fields: [notifications.tileId],
+    references: [tiles.id],
+  }),
+  team: one(teams, {
+    fields: [notifications.teamId],
+    references: [teams.id],
+  }),
+}))

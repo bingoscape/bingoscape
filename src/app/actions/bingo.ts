@@ -9,6 +9,7 @@ import { nanoid } from "nanoid"
 import fs from 'fs/promises'
 import path from 'path'
 import { type Tile, type TeamTileSubmission, type Bingo } from "./events"
+import { createNotification } from "./notifications"
 
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 
@@ -241,36 +242,43 @@ export async function getSubmissions(tileId: string): Promise<TeamTileSubmission
 
 export async function submitImage(formData: FormData) {
   try {
-    const tileId = formData.get('tileId') as string
-    const teamId = formData.get('teamId') as string
-    const image = formData.get('image') as File
+    const tileId = formData.get("tileId") as string
+    const teamId = formData.get("teamId") as string
+    const image = formData.get("image") as File
 
     if (!tileId || !teamId || !image) {
       throw new Error("Missing required fields")
     }
 
-    // Check if the tile exists
-    const tileExists = await db.select({ id: tiles.id })
+    // Check if the tile exists and get its bingoId
+    const tileResult = await db
+      .select({ id: tiles.id, bingoId: tiles.bingoId, title: tiles.title })
       .from(tiles)
       .where(eq(tiles.id, tileId))
       .execute()
 
-    if (tileExists.length === 0) {
+    if (tileResult.length === 0) {
       throw new Error("Tile not found")
     }
 
-    // Check if the team exists
-    const teamExists = await db.select({ id: teams.id })
+    const bingoId = tileResult[0]!.bingoId
+    const tileTitle = tileResult[0]!.title
+
+    // Check if the team exists and get its name
+    const teamResult = await db
+      .select({ id: teams.id, name: teams.name })
       .from(teams)
       .where(eq(teams.id, teamId))
       .execute()
 
-    if (teamExists.length === 0) {
+    if (teamResult.length === 0) {
       throw new Error("Team not found")
     }
 
+    const teamName = teamResult[0]
+
     // Ensure the upload directory exists
-    await ensureUploadDir();
+    await ensureUploadDir()
 
     // Generate a unique filename
     const filename = `${nanoid()}`
@@ -281,7 +289,7 @@ export async function submitImage(formData: FormData) {
     await fs.writeFile(filePath, buffer)
 
     // Calculate the relative path for storage and serving
-    const relativePath = path.join('/uploads', filename).replace(/\\/g, '/')
+    const relativePath = path.join("/uploads", filename).replace(/\\/g, "/")
 
     const newSubmission = await db.transaction(async (tx) => {
       // Get or create teamTileSubmission
@@ -290,26 +298,28 @@ export async function submitImage(formData: FormData) {
         .values({
           tileId,
           teamId,
-          status: 'pending',
+          status: "pending",
         })
         .onConflictDoUpdate({
           target: [teamTileSubmissions.tileId, teamTileSubmissions.teamId],
           set: {
             updatedAt: new Date(),
-            status: 'pending', // Reset status to pending when a new submission is made
+            status: "pending", // Reset status to pending when a new submission is made
           },
         })
         .returning()
 
       // Insert the image record
-      const [insertedImage] = await tx.insert(images)
+      const [insertedImage] = await tx
+        .insert(images)
         .values({
           path: relativePath,
         })
         .returning()
 
       // Insert the submission record
-      const [insertedSubmission] = await tx.insert(submissions)
+      const [insertedSubmission] = await tx
+        .insert(submissions)
         .values({
           teamTileSubmissionId: teamTileSubmission!.id,
           imageId: insertedImage!.id,
@@ -319,8 +329,11 @@ export async function submitImage(formData: FormData) {
       return insertedSubmission
     })
 
+    // Create a notification for admin and management users
+    await createNotification(bingoId, tileId, teamId, `Team ${teamName} has submitted an image for tile "${tileTitle}"`)
+
     // Revalidate the bingo page
-    revalidatePath('/bingo')
+    revalidatePath("/bingo")
 
     return { success: true, submission: newSubmission }
   } catch (error) {
