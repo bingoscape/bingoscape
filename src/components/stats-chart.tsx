@@ -27,6 +27,9 @@ export function StatsChart({ data, totalPossibleXP, title }: StatsChartProps) {
       },
       tooltip: {
         callbacks: {
+          /* eslint-disable  @typescript-eslint/no-explicit-any */
+          /* eslint-disable  @typescript-eslint/no-unsafe-argument */
+          /* eslint-disable  @typescript-eslint/no-unsafe-member-access */
           label: (context: any) => `XP: ${Math.round(context.parsed.y)}`,
         },
       },
@@ -40,7 +43,12 @@ export function StatsChart({ data, totalPossibleXP, title }: StatsChartProps) {
           text: "XP",
         },
         ticks: {
-          callback: (value: number) => Math.round(value),
+          callback: (value: string | number) => {
+            if (typeof value === "number") {
+              return Math.round(value)
+            }
+            return value;
+          },
         },
       },
     },
