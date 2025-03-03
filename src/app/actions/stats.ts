@@ -21,23 +21,25 @@ export interface StatsData {
 }
 
 /**
- * Get total XP for all teams in a bingo and the total possible XP
+ * Get total XP for all participating teams in a bingo and the total possible XP
  */
 export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsData> {
-  // Get all teams for this bingo
-  const bingoTeams = await db
+  // Get all teams that have submissions for this bingo
+  const participatingTeams = await db
     .select({
       id: teams.id,
       name: teams.name,
     })
     .from(teams)
-    .innerJoin(tiles, eq(tiles.bingoId, bingoId))
+    .innerJoin(teamTileSubmissions, eq(teamTileSubmissions.teamId, teams.id))
+    .innerJoin(tiles, eq(tiles.id, teamTileSubmissions.tileId))
+    .where(eq(tiles.bingoId, bingoId))
     .groupBy(teams.id, teams.name)
 
   const teamPoints: TeamPoints[] = []
 
-  // For each team, calculate their total XP
-  for (const team of bingoTeams) {
+  // For each participating team, calculate their total XP
+  for (const team of participatingTeams) {
     // Calculate XP from accepted submissions
     const submissionPoints = await db
       .select({
@@ -79,3 +81,4 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
     totalPossibleXP,
   }
 }
+
