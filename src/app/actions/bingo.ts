@@ -330,7 +330,7 @@ export async function submitImage(formData: FormData) {
     })
 
     // Create a notification for admin and management users
-    await createNotification(bingoId, tileId, teamId, `Team ${teamName} has submitted an image for tile "${tileTitle}"`)
+    await createNotification(bingoId, tileId, teamId, `Team ${teamName!.name} has submitted an image for tile "${tileTitle}"`)
 
     // Revalidate the bingo page
     revalidatePath("/bingo")

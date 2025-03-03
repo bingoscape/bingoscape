@@ -32,7 +32,7 @@ export function NotificationBell({ userId }: { userId: string }) {
 
   async function handleNotificationClick(notificationId: string) {
     await markNotificationAsRead(notificationId)
-    fetchNotifications()
+    fetchNotifications().then(() => console.log("Notifications fetched")).catch((e) => console.error(e))
   }
 
   return (
