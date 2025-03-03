@@ -21,7 +21,7 @@ export function NotificationBell({ userId }: { userId: string }) {
   const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
-    fetchNotifications()
+    fetchNotifications().then(() => console.log("Notifications fetched")).catch((e) => console.error(e))
   }, [])
 
   async function fetchNotifications() {
