@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ForwardRefEditor } from "./forward-ref-editor"
 import type { Tile, Team } from "@/app/actions/events"
 import { Progress } from "@/components/ui/progress"
-import { Pencil, X, Zap } from "lucide-react"
+import { Pencil, X, Zap, EyeOff } from "lucide-react"
 import Markdown from "react-markdown"
 import { Switch } from "@/components/ui/switch"
 import { ProgressSlider } from "./progress-slider"
@@ -214,8 +214,23 @@ export function TileDetailsTab({
               </>
             ) : (
               <>
-                <p>Weight: {selectedTile?.weight}</p>
-                <Markdown>{selectedTile?.description ?? ""}</Markdown>
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-4 items-center">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-md">
+                      <Zap className="h-4 w-4 text-amber-500" />
+                      <span className="font-medium">{selectedTile?.weight} XP</span>
+                    </div>
+                    {selectedTile?.isHidden && (
+                      <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-md text-gray-500">
+                        <EyeOff className="h-4 w-4" />
+                        <span className="font-medium">Hidden</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="prose max-w-none">
+                    <Markdown>{selectedTile?.description ?? ""}</Markdown>
+                  </div>
+                </div>
               </>
             )}
           </div>
@@ -290,3 +305,4 @@ function TileProgress({
     </div>
   )
 }
+
