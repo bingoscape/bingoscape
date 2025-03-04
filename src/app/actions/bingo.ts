@@ -329,6 +329,7 @@ export async function submitImage(formData: FormData) {
       return insertedSubmission
     })
 
+
     const b = await db.query.bingos.findFirst({
       where: eq(bingos.id, bingoId),
       with: {
@@ -535,3 +536,37 @@ export async function deleteRowOrColumn(bingoId: string, type: 'row' | 'column')
     return { success: false, error: `Failed to delete ${type}` }
   }
 }
+
+interface UpdateBingoData {
+  title: string
+  description: string
+  visible: boolean
+  locked: boolean
+  codephrase: string
+}
+
+export async function updateBingo(bingoId: string, data: UpdateBingoData) {
+  try {
+    await db
+      .update(bingos)
+      .set({
+        title: data.title,
+        description: data.description,
+        visible: data.visible,
+        locked: data.locked,
+        codephrase: data.codephrase,
+        updatedAt: new Date(),
+      })
+      .where(eq(bingos.id, bingoId))
+
+    // Revalidate the bingo page
+    revalidatePath(`/events/[id]/bingos/${bingoId}`)
+    revalidatePath(`/events/[id]`)
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error updating bingo:", error)
+    return { success: false, error: "Failed to update bingo" }
+  }
+}
+
