@@ -402,7 +402,7 @@ export async function deleteSubmission(submissionId: string) {
       // Get the image path to delete the file
       const [imageRecord] = await tx.select({ path: images.path }).from(images).where(eq(images.id, submission.imageId))
 
-      if (imageRecord && imageRecord.path) {
+      if (imageRecord?.path) {
         // Delete the image file from the filesystem
         const filePath = path.join(process.cwd(), "public", imageRecord.path)
         try {

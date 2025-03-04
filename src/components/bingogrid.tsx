@@ -461,7 +461,7 @@ export default function BingoGrid({
           description: "The submission has been successfully deleted.",
         })
       } else {
-        throw new Error(result.error)
+        throw new Error("Failed to delete submission")
       }
     } catch (error) {
       console.error("Error deleting submission:", error)
