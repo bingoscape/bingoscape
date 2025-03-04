@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ForwardRefEditor } from "./forward-ref-editor"
 import type { Tile, Team } from "@/app/actions/events"
 import { Progress } from "@/components/ui/progress"
-import { Pencil, X } from "lucide-react"
+import { Pencil, X, Zap } from "lucide-react"
 import Markdown from "react-markdown"
 import { Switch } from "@/components/ui/switch"
 import { ProgressSlider } from "./progress-slider"
@@ -149,29 +149,34 @@ export function TileDetailsTab({
                       className="mt-1"
                     />
                   </div>
-                  <div>
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                      Description
-                    </label>
-                    <div className="mt-1 border rounded-md">
-                      <ForwardRefEditor
-                        onChange={onEditorChange}
-                        markdown={editedTile.description ?? ""}
-                        contentEditableClassName="prose max-w-full p-2"
-                      />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="xp" className="block text-sm font-medium text-gray-700">
+                        XP
+                      </label>
+                      <div className="mt-1 relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Zap className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <Input
+                          id="xp"
+                          type="number"
+                          value={editedTile.weight?.toString() ?? ""}
+                          onChange={(e) => onEditTile("weight", Number(e.target.value))}
+                          className="pl-10"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <label htmlFor="weight" className="block text-sm font-medium text-gray-700">
-                      Weight
-                    </label>
-                    <Input
-                      id="weight"
-                      type="number"
-                      value={editedTile.weight?.toString() ?? ""}
-                      onChange={(e) => onEditTile("weight", Number(e.target.value))}
-                      className="mt-1"
-                    />
+                    <div className="flex items-center space-x-2 h-full pt-6">
+                      <Switch
+                        id="isHidden"
+                        checked={editedTile.isHidden ?? false}
+                        onCheckedChange={handleIsHiddenChange}
+                      />
+                      <label htmlFor="isHidden" className="text-sm font-medium text-gray-700">
+                        Hidden
+                      </label>
+                    </div>
                   </div>
                   <div>
                     <label htmlFor="headerImage" className="block text-sm font-medium text-gray-700">
@@ -190,15 +195,17 @@ export function TileDetailsTab({
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="isHidden"
-                      checked={editedTile.isHidden ?? false}
-                      onCheckedChange={handleIsHiddenChange}
-                    />
-                    <label htmlFor="isHidden" className="text-sm font-medium text-gray-700">
-                      Hidden
+                  <div>
+                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                      Description
                     </label>
+                    <div className="mt-1 border rounded-md">
+                      <ForwardRefEditor
+                        onChange={onEditorChange}
+                        markdown={editedTile.description ?? ""}
+                        contentEditableClassName="prose max-w-full p-2"
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="flex justify-end">
@@ -283,4 +290,3 @@ function TileProgress({
     </div>
   )
 }
-
