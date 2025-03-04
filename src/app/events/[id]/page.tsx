@@ -41,7 +41,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
     const isAdminOrManagement = userRole === "admin" || userRole === "management"
 
     // Filter bingos based on user role and visibility
-    const visibleBingos = event.bingos?.filter((bingo) => isAdminOrManagement || bingo.visible === true) || []
+    const visibleBingos = event.bingos?.filter((bingo) => isAdminOrManagement || bingo.visible === true) ?? []
 
     const bingoCount = visibleBingos.length
     const gridClass = bingoCount <= 1 ? "grid-cols-1" : "md:grid-cols-2 lg:grid-cols-2"
