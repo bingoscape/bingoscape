@@ -261,7 +261,7 @@ export function TileDetailsTab({
                         onCheckedChange={handleIsHiddenChange}
                       />
                       <label htmlFor="isHidden" className="text-sm font-medium text-gray-700">
-                        Hidden
+                        Hide Tile on Board
                       </label>
                     </div>
                   </div>
