@@ -15,6 +15,7 @@ import {
   getSubmissions,
   updateTeamTileSubmissionStatus,
   deleteTile,
+  deleteSubmission,
 } from "@/app/actions/bingo"
 import "@mdxeditor/editor/style.css"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -26,7 +27,7 @@ import { GoalsTab } from "./goals-tab"
 import { SubmissionsTab } from "./submissions-tab"
 import { FullSizeImageDialog } from "./full-size-image-dialog"
 import { StatsDialog } from "./stats-dialog"
-import { BarChart } from "lucide-react"
+import { BarChart, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface BingoGridProps {
@@ -416,6 +417,62 @@ export default function BingoGrid({
     }
   }
 
+  const handleDeleteSubmission = async (submissionId: string) => {
+    if (!selectedTile) return
+
+    try {
+      const result = await deleteSubmission(submissionId)
+      if (result.success) {
+        // Update the local state to remove the deleted submission
+        setSelectedTile((prev) => {
+          if (!prev) return null
+
+          const updatedTeamTileSubmissions = prev.teamTileSubmissions?.map((tts) => ({
+            ...tts,
+            submissions: tts.submissions.filter((sub) => sub.id !== submissionId),
+          }))
+
+          return {
+            ...prev,
+            teamTileSubmissions: updatedTeamTileSubmissions,
+          }
+        })
+
+        // Update the tiles state as well
+        setTiles((prevTiles) =>
+          prevTiles.map((tile) => {
+            if (tile.id === selectedTile.id) {
+              const updatedTeamTileSubmissions = tile.teamTileSubmissions?.map((tts) => ({
+                ...tts,
+                submissions: tts.submissions.filter((sub) => sub.id !== submissionId),
+              }))
+
+              return {
+                ...tile,
+                teamTileSubmissions: updatedTeamTileSubmissions,
+              }
+            }
+            return tile
+          }),
+        )
+
+        toast({
+          title: "Submission deleted",
+          description: "The submission has been successfully deleted.",
+        })
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (error) {
+      console.error("Error deleting submission:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete submission",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleDeleteTile = async (tileId: string) => {
     if (isLocked) return
 
@@ -473,7 +530,12 @@ export default function BingoGrid({
         <DialogContent className="sm:max-w-[900px] h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>{selectedTile?.title}</DialogTitle>
-            <DialogDescription>Weight: {selectedTile?.weight}</DialogDescription>
+            <DialogDescription>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-md">
+                <Zap className="h-4 w-4 text-amber-500" />
+                <span className="font-medium">{selectedTile?.weight} XP</span>
+              </div>
+            </DialogDescription>
           </DialogHeader>
           <Tabs defaultValue="details" className="flex-1 flex flex-col">
             <TabsList>
@@ -515,6 +577,7 @@ export default function BingoGrid({
                 onImageSubmit={handleImageSubmit}
                 onFullSizeImageView={(src, alt) => setFullSizeImage({ src, alt })}
                 onTeamTileSubmissionStatusUpdate={handleTeamTileSubmissionStatusUpdate}
+                onDeleteSubmission={handleDeleteSubmission}
               />
             </TabsContent>
           </Tabs>
