@@ -195,7 +195,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
   const [editedTeamName, setEditedTeamName] = useState("")
 
   useEffect(() => {
-    fetchTeamsAndParticipants()
+    fetchTeamsAndParticipants().then(() => console.log("done fetching teams")).catch(e => console.error(e));
   }, [])
 
   const fetchTeamsAndParticipants = async () => {
