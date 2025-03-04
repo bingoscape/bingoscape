@@ -115,7 +115,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
         <p className="text-muted-foreground">You do not have any events yet. Create one to get started!</p>
       ) : (
         <>
-          {renderEventList(running, "Running Events", "No events are currently running.")}
+          {renderEventList(running, "Current Events", "No events are currently running.")}
           {renderEventList(upcoming, "Upcoming Events", "No upcoming events.")}
           {renderEventList(past, "Past Events", "No past events.")}
         </>

@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback } from "react"
 import { useState } from "react"
 import type React from "react"
@@ -7,10 +9,20 @@ import { Button } from "@/components/ui/button"
 import { ForwardRefEditor } from "./forward-ref-editor"
 import type { Tile, Team } from "@/app/actions/events"
 import { Progress } from "@/components/ui/progress"
-import { Pencil, X, Zap, EyeOff } from "lucide-react"
+import { Pencil, X, Zap, EyeOff, Search, ExternalLink } from "lucide-react"
 import Markdown from "react-markdown"
 import { Switch } from "@/components/ui/switch"
 import { ProgressSlider } from "./progress-slider"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 type EditableTileFields = {
   title: string
@@ -29,6 +41,12 @@ interface TileDetailsTabProps {
   onUpdateTile: () => void
   onEditorChange: (content: string) => void
   onUpdateProgress: (goalId: string, teamId: string, newValue: number) => void
+}
+
+interface WikiImage {
+  title: string
+  url: string
+  thumbnail: string
 }
 
 function isValidImageUrl(url: string): boolean {
@@ -54,6 +72,12 @@ export function TileDetailsTab({
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isValidImage, setIsValidImage] = useState(true)
   const canEdit = userRole === "admin" || userRole === "management"
+
+  // OSRS Wiki image search
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<WikiImage[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<WikiImage | null>(null)
 
   const toggleEdit = (isCancelled: boolean) => {
     if (isCancelled) {
@@ -99,6 +123,70 @@ export function TileDetailsTab({
     },
     [onEditTile],
   )
+
+  const searchOSRSWikiImages = async () => {
+    if (!searchQuery.trim()) return
+
+    setIsSearching(true)
+    setSearchResults([])
+
+    try {
+      // Using the OSRS Wiki API to search for images
+      debugger;
+
+      const apiUrl = `https://oldschool.runescape.wiki/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&srnamespace=6&format=json&origin=*`
+      const response = await fetch(apiUrl)
+
+      const data = await response.json()
+
+      if (data.query && data.query.search) {
+        const imagePromises = data.query.search.map(async (result: any) => {
+          const title = result.title.replace("File:", "")
+
+          // Get image info including URL
+          const imageInfoResponse = await fetch(
+            `https://oldschool.runescape.wiki/api.php?action=query&titles=${encodeURIComponent(
+              result.title,
+            )}&prop=imageinfo&iiprop=url|thumburl&iiurlwidth=100&format=json&origin=*`,
+          )
+
+          const imageData = await imageInfoResponse.json()
+          const pages = imageData.query.pages
+          const pageId = Object.keys(pages)[0]
+
+          if (pages[pageId!].imageinfo && pages[pageId!].imageinfo[0]) {
+            const imageInfo = pages[pageId!].imageinfo[0]
+            return {
+              title,
+              url: imageInfo.url,
+              thumbnail: imageInfo.thumburl,
+            }
+          }
+          return null
+        })
+
+        const images = (await Promise.all(imagePromises)).filter(Boolean) as WikiImage[]
+        setSearchResults(images)
+      }
+    } catch (error) {
+      console.error("Error searching OSRS Wiki:", error)
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  const handleImageSelect = (image: WikiImage) => {
+    setSelectedImage(image)
+  }
+
+  const applySelectedImage = () => {
+    if (selectedImage) {
+      onEditTile("headerImage", selectedImage.url)
+      setImagePreview(selectedImage.url)
+      setIsValidImage(true)
+      setSelectedImage(null)
+    }
+  }
 
   return (
     <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
@@ -151,7 +239,7 @@ export function TileDetailsTab({
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="xp" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="xp" className="block text-sm font-medium">
                         XP
                       </label>
                       <div className="mt-1 relative">
@@ -182,18 +270,103 @@ export function TileDetailsTab({
                     <label htmlFor="headerImage" className="block text-sm font-medium text-gray-700">
                       Header Image URL
                     </label>
-                    <Input
-                      id="headerImage"
-                      value={editedTile.headerImage ?? ""}
-                      onChange={handleHeaderImageChange}
-                      onPaste={handleHeaderImagePaste}
-                      className={`mt-1 ${!isValidImage && editedTile.headerImage ? "border-red-500" : ""}`}
-                    />
-                    {!isValidImage && editedTile.headerImage && (
-                      <p className="mt-1 text-sm text-red-500">
-                        Please enter a valid image URL (starting with http:// or https://)
-                      </p>
-                    )}
+                    <div className="flex mt-1 gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          id="headerImage"
+                          value={editedTile.headerImage ?? ""}
+                          onChange={handleHeaderImageChange}
+                          onPaste={handleHeaderImagePaste}
+                          className={`${!isValidImage && editedTile.headerImage ? "border-red-500" : ""}`}
+                        />
+                        {!isValidImage && editedTile.headerImage && (
+                          <p className="mt-1 text-sm text-red-500">
+                            Please enter a valid image URL (starting with http:// or https://)
+                          </p>
+                        )}
+                      </div>
+
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" className="gap-2">
+                            <Search className="h-4 w-4" />
+                            <span>OSRS Wiki</span>
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[600px]">
+                          <DialogHeader>
+                            <DialogTitle>Search OSRS Wiki Images</DialogTitle>
+                          </DialogHeader>
+
+                          <div className="flex gap-2 my-4">
+                            <Input
+                              placeholder="Search for images (e.g., 'abyssal whip')"
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && searchOSRSWikiImages()}
+                            />
+                            <Button onClick={searchOSRSWikiImages} disabled={isSearching}>
+                              {isSearching ? "Searching..." : "Search"}
+                            </Button>
+                          </div>
+
+                          <ScrollArea className="h-[300px] border rounded-md p-2">
+                            {searchResults.length === 0 && !isSearching ? (
+                              <div className="flex items-center justify-center h-full text-gray-500">
+                                {searchQuery ? "No results found" : "Search for OSRS images"}
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-3 gap-3">
+                                {searchResults.map((image) => (
+                                  <div
+                                    key={image.title}
+                                    className={`
+                                      border rounded-md p-2 cursor-pointer hover:bg-gray-100 transition-colors
+                                      ${selectedImage?.url === image.url ? "ring-2 ring-primary" : ""}
+                                    `}
+                                    onClick={() => handleImageSelect(image)}
+                                  >
+                                    <div className="aspect-square relative mb-1">
+                                      <Image
+                                        src={image.thumbnail || "/placeholder.svg"}
+                                        alt={image.title}
+                                        fill
+                                        className="object-contain"
+                                      />
+                                    </div>
+                                    <p className="text-xs truncate" title={image.title}>
+                                      {image.title}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </ScrollArea>
+
+                          <DialogFooter className="flex justify-between items-center">
+                            <a
+                              href="https://oldschool.runescape.wiki/"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-gray-500 flex items-center gap-1"
+                            >
+                              Images from OSRS Wiki
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                            <div className="flex gap-2">
+                              <DialogClose asChild>
+                                <Button variant="outline">Cancel</Button>
+                              </DialogClose>
+                              <DialogClose asChild>
+                                <Button onClick={applySelectedImage} disabled={!selectedImage}>
+                                  Use Selected Image
+                                </Button>
+                              </DialogClose>
+                            </div>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </div>
                   <div>
                     <label htmlFor="description" className="block text-sm font-medium text-gray-700">
@@ -305,4 +478,3 @@ function TileProgress({
     </div>
   )
 }
-
