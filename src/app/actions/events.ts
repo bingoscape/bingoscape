@@ -1,7 +1,7 @@
 'use server'
 import { getServerAuthSession } from "@/server/auth";
 import { db } from "@/server/db";
-import { events, tiles, eventParticipants, clanMembers, eventInvites, teamMembers, teams, eventBuyIns, users } from "@/server/db/schema";
+import { events, tiles, eventParticipants, clanMembers, eventInvites, teamMembers, teams, eventBuyIns, users, bingos } from "@/server/db/schema";
 import { eq, and, asc, sum, sql } from "drizzle-orm";
 import { nanoid } from 'nanoid';
 import { revalidatePath } from "next/cache";
@@ -202,6 +202,7 @@ export async function getEventById(eventId: string): Promise<GetEventByIdResult 
     where: eq(events.id, eventId),
     with: {
       bingos: {
+        orderBy: [asc(bingos.createdAt)],
         with: {
           tiles: {
             orderBy: [asc(tiles.index)],
