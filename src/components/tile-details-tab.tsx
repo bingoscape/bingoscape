@@ -132,8 +132,6 @@ export function TileDetailsTab({
 
     try {
       // Using the OSRS Wiki API to search for images
-      debugger;
-
       const apiUrl = `https://oldschool.runescape.wiki/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&srnamespace=6&format=json&origin=*`
       const response = await fetch(apiUrl)
 
