@@ -1,45 +1,52 @@
-'use server'
+"use server"
 
 import { db } from "@/server/db"
-import { bingos, goals, teamGoalProgress, tiles, submissions, images, teams, teamTileSubmissions } from "@/server/db/schema"
-import { type UUID } from "crypto"
+import {
+  bingos,
+  goals,
+  teamGoalProgress,
+  tiles,
+  submissions,
+  images,
+  teams,
+  teamTileSubmissions,
+} from "@/server/db/schema"
+import type { UUID } from "crypto"
 import { asc, eq, inArray } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
-import fs from 'fs/promises'
-import path from 'path'
-import { type Tile, type TeamTileSubmission, type Bingo } from "./events"
+import fs from "fs/promises"
+import path from "path"
+import type { Tile, TeamTileSubmission, Bingo } from "./events"
 import { createNotification } from "./notifications"
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
+const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
 
 interface AddRowOrColumnSuccessResult {
-  success: true;
-  tiles: Tile[];
-  bingo: Bingo;
+  success: true
+  tiles: Tile[]
+  bingo: Bingo
 }
 
 interface AddRowOrColumnErrorResult {
-  success: false;
-  error: string;
+  success: false
+  error: string
 }
 
-type AddRowOrColumnResult = AddRowOrColumnSuccessResult | AddRowOrColumnErrorResult;
+type AddRowOrColumnResult = AddRowOrColumnSuccessResult | AddRowOrColumnErrorResult
 
 // Utility function to ensure the upload directory exists
 async function ensureUploadDir() {
   try {
-    await fs.access(UPLOAD_DIR);
+    await fs.access(UPLOAD_DIR)
   } catch {
-    await fs.mkdir(UPLOAD_DIR, { recursive: true });
+    await fs.mkdir(UPLOAD_DIR, { recursive: true })
   }
 }
 
 export async function updateTile(tileId: string, updatedTile: Partial<typeof tiles.$inferInsert>) {
   try {
-    await db.update(tiles)
-      .set(updatedTile)
-      .where(eq(tiles.id, tileId))
+    await db.update(tiles).set(updatedTile).where(eq(tiles.id, tileId))
     return { success: true }
   } catch (error) {
     console.error("Error updating tile:", error)
@@ -51,10 +58,7 @@ export async function reorderTiles(reorderedTiles: Array<{ id: string; index: nu
   try {
     await db.transaction(async (tx) => {
       for (const tile of reorderedTiles) {
-        await tx
-          .update(tiles)
-          .set({ index: tile.index })
-          .where(eq(tiles.id, tile.id))
+        await tx.update(tiles).set({ index: tile.index }).where(eq(tiles.id, tile.id))
       }
     })
     return { success: true }
@@ -65,12 +69,12 @@ export async function reorderTiles(reorderedTiles: Array<{ id: string; index: nu
 }
 
 export async function createBingo(formData: FormData) {
-  const eventId = formData.get('eventId') as UUID
-  const title = formData.get('title') as string
-  const description = formData.get('description') as string
-  const rowsStr = formData.get('rows') as string
-  const columnsStr = formData.get('columns') as string
-  const codephrase = formData.get('codephrase') as string
+  const eventId = formData.get("eventId") as UUID
+  const title = formData.get("title") as string
+  const description = formData.get("description") as string
+  const rowsStr = formData.get("rows") as string
+  const columnsStr = formData.get("columns") as string
+  const codephrase = formData.get("codephrase") as string
 
   console.log(formData)
 
@@ -78,21 +82,24 @@ export async function createBingo(formData: FormData) {
     throw new Error("Missing required fields")
   }
 
-  const rows = parseInt(rowsStr)
-  const columns = parseInt(columnsStr)
+  const rows = Number.parseInt(rowsStr)
+  const columns = Number.parseInt(columnsStr)
 
   if (isNaN(rows) || isNaN(columns) || rows < 1 || columns < 1) {
     throw new Error("Invalid rows or columns")
   }
 
-  const newBingo = await db.insert(bingos).values({
-    eventId,
-    title,
-    description: description || '',
-    rows,
-    codephrase,
-    columns
-  }).returning({ id: bingos.id })
+  const newBingo = await db
+    .insert(bingos)
+    .values({
+      eventId,
+      title,
+      description: description || "",
+      rows,
+      codephrase,
+      columns,
+    })
+    .returning({ id: bingos.id })
 
   const bingoId = newBingo[0]!.id
 
@@ -101,7 +108,7 @@ export async function createBingo(formData: FormData) {
     tilesToInsert.push({
       bingoId,
       title: `Tile ${idx + 1}`,
-      headerImage: '/placeholder.svg?height=100&width=100',
+      headerImage: "/placeholder.svg?height=100&width=100",
       description: `Tile ${idx + 1}`,
       weight: 1,
       isHidden: false,
@@ -123,7 +130,6 @@ export async function deleteBingo(bingoId: string) {
       // Delete the bingo itself
       const bingosDeleted = await tx.delete(bingos).where(eq(bingos.id, bingoId))
       console.table(tilesDeleted, bingosDeleted)
-
     })
 
     return { success: true }
@@ -133,13 +139,16 @@ export async function deleteBingo(bingoId: string) {
   }
 }
 
-export async function addGoal(tileId: string, goal: { description: string, targetValue: number }) {
+export async function addGoal(tileId: string, goal: { description: string; targetValue: number }) {
   try {
-    const [newGoal] = await db.insert(goals).values({
-      tileId,
-      description: goal.description,
-      targetValue: goal.targetValue,
-    }).returning()
+    const [newGoal] = await db
+      .insert(goals)
+      .values({
+        tileId,
+        description: goal.description,
+        targetValue: goal.targetValue,
+      })
+      .returning()
 
     return { success: true, goal: newGoal }
   } catch (error) {
@@ -186,9 +195,9 @@ export async function getTileGoalsAndProgress(tileId: string) {
     with: {
       teamProgress: true,
     },
-  });
+  })
 
-  return tileGoals;
+  return tileGoals
 }
 
 export async function getBingoById(bingoId: string) {
@@ -203,21 +212,18 @@ export async function getBingoById(bingoId: string) {
           orderBy: [asc(tiles.index)],
         },
       },
-    });
+    })
 
     if (!result) {
-      return null;
+      return null
     }
 
-
-    return result;
-
+    return result
   } catch (error) {
-    console.error("Error fetching bingo:", error);
-    throw new Error("Failed to fetch bingo");
+    console.error("Error fetching bingo:", error)
+    throw new Error("Failed to fetch bingo")
   }
 }
-
 
 export async function getSubmissions(tileId: string): Promise<TeamTileSubmission[]> {
   try {
@@ -225,12 +231,12 @@ export async function getSubmissions(tileId: string): Promise<TeamTileSubmission
       with: {
         submissions: {
           with: {
-            image: true
-          }
+            image: true,
+          },
         },
-        team: true
+        team: true,
       },
-      where: eq(teamTileSubmissions.tileId, tileId)
+      where: eq(teamTileSubmissions.tileId, tileId),
     })
 
     return result
@@ -329,16 +335,20 @@ export async function submitImage(formData: FormData) {
       return insertedSubmission
     })
 
-
     const b = await db.query.bingos.findFirst({
       where: eq(bingos.id, bingoId),
       with: {
-        event: true
-      }
+        event: true,
+      },
     })
 
     // Create a notification for admin and management users
-    await createNotification(b!.eventId, tileId, teamId, `Team ${teamName!.name} has submitted an image for tile "${tileTitle}"`)
+    await createNotification(
+      b!.eventId,
+      tileId,
+      teamId,
+      `Team ${teamName!.name} has submitted an image for tile "${tileTitle}"`,
+    )
 
     // Revalidate the bingo page
     revalidatePath("/bingo")
@@ -350,7 +360,10 @@ export async function submitImage(formData: FormData) {
   }
 }
 
-export async function updateTeamTileSubmissionStatus(teamTileSubmissionId: string, newStatus: 'accepted' | 'requires_interaction' | 'declined') {
+export async function updateTeamTileSubmissionStatus(
+  teamTileSubmissionId: string,
+  newStatus: "accepted" | "requires_interaction" | "declined",
+) {
   try {
     const [updatedTeamTileSubmission] = await db
       .update(teamTileSubmissions)
@@ -369,17 +382,82 @@ export async function updateTeamTileSubmissionStatus(teamTileSubmissionId: strin
   }
 }
 
-export async function addRowOrColumn(bingoId: string, type: 'row' | 'column'): Promise<AddRowOrColumnResult> {
+export async function deleteSubmission(submissionId: string) {
+  try {
+    return await db.transaction(async (tx) => {
+      // First, get the submission to find the associated image
+      const [submission] = await tx
+        .select({
+          id: submissions.id,
+          imageId: submissions.imageId,
+          teamTileSubmissionId: submissions.teamTileSubmissionId,
+        })
+        .from(submissions)
+        .where(eq(submissions.id, submissionId))
+
+      if (!submission) {
+        throw new Error("Submission not found")
+      }
+
+      // Get the image path to delete the file
+      const [imageRecord] = await tx.select({ path: images.path }).from(images).where(eq(images.id, submission.imageId))
+
+      if (imageRecord && imageRecord.path) {
+        // Delete the image file from the filesystem
+        const filePath = path.join(process.cwd(), "public", imageRecord.path)
+        try {
+          await fs.access(filePath)
+          await fs.unlink(filePath)
+        } catch (fileError) {
+          // If file doesn't exist, just log and continue
+          console.warn(`Could not delete file at ${filePath}:`, fileError)
+        }
+      }
+
+      // Delete the submission record
+      await tx.delete(submissions).where(eq(submissions.id, submissionId))
+
+      // Delete the image record
+      if (imageRecord) {
+        await tx.delete(images).where(eq(images.id, submission.imageId))
+      }
+
+      // Check if this was the last submission for this teamTileSubmission
+      const remainingSubmissions = await tx
+        .select({ count: submissions.id })
+        .from(submissions)
+        .where(eq(submissions.teamTileSubmissionId, submission.teamTileSubmissionId))
+
+      // If no submissions remain, update the status to 'pending'
+      if (remainingSubmissions.length === 0) {
+        await tx
+          .update(teamTileSubmissions)
+          .set({ status: "pending" })
+          .where(eq(teamTileSubmissions.id, submission.teamTileSubmissionId))
+      }
+
+      return { success: true }
+    })
+  } catch (error) {
+    console.error("Error deleting submission:", error)
+    return { success: false, error: (error as Error).message }
+  }
+}
+
+export async function addRowOrColumn(bingoId: string, type: "row" | "column"): Promise<AddRowOrColumnResult> {
   try {
     return await db.transaction(async (tx) => {
       const [bingo] = await tx.select().from(bingos).where(eq(bingos.id, bingoId))
       if (!bingo) throw new Error("Bingo not found")
 
-      const newSize = type === 'row' ? bingo.rows + 1 : bingo.columns + 1
-      const totalTiles = type === 'row' ? newSize * bingo.columns : bingo.rows * newSize
+      const newSize = type === "row" ? bingo.rows + 1 : bingo.columns + 1
+      const totalTiles = type === "row" ? newSize * bingo.columns : bingo.rows * newSize
 
       // Update bingo size
-      await tx.update(bingos).set({ [type === 'row' ? 'rows' : 'columns']: newSize }).where(eq(bingos.id, bingoId))
+      await tx
+        .update(bingos)
+        .set({ [type === "row" ? "rows" : "columns"]: newSize })
+        .where(eq(bingos.id, bingoId))
 
       // Get existing tiles
       const existingTiles = await tx.select().from(tiles).where(eq(tiles.bingoId, bingoId))
@@ -391,8 +469,8 @@ export async function addRowOrColumn(bingoId: string, type: 'row' | 'column'): P
         newTiles.push({
           bingoId,
           title: `New Tile ${i + 1}`,
-          headerImage: '/placeholder.svg?height=100&width=100',
-          description: '',
+          headerImage: "/placeholder.svg?height=100&width=100",
+          description: "",
           weight: 1,
           index: i,
         })
@@ -416,44 +494,30 @@ export async function deleteTile(tileId: string, bingoId: string) {
   try {
     await db.transaction(async (tx) => {
       // Delete the tile
-      await tx.delete(tiles).where(eq(tiles.id, tileId));
+      await tx.delete(tiles).where(eq(tiles.id, tileId))
 
       // Get remaining tiles
-      const remainingTiles = await tx
-        .select()
-        .from(tiles)
-        .where(eq(tiles.bingoId, bingoId))
-        .orderBy(asc(tiles.index));
+      const remainingTiles = await tx.select().from(tiles).where(eq(tiles.bingoId, bingoId)).orderBy(asc(tiles.index))
 
       // Reorder remaining tiles
       for (let i = 0; i < remainingTiles.length; i++) {
-        await tx
-          .update(tiles)
-          .set({ index: i })
-          .where(eq(tiles.id, remainingTiles[i]!.id));
+        await tx.update(tiles).set({ index: i }).where(eq(tiles.id, remainingTiles[i]!.id))
       }
 
       // Update bingo dimensions
-      const [bingo] = await tx
-        .select()
-        .from(bingos)
-        .where(eq(bingos.id, bingoId));
+      const [bingo] = await tx.select().from(bingos).where(eq(bingos.id, bingoId))
 
-      const newTotalTiles = remainingTiles.length;
-      const newRows = Math.floor(Math.sqrt(newTotalTiles));
-      const newColumns = Math.ceil(newTotalTiles / newRows);
+      const newTotalTiles = remainingTiles.length
+      const newRows = Math.floor(Math.sqrt(newTotalTiles))
+      const newColumns = Math.ceil(newTotalTiles / newRows)
 
-      await tx
-        .update(bingos)
-        .set({ rows: newRows, columns: newColumns })
-        .where(eq(bingos.id, bingoId));
+      await tx.update(bingos).set({ rows: newRows, columns: newColumns }).where(eq(bingos.id, bingoId))
+    })
 
-    });
-
-    return { success: true };
+    return { success: true }
   } catch (error) {
-    console.error("Error deleting tile:", error);
-    return { success: false, error: "Failed to delete tile" };
+    console.error("Error deleting tile:", error)
+    return { success: false, error: "Failed to delete tile" }
   }
 }
 
@@ -466,21 +530,24 @@ export async function addTile(bingoId: string): Promise<AddRowOrColumnResult> {
       const totalTiles = bingo.rows * bingo.columns + 1
 
       // Create new tile
-      const [newTile] = await tx.insert(tiles).values({
-        bingoId,
-        title: `New Tile ${totalTiles}`,
-        description: '',
-        weight: 1,
-        index: totalTiles - 1,
-      }).returning()
+      const [newTile] = await tx
+        .insert(tiles)
+        .values({
+          bingoId,
+          title: `New Tile ${totalTiles}`,
+          description: "",
+          weight: 1,
+          index: totalTiles - 1,
+        })
+        .returning()
 
       // Update bingo dimensions
       const newColumns = Math.ceil(Math.sqrt(totalTiles))
       const newRows = Math.ceil(totalTiles / newColumns)
 
       await tx.update(bingos).set({ rows: newRows, columns: newColumns }).where(eq(bingos.id, bingoId))
-      bingo.columns = newColumns;
-      bingo.rows = newRows;
+      bingo.columns = newColumns
+      bingo.rows = newRows
 
       // Fetch all tiles after update
       const updatedTiles = await tx.select().from(tiles).where(eq(tiles.bingoId, bingoId))
@@ -493,34 +560,43 @@ export async function addTile(bingoId: string): Promise<AddRowOrColumnResult> {
   }
 }
 
-export async function deleteRowOrColumn(bingoId: string, type: 'row' | 'column'): Promise<AddRowOrColumnResult> {
+export async function deleteRowOrColumn(bingoId: string, type: "row" | "column"): Promise<AddRowOrColumnResult> {
   try {
     return await db.transaction(async (tx) => {
       const [bingo] = await tx.select().from(bingos).where(eq(bingos.id, bingoId))
       if (!bingo) throw new Error("Bingo not found")
 
-      if ((type === 'row' && bingo.rows <= 1) || (type === 'column' && bingo.columns <= 1)) {
+      if ((type === "row" && bingo.rows <= 1) || (type === "column" && bingo.columns <= 1)) {
         throw new Error(`Cannot delete the last ${type}`)
       }
 
-      const newSize = type === 'row' ? bingo.rows - 1 : bingo.columns - 1
-      const totalTiles = type === 'row' ? newSize * bingo.columns : bingo.rows * newSize
+      const newSize = type === "row" ? bingo.rows - 1 : bingo.columns - 1
+      const totalTiles = type === "row" ? newSize * bingo.columns : bingo.rows * newSize
 
       // Update bingo size
-      await tx.update(bingos).set({ [type === 'row' ? 'rows' : 'columns']: newSize }).where(eq(bingos.id, bingoId))
+      await tx
+        .update(bingos)
+        .set({ [type === "row" ? "rows" : "columns"]: newSize })
+        .where(eq(bingos.id, bingoId))
 
       // Get existing tiles
       const existingTiles = await tx.select().from(tiles).where(eq(tiles.bingoId, bingoId)).orderBy(asc(tiles.index))
 
       // Delete tiles
-      const tilesToDelete = type === 'row'
-        ? existingTiles.slice(-bingo.columns)
-        : existingTiles.filter((_, index) => (index + 1) % bingo.columns === 0)
+      const tilesToDelete =
+        type === "row"
+          ? existingTiles.slice(-bingo.columns)
+          : existingTiles.filter((_, index) => (index + 1) % bingo.columns === 0)
 
-      await tx.delete(tiles).where(inArray(tiles.id, tilesToDelete.map(tile => tile.id)))
+      await tx.delete(tiles).where(
+        inArray(
+          tiles.id,
+          tilesToDelete.map((tile) => tile.id),
+        ),
+      )
 
       // Reindex remaining tiles
-      const remainingTiles = existingTiles.filter(tile => !tilesToDelete.includes(tile))
+      const remainingTiles = existingTiles.filter((tile) => !tilesToDelete.includes(tile))
       for (let i = 0; i < remainingTiles.length; i++) {
         await tx.update(tiles).set({ index: i }).where(eq(tiles.id, remainingTiles[i]!.id))
       }
