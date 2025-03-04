@@ -329,8 +329,6 @@ export async function submitImage(formData: FormData) {
       return insertedSubmission
     })
 
-    console.table(newSubmission)
-
     const b = await db.query.bingos.findFirst({
       where: eq(bingos.id, bingoId),
       with: {
