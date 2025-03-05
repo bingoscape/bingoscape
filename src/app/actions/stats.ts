@@ -254,7 +254,7 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
           .then((result) => Number(result[0]?.count ?? 0))
 
         if (imageCount > 0) {
-          const tileXP = tileWeights.get(submission.tileId) || 0
+          const tileXP = tileWeights.get(submission.tileId) ?? 0
 
           // Add to user's tile-specific counts
           if (!userTileSubmissions.has(submission.tileId)) {
