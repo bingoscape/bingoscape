@@ -82,6 +82,7 @@ export function NotificationBell({ userId }: { userId: string }) {
                 key={notification.id}
                 className={`m-2 p-0 border relative ${notification.isRead ? "bg-muted/20" : "bg-background shadow-md border-l-4 border-l-blue-500"
                   }`}
+                onClick={() => handleNotificationClick(notification.id)}
               >
                 {!notification.isRead && (
                   <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-blue-500"></span>
@@ -118,23 +119,19 @@ export function NotificationBell({ userId }: { userId: string }) {
                     </p>
 
                     {/* Action buttons */}
-                    <div className="flex gap-2 mt-auto">
+                    <div className="flex gap-2 mt-auto" onClick={(e) => e.stopPropagation()}>
                       <Link
                         href={`/events/${notification.eventId}`}
                         className="flex-1"
-                        onClick={() => handleNotificationClick(notification.id)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleNotificationClick(notification.id)
+                        }}
                       >
                         <Button className="w-full" variant="ghost">
                           Event
                         </Button>
                       </Link>
-                      <Button
-                        className="flex-1"
-                        variant="ghost"
-                        onClick={() => handleNotificationClick(notification.id)}
-                      >
-                        Dismiss
-                      </Button>
                     </div>
                   </div>
                 </div>
@@ -146,4 +143,3 @@ export function NotificationBell({ userId }: { userId: string }) {
     </Popover>
   )
 }
-
