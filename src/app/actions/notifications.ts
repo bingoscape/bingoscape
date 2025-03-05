@@ -37,8 +37,10 @@ export async function getNotifications(userId: string, limit = 10) {
       isRead: notifications.isRead,
       createdAt: notifications.createdAt,
       eventTitle: events.title,
+      eventId: events.id,
       teamName: teams.name,
       tileTitle: tiles.title,
+      tileImage: tiles.headerImage,
     })
     .from(notifications)
     .innerJoin(events, eq(events.id, notifications.eventId))
