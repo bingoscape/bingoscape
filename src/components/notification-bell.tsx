@@ -5,6 +5,9 @@ import { Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { getNotifications, markNotificationAsRead } from "@/app/actions/notifications"
+import { Card } from "@/components/ui/card"
+import Link from "next/link"
+import Image from "next/image"
 
 interface Notification {
   id: string
@@ -12,8 +15,10 @@ interface Notification {
   isRead: boolean
   createdAt: Date
   eventTitle: string
+  eventId: string
   teamName: string
   tileTitle: string
+  tileImage: string | null
 }
 
 export function NotificationBell({ userId }: { userId: string }) {
@@ -62,21 +67,70 @@ export function NotificationBell({ userId }: { userId: string }) {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80">
-        <div className="grid gap-4">
-          <h4 className="font-medium leading-none">Notifications</h4>
+      <PopoverContent className="w-96 p-0">
+        <div className="p-4 border-b">
+          <h4 className="font-medium">Notifications</h4>
+        </div>
+        <div className="max-h-[400px] overflow-y-auto">
           {notifications.length === 0 ? (
-            <p>No notifications</p>
+            <div className="p-4 text-center text-muted-foreground">
+              <p>No notifications</p>
+            </div>
           ) : (
             notifications.map((notification) => (
-              <div
+              <Card
                 key={notification.id}
-                className={`text-sm ${notification.isRead ? "text-muted-foreground" : "font-semibold"}`}
-                onClick={() => handleNotificationClick(notification.id)}
+                className={`m-2 p-0 border ${notification.isRead ? "bg-background-50" : "bg-background"}`}
               >
-                <p>{notification.message}</p>
-                <p className="text-xs text-muted-foreground">{new Date(notification.createdAt).toLocaleString()}</p>
-              </div>
+                <div className="flex p-3 gap-3">
+                  {/* Tile image placeholder */}
+                  <div className="w-24 h-24 border border-[#d9d9d9] flex-shrink-0 relative">
+                    <Image
+                      src={notification.tileImage ?? "/placeholder.svg?width=96&height=96"}
+                      alt="Tile"
+                      fill
+                      sizes="96px"
+                      style={{ objectFit: "contain" }}
+                      priority={false}
+                    />
+                  </div>
+
+                  <div className="flex flex-col flex-grow">
+                    {/* Title: Event + Tile */}
+                    <h5 className={`text-sm font-medium ${notification.isRead ? "" : "font-bold"}`}>
+                      {notification.eventTitle}: {notification.tileTitle}
+                    </h5>
+
+                    {/* Message */}
+                    <p className="text-sm text-muted-foreground mt-1 mb-2">{notification.message}</p>
+
+                    {/* Timestamp */}
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {new Date(notification.createdAt).toLocaleString()}
+                    </p>
+
+                    {/* Action buttons */}
+                    <div className="flex gap-2 mt-auto">
+                      <Link
+                        href={`/events/${notification.eventId}`}
+                        className="flex-1"
+                        onClick={() => handleNotificationClick(notification.id)}
+                      >
+                        <Button className="w-full" variant="ghost">
+                          Event
+                        </Button>
+                      </Link>
+                      <Button
+                        className="flex-1"
+                        variant="ghost"
+                        onClick={() => handleNotificationClick(notification.id)}
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </Card>
             ))
           )}
         </div>
