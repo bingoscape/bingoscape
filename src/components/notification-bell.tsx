@@ -126,6 +126,9 @@ export function NotificationBell({ userId }: { userId: string }) {
                         onClick={(e) => {
                           e.stopPropagation()
                           handleNotificationClick(notification.id)
+                            .then(() => console.log("Handled notification click"))
+                            .catch((e) => console.error(e))
+
                         }}
                       >
                         <Button className="w-full" variant="ghost">
