@@ -74,8 +74,8 @@ export function EditBingoModal({ bingo }: { bingo: Bingo }) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Edit className="mr-2 h-4 w-4" />
+        <Button variant="ghost" size="icon">
+          <Edit className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
