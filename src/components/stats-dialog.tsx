@@ -26,7 +26,7 @@ import {
   AreaChart,
   Area,
 } from "recharts"
-import { Trophy, Image, TrendingUp, Calendar, Grid, BarChart2, PieChartIcon, Award } from "lucide-react"
+import { Trophy, TrendingUp, Calendar, Grid, BarChart2, Award } from "lucide-react"
 import type { Team } from "@/app/actions/events"
 import { getAllTeamPointsAndTotal } from "@/app/actions/stats"
 import type { StatsData, TeamUserSubmissions } from "@/app/actions/stats"
@@ -145,6 +145,69 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
     })
   }
 
+  // Chart configurations
+  const xpChartConfig = {
+    xp: {
+      label: "XP",
+      color: "hsl(var(--chart-1))",
+    },
+    label: {
+      color: "hsl(var(--background))",
+    },
+  }
+
+  const efficiencyChartConfig = {
+    efficiency: {
+      label: "XP per Submission",
+      color: "hsl(var(--chart-2))",
+    },
+    label: {
+      color: "hsl(var(--background))",
+    },
+  }
+
+  const tileCompletionChartConfig = {
+    completions: {
+      label: "Completions",
+      color: "hsl(var(--chart-3))",
+    },
+    label: {
+      color: "hsl(var(--background))",
+    },
+  }
+
+  const activityChartConfig = {
+    submissions: {
+      label: "Submissions",
+      color: "hsl(var(--chart-4))",
+    },
+    label: {
+      color: "hsl(var(--background))",
+    },
+  }
+
+  const submissionStatusChartConfig = {
+    accepted: {
+      label: "Accepted",
+      color: "hsl(var(--chart-2))",
+    },
+    pending: {
+      label: "Pending",
+      color: "hsl(var(--chart-3))",
+    },
+    declined: {
+      label: "Declined",
+      color: "hsl(var(--chart-5))",
+    },
+    requiresInteraction: {
+      label: "Requires Interaction",
+      color: "hsl(var(--chart-4))",
+    },
+    label: {
+      color: "hsl(var(--background))",
+    },
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[900px] h-[80vh] overflow-hidden flex flex-col">
@@ -242,13 +305,13 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                             <Award className="h-4 w-4 text-amber-500" />
                             {team.teamName} MVPs
                           </CardTitle>
-                          <CardDescription>Contribution by weighted image submissions</CardDescription>
+                          <CardDescription>Contribution weighted by tile XP and submission ratio</CardDescription>
                         </CardHeader>
                         <CardContent className="flex-1 pb-0">
                           <ChartContainer
                             config={{
-                              weightedAverage: {
-                                label: "Weighted Average",
+                              contributionScore: {
+                                label: "Contribution Score",
                               },
                               ...team.users.reduce(
                                 (acc, user, index) => {
@@ -272,7 +335,7 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                                     return (
                                       <div className="bg-background border border-border p-2 rounded-md shadow-md">
                                         <p className="font-medium">{data.name}</p>
-                                        <p>Weighted Avg: {data.weightedAverage}</p>
+                                        <p>Contribution Score: {data.contributionScore}</p>
                                         <p>Total Images: {data.totalImages}</p>
                                         <p>Tiles Completed: {data.totalTiles}</p>
                                         <p>Total XP: {data.totalXP}</p>
@@ -288,11 +351,11 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                                   return {
                                     ...user,
                                     name: user.runescapeName || user.name,
-                                    value: user.weightedAverage,
+                                    value: user.contributionScore,
                                     fill: `var(--color-${user.userId})`,
                                   }
                                 })}
-                                dataKey="weightedAverage"
+                                dataKey="contributionScore"
                                 nameKey="name"
                                 label={(entry) => entry.name}
                                 labelLine={false}
@@ -303,7 +366,7 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                         </CardContent>
                         <CardFooter className="text-sm text-center">
                           <div className="w-full leading-none text-muted-foreground">
-                            Pie slices represent weighted contribution per user
+                            Pie slices represent weighted contribution based on tile XP and submission ratio
                           </div>
                         </CardFooter>
                       </Card>
@@ -513,67 +576,5 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
       </DialogContent>
     </Dialog>
   )
-}
-
-const xpChartConfig = {
-  xp: {
-    label: "XP",
-    color: "hsl(var(--chart-1))",
-  },
-  label: {
-    color: "hsl(var(--background))",
-  },
-}
-
-const efficiencyChartConfig = {
-  efficiency: {
-    label: "XP per Submission",
-    color: "hsl(var(--chart-2))",
-  },
-  label: {
-    color: "hsl(var(--background))",
-  },
-}
-
-const tileCompletionChartConfig = {
-  completions: {
-    label: "Completions",
-    color: "hsl(var(--chart-3))",
-  },
-  label: {
-    color: "hsl(var(--background))",
-  },
-}
-
-const activityChartConfig = {
-  submissions: {
-    label: "Submissions",
-    color: "hsl(var(--chart-4))",
-  },
-  label: {
-    color: "hsl(var(--background))",
-  },
-}
-
-const submissionStatusChartConfig = {
-  accepted: {
-    label: "Accepted",
-    color: "hsl(var(--chart-2))",
-  },
-  pending: {
-    label: "Pending",
-    color: "hsl(var(--chart-3))",
-  },
-  declined: {
-    label: "Declined",
-    color: "hsl(var(--chart-5))",
-  },
-  requiresInteraction: {
-    label: "Requires Interaction",
-    color: "hsl(var(--chart-4))",
-  },
-  label: {
-    color: "hsl(var(--background))",
-  },
 }
 
