@@ -419,9 +419,9 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                                 if (active && payload && payload.length) {
                                   return (
                                     <div className="bg-background border border-border p-2 rounded-md shadow-md">
-                                      <p className="font-medium">{payload[0].payload.fullTitle}</p>
-                                      <p>Completions: {payload[0].value}</p>
-                                      <p>XP Value: {payload[0].payload.weight}</p>
+                                      <p className="font-medium">{payload[0]?.payload.fullTitle ?? "No stats"}</p>
+                                      <p>Completions: {payload[0]?.value ?? 0}</p>
+                                      <p>XP Value: {payload[0]?.payload.weight ?? 0}</p>
                                     </div>
                                   )
                                 }
