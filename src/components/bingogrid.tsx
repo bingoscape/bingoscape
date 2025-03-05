@@ -504,7 +504,7 @@ export default function BingoGrid({
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-4">
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
           className="flex items-center gap-2"
           onClick={() => setIsStatsDialogOpen(true)}

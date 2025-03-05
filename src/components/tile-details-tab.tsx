@@ -190,7 +190,7 @@ export function TileDetailsTab({
   return (
     <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
       <div className="space-y-6 p-4">
-        <div className="flex flex-col md:flex-row gap-6">
+        <div className="flex flex-col md:flex-row gap-6 items-start">
           <div className="w-full md:w-1/3 relative aspect-square">
             {isEditing && imagePreview && isValidImage ? (
               <Image
