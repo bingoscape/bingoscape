@@ -2,7 +2,7 @@
 
 import { db } from "@/server/db"
 import { teams, teamTileSubmissions, tiles, teamMembers, users, submissions } from "@/server/db/schema"
-import { eq, and, sql, count, desc, asc, gte, lte } from "drizzle-orm"
+import { eq, and, sql, count, inArray, desc, asc, gte, lte } from "drizzle-orm"
 
 export interface TeamPointsOverTime {
   date: string
@@ -60,17 +60,6 @@ export interface ActivityData {
   submissions: number
 }
 
-export interface StatsData {
-  teamPoints: TeamPoints[]
-  teamSubmissions: TeamSubmissions[]
-  teamUserSubmissions: TeamUserSubmissions[]
-  teamUserWeightedSubmissions: TeamUserWeightedSubmissions[]
-  teamEfficiency: TeamEfficiency[]
-  tileCompletions: TileCompletion[]
-  activityTimeline: ActivityData[]
-  totalPossibleXP: number
-}
-
 export interface UserWeightedSubmission {
   userId: string
   name: string
@@ -85,6 +74,17 @@ export interface TeamUserWeightedSubmissions {
   teamId: string
   teamName: string
   users: UserWeightedSubmission[]
+}
+
+export interface StatsData {
+  teamPoints: TeamPoints[]
+  teamSubmissions: TeamSubmissions[]
+  teamUserSubmissions: TeamUserSubmissions[]
+  teamUserWeightedSubmissions: TeamUserWeightedSubmissions[]
+  teamEfficiency: TeamEfficiency[]
+  tileCompletions: TileCompletion[]
+  activityTimeline: ActivityData[]
+  totalPossibleXP: number
 }
 
 /**
@@ -196,13 +196,8 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
       .innerJoin(users, eq(users.id, teamMembers.userId))
       .where(eq(teamMembers.teamId, team.id))
 
-    // Get image counts for each user
-    const userSubmissions: UserSubmission[] = []
-    const userWeightedSubmissions: UserWeightedSubmission[] = []
-    let totalTeamImages = 0
-
-    // First, get all teamTileSubmissions for this team
-    const teamSubmissionIds = await db
+    // Get all teamTileSubmissions for this team
+    const teamSubmissionData = await db
       .select({
         id: teamTileSubmissions.id,
         tileId: teamTileSubmissions.tileId,
@@ -211,7 +206,7 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
       .innerJoin(tiles, eq(tiles.id, teamTileSubmissions.tileId))
       .where(and(eq(teamTileSubmissions.teamId, team.id), eq(tiles.bingoId, bingoId)))
 
-    if (teamSubmissionIds.length === 0) {
+    if (teamSubmissionData.length === 0) {
       continue // Skip if no submissions
     }
 
@@ -229,79 +224,102 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
         return weightMap
       })
 
-    // For each team member, calculate weighted submission metrics
+    // Get all submissions with user info
+    const allSubmissions = await db
+      .select({
+        teamTileSubmissionId: submissions.teamTileSubmissionId,
+        submittedBy: submissions.submittedBy,
+        tileId: teamTileSubmissions.tileId,
+      })
+      .from(submissions)
+      .innerJoin(teamTileSubmissions, eq(submissions.teamTileSubmissionId, teamTileSubmissions.id))
+      .where(
+        and(
+          eq(teamTileSubmissions.teamId, team.id),
+          inArray(
+            teamTileSubmissions.id,
+            teamSubmissionData.map((s) => s.id),
+          ),
+        ),
+      )
+
+    // Process user submissions
+    const userSubmissions: UserSubmission[] = []
+    const userWeightedSubmissions: UserWeightedSubmission[] = []
+    let totalTeamImages = 0
+
+    // Create a map to track per-user, per-tile submissions
+    const userTileSubmissionsMap = new Map<string, Map<string, { images: number; xp: number }>>()
+
+    // Process all submissions to build the user-tile map
+    for (const submission of allSubmissions) {
+      const userId = submission.submittedBy
+      const tileId = submission.tileId
+      const tileXP = tileWeights.get(tileId) ?? 0
+
+      // Initialize user map if needed
+      if (!userTileSubmissionsMap.has(userId)) {
+        userTileSubmissionsMap.set(userId, new Map())
+      }
+
+      const userMap = userTileSubmissionsMap.get(userId)!
+
+      // Initialize tile data if needed
+      if (!userMap.has(tileId)) {
+        userMap.set(tileId, { images: 0, xp: tileXP })
+      }
+
+      // Increment image count
+      const tileData = userMap.get(tileId)!
+      tileData.images += 1
+      userMap.set(tileId, tileData)
+    }
+
+    // Process the map to generate statistics
     for (const member of members) {
-      // Track per-tile submissions for this user
-      const userTileSubmissions = new Map<string, { images: number; xp: number }>()
+      const userId = member.userId
+      const userMap = userTileSubmissionsMap.get(userId)
+
+      if (!userMap || userMap.size === 0) {
+        continue // Skip users with no submissions
+      }
+
       let totalUserImages = 0
       let totalUserTiles = 0
       let totalUserXP = 0
+      let weightedSum = 0
 
-      // For each team submission, count images by this user per tile
-      for (const submission of teamSubmissionIds) {
-        const imageCount = await db
-          .select({
-            count: count(),
-          })
-          .from(submissions)
-          .where(
-            and(
-              eq(submissions.teamTileSubmissionId, submission.id),
-              // In a real app, you'd have a direct way to identify the uploader
-              // This is a simplified approach
-            ),
-          )
-          .then((result) => Number(result[0]?.count ?? 0))
-
-        if (imageCount > 0) {
-          const tileXP = tileWeights.get(submission.tileId) ?? 0
-
-          // Add to user's tile-specific counts
-          if (!userTileSubmissions.has(submission.tileId)) {
-            userTileSubmissions.set(submission.tileId, { images: 0, xp: tileXP })
-            totalUserTiles++
-            totalUserXP += tileXP
-          }
-
-          const tileData = userTileSubmissions.get(submission.tileId)!
-          tileData.images += imageCount
-          userTileSubmissions.set(submission.tileId, tileData)
-
-          totalUserImages += imageCount
-        }
+      // Calculate totals
+      for (const [tileId, tileData] of userMap.entries()) {
+        totalUserImages += tileData.images
+        totalUserTiles += 1
+        totalUserXP += tileData.xp
+        weightedSum += tileData.images * tileData.xp
       }
 
-      // Calculate weighted average (if user has submissions)
-      if (totalUserTiles > 0 && totalUserXP > 0) {
-        // Calculate weighted average: sum(images_per_tile * tile_xp) / sum(tile_xp)
-        let weightedSum = 0
-        for (const [_, tileData] of userTileSubmissions.entries()) {
-          weightedSum += tileData.images * tileData.xp
-        }
+      // Calculate weighted average
+      const weightedAverage = totalUserXP > 0 ? Number.parseFloat((weightedSum / totalUserXP).toFixed(2)) : 0
 
-        const weightedAverage = Number.parseFloat((weightedSum / totalUserXP).toFixed(2))
+      // Add to user weighted submissions
+      userWeightedSubmissions.push({
+        userId,
+        name: member.name ?? "Unknown",
+        runescapeName: member.runescapeName ?? "Unknown",
+        totalImages: totalUserImages,
+        totalTiles: totalUserTiles,
+        totalXP: totalUserXP,
+        weightedAverage,
+      })
 
-        // Add to user weighted submissions
-        userWeightedSubmissions.push({
-          userId: member.userId,
-          name: member.name ?? "Unknown",
-          runescapeName: member.runescapeName ?? "Unknown",
-          totalImages: totalUserImages,
-          totalTiles: totalUserTiles,
-          totalXP: totalUserXP,
-          weightedAverage: weightedAverage,
-        })
+      // Also add to regular image count for backward compatibility
+      userSubmissions.push({
+        userId,
+        name: member.name ?? "Unknown",
+        runescapeName: member.runescapeName ?? "Unknown",
+        imageCount: totalUserImages,
+      })
 
-        // Also add to regular image count for backward compatibility
-        userSubmissions.push({
-          userId: member.userId,
-          name: member.name ?? "Unknown",
-          runescapeName: member.runescapeName ?? "Unknown",
-          imageCount: totalUserImages,
-        })
-
-        totalTeamImages += totalUserImages
-      }
+      totalTeamImages += totalUserImages
     }
 
     // Only add teams that have image uploads
