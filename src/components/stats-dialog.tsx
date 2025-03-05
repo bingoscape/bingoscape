@@ -12,8 +12,21 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList, ResponsiveContainer, Pie, PieChart } from "recharts"
-import { Trophy, Users } from "lucide-react"
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  LabelList,
+  ResponsiveContainer,
+  Pie,
+  PieChart,
+  Legend,
+  AreaChart,
+  Area,
+} from "recharts"
+import { Trophy, Image, TrendingUp, Calendar, Grid, BarChart2 } from "lucide-react"
 import type { Team } from "@/app/actions/events"
 import { getAllTeamPointsAndTotal } from "@/app/actions/stats"
 import type { StatsData, TeamUserSubmissions } from "@/app/actions/stats"
@@ -57,7 +70,47 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
     statsData?.teamPoints.map((team) => ({
       name: team.name,
       xp: team.xp,
-    })) ?? []
+    })) || []
+
+  // Format team efficiency data
+  const teamEfficiencyData =
+    statsData?.teamEfficiency.map((team) => ({
+      name: team.name,
+      efficiency: team.efficiency,
+      xp: team.xp,
+      submissions: team.submissions,
+    })) || []
+
+  // Format tile completion data
+  const tileCompletionData =
+    statsData?.tileCompletions.slice(0, 10).map((tile) => ({
+      name: tile.title.length > 20 ? tile.title.substring(0, 20) + "..." : tile.title,
+      completions: tile.completionCount,
+      weight: tile.weight,
+      fullTitle: tile.title,
+    })) || []
+
+  // Format activity timeline data
+  const activityTimelineData =
+    statsData?.activityTimeline.map((day) => ({
+      date: new Date(day.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      submissions: day.submissions,
+      fullDate: day.date,
+    })) || []
+
+  // Format submission status data
+  const submissionStatusData =
+    statsData?.teamSubmissions.map((team) => {
+      const total = team.total || 1 // Avoid division by zero
+      return {
+        name: team.name,
+        accepted: team.accepted,
+        pending: team.pending,
+        declined: team.declined,
+        requiresInteraction: team.requiresInteraction,
+        acceptedRate: Number.parseFloat(((team.accepted / total) * 100).toFixed(1)),
+      }
+    }) || []
 
   // Chart configurations
   const xpChartConfig = {
@@ -70,11 +123,63 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
     },
   }
 
+  const efficiencyChartConfig = {
+    efficiency: {
+      label: "XP per Submission",
+      color: "hsl(var(--chart-2))",
+    },
+    label: {
+      color: "hsl(var(--background))",
+    },
+  }
+
+  const tileCompletionChartConfig = {
+    completions: {
+      label: "Completions",
+      color: "hsl(var(--chart-3))",
+    },
+    label: {
+      color: "hsl(var(--background))",
+    },
+  }
+
+  const activityChartConfig = {
+    submissions: {
+      label: "Submissions",
+      color: "hsl(var(--chart-4))",
+    },
+    label: {
+      color: "hsl(var(--background))",
+    },
+  }
+
+  const submissionStatusChartConfig = {
+    accepted: {
+      label: "Accepted",
+      color: "hsl(var(--chart-2))",
+    },
+    pending: {
+      label: "Pending",
+      color: "hsl(var(--chart-3))",
+    },
+    declined: {
+      label: "Declined",
+      color: "hsl(var(--chart-5))",
+    },
+    requiresInteraction: {
+      label: "Requires Interaction",
+      color: "hsl(var(--chart-4))",
+    },
+    label: {
+      color: "hsl(var(--background))",
+    },
+  }
+
   // Create a config for each team's pie chart
   const createTeamPieConfig = (team: TeamUserSubmissions) => {
     const config: Record<string, any> = {
-      submissions: {
-        label: "Submissions",
+      imageCount: {
+        label: "Images",
       },
     }
 
@@ -117,9 +222,31 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
         ) : (
           <div className="flex-1 overflow-y-auto p-4">
             <Tabs defaultValue="xp" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="xp">Team XP</TabsTrigger>
-                <TabsTrigger value="users">User Submissions</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3 md:grid-cols-6">
+                <TabsTrigger value="xp" className="flex items-center gap-1">
+                  <Trophy className="h-4 w-4 md:mr-1" />
+                  <span className="hidden md:inline">XP</span>
+                </TabsTrigger>
+                <TabsTrigger value="images" className="flex items-center gap-1">
+                  <Image className="h-4 w-4 md:mr-1" />
+                  <span className="hidden md:inline">Images</span>
+                </TabsTrigger>
+                <TabsTrigger value="efficiency" className="flex items-center gap-1">
+                  <TrendingUp className="h-4 w-4 md:mr-1" />
+                  <span className="hidden md:inline">Efficiency</span>
+                </TabsTrigger>
+                <TabsTrigger value="tiles" className="flex items-center gap-1">
+                  <Grid className="h-4 w-4 md:mr-1" />
+                  <span className="hidden md:inline">Tiles</span>
+                </TabsTrigger>
+                <TabsTrigger value="activity" className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4 md:mr-1" />
+                  <span className="hidden md:inline">Activity</span>
+                </TabsTrigger>
+                <TabsTrigger value="status" className="flex items-center gap-1">
+                  <BarChart2 className="h-4 w-4 md:mr-1" />
+                  <span className="hidden md:inline">Status</span>
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="xp" className="mt-4">
@@ -146,7 +273,7 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                           >
                             <CartesianGrid horizontal strokeDasharray="3 3" />
                             <YAxis dataKey="name" type="category" width={120} tickLine={false} axisLine={false} />
-                            <XAxis type="number" domain={[0, statsData?.totalPossibleXP ?? "auto"]} />
+                            <XAxis type="number" domain={[0, statsData?.totalPossibleXP || "auto"]} />
                             <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
                             <Bar dataKey="xp" fill="var(--color-xp)" radius={4}>
                               <LabelList
@@ -163,23 +290,23 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                   </CardContent>
                   <CardFooter className="flex-col items-start gap-2 text-sm">
                     <div className="leading-none text-muted-foreground">
-                      Total Possible XP: {statsData?.totalPossibleXP ?? 0}
+                      Total Possible XP: {statsData?.totalPossibleXP || 0}
                     </div>
                   </CardFooter>
                 </Card>
               </TabsContent>
 
-              <TabsContent value="users" className="mt-4">
+              <TabsContent value="images" className="mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {statsData?.teamUserSubmissions && statsData.teamUserSubmissions.length > 0 ? (
                     statsData.teamUserSubmissions.map((team) => (
                       <Card key={team.teamId} className="flex flex-col">
                         <CardHeader className="items-center pb-0">
                           <CardTitle className="flex items-center gap-2 text-base">
-                            <Users className="h-4 w-4" />
+                            <Image className="h-4 w-4" />
                             {team.teamName}
                           </CardTitle>
-                          <CardDescription>User Submissions</CardDescription>
+                          <CardDescription>Images Uploaded by User</CardDescription>
                         </CardHeader>
                         <CardContent className="flex-1 pb-0">
                           <ChartContainer
@@ -190,7 +317,7 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                               <ChartTooltip content={<ChartTooltipContent hideLabel nameKey="name" />} />
                               <Pie
                                 data={prepareTeamPieData(team)}
-                                dataKey="submissions"
+                                dataKey="imageCount"
                                 nameKey="name"
                                 label
                                 labelLine={false}
@@ -201,17 +328,209 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                         </CardContent>
                         <CardFooter className="text-sm text-center">
                           <div className="w-full leading-none text-muted-foreground">
-                            Total Submissions: {team.totalSubmissions}
+                            Total Images: {team.totalImages}
                           </div>
                         </CardFooter>
                       </Card>
                     ))
                   ) : (
                     <div className="col-span-2 flex items-center justify-center h-[300px]">
-                      <p className="text-muted-foreground">No user submission data available</p>
+                      <p className="text-muted-foreground">No image upload data available</p>
                     </div>
                   )}
                 </div>
+              </TabsContent>
+
+              <TabsContent value="efficiency" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-green-500" />
+                      Team Efficiency
+                    </CardTitle>
+                    <CardDescription>XP earned per submission (higher is better)</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-[400px]">
+                    {teamEfficiencyData.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-muted-foreground">No data available</p>
+                      </div>
+                    ) : (
+                      <ChartContainer config={efficiencyChartConfig}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={teamEfficiencyData}
+                            layout="vertical"
+                            margin={{ top: 10, right: 80, left: 10, bottom: 10 }}
+                          >
+                            <CartesianGrid horizontal strokeDasharray="3 3" />
+                            <YAxis dataKey="name" type="category" width={120} tickLine={false} axisLine={false} />
+                            <XAxis type="number" />
+                            <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                            <Bar dataKey="efficiency" fill="var(--color-efficiency)" radius={4}>
+                              <LabelList
+                                dataKey="efficiency"
+                                position="right"
+                                formatter={(value: number) => `${value} XP/sub`}
+                                className="fill-foreground"
+                              />
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
+                    )}
+                  </CardContent>
+                  <CardFooter className="flex-col items-start gap-2 text-sm">
+                    <div className="leading-none text-muted-foreground">
+                      Higher efficiency means teams are earning more XP with fewer submissions
+                    </div>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="tiles" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Grid className="h-5 w-5 text-purple-500" />
+                      Most Completed Tiles
+                    </CardTitle>
+                    <CardDescription>Top 10 tiles by completion count</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-[400px]">
+                    {tileCompletionData.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-muted-foreground">No data available</p>
+                      </div>
+                    ) : (
+                      <ChartContainer config={tileCompletionChartConfig}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={tileCompletionData}
+                            layout="vertical"
+                            margin={{ top: 10, right: 50, left: 10, bottom: 10 }}
+                          >
+                            <CartesianGrid horizontal strokeDasharray="3 3" />
+                            <YAxis dataKey="name" type="category" width={150} tickLine={false} axisLine={false} />
+                            <XAxis type="number" />
+                            <ChartTooltip
+                              cursor={false}
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  return (
+                                    <div className="bg-background border border-border p-2 rounded-md shadow-md">
+                                      <p className="font-medium">{payload[0].payload.fullTitle}</p>
+                                      <p>Completions: {payload[0].value}</p>
+                                      <p>XP Value: {payload[0].payload.weight}</p>
+                                    </div>
+                                  )
+                                }
+                                return null
+                              }}
+                            />
+                            <Bar dataKey="completions" fill="var(--color-completions)" radius={4}>
+                              <LabelList dataKey="completions" position="right" className="fill-foreground" />
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="activity" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-blue-500" />
+                      Activity Timeline
+                    </CardTitle>
+                    <CardDescription>Submission activity over the last 30 days</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-[400px]">
+                    {activityTimelineData.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-muted-foreground">No activity data available</p>
+                      </div>
+                    ) : (
+                      <ChartContainer config={activityChartConfig}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={activityTimelineData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="date" tickLine={false} />
+                            <YAxis />
+                            <ChartTooltip
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  return (
+                                    <div className="bg-background border border-border p-2 rounded-md shadow-md">
+                                      <p className="font-medium">{payload[0].payload.date}</p>
+                                      <p>Submissions: {payload[0].value}</p>
+                                    </div>
+                                  )
+                                }
+                                return null
+                              }}
+                            />
+                            <Area
+                              type="monotone"
+                              dataKey="submissions"
+                              stroke="var(--color-submissions)"
+                              fill="var(--color-submissions)"
+                              fillOpacity={0.3}
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
+                    )}
+                  </CardContent>
+                  <CardFooter className="flex-col items-start gap-2 text-sm">
+                    <div className="leading-none text-muted-foreground">
+                      Shows when teams are most active in submitting tiles
+                    </div>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="status" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart2 className="h-5 w-5 text-orange-500" />
+                      Submission Status
+                    </CardTitle>
+                    <CardDescription>Breakdown of submission statuses by team</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-[400px]">
+                    {submissionStatusData.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-muted-foreground">No status data available</p>
+                      </div>
+                    ) : (
+                      <ChartContainer config={submissionStatusChartConfig}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={submissionStatusData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" />
+                            <YAxis />
+                            <ChartTooltip content={<ChartTooltipContent />} />
+                            <Legend />
+                            <Bar dataKey="accepted" stackId="a" fill="var(--color-accepted)" />
+                            <Bar dataKey="pending" stackId="a" fill="var(--color-pending)" />
+                            <Bar dataKey="declined" stackId="a" fill="var(--color-declined)" />
+                            <Bar dataKey="requiresInteraction" stackId="a" fill="var(--color-requiresInteraction)" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
+                    )}
+                  </CardContent>
+                  <CardFooter className="flex-col items-start gap-2 text-sm">
+                    <div className="leading-none text-muted-foreground">
+                      Teams with higher acceptance rates are more successful at completing tiles correctly
+                    </div>
+                  </CardFooter>
+                </Card>
               </TabsContent>
             </Tabs>
           </div>
