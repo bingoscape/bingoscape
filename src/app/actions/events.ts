@@ -486,36 +486,60 @@ export async function getUserRole(eventId: string): Promise<EventRole> {
     throw new Error("Failed to fetch user role");
   }
 }
+
 export async function getEventParticipants(eventId: string) {
   try {
-    const participants = await db
+    // First, get all unique participants for this event
+    const eventParticipantsList = await db
       .select({
+        id: eventParticipants.id,
         userId: eventParticipants.userId,
-        runescapeName: users.runescapeName,
         role: eventParticipants.role,
-        buyIn: sql<number>`COALESCE(${eventBuyIns.amount}, 0)`.as('buyIn'),
-        teamId: teamMembers.teamId,
-        teamName: teams.name,
       })
       .from(eventParticipants)
-      .leftJoin(users, eq(eventParticipants.userId, users.id))
-      .leftJoin(
-        eventBuyIns,
-        eq(eventBuyIns.eventParticipantId, eventParticipants.id)
-      )
-      .leftJoin(teamMembers, eq(eventParticipants.userId, teamMembers.userId))
-      .leftJoin(teams, eq(teamMembers.teamId, teams.id))
       .where(eq(eventParticipants.eventId, eventId))
-      .orderBy(eventParticipants.userId)
 
-    return participants.map(p => ({
-      id: p.userId,
-      runescapeName: p.runescapeName ?? '',
-      role: p.role,
-      teamId: p.teamId ?? null,
-      teamName: p.teamName ?? null,
-      buyIn: p.buyIn,
-    }))
+    // Process each participant individually to avoid duplicates
+    const participants = await Promise.all(
+      eventParticipantsList.map(async (participant) => {
+        // Get user info
+        const user = await db.query.users.findFirst({
+          where: eq(users.id, participant.userId),
+        })
+
+        // Get buy-in amount (if any)
+        const buyInResult = await db
+          .select({
+            amount: sql<number>`COALESCE(${eventBuyIns.amount}, 0)`.as("buyIn"),
+          })
+          .from(eventBuyIns)
+          .where(eq(eventBuyIns.eventParticipantId, participant.id))
+
+        const buyIn = buyInResult[0]?.amount || 0
+
+        // Get team info (if any)
+        const teamMember = await db.query.teamMembers.findFirst({
+          where: eq(teamMembers.userId, participant.userId),
+          with: {
+            team: true,
+          },
+        })
+
+        // Only include team if it belongs to this event
+        const team = teamMember?.team.eventId === eventId ? teamMember.team : null
+
+        return {
+          id: participant.userId,
+          runescapeName: user?.runescapeName ?? "",
+          role: participant.role,
+          teamId: team?.id ?? null,
+          teamName: team?.name ?? null,
+          buyIn: buyIn,
+        }
+      }),
+    )
+
+    return participants
   } catch (error) {
     console.error("Error fetching event participants:", error)
     throw new Error("Failed to fetch event participants")
