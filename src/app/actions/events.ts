@@ -515,7 +515,7 @@ export async function getEventParticipants(eventId: string) {
           .from(eventBuyIns)
           .where(eq(eventBuyIns.eventParticipantId, participant.id))
 
-        const buyIn = buyInResult[0]?.amount || 0
+        const buyIn = buyInResult[0]?.amount ?? 0
 
         // Get team info (if any)
         const teamMember = await db.query.teamMembers.findFirst({
