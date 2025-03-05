@@ -145,7 +145,7 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                           >
                             <CartesianGrid horizontal strokeDasharray="3 3" />
                             <YAxis dataKey="name" type="category" width={120} tickLine={false} axisLine={false} />
-                            <XAxis type="number" domain={[0, statsData?.totalPossibleXP || "auto"]} />
+                            <XAxis type="number" domain={[0, statsData?.totalPossibleXP ?? "auto"]} />
                             <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
                             <Bar dataKey="xp" fill="var(--color-xp)" radius={4}>
                               <LabelList
@@ -162,7 +162,7 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                   </CardContent>
                   <CardFooter className="flex-col items-start gap-2 text-sm">
                     <div className="leading-none text-muted-foreground">
-                      Total Possible XP: {statsData?.totalPossibleXP || 0}
+                      Total Possible XP: {statsData?.totalPossibleXP ?? 0}
                     </div>
                   </CardFooter>
                 </Card>
