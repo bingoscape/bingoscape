@@ -367,12 +367,12 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                                 if (active && payload && payload.length) {
                                   return (
                                     <div className="bg-background border border-border p-2 rounded-md shadow-md">
-                                      <p className="font-medium">{payload[0].payload.name}</p>
-                                      <p>Team: {payload[0].payload.teamName}</p>
-                                      <p>Weighted Avg: {payload[0].value}</p>
-                                      <p>Total Images: {payload[0].payload.totalImages}</p>
-                                      <p>Tiles Completed: {payload[0].payload.totalTiles}</p>
-                                      <p>Total XP: {payload[0].payload.totalXP}</p>
+                                      <p className="font-medium">{payload[0]?.payload.name}</p>
+                                      <p>Team: {payload[0]?.payload.teamName}</p>
+                                      <p>Weighted Avg: {payload[0]?.value}</p>
+                                      <p>Total Images: {payload[0]?.payload.totalImages}</p>
+                                      <p>Tiles Completed: {payload[0]?.payload.totalTiles}</p>
+                                      <p>Total XP: {payload[0]?.payload.totalXP}</p>
                                     </div>
                                   )
                                 }
@@ -473,9 +473,9 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                                 if (active && payload && payload.length) {
                                   return (
                                     <div className="bg-background border border-border p-2 rounded-md shadow-md">
-                                      <p className="font-medium">{payload[0].payload.fullTitle}</p>
-                                      <p>Completions: {payload[0].value}</p>
-                                      <p>XP Value: {payload[0].payload.weight}</p>
+                                      <p className="font-medium">{payload[0]?.payload.fullTitle}</p>
+                                      <p>Completions: {payload[0]?.value}</p>
+                                      <p>XP Value: {payload[0]?.payload.weight}</p>
                                     </div>
                                   )
                                 }
@@ -519,8 +519,8 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                                 if (active && payload && payload.length) {
                                   return (
                                     <div className="bg-background border border-border p-2 rounded-md shadow-md">
-                                      <p className="font-medium">{payload[0].payload.date}</p>
-                                      <p>Submissions: {payload[0].value}</p>
+                                      <p className="font-medium">{payload[0]?.payload.date}</p>
+                                      <p>Submissions: {payload[0]?.value}</p>
                                     </div>
                                   )
                                 }
