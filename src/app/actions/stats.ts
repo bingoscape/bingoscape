@@ -256,7 +256,7 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
       const submissionId = submission.teamTileSubmissionId
 
       // Count total submissions per tile
-      tileSubmissionCounts.set(tileId, (tileSubmissionCounts.get(tileId) || 0) + 1)
+      tileSubmissionCounts.set(tileId, (tileSubmissionCounts.get(tileId) ?? 0) + 1)
 
       // Group by tile and submission
       if (!tileSubmissionMap.has(tileId)) {
@@ -264,7 +264,7 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
       }
 
       const submissionMap = tileSubmissionMap.get(tileId)!
-      submissionMap.set(submissionId, (submissionMap.get(submissionId) || 0) + 1)
+      submissionMap.set(submissionId, (submissionMap.get(submissionId) ?? 0) + 1)
     }
 
     // Process user submissions
@@ -307,7 +307,7 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
 
         // Initialize tile data if needed
         if (!userMap.has(tileId)) {
-          const totalTileSubmissions = tileSubmissionCounts.get(tileId) || 1
+          const totalTileSubmissions = tileSubmissionCounts.get(tileId) ?? 1
           userMap.set(tileId, {
             images: 0,
             xp: tileXP,
