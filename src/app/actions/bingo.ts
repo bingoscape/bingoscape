@@ -19,6 +19,7 @@ import fs from "fs/promises"
 import path from "path"
 import type { Tile, TeamTileSubmission, Bingo } from "./events"
 import { createNotification } from "./notifications"
+import { getServerAuthSession } from "@/server/auth"
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
 
@@ -297,6 +298,7 @@ export async function submitImage(formData: FormData) {
     // Calculate the relative path for storage and serving
     const relativePath = path.join("/uploads", filename).replace(/\\/g, "/")
 
+    const sessionPromise = getServerAuthSession()
     const newSubmission = await db.transaction(async (tx) => {
       // Get or create teamTileSubmission
       const [teamTileSubmission] = await tx
@@ -323,11 +325,13 @@ export async function submitImage(formData: FormData) {
         })
         .returning()
 
+      const session = await sessionPromise
       // Insert the submission record
       const [insertedSubmission] = await tx
         .insert(submissions)
         .values({
           teamTileSubmissionId: teamTileSubmission!.id,
+          submittedBy: session!.user.id,
           imageId: insertedImage!.id,
         })
         .returning()
