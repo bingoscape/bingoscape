@@ -26,10 +26,10 @@ import {
   AreaChart,
   Area,
 } from "recharts"
-import { Trophy, Image, TrendingUp, Calendar, Grid, BarChart2, PieChartIcon } from "lucide-react"
+import { Trophy, Image, TrendingUp, Calendar, Grid, BarChart2, PieChartIcon, Award } from "lucide-react"
 import type { Team } from "@/app/actions/events"
 import { getAllTeamPointsAndTotal } from "@/app/actions/stats"
-import type { StatsData, TeamUserSubmissions } from "@/app/actions/stats"
+import type { StatsData, TeamUserSubmissions, UserWeightedSubmission } from "@/app/actions/stats"
 
 interface StatsDialogProps {
   isOpen: boolean
@@ -70,7 +70,7 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
     statsData?.teamPoints.map((team) => ({
       name: team.name,
       xp: team.xp,
-    })) ?? []
+    })) || []
 
   // Format team efficiency data
   const teamEfficiencyData =
@@ -79,7 +79,7 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
       efficiency: team.efficiency,
       xp: team.xp,
       submissions: team.submissions,
-    })) ?? []
+    })) || []
 
   // Format tile completion data
   const tileCompletionData =
@@ -88,7 +88,7 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
       completions: tile.completionCount,
       weight: tile.weight,
       fullTitle: tile.title,
-    })) ?? []
+    })) || []
 
   // Format activity timeline data
   const activityTimelineData =
@@ -96,7 +96,7 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
       date: new Date(day.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
       submissions: day.submissions,
       fullDate: day.date,
-    })) ?? []
+    })) || []
 
   // Format submission status data
   const submissionStatusData =
@@ -111,6 +111,36 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
         acceptedRate: Number.parseFloat(((team.accepted / total) * 100).toFixed(1)),
       }
     }) || []
+
+  // Prepare top contributors data across all teams
+  const topContributorsData = (() => {
+    if (!statsData?.teamUserWeightedSubmissions) return []
+
+    // Flatten all users from all teams
+    const allUsers: Array<UserWeightedSubmission & { teamName: string }> = []
+
+    statsData.teamUserWeightedSubmissions.forEach((team) => {
+      team.users.forEach((user) => {
+        allUsers.push({
+          ...user,
+          teamName: team.teamName,
+        })
+      })
+    })
+
+    // Sort by weighted average and take top 10
+    return allUsers
+      .sort((a, b) => b.weightedAverage - a.weightedAverage)
+      .slice(0, 10)
+      .map((user) => ({
+        name: user.runescapeName || user.name,
+        weightedAverage: user.weightedAverage,
+        totalImages: user.totalImages,
+        totalTiles: user.totalTiles,
+        totalXP: user.totalXP,
+        teamName: user.teamName,
+      }))
+  })()
 
   // Chart configurations
   const xpChartConfig = {
@@ -175,6 +205,16 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
     },
   }
 
+  const contributorsChartConfig = {
+    weightedAverage: {
+      label: "Weighted Average",
+      color: "hsl(var(--chart-1))",
+    },
+    label: {
+      color: "hsl(var(--background))",
+    },
+  }
+
   // Create a config for each team's pie chart
   const createTeamPieConfig = (team: TeamUserSubmissions) => {
     const config: Record<string, any> = {
@@ -222,18 +262,14 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
         ) : (
           <div className="flex-1 overflow-y-auto p-4">
             <Tabs defaultValue="xp" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 md:grid-cols-7">
+              <TabsList className="grid w-full grid-cols-4 md:grid-cols-8">
                 <TabsTrigger value="xp" className="flex items-center gap-1">
                   <Trophy className="h-4 w-4 md:mr-1" />
                   <span className="hidden md:inline">XP</span>
                 </TabsTrigger>
-                <TabsTrigger value="images" className="flex items-center gap-1">
-                  <Image className="h-4 w-4 md:mr-1" />
-                  <span className="hidden md:inline">Images</span>
-                </TabsTrigger>
-                <TabsTrigger value="weightedImages" className="flex items-center gap-1">
-                  <PieChartIcon className="h-4 w-4 md:mr-1" />
-                  <span className="hidden md:inline">Weighted</span>
+                <TabsTrigger value="contributors" className="flex items-center gap-1">
+                  <Award className="h-4 w-4 md:mr-1" />
+                  <span className="hidden md:inline">MVPs</span>
                 </TabsTrigger>
                 <TabsTrigger value="efficiency" className="flex items-center gap-1">
                   <TrendingUp className="h-4 w-4 md:mr-1" />
@@ -299,127 +335,64 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                   </CardFooter>
                 </Card>
               </TabsContent>
-
-              <TabsContent value="images" className="mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {statsData?.teamUserSubmissions && statsData.teamUserSubmissions.length > 0 ? (
-                    statsData.teamUserSubmissions.map((team) => (
-                      <Card key={team.teamId} className="flex flex-col">
-                        <CardHeader className="items-center pb-0">
-                          <CardTitle className="flex items-center gap-2 text-base">
-                            <Image className="h-4 w-4" />
-                            {team.teamName}
-                          </CardTitle>
-                          <CardDescription>Images Uploaded by User</CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex-1 pb-0">
-                          <ChartContainer
-                            config={createTeamPieConfig(team)}
-                            className="mx-auto aspect-square max-h-[200px] pb-0 [&_.recharts-pie-label-text]:fill-foreground"
+              <TabsContent value="contributors" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Award className="h-5 w-5 text-purple-500" />
+                      Top Contributors (MVPs)
+                    </CardTitle>
+                    <CardDescription>
+                      Players with the highest weighted image submissions across all teams
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-[400px]">
+                    {topContributorsData.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-muted-foreground">No contributor data available</p>
+                      </div>
+                    ) : (
+                      <ChartContainer config={contributorsChartConfig}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={topContributorsData}
+                            layout="vertical"
+                            margin={{ top: 10, right: 80, left: 10, bottom: 10 }}
                           >
-                            <PieChart>
-                              <ChartTooltip content={<ChartTooltipContent hideLabel nameKey="name" />} />
-                              <Pie
-                                data={prepareTeamPieData(team)}
-                                dataKey="imageCount"
-                                nameKey="name"
-                                label
-                                labelLine={false}
-                              />
-                              <ChartLegend content={<ChartLegendContent nameKey="name" />} />
-                            </PieChart>
-                          </ChartContainer>
-                        </CardContent>
-                        <CardFooter className="text-sm text-center">
-                          <div className="w-full leading-none text-muted-foreground">
-                            Total Images: {team.totalImages}
-                          </div>
-                        </CardFooter>
-                      </Card>
-                    ))
-                  ) : (
-                    <div className="col-span-2 flex items-center justify-center h-[300px]">
-                      <p className="text-muted-foreground">No image upload data available</p>
+                            <CartesianGrid horizontal strokeDasharray="3 3" />
+                            <YAxis dataKey="name" type="category" width={120} tickLine={false} axisLine={false} />
+                            <XAxis type="number" />
+                            <ChartTooltip
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  return (
+                                    <div className="bg-background border border-border p-2 rounded-md shadow-md">
+                                      <p className="font-medium">{payload[0].payload.name}</p>
+                                      <p>Team: {payload[0].payload.teamName}</p>
+                                      <p>Weighted Avg: {payload[0].value}</p>
+                                      <p>Total Images: {payload[0].payload.totalImages}</p>
+                                      <p>Tiles Completed: {payload[0].payload.totalTiles}</p>
+                                      <p>Total XP: {payload[0].payload.totalXP}</p>
+                                    </div>
+                                  )
+                                }
+                                return null
+                              }}
+                            />
+                            <Bar dataKey="weightedAverage" fill="var(--color-weightedAverage)" radius={4}>
+                              <LabelList dataKey="weightedAverage" position="right" className="fill-foreground" />
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
+                    )}
+                  </CardContent>
+                  <CardFooter className="flex-col items-start gap-2 text-sm">
+                    <div className="leading-none text-muted-foreground">
+                      MVPs are players who contribute the most valuable images across all teams
                     </div>
-                  )}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="weightedImages" className="mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {statsData?.teamUserWeightedSubmissions && statsData.teamUserWeightedSubmissions.length > 0 ? (
-                    statsData.teamUserWeightedSubmissions.map((team) => (
-                      <Card key={team.teamId} className="flex flex-col">
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2 text-base">
-                            <PieChartIcon className="h-4 w-4" />
-                            {team.teamName}
-                          </CardTitle>
-                          <CardDescription>Average Images per Tile (Weighted by XP)</CardDescription>
-                        </CardHeader>
-                        <CardContent className="h-[300px]">
-                          <ChartContainer
-                            config={{
-                              weightedAverage: {
-                                label: "Weighted Average",
-                                color: "hsl(var(--chart-1))",
-                              },
-                              label: {
-                                color: "hsl(var(--background))",
-                              },
-                            }}
-                          >
-                            <ResponsiveContainer width="100%" height="100%">
-                              <BarChart
-                                data={team.users.map((user) => ({
-                                  name: user.runescapeName || user.name,
-                                  weightedAverage: user.weightedAverage,
-                                  totalImages: user.totalImages,
-                                  totalTiles: user.totalTiles,
-                                  totalXP: user.totalXP,
-                                }))}
-                                layout="vertical"
-                                margin={{ top: 10, right: 50, left: 10, bottom: 10 }}
-                              >
-                                <CartesianGrid horizontal strokeDasharray="3 3" />
-                                <YAxis dataKey="name" type="category" width={120} tickLine={false} axisLine={false} />
-                                <XAxis type="number" />
-                                <ChartTooltip
-                                  content={({ active, payload }) => {
-                                    if (active && payload && payload.length) {
-                                      return (
-                                        <div className="bg-background border border-border p-2 rounded-md shadow-md">
-                                          <p className="font-medium">{payload[0]?.payload.name}</p>
-                                          <p>Weighted Avg: {payload[0]?.value}</p>
-                                          <p>Total Images: {payload[0]?.payload.totalImages}</p>
-                                          <p>Tiles Completed: {payload[0]?.payload.totalTiles}</p>
-                                          <p>Total XP: {payload[0]?.payload.totalXP}</p>
-                                        </div>
-                                      )
-                                    }
-                                    return null
-                                  }}
-                                />
-                                <Bar dataKey="weightedAverage" fill="var(--color-weightedAverage)" radius={4}>
-                                  <LabelList dataKey="weightedAverage" position="right" className="fill-foreground" />
-                                </Bar>
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </ChartContainer>
-                        </CardContent>
-                        <CardFooter className="text-sm">
-                          <div className="w-full text-muted-foreground">
-                            Higher values indicate users who submit more images for higher-value tiles
-                          </div>
-                        </CardFooter>
-                      </Card>
-                    ))
-                  ) : (
-                    <div className="col-span-2 flex items-center justify-center h-[300px]">
-                      <p className="text-muted-foreground">No weighted image data available</p>
-                    </div>
-                  )}
-                </div>
+                  </CardFooter>
+                </Card>
               </TabsContent>
 
               <TabsContent value="efficiency" className="mt-4">
@@ -500,9 +473,9 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                                 if (active && payload && payload.length) {
                                   return (
                                     <div className="bg-background border border-border p-2 rounded-md shadow-md">
-                                      <p className="font-medium">{payload[0]?.payload.fullTitle}</p>
-                                      <p>Completions: {payload[0]?.value}</p>
-                                      <p>XP Value: {payload[0]?.payload.weight}</p>
+                                      <p className="font-medium">{payload[0].payload.fullTitle}</p>
+                                      <p>Completions: {payload[0].value}</p>
+                                      <p>XP Value: {payload[0].payload.weight}</p>
                                     </div>
                                   )
                                 }
@@ -546,8 +519,8 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                                 if (active && payload && payload.length) {
                                   return (
                                     <div className="bg-background border border-border p-2 rounded-md shadow-md">
-                                      <p className="font-medium">{payload[0]?.payload.date}</p>
-                                      <p>Submissions: {payload[0]?.value}</p>
+                                      <p className="font-medium">{payload[0].payload.date}</p>
+                                      <p>Submissions: {payload[0].value}</p>
                                     </div>
                                   )
                                 }
