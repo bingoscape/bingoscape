@@ -465,8 +465,8 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                                 if (active && payload && payload.length) {
                                   return (
                                     <div className="bg-background border border-border p-2 rounded-md shadow-md">
-                                      <p className="font-medium">{payload[0].payload.date}</p>
-                                      <p>Submissions: {payload[0].value}</p>
+                                      <p className="font-medium">{payload[0]?.payload.date}</p>
+                                      <p>Submissions: {payload[0]?.value}</p>
                                     </div>
                                   )
                                 }
