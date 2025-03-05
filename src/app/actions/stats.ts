@@ -68,6 +68,7 @@ export interface UserWeightedSubmission {
   totalTiles: number
   totalXP: number
   weightedAverage: number // Average images per tile, weighted by XP
+  contributionScore: number // Contribution score based on relative submissions and tile weight
 }
 
 export interface TeamUserWeightedSubmissions {
@@ -228,6 +229,7 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
     // Get all submissions with user info
     const allSubmissions = await db
       .select({
+        id: submissions.id,
         teamTileSubmissionId: submissions.teamTileSubmissionId,
         submittedBy: submissions.submittedBy,
         tileId: teamTileSubmissions.tileId,
@@ -244,22 +246,55 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
         ),
       )
 
+    // Group submissions by tile and submission ID to calculate total submissions per tile
+    const tileSubmissionCounts = new Map<string, number>()
+    const tileSubmissionMap = new Map<string, Map<string, number>>()
+
+    // First, count total submissions per tile
+    for (const submission of allSubmissions) {
+      const tileId = submission.tileId
+      const submissionId = submission.teamTileSubmissionId
+
+      // Count total submissions per tile
+      tileSubmissionCounts.set(tileId, (tileSubmissionCounts.get(tileId) || 0) + 1)
+
+      // Group by tile and submission
+      if (!tileSubmissionMap.has(tileId)) {
+        tileSubmissionMap.set(tileId, new Map())
+      }
+
+      const submissionMap = tileSubmissionMap.get(tileId)!
+      submissionMap.set(submissionId, (submissionMap.get(submissionId) || 0) + 1)
+    }
+
     // Process user submissions
     const userSubmissions: UserSubmission[] = []
     const userWeightedSubmissions: UserWeightedSubmission[] = []
     let totalTeamImages = 0
 
-    // Create a map to track per-user, per-tile submissions
-    const userTileSubmissionsMap = new Map<string, Map<string, { images: number; xp: number }>>()
+    // Create a map to track per-user, per-tile submissions and contribution scores
+    const userTileSubmissionsMap = new Map<
+      string,
+      Map<
+        string,
+        {
+          images: number
+          xp: number
+          totalTileSubmissions: number
+          contributionScore: number
+        }
+      >
+    >()
 
     // Process all submissions to build the user-tile map
     for (const submission of allSubmissions) {
       const userId = submission.submittedBy
       const tileId = submission.tileId
+      const submissionId = submission.teamTileSubmissionId
       const tileXP = tileWeights.get(tileId) ?? 0
 
       // Get the submission status
-      const submissionStatus = teamSubmissionData.find((s) => s.id === submission.teamTileSubmissionId)?.status
+      const submissionStatus = teamSubmissionData.find((s) => s.id === submissionId)?.status
 
       // Only count accepted submissions for the weighted average
       if (submissionStatus === "accepted") {
@@ -272,12 +307,24 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
 
         // Initialize tile data if needed
         if (!userMap.has(tileId)) {
-          userMap.set(tileId, { images: 0, xp: tileXP })
+          const totalTileSubmissions = tileSubmissionCounts.get(tileId) || 1
+          userMap.set(tileId, {
+            images: 0,
+            xp: tileXP,
+            totalTileSubmissions,
+            contributionScore: 0,
+          })
         }
 
         // Increment image count
         const tileData = userMap.get(tileId)!
         tileData.images += 1
+
+        // Calculate contribution score for this tile
+        // Formula: (user's submissions / total submissions for tile) * tile XP
+        const totalTileSubmissions = tileData.totalTileSubmissions
+        tileData.contributionScore = (tileData.images / totalTileSubmissions) * tileXP
+
         userMap.set(tileId, tileData)
       }
     }
@@ -295,6 +342,7 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
       let totalUserTiles = 0
       let totalUserXP = 0
       let weightedSum = 0
+      let totalContributionScore = 0
 
       // Calculate totals
       for (const [tileId, tileData] of userMap.entries()) {
@@ -302,6 +350,7 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
         totalUserTiles += 1
         totalUserXP += tileData.xp
         weightedSum += tileData.images * tileData.xp
+        totalContributionScore += tileData.contributionScore
       }
 
       // Calculate weighted average
@@ -316,6 +365,7 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
         totalTiles: totalUserTiles,
         totalXP: totalUserXP,
         weightedAverage,
+        contributionScore: Number.parseFloat(totalContributionScore.toFixed(2)),
       })
 
       // Also add to regular image count for backward compatibility
@@ -341,8 +391,8 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
 
     // Only add teams that have weighted submissions
     if (userWeightedSubmissions.length > 0) {
-      // Sort by weighted average in descending order
-      userWeightedSubmissions.sort((a, b) => b.weightedAverage - a.weightedAverage)
+      // Sort by contribution score in descending order
+      userWeightedSubmissions.sort((a, b) => b.contributionScore - a.contributionScore)
 
       teamUserWeightedSubmissions.push({
         teamId: team.id,
