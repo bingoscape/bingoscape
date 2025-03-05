@@ -196,11 +196,12 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
       .innerJoin(users, eq(users.id, teamMembers.userId))
       .where(eq(teamMembers.teamId, team.id))
 
-    // Get all teamTileSubmissions for this team
+    // Get all teamTileSubmissions for this team with status
     const teamSubmissionData = await db
       .select({
         id: teamTileSubmissions.id,
         tileId: teamTileSubmissions.tileId,
+        status: teamTileSubmissions.status,
       })
       .from(teamTileSubmissions)
       .innerJoin(tiles, eq(tiles.id, teamTileSubmissions.tileId))
@@ -257,22 +258,28 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
       const tileId = submission.tileId
       const tileXP = tileWeights.get(tileId) ?? 0
 
-      // Initialize user map if needed
-      if (!userTileSubmissionsMap.has(userId)) {
-        userTileSubmissionsMap.set(userId, new Map())
+      // Get the submission status
+      const submissionStatus = teamSubmissionData.find((s) => s.id === submission.teamTileSubmissionId)?.status
+
+      // Only count accepted submissions for the weighted average
+      if (submissionStatus === "accepted") {
+        // Initialize user map if needed
+        if (!userTileSubmissionsMap.has(userId)) {
+          userTileSubmissionsMap.set(userId, new Map())
+        }
+
+        const userMap = userTileSubmissionsMap.get(userId)!
+
+        // Initialize tile data if needed
+        if (!userMap.has(tileId)) {
+          userMap.set(tileId, { images: 0, xp: tileXP })
+        }
+
+        // Increment image count
+        const tileData = userMap.get(tileId)!
+        tileData.images += 1
+        userMap.set(tileId, tileData)
       }
-
-      const userMap = userTileSubmissionsMap.get(userId)!
-
-      // Initialize tile data if needed
-      if (!userMap.has(tileId)) {
-        userMap.set(tileId, { images: 0, xp: tileXP })
-      }
-
-      // Increment image count
-      const tileData = userMap.get(tileId)!
-      tileData.images += 1
-      userMap.set(tileId, tileData)
     }
 
     // Process the map to generate statistics
