@@ -7,6 +7,9 @@ import "@/styles/globals.css";
 import '@mdxeditor/editor/style.css'
 
 import { type Metadata } from "next";
+import { Noto_Sans } from 'next/font/google'
+
+const noto = Noto_Sans({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: "BingoScape Next",
@@ -18,7 +21,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`font-sans`}>
+    <html lang="en" className={noto.className}>
       <AuthProvider>
         <body>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
