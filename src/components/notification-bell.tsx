@@ -80,8 +80,12 @@ export function NotificationBell({ userId }: { userId: string }) {
             notifications.map((notification) => (
               <Card
                 key={notification.id}
-                className={`m-2 p-0 border ${notification.isRead ? "bg-background-50" : "bg-background"}`}
+                className={`m-2 p-0 border relative ${notification.isRead ? "bg-muted/20" : "bg-background shadow-md border-l-4 border-l-blue-500"
+                  }`}
               >
+                {!notification.isRead && (
+                  <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-blue-500"></span>
+                )}
                 <div className="flex p-3 gap-3">
                   {/* Tile image placeholder */}
                   <div className="w-24 h-24 border border-[#d9d9d9] flex-shrink-0 relative">
@@ -97,12 +101,16 @@ export function NotificationBell({ userId }: { userId: string }) {
 
                   <div className="flex flex-col flex-grow">
                     {/* Title: Event + Tile */}
-                    <h5 className={`text-sm font-medium ${notification.isRead ? "" : "font-bold"}`}>
+                    <h5 className={`text-sm ${notification.isRead ? "font-medium" : "font-bold"}`}>
                       {notification.eventTitle}: {notification.tileTitle}
                     </h5>
 
                     {/* Message */}
-                    <p className="text-sm text-muted-foreground mt-1 mb-2">{notification.message}</p>
+                    <p
+                      className={`text-sm ${notification.isRead ? "text-muted-foreground" : "text-foreground"} mt-1 mb-2`}
+                    >
+                      {notification.message}
+                    </p>
 
                     {/* Timestamp */}
                     <p className="text-xs text-muted-foreground mb-2">
@@ -138,3 +146,4 @@ export function NotificationBell({ userId }: { userId: string }) {
     </Popover>
   )
 }
+
