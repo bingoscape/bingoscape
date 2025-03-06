@@ -20,7 +20,7 @@ export default function JoinEventPage({ params }: { params: { inviteCode: string
         if (status === "unauthenticated") {
             // Use the current URL as the callback URL
             const callbackUrl = `/events/join/${inviteCode}`
-            signIn(undefined, { callbackUrl })
+            signIn(undefined, { callbackUrl }).then(() => console.log("Signed in")).catch(err => console.error("Sign in failed", err))
         }
     }, [inviteCode, status])
 

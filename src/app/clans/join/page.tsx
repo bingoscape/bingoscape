@@ -29,7 +29,7 @@ function JoinClanContent({ inviteCode }: { inviteCode: string | null }) {
     if (status === "unauthenticated") {
       // Use the current URL as the callback URL
       const callbackUrl = `/clans/join?code=${inviteCode}`
-      signIn(undefined, { callbackUrl })
+      signIn(undefined, { callbackUrl }).then(() => console.log("Signed in")).catch(err => console.error("Sign in failed", err))
     }
   }, [inviteCode, router, status])
 
@@ -51,7 +51,7 @@ function JoinClanContent({ inviteCode }: { inviteCode: string | null }) {
         })
         router.push("/clans")
       } else {
-        throw new Error(data.error || "Could not join clan")
+        throw new Error(data.error ?? "Could not join clan")
       }
     } catch (error) {
       toast({
