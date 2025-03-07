@@ -8,6 +8,7 @@ import { getNotifications, markNotificationAsRead } from "@/app/actions/notifica
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
 import Image from "next/image"
+import getRandomFrog from "@/lib/getRandomFrog"
 
 interface Notification {
   id: string
@@ -91,7 +92,7 @@ export function NotificationBell({ userId }: { userId: string }) {
                   {/* Tile image placeholder */}
                   <div className="w-24 h-24 border border-[#d9d9d9] flex-shrink-0 relative">
                     <Image
-                      src={notification.tileImage ?? "/placeholder.svg?width=96&height=96"}
+                      src={notification.tileImage ?? getRandomFrog()}
                       alt="Tile"
                       fill
                       sizes="96px"

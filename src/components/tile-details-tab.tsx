@@ -24,6 +24,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import getRandomFrog from "@/lib/getRandomFrog"
 
 type EditableTileFields = {
   title: string
@@ -194,14 +195,14 @@ export function TileDetailsTab({
           <div className="w-full md:w-1/3 relative aspect-square">
             {isEditing && imagePreview && isValidImage ? (
               <Image
-                src={imagePreview || "/placeholder.svg"}
+                src={imagePreview || getRandomFrog()}
                 alt="Header image preview"
                 fill
                 className="object-contain rounded-md"
               />
             ) : selectedTile?.headerImage && isValidImageUrl(selectedTile.headerImage) ? (
               <Image
-                src={selectedTile.headerImage || "/placeholder.svg"}
+                src={selectedTile.headerImage || getRandomFrog()}
                 alt={selectedTile.title}
                 fill
                 className="object-contain rounded-md"
@@ -327,7 +328,7 @@ export function TileDetailsTab({
                                   >
                                     <div className="aspect-square relative mb-1">
                                       <Image
-                                        src={image.thumbnail || "/placeholder.svg"}
+                                        src={image.thumbnail || getRandomFrog()}
                                         alt={image.title}
                                         fill
                                         className="object-contain"

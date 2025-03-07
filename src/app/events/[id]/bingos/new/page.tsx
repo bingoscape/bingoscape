@@ -10,6 +10,7 @@ import { db } from "@/server/db"
 import { getServerAuthSession } from "@/server/auth"
 import { type UUID } from "crypto"
 import { getEventById, getUserRole } from "@/app/actions/events"
+import getRandomFrog from "@/lib/getRandomFrog"
 
 async function createBingo(formData: FormData) {
     'use server'
@@ -38,7 +39,7 @@ async function createBingo(formData: FormData) {
         for (let col = 0; col < columns; col++) {
             tilesToInsert.push({
                 bingoId,
-                headerImage: '/placeholder.svg?height=100&width=100', // Default placeholder image
+                headerImage: getRandomFrog(), // Default placeholder image
                 title: `Tile ${row * columns + col + 1}`,
                 description: `Tile ${row * columns + col + 1}`,
                 weight: 1,

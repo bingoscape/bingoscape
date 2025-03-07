@@ -5,6 +5,7 @@ import Image from "next/image"
 import { Check, Clock, Send, X, Zap, EyeOff } from "lucide-react"
 import type { Tile } from "@/app/actions/events"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
+import getRandomFrog from "@/lib/getRandomFrog"
 
 interface BingoTileProps {
   tile: Tile
@@ -92,7 +93,7 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
               {tile.headerImage ? (
                 <Image
                   unoptimized
-                  src={tile.headerImage || "/placeholder.svg"}
+                  src={tile.headerImage || getRandomFrog()}
                   alt={tile.title}
                   fill
                   className="object-contain transition-transform duration-300 ease-in-out hover:scale-110"
