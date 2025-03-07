@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { UUID } from "crypto"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { TeamSelector } from "@/components/team-selector"
+import { BingoImportExportModal } from "@/components/bingo-import-export-modal"
 
 export default async function BingoDetailPage({ params }: { params: { id: UUID; bingoId: string } }) {
   const { id: eventId, bingoId } = params
@@ -36,9 +37,14 @@ export default async function BingoDetailPage({ params }: { params: { id: UUID; 
       <Breadcrumbs items={breadcrumbItems} />
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">{bingo.title}</h1>
-        {isAdminOrManagement && teams.length > 0 && (
-          <TeamSelector teams={teams} currentTeamId={currentTeam?.id} userRole={userRole} />
-        )}
+        <div className="flex items-center gap-2">
+          {isAdminOrManagement && teams.length > 0 && (
+            <TeamSelector teams={teams} currentTeamId={currentTeam?.id} userRole={userRole} />
+          )}
+          {isAdminOrManagement && (
+            <BingoImportExportModal eventId={eventId} bingoId={bingoId} bingoTitle={bingo.title} />
+          )}
+        </div>
       </div>
       <div className="aspect-square w-full max-w-[80vh] mx-auto">
         <Suspense fallback={<Skeleton className="w-full h-full" />}>

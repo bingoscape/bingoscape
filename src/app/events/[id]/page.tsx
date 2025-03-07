@@ -21,6 +21,7 @@ import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import { EditEventModal } from "@/components/edit-event-modal"
 import { EditBingoModal } from "@/components/edit-bingo-modal"
 import { TeamSelector } from "@/components/team-selector"
+import { BingoImportExportModal } from "@/components/bingo-import-export-modal"
 
 export default async function EventBingosPage({ params }: { params: { id: UUID } }) {
     const session = await getServerAuthSession()
@@ -118,6 +119,13 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
                 </div>
                 <div className="flex flex-col space-y-4 lg:w-64">
                     {isAdminOrManagement && <CreateBingoModal eventId={event.id} />}
+                    {isAdminOrManagement && (
+                        <BingoImportExportModal
+                            eventId={event.id}
+                            bingoId={visibleBingos.length > 0 ? visibleBingos[0]?.id : undefined}
+                            bingoTitle={visibleBingos.length > 0 ? visibleBingos[0]?.title : undefined}
+                        />
+                    )}
                     {isAdminOrManagement && (
                         <GenerateEventInviteLink eventId={event.id as UUID}>Generate Invite Link</GenerateEventInviteLink>
                     )}
