@@ -130,7 +130,7 @@ export const events = createTable("events", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   locked: boolean("locked").default(false).notNull(),
-  visible: boolean("visible").default(false).notNull(),
+  public: boolean("public").default(false).notNull(), // Renamed from 'visible' to 'public'
   basePrizePool: bigint("basePrizePool", { mode: "number" }).default(0).notNull(),
   minimumBuyIn: bigint("minimumBuyIn", { mode: "number" }).default(0).notNull(),
 })
