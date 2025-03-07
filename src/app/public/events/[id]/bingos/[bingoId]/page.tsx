@@ -10,6 +10,7 @@ import { ArrowLeft } from "lucide-react"
 import type { Metadata, ResolvingMetadata } from "next"
 import type { UUID } from "crypto"
 import Image from "next/image"
+import getRandomFrog from "@/lib/getRandomFrog"
 
 // Generate metadata for SEO
 export async function generateMetadata(
@@ -116,7 +117,7 @@ export default async function PublicBingoPage({ params }: { params: { id: string
                 <div key={tile.id} className="border-2 border-primary rounded overflow-hidden aspect-square relative">
                   {tile.headerImage ? (
                     <Image
-                      src={tile.headerImage || "/placeholder.svg"}
+                      src={tile.headerImage || getRandomFrog()}
                       alt={tile.title}
                       fill
                       className="object-contain transition-transform duration-300 ease-in-out hover:scale-110"

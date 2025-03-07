@@ -16,6 +16,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import getRandomFrog from "@/lib/getRandomFrog"
 
 interface SubmissionsTabProps {
   selectedTile: Tile | null
@@ -79,7 +80,7 @@ export function SubmissionsTab({
                 <div key={submission.id} className="border rounded-md p-4 relative group">
                   <div className="relative w-full h-48">
                     <Image
-                      src={submission.image.path || "/placeholder.svg"}
+                      src={submission.image.path || getRandomFrog()}
                       alt={`Submission for ${selectedTile.title}`}
                       fill
                       style={{ objectFit: "cover" }}
@@ -197,7 +198,7 @@ export function SubmissionsTab({
                       <div key={submission.id} className="border rounded-md p-4 relative group">
                         <div className="relative aspect-square">
                           <Image
-                            src={submission.image.path || "/placeholder.svg"}
+                            src={submission.image.path || getRandomFrog()}
                             alt={`Submission for ${selectedTile?.title} by ${team.name}`}
                             fill
                             style={{ objectFit: "cover" }}

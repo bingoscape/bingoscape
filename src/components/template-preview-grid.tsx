@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import type { ExportedBingo } from "@/app/actions/bingo-import-export"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { Zap } from "lucide-react"
+import getRandomFrog from "@/lib/getRandomFrog"
 
 interface TemplatePreviewGridProps {
   templateData: string | null
@@ -87,7 +88,7 @@ export function TemplatePreviewGrid({
               <div className="border border-primary rounded overflow-hidden aspect-square relative cursor-pointer transition-all hover:scale-105 hover:shadow-md">
                 {tile.headerImage ? (
                   <Image
-                    src={tile.headerImage || "/placeholder.svg"}
+                    src={tile.headerImage || getRandomFrog()}
                     alt={tile.title}
                     fill
                     className="object-contain"

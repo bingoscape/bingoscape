@@ -6,6 +6,7 @@ import Image from "next/image"
 import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import getRandomFrog from "@/lib/getRandomFrog"
 
 interface FullSizeImageDialogProps {
   isOpen: boolean
@@ -113,7 +114,7 @@ export function FullSizeImageDialog({ isOpen, onClose, imageSrc, imageAlt }: Ful
             }}
           >
             <Image
-              src={imageSrc || "/placeholder.svg"}
+              src={imageSrc || getRandomFrog()}
               alt={imageAlt}
               fill
               style={{ objectFit: "contain" }}

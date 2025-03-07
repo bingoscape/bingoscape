@@ -20,6 +20,7 @@ import path from "path"
 import type { Tile, TeamTileSubmission, Bingo } from "./events"
 import { createNotification } from "./notifications"
 import { getServerAuthSession } from "@/server/auth"
+import getRandomFrog from "@/lib/getRandomFrog"
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
 
@@ -109,7 +110,7 @@ export async function createBingo(formData: FormData) {
     tilesToInsert.push({
       bingoId,
       title: `Tile ${idx + 1}`,
-      headerImage: "/placeholder.svg?height=100&width=100",
+      headerImage: getRandomFrog(),
       description: `Tile ${idx + 1}`,
       weight: 1,
       isHidden: false,
@@ -473,7 +474,7 @@ export async function addRowOrColumn(bingoId: string, type: "row" | "column"): P
         newTiles.push({
           bingoId,
           title: `New Tile ${i + 1}`,
-          headerImage: "/placeholder.svg?height=100&width=100",
+          headerImage: getRandomFrog(),
           description: "",
           weight: 1,
           index: i,
