@@ -22,6 +22,7 @@ import { EditEventModal } from "@/components/edit-event-modal"
 import { EditBingoModal } from "@/components/edit-bingo-modal"
 import { TeamSelector } from "@/components/team-selector"
 import { BingoImportExportModal } from "@/components/bingo-import-export-modal"
+import { ShareEventButton } from "@/components/share-event-button"
 
 export default async function EventBingosPage({ params }: { params: { id: UUID } }) {
     const session = await getServerAuthSession()
@@ -144,6 +145,9 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
                         />
                     )}
                     {userRole === "admin" && <EditEventModal event={event} />}
+                    {isAdminOrManagement && (
+                        <ShareEventButton eventId={event.id} eventTitle={event.title} isPublic={event.public ?? false} />
+                    )}
                     <PrizePoolDisplay prizePool={prizePool} />
                 </div>
             </div>
