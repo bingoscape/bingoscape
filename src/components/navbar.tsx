@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import { signOut, useSession } from "next-auth/react"
 import Link from "next/link"
@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, User, Home, Users, Menu, Calendar } from "lucide-react"
+import { LogOut, User, Home, Users, Menu, Calendar, FileJson } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -27,6 +27,7 @@ export function Navbar() {
     { href: "/", label: "Home", icon: Home },
     { href: "/clans", label: "Clans", icon: Users },
     { href: "/events/mine", label: "My Events", icon: Calendar },
+    { href: "/templates", label: "Templates", icon: FileJson },
   ]
 
   return (
@@ -46,7 +47,7 @@ export function Navbar() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center space-x-2 hover:text-foreground/80 transition-colors ${pathname === item.href ? 'font-semibold' : ''}`}
+                    className={`flex items-center space-x-2 hover:text-foreground/80 transition-colors ${pathname === item.href ? "font-semibold" : ""}`}
                     onClick={() => setIsOpen(false)}
                   >
                     <item.icon className="h-5 w-5" />
@@ -56,7 +57,9 @@ export function Navbar() {
               </div>
             </SheetContent>
           </Sheet>
-          <Link href="/" className="text-xl font-bold">BingoScape</Link>
+          <Link href="/" className="text-xl font-bold">
+            BingoScape
+          </Link>
           {session?.user && (
             <>
               <div className="hidden md:flex items-center space-x-4">
@@ -64,7 +67,7 @@ export function Navbar() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center space-x-1 hover:text-foreground/80 transition-colors ${pathname === item.href ? 'font-semibold' : ''}`}
+                    className={`flex items-center space-x-1 hover:text-foreground/80 transition-colors ${pathname === item.href ? "font-semibold" : ""}`}
                   >
                     <item.icon className="h-4 w-4" />
                     <span>{item.label}</span>
@@ -76,37 +79,40 @@ export function Navbar() {
         </div>
         {status === "loading" ? (
           <div className="h-8 w-8 animate-pulse bg-muted rounded-full" />
-        ) : session?.user && (
-          <div className="flex items-center space-x-4">
-            <span className="hidden md:inline">{session.user.runescapeName || session.user.name}</span>
-            <ModeToggle />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={session.user.image ?? undefined} alt={session.user.name ?? ''} />
-                    <AvatarFallback>{session.user.name?.[0] ?? 'U'}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuItem asChild>
-                  <Link href="/profile" className="flex items-center">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut()} className="flex items-center">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <NotificationBell userId={session.user.id} />
-          </div>
+        ) : (
+          session?.user && (
+            <div className="flex items-center space-x-4">
+              <span className="hidden md:inline">{session.user.runescapeName || session.user.name}</span>
+              <ModeToggle />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={session.user.image ?? undefined} alt={session.user.name ?? ""} />
+                      <AvatarFallback>{session.user.name?.[0] ?? "U"}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="flex items-center">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => signOut()} className="flex items-center">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <NotificationBell userId={session.user.id} />
+            </div>
+          )
         )}
       </div>
     </nav>
   )
 }
+

@@ -37,6 +37,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   clanMemberships: many(clanMembers),
   // Add relation to submissions
   submissions: many(submissions),
+  bingoTemplates: many(bingoTemplates), // Add this line
 }))
 
 export const accounts = createTable(
@@ -523,6 +524,38 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   team: one(teams, {
     fields: [notifications.teamId],
     references: [teams.id],
+  }),
+}))
+
+// Add this to your existing schema.ts file
+// This creates a new table for bingo templates
+
+export const bingoTemplates = createTable("bingo_templates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  previewImage: varchar("preview_image", { length: 255 }),
+  creatorId: uuid("creator_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  originalBingoId: uuid("original_bingo_id").references(() => bingos.id, { onDelete: "set null" }),
+  category: varchar("category", { length: 100 }),
+  tags: varchar("tags", { length: 255 }),
+  isPublic: boolean("is_public").default(true).notNull(),
+  templateData: text("template_data").notNull(), // Stores the exported JSON data
+  downloadCount: integer("download_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const bingoTemplatesRelations = relations(bingoTemplates, ({ one }) => ({
+  creator: one(users, {
+    fields: [bingoTemplates.creatorId],
+    references: [users.id],
+  }),
+  originalBingo: one(bingos, {
+    fields: [bingoTemplates.originalBingoId],
+    references: [bingos.id],
   }),
 }))
 
