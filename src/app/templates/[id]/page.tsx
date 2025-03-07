@@ -5,12 +5,13 @@ import { Breadcrumbs } from "@/components/breadcrumbs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Download, Calendar, Tag, Grid } from "lucide-react"
+import { Download, Calendar, Tag, Grid, Info } from "lucide-react"
 import { TemplatePreviewGrid } from "@/components/template-preview-grid"
 import { ImportTemplateButton } from "@/components/import-template-button"
 import { formatDistanceToNow } from "date-fns"
 import { getServerAuthSession } from "@/server/auth"
-import { ExportedBingo } from "@/app/actions/bingo-import-export"
+import type { ExportedBingo } from "@/app/actions/bingo-import-export"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default async function TemplatePage({ params }: { params: { id: string } }) {
   const template = await getTemplateById(params.id)
@@ -31,10 +32,14 @@ export default async function TemplatePage({ params }: { params: { id: string } 
 
   // Try to parse the template data to extract grid size
   let gridSize = ""
+  let tileCount = 0
+  let totalXP = 0
   try {
     const parsedData: ExportedBingo = JSON.parse(template.templateData)
     if (parsedData?.metadata?.rows && parsedData?.metadata?.columns) {
       gridSize = `${parsedData.metadata.rows}×${parsedData.metadata.columns}`
+      tileCount = parsedData.tiles.length
+      totalXP = parsedData.tiles.reduce((sum, tile) => sum + tile.weight, 0)
     }
   } catch (error) {
     console.error("Error parsing template data:", error)
@@ -69,6 +74,14 @@ export default async function TemplatePage({ params }: { params: { id: string } 
                 <p>{template.description}</p>
               </div>
 
+              <Alert className="mb-4">
+                <Info className="h-4 w-4" />
+                <AlertTitle>Interactive Preview</AlertTitle>
+                <AlertDescription>
+                  Hover over any tile to see detailed information including XP value, description, and goals.
+                </AlertDescription>
+              </Alert>
+
               <div className="mt-6">
                 <TemplatePreviewGrid templateData={template.templateData} title={template.title} isDetailView={true} />
               </div>
@@ -96,6 +109,23 @@ export default async function TemplatePage({ params }: { params: { id: string } 
                 <div className="flex items-center">
                   <Grid className="h-4 w-4 mr-2 text-muted-foreground" />
                   <span>Size: {gridSize} grid</span>
+                </div>
+              )}
+
+              {tileCount > 0 && totalXP > 0 && (
+                <div className="bg-secondary/50 p-3 rounded-md space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Total Tiles:</span>
+                    <span className="font-medium">{tileCount}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Total XP:</span>
+                    <span className="font-medium">{totalXP} XP</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Average XP per Tile:</span>
+                    <span className="font-medium">{(totalXP / tileCount).toFixed(1)} XP</span>
+                  </div>
                 </div>
               )}
 

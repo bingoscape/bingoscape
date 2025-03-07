@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import type { ExportedBingo } from "@/app/actions/bingo-import-export"
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
+import { Zap } from "lucide-react"
 
 interface TemplatePreviewGridProps {
   templateData: string | null
@@ -80,17 +82,59 @@ export function TemplatePreviewGrid({
         }}
       >
         {displayTiles.map((tile, index) => (
-          <div key={index} className="border border-primary rounded overflow-hidden aspect-square relative">
-            {tile.headerImage ? (
-              <Image src={tile.headerImage || "/placeholder.svg"} alt={tile.title} fill className="object-contain" />
-            ) : (
-              <div className="w-full h-full bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground text-[8px] md:text-xs font-semibold truncate px-1">
-                  {tile.title}
-                </span>
+          <HoverCard key={index} openDelay={200} closeDelay={100}>
+            <HoverCardTrigger asChild>
+              <div className="border border-primary rounded overflow-hidden aspect-square relative cursor-pointer transition-all hover:scale-105 hover:shadow-md">
+                {tile.headerImage ? (
+                  <Image
+                    src={tile.headerImage || "/placeholder.svg"}
+                    alt={tile.title}
+                    fill
+                    className="object-contain"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-primary flex items-center justify-center">
+                    <span className="text-primary-foreground text-[8px] md:text-xs font-semibold truncate px-1">
+                      {tile.title}
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-80 p-4" side="right">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold">{tile.title}</h4>
+                  <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 rounded-full">
+                    <Zap className="h-3.5 w-3.5 text-amber-500" />
+                    <span className="text-xs font-medium">{tile.weight} XP</span>
+                  </div>
+                </div>
+
+                {tile.description && <p className="text-sm text-muted-foreground line-clamp-3">{tile.description}</p>}
+
+                {tile.goals && tile.goals.length > 0 && (
+                  <div className="pt-2">
+                    <h5 className="text-xs font-semibold mb-1">Goals:</h5>
+                    <ul className="text-xs space-y-1">
+                      {tile.goals.map((goal, idx) => (
+                        <li key={idx} className="flex justify-between">
+                          <span className="text-muted-foreground">{goal.description}</span>
+                          <span className="font-medium">Target: {goal.targetValue}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {tile.isHidden && (
+                  <div className="mt-2 text-xs bg-secondary p-1.5 rounded">
+                    <span className="font-medium">Hidden tile</span> - Not visible on the board until revealed
+                  </div>
+                )}
+              </div>
+            </HoverCardContent>
+          </HoverCard>
         ))}
       </div>
 
