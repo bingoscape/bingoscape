@@ -13,7 +13,7 @@ import {
   users,
   bingos,
 } from "@/server/db/schema"
-import { eq, and, asc, sum, sql } from "drizzle-orm"
+import { eq, and, asc, sum, sql, desc } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { revalidatePath } from "next/cache"
 
@@ -512,12 +512,13 @@ export async function getEventParticipants(eventId: string) {
 
         const buyIn = buyInResult[0]?.amount ?? 0
 
-        // Get team info (if any)
+        // Get team info (if any) - Make sure we're getting the latest team assignment
         const teamMember = await db.query.teamMembers.findFirst({
           where: eq(teamMembers.userId, participant.userId),
           with: {
             team: true,
           },
+          orderBy: [desc(teamMembers.createdAt)], // Get the most recent team assignment
         })
 
         // Only include team if it belongs to this event
