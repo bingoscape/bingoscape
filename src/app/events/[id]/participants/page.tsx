@@ -1,23 +1,28 @@
-'use client'
+"use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from "react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { toast } from "@/hooks/use-toast"
 import { Loader2, CheckCircle, CircleAlert } from "lucide-react"
-import { getEventParticipants, updateParticipantRole, assignParticipantToTeam, updateParticipantBuyIn } from '@/app/actions/events'
-import { getTeamsByEventId } from '@/app/actions/team'
-import { getEventById } from '@/app/actions/events'
+import {
+  getEventParticipants,
+  updateParticipantRole,
+  assignParticipantToTeam,
+  updateParticipantBuyIn,
+} from "@/app/actions/events"
+import { getTeamsByEventId } from "@/app/actions/team"
+import { getEventById } from "@/app/actions/events"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
-import { type UUID } from 'crypto'
-import { Breadcrumbs } from '@/components/breadcrumbs'
-import debounce from 'lodash/debounce'
+import type { UUID } from "crypto"
+import { Breadcrumbs } from "@/components/breadcrumbs"
+import debounce from "lodash/debounce"
 
 interface Participant {
   id: string
   runescapeName: string
-  role: 'admin' | 'management' | 'participant'
+  role: "admin" | "management" | "participant"
   teamId: string | null
   buyIn: number
 }
@@ -31,9 +36,9 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
   const [participants, setParticipants] = useState<Participant[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [searchTerm, setSearchTerm] = useState("")
   const [minimumBuyIn, setMinimumBuyIn] = useState(0)
-  const [eventName, setEventName] = useState('')
+  const [eventName, setEventName] = useState("")
 
   useEffect(() => {
     const fetchData = async () => {
@@ -41,14 +46,14 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
         const [participantsData, teamsData, eventData] = await Promise.all([
           getEventParticipants(params.id as string),
           getTeamsByEventId(params.id as string),
-          getEventById(params.id as string)
+          getEventById(params.id as string),
         ])
         setParticipants(participantsData)
         setTeams(teamsData)
         setMinimumBuyIn(eventData?.event.minimumBuyIn ?? 0)
-        setEventName(eventData?.event.title ?? '')
+        setEventName(eventData?.event.title ?? "")
       } catch (error) {
-        console.error('Error fetching data:', error)
+        console.error("Error fetching data:", error)
         toast({
           title: "Error",
           description: "Failed to load participants and teams",
@@ -58,21 +63,27 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
         setLoading(false)
       }
     }
-    fetchData().then(() => console.log("Done fetching data")).catch(err => console.error(err))
+
+    setLoading(true)
+    fetchData()
+      .then(() => console.log("Done fetching data"))
+      .catch((err) => console.error(err))
   }, [params.id])
 
   const handleRoleChange = async (participantId: string, newRole: string) => {
     try {
-      await updateParticipantRole(params.id as string, participantId, newRole as 'admin' | 'management' | 'participant')
-      setParticipants(participants.map(p =>
-        p.id === participantId ? { ...p, role: newRole as 'admin' | 'management' | 'participant' } : p
-      ))
+      await updateParticipantRole(params.id as string, participantId, newRole as "admin" | "management" | "participant")
+      setParticipants(
+        participants.map((p) =>
+          p.id === participantId ? { ...p, role: newRole as "admin" | "management" | "participant" } : p,
+        ),
+      )
       toast({
         title: "Success",
         description: "Participant role updated",
       })
     } catch (error) {
-      console.error('Error updating role:', error)
+      console.error("Error updating role:", error)
       toast({
         title: "Error",
         description: "Failed to update participant role",
@@ -85,15 +96,15 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
     debounce(async (participantId: string, newBuyIn: number) => {
       try {
         await updateParticipantBuyIn(params.id as string, participantId, newBuyIn)
-        setParticipants(participants => participants.map(p =>
-          p.id === participantId ? { ...p, buyIn: newBuyIn } : p
-        ))
+        setParticipants((participants) =>
+          participants.map((p) => (p.id === participantId ? { ...p, buyIn: newBuyIn } : p)),
+        )
         toast({
           title: "Success",
           description: "Participant buy-in updated",
         })
       } catch (error) {
-        console.error('Error updating buy-in:', error)
+        console.error("Error updating buy-in:", error)
         toast({
           title: "Error",
           description: error instanceof Error ? error.message : "Failed to update participant buy-in",
@@ -101,30 +112,32 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
         })
       }
     }, 500),
-    [params.id]
+    [params.id],
   )
 
   const handleBuyInChange = (participantId: string, newBuyIn: number) => {
     // Update the local state immediately for a responsive UI
-    setParticipants(participants.map(p =>
-      p.id === participantId ? { ...p, buyIn: newBuyIn } : p
-    ))
+    setParticipants(participants.map((p) => (p.id === participantId ? { ...p, buyIn: newBuyIn } : p)))
     // Debounce the API call
-    debouncedBuyInChange(participantId, newBuyIn)?.then(() => console.log('done')).catch(err => console.error(err))
+    debouncedBuyInChange(participantId, newBuyIn)
+      ?.then(() => console.log("done"))
+      .catch((err) => console.error(err))
   }
 
   const handleTeamAssignment = async (participantId: string, teamId: string | null) => {
     try {
       await assignParticipantToTeam(params.id as string, participantId, teamId!)
-      setParticipants(participants.map(p =>
-        p.id === participantId ? { ...p, teamId } : p
-      ))
+
+      // Refresh the participants list after team assignment
+      const updatedParticipants = await getEventParticipants(params.id as string)
+      setParticipants(updatedParticipants)
+
       toast({
         title: "Success",
         description: teamId ? "Participant assigned to team" : "Participant removed from team",
       })
     } catch (error) {
-      console.error('Error assigning team:', error)
+      console.error("Error assigning team:", error)
       toast({
         title: "Error",
         description: "Failed to update participant's team",
@@ -133,8 +146,8 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
     }
   }
 
-  const filteredParticipants = participants.filter(p =>
-    p.runescapeName.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredParticipants = participants.filter((p) =>
+    p.runescapeName.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   if (loading) {
@@ -146,10 +159,10 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
   }
 
   const breadcrumbItems = [
-    { label: 'Home', href: '/' },
-    { label: 'Events', href: '/' },
+    { label: "Home", href: "/" },
+    { label: "Events", href: "/" },
     { label: eventName, href: `/events/${params.id}` },
-    { label: 'Participants', href: `/events/${params.id}/participants` },
+    { label: "Participants", href: `/events/${params.id}/participants` },
   ]
 
   return (
@@ -181,10 +194,7 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
               <TableRow key={participant.id}>
                 <TableCell className="w-48">{participant.runescapeName}</TableCell>
                 <TableCell className="w-40">
-                  <Select
-                    value={participant.role}
-                    onValueChange={(value) => handleRoleChange(participant.id, value)}
-                  >
+                  <Select value={participant.role} onValueChange={(value) => handleRoleChange(participant.id, value)}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
@@ -197,8 +207,8 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
                 </TableCell>
                 <TableCell className="w-40">
                   <Select
-                    value={participant.teamId ?? 'no-team'}
-                    onValueChange={(value) => handleTeamAssignment(participant.id, value === 'no-team' ? null : value)}
+                    value={participant.teamId ?? "no-team"}
+                    onValueChange={(value) => handleTeamAssignment(participant.id, value === "no-team" ? null : value)}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Assign to team" />
@@ -206,7 +216,9 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
                     <SelectContent>
                       <SelectItem value="no-team">No Team</SelectItem>
                       {teams.map((team) => (
-                        <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                        <SelectItem key={team.id} value={team.id}>
+                          {team.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -221,9 +233,7 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
                   />
                 </TableCell>
                 <TableCell className="w-40">
-                  <span className="text-sm font-medium">
-                    {formatRunescapeGold(participant.buyIn)} GP
-                  </span>
+                  <span className="text-sm font-medium">{formatRunescapeGold(participant.buyIn)} GP</span>
                 </TableCell>
                 <TableCell className="w-20">
                   <div className="flex items-center justify-center">
@@ -242,3 +252,4 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
     </div>
   )
 }
+
