@@ -8,6 +8,7 @@ export default function getRandomFrog(): string {
     'https://oldschool.runescape.wiki/images/thumb/Plague_frog.png/800px-Plague_frog.png?c1e76',
     'https://oldschool.runescape.wiki/images/thumb/Cuthbert.png/1200px-Cuthbert.png?ab9b5',
     'https://oldschool.runescape.wiki/images/thumb/Dave.png/290px-Dave.png?d30e8',
+    'https://oldschool.runescape.wiki/images/thumb/Frog_%28Ruins_of_Camdozaal%29.png/200px-Frog_%28Ruins_of_Camdozaal%29.png?6ae5e',
   ]
 
   return images[Math.floor(Math.random() * images.length)]!;
