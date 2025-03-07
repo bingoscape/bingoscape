@@ -20,6 +20,7 @@ import { PrizePoolDisplay } from "@/components/prize-pool-display"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import { EditEventModal } from "@/components/edit-event-modal"
 import { EditBingoModal } from "@/components/edit-bingo-modal"
+import { TeamSelector } from "@/components/team-selector"
 
 export default async function EventBingosPage({ params }: { params: { id: UUID } }) {
     const session = await getServerAuthSession()
@@ -61,7 +62,13 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
                         <p className="text-sm text-muted-foreground mt-2">No Buy-In!</p>
                     )}
 
-                    <h2 className="text-2xl font-bold mb-4 mt-6">Bingos</h2>
+                    <div className="flex justify-between items-center mt-6 mb-4">
+                        <h2 className="text-2xl font-bold">Bingos</h2>
+                        {isAdminOrManagement && event.teams && event.teams.length > 0 && (
+                            <TeamSelector teams={event.teams} currentTeamId={currentTeam?.id} userRole={userRole} />
+                        )}
+                    </div>
+
                     {visibleBingos.length === 0 ? (
                         <p>No bingos have been created for this event yet.</p>
                     ) : (
@@ -135,3 +142,4 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
         </div>
     )
 }
+
