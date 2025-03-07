@@ -2,9 +2,9 @@
 
 import React from "react"
 import Image from "next/image"
-import { Check, Clock, Send, X } from "lucide-react"
+import { Check, Clock, Send, X, Zap, EyeOff } from "lucide-react"
 import type { Tile } from "@/app/actions/events"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 
 interface BingoTileProps {
   tile: Tile
@@ -80,50 +80,85 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
     return strippedMarkdown.length > 150 ? strippedMarkdown.substring(0, 150) + "..." : strippedMarkdown
   }
 
-  // Only show tooltip if tile is not hidden or if user has management rights
-  const shouldShowTooltip = !tile.isHidden || (tile.isHidden && isManagement && !isLocked)
+  // Only show hover card if tile is not hidden or if user has management rights
+  const shouldShowHoverCard = !tile.isHidden || (tile.isHidden && isManagement && !isLocked)
 
   return (
-    <TooltipProvider>
-      <Tooltip delayDuration={300}>
-        <TooltipTrigger asChild>
-          <div className={tileClasses} onClick={handleClick}>
-            {!tile.isHidden && (
-              <>
-                {tile.headerImage ? (
-                  <Image
-                    unoptimized
-                    src={tile.headerImage || "/placeholder.svg"}
-                    alt={tile.title}
-                    fill
-                    className="object-contain transition-transform duration-300 ease-in-out hover:scale-110"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-primary flex items-center justify-center">
-                    <span className="text-primary-foreground text-lg font-semibold">{tile.title}</span>
-                  </div>
-                )}
-                {currentTeamSubmission && (
-                  <div className="absolute top-2 left-2 z-10">{renderStatusIcon(currentTeamSubmission.status)}</div>
-                )}
-              </>
+    <HoverCard openDelay={200} closeDelay={100}>
+      <HoverCardTrigger asChild>
+        <div className={tileClasses} onClick={handleClick}>
+          {!tile.isHidden && (
+            <>
+              {tile.headerImage ? (
+                <Image
+                  unoptimized
+                  src={tile.headerImage || "/placeholder.svg"}
+                  alt={tile.title}
+                  fill
+                  className="object-contain transition-transform duration-300 ease-in-out hover:scale-110"
+                />
+              ) : (
+                <div className="w-full h-full bg-primary flex items-center justify-center">
+                  <span className="text-primary-foreground text-lg font-semibold">{tile.title}</span>
+                </div>
+              )}
+              {currentTeamSubmission && (
+                <div className="absolute top-2 left-2 z-10">{renderStatusIcon(currentTeamSubmission.status)}</div>
+              )}
+            </>
+          )}
+          {tile.isHidden && !isLocked && isManagement && (
+            <div className="absolute inset-0 flex items-center justify-center text-gray-400">Click to reveal</div>
+          )}
+        </div>
+      </HoverCardTrigger>
+      {shouldShowHoverCard && (
+        <HoverCardContent side="right" align="start" className="w-80 p-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold text-base">{tile.title}</h4>
+              <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 rounded-full">
+                <Zap className="h-3.5 w-3.5 text-amber-500" />
+                <span className="text-xs font-medium">{tile.weight} XP</span>
+              </div>
+            </div>
+
+            {tile.description && <p className="text-sm text-muted-foreground">{tile.description}</p>}
+
+            {tile.goals && tile.goals.length > 0 && (
+              <div className="pt-1">
+                <h5 className="text-xs font-semibold mb-1">Goals:</h5>
+                <ul className="text-xs space-y-1">
+                  {tile.goals.map((goal, idx) => (
+                    <li key={idx} className="flex justify-between">
+                      <span className="text-muted-foreground">{goal.description}</span>
+                      <span className="font-medium">Target: {goal.targetValue}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
-            {tile.isHidden && !isLocked && isManagement && (
-              <div className="absolute inset-0 flex items-center justify-center text-gray-400">Click to reveal</div>
+
+            {currentTeamSubmission && (
+              <div className="pt-1 border-t">
+                <h5 className="text-xs font-semibold mb-1">Submission Status:</h5>
+                <div className="flex items-center gap-2">
+                  {renderStatusIcon(currentTeamSubmission.status)}
+                  <span className="text-sm capitalize">{currentTeamSubmission.status?.replace("_", " ")}</span>
+                </div>
+              </div>
+            )}
+
+            {tile.isHidden && (
+              <div className="mt-2 text-xs bg-secondary p-1.5 rounded flex items-center gap-1.5">
+                <EyeOff className="h-3.5 w-3.5" />
+                <span className="font-medium">Hidden tile</span>
+              </div>
             )}
           </div>
-        </TooltipTrigger>
-        {shouldShowTooltip && (
-          <TooltipContent side="top" align="center" className="max-w-xs p-3">
-            <div className="space-y-1">
-              <p className="font-semibold">{tile.title}</p>
-              <p className="text-sm text-gray-500">{formatDescription(tile.description)}</p>
-              {tile.weight && <p className="text-xs font-medium text-amber-600">{tile.weight} XP</p>}
-            </div>
-          </TooltipContent>
-        )}
-      </Tooltip>
-    </TooltipProvider>
+        </HoverCardContent>
+      )}
+    </HoverCard>
   )
 }
 
