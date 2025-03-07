@@ -29,6 +29,7 @@ import { FullSizeImageDialog } from "./full-size-image-dialog"
 import { StatsDialog } from "./stats-dialog"
 import { BarChart, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useSearchParams } from "next/navigation"
 
 interface BingoGridProps {
   bingo: Bingo
@@ -60,6 +61,10 @@ export default function BingoGrid({
   const gridRef = useRef<HTMLDivElement>(null)
   const sortableRef = useRef<Sortable | null>(null)
   const [isStatsDialogOpen, setIsStatsDialogOpen] = useState(false)
+  const searchParams = useSearchParams()
+
+  // Get the selected team ID from URL params or use the current team ID
+  const selectedTeamId = searchParams.get("teamId") ?? currentTeamId
 
   useEffect(() => {
     if (gridRef.current && hasSufficientRights() && !isLocked) {
@@ -519,7 +524,7 @@ export default function BingoGrid({
         columns={bingo.columns}
         rows={bingo.rows}
         userRole={userRole}
-        currentTeamId={currentTeamId}
+        currentTeamId={selectedTeamId}
         onTileClick={handleTileClick}
         onTogglePlaceholder={handleTogglePlaceholder}
         highlightedTiles={highlightedTiles}
@@ -568,7 +573,7 @@ export default function BingoGrid({
             <TabsContent value="submissions" className="flex-1 overflow-y-auto">
               <SubmissionsTab
                 selectedTile={selectedTile}
-                currentTeamId={currentTeamId}
+                currentTeamId={selectedTeamId}
                 teams={teams}
                 hasSufficientRights={hasSufficientRights()}
                 selectedImage={selectedImage}
@@ -594,7 +599,7 @@ export default function BingoGrid({
         isOpen={isStatsDialogOpen}
         onOpenChange={setIsStatsDialogOpen}
         userRole={userRole}
-        currentTeamId={currentTeamId}
+        currentTeamId={selectedTeamId}
         teams={teams}
         bingoId={bingo.id}
       />
