@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/server/db"
-import { teams, teamMembers } from "@/server/db/schema"
+import { teams, teamMembers, eventParticipants, events } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
 import { validateApiKey } from "@/lib/api-auth"
 import { getEvents } from "@/app/actions/events"
@@ -17,13 +17,36 @@ export async function GET(req: Request) {
     // Get all events where the user is a participant or creator
     //
     //
-    const userEvents = await getEvents(userId)
 
+    const userEvents = await db.query.events.findMany({
+      where: (events, { or, eq, exists, and }) =>
+        or(
+          eq(events.creatorId, userId),
+          exists(
+            db
+              .select()
+              .from(eventParticipants)
+              .where(and(eq(eventParticipants.eventId, events.id), eq(eventParticipants.userId, userId))),
+          ),
+        ),
+      with: {
+        eventParticipants: {
+          where: eq(eventParticipants.userId, userId),
+        },
+        clan: true,
+        bingos: {
+          with: {
+            tiles: true
+          },
+        },
+      },
+      orderBy: events.createdAt,
+    })
     // Get the user's team for each event
     const eventsWithTeams = await Promise.all(
       userEvents.map(async (eventData) => {
         const userTeam = await db.query.teams.findFirst({
-          where: eq(teams.eventId, eventData.event.id),
+          where: eq(teams.eventId, eventData.id),
           with: {
             teamMembers: {
               where: eq(teamMembers.userId, userId),
@@ -40,7 +63,7 @@ export async function GET(req: Request) {
               isLeader: userTeam.teamMembers[0]?.isLeader ?? false,
             }
             : null,
-          role: eventData.event.creatorId === userId ? "admin" : (eventData.event.eventParticipants ?? []).find(p => p.userId === userId)?.role,
+          role: eventData.creatorId === userId ? "admin" : (eventData.eventParticipants ?? []).find(p => p.userId === userId)?.role,
         }
       }),
     )
