@@ -38,6 +38,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   // Add relation to submissions
   submissions: many(submissions),
   bingoTemplates: many(bingoTemplates), // Add this line
+  apiKeys: many(apiKeys),
 }))
 
 export const accounts = createTable(
@@ -556,6 +557,28 @@ export const bingoTemplatesRelations = relations(bingoTemplates, ({ one }) => ({
   originalBingo: one(bingos, {
     fields: [bingoTemplates.originalBingoId],
     references: [bingos.id],
+  }),
+}))
+
+// Add this to your existing schema.ts file
+// This creates a new table for API keys
+
+export const apiKeys = createTable("api_keys", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  key: varchar("key", { length: 100 }).notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  lastUsed: timestamp("last_used"),
+})
+
+export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
+  user: one(users, {
+    fields: [apiKeys.userId],
+    references: [users.id],
   }),
 }))
 
