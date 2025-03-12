@@ -1,6 +1,6 @@
 import { db } from "@/server/db"
 import { teams, teamMembers } from "@/server/db/schema"
-import { eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 
 /**
  * Gets the team for a user in a specific event
@@ -10,24 +10,28 @@ import { eq } from "drizzle-orm"
  */
 export async function getTeamForUserInEvent(userId: string, eventId: string) {
   try {
-    const userTeam = await db.query.teams.findFirst({
-      where: eq(teams.eventId, eventId),
-      with: {
-        teamMembers: {
-          where: eq(teamMembers.userId, userId),
-        },
-      },
-    })
+    // Use select syntax with a join between teams and teamMembers
+    const result = await db
+      .select({
+        id: teams.id,
+        name: teams.name,
+        isLeader: teamMembers.isLeader,
+      })
+      .from(teams)
+      .innerJoin(teamMembers, and(eq(teamMembers.teamId, teams.id), eq(teamMembers.userId, userId)))
+      .where(eq(teams.eventId, eventId))
+      .limit(1)
 
-    if (!userTeam || userTeam.teamMembers.length === 0) {
+
+    console.log(result);
+
+    // If no results found, return null
+    if (result.length === 0) {
       return null
     }
 
-    return {
-      id: userTeam.id,
-      name: userTeam.name,
-      isLeader: userTeam.teamMembers[0]?.isLeader ?? false,
-    }
+    // Return the first (and only) result
+    return result[0]
   } catch (error) {
     console.error("Error getting team for user:", error)
     return null
