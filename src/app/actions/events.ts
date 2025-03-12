@@ -513,23 +513,37 @@ export async function getEventParticipants(eventId: string) {
         const buyIn = buyInResult[0]?.amount ?? 0
 
         // Get team info (if any) - Make sure we're getting the latest team assignment
-        const teamMember = await db.query.teamMembers.findFirst({
-          where: eq(teamMembers.userId, participant.userId),
-          with: {
-            team: true,
-          },
-          orderBy: [desc(teamMembers.createdAt)], // Get the most recent team assignment
-        })
+        // const teamMember = await db.query.teamMembers.findFirst({
+        //   where: eq(teamMembers.userId, participant.userId),
+        //   with: {
+        //     team: true,
+        //   },
+        //   orderBy: [desc(teamMembers.createdAt)], // Get the most recent team assignment
+        // })
+
+
+        // Use select syntax with a join between teams and teamMembers
+        const team = await db
+          .select({
+            id: teams.id,
+            name: teams.name,
+            isLeader: teamMembers.isLeader,
+          })
+          .from(teams)
+          .innerJoin(teamMembers, and(eq(teamMembers.teamId, teams.id), eq(teamMembers.userId, participant.userId)))
+          .where(eq(teams.eventId, eventId))
+          .limit(1)
+
 
         // Only include team if it belongs to this event
-        const team = teamMember?.team.eventId === eventId ? teamMember.team : null
+        // const team = teamMember?.team.eventId === eventId ? teamMember.team : null
 
         return {
           id: participant.userId,
           runescapeName: user?.runescapeName ?? "",
           role: participant.role,
-          teamId: team?.id ?? null,
-          teamName: team?.name ?? null,
+          teamId: team[0]!.id ?? null,
+          teamName: team[0]!.name ?? null,
           buyIn: buyIn,
         }
       }),
