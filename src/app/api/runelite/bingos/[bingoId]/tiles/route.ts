@@ -48,8 +48,6 @@ export async function GET(req: Request, { params }: { params: { bingoId: string 
       {
         id: string
         status: "pending" | "accepted" | "requires_interaction" | "declined" | "not_submitted"
-        index: number
-        title: string
       }
     > = {}
 
@@ -58,8 +56,6 @@ export async function GET(req: Request, { params }: { params: { bingoId: string 
       tileStatusMap[tile.id] = {
         id: tile.id,
         status: "not_submitted",
-        index: tile.index,
-        title: tile.title,
       }
     })
 
