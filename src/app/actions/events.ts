@@ -534,7 +534,10 @@ export async function getEventParticipants(eventId: string) {
           .where(eq(teams.eventId, eventId))
           .limit(1)
 
+        console.log("team", team)
 
+
+        const t = team[0] ?? null
         // Only include team if it belongs to this event
         // const team = teamMember?.team.eventId === eventId ? teamMember.team : null
 
@@ -542,8 +545,8 @@ export async function getEventParticipants(eventId: string) {
           id: participant.userId,
           runescapeName: user?.runescapeName ?? "",
           role: participant.role,
-          teamId: team[0]!.id ?? null,
-          teamName: team[0]!.name ?? null,
+          teamId: t != null ? t.id : null,
+          teamName: t != null ? t.name : null,
           buyIn: buyIn,
         }
       }),
