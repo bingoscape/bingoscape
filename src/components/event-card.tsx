@@ -12,7 +12,7 @@ interface EventCardProps {
   eventData: EventData
   onJoin?: () => void
   isParticipant: boolean
-  status?: "running" | "upcoming" | "past"
+  status?: "active" | "upcoming" | "past"
 }
 
 export function EventCard({ eventData, onJoin, isParticipant, status }: EventCardProps) {
@@ -23,7 +23,7 @@ export function EventCard({ eventData, onJoin, isParticipant, status }: EventCar
     if (!status) return null
 
     switch (status) {
-      case "running":
+      case "active":
         return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>
       case "upcoming":
         return <Badge className="bg-blue-500 hover:bg-blue-600">Upcoming</Badge>
