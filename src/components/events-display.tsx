@@ -1,125 +1,265 @@
-'use client'
+"use client"
 
 import { useState } from "react"
-import { type EventData } from "@/app/actions/events"
+import type { EventData } from "@/app/actions/events"
 import { EventCard } from "@/components/event-card"
 import { Button } from "@/components/ui/button"
-import { LayoutGrid, List } from "lucide-react"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { LayoutGrid, List, Calendar, Clock, Archive } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface EventDisplayProps {
   initialEvents: EventData[]
 }
 
 export function EventDisplay({ initialEvents }: EventDisplayProps) {
-  const [events, setEvents] = useState<EventData[]>(initialEvents)
-  const [isGridView, setIsGridView] = useState(false)
+  const [events] = useState<EventData[]>(initialEvents)
+  const [isGridView, setIsGridView] = useState(true)
+  const [activeTab, setActiveTab] = useState("all")
 
   const categorizeEvents = (events: EventData[]) => {
     const now = new Date()
-    return events.reduce((acc, eventData) => {
-      const startDate = new Date(eventData.event.startDate)
-      const endDate = new Date(eventData.event.endDate)
-      if (now >= startDate && now <= endDate) {
-        acc.running.push(eventData)
-      } else if (now < startDate) {
-        acc.upcoming.push(eventData)
-      } else {
-        acc.past.push(eventData)
-      }
-      return acc
-    }, { running: [], upcoming: [], past: [] } as { running: EventData[], upcoming: EventData[], past: EventData[] })
+    return events.reduce(
+      (acc, eventData) => {
+        const startDate = new Date(eventData.event.startDate)
+        const endDate = new Date(eventData.event.endDate)
+        if (now >= startDate && now <= endDate) {
+          acc.running.push(eventData)
+        } else if (now < startDate) {
+          acc.upcoming.push(eventData)
+        } else {
+          acc.past.push(eventData)
+        }
+        return acc
+      },
+      { running: [], upcoming: [], past: [] } as { running: EventData[]; upcoming: EventData[]; past: EventData[] },
+    )
   }
 
   const { running, upcoming, past } = categorizeEvents(events)
 
-  const renderEventTable = (eventsList: EventData[]) => (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Title</TableHead>
-          <TableHead># Bingos</TableHead>
-          <TableHead>Start Date</TableHead>
-          <TableHead>End Date</TableHead>
-          <TableHead>Clan</TableHead>
-          <TableHead>Prize Pool</TableHead>
-          <TableHead></TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {eventsList.map((ed) => (
-          <TableRow key={ed.event.id}>
-            <TableCell>{ed.event.title}</TableCell>
-            <TableCell>{ed.event.bingos?.length ?? 0}</TableCell>
-            <TableCell>{new Date(ed.event.startDate).toLocaleDateString()}</TableCell>
-            <TableCell>{new Date(ed.event.endDate).toLocaleDateString()}</TableCell>
-            <TableCell>{ed.event.clan?.name ?? 'no clan'}</TableCell>
-            <TableCell>{formatRunescapeGold(ed.totalPrizePool)}</TableCell>
-            <TableCell>
-              <Button variant="outline" size="sm" asChild>
-                <a href={`/events/${ed.event.id}`}>View</a>
-              </Button>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  )
+  // Calculate stats
+  const totalEvents = events.length
+  const activeEvents = running.length
+  const totalPrizePool = events.reduce((sum, event) => sum + event.totalPrizePool, 0)
 
-  const renderEventGrid = (eventsList: EventData[]) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {eventsList.map((ed) => (
-        <EventCard
-          key={ed.event.id}
-          eventData={ed}
-          isParticipant={true}
-          // eslint-disable-next-line @typescript-eslint/no-empty-function
-          onJoin={() => { }}
-        />
-      ))}
+  const renderEventTable = (eventsList: EventData[]) => (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Title</TableHead>
+            <TableHead className="hidden md:table-cell"># Bingos</TableHead>
+            <TableHead className="hidden md:table-cell">Start Date</TableHead>
+            <TableHead className="hidden md:table-cell">End Date</TableHead>
+            <TableHead className="hidden lg:table-cell">Clan</TableHead>
+            <TableHead>Prize Pool</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {eventsList.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={8} className="text-center text-muted-foreground py-6">
+                No events found
+              </TableCell>
+            </TableRow>
+          ) : (
+            eventsList.map((ed) => {
+              // Determine status for each event
+              const now = new Date()
+              const startDate = new Date(ed.event.startDate)
+              const endDate = new Date(ed.event.endDate)
+              let status: "running" | "upcoming" | "past"
+
+              if (now >= startDate && now <= endDate) {
+                status = "running"
+              } else if (now < startDate) {
+                status = "upcoming"
+              } else {
+                status = "past"
+              }
+
+              return (
+                <TableRow key={ed.event.id}>
+                  <TableCell className="font-medium">{ed.event.title}</TableCell>
+                  <TableCell className="hidden md:table-cell">{ed.event.bingos?.length ?? 0}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {new Date(ed.event.startDate).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {new Date(ed.event.endDate).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">{ed.event.clan?.name ?? "No clan"}</TableCell>
+                  <TableCell>{formatRunescapeGold(ed.totalPrizePool)}</TableCell>
+                  <TableCell>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${status === "running"
+                        ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
+                        : status === "upcoming"
+                          ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
+                          : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                        }`}
+                    >
+                      {status === "running" ? "Active" : status === "upcoming" ? "Upcoming" : "Completed"}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={`/events/${ed.event.id}`}>View</a>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )
+            })
+          )}
+        </TableBody>
+      </Table>
     </div>
   )
 
-  const renderEventList = (eventsList: EventData[], title: string, noEventMessage: string) => (
-    <section className="mb-10">
-      <h2 className="text-2xl font-semibold mb-4">{title}</h2>
+  const renderEventGrid = (eventsList: EventData[], forcedStatus?: "running" | "upcoming" | "past") => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {eventsList.length === 0 ? (
-        <p className="text-muted-foreground">{noEventMessage}</p>
+        <div className="col-span-full text-center py-10 text-muted-foreground">No events found</div>
       ) : (
-        isGridView ? renderEventGrid(eventsList) : renderEventTable(eventsList)
+        eventsList.map((ed) => {
+          // Determine status for each event when in "all" tab
+          let status = forcedStatus
+          if (!status) {
+            const now = new Date()
+            const startDate = new Date(ed.event.startDate)
+            const endDate = new Date(ed.event.endDate)
+
+            if (now >= startDate && now <= endDate) {
+              status = "running"
+            } else if (now < startDate) {
+              status = "upcoming"
+            } else {
+              status = "past"
+            }
+          }
+
+          return (
+            <EventCard
+              key={ed.event.id}
+              eventData={ed}
+              isParticipant={true}
+              status={status}
+              // eslint-disable-next-line @typescript-eslint/no-empty-function
+              onJoin={() => { }}
+            />
+          )
+        })
       )}
-    </section>
+    </div>
   )
+
+  const getEventsForTab = () => {
+    switch (activeTab) {
+      case "running":
+        return running
+      case "upcoming":
+        return upcoming
+      case "past":
+        return past
+      default:
+        return events
+    }
+  }
+
+  const getStatusForTab = () => {
+    switch (activeTab) {
+      case "running":
+        return "running" as const
+      case "upcoming":
+        return "upcoming" as const
+      case "past":
+        return "past" as const
+      default:
+        return undefined
+    }
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end mb-4">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setIsGridView(!isGridView)}
-          aria-label={isGridView ? "Switch to table view" : "Switch to grid view"}
-        >
-          {isGridView ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
-        </Button>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Total Events</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalEvents}</div>
+            <p className="text-xs text-muted-foreground mt-1">Across all time periods</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Active Events</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeEvents}</div>
+            <p className="text-xs text-muted-foreground mt-1">Currently running</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Total Prize Pool</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatRunescapeGold(totalPrizePool)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Across all events</p>
+          </CardContent>
+        </Card>
       </div>
-      {events.length === 0 ? (
-        <p className="text-muted-foreground">You do not have any events yet. Create one to get started!</p>
-      ) : (
-        <>
-          {renderEventList(running, "Current Events", "No events are currently running.")}
-          {renderEventList(upcoming, "Upcoming Events", "No upcoming events.")}
-          {renderEventList(past, "Past Events", "No past events.")}
-        </>
-      )}
+
+      <Tabs defaultValue="running" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="flex justify-between items-center mb-4">
+          <TabsList>
+            <TabsTrigger value="running" className="flex items-center gap-1">
+              <Clock className="h-4 w-4" />
+              <span className="hidden sm:inline">Running</span>
+              {running.length > 0 && (
+                <span className="ml-1 text-xs bg-primary/20 rounded-full px-1.5">{running.length}</span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="upcoming" className="flex items-center gap-1">
+              <Calendar className="h-4 w-4" />
+              <span className="hidden sm:inline">Upcoming</span>
+              {upcoming.length > 0 && (
+                <span className="ml-1 text-xs bg-primary/20 rounded-full px-1.5">{upcoming.length}</span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="past" className="flex items-center gap-1">
+              <Archive className="h-4 w-4" />
+              <span className="hidden sm:inline">Past</span>
+              {past.length > 0 && <span className="ml-1 text-xs bg-primary/20 rounded-full px-1.5">{past.length}</span>}
+            </TabsTrigger>
+            <TabsTrigger value="all" className="flex items-center gap-1">
+              <Calendar className="h-4 w-4" />
+              <span className="hidden sm:inline">All Events</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIsGridView(!isGridView)}
+            aria-label={isGridView ? "Switch to table view" : "Switch to grid view"}
+          >
+            {isGridView ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+          </Button>
+        </div>
+
+        <TabsContent value={activeTab} className="mt-0">
+          {isGridView ? renderEventGrid(getEventsForTab(), getStatusForTab()) : renderEventTable(getEventsForTab())}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
+

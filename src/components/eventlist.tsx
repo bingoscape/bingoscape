@@ -1,20 +1,24 @@
 import { CreateEventModal } from "./create-event-modal"
-import { type EventData, getEvents } from "@/app/actions/events"
-import { EventCard } from "./event-card"
+import { getEvents } from "@/app/actions/events"
 import { EventDisplay } from "./events-display"
+import { Button } from "@/components/ui/button"
+import { Plus } from "lucide-react"
 
 export default async function EventList({ userId }: { userId: string }) {
   const allEvents = await getEvents(userId)
 
   return (
-    <>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Events</h1>
-          <CreateEventModal />
+    <div className="space-y-8">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Your Events</h1>
+          <p className="text-muted-foreground mt-1">Manage and track your RuneScape bingo events</p>
         </div>
-        <EventDisplay initialEvents={allEvents} />
+        <CreateEventModal />
       </div>
-    </>
+
+      <EventDisplay initialEvents={allEvents} />
+    </div>
   )
 }
+
