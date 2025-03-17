@@ -55,6 +55,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
             <div className="flex flex-col lg:flex-row justify-between mb-6 space-y-5 lg:space-y-0">
                 <div className="lg:mr-5 flex-grow">
                     <h1 className="text-3xl font-bold">{event.title}</h1>
+                    <PrizePoolDisplay prizePool={prizePool} />
                     {event.clan && <p className="text-sm text-muted-foreground mt-2">Clan: {event.clan.name}</p>}
                     {event.minimumBuyIn ? (
                         <p className="text-sm text-muted-foreground mt-2">
@@ -148,7 +149,6 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
                     {isAdminOrManagement && (
                         <ShareEventButton eventId={event.id} eventTitle={event.title} isPublic={event.public ?? false} />
                     )}
-                    <PrizePoolDisplay prizePool={prizePool} />
                 </div>
             </div>
         </div>
