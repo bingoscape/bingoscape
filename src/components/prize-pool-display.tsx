@@ -1,32 +1,61 @@
-// components/prize-pool-display.tsx
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Coins } from "lucide-react"
+import formatRunescapeGold from "@/lib/formatRunescapeGold"
+import { cn } from "@/lib/utils"
 
 interface PrizePoolDisplayProps {
   prizePool: number
+  className?: string
+  variant?: "default" | "compact" | "badge"
+  showIcon?: boolean
 }
 
-function formatRunescapeGold(amount: number): string {
-  if (amount >= 1000000000) {
-    return `${(amount / 1000000000).toFixed(1)}B`
-  } else if (amount >= 1000000) {
-    return `${(amount / 1000000).toFixed(1)}M`
-  } else if (amount >= 1000) {
-    return `${(amount / 1000).toFixed(1)}K`
-  } else {
-    return amount.toString()
-  }
-}
+export function PrizePoolDisplay({
+  prizePool,
+  className,
+  variant = "default",
+  showIcon = true,
+}: PrizePoolDisplayProps) {
+  if (prizePool <= 0) return null
 
-export function PrizePoolDisplay({ prizePool }: PrizePoolDisplayProps) {
   const formattedPrizePool = formatRunescapeGold(prizePool)
+
+  // Determine text size based on prize pool amount
+  const getTextSize = () => {
+    if (variant === "compact") return "text-sm"
+    if (prizePool >= 1000000000) return "text-lg font-bold" // 1B+
+    if (prizePool >= 100000000) return "text-base font-semibold" // 100M+
+    return "text-sm"
+  }
+
+  // Determine color based on prize pool amount
+  const getTextColor = () => {
+    if (prizePool >= 1000000000) return "text-amber-500 dark:text-amber-400" // 1B+
+    if (prizePool >= 100000000) return "text-amber-500 dark:text-amber-400" // 100M+
+    if (prizePool >= 10000000) return "text-amber-500 dark:text-amber-400" // 10M+
+    if (prizePool >= 1000000) return "text-amber-500 dark:text-amber-400" // 1M+
+    return "text-muted-foreground"
+  }
+
+  if (variant === "badge") {
+    return (
+      <div
+        className={cn(
+          "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30",
+          getTextColor(),
+          className,
+        )}
+      >
+        {showIcon && <Coins className="h-3 w-3 mr-1" />}
+        {formattedPrizePool}
+      </div>
+    )
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Prize Pool</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-3xl font-bold">{formattedPrizePool} GP</p>
-      </CardContent>
-    </Card>
+    <div className={cn("flex items-center gap-1", getTextColor(), getTextSize(), className)}>
+      {showIcon && <Coins className={cn("flex-shrink-0", variant === "compact" ? "h-3.5 w-3.5" : "h-4 w-4")} />}
+      <span>{formattedPrizePool}</span>
+    </div>
   )
 }
+
