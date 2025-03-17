@@ -26,7 +26,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
         const startDate = new Date(eventData.event.startDate)
         const endDate = new Date(eventData.event.endDate)
         if (now >= startDate && now <= endDate) {
-          acc.running.push(eventData)
+          acc.active.push(eventData)
         } else if (now < startDate) {
           acc.upcoming.push(eventData)
         } else {
@@ -34,15 +34,15 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
         }
         return acc
       },
-      { running: [], upcoming: [], past: [] } as { running: EventData[]; upcoming: EventData[]; past: EventData[] },
+      { active: [], upcoming: [], past: [] } as { active: EventData[]; upcoming: EventData[]; past: EventData[] },
     )
   }
 
-  const { running, upcoming, past } = categorizeEvents(events)
+  const { active: active, upcoming, past } = categorizeEvents(events)
 
   // Calculate stats
   const totalEvents = events.length
-  const activeEvents = running.length
+  const activeEvents = active.length
   const totalPrizePool = events.reduce((sum, event) => sum + event.totalPrizePool, 0)
 
   const renderEventTable = (eventsList: EventData[]) => (
@@ -73,10 +73,10 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
               const now = new Date()
               const startDate = new Date(ed.event.startDate)
               const endDate = new Date(ed.event.endDate)
-              let status: "running" | "upcoming" | "past"
+              let status: "active" | "upcoming" | "past"
 
               if (now >= startDate && now <= endDate) {
-                status = "running"
+                status = "active"
               } else if (now < startDate) {
                 status = "upcoming"
               } else {
@@ -97,14 +97,14 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
                   <TableCell>{formatRunescapeGold(ed.totalPrizePool)}</TableCell>
                   <TableCell>
                     <span
-                      className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${status === "running"
+                      className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${status === "active"
                         ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
                         : status === "upcoming"
                           ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
                           : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
                         }`}
                     >
-                      {status === "running" ? "Active" : status === "upcoming" ? "Upcoming" : "Completed"}
+                      {status === "active" ? "Active" : status === "upcoming" ? "Upcoming" : "Completed"}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -121,7 +121,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
     </div>
   )
 
-  const renderEventGrid = (eventsList: EventData[], forcedStatus?: "running" | "upcoming" | "past") => (
+  const renderEventGrid = (eventsList: EventData[], forcedStatus?: "active" | "upcoming" | "past") => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {eventsList.length === 0 ? (
         <div className="col-span-full text-center py-10 text-muted-foreground">No events found</div>
@@ -135,7 +135,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
             const endDate = new Date(ed.event.endDate)
 
             if (now >= startDate && now <= endDate) {
-              status = "running"
+              status = "active"
             } else if (now < startDate) {
               status = "upcoming"
             } else {
@@ -160,8 +160,8 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
 
   const getEventsForTab = () => {
     switch (activeTab) {
-      case "running":
-        return running
+      case "active":
+        return active
       case "upcoming":
         return upcoming
       case "past":
@@ -173,8 +173,8 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
 
   const getStatusForTab = () => {
     switch (activeTab) {
-      case "running":
-        return "running" as const
+      case "active":
+        return "active" as const
       case "upcoming":
         return "upcoming" as const
       case "past":
@@ -203,7 +203,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeEvents}</div>
-            <p className="text-xs text-muted-foreground mt-1">Currently running</p>
+            <p className="text-xs text-muted-foreground mt-1">Currently active</p>
           </CardContent>
         </Card>
         <Card>
@@ -217,14 +217,14 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
         </Card>
       </div>
 
-      <Tabs defaultValue="running" value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs defaultValue="active" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex justify-between items-center mb-4">
           <TabsList>
-            <TabsTrigger value="running" className="flex items-center gap-1">
+            <TabsTrigger value="active" className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
-              <span className="hidden sm:inline">Running</span>
-              {running.length > 0 && (
-                <span className="ml-1 text-xs bg-primary/20 rounded-full px-1.5">{running.length}</span>
+              <span className="hidden sm:inline">Active</span>
+              {active.length > 0 && (
+                <span className="ml-1 text-xs bg-primary/20 rounded-full px-1.5">{active.length}</span>
               )}
             </TabsTrigger>
             <TabsTrigger value="upcoming" className="flex items-center gap-1">
