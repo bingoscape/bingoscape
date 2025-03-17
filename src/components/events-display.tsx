@@ -4,7 +4,7 @@ import { useState } from "react"
 import type { EventData } from "@/app/actions/events"
 import { EventCard } from "@/components/event-card"
 import { Button } from "@/components/ui/button"
-import { LayoutGrid, List, Calendar, Clock, Archive } from "lucide-react"
+import { LayoutGrid, List, Calendar, Clock, Archive, Layers } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -17,7 +17,7 @@ interface EventDisplayProps {
 export function EventDisplay({ initialEvents }: EventDisplayProps) {
   const [events] = useState<EventData[]>(initialEvents)
   const [isGridView, setIsGridView] = useState(true)
-  const [activeTab, setActiveTab] = useState("all")
+  const [activeTab, setActiveTab] = useState("active")
 
   const categorizeEvents = (events: EventData[]) => {
     const now = new Date()
@@ -38,7 +38,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
     )
   }
 
-  const { active: active, upcoming, past } = categorizeEvents(events)
+  const { active, upcoming, past } = categorizeEvents(events)
 
   // Calculate stats
   const totalEvents = events.length
@@ -203,7 +203,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeEvents}</div>
-            <p className="text-xs text-muted-foreground mt-1">Currently active</p>
+            <p className="text-xs text-muted-foreground mt-1">Currently running</p>
           </CardContent>
         </Card>
         <Card>
@@ -240,7 +240,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
               {past.length > 0 && <span className="ml-1 text-xs bg-primary/20 rounded-full px-1.5">{past.length}</span>}
             </TabsTrigger>
             <TabsTrigger value="all" className="flex items-center gap-1">
-              <Calendar className="h-4 w-4" />
+              <Layers className="h-4 w-4" />
               <span className="hidden sm:inline">All Events</span>
             </TabsTrigger>
           </TabsList>
