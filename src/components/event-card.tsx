@@ -71,7 +71,7 @@ export function EventCard({ eventData, onJoin, isParticipant, status }: EventCar
 
             <div className="flex items-center text-muted-foreground">
               <Trophy className="h-3.5 w-3.5 mr-1" />
-              <span>{eventData.event.bingos?.length || 0} Bingos</span>
+              <span>{eventData.event.bingos?.length ?? 0} Bingos</span>
             </div>
           </div>
         </div>
