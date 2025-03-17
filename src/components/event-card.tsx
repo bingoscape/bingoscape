@@ -36,18 +36,25 @@ export function EventCard({ eventData, onJoin, isParticipant, status }: EventCar
 
   return (
     <Card className="overflow-hidden transition-all hover:shadow-md">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-xl font-bold">{eventData.event.title}</CardTitle>
-            <CardDescription className="flex items-center mt-1">
-              <CalendarIcon className="h-3.5 w-3.5 mr-1" />
-              {startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}
-            </CardDescription>
+      <div className="relative">
+        {eventData.totalPrizePool > 0 && (
+          <div className="absolute left-4 top-4 z-10">
+            <PrizePoolDisplay prizePool={eventData.totalPrizePool} variant="badge" />
           </div>
-          {getStatusBadge()}
-        </div>
-      </CardHeader>
+        )}
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-start">
+            <div className={`${eventData.totalPrizePool > 0 ? "mt-6" : ""}`}>
+              <CardTitle className="text-xl font-bold">{eventData.event.title}</CardTitle>
+              <CardDescription className="flex items-center mt-1">
+                <CalendarIcon className="h-3.5 w-3.5 mr-1" />
+                {startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}
+              </CardDescription>
+            </div>
+            {getStatusBadge()}
+          </div>
+        </CardHeader>
+      </div>
       <CardContent className="pb-2">
         <div className="space-y-3">
           {eventData.event.description && (
@@ -64,11 +71,7 @@ export function EventCard({ eventData, onJoin, isParticipant, status }: EventCar
 
             <div className="flex items-center text-muted-foreground">
               <Trophy className="h-3.5 w-3.5 mr-1" />
-              <span>{eventData.event.bingos?.length ?? 0} Boards</span>
-            </div>
-
-            <div className="ml-auto">
-              <PrizePoolDisplay prizePool={eventData.totalPrizePool} />
+              <span>{eventData.event.bingos?.length || 0} Bingos</span>
             </div>
           </div>
         </div>
