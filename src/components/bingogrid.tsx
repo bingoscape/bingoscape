@@ -317,28 +317,36 @@ export default function BingoGrid({
   }
 
   const handleImageSubmit = async () => {
-    if (selectedTile && (selectedImage || pastedImage) && currentTeamId) {
-      const formData = new FormData()
-      formData.append("image", selectedImage ?? pastedImage!)
-      formData.append("tileId", selectedTile.id)
-      formData.append("teamId", currentTeamId)
+    if (!selectedTile || !(selectedImage || pastedImage) || !currentTeamId) {
+      toast({
+        title: "Error",
+        description: "Missing required information for submission",
+        variant: "destructive",
+      })
+      return
+    }
 
-      const result = await submitImage(formData)
-      if (result.success) {
-        setSelectedImage(null)
-        setPastedImage(null)
-        toast({
-          title: "Image submitted",
-          description: "Your image has been successfully submitted for review.",
-        })
-        await refreshSubmissions(selectedTile.id)
-      } else {
-        toast({
-          title: "Error",
-          description: result.error ?? "Failed to submit image",
-          variant: "destructive",
-        })
-      }
+    const formData = new FormData()
+    formData.append("image", selectedImage ?? pastedImage!)
+    formData.append("tileId", selectedTile.id)
+    formData.append("teamId", currentTeamId)
+
+    const result = await submitImage(formData)
+
+    if (result.success) {
+      setSelectedImage(null)
+      setPastedImage(null)
+      toast({
+        title: "Image submitted",
+        description: "Your image has been successfully submitted for review.",
+      })
+      await refreshSubmissions(selectedTile.id)
+    } else {
+      toast({
+        title: "Error",
+        description: result.error ?? "Failed to submit image",
+        variant: "destructive",
+      })
     }
   }
 
@@ -387,44 +395,33 @@ export default function BingoGrid({
     try {
       const result = await updateTeamTileSubmissionStatus(teamTileSubmissionId, newStatus)
       if (result.success) {
-        setSelectedTile((prev) => {
-          if (prev) {
-            const updatedTeamTileSubmissions = prev.teamTileSubmissions?.map((tts) =>
-              tts.id === teamTileSubmissionId ? { ...tts, status: newStatus } : tts,
-            )
-            return {
-              ...prev,
-              teamTileSubmissions: updatedTeamTileSubmissions,
-            }
-          }
-          return null
-        })
+        // Update local state with the new status
+        const updateSubmissions = (submissions: any[] | undefined) =>
+          submissions?.map((tts) => (tts.id === teamTileSubmissionId ? { ...tts, status: newStatus } : tts))
 
+        setSelectedTile((prev) =>
+          prev ? { ...prev, teamTileSubmissions: updateSubmissions(prev.teamTileSubmissions) } : null,
+        )
         setTiles((prevTiles) =>
           prevTiles.map((tile) =>
             tile.id === selectedTile.id
-              ? {
-                ...tile,
-                teamTileSubmissions: tile.teamTileSubmissions?.map((tts) =>
-                  tts.id === teamTileSubmissionId ? { ...tts, status: newStatus } : tts,
-                ),
-              }
+              ? { ...tile, teamTileSubmissions: updateSubmissions(tile.teamTileSubmissions) }
               : tile,
           ),
         )
 
         toast({
-          title: "Submission status updated",
-          description: `The team's submission status has been set to ${newStatus}.`,
+          title: "Status updated",
+          description: `Submission marked as ${newStatus.replace("_", " ")}`,
         })
       } else {
         throw new Error(result.error)
       }
     } catch (error) {
-      console.error("Error updating team tile submission status:", error)
+      console.error("Error updating submission status:", error)
       toast({
         title: "Error",
-        description: "Failed to update team tile submission status",
+        description: "Failed to update submission status",
         variant: "destructive",
       })
     }
