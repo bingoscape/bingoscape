@@ -433,48 +433,96 @@ function TileProgress({
   onUpdateProgress: (goalId: string, teamId: string, newValue: number) => void
   userRole: "admin" | "management" | "participant"
 }) {
-  if (!selectedTile?.goals) return null
+  if (!selectedTile?.goals || selectedTile.goals.length === 0) {
+    return (
+      <div className="text-center py-6 bg-muted/30 rounded-lg">
+        <p className="text-muted-foreground">No goals have been set for this tile yet.</p>
+      </div>
+    )
+  }
 
   const canUpdateProgress = userRole === "admin" || userRole === "management"
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {teams.map((team) => (
-        <div key={team.id} className="space-y-2">
-          <h4 className="font-medium">{team.name}</h4>
-          {selectedTile.goals?.map((goal) => {
-            const teamProgress = goal.teamProgress.find((progress) => progress.teamId === team.id)
-            const currentValue = teamProgress?.currentValue ?? 0
-            return (
-              <div key={goal.id} className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span>{goal.description}</span>
-                </div>
-                {canUpdateProgress ? (
-                  <ProgressSlider
-                    goalId={goal.id}
-                    teamId={team.id}
-                    currentValue={currentValue}
-                    maxValue={goal.targetValue}
-                    onUpdateProgress={onUpdateProgress}
-                  />
-                ) : (
-                  <div className="flex flex-col space-y-1">
-                    <Progress
-                      value={(currentValue / goal.targetValue) * 100}
-                      className="h-2"
-                      aria-label={`Progress for ${team.name} on ${goal.description}`}
-                    />
-                    <span className="self-end ml-2 text-sm">
-                      {currentValue} / {goal.targetValue}
-                    </span>
+        <div key={team.id} className="border rounded-lg p-4 shadow-sm transition-all hover:shadow-md">
+          <div className="flex items-center gap-2 mb-4">
+            <div
+              className="h-3 w-3 rounded-full"
+              style={{
+                backgroundColor: `hsl(${(team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`,
+              }}
+            />
+            <h4 className="font-semibold text-lg">{team.name}</h4>
+          </div>
+
+          <div className="space-y-5">
+            {selectedTile.goals?.map((goal) => {
+              const teamProgress = goal.teamProgress.find((progress) => progress.teamId === team.id)
+              const currentValue = teamProgress?.currentValue ?? 0
+              const progressPercentage = (currentValue / goal.targetValue) * 100
+
+              return (
+                <div key={goal.id} className="space-y-2">
+                  <div className="flex justify-between items-center text-sm">
+                    <div className="font-medium">{goal.description}</div>
+                    <div className="text-muted-foreground">
+                      Target: <span className="font-medium">{goal.targetValue}</span>
+                    </div>
                   </div>
-                )}
-              </div>
-            )
-          })}
+
+                  {canUpdateProgress ? (
+                    <div className="bg-muted/30 p-3 rounded-md">
+                      <ProgressSlider
+                        goalId={goal.id}
+                        teamId={team.id}
+                        currentValue={currentValue}
+                        maxValue={goal.targetValue}
+                        onUpdateProgress={onUpdateProgress}
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <Progress
+                          value={progressPercentage}
+                          className="h-2.5 flex-1"
+                          aria-label={`Progress for ${team.name} on ${goal.description}`}
+                        />
+                        <span className="text-sm font-medium min-w-[80px] text-right">
+                          {currentValue} / {goal.targetValue}
+                        </span>
+                      </div>
+
+                      <div className="text-xs text-right text-muted-foreground">
+                        {progressPercentage.toFixed(0)}% complete
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Summary section */}
+          <div className="mt-4 pt-3 border-t">
+            <div className="flex justify-between items-center text-sm">
+              <span className="font-medium">Overall completion</span>
+              <span className="text-muted-foreground">
+                {
+                  (selectedTile.goals ?? []).filter((goal) => {
+                    const teamProgress = goal.teamProgress.find((p) => p.teamId === team.id)
+                    return teamProgress?.currentValue === goal.targetValue
+                  }).length
+                }{" "}
+                of {(selectedTile.goals ?? []).length} goals
+              </span>
+            </div>
+          </div>
         </div>
       ))}
     </div>
   )
 }
+
