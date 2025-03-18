@@ -37,18 +37,13 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
   }, [currentTeamId, tile.teamTileSubmissions])
 
   const renderStatusIcon = (status: "accepted" | "requires_interaction" | "declined" | "pending" | undefined) => {
-    switch (status) {
-      case "accepted":
-        return <Check className="h-6 w-6 text-green-500" />
-      case "requires_interaction":
-        return <Clock className="h-6 w-6 text-yellow-500" />
-      case "declined":
-        return <X className="h-6 w-6 text-red-500" />
-      case "pending":
-        return <Send className="h-6 w-6 text-blue-500" />
-      default:
-        return null
+    const iconMap = {
+      accepted: <Check className="h-5 w-5 text-green-500" />,
+      requires_interaction: <Clock className="h-5 w-5 text-yellow-500" />,
+      declined: <X className="h-5 w-5 text-red-500" />,
+      pending: <Send className="h-5 w-5 text-blue-500" />,
     }
+    return status ? iconMap[status] : null
   }
 
   const tileClasses = `
@@ -104,7 +99,9 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
                 </div>
               )}
               {currentTeamSubmission && (
-                <div className="absolute top-2 left-2 z-10">{renderStatusIcon(currentTeamSubmission.status)}</div>
+                <div className="absolute top-1 right-1 z-10 bg-background/80 rounded-full p-0.5">
+                  {renderStatusIcon(currentTeamSubmission.status)}
+                </div>
               )}
             </>
           )}
@@ -142,10 +139,9 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
 
             {currentTeamSubmission && (
               <div className="pt-1 border-t">
-                <h5 className="text-xs font-semibold mb-1">Submission Status:</h5>
                 <div className="flex items-center gap-2">
                   {renderStatusIcon(currentTeamSubmission.status)}
-                  <span className="text-sm capitalize">{currentTeamSubmission.status?.replace("_", " ")}</span>
+                  <span className="text-xs capitalize">{currentTeamSubmission.status?.replace("_", " ")}</span>
                 </div>
               </div>
             )}
