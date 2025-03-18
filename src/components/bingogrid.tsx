@@ -37,7 +37,7 @@ interface BingoGridProps {
   userRole: EventRole
   teams: Team[]
   currentTeamId: string | undefined
-  isLocked: boolean
+  isLayoutLocked: boolean // Controls whether the board layout can be modified
   onReorderTiles?: (reorderedTiles: Tile[]) => void
   highlightedTiles: number[]
   onTileUpdated?: () => void
@@ -48,7 +48,7 @@ export default function BingoGrid({
   userRole,
   teams,
   currentTeamId,
-  isLocked,
+  isLayoutLocked,
   onReorderTiles,
   highlightedTiles,
   onTileUpdated,
@@ -70,7 +70,7 @@ export default function BingoGrid({
   const selectedTeamId = searchParams.get("teamId") ?? currentTeamId
 
   useEffect(() => {
-    if (gridRef.current && hasSufficientRights() && !isLocked) {
+    if (gridRef.current && hasSufficientRights() && !isLayoutLocked) {
       sortableRef.current = new Sortable(gridRef.current, {
         animation: 150,
         swap: true,
@@ -108,10 +108,10 @@ export default function BingoGrid({
         }
       }
     }
-  }, [tiles, isLocked, onReorderTiles])
+  }, [tiles, isLayoutLocked, onReorderTiles])
 
   const handleTileClick = async (tile: Tile) => {
-    if (tile.isHidden && !isLocked && hasSufficientRights()) {
+    if (tile.isHidden && !isLayoutLocked && hasSufficientRights()) {
       await handleTogglePlaceholder(tile)
       return
     }
@@ -133,6 +133,15 @@ export default function BingoGrid({
   }
 
   const handleTogglePlaceholder = async (tile: Tile) => {
+    if (isLayoutLocked) {
+      toast({
+        title: "Layout locked",
+        description: "The bingo board layout is currently locked for editing.",
+        variant: "destructive",
+      })
+      return
+    }
+
     const updatedTile = { ...tile, isHidden: !tile.isHidden }
     const result = await updateTile(tile.id, updatedTile)
     if (result.success) {
@@ -318,6 +327,15 @@ export default function BingoGrid({
   }
 
   const handleImageSubmit = async () => {
+    if (bingo.locked) {
+      toast({
+        title: "Submissions locked",
+        description: "This bingo board is currently locked for submissions.",
+        variant: "destructive",
+      })
+      return
+    }
+
     if (!selectedTile || !(selectedImage || pastedImage) || !currentTeamId) {
       toast({
         title: "Error",
@@ -351,27 +369,32 @@ export default function BingoGrid({
     }
   }
 
-  const handlePaste = useCallback((event: ClipboardEvent) => {
-    event.preventDefault()
-    const items = event.clipboardData?.items
-    if (items) {
-      for (const item of items) {
-        if (item.type.startsWith("image/")) {
-          const blob = item.getAsFile()
-          if (blob) {
-            const file = new File([blob], "pasted-image.png", { type: blob.type })
-            setPastedImage(file)
-            setSelectedImage(file)
-            toast({
-              title: "Image pasted",
-              description: "Your pasted image is ready to be submitted.",
-            })
-            break
+  const handlePaste = useCallback(
+    (event: ClipboardEvent) => {
+      if (bingo.locked) return
+
+      event.preventDefault()
+      const items = event.clipboardData?.items
+      if (items) {
+        for (const item of items) {
+          if (item.type.startsWith("image/")) {
+            const blob = item.getAsFile()
+            if (blob) {
+              const file = new File([blob], "pasted-image.png", { type: blob.type })
+              setPastedImage(file)
+              setSelectedImage(file)
+              toast({
+                title: "Image pasted",
+                description: "Your pasted image is ready to be submitted.",
+              })
+              break
+            }
           }
         }
       }
-    }
-  }, [])
+    },
+    [bingo],
+  )
 
   useEffect(() => {
     document.addEventListener("paste", handlePaste)
@@ -485,7 +508,13 @@ export default function BingoGrid({
   }
 
   const handleDeleteTile = async (tileId: string) => {
-    if (isLocked) return
+    if (isLayoutLocked) {
+      toast({
+        title: "Layout locked",
+        description: "The bingo board layout is currently locked for editing.",
+      })
+      return
+    }
 
     const confirmDelete = window.confirm("Are you sure you want to delete this tile?")
     if (!confirmDelete) return
@@ -534,7 +563,7 @@ export default function BingoGrid({
         onTileClick={handleTileClick}
         onTogglePlaceholder={handleTogglePlaceholder}
         highlightedTiles={highlightedTiles}
-        isLocked={isLocked}
+        isLocked={isLayoutLocked}
       />
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -584,6 +613,7 @@ export default function BingoGrid({
                 hasSufficientRights={hasSufficientRights()}
                 selectedImage={selectedImage}
                 pastedImage={pastedImage}
+                isSubmissionsLocked={bingo.locked}
                 onImageChange={handleImageChange}
                 onImageSubmit={handleImageSubmit}
                 onFullSizeImageView={(src, alt) => setFullSizeImage({ src, alt })}

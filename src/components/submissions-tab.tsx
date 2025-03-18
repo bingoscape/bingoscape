@@ -4,7 +4,7 @@ import type React from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Upload, Check, Clock, X, Trash2, ImageIcon } from "lucide-react"
+import { Upload, Check, Clock, X, Trash2, ImageIcon, LockIcon } from "lucide-react"
 import type { Tile, Team } from "@/app/actions/events"
 import {
   AlertDialog,
@@ -21,6 +21,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import getRandomFrog from "@/lib/getRandomFrog"
 
 interface SubmissionsTabProps {
@@ -38,6 +39,7 @@ interface SubmissionsTabProps {
     newStatus: "accepted" | "requires_interaction" | "declined",
   ) => void
   onDeleteSubmission?: (submissionId: string) => Promise<void>
+  isSubmissionsLocked?: boolean
 }
 
 export function SubmissionsTab({
@@ -52,6 +54,7 @@ export function SubmissionsTab({
   onFullSizeImageView,
   onTeamTileSubmissionStatusUpdate,
   onDeleteSubmission,
+  isSubmissionsLocked = false,
 }: SubmissionsTabProps) {
   if (!selectedTile) {
     return <p>No tile selected</p>
@@ -80,6 +83,9 @@ export function SubmissionsTab({
     }
   }
 
+  // Determine if submissions are allowed
+  const canSubmit = !isSubmissionsLocked && currentStatus !== "accepted" && currentTeamId
+
   return (
     <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
       {currentTeamId && (
@@ -90,12 +96,21 @@ export function SubmissionsTab({
               {currentTeamSubmission && getStatusBadge(currentStatus)}
             </div>
 
-            {/* Only show upload UI if status is not accepted */}
-            {currentStatus !== "accepted" ? (
+            {isSubmissionsLocked && (
+              <Alert variant="destructive" className="mb-3">
+                <LockIcon className="h-4 w-4 mr-2" />
+                <AlertDescription>
+                  This bingo board is currently locked. New submissions are not allowed.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Only show upload UI if not locked and not accepted */}
+            {canSubmit ? (
               <>
                 <div className="flex gap-2 mb-3">
                   <div
-                    className={`flex-1 border-2 border-dashed rounded-lg p-3 text-center cursor-pointer transition-colors ${hasImageSelected ? "border-green-500 bg-green-50" : "border-gray-300"
+                    className={`flex-1 border-2 border-dashed rounded-lg p-3 text-center cursor-pointer transition-colors ${hasImageSelected ? "border-green-500" : "border-gray-300"
                       }`}
                     onClick={() => document.getElementById("file-input")?.click()}
                   >
@@ -113,12 +128,12 @@ export function SubmissionsTab({
                 </div>
                 <Input id="file-input" type="file" accept="image/*" onChange={onImageChange} className="hidden" />
               </>
-            ) : (
+            ) : currentStatus === "accepted" ? (
               <div className="flex items-center gap-2 p-2 bg-green-50 rounded-md mb-3 text-green-700 text-sm">
                 <Check className="h-4 w-4" />
                 <span>Your submission has been accepted!</span>
               </div>
-            )}
+            ) : null}
 
             {/* Existing submissions */}
             {teamSubmissions.length > 0 ? (
@@ -126,14 +141,14 @@ export function SubmissionsTab({
                 {teamSubmissions.map((submission) => (
                   <div key={submission.id} className="relative group aspect-square">
                     <Image
-                      src={submission.image.path || getRandomFrog()}
+                      src={submission.image.path ?? getRandomFrog()}
                       alt={`Submission for ${selectedTile.title}`}
                       fill
                       style={{ objectFit: "cover" }}
                       className="rounded-md cursor-pointer"
                       onClick={() => onFullSizeImageView(submission.image.path, `Submission for ${selectedTile.title}`)}
                     />
-                    {canDeleteSubmissions && (
+                    {canDeleteSubmissions && !isSubmissionsLocked && (
                       <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
@@ -175,137 +190,13 @@ export function SubmissionsTab({
       )}
 
       {hasSufficientRights && (
-        <Tabs defaultValue="all" className="w-full">
+        <Tabs defaultValue="pending" className="w-full">
           <TabsList className="w-full grid grid-cols-2">
-            <TabsTrigger value="all">All Submissions</TabsTrigger>
             <TabsTrigger value="pending">Pending Review</TabsTrigger>
+            <TabsTrigger value="all">All Submissions</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="all" className="mt-2 space-y-4">
-            {teams.map((team) => {
-              const teamTileSubmission = selectedTile?.teamTileSubmissions?.find((tts) => tts.teamId === team.id)
-              const hasSubmissions = (teamTileSubmission?.submissions.length ?? 0) > 0
 
-              if (!hasSubmissions) return null
-
-              return (
-                <Card key={team.id} className="overflow-hidden">
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-sm">{team.name}</h4>
-                      <div className="flex items-center gap-1">
-                        {getStatusBadge(teamTileSubmission?.status ?? "pending")}
-                        <div className="flex space-x-1 ml-2">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => onTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, "accepted")}
-                                >
-                                  <Check className="h-3 w-3 text-green-500" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Accept</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() =>
-                                    onTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, "requires_interaction")
-                                  }
-                                >
-                                  <Clock className="h-3 w-3 text-yellow-500" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Requires Interaction</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => onTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, "declined")}
-                                >
-                                  <X className="h-3 w-3 text-red-500" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Decline</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                      {teamTileSubmission?.submissions.map((submission) => (
-                        <div key={submission.id} className="relative group aspect-square">
-                          <Image
-                            src={submission.image.path || getRandomFrog()}
-                            alt={`Submission for ${selectedTile?.title} by ${team.name}`}
-                            fill
-                            style={{ objectFit: "cover" }}
-                            className="rounded-md cursor-pointer"
-                            onClick={() =>
-                              onFullSizeImageView(
-                                submission.image.path,
-                                `Submission for ${selectedTile?.title} by ${team.name}`,
-                              )
-                            }
-                          />
-
-                          {canDeleteSubmissions && (
-                            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="destructive" size="icon" className="h-6 w-6">
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Submission</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to delete this submission from {team.name}?
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => onDeleteSubmission?.(submission.id)}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          )}
-
-                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate">
-                            {new Date(submission.createdAt).toLocaleDateString()}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </TabsContent>
 
           <TabsContent value="pending" className="mt-2 space-y-4">
             {teams.map((team) => {
@@ -380,7 +271,7 @@ export function SubmissionsTab({
                       {teamTileSubmission?.submissions.map((submission) => (
                         <div key={submission.id} className="relative group aspect-square">
                           <Image
-                            src={submission.image.path || getRandomFrog()}
+                            src={submission.image.path ?? getRandomFrog()}
                             alt={`Submission for ${selectedTile?.title} by ${team.name}`}
                             fill
                             style={{ objectFit: "cover" }}
@@ -393,7 +284,132 @@ export function SubmissionsTab({
                             }
                           />
 
-                          {canDeleteSubmissions && (
+                          {canDeleteSubmissions && !isSubmissionsLocked && (
+                            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="destructive" size="icon" className="h-6 w-6">
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Submission</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete this submission from {team.name}?
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => onDeleteSubmission?.(submission.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          )}
+
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate">
+                            {new Date(submission.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </TabsContent>
+          <TabsContent value="all" className="mt-2 space-y-4">
+            {teams.map((team) => {
+              const teamTileSubmission = selectedTile?.teamTileSubmissions?.find((tts) => tts.teamId === team.id)
+              const hasSubmissions = (teamTileSubmission?.submissions.length ?? 0) > 0
+
+              if (!hasSubmissions) return null
+
+              return (
+                <Card key={team.id} className="overflow-hidden">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium text-sm">{team.name}</h4>
+                      <div className="flex items-center gap-1">
+                        {getStatusBadge(teamTileSubmission?.status ?? "pending")}
+                        <div className="flex space-x-1 ml-2">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => onTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, "accepted")}
+                                >
+                                  <Check className="h-3 w-3 text-green-500" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Accept</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() =>
+                                    onTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, "requires_interaction")
+                                  }
+                                >
+                                  <Clock className="h-3 w-3 text-yellow-500" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Requires Interaction</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => onTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, "declined")}
+                                >
+                                  <X className="h-3 w-3 text-red-500" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Decline</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                      {teamTileSubmission?.submissions.map((submission) => (
+                        <div key={submission.id} className="relative group aspect-square">
+                          <Image
+                            src={submission.image.path ?? getRandomFrog()}
+                            alt={`Submission for ${selectedTile?.title} by ${team.name}`}
+                            fill
+                            style={{ objectFit: "cover" }}
+                            className="rounded-md cursor-pointer"
+                            onClick={() =>
+                              onFullSizeImageView(
+                                submission.image.path,
+                                `Submission for ${selectedTile?.title} by ${team.name}`,
+                              )
+                            }
+                          />
+
+                          {canDeleteSubmissions && !isSubmissionsLocked && (
                             <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>

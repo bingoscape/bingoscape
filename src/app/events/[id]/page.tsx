@@ -99,7 +99,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
                                                 currentTeamId={currentTeam?.id}
                                                 teams={event.teams ?? []}
                                                 highlightedTiles={[]}
-                                                isLocked={true}
+                                                isLayoutLocked={true}
                                                 userRole={userRole}
                                             />
                                         </div>

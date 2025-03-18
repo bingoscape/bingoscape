@@ -24,7 +24,7 @@ export default function BingoGridWrapper({
   currentTeamId,
 }: BingoGridWrapperProps) {
   const [bingo, setBingo] = useState(initialBingo)
-  const [isLocked, setIsLocked] = useState(true)
+  const [isLayoutLocked, setIsLocked] = useState(true)
   const [updateKey, setUpdateKey] = useState(0)
   const [highlightedTiles, setHighlightedTiles] = useState<number[]>([])
   const searchParams = useSearchParams()
@@ -41,10 +41,10 @@ export default function BingoGridWrapper({
     setIsLocked((prevIsLocked) => !prevIsLocked)
     setBingo((prevBingo) => ({ ...prevBingo, locked: !prevBingo.locked }))
     toast({
-      title: isLocked ? "Bingo board unlocked" : "Bingo board locked",
-      description: isLocked ? "You can now edit the bingo board." : "The bingo board is now locked.",
+      title: isLayoutLocked ? "Bingo board unlocked" : "Bingo board locked",
+      description: isLayoutLocked ? "You can now edit the bingo board." : "The bingo board is now locked.",
     })
-  }, [isLocked])
+  }, [isLayoutLocked])
 
   const updateBingoState = useCallback((newTiles: Tile[], updatedBingo: Bingo) => {
     setBingo((prevBingo) => ({
@@ -193,11 +193,11 @@ export default function BingoGridWrapper({
       {isManagement && (
         <div className="flex flex-wrap gap-4 mb-4">
           <Button onClick={handleToggleLock} className="flex items-center justify-center">
-            {isLocked ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
-            {isLocked ? "Unlock Board" : "Lock Board"}
+            {isLayoutLocked ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
+            {isLayoutLocked ? "Unlock Board" : "Lock Board"}
           </Button>
           <AnimatePresence>
-            {!isLocked && (
+            {!isLayoutLocked && (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -246,7 +246,7 @@ export default function BingoGridWrapper({
         userRole={userRole}
         currentTeamId={selectedTeamId}
         teams={teams}
-        isLocked={isLocked}
+        isLayoutLocked={isLayoutLocked}
         onReorderTiles={handleReorderTiles}
         highlightedTiles={highlightedTiles}
       />
