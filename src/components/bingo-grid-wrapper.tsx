@@ -28,7 +28,6 @@ export default function BingoGridWrapper({
   const [updateKey, setUpdateKey] = useState(0)
   const [highlightedTiles, setHighlightedTiles] = useState<number[]>([])
   const searchParams = useSearchParams()
-  const [tiles, setTiles] = useState<Tile[]>(bingo.tiles || [])
 
   // Get the selected team ID from URL params or use the current team ID
   const selectedTeamId = searchParams.get("teamId") ?? currentTeamId
@@ -36,19 +35,6 @@ export default function BingoGridWrapper({
   useEffect(() => {
     setUpdateKey((prev) => prev + 1)
   }, [bingo])
-
-  // Add a useEffect to refresh the bingo data when tiles are updated
-  useEffect(() => {
-    // This effect will run whenever the bingo prop changes
-    setTiles(bingo.tiles || [])
-    setHighlightedTiles([])
-  }, [bingo])
-
-  // Add a function to handle tile updates
-  const handleTileUpdated = () => {
-    // Force a refresh of the component
-    setTiles([...tiles])
-  }
 
   const handleToggleLock = useCallback(async () => {
     // TODO: Implement the actual API call to toggle the lock state
@@ -258,12 +244,11 @@ export default function BingoGridWrapper({
         key={`${bingo.rows}-${bingo.columns}-${updateKey}`}
         bingo={bingo}
         userRole={userRole}
-        teams={teams}
         currentTeamId={selectedTeamId}
+        teams={teams}
         isLocked={isLocked}
         onReorderTiles={handleReorderTiles}
         highlightedTiles={highlightedTiles}
-        onTileUpdated={handleTileUpdated}
       />
     </div>
   )

@@ -60,11 +60,11 @@ export function SubmissionsTab({
   const teamSubmissions =
     selectedTile.teamTileSubmissions?.find((tts) => tts.teamId === currentTeamId)?.submissions ?? []
   const canDeleteSubmissions = !!onDeleteSubmission && (hasSufficientRights || currentTeamId)
-  const hasImageSelected = !!(selectedImage || pastedImage)
+  const hasImageSelected = !!(selectedImage ?? pastedImage)
 
   // Get current team's submission status
   const currentTeamSubmission = selectedTile.teamTileSubmissions?.find((tts) => tts.teamId === currentTeamId)
-  const currentStatus = currentTeamSubmission?.status || "pending"
+  const currentStatus = currentTeamSubmission?.status ?? "pending"
 
   // Status badge colors
   const getStatusBadge = (status: string) => {
@@ -194,7 +194,7 @@ export function SubmissionsTab({
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-medium text-sm">{team.name}</h4>
                       <div className="flex items-center gap-1">
-                        {getStatusBadge(teamTileSubmission?.status || "pending")}
+                        {getStatusBadge(teamTileSubmission?.status ?? "pending")}
                         <div className="flex space-x-1 ml-2">
                           <TooltipProvider>
                             <Tooltip>
