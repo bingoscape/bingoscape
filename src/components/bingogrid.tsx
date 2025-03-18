@@ -39,6 +39,7 @@ interface BingoGridProps {
   isLocked: boolean
   onReorderTiles?: (reorderedTiles: Tile[]) => void
   highlightedTiles: number[]
+  onTileUpdated?: () => void
 }
 
 export default function BingoGrid({
@@ -49,6 +50,7 @@ export default function BingoGrid({
   isLocked,
   onReorderTiles,
   highlightedTiles,
+  onTileUpdated,
 }: BingoGridProps) {
   const [tiles, setTiles] = useState<Tile[]>(bingo.tiles ?? [])
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null)
@@ -134,6 +136,9 @@ export default function BingoGrid({
     const result = await updateTile(tile.id, updatedTile)
     if (result.success) {
       setTiles((prevTiles) => prevTiles.map((t) => (t.id === tile.id ? updatedTile : t)))
+      if (onTileUpdated) {
+        onTileUpdated()
+      }
       toast({
         title: "Tile updated",
         description: `The tile is now ${updatedTile.isHidden ? "a placeholder" : "no longer a placeholder"}.`,
@@ -154,6 +159,9 @@ export default function BingoGrid({
         setTiles((prevTiles) =>
           prevTiles.map((tile) => (tile.id === selectedTile.id ? { ...tile, ...editedTile } : tile)),
         )
+        if (onTileUpdated) {
+          onTileUpdated()
+        }
         setIsDialogOpen(false)
         toast({
           title: "Tile updated",
