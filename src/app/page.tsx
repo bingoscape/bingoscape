@@ -51,8 +51,8 @@ export default async function HomePage() {
               <div className="aspect-square rounded-lg bg-muted/30 p-1 backdrop-blur-sm border">
                 <div className="h-full w-full rounded-md bg-muted/80 flex items-center justify-center">
                   <img
-                    src="/placeholder.svg?height=400&width=400"
-                    alt="BingoScape Preview"
+                    src="https://oldschool.runescape.wiki/images/thumb/TzKal-Zuk.png/1024px-TzKal-Zuk.png?2d222"
+                    alt="TzKal-Zuk"
                     className="max-w-full max-h-full object-contain"
                   />
                 </div>
