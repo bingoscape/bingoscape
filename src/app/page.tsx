@@ -48,14 +48,12 @@ export default async function HomePage() {
             </div>
 
             <div className="relative w-full max-w-md">
-              <div className="aspect-square rounded-lg p-1 backdrop-blur-sm border">
-                <div className="h-full w-full rounded-md flex items-center justify-center">
-                  <img
-                    src="https://oldschool.runescape.wiki/images/thumb/TzKal-Zuk.png/1024px-TzKal-Zuk.png?2d222"
-                    alt="TzKal-Zuk"
-                    className="max-w-full max-h-full object-contain"
-                  />
-                </div>
+              <div className="h-full w-full aspect-square rounded-md flex items-center justify-center">
+                <img
+                  src="https://oldschool.runescape.wiki/images/thumb/TzKal-Zuk.png/1024px-TzKal-Zuk.png?2d222"
+                  alt="TzKal-Zuk"
+                  className="max-w-full max-h-full object-contain"
+                />
               </div>
             </div>
           </div>
