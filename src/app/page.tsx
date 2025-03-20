@@ -48,8 +48,8 @@ export default async function HomePage() {
             </div>
 
             <div className="relative w-full max-w-md">
-              <div className="aspect-square rounded-lg bg-muted/30 p-1 backdrop-blur-sm border">
-                <div className="h-full w-full rounded-md bg-muted/80 flex items-center justify-center">
+              <div className="aspect-square rounded-lg p-1 backdrop-blur-sm border">
+                <div className="h-full w-full rounded-md flex items-center justify-center">
                   <img
                     src="https://oldschool.runescape.wiki/images/thumb/TzKal-Zuk.png/1024px-TzKal-Zuk.png?2d222"
                     alt="TzKal-Zuk"
