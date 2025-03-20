@@ -35,6 +35,7 @@ export async function validateApiKey(req: Request): Promise<string | null> {
       .where(eq(apiKeys.key, apiKey))
       .limit(1)
 
+
     if (!key) {
       return null
     }
