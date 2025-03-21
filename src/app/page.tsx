@@ -1,5 +1,7 @@
 import EventList from "@/components/eventlist"
 import { LoginCard } from "@/components/login"
+import { TemplatePreviewGrid } from "@/components/template-preview-grid"
+import getTemplateBoard from "@/lib/getTemplateBoard"
 import { getServerAuthSession } from "@/server/auth"
 import { Trophy, Users, Calendar } from "lucide-react"
 
@@ -47,14 +49,13 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <div className="relative w-full max-w-md">
-              <div className="h-full w-full aspect-square rounded-md flex items-center justify-center">
-                <img
-                  src="https://oldschool.runescape.wiki/images/thumb/TzKal-Zuk.png/1024px-TzKal-Zuk.png?2d222"
-                  alt="TzKal-Zuk"
-                  className="max-w-full max-h-full object-contain"
-                />
-              </div>
+            <div className="h-full w-full aspect-square rounded-md flex items-center justify-center max-w-md">
+              <TemplatePreviewGrid
+                templateData={getTemplateBoard()}
+                title={"Showcase"}
+                isDetailView={true}
+                className="mb-2"
+              />
             </div>
           </div>
         )}
@@ -62,4 +63,3 @@ export default async function HomePage() {
     </div>
   )
 }
-
