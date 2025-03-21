@@ -47,7 +47,7 @@ export function TemplatePreviewGrid({
 
   if (!parsedData) {
     return (
-      <div className={cn("relative rounded-md overflow-hidden bg-muted flex items-center justify-center", className)}>
+      <div className={cn("relative rounded-md overflow-hidden flex items-center justify-center", className)}>
         <div className="grid grid-cols-3 grid-rows-3 gap-1 w-3/4 h-3/4 opacity-50">
           {Array.from({ length: 9 }).map((_, i) => (
             <div key={i} className="bg-muted-foreground/20 rounded-sm" />
@@ -70,7 +70,7 @@ export function TemplatePreviewGrid({
   return (
     <div
       className={cn(
-        "relative rounded-md overflow-hidden bg-muted p-2",
+        "relative rounded-md overflow-hidden p-2",
         className,
         isDetailView ? "aspect-square w-full max-w-[80vh] mx-auto" : "aspect-square",
       )}
