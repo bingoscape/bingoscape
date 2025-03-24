@@ -100,7 +100,7 @@ export function EventCard({ eventData, onJoin, isParticipant, status }: EventCar
             Join
           </Button>
         )}
-        {!isParticipant && (isRegistrationClosed || eventData.event.locked) && (
+        {!isParticipant && (isRegistrationClosed ?? eventData.event.locked) && (
           <Button disabled className="ml-2" title="Registration is closed">
             Closed
           </Button>

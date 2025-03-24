@@ -112,7 +112,7 @@ export function CreateEventModal() {
             <Label htmlFor="registrationDeadline">Registration Deadline</Label>
             <Input id="registrationDeadline" name="registrationDeadline" type="datetime-local" />
             <p className="text-xs text-muted-foreground mt-1">
-              If set, users won't be able to join after this date. Leave empty for no deadline.
+              If set, users won&apos;t be able to join after this date. Leave empty for no deadline.
             </p>
           </div>
           <div>

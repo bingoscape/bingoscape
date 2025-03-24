@@ -489,7 +489,7 @@ export async function joinEvent(eventId: string, override = false) {
     const registrationStatus = await isRegistrationOpen(eventId)
 
     if (!registrationStatus.isOpen) {
-      throw new Error(registrationStatus.reason || "Registration is closed for this event")
+      throw new Error(registrationStatus.reason ?? "Registration is closed for this event")
     }
   } else {
     // If override is true, verify the user is an admin
