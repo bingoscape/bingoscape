@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { PrizePoolDisplay } from "./prize-pool-display"
 import type { EventData } from "@/app/actions/events"
-import { CalendarIcon, Users, Trophy, ArrowRight } from "lucide-react"
+import { CalendarIcon, Users, Trophy, ArrowRight, Clock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
 interface EventCardProps {
@@ -18,6 +18,10 @@ interface EventCardProps {
 export function EventCard({ eventData, onJoin, isParticipant, status }: EventCardProps) {
   const startDate = new Date(eventData.event.startDate)
   const endDate = new Date(eventData.event.endDate)
+  const registrationDeadline = eventData.event.registrationDeadline
+    ? new Date(eventData.event.registrationDeadline)
+    : null
+  const isRegistrationClosed = registrationDeadline && new Date() > registrationDeadline
 
   const getStatusBadge = () => {
     if (!status) return null
@@ -73,6 +77,14 @@ export function EventCard({ eventData, onJoin, isParticipant, status }: EventCar
               <Trophy className="h-3.5 w-3.5 mr-1" />
               <span>{eventData.event.bingos?.length ?? 0} Bingos</span>
             </div>
+
+            {registrationDeadline && (
+              <div className="flex items-center text-muted-foreground">
+                <Clock className="h-3.5 w-3.5 mr-1" />
+                <span>Registration: {registrationDeadline.toLocaleDateString()}</span>
+                {isRegistrationClosed && <span className="ml-1 text-destructive">(Closed)</span>}
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
@@ -83,9 +95,14 @@ export function EventCard({ eventData, onJoin, isParticipant, status }: EventCar
             <ArrowRight className="h-4 w-4" />
           </Button>
         </Link>
-        {!isParticipant && (
+        {!isParticipant && !isRegistrationClosed && !eventData.event.locked && (
           <Button onClick={onJoin} className="ml-2">
             Join
+          </Button>
+        )}
+        {!isParticipant && (isRegistrationClosed || eventData.event.locked) && (
+          <Button disabled className="ml-2" title="Registration is closed">
+            Closed
           </Button>
         )}
       </CardFooter>

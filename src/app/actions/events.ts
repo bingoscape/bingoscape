@@ -13,7 +13,7 @@ import {
   users,
   bingos,
 } from "@/server/db/schema"
-import { eq, and, asc, sum, sql, desc } from "drizzle-orm"
+import { eq, and, asc, sum, sql } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { revalidatePath } from "next/cache"
 
@@ -131,6 +131,7 @@ export interface Event {
   eventParticipants?: EventParticipant[]
   minimumBuyIn: number
   basePrizePool: number
+  registrationDeadline: Date | null
 }
 
 export interface EventData {
@@ -155,6 +156,7 @@ export async function createEvent(formData: FormData) {
   const description = formData.get("description") as string
   const startDateStr = formData.get("startDate") as string
   const endDateStr = formData.get("endDate") as string
+  const registrationDeadlineStr = formData.get("registrationDeadline") as string
   const bpp = formData.get("basePrizePool") as string
   const mbi = formData.get("minimumBuyIn") as string
 
@@ -164,13 +166,22 @@ export async function createEvent(formData: FormData) {
 
   const startDate = new Date(startDateStr)
   const endDate = new Date(endDateStr)
+  const registrationDeadline = registrationDeadlineStr ? new Date(registrationDeadlineStr) : null
 
   if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
     return { success: false, error: "Invalid date format" }
   }
 
+  if (registrationDeadline && isNaN(registrationDeadline.getTime())) {
+    return { success: false, error: "Invalid registration deadline format" }
+  }
+
   if (endDate < startDate) {
     return { success: false, error: "End date must be after start date" }
+  }
+
+  if (registrationDeadline && registrationDeadline > endDate) {
+    return { success: false, error: "Registration deadline must be before the event end date" }
   }
 
   const basePrizePool = Number.parseInt(bpp) ?? 0
@@ -185,6 +196,7 @@ export async function createEvent(formData: FormData) {
           description: description || "",
           startDate,
           endDate,
+          registrationDeadline,
           basePrizePool,
           minimumBuyIn,
           creatorId: session.user.id,
@@ -368,10 +380,126 @@ export async function getEvents(userId: string): Promise<EventData[]> {
   }
 }
 
-export async function joinEvent(eventId: string) {
+export async function updateEvent(
+  eventId: string,
+  eventData: {
+    title: string
+    description: string | null
+    startDate: string
+    endDate: string
+    registrationDeadline: string | null
+    minimumBuyIn: number
+    basePrizePool: number
+    locked?: boolean
+    public?: boolean
+  },
+) {
+  try {
+    await db
+      .update(events)
+      .set({
+        title: eventData.title,
+        description: eventData.description,
+        startDate: new Date(eventData.startDate),
+        endDate: new Date(eventData.endDate),
+        registrationDeadline: eventData.registrationDeadline ? new Date(eventData.registrationDeadline) : null,
+        minimumBuyIn: eventData.minimumBuyIn,
+        basePrizePool: eventData.basePrizePool,
+        locked: eventData.locked,
+        public: eventData.public,
+        updatedAt: new Date(),
+      })
+      .where(eq(events.id, eventId))
+
+    // Revalidate the event page to reflect the changes
+    revalidatePath(`/events/${eventId}`)
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error updating event:", error)
+    throw new Error("Failed to update event")
+  }
+}
+
+export async function isRegistrationOpen(eventId: string): Promise<{
+  isOpen: boolean
+  reason?: string
+  canOverride: boolean
+}> {
+  const session = await getServerAuthSession()
+  if (!session || !session.user) {
+    return { isOpen: false, reason: "You must be logged in to join events", canOverride: false }
+  }
+
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+  })
+
+  if (!event) {
+    return { isOpen: false, reason: "Event not found", canOverride: false }
+  }
+
+  // Check if the user is already a participant
+  const existingParticipant = await db.query.eventParticipants.findFirst({
+    where: and(eq(eventParticipants.eventId, eventId), eq(eventParticipants.userId, session.user.id)),
+  })
+
+  if (existingParticipant) {
+    return { isOpen: false, reason: "You are already a participant in this event", canOverride: false }
+  }
+
+  // Check if the event is locked
+  if (event.locked) {
+    // Check if the user is an admin (can override)
+    const isAdmin = event.creatorId === session.user.id
+    return {
+      isOpen: false,
+      reason: "This event is locked for registration",
+      canOverride: isAdmin,
+    }
+  }
+
+  // Check if registration deadline has passed
+  if (event.registrationDeadline && new Date() > new Date(event.registrationDeadline)) {
+    // Check if the user is an admin (can override)
+    const isAdmin = event.creatorId === session.user.id
+    return {
+      isOpen: false,
+      reason: `Registration deadline (${new Date(event.registrationDeadline).toLocaleString()}) has passed`,
+      canOverride: isAdmin,
+    }
+  }
+
+  // Check if the event has ended
+  if (new Date() > new Date(event.endDate)) {
+    return { isOpen: false, reason: "This event has ended", canOverride: false }
+  }
+
+  return { isOpen: true, canOverride: false }
+}
+
+export async function joinEvent(eventId: string, override = false) {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
     throw new Error("You must be logged in to join an event")
+  }
+
+  // Skip registration checks if override is true and user is admin
+  if (!override) {
+    const registrationStatus = await isRegistrationOpen(eventId)
+
+    if (!registrationStatus.isOpen) {
+      throw new Error(registrationStatus.reason || "Registration is closed for this event")
+    }
+  } else {
+    // If override is true, verify the user is an admin
+    const event = await db.query.events.findFirst({
+      where: eq(events.id, eventId),
+    })
+
+    if (!event || event.creatorId !== session.user.id) {
+      throw new Error("You don't have permission to override registration restrictions")
+    }
   }
 
   const existingParticipant = await db.query.eventParticipants.findFirst({
@@ -519,8 +647,6 @@ export async function getEventParticipants(eventId: string) {
         //     team: true,
         //   },
         //   orderBy: [desc(teamMembers.createdAt)], // Get the most recent team assignment
-        // })
-
 
         // Use select syntax with a join between teams and teamMembers
         const team = await db
@@ -535,7 +661,6 @@ export async function getEventParticipants(eventId: string) {
           .limit(1)
 
         console.log("team", team)
-
 
         const t = team[0] ?? null
         // Only include team if it belongs to this event
@@ -728,45 +853,6 @@ export async function updateParticipantBuyIn(eventId: string, participantId: str
   } catch (error) {
     console.error("Error updating participant buy-in:", error)
     throw error
-  }
-}
-
-export async function updateEvent(
-  eventId: string,
-  eventData: {
-    title: string
-    description: string | null
-    startDate: string
-    endDate: string
-    minimumBuyIn: number
-    basePrizePool: number
-    locked?: boolean
-    public?: boolean
-  },
-) {
-  try {
-    await db
-      .update(events)
-      .set({
-        title: eventData.title,
-        description: eventData.description,
-        startDate: new Date(eventData.startDate),
-        endDate: new Date(eventData.endDate),
-        minimumBuyIn: eventData.minimumBuyIn,
-        basePrizePool: eventData.basePrizePool,
-        locked: eventData.locked,
-        public: eventData.public,
-        updatedAt: new Date(),
-      })
-      .where(eq(events.id, eventId))
-
-    // Revalidate the event page to reflect the changes
-    revalidatePath(`/events/${eventId}`)
-
-    return { success: true }
-  } catch (error) {
-    console.error("Error updating event:", error)
-    throw new Error("Failed to update event")
   }
 }
 

@@ -1,15 +1,24 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import type React from "react"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
-import { createEvent } from '@/app/actions/events'
-import formatRunescapeGold from '@/lib/formatRunescapeGold'
+import { createEvent } from "@/app/actions/events"
+import formatRunescapeGold from "@/lib/formatRunescapeGold"
 
 export function CreateEventModal() {
   const [open, setOpen] = useState(false)
@@ -67,17 +76,29 @@ export function CreateEventModal() {
           </div>
           <div>
             <Label htmlFor="basePrizePool">Base Prizepool</Label>
-            <Input id="basePrizePool" name="basePrizePool" type="number" required onChange={(e) => setBasePool(parseInt(e.target.value))} min={0} defaultValue={0} />
-            <span className="text-sm font-medium">
-              ({formatRunescapeGold(basePool)} GP)
-            </span>
+            <Input
+              id="basePrizePool"
+              name="basePrizePool"
+              type="number"
+              required
+              onChange={(e) => setBasePool(Number.parseInt(e.target.value))}
+              min={0}
+              defaultValue={0}
+            />
+            <span className="text-sm font-medium">({formatRunescapeGold(basePool)} GP)</span>
           </div>
           <div>
             <Label htmlFor="minimumBuyIn">Buy In</Label>
-            <Input id="minimumBuyIn" name="minimumBuyIn" type="number" required onChange={(e) => setBuyIn(parseInt(e.target.value))} min={0} defaultValue={0} />
-            <span className="text-sm font-medium">
-              ({formatRunescapeGold(buyIn)} GP)
-            </span>
+            <Input
+              id="minimumBuyIn"
+              name="minimumBuyIn"
+              type="number"
+              required
+              onChange={(e) => setBuyIn(Number.parseInt(e.target.value))}
+              min={0}
+              defaultValue={0}
+            />
+            <span className="text-sm font-medium">({formatRunescapeGold(buyIn)} GP)</span>
           </div>
           <div>
             <Label htmlFor="startDate">Start Date</Label>
@@ -87,6 +108,16 @@ export function CreateEventModal() {
             <Label htmlFor="endDate">End Date</Label>
             <Input id="endDate" name="endDate" type="date" required />
           </div>
+          <div>
+            <Label htmlFor="registrationDeadline">Registration Deadline</Label>
+            <Input id="registrationDeadline" name="registrationDeadline" type="datetime-local" />
+            <p className="text-xs text-muted-foreground mt-1">
+              If set, users won't be able to join after this date. Leave empty for no deadline.
+            </p>
+          </div>
+          <div>
+            <Label htmlFor="basePrizePool">Base Prizepool</Label>
+          </div>
           <Button type="submit" disabled={isLoading}>
             {isLoading ? "Creating..." : "Create Event"}
           </Button>
@@ -95,3 +126,4 @@ export function CreateEventModal() {
     </Dialog>
   )
 }
+

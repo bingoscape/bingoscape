@@ -27,6 +27,7 @@ interface Event {
   description: string | null
   startDate: Date
   endDate: Date
+  registrationDeadline: Date | null
   minimumBuyIn: number | undefined
   basePrizePool: number | undefined
   public: boolean | undefined
@@ -39,6 +40,9 @@ export function EditEventModal({ event }: { event: Event }) {
     description: event.description ?? "",
     startDate: event.startDate.toISOString().split("T")[0]!,
     endDate: event.endDate.toISOString().split("T")[0]!,
+    registrationDeadline: event.registrationDeadline
+      ? new Date(event.registrationDeadline).toISOString().slice(0, 16)
+      : "",
     minimumBuyIn: event.minimumBuyIn!,
     basePrizePool: event.basePrizePool!,
     public: event.public ?? false,
@@ -110,6 +114,20 @@ export function EditEventModal({ event }: { event: Event }) {
           <div className="space-y-2">
             <Label htmlFor="endDate">End Date</Label>
             <Input id="endDate" name="endDate" type="date" value={formData.endDate} onChange={handleChange} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="registrationDeadline">Registration Deadline</Label>
+            <Input
+              id="registrationDeadline"
+              name="registrationDeadline"
+              type="datetime-local"
+              value={formData.registrationDeadline}
+              onChange={handleChange}
+            />
+            <p className="text-xs text-muted-foreground">
+              If set, users won't be able to join after this date. Leave empty to allow registration until the event
+              ends.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="minimumBuyIn">Minimum Buy-In</Label>
