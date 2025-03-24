@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { CreateBingoModal } from "@/components/create-bingo-modal"
 import BingoGrid from "@/components/bingogrid"
 import { getServerAuthSession } from "@/server/auth"
-import { getEventById, getTotalBuyInsForEvent } from "@/app/actions/events"
+import { getEventById, getTotalBuyInsForEvent, isRegistrationOpen } from "@/app/actions/events"
 import type { UUID } from "crypto"
 import { getUserClans } from "@/app/actions/clan"
 import AssignEventToClanModal from "@/components/assign-event-to-clan-modal"
@@ -14,7 +14,7 @@ import { TeamDisplay } from "@/components/team-display"
 import { DeleteBingoButton } from "@/components/delete-bingo-button"
 import { BingoInfoModal } from "@/components/bingo-info-modal"
 import Link from "next/link"
-import { Users } from "lucide-react"
+import { Users, Clock } from "lucide-react"
 import { getCurrentTeamForUser } from "@/app/actions/team"
 import { PrizePoolDisplay } from "@/components/prize-pool-display"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
@@ -40,6 +40,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
     const userClans = await getUserClans()
     const currentTeam = await getCurrentTeamForUser(params.id)
     const prizePool = await getTotalBuyInsForEvent(params.id)
+    const registrationStatus = await isRegistrationOpen(params.id)
 
     const isAdminOrManagement = userRole === "admin" || userRole === "management"
 
@@ -64,6 +65,20 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
                     ) : (
                         <p className="text-sm text-muted-foreground mt-2">No Buy-In!</p>
                     )}
+
+                    {/* Registration Deadline Information */}
+                    {event.registrationDeadline && (
+                        <div className="flex items-center mt-2">
+                            <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground">
+                                Registration Deadline: {event.registrationDeadline.toDateString()}
+                                {!registrationStatus.isOpen && registrationStatus.reason?.includes("deadline") && (
+                                    <span className="ml-2 text-destructive font-medium">(Closed)</span>
+                                )}
+                            </p>
+                        </div>
+                    )}
+                    {event.locked && <p className="text-sm text-destructive mt-2">This event is locked for registration</p>}
 
                     <div className="flex justify-between items-center mt-6 mb-4">
                         <h2 className="text-2xl font-bold">Bingos</h2>

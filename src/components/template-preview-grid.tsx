@@ -85,13 +85,13 @@ export function TemplatePreviewGrid({
         {displayTiles.map((tile, index) => (
           <HoverCard key={index} openDelay={200} closeDelay={100}>
             <HoverCardTrigger asChild>
-              <div className="border border-primary rounded overflow-hidden aspect-square relative cursor-pointer transition-all hover:scale-105 hover:shadow-md">
+              <div className="border border-primary rounded overflow-hidden aspect-square relative p-4 cursor-pointer transition-all hover:scale-105 hover:shadow-md">
                 {tile.headerImage ? (
                   <Image
                     src={tile.headerImage || getRandomFrog()}
                     alt={tile.title}
                     fill
-                    className="object-contain"
+                    className="object-scale-down"
                   />
                 ) : (
                   <div className="w-full h-full bg-primary flex items-center justify-center">

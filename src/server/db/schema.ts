@@ -125,6 +125,7 @@ export const events = createTable("events", {
   description: varchar("description", { length: 1000 }),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
+  registrationDeadline: timestamp("registration_deadline"),
   creatorId: uuid("creator_id")
     .notNull()
     .references(() => users.id, { onDelete: "set null" }),
