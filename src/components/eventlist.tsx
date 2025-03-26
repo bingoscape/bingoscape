@@ -1,8 +1,6 @@
 import { CreateEventModal } from "./create-event-modal"
 import { getEvents } from "@/app/actions/events"
 import { EventDisplay } from "./events-display"
-import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
 
 export default async function EventList({ userId }: { userId: string }) {
   const allEvents = await getEvents(userId)

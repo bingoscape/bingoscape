@@ -1,21 +1,21 @@
-import { getUserClans } from "../actions/clan";
-import { notFound } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import CreateClanModal from "@/components/create-clan-modal";
-import { getServerAuthSession } from "@/server/auth";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Crown, Users } from "lucide-react";
-import Link from "next/link";
+import { getUserClans } from "../actions/clan"
+import { notFound } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
+import CreateClanModal from "@/components/create-clan-modal"
+import { getServerAuthSession } from "@/server/auth"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Crown, Users } from "lucide-react"
+import Link from "next/link"
 
 export default async function ClansPage() {
-  const session = await getServerAuthSession();
+  const session = await getServerAuthSession()
   if (!session || !session.user) {
-    notFound();
+    notFound()
   }
 
-  const userClans = await getUserClans();
+  const userClans = await getUserClans()
 
   return (
     <div className="container mx-auto py-10">
@@ -32,9 +32,7 @@ export default async function ClansPage() {
                   <CardTitle>{userClan.clan.name}</CardTitle>
                   <CardDescription>{userClan.isMain ? "Main Clan" : "Guest Clan"}</CardDescription>
                 </div>
-                <Badge variant={userClan.isMain ? "default" : "secondary"}>
-                  {userClan.isMain ? "Main" : "Guest"}
-                </Badge>
+                <Badge variant={userClan.isMain ? "default" : "secondary"}>{userClan.isMain ? "Main" : "Guest"}</Badge>
               </div>
             </CardHeader>
             <CardContent>
@@ -43,8 +41,8 @@ export default async function ClansPage() {
                 <Crown className="h-4 w-4" />
                 <span className="text-sm font-medium">Owner:</span>
                 <Avatar className="h-6 w-6">
-                  <AvatarImage src={userClan.owner.image ?? undefined} alt={userClan.owner.name ?? ''} />
-                  <AvatarFallback>{userClan.owner.runescapeName?.[0] ?? 'O'}</AvatarFallback>
+                  <AvatarImage src={userClan.owner.image ?? undefined} alt={userClan.owner.name ?? ""} />
+                  <AvatarFallback>{userClan.owner.runescapeName?.[0] ?? "O"}</AvatarFallback>
                 </Avatar>
                 <span className="text-sm">{userClan.owner.runescapeName ?? userClan.owner.name}</span>
               </div>
@@ -63,5 +61,6 @@ export default async function ClansPage() {
         ))}
       </div>
     </div>
-  );
+  )
 }
+

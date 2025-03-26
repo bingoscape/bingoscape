@@ -1,14 +1,23 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import type React from "react"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
-import { createClan } from '@/app/actions/clan'
+import { createClan } from "@/app/actions/clan"
 
 export default function CreateClanModal() {
   const [open, setOpen] = useState(false)
@@ -19,8 +28,8 @@ export default function CreateClanModal() {
     e.preventDefault()
     setIsLoading(true)
     const formData = new FormData(e.currentTarget)
-    const name = formData.get('name') as string
-    const description = formData.get('description') as string
+    const name = formData.get("name") as string
+    const description = formData.get("description") as string
 
     try {
       await createClan(name, description)

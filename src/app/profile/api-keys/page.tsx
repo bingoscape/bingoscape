@@ -1,4 +1,3 @@
-/* eslint-disable */
 "use client"
 
 import { useState, useEffect } from "react"
@@ -52,7 +51,9 @@ export default function ApiKeysPage() {
   const [isDeletingKey, setIsDeletingKey] = useState(false)
 
   useEffect(() => {
-    fetchApiKeys().then(() => console.log("fetched keys")).catch((err) => console.error(err))
+    fetchApiKeys()
+      .then(() => console.log("fetched keys"))
+      .catch((err) => console.error(err))
   }, [])
 
   const fetchApiKeys = async () => {
@@ -158,7 +159,10 @@ export default function ApiKeysPage() {
   }
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => console.log("Copied to clipboard")).catch(err => console.error(err))
+    navigator.clipboard
+      .writeText(text)
+      .then(() => console.log("Copied to clipboard"))
+      .catch((err) => console.error(err))
     toast({
       title: "Copied",
       description: "API key copied to clipboard",

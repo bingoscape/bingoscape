@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { getTemplateById } from "@/app/actions/templates"
 import { notFound } from "next/navigation"
 import { Breadcrumbs } from "@/components/breadcrumbs"

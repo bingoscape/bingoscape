@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { getTeamsByEventId } from "@/app/actions/team"
@@ -45,7 +45,9 @@ export function TeamDisplay({ eventId }: { eventId: string }) {
       }
     }
 
-    fetchTeams().then(() => console.log("done fetching teams")).catch(e => console.error(e));
+    fetchTeams()
+      .then(() => console.log("done fetching teams"))
+      .catch((e) => console.error(e))
   }, [eventId])
 
   if (loading) {
@@ -55,21 +57,19 @@ export function TeamDisplay({ eventId }: { eventId: string }) {
   const renderMember = (member: TeamMember) => (
     <li key={member.user.id} className="flex items-center space-x-2">
       <Avatar className="h-8 w-8">
-        <AvatarImage src={member.user.image ?? undefined} alt={member.user.runescapeName ?? ''} />
-        <AvatarFallback>{member.user.runescapeName?.[0] ?? 'U'}</AvatarFallback>
+        <AvatarImage src={member.user.image ?? undefined} alt={member.user.runescapeName ?? ""} />
+        <AvatarFallback>{member.user.runescapeName?.[0] ?? "U"}</AvatarFallback>
       </Avatar>
       <span>{member.user.runescapeName ?? member.user.name}</span>
-      {member.isLeader && (
-        <Shield className="h-4 w-4 text-yellow-500" aria-label="Team Leader" />
-      )}
+      {member.isLeader && <Shield className="h-4 w-4 text-yellow-500" aria-label="Team Leader" />}
     </li>
   )
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {teams.map((team) => {
-        const leader = team.teamMembers.find(member => member.isLeader)
-        const members = team.teamMembers.filter(member => !member.isLeader)
+        const leader = team.teamMembers.find((member) => member.isLeader)
+        const members = team.teamMembers.filter((member) => !member.isLeader)
 
         return (
           <Card key={team.id}>
@@ -88,3 +88,4 @@ export function TeamDisplay({ eventId }: { eventId: string }) {
     </div>
   )
 }
+

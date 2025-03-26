@@ -1,4 +1,3 @@
-/* eslint-disable */
 "use client"
 
 import type React from "react"
@@ -31,6 +30,7 @@ import { StatsDialog } from "./stats-dialog"
 import { BarChart, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSearchParams } from "next/navigation"
+import { getRunescapeAccountName } from "@/app/actions/user"
 
 interface BingoGridProps {
   bingo: Bingo
@@ -65,12 +65,18 @@ export default function BingoGrid({
   const sortableRef = useRef<Sortable | null>(null)
   const [isStatsDialogOpen, setIsStatsDialogOpen] = useState(false)
   const searchParams = useSearchParams()
+  const [runescapeName, setRunescapeName] = useState<string | null>(null)
 
   // Get the selected team ID from URL params or use the current team ID
   const selectedTeamId = searchParams.get("teamId") ?? currentTeamId
 
   useEffect(() => {
     if (gridRef.current && hasSufficientRights() && !isLayoutLocked) {
+      getRunescapeAccountName().then(res => {
+        debugger;
+        setRunescapeName(res)
+      }).catch(err => console.error("could not get account name from user"))
+
       sortableRef.current = new Sortable(gridRef.current, {
         animation: 150,
         swap: true,
@@ -100,6 +106,7 @@ export default function BingoGrid({
           }
         },
       })
+
 
       return () => {
         if (sortableRef.current) {
@@ -610,9 +617,11 @@ export default function BingoGrid({
                 selectedTile={selectedTile}
                 currentTeamId={selectedTeamId}
                 teams={teams}
+                eventId={bingo.eventId}
                 hasSufficientRights={hasSufficientRights()}
                 selectedImage={selectedImage}
                 pastedImage={pastedImage}
+                runescapeName={runescapeName}
                 isSubmissionsLocked={bingo.locked}
                 onImageChange={handleImageChange}
                 onImageSubmit={handleImageSubmit}

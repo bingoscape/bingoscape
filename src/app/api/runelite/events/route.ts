@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/server/db"
-import { teams, eventParticipants, events, teamTileSubmissions, tiles, teamMembers, bingos } from "@/server/db/schema"
+import { eventParticipants, events, teamTileSubmissions, tiles, teamMembers, bingos } from "@/server/db/schema"
 import { eq, asc } from "drizzle-orm"
 import { validateApiKey } from "@/lib/api-auth"
 
@@ -62,8 +62,8 @@ export async function GET(req: Request) {
                 db
                   .select()
                   .from(teamMembers)
-                  .where(and(eq(teamMembers.teamId, teams.id), eq(teamMembers.userId, userId)))
-              )
+                  .where(and(eq(teamMembers.teamId, teams.id), eq(teamMembers.userId, userId))),
+              ),
             ),
           with: {
             teamMembers: {
@@ -71,9 +71,9 @@ export async function GET(req: Request) {
                 user: {
                   columns: {
                     runescapeName: true,
-                  }
-                }
-              }
+                  },
+                },
+              },
             },
           },
         })
@@ -81,22 +81,22 @@ export async function GET(req: Request) {
         // Get all team tile submissions for this team
         const teamSubmissions = userTeam
           ? await db.query.teamTileSubmissions.findMany({
-            where: eq(teamTileSubmissions.teamId, userTeam.id),
-            with: {
-              submissions: {
-                with: {
-                  image: true,
-                  user: {
-                    columns: {
-                      id: true,
-                      name: true,
-                      runescapeName: true,
+              where: eq(teamTileSubmissions.teamId, userTeam.id),
+              with: {
+                submissions: {
+                  with: {
+                    image: true,
+                    user: {
+                      columns: {
+                        id: true,
+                        name: true,
+                        runescapeName: true,
+                      },
                     },
                   },
                 },
               },
-            },
-          })
+            })
           : []
 
         // Create a map of tile IDs to submission data
@@ -133,17 +133,17 @@ export async function GET(req: Request) {
               submissionCount: submission?.submissions.length ?? 0,
               ...(submission?.submissions.length
                 ? {
-                  latestSubmission: {
-                    id: submission.submissions[submission.submissions.length - 1]!.id,
-                    imageUrl: submission.submissions[submission.submissions.length - 1]!.image.path,
-                    submittedBy: {
-                      id: submission.submissions[submission.submissions.length - 1]!.user.id,
-                      name: submission.submissions[submission.submissions.length - 1]!.user.name,
-                      runescapeName: submission.submissions[submission.submissions.length - 1]!.user.runescapeName,
+                    latestSubmission: {
+                      id: submission.submissions[submission.submissions.length - 1]!.id,
+                      imageUrl: submission.submissions[submission.submissions.length - 1]!.image.path,
+                      submittedBy: {
+                        id: submission.submissions[submission.submissions.length - 1]!.user.id,
+                        name: submission.submissions[submission.submissions.length - 1]!.user.name,
+                        runescapeName: submission.submissions[submission.submissions.length - 1]!.user.runescapeName,
+                      },
+                      createdAt: submission.submissions[submission.submissions.length - 1]!.createdAt,
                     },
-                    createdAt: submission.submissions[submission.submissions.length - 1]!.createdAt,
-                  },
-                }
+                  }
                 : {}),
             }
           })
@@ -196,13 +196,15 @@ export async function GET(req: Request) {
           minimumBuyIn: eventData.minimumBuyIn,
           clan: eventData.clan,
           role: eventData.creatorId === userId ? "admin" : (eventData.eventParticipants[0]?.role ?? "participant"),
-          userTeam: !!userTeam ? {
-            name: userTeam.name,
-            members: userTeam.teamMembers.map((member) => ({
-              isLeader: member.isLeader,
-              runescapeName: member.user.runescapeName,
-            }))
-          } : null,
+          userTeam: !!userTeam
+            ? {
+                name: userTeam.name,
+                members: userTeam.teamMembers.map((member) => ({
+                  isLeader: member.isLeader,
+                  runescapeName: member.user.runescapeName,
+                })),
+              }
+            : null,
           bingos: eventData.bingos.map((bingo) => ({
             id: bingo.id,
             title: bingo.title,

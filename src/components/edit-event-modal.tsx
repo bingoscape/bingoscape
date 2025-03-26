@@ -125,8 +125,8 @@ export function EditEventModal({ event }: { event: Event }) {
               onChange={handleChange}
             />
             <p className="text-xs text-muted-foreground">
-              If set, users won&apos;t be able to join after this date. Leave empty to allow registration until the event
-              ends.
+              If set, users won&apos;t be able to join after this date. Leave empty to allow registration until the
+              event ends.
             </p>
           </div>
           <div className="space-y-2">

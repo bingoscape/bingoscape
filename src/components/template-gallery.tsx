@@ -172,7 +172,9 @@ export function TemplateGallery({
       {templates.length === 0 ? (
         <div className="text-center py-12 border rounded-lg">
           <h2 className="text-xl font-medium mb-2">No templates found</h2>
-          <p className="text-muted-foreground">Try adjusting your search or filters to find what you&apos;re looking for.</p>
+          <p className="text-muted-foreground">
+            Try adjusting your search or filters to find what you&apos;re looking for.
+          </p>
         </div>
       ) : (
         <>

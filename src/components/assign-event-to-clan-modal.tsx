@@ -1,22 +1,29 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/hooks/use-toast"
-import { assignEventToClan } from '@/app/actions/events'
+import { assignEventToClan } from "@/app/actions/events"
 
 type Clan = {
-  id: string;
-  name: string;
-};
+  id: string
+  name: string
+}
 
 type AssignEventToClanModalProps = {
-  eventId: string;
-  clans: Clan[];
-};
+  eventId: string
+  clans: Clan[]
+}
 
 export default function AssignEventToClanModal({ eventId, clans }: AssignEventToClanModalProps) {
   const [open, setOpen] = useState(false)
@@ -57,7 +64,9 @@ export default function AssignEventToClanModal({ eventId, clans }: AssignEventTo
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className='w-full'>Assign to Clan</Button>
+        <Button variant="outline" className="w-full">
+          Assign to Clan
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -71,7 +80,9 @@ export default function AssignEventToClanModal({ eventId, clans }: AssignEventTo
             </SelectTrigger>
             <SelectContent>
               {clans.map((clan) => (
-                <SelectItem key={clan.id} value={clan.id}>{clan.name}</SelectItem>
+                <SelectItem key={clan.id} value={clan.id}>
+                  {clan.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

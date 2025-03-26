@@ -20,7 +20,6 @@ import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { saveBingoAsTemplate } from "@/app/actions/templates"
 import { getEventById, getUserCreatedEvents } from "@/app/actions/events"
-import { getBingoById } from "@/app/actions/bingo"
 import { Plus } from "lucide-react"
 
 export function CreateTemplateButton() {
@@ -75,7 +74,9 @@ export function CreateTemplateButton() {
   const handleEventChange = (eventId: string) => {
     setSelectedEventId(eventId)
     setSelectedBingoId("")
-    loadBingos(eventId).then(() => console.log("Bingos loaded")).catch((error) => console.error("Error loading bingos:", error))
+    loadBingos(eventId)
+      .then(() => console.log("Bingos loaded"))
+      .catch((error) => console.error("Error loading bingos:", error))
   }
 
   const handleBingoChange = (bingoId: string) => {
@@ -137,7 +138,9 @@ export function CreateTemplateButton() {
     setIsOpen(open)
     if (open) {
       setStep("select-bingo")
-      loadEvents().then(() => console.log("Events loaded")).catch((error) => console.error("Error loading events:", error))
+      loadEvents()
+        .then(() => console.log("Events loaded"))
+        .catch((error) => console.error("Error loading events:", error))
     }
   }
 

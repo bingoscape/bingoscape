@@ -81,8 +81,9 @@ export function NotificationBell({ userId }: { userId: string }) {
             notifications.map((notification) => (
               <Card
                 key={notification.id}
-                className={`m-2 p-0 border relative ${notification.isRead ? "bg-muted/20" : "bg-background shadow-md border-l-4 border-l-blue-500"
-                  }`}
+                className={`m-2 p-0 border relative ${
+                  notification.isRead ? "bg-muted/20" : "bg-background shadow-md border-l-4 border-l-blue-500"
+                }`}
                 onClick={() => handleNotificationClick(notification.id)}
               >
                 {!notification.isRead && (
@@ -129,7 +130,6 @@ export function NotificationBell({ userId }: { userId: string }) {
                           handleNotificationClick(notification.id)
                             .then(() => console.log("Handled notification click"))
                             .catch((e) => console.error(e))
-
                         }}
                       >
                         <Button className="w-full" variant="ghost">
@@ -147,3 +147,4 @@ export function NotificationBell({ userId }: { userId: string }) {
     </Popover>
   )
 }
+

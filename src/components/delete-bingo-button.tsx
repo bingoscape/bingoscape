@@ -1,13 +1,23 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { deleteBingo } from "@/app/actions/bingo"
 import { toast } from "@/hooks/use-toast"
 import { Trash2 } from "lucide-react"
-import { type UUID } from "crypto"
+import type { UUID } from "crypto"
 
 interface DeleteBingoButtonProps {
   bingoId: UUID
@@ -58,3 +68,4 @@ export function DeleteBingoButton({ bingoId }: DeleteBingoButtonProps) {
     </AlertDialog>
   )
 }
+

@@ -22,8 +22,7 @@ export async function getTeamForUserInEvent(userId: string, eventId: string) {
       .where(eq(teams.eventId, eventId))
       .limit(1)
 
-
-    console.log(result);
+    console.log(result)
 
     // If no results found, return null
     if (result.length === 0) {

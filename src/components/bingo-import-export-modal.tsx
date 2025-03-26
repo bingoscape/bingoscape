@@ -138,7 +138,7 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle }: BingoIm
       }
 
       // Create a downloadable file
-      const fileName = `bingo-${bingoTitle?.toLowerCase().replace(/\s+/g, "-") ?? 'export'}-${new Date().toISOString().split("T")[0]}.json`
+      const fileName = `bingo-${bingoTitle?.toLowerCase().replace(/\s+/g, "-") ?? "export"}-${new Date().toISOString().split("T")[0]}.json`
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" })
       const url = URL.createObjectURL(blob)
 
@@ -241,8 +241,8 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle }: BingoIm
                   <FileJson className="h-4 w-4" />
                   <AlertTitle>Ready to Export</AlertTitle>
                   <AlertDescription>
-                    You are about to export the bingo board &quot;{bingoTitle}&quot;. The export will include all tiles, goals,
-                    and board settings.
+                    You are about to export the bingo board &quot;{bingoTitle}&quot;. The export will include all tiles,
+                    goals, and board settings.
                   </AlertDescription>
                 </Alert>
               </div>

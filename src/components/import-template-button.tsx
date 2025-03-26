@@ -97,7 +97,9 @@ export function ImportTemplateButton({ templateId }: ImportTemplateButtonProps) 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
     if (open) {
-      loadEvents().then(() => console.log("Events loaded")).catch((error) => console.error("Error loading events:", error))
+      loadEvents()
+        .then(() => console.log("Events loaded"))
+        .catch((error) => console.error("Error loading events:", error))
     }
   }
 

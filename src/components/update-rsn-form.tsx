@@ -1,14 +1,16 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import type React from "react"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "@/hooks/use-toast"
-import { updateProfile } from '@/app/actions/profile'
+import { updateProfile } from "@/app/actions/profile"
 
 interface User {
   id: string
@@ -61,14 +63,14 @@ export function UpdateRsnForm({ user }: { user: User }) {
 
           <div className="flex items-center space-x-4">
             <Avatar className="w-20 h-20">
-              <AvatarImage src={user.image ?? undefined} alt={user.name ?? ''} />
-              <AvatarFallback>{user.name?.[0] ?? 'U'}</AvatarFallback>
+              <AvatarImage src={user.image ?? undefined} alt={user.name ?? ""} />
+              <AvatarFallback>{user.name?.[0] ?? "U"}</AvatarFallback>
             </Avatar>
           </div>
 
           <div>
             <Label htmlFor="runescapeName">RuneScape Name</Label>
-            <Input id="runescapeName" name="runescapeName" defaultValue={user.runescapeName ?? ''} />
+            <Input id="runescapeName" name="runescapeName" defaultValue={user.runescapeName ?? ""} />
           </div>
 
           <Button type="submit" disabled={isLoading}>
@@ -79,3 +81,4 @@ export function UpdateRsnForm({ user }: { user: User }) {
     </Card>
   )
 }
+

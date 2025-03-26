@@ -28,9 +28,9 @@ export async function GET(request: NextRequest, { params }: { params: { bingoId:
                 submissions: {
                   with: {
                     image: true,
-                  }
+                  },
                 },
-              }
+              },
             },
             goals: {
               with: {
@@ -54,8 +54,8 @@ export async function GET(request: NextRequest, { params }: { params: { bingoId:
             db
               .select()
               .from(teamMembers)
-              .where(and(eq(teamMembers.teamId, teams.id), eq(teamMembers.userId, userId)))
-          )
+              .where(and(eq(teamMembers.teamId, teams.id), eq(teamMembers.userId, userId))),
+          ),
         ),
       with: {
         teamMembers: {
@@ -63,9 +63,9 @@ export async function GET(request: NextRequest, { params }: { params: { bingoId:
             user: {
               columns: {
                 runescapeName: true,
-              }
-            }
-          }
+              },
+            },
+          },
         },
       },
     })
@@ -93,26 +93,25 @@ export async function GET(request: NextRequest, { params }: { params: { bingoId:
 
     const teamSubmissions = userTeam
       ? await db.query.teamTileSubmissions.findMany({
-        where: eq(teamTileSubmissions.teamId, userTeam.id),
-        with: {
-          submissions: {
-            with: {
-              image: true,
-              user: {
-                columns: {
-                  id: true,
-                  name: true,
-                  runescapeName: true,
+          where: eq(teamTileSubmissions.teamId, userTeam.id),
+          with: {
+            submissions: {
+              with: {
+                image: true,
+                user: {
+                  columns: {
+                    id: true,
+                    name: true,
+                    runescapeName: true,
+                  },
                 },
               },
             },
           },
-        },
-      })
+        })
       : []
 
     bingo.tiles.forEach((tile) => {
-
       const submission = teamSubmissions.find((sub) => sub.tileId === tile.id)
       tileSubmissionMap[tile.id] = {
         id: tile.id,
@@ -121,17 +120,17 @@ export async function GET(request: NextRequest, { params }: { params: { bingoId:
         submissionCount: submission?.submissions.length ?? 0,
         ...(submission?.submissions.length
           ? {
-            latestSubmission: {
-              id: submission.submissions[submission.submissions.length - 1]!.id,
-              imageUrl: submission.submissions[submission.submissions.length - 1]!.image.path,
-              submittedBy: {
-                id: submission.submissions[submission.submissions.length - 1]!.user.id,
-                name: submission.submissions[submission.submissions.length - 1]!.user.name,
-                runescapeName: submission.submissions[submission.submissions.length - 1]!.user.runescapeName,
+              latestSubmission: {
+                id: submission.submissions[submission.submissions.length - 1]!.id,
+                imageUrl: submission.submissions[submission.submissions.length - 1]!.image.path,
+                submittedBy: {
+                  id: submission.submissions[submission.submissions.length - 1]!.user.id,
+                  name: submission.submissions[submission.submissions.length - 1]!.user.name,
+                  runescapeName: submission.submissions[submission.submissions.length - 1]!.user.runescapeName,
+                },
+                createdAt: submission.submissions[submission.submissions.length - 1]!.createdAt,
               },
-              createdAt: submission.submissions[submission.submissions.length - 1]!.createdAt,
-            },
-          }
+            }
           : {}),
       }
     })
@@ -165,9 +164,8 @@ export async function GET(request: NextRequest, { params }: { params: { bingoId:
             targetValue: goal.targetValue,
             // progress: goalProgressMap[goal.id] || null,
           })) ?? [],
-      }))
+      })),
     }
-
 
     return NextResponse.json(formattedBingo)
   } catch (error) {
@@ -175,3 +173,4 @@ export async function GET(request: NextRequest, { params }: { params: { bingoId:
     return NextResponse.json({ error: "An error occurred while fetching bingo data" }, { status: 500 })
   }
 }
+

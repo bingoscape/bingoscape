@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { db } from "@/server/db"
 import { apiKeys } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
@@ -34,7 +33,6 @@ export async function validateApiKey(req: Request): Promise<string | null> {
       .from(apiKeys)
       .where(eq(apiKeys.key, apiKey))
       .limit(1)
-
 
     if (!key) {
       return null

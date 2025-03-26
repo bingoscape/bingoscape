@@ -12,6 +12,7 @@ import {
   uniqueIndex,
   uuid,
   varchar,
+  json,
 } from "drizzle-orm/pg-core"
 import type { AdapterAccount } from "next-auth/adapters"
 
@@ -217,6 +218,7 @@ export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
   }),
 }))
 
+// Update the tiles table to include WOM verification config
 export const tiles = createTable("tiles", {
   id: uuid("id").defaultRandom().primaryKey(),
   bingoId: uuid("bingo_id")
@@ -230,6 +232,8 @@ export const tiles = createTable("tiles", {
   isHidden: boolean("is_hidden").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  // Add WOM verification config
+  womVerificationConfig: json("wom_verification_config"),
 })
 
 export const tilesRelations = relations(tiles, ({ one, many }) => ({

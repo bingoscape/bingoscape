@@ -1,4 +1,3 @@
-/* eslint-disable */
 "use client"
 
 import { useEffect, useState } from "react"
@@ -58,7 +57,9 @@ export default function BingoDetailPage({ params }: { params: { id: UUID; bingoI
       }
     }
 
-    fetchData().then(() => console.log("Bingo data fetched")).catch((error) => console.error("Error fetching bingo data:", error))
+    fetchData()
+      .then(() => console.log("Bingo data fetched"))
+      .catch((error) => console.error("Error fetching bingo data:", error))
   }, [eventId, bingoId, refreshKey])
 
   const handleRefresh = () => {

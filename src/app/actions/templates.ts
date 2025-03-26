@@ -124,7 +124,7 @@ export async function getPublicTemplates(
     const result = await db
       .select({ count: sql<number>`count(*)` })
       .from(bingoTemplates)
-      .where(and(...conditions));
+      .where(and(...conditions))
 
     const count = result[0]?.count ?? 0
 

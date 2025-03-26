@@ -1,10 +1,10 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/hooks/use-toast"
-import { type GenerateInviteResponse } from '@/app/api/clans/[clanId]/invite/route'
+import type { GenerateInviteResponse } from "@/app/api/clans/[clanId]/invite/route"
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,7 @@ import {
 import { Link } from "lucide-react"
 
 export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
-  const [inviteLink, setInviteLink] = useState('')
+  const [inviteLink, setInviteLink] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
 
@@ -24,9 +24,9 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
     setIsLoading(true)
     try {
       const response = await fetch(`/api/clans/${clanId}/invite`, {
-        method: 'POST',
+        method: "POST",
       })
-      const data = await response.json() as GenerateInviteResponse;
+      const data = (await response.json()) as GenerateInviteResponse
       if (response.ok) {
         const link = `${window.location.origin}/clans/join?code=${data.inviteCode}`
         setInviteLink(link)
@@ -86,3 +86,4 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
     </Dialog>
   )
 }
+

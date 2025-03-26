@@ -1,4 +1,3 @@
-/* eslint-disable */
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
@@ -177,8 +176,9 @@ function TeamCard({
       <CardContent className="pt-0">
         <div
           ref={setNodeRef}
-          className={`min-h-[100px] rounded-md p-2 mb-3 transition-colors ${isOver ? "bg-primary/10 border-2 border-dashed border-primary" : "bg-secondary/20"
-            }`}
+          className={`min-h-[100px] rounded-md p-2 mb-3 transition-colors ${
+            isOver ? "bg-primary/10 border-2 border-dashed border-primary" : "bg-secondary/20"
+          }`}
         >
           {team.teamMembers.length === 0 ? (
             <div className="flex items-center justify-center h-full text-muted-foreground text-sm italic">
@@ -255,8 +255,9 @@ function UnassignedParticipantsPool({ participants }: { participants: Participan
       <CardContent>
         <div
           ref={setNodeRef}
-          className={`rounded-md p-2 transition-colors ${isOver ? "bg-primary/10 border-2 border-dashed border-primary" : "bg-secondary/20"
-            }`}
+          className={`rounded-md p-2 transition-colors ${
+            isOver ? "bg-primary/10 border-2 border-dashed border-primary" : "bg-secondary/20"
+          }`}
         >
           <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {participants.map((participant) => (

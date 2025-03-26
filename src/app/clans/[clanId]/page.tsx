@@ -1,131 +1,133 @@
-'use client'
+"use client"
 
-import { notFound, useRouter } from "next/navigation";
-import { getClanDetails, getClanMembers, updateMemberRole } from "@/app/actions/clan";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
-import { UserIcon, CalendarIcon, Users } from "lucide-react";
-import { GenerateClanInviteLink } from "@/components/generate-clan-invite-link";
-import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
-import { toast } from "@/hooks/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Breadcrumbs } from "@/components/breadcrumbs";
+import { notFound, useRouter } from "next/navigation"
+import { getClanDetails, getClanMembers, updateMemberRole } from "@/app/actions/clan"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
+import { UserIcon, CalendarIcon, Users } from "lucide-react"
+import { GenerateClanInviteLink } from "@/components/generate-clan-invite-link"
+import { useSession } from "next-auth/react"
+import { useState, useEffect } from "react"
+import { toast } from "@/hooks/use-toast"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 
 type ClanMember = {
-  id: string;
-  name: string | null;
-  runescapeName: string | null;
-  image: string | null;
-  role: 'admin' | 'management' | 'member' | 'guest';
-};
+  id: string
+  name: string | null
+  runescapeName: string | null
+  image: string | null
+  role: "admin" | "management" | "member" | "guest"
+}
 
 type ClanDetails = {
-  id: string;
-  name: string;
-  description: string;
-  ownerId: string;
-  memberCount: number;
-  eventCount: number;
+  id: string
+  name: string
+  description: string
+  ownerId: string
+  memberCount: number
+  eventCount: number
   userMembership: {
-    id: string;
-    userId: string;
-    clanId: string;
-    role: 'admin' | 'management' | 'member' | 'guest';
-    isMain: boolean;
-    joinedAt: Date;
-  };
+    id: string
+    userId: string
+    clanId: string
+    role: "admin" | "management" | "member" | "guest"
+    isMain: boolean
+    joinedAt: Date
+  }
   owner: {
-    id: string;
-    name: string | null;
-    image: string | null;
-    runescapeName: string | null;
-  };
-};
+    id: string
+    name: string | null
+    image: string | null
+    runescapeName: string | null
+  }
+}
 
-type Role = 'admin' | 'management' | 'member' | 'guest';
+type Role = "admin" | "management" | "member" | "guest"
 
 export default function ClanDetailPage({ params }: { params: { clanId: string } }) {
-  const [members, setMembers] = useState<ClanMember[]>([]);
-  const [clanDetails, setClanDetails] = useState<ClanDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const { status } = useSession();
-  const router = useRouter();
+  const [members, setMembers] = useState<ClanMember[]>([])
+  const [clanDetails, setClanDetails] = useState<ClanDetails | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const { status } = useSession()
+  const router = useRouter()
 
   useEffect(() => {
     const fetchData = async () => {
-      if (status === 'loading') return;
+      if (status === "loading") return
 
-      if (status === 'unauthenticated') {
-        router.push('/login');
-        return;
+      if (status === "unauthenticated") {
+        router.push("/login")
+        return
       }
 
       try {
-        const details = await getClanDetails(params.clanId);
+        const details = await getClanDetails(params.clanId)
         if (details?.id) {
-          setClanDetails(details as ClanDetails);
+          setClanDetails(details as ClanDetails)
         } else {
-          throw new Error("Invalid clan details");
+          throw new Error("Invalid clan details")
         }
 
-        const membersList = await getClanMembers(params.clanId);
-        setMembers(membersList);
+        const membersList = await getClanMembers(params.clanId)
+        setMembers(membersList)
       } catch (error) {
         if (error instanceof Error && error.message === "You are not a member of this clan") {
-          notFound();
+          notFound()
         }
         toast({
           title: "Error",
           description: "Failed to load clan details and members.",
           variant: "destructive",
-        });
+        })
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    fetchData().then(() => console.log("done")).catch(err => console.error(err));
-  }, [params.clanId, status, router]);
+    fetchData()
+      .then(() => console.log("done"))
+      .catch((err) => console.error(err))
+  }, [params.clanId, status, router])
 
   const handleRoleUpdate = async (memberId: string, newRole: Role) => {
     try {
-      await updateMemberRole(params.clanId, memberId, newRole);
-      const updatedMembers = await getClanMembers(params.clanId);
-      setMembers(updatedMembers);
+      await updateMemberRole(params.clanId, memberId, newRole)
+      const updatedMembers = await getClanMembers(params.clanId)
+      setMembers(updatedMembers)
       toast({
         title: "Role Updated",
         description: `The member's role has been successfully updated to ${newRole}.`,
-      });
+      })
     } catch (_) {
       toast({
         title: "Error",
         description: "Failed to update member's role. Please try again.",
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   const canChangeRole = (userRole: Role, memberRole: Role) => {
-    const roles: Role[] = ['guest', 'member', 'management', 'admin'];
-    const userRoleIndex = roles.indexOf(userRole);
-    const memberRoleIndex = roles.indexOf(memberRole);
-    return userRoleIndex > memberRoleIndex;
-  };
+    const roles: Role[] = ["guest", "member", "management", "admin"]
+    const userRoleIndex = roles.indexOf(userRole)
+    const memberRoleIndex = roles.indexOf(memberRole)
+    return userRoleIndex > memberRoleIndex
+  }
 
-  const getAdjacentRoles = (currentRole: Role): { promote: Role | null, demote: Role | null } => {
-    const roles: Role[] = ['guest', 'member', 'management', 'admin'];
-    const currentIndex = roles.indexOf(currentRole);
+  const getAdjacentRoles = (currentRole: Role): { promote: Role | null; demote: Role | null } => {
+    const roles: Role[] = ["guest", "member", "management", "admin"]
+    const currentIndex = roles.indexOf(currentRole)
     return {
       promote: currentIndex < roles.length - 1 ? roles[currentIndex + 1]! : null,
       demote: currentIndex > 0 ? roles[currentIndex - 1]! : null,
-    };
-  };
+    }
+  }
 
-  if (status === 'loading' || isLoading) {
+  if (status === "loading" || isLoading) {
     return (
       <div className="container mx-auto py-10">
         <Card>
@@ -143,24 +145,24 @@ export default function ClanDetailPage({ params }: { params: { clanId: string } 
           </CardContent>
         </Card>
       </div>
-    );
+    )
   }
 
-  if (status === 'unauthenticated') {
-    return null; // The useEffect will handle the redirect
+  if (status === "unauthenticated") {
+    return null // The useEffect will handle the redirect
   }
 
   if (!clanDetails) {
-    return <div>Clan not found</div>;
+    return <div>Clan not found</div>
   }
 
-  const isOwnerOrAdmin = clanDetails.userMembership.role === 'admin' || clanDetails.userMembership.role === 'management';
+  const isOwnerOrAdmin = clanDetails.userMembership.role === "admin" || clanDetails.userMembership.role === "management"
 
   const breadcrumbItems = [
-    { label: 'Home', href: '/' },
-    { label: 'Clans', href: '/' },
+    { label: "Home", href: "/" },
+    { label: "Clans", href: "/" },
     { label: clanDetails.name, href: `/clans/${clanDetails.id}` },
-  ];
+  ]
 
   return (
     <div className="container mx-auto py-10 space-y-5">
@@ -185,16 +187,14 @@ export default function ClanDetailPage({ params }: { params: { clanId: string } 
                 <UserIcon className="h-4 w-4" />
                 <span>Owner:</span>
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={clanDetails.owner.image ?? undefined} alt={clanDetails.owner.runescapeName ?? ''} />
-                  <AvatarFallback>{clanDetails.owner?.runescapeName?.[0] ?? 'O'}</AvatarFallback>
+                  <AvatarImage src={clanDetails.owner.image ?? undefined} alt={clanDetails.owner.runescapeName ?? ""} />
+                  <AvatarFallback>{clanDetails.owner?.runescapeName?.[0] ?? "O"}</AvatarFallback>
                 </Avatar>
                 <span>{clanDetails.owner?.runescapeName ?? clanDetails.owner?.name}</span>
               </div>
             </div>
             <div className="flex flex-col space-y-2">
-              {isOwnerOrAdmin && (
-                <GenerateClanInviteLink clanId={params.clanId} />
-              )}
+              {isOwnerOrAdmin && <GenerateClanInviteLink clanId={params.clanId} />}
               <Link href={`/clans/${params.clanId}/events`} passHref>
                 <Button variant="outline" className="w-full">
                   <CalendarIcon className="mr-2 h-4 w-4" />
@@ -212,8 +212,8 @@ export default function ClanDetailPage({ params }: { params: { clanId: string } 
           <li key={member.id} className="flex items-center justify-between p-4 bg-secondary rounded-lg">
             <div className="flex items-center space-x-4">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={member.image ?? undefined} alt={member.name ?? ''} />
-                <AvatarFallback>{member.name?.[0] ?? 'U'}</AvatarFallback>
+                <AvatarImage src={member.image ?? undefined} alt={member.name ?? ""} />
+                <AvatarFallback>{member.name?.[0] ?? "U"}</AvatarFallback>
               </Avatar>
               <div>
                 <p className="font-medium">{member.runescapeName ?? member.name}</p>
@@ -250,23 +250,22 @@ export default function ClanDetailPage({ params }: { params: { clanId: string } 
           </li>
         ))}
       </ul>
-
     </div>
-  );
+  )
 }
 
 function getRoleBadgeVariant(role: Role): "default" | "secondary" | "destructive" | "outline" {
   switch (role) {
-    case 'admin':
-      return "destructive";
-    case 'management':
-      return "default";
-    case 'member':
-      return "secondary";
-    case 'guest':
-      return "outline";
+    case "admin":
+      return "destructive"
+    case "management":
+      return "default"
+    case "member":
+      return "secondary"
+    case "guest":
+      return "outline"
     default:
-      return "secondary";
+      return "secondary"
   }
 }
 

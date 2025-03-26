@@ -97,12 +97,13 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
                   <TableCell>{formatRunescapeGold(ed.totalPrizePool)}</TableCell>
                   <TableCell>
                     <span
-                      className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${status === "active"
-                        ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
-                        : status === "upcoming"
-                          ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-                          : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
-                        }`}
+                      className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                        status === "active"
+                          ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
+                          : status === "upcoming"
+                            ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
+                            : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                      }`}
                     >
                       {status === "active" ? "Active" : status === "upcoming" ? "Upcoming" : "Completed"}
                     </span>
@@ -150,7 +151,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
               isParticipant={true}
               status={status}
               // eslint-disable-next-line @typescript-eslint/no-empty-function
-              onJoin={() => { }}
+              onJoin={() => {}}
             />
           )
         })

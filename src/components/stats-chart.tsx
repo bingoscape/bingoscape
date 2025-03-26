@@ -47,7 +47,7 @@ export function StatsChart({ data, totalPossibleXP, title }: StatsChartProps) {
             if (typeof value === "number") {
               return Math.round(value)
             }
-            return value;
+            return value
           },
         },
       },
@@ -83,5 +83,4 @@ export function StatsChart({ data, totalPossibleXP, title }: StatsChartProps) {
     </Card>
   )
 }
-
 

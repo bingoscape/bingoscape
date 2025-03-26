@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import type { ForwardedRef } from 'react'
+import type { ForwardedRef } from "react"
 import {
   headingsPlugin,
   listsPlugin,
@@ -9,8 +9,8 @@ import {
   markdownShortcutPlugin,
   MDXEditor,
   type MDXEditorMethods,
-  type MDXEditorProps
-} from '@mdxeditor/editor'
+  type MDXEditorProps,
+} from "@mdxeditor/editor"
 
 export default function InitializedMDXEditor({
   editorRef,
@@ -18,15 +18,10 @@ export default function InitializedMDXEditor({
 }: { editorRef: ForwardedRef<MDXEditorMethods> | null } & MDXEditorProps) {
   return (
     <MDXEditor
-      plugins={[
-        headingsPlugin(),
-        listsPlugin(),
-        quotePlugin(),
-        thematicBreakPlugin(),
-        markdownShortcutPlugin()
-      ]}
+      plugins={[headingsPlugin(), listsPlugin(), quotePlugin(), thematicBreakPlugin(), markdownShortcutPlugin()]}
       {...props}
       ref={editorRef}
     />
   )
 }
+

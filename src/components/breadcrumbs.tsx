@@ -1,6 +1,13 @@
-import Link from 'next/link'
-import { ChevronRight } from 'lucide-react'
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
+import Link from "next/link"
+import { ChevronRight } from "lucide-react"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 
 interface BreadcrumbItem {
   label: string
@@ -37,3 +44,4 @@ export function Breadcrumbs({ items }: BreadcrumbsProps) {
     </Breadcrumb>
   )
 }
+

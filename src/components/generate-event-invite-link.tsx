@@ -1,11 +1,13 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
+import type React from "react"
+
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/hooks/use-toast"
 import { generateEventInviteLink } from "@/app/actions/events"
-import { type UUID } from "crypto"
+import type { UUID } from "crypto"
 import {
   Dialog,
   DialogContent,
@@ -16,7 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { Link } from "lucide-react"
 
-export function GenerateEventInviteLink({ eventId, children }: { eventId: UUID, children: React.ReactNode }) {
+export function GenerateEventInviteLink({ eventId, children }: { eventId: UUID; children: React.ReactNode }) {
   const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(false)
 
@@ -44,22 +46,22 @@ export function GenerateEventInviteLink({ eventId, children }: { eventId: UUID, 
 
   const handleCopy = () => {
     if (inviteLink) {
-      navigator.clipboard.writeText(inviteLink)
+      navigator.clipboard
+        .writeText(inviteLink)
         .then(() =>
           toast({
             title: "Copied",
             description: "Invite link copied to clipboard.",
-          })
-        ).catch(err => console.error(err))
+          }),
+        )
+        .catch((err) => console.error(err))
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full">
-          {children}
-        </Button>
+        <Button className="w-full">{children}</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -84,3 +86,4 @@ export function GenerateEventInviteLink({ eventId, children }: { eventId: UUID, 
     </Dialog>
   )
 }
+

@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -10,9 +10,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Info } from 'lucide-react'
-import { type Bingo } from '@/app/actions/events'
-import { CodephraseDisplay } from './codephrase-display'
+import { Info } from "lucide-react"
+import type { Bingo } from "@/app/actions/events"
+import { CodephraseDisplay } from "./codephrase-display"
 
 interface BingoInfoModalProps {
   bingo: Bingo
@@ -41,7 +41,9 @@ export function BingoInfoModal({ bingo }: BingoInfoModalProps) {
           </div>
           <div>
             <h4 className="font-semibold">Dimensions</h4>
-            <p>{bingo.rows} rows x {bingo.columns} columns</p>
+            <p>
+              {bingo.rows} rows x {bingo.columns} columns
+            </p>
           </div>
           <div>
             <h4 className="font-semibold">Codephrase</h4>
@@ -59,3 +61,4 @@ export function BingoInfoModal({ bingo }: BingoInfoModalProps) {
     </Dialog>
   )
 }
+

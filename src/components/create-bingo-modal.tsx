@@ -1,13 +1,22 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import type React from "react"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { createBingo } from '@/app/actions/bingo'
-import { Textarea } from './ui/textarea'
+import { createBingo } from "@/app/actions/bingo"
+import { Textarea } from "./ui/textarea"
 
 export function CreateBingoModal({ eventId }: { eventId: string }) {
   const [open, setOpen] = useState(false)
@@ -17,7 +26,7 @@ export function CreateBingoModal({ eventId }: { eventId: string }) {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
-    formData.append('eventId', eventId)
+    formData.append("eventId", eventId)
 
     try {
       await createBingo(formData)
@@ -27,7 +36,7 @@ export function CreateBingoModal({ eventId }: { eventId: string }) {
       if (error instanceof Error) {
         setError(error.message)
       } else {
-        setError('An unknown error occurred')
+        setError("An unknown error occurred")
       }
     }
   }
@@ -35,12 +44,14 @@ export function CreateBingoModal({ eventId }: { eventId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className='w-full'>Create New Bingo</Button>
+        <Button className="w-full">Create New Bingo</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
           <DialogTitle>Create New Bingo</DialogTitle>
-          <DialogDescription>Set up the basic structure for your new bingo game. Tiles will be automatically created.</DialogDescription>
+          <DialogDescription>
+            Set up the basic structure for your new bingo game. Tiles will be automatically created.
+          </DialogDescription>
         </DialogHeader>
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
@@ -79,3 +90,4 @@ export function CreateBingoModal({ eventId }: { eventId: string }) {
     </Dialog>
   )
 }
+

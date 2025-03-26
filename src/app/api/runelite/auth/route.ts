@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { NextResponse } from "next/server"
 import { db } from "@/server/db"
 import { apiKeys, users } from "@/server/db/schema"

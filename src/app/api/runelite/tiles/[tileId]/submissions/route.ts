@@ -6,7 +6,6 @@ import { validateApiKey } from "@/lib/api-auth"
 import { nanoid } from "nanoid"
 import fs from "fs/promises"
 import path from "path"
-import { getTeamForUserInEvent } from "@/lib/team-utils"
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
 
@@ -47,11 +46,11 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
             tiles: {
               with: {
                 goals: true,
-              }
-            }
-          }
+              },
+            },
+          },
         },
-        teamTileSubmissions: true
+        teamTileSubmissions: true,
       },
     })
 
@@ -77,8 +76,8 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
             db
               .select()
               .from(teamMembers)
-              .where(and(eq(teamMembers.teamId, teams.id), eq(teamMembers.userId, userId)))
-          )
+              .where(and(eq(teamMembers.teamId, teams.id), eq(teamMembers.userId, userId))),
+          ),
         ),
       with: {
         teamMembers: {
@@ -86,9 +85,9 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
             user: {
               columns: {
                 runescapeName: true,
-              }
-            }
-          }
+              },
+            },
+          },
         },
       },
     })
@@ -157,7 +156,7 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
         })
         .returning({
           id: submissions.id,
-          createdAt: submissions.createdAt
+          createdAt: submissions.createdAt,
         })
 
       return {
@@ -168,8 +167,6 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
 
     // Create a notification for admin and management users
     // This would typically be handled by your existing notification system
-
-
 
     // Create a map of tile IDs to submission data
     const tileSubmissionMap: Record<
@@ -194,22 +191,22 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
 
     const teamSubmissions = userTeam
       ? await db.query.teamTileSubmissions.findMany({
-        where: eq(teamTileSubmissions.teamId, userTeam.id),
-        with: {
-          submissions: {
-            with: {
-              image: true,
-              user: {
-                columns: {
-                  id: true,
-                  name: true,
-                  runescapeName: true,
+          where: eq(teamTileSubmissions.teamId, userTeam.id),
+          with: {
+            submissions: {
+              with: {
+                image: true,
+                user: {
+                  columns: {
+                    id: true,
+                    name: true,
+                    runescapeName: true,
+                  },
                 },
               },
             },
           },
-        },
-      })
+        })
       : []
 
     tile.bingo.tiles.forEach((t) => {
@@ -221,17 +218,17 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
         submissionCount: submission?.submissions.length ?? 0,
         ...(submission?.submissions.length
           ? {
-            latestSubmission: {
-              id: submission.submissions[submission.submissions.length - 1]!.id,
-              imageUrl: submission.submissions[submission.submissions.length - 1]!.image.path,
-              submittedBy: {
-                id: submission.submissions[submission.submissions.length - 1]!.user.id,
-                name: submission.submissions[submission.submissions.length - 1]!.user.name,
-                runescapeName: submission.submissions[submission.submissions.length - 1]!.user.runescapeName,
+              latestSubmission: {
+                id: submission.submissions[submission.submissions.length - 1]!.id,
+                imageUrl: submission.submissions[submission.submissions.length - 1]!.image.path,
+                submittedBy: {
+                  id: submission.submissions[submission.submissions.length - 1]!.user.id,
+                  name: submission.submissions[submission.submissions.length - 1]!.user.name,
+                  runescapeName: submission.submissions[submission.submissions.length - 1]!.user.runescapeName,
+                },
+                createdAt: submission.submissions[submission.submissions.length - 1]!.createdAt,
               },
-              createdAt: submission.submissions[submission.submissions.length - 1]!.createdAt,
-            },
-          }
+            }
           : {}),
       }
     })
@@ -264,9 +261,8 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
             description: goal.description,
             targetValue: goal.targetValue,
           })) ?? [],
-      }))
+      })),
     }
-
 
     return NextResponse.json(formattedBingo)
   } catch (error) {

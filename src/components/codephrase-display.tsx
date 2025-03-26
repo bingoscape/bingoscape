@@ -1,5 +1,3 @@
-import React from 'react'
-
 interface CodephraseDisplayProps {
   codephrase: string
 }
@@ -12,3 +10,4 @@ export function CodephraseDisplay({ codephrase }: CodephraseDisplayProps) {
     </div>
   )
 }
+

@@ -1,4 +1,3 @@
-/* eslint-disable */
 "use client"
 
 import { useCallback } from "react"
@@ -10,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { ForwardRefEditor } from "./forward-ref-editor"
 import type { Tile, Team } from "@/app/actions/events"
 import { Progress } from "@/components/ui/progress"
-import { Pencil, X, Zap, EyeOff, Search, ExternalLink } from "lucide-react"
+import { Pencil, X, Zap, EyeOff, Search, ExternalLink, Shield } from "lucide-react"
 import Markdown from "react-markdown"
 import { Switch } from "@/components/ui/switch"
 import { ProgressSlider } from "./progress-slider"
@@ -25,6 +24,7 @@ import {
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import getRandomFrog from "@/lib/getRandomFrog"
+import { AutoVerifyTileModal } from "@/components/auto-verify-tile-modal"
 
 type EditableTileFields = {
   title: string
@@ -80,6 +80,8 @@ export function TileDetailsTab({
   const [searchResults, setSearchResults] = useState<WikiImage[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [selectedImage, setSelectedImage] = useState<WikiImage | null>(null)
+
+  const [isAutoVerifyModalOpen, setIsAutoVerifyModalOpen] = useState(false)
 
   const toggleEdit = (isCancelled: boolean) => {
     if (isCancelled) {
@@ -417,6 +419,28 @@ export function TileDetailsTab({
             userRole={userRole}
           />
         </div>
+        {userRole === "admin" && (
+          <div className="mt-4">
+            <Button
+              variant="outline"
+              className="w-full flex items-center gap-2"
+              onClick={() => setIsAutoVerifyModalOpen(true)}
+            >
+              <Shield className="h-4 w-4" />
+              Configure Auto-Verification
+            </Button>
+
+            <AutoVerifyTileModal
+              tile={selectedTile}
+              isOpen={isAutoVerifyModalOpen}
+              onClose={() => setIsAutoVerifyModalOpen(false)}
+              onSave={() => {
+                setIsAutoVerifyModalOpen(false)
+                onUpdateTile()
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   )

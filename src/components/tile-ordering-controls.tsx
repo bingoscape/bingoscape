@@ -1,7 +1,7 @@
-import React from 'react'
+"use client"
 import { Button } from "@/components/ui/button"
-import { Lock, Unlock, PlusSquare } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { Lock, Unlock, PlusSquare } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 
 interface TileOrderingControlsProps {
   isLocked: boolean
@@ -41,9 +41,15 @@ export function TileOrderingControls({ isLocked, onToggleOrdering, onAddRow, onA
           </>
         )}
       </AnimatePresence>
-      <Button onClick={onToggleOrdering} variant="outline" size="icon" aria-label={isLocked ? 'Unlock grid' : 'Lock grid'}>
+      <Button
+        onClick={onToggleOrdering}
+        variant="outline"
+        size="icon"
+        aria-label={isLocked ? "Unlock grid" : "Lock grid"}
+      >
         {isLocked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
       </Button>
     </div>
   )
 }
+

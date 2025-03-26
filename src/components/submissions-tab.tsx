@@ -23,6 +23,8 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import getRandomFrog from "@/lib/getRandomFrog"
+// Import the WomAutoVerifyButton component
+import { WomAutoVerifyButton } from "@/components/wom-auto-verify-button"
 
 interface SubmissionsTabProps {
   selectedTile: Tile | null
@@ -40,6 +42,9 @@ interface SubmissionsTabProps {
   ) => void
   onDeleteSubmission?: (submissionId: string) => Promise<void>
   isSubmissionsLocked?: boolean
+  onSubmissionUpdated?: () => void
+  runescapeName?: string | null
+  eventId: string
 }
 
 export function SubmissionsTab({
@@ -55,6 +60,9 @@ export function SubmissionsTab({
   onTeamTileSubmissionStatusUpdate,
   onDeleteSubmission,
   isSubmissionsLocked = false,
+  onSubmissionUpdated,
+  runescapeName,
+  eventId
 }: SubmissionsTabProps) {
   if (!selectedTile) {
     return <p>No tile selected</p>
@@ -135,6 +143,16 @@ export function SubmissionsTab({
               </div>
             ) : null}
 
+            {runescapeName && selectedTile && currentTeamId && onSubmissionUpdated && (
+              <WomAutoVerifyButton
+                tile={selectedTile}
+                teamId={currentTeamId}
+                eventId={eventId}
+                runescapeName={runescapeName}
+                onVerified={onSubmissionUpdated}
+              />
+            )}
+
             {/* Existing submissions */}
             {teamSubmissions.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -195,8 +213,6 @@ export function SubmissionsTab({
             <TabsTrigger value="pending">Pending Review</TabsTrigger>
             <TabsTrigger value="all">All Submissions</TabsTrigger>
           </TabsList>
-
-
 
           <TabsContent value="pending" className="mt-2 space-y-4">
             {teams.map((team) => {

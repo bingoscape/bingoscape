@@ -27,7 +27,7 @@ export default function ModeToggle() {
       variant="ghost"
       size="icon"
       onClick={toggleTheme}
-      aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+      aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
     >
       <motion.div
         initial={false}
@@ -43,3 +43,4 @@ export default function ModeToggle() {
     </Button>
   )
 }
+
