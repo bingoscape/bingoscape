@@ -133,7 +133,7 @@ export function CreateEventModal() {
                 Start Date *
               </Label>
               <div className="col-span-3">
-                <Popover>
+                <Popover modal={true}>
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
@@ -147,7 +147,7 @@ export function CreateEventModal() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
+                    <Calendar mode="single" selected={startDate} onSelect={setStartDate} />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -157,7 +157,7 @@ export function CreateEventModal() {
                 End Date *
               </Label>
               <div className="col-span-3">
-                <Popover>
+                <Popover modal={true}>
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
@@ -168,7 +168,7 @@ export function CreateEventModal() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
+                    <Calendar mode="single" selected={endDate} onSelect={setEndDate} />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -178,7 +178,7 @@ export function CreateEventModal() {
                 Registration Deadline
               </Label>
               <div className="col-span-3">
-                <Popover>
+                <Popover modal={true}>
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
@@ -196,7 +196,6 @@ export function CreateEventModal() {
                       mode="single"
                       selected={registrationDeadline}
                       onSelect={setRegistrationDeadline}
-                      initialFocus
                     />
                   </PopoverContent>
                 </Popover>

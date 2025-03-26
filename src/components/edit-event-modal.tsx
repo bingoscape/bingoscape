@@ -117,7 +117,7 @@ export function EditEventModal({ event }: EditEventModalProps) {
               Start Date
             </Label>
             <div className="col-span-3">
-              <Popover>
+              <Popover modal={true}>
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
@@ -143,7 +143,7 @@ export function EditEventModal({ event }: EditEventModalProps) {
               End Date
             </Label>
             <div className="col-span-3">
-              <Popover>
+              <Popover modal={true}>
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
@@ -169,7 +169,7 @@ export function EditEventModal({ event }: EditEventModalProps) {
               Registration Deadline
             </Label>
             <div className="col-span-3">
-              <Popover>
+              <Popover modal={true}>
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
