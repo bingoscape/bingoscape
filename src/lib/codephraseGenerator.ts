@@ -81,16 +81,3 @@ function generateOSRSCodePhrase(): string {
 
   return `${randomAdjective}-${randomNoun}-${randomCreature}`;
 }
-
-/**
- * Generates multiple OSRS-themed code phrases
- * @param {number} count - The number of phrases to generate
- * @returns {string[]} An array of generated phrases
- */
-function generateMultiplePhrases(count: number = 5): string[] {
-  const phrases = [];
-  for (let i = 0; i < count; i++) {
-    phrases.push(generateOSRSCodePhrase());
-  }
-  return phrases;
-}
