@@ -31,7 +31,7 @@ export function Navbar() {
   ]
 
   return (
-    <nav className="sticky top-0 z-50 border-b bg-background">
+    <nav className="sticky top-0 z-50 border-b border-[#1e293b] bg-[#020817] text-white">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center space-x-4">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -79,37 +79,39 @@ export function Navbar() {
         </div>
         {status === "loading" ? (
           <div className="h-8 w-8 animate-pulse bg-muted rounded-full" />
+        ) : session?.user ? (
+          <div className="flex items-center space-x-4">
+            <span className="hidden md:inline">{session.user.runescapeName || session.user.name}</span>
+            <ModeToggle />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={session.user.image ?? undefined} alt={session.user.name ?? ""} />
+                    <AvatarFallback>{session.user.name?.[0] ?? "U"}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="flex items-center">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => signOut()} className="flex items-center">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <NotificationBell userId={session.user.id} />
+          </div>
         ) : (
-          session?.user && (
-            <div className="flex items-center space-x-4">
-              <span className="hidden md:inline">{session.user.runescapeName || session.user.name}</span>
-              <ModeToggle />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={session.user.image ?? undefined} alt={session.user.name ?? ""} />
-                      <AvatarFallback>{session.user.name?.[0] ?? "U"}</AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile" className="flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => signOut()} className="flex items-center">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <NotificationBell userId={session.user.id} />
-            </div>
-          )
+          <Link href="/sign-in">
+            <Button className="bg-white text-[#020817] hover:bg-white/90">Log in</Button>
+          </Link>
         )}
       </div>
     </nav>
