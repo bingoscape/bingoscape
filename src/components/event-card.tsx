@@ -5,23 +5,35 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { PrizePoolDisplay } from "./prize-pool-display"
 import type { EventData } from "@/app/actions/events"
-import { CalendarIcon, Users, Trophy, ArrowRight, Clock } from "lucide-react"
+import { CalendarIcon, Users, Trophy, ArrowRight, Clock, CheckCircle2, XCircle, Clock3 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { useState } from "react"
+import { Textarea } from "@/components/ui/textarea"
+import { requestToJoinEvent } from "@/app/actions/events"
+import { toast } from "@/hooks/use-toast"
 
 interface EventCardProps {
   eventData: EventData
   onJoin?: () => void
   isParticipant: boolean
   status?: "active" | "upcoming" | "past"
+  registrationStatus?: {
+    status: "not_requested" | "pending" | "approved" | "rejected"
+    message?: string
+    responseMessage?: string
+  }
 }
 
-export function EventCard({ eventData, onJoin, isParticipant, status }: EventCardProps) {
+export function EventCard({ eventData, onJoin, isParticipant, status, registrationStatus }: EventCardProps) {
   const startDate = new Date(eventData.event.startDate)
   const endDate = new Date(eventData.event.endDate)
   const registrationDeadline = eventData.event.registrationDeadline
     ? new Date(eventData.event.registrationDeadline)
     : null
   const isRegistrationClosed = registrationDeadline && new Date() > registrationDeadline
+  const [showRequestForm, setShowRequestForm] = useState(false)
+  const [requestMessage, setRequestMessage] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const getStatusBadge = () => {
     if (!status) return null
@@ -35,6 +47,58 @@ export function EventCard({ eventData, onJoin, isParticipant, status }: EventCar
         return <Badge className="bg-gray-500 hover:bg-gray-600">Completed</Badge>
       default:
         return null
+    }
+  }
+
+  const handleRequestSubmit = async () => {
+    setIsSubmitting(true)
+    try {
+      await requestToJoinEvent(eventData.event.id, requestMessage)
+      toast({
+        title: "Request submitted",
+        description: "Your registration request has been submitted for review.",
+      })
+      setShowRequestForm(false)
+      if (onJoin) onJoin()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to submit request",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const renderRegistrationStatus = () => {
+    if (!registrationStatus || registrationStatus.status === "not_requested") return null
+
+    switch (registrationStatus.status) {
+      case "pending":
+        return (
+          <div className="mt-2 flex items-center text-yellow-500">
+            <Clock3 className="h-4 w-4 mr-1" />
+            <span className="text-sm">Registration pending approval</span>
+          </div>
+        )
+      case "approved":
+        return (
+          <div className="mt-2 flex items-center text-green-500">
+            <CheckCircle2 className="h-4 w-4 mr-1" />
+            <span className="text-sm">Registration approved</span>
+          </div>
+        )
+      case "rejected":
+        return (
+          <div className="mt-2 flex items-center text-red-500">
+            <XCircle className="h-4 w-4 mr-1" />
+            <span className="text-sm">Registration rejected</span>
+            {registrationStatus.responseMessage && (
+              <div className="mt-1 text-xs text-muted-foreground">Reason: {registrationStatus.responseMessage}</div>
+            )}
+          </div>
+        )
     }
   }
 
@@ -86,6 +150,34 @@ export function EventCard({ eventData, onJoin, isParticipant, status }: EventCar
               </div>
             )}
           </div>
+
+          {eventData.event.requiresApproval && !isParticipant && (
+            <div className="flex items-center text-amber-500">
+              <Clock className="h-3.5 w-3.5 mr-1" />
+              <span>Requires approval to join</span>
+            </div>
+          )}
+
+          {renderRegistrationStatus()}
+
+          {showRequestForm && (
+            <div className="mt-3 space-y-2">
+              <Textarea
+                placeholder="Why do you want to join this event? (Optional)"
+                value={requestMessage}
+                onChange={(e) => setRequestMessage(e.target.value)}
+                className="h-24"
+              />
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setShowRequestForm(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleRequestSubmit} disabled={isSubmitting}>
+                  {isSubmitting ? "Submitting..." : "Submit Request"}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
       <CardFooter className="flex justify-between pt-3 border-t">
@@ -96,9 +188,27 @@ export function EventCard({ eventData, onJoin, isParticipant, status }: EventCar
           </Button>
         </Link>
         {!isParticipant && !isRegistrationClosed && !eventData.event.locked && (
-          <Button onClick={onJoin} className="ml-2">
-            Join
-          </Button>
+          <>
+            {eventData.event.requiresApproval ? (
+              registrationStatus?.status === "pending" ? (
+                <Button disabled className="ml-2" title="Request pending">
+                  Pending
+                </Button>
+              ) : registrationStatus?.status === "rejected" ? (
+                <Button disabled className="ml-2" title="Request rejected">
+                  Rejected
+                </Button>
+              ) : (
+                <Button onClick={() => setShowRequestForm(true)} className="ml-2">
+                  Request to Join
+                </Button>
+              )
+            ) : (
+              <Button onClick={onJoin} className="ml-2">
+                Join
+              </Button>
+            )}
+          </>
         )}
         {!isParticipant && (isRegistrationClosed ?? eventData.event.locked) && (
           <Button disabled className="ml-2" title="Registration is closed">

@@ -1,172 +1,274 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { toast } from "@/hooks/use-toast"
-import { updateEvent } from "@/app/actions/events"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Edit } from "lucide-react"
-import formatRunescapeGold from "@/lib/formatRunescapeGold"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
+import { updateEvent } from "@/app/actions/events"
+import { toast } from "@/hooks/use-toast"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { CalendarIcon, Settings } from "lucide-react"
+import { format } from "date-fns"
+import { cn } from "@/lib/utils"
+import type { Event } from "@/app/actions/events"
 
-interface Event {
-  id: string
-  title: string
-  description: string | null
-  startDate: Date
-  endDate: Date
-  registrationDeadline: Date | null
-  minimumBuyIn: number | undefined
-  basePrizePool: number | undefined
-  public: boolean | undefined
+interface EditEventModalProps {
+  event: Event
 }
 
-export function EditEventModal({ event }: { event: Event }) {
+export function EditEventModal({ event }: EditEventModalProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [formData, setFormData] = useState({
-    title: event.title,
-    description: event.description ?? "",
-    startDate: event.startDate.toISOString().split("T")[0]!,
-    endDate: event.endDate.toISOString().split("T")[0]!,
-    registrationDeadline: event.registrationDeadline
-      ? new Date(event.registrationDeadline).toISOString().slice(0, 16)
-      : "",
-    minimumBuyIn: event.minimumBuyIn!,
-    basePrizePool: event.basePrizePool!,
-    public: event.public ?? false,
-  })
+  const [title, setTitle] = useState(event.title)
+  const [description, setDescription] = useState(event.description ?? "")
+  const [startDate, setStartDate] = useState<Date>(new Date(event.startDate))
+  const [endDate, setEndDate] = useState<Date>(new Date(event.endDate))
+  const [registrationDeadline, setRegistrationDeadline] = useState<Date | undefined>(
+    event.registrationDeadline ? new Date(event.registrationDeadline) : undefined,
+  )
+  const [minimumBuyIn, setMinimumBuyIn] = useState(event.minimumBuyIn)
+  const [basePrizePool, setBasePrizePool] = useState(event.basePrizePool)
+  const [isLocked, setIsLocked] = useState(event.locked)
+  const [isPublic, setIsPublic] = useState(event.public)
+  const [requiresApproval, setRequiresApproval] = useState(event.requiresApproval || false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === "minimumBuyIn" || name === "basePrizePool" ? Number(value) : value,
-    }))
-  }
-
-  const handleSwitchChange = (name: string, checked: boolean) => {
-    setFormData((prev) => ({ ...prev, [name]: checked }))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async () => {
+    setIsSubmitting(true)
     try {
-      await updateEvent(event.id, formData)
+      await updateEvent(event.id, {
+        title,
+        description,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        registrationDeadline: registrationDeadline ? registrationDeadline.toISOString() : null,
+        minimumBuyIn,
+        basePrizePool,
+        locked: isLocked,
+        public: isPublic,
+        requiresApproval,
+      })
       toast({
-        title: "Success",
-        description: "Event updated successfully",
+        title: "Event updated",
+        description: "Your event has been updated successfully.",
       })
       setIsOpen(false)
     } catch (error) {
-      console.error(error)
       toast({
         title: "Error",
-        description: "Failed to update event",
+        description: "Failed to update event. Please try again.",
         variant: "destructive",
       })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
-          <Edit className="mr-2 h-4 w-4" />
-          Edit Event
+        <Button variant="outline" className="w-full">
+          <Settings className="mr-2 h-4 w-4" />
+          Edit Event Settings
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
           <DialogTitle>Edit Event</DialogTitle>
-          <DialogDescription>Make changes to your event here. Click save when you are done.</DialogDescription>
+          <DialogDescription>Make changes to your event here. Click save when you&apos;re done.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
-            <Input id="title" name="title" value={formData.title} onChange={handleChange} placeholder="Event Title" />
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="title" className="text-right">
+              Title
+            </Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="col-span-3"
+              required
+            />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="description" className="text-right">
+              Description
+            </Label>
             <Textarea
               id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Event Description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="col-span-3"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="startDate">Start Date</Label>
-            <Input id="startDate" name="startDate" type="date" value={formData.startDate} onChange={handleChange} />
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="startDate" className="text-right">
+              Start Date
+            </Label>
+            <div className="col-span-3">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(date) => date && setStartDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="endDate">End Date</Label>
-            <Input id="endDate" name="endDate" type="date" value={formData.endDate} onChange={handleChange} />
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="endDate" className="text-right">
+              End Date
+            </Label>
+            <div className="col-span-3">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={(date) => date && setEndDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="registrationDeadline">Registration Deadline</Label>
-            <Input
-              id="registrationDeadline"
-              name="registrationDeadline"
-              type="datetime-local"
-              value={formData.registrationDeadline}
-              onChange={handleChange}
-            />
-            <p className="text-xs text-muted-foreground">
-              If set, users won&apos;t be able to join after this date. Leave empty to allow registration until the event
-              ends.
-            </p>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="registrationDeadline" className="text-right">
+              Registration Deadline
+            </Label>
+            <div className="col-span-3">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !registrationDeadline && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {registrationDeadline ? format(registrationDeadline, "PPP") : <span>Optional</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={registrationDeadline}
+                    onSelect={setRegistrationDeadline}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="minimumBuyIn">Minimum Buy-In</Label>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="minimumBuyIn" className="text-right">
+              Minimum Buy-In
+            </Label>
             <Input
               id="minimumBuyIn"
-              name="minimumBuyIn"
               type="number"
-              value={formData.minimumBuyIn}
-              onChange={handleChange}
-              placeholder="Minimum Buy-In"
+              value={minimumBuyIn}
+              onChange={(e) => setMinimumBuyIn(Number(e.target.value))}
+              className="col-span-3"
             />
-            <p className="text-sm text-muted-foreground">{formatRunescapeGold(formData.minimumBuyIn)} GP</p>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="basePrizePool">Base Prize Pool</Label>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="basePrizePool" className="text-right">
+              Base Prize Pool
+            </Label>
             <Input
               id="basePrizePool"
-              name="basePrizePool"
               type="number"
-              value={formData.basePrizePool}
-              onChange={handleChange}
-              placeholder="Base Prize Pool"
-            />
-            <p className="text-sm text-muted-foreground">{formatRunescapeGold(formData.basePrizePool)} GP</p>
-          </div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="public">Publicly Accessible</Label>
-            <Switch
-              id="public"
-              name="public"
-              checked={formData.public}
-              onCheckedChange={(checked) => handleSwitchChange("public", checked)}
+              value={basePrizePool}
+              onChange={(e) => setBasePrizePool(Number(e.target.value))}
+              className="col-span-3"
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            When enabled, this event will be viewable by anyone with the link, even without logging in.
-          </p>
-          <Button type="submit">Save Changes</Button>
-        </form>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="isLocked" className="text-right">
+              Lock Registration
+            </Label>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="isLocked" checked={isLocked} onCheckedChange={(checked) => setIsLocked(!!checked)} />
+              <label
+                htmlFor="isLocked"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Prevent new registrations
+              </label>
+            </div>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="isPublic" className="text-right">
+              Public Event
+            </Label>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="isPublic" checked={isPublic} onCheckedChange={(checked) => setIsPublic(!!checked)} />
+              <label
+                htmlFor="isPublic"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Visible in public listings
+              </label>
+            </div>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="requiresApproval" className="text-right">
+              Require Approval
+            </Label>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="requiresApproval"
+                checked={requiresApproval}
+                onCheckedChange={(checked) => setRequiresApproval(!!checked)}
+              />
+              <label
+                htmlFor="requiresApproval"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Require admin approval for registrations
+              </label>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="submit" onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? "Saving..." : "Save changes"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

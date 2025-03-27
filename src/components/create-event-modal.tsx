@@ -3,124 +3,253 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { toast } from "@/hooks/use-toast"
 import { createEvent } from "@/app/actions/events"
-import formatRunescapeGold from "@/lib/formatRunescapeGold"
+import { toast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { CalendarIcon, Plus } from "lucide-react"
+import { format } from "date-fns"
+import { cn } from "@/lib/utils"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export function CreateEventModal() {
-  const [open, setOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [buyIn, setBuyIn] = useState(0)
-  const [basePool, setBasePool] = useState(0)
   const router = useRouter()
+  const [isOpen, setIsOpen] = useState(false)
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined)
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined)
+  const [registrationDeadline, setRegistrationDeadline] = useState<Date | undefined>(undefined)
+  const [minimumBuyIn, setMinimumBuyIn] = useState(0)
+  const [basePrizePool, setBasePrizePool] = useState(0)
+  const [requiresApproval, setRequiresApproval] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-    const formData = new FormData(e.currentTarget)
+    if (!title || !startDate || !endDate) {
+      toast({
+        title: "Missing required fields",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+    const formData = new FormData()
+    formData.append("title", title)
+    formData.append("description", description)
+    formData.append("startDate", startDate.toISOString())
+    formData.append("endDate", endDate.toISOString())
+    if (registrationDeadline) {
+      formData.append("registrationDeadline", registrationDeadline.toISOString())
+    }
+    formData.append("minimumBuyIn", minimumBuyIn.toString())
+    formData.append("basePrizePool", basePrizePool.toString())
+    formData.append("requiresApproval", requiresApproval.toString())
 
     try {
       const result = await createEvent(formData)
       if (result.success) {
-        setOpen(false)
         toast({
           title: "Event created",
-          description: "Your new event has been successfully created.",
+          description: "Your event has been created successfully.",
         })
+        setIsOpen(false)
         router.refresh()
       } else {
-        throw new Error(result.error ?? "Failed to create event")
+        toast({
+          title: "Error",
+          description: result.error ?? "Failed to create event. Please try again.",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description: "Failed to create event. Please try again.",
         variant: "destructive",
       })
     } finally {
-      setIsLoading(false)
+      setIsSubmitting(false)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>Create New Event</Button>
+        <Button>
+          <Plus className="mr-2 h-4 w-4" />
+          Create Event
+        </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Create New Event</DialogTitle>
-          <DialogDescription>Create a new event for your OSRS Bingo. Fill out the details below.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="title">Event Title</Label>
-            <Input id="title" name="title" required />
+      <DialogContent className="sm:max-w-[525px]">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Create New Event</DialogTitle>
+            <DialogDescription>Fill in the details for your new event.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="title" className="text-right">
+                Title *
+              </Label>
+              <Input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="col-span-3"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="description" className="text-right">
+                Description
+              </Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="startDate" className="text-right">
+                Start Date *
+              </Label>
+              <div className="col-span-3">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !startDate && "text-muted-foreground",
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="endDate" className="text-right">
+                End Date *
+              </Label>
+              <div className="col-span-3">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="registrationDeadline" className="text-right">
+                Registration Deadline
+              </Label>
+              <div className="col-span-3">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !registrationDeadline && "text-muted-foreground",
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {registrationDeadline ? format(registrationDeadline, "PPP") : <span>Optional</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={registrationDeadline}
+                      onSelect={setRegistrationDeadline}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="minimumBuyIn" className="text-right">
+                Minimum Buy-In
+              </Label>
+              <Input
+                id="minimumBuyIn"
+                type="number"
+                value={minimumBuyIn}
+                onChange={(e) => setMinimumBuyIn(Number(e.target.value))}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="basePrizePool" className="text-right">
+                Base Prize Pool
+              </Label>
+              <Input
+                id="basePrizePool"
+                type="number"
+                value={basePrizePool}
+                onChange={(e) => setBasePrizePool(Number(e.target.value))}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="requiresApproval" className="text-right">
+                Require Approval
+              </Label>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="requiresApproval"
+                  checked={requiresApproval}
+                  onCheckedChange={(checked) => setRequiresApproval(!!checked)}
+                />
+                <label
+                  htmlFor="requiresApproval"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Require admin approval for registrations
+                </label>
+              </div>
+            </div>
           </div>
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea id="description" name="description" />
-          </div>
-          <div>
-            <Label htmlFor="basePrizePool">Base Prizepool</Label>
-            <Input
-              id="basePrizePool"
-              name="basePrizePool"
-              type="number"
-              required
-              onChange={(e) => setBasePool(Number.parseInt(e.target.value))}
-              min={0}
-              defaultValue={0}
-            />
-            <span className="text-sm font-medium">({formatRunescapeGold(basePool)} GP)</span>
-          </div>
-          <div>
-            <Label htmlFor="minimumBuyIn">Buy In</Label>
-            <Input
-              id="minimumBuyIn"
-              name="minimumBuyIn"
-              type="number"
-              required
-              onChange={(e) => setBuyIn(Number.parseInt(e.target.value))}
-              min={0}
-              defaultValue={0}
-            />
-            <span className="text-sm font-medium">({formatRunescapeGold(buyIn)} GP)</span>
-          </div>
-          <div>
-            <Label htmlFor="startDate">Start Date</Label>
-            <Input id="startDate" name="startDate" type="date" required />
-          </div>
-          <div>
-            <Label htmlFor="endDate">End Date</Label>
-            <Input id="endDate" name="endDate" type="date" required />
-          </div>
-          <div>
-            <Label htmlFor="registrationDeadline">Registration Deadline</Label>
-            <Input id="registrationDeadline" name="registrationDeadline" type="datetime-local" />
-            <p className="text-xs text-muted-foreground mt-1">
-              If set, users won&apos;t be able to join after this date. Leave empty for no deadline.
-            </p>
-          </div>
-          <div>
-            <Label htmlFor="basePrizePool">Base Prizepool</Label>
-          </div>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Creating..." : "Create Event"}
-          </Button>
+          <DialogFooter>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Creating..." : "Create Event"}
+            </Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
