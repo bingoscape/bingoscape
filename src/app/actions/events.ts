@@ -143,7 +143,7 @@ export interface EventData {
 
 export interface GetEventByIdResult {
   event: Event
-  userRole: EventRole
+  userRole: EventRole | null
 }
 
 export type EventRole = "admin" | "management" | "participant"
@@ -1214,6 +1214,7 @@ export async function getUserRegistrationStatus(eventId: string): Promise<{
   status: "not_requested" | "pending" | "approved" | "rejected"
   message?: string
   responseMessage?: string
+  eventTitle?: string
 }> {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
@@ -1233,6 +1234,9 @@ export async function getUserRegistrationStatus(eventId: string): Promise<{
   const request = await db.query.eventRegistrationRequests.findFirst({
     where: and(eq(eventRegistrationRequests.eventId, eventId), eq(eventRegistrationRequests.userId, session.user.id)),
     orderBy: [desc(eventRegistrationRequests.createdAt)],
+    with: {
+      event: true,
+    }
   })
 
   if (!request) {
@@ -1242,6 +1246,7 @@ export async function getUserRegistrationStatus(eventId: string): Promise<{
   return {
     status: request.status,
     message: request.message ?? undefined,
+    eventTitle: request.event.title,
     responseMessage: request.responseMessage ?? undefined,
   }
 }

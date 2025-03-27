@@ -8,7 +8,7 @@ import Link from "next/link"
 interface RegistrationStatusProps {
   eventId: string
   eventTitle: string
-  status: "pending" | "approved" | "rejected"
+  status: "not_requested" | "pending" | "approved" | "rejected"
   message?: string
   responseMessage?: string
 }

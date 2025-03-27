@@ -71,7 +71,7 @@ export function JoinEventButton({ eventId, registrationStatus, requiresApproval,
     if (requiresApproval) {
       setShowRequestForm(true)
     } else {
-      handleJoinEvent(false)
+      handleJoinEvent(false).then(() => console.log("Join event request sent")).catch(err => console.error(err))
     }
   }
 
