@@ -1,16 +1,10 @@
-import { type NextRequest, NextResponse } from "next/server"
 import { db } from "@/server/db"
 import { eventInvites } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
-import { getServerAuthSession } from "@/server/auth"
 
-export async function GET(request: NextRequest, { params }: { params: { inviteCode: string } }) {
+// Improve error handling in the invite code API
+export async function GET(request: Request, { params }: { params: { inviteCode: string } }) {
   try {
-    const session = await getServerAuthSession()
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
     const { inviteCode } = params
 
     const invite = await db.query.eventInvites.findFirst({
@@ -20,14 +14,26 @@ export async function GET(request: NextRequest, { params }: { params: { inviteCo
       },
     })
 
-    if (!invite || (invite.expiresAt && invite.expiresAt < new Date())) {
-      return NextResponse.json({ error: "Invalid or expired invite code" }, { status: 404 })
+    if (!invite) {
+      return Response.json({ error: "Invalid invite code" }, { status: 404 })
     }
 
-    return NextResponse.json(invite.event)
+    if (invite.expiresAt && invite.expiresAt < new Date()) {
+      return Response.json({ error: "This invite link has expired" }, { status: 410 })
+    }
+
+    // Return basic event info without joining
+    return Response.json({
+      id: invite.event.id,
+      title: invite.event.title,
+      description: invite.event.description,
+      startDate: invite.event.startDate,
+      endDate: invite.event.endDate,
+      requiresApproval: invite.event.requiresApproval,
+    })
   } catch (error) {
-    console.error("Error fetching event from invite:", error)
-    return NextResponse.json({ error: "Failed to fetch event details" }, { status: 500 })
+    console.error("Error fetching invite:", error)
+    return Response.json({ error: "An error occurred while processing your request" }, { status: 500 })
   }
 }
 

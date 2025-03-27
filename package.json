@@ -12,7 +12,9 @@
     "dev": "next dev",
     "dbg": "NODE_OPTIONS='--inspect' next dev",
     "lint": "next lint",
-    "start": "next start -p 3344"
+    "start": "next start -p 3344",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.1.0",
@@ -72,6 +74,9 @@
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.15",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
     "@types/eslint": "^8.56.10",
     "@types/lodash": "^4.17.10",
     "@types/node": "^20.14.10",
@@ -84,10 +89,13 @@
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.4",
     "eslint-plugin-drizzle": "^0.2.3",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
     "postcss": "^8.4.39",
     "prettier": "^3.3.2",
     "prettier-plugin-tailwindcss": "^0.6.5",
     "tailwindcss": "^3.4.3",
+    "ts-node": "^10.9.2",
     "typescript": "^5.5.3"
   },
   "ct3aMetadata": {

@@ -10,11 +10,14 @@ import { useSession, signIn } from "next-auth/react"
 import { Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { RegistrationStatus } from "@/components/registration-status"
+import Link from "next/link"
 
+// Modify the JoinEventPage component to handle previously removed participants
 export default function JoinEventPage({ params }: { params: { inviteCode: string } }) {
     const [isJoining, setIsJoining] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
     const [event, setEvent] = useState<any>(null)
+    const [error, setError] = useState<string | null>(null)
     const [registrationStatus, setRegistrationStatus] = useState<{
         status: "not_requested" | "pending" | "approved" | "rejected"
         message?: string
@@ -47,7 +50,8 @@ export default function JoinEventPage({ params }: { params: { inviteCode: string
                 })
 
                 if (!response.ok) {
-                    throw new Error("Failed to fetch event details")
+                    const errorData = await response.json()
+                    throw new Error(errorData.error || "Failed to fetch event details")
                 }
 
                 const eventData = await response.json()
@@ -62,6 +66,7 @@ export default function JoinEventPage({ params }: { params: { inviteCode: string
                     router.push(`/events/${eventData.id}`)
                 }
             } catch (error) {
+                setError(error instanceof Error ? error.message : "Failed to check registration status")
                 toast({
                     title: "Error",
                     description: error instanceof Error ? error.message : "Failed to check registration status",
@@ -98,6 +103,7 @@ export default function JoinEventPage({ params }: { params: { inviteCode: string
                 router.push(`/events/${event.id}`)
             }
         } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to join event")
             toast({
                 title: "Error",
                 description: error instanceof Error ? error.message : "Failed to join event",
@@ -123,6 +129,28 @@ export default function JoinEventPage({ params }: { params: { inviteCode: string
             <div className="flex justify-center items-center h-[50vh]">
                 <Loader2 className="h-8 w-8 animate-spin" />
                 <p className="ml-2">Redirecting to login...</p>
+            </div>
+        )
+    }
+
+    // If we have an error, show it
+    if (error) {
+        return (
+            <div className="container mx-auto py-10">
+                <Card className="max-w-md mx-auto">
+                    <CardHeader>
+                        <CardTitle>Error</CardTitle>
+                        <CardDescription>There was a problem with your invite link</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-destructive">{error}</p>
+                    </CardContent>
+                    <CardFooter>
+                        <Button asChild variant="outline" className="w-full">
+                            <Link href="/">Return to Home</Link>
+                        </Button>
+                    </CardFooter>
+                </Card>
             </div>
         )
     }
@@ -156,6 +184,7 @@ export default function JoinEventPage({ params }: { params: { inviteCode: string
                 </CardContent>
                 <CardFooter>
                     <Button onClick={handleJoinEvent} disabled={isJoining} className="w-full">
+                        {isJoining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                         {isJoining ? "Joining..." : "Join Event"}
                     </Button>
                 </CardFooter>

@@ -31,7 +31,7 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
   const registrationDeadline = eventData.event.registrationDeadline
     ? new Date(eventData.event.registrationDeadline)
     : null
-  const isRegistrationClosed = registrationDeadline && new Date() > registrationDeadline
+  const isRegistrationClosed = !!registrationDeadline && new Date() > registrationDeadline
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [requestMessage, setRequestMessage] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
