@@ -44,7 +44,7 @@ export default function BingoDetailPage({ params }: { params: { id: UUID; bingoI
         setData(eventData)
         setTeams(teamsData)
         setCurrentTeam(currentTeamData)
-        setUserRole(userRoleData)
+        setUserRole(userRoleData!)
 
         const foundBingo = eventData.event.bingos!.find((b: any) => b.id == bingoId)
         if (!foundBingo) {
