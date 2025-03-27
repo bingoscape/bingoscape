@@ -12,8 +12,9 @@ import {
   eventBuyIns,
   users,
   bingos,
+  eventRegistrationRequests,
 } from "@/server/db/schema"
-import { eq, and, asc, sum, sql } from "drizzle-orm"
+import { eq, and, asc, sum, sql, desc } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { revalidatePath } from "next/cache"
 
@@ -132,6 +133,7 @@ export interface Event {
   minimumBuyIn: number
   basePrizePool: number
   registrationDeadline: Date | null
+  requiresApproval: boolean
 }
 
 export interface EventData {
@@ -146,6 +148,35 @@ export interface GetEventByIdResult {
 
 export type EventRole = "admin" | "management" | "participant"
 
+export interface RegistrationRequest {
+  id: string
+  eventId: string
+  userId: string
+  status: "pending" | "approved" | "rejected"
+  message: string | null
+  adminNotes: string | null
+  responseMessage: string | null
+  reviewedBy: string | null
+  reviewedAt: Date | null
+  createdAt: Date
+  updatedAt: Date
+  user: {
+    id: string
+    name: string | null
+    email: string | null
+    image: string | null
+    runescapeName: string | null
+  }
+  event: {
+    id: string
+    title: string
+  }
+  reviewer?: {
+    id: string
+    name: string | null
+  } | null
+}
+
 export async function createEvent(formData: FormData) {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
@@ -159,6 +190,7 @@ export async function createEvent(formData: FormData) {
   const registrationDeadlineStr = formData.get("registrationDeadline") as string
   const bpp = formData.get("basePrizePool") as string
   const mbi = formData.get("minimumBuyIn") as string
+  const requiresApproval = formData.get("requiresApproval") === "true"
 
   if (!title || !startDateStr || !endDateStr) {
     return { success: false, error: "Missing required fields" }
@@ -200,6 +232,7 @@ export async function createEvent(formData: FormData) {
           basePrizePool,
           minimumBuyIn,
           creatorId: session.user.id,
+          requiresApproval,
         })
         .returning()
 
@@ -392,6 +425,7 @@ export async function updateEvent(
     basePrizePool: number
     locked?: boolean
     public?: boolean
+    requiresApproval?: boolean
   },
 ) {
   try {
@@ -407,6 +441,7 @@ export async function updateEvent(
         basePrizePool: eventData.basePrizePool,
         locked: eventData.locked,
         public: eventData.public,
+        requiresApproval: eventData.requiresApproval,
         updatedAt: new Date(),
       })
       .where(eq(events.id, eventId))
@@ -425,6 +460,7 @@ export async function isRegistrationOpen(eventId: string): Promise<{
   isOpen: boolean
   reason?: string
   canOverride: boolean
+  requiresApproval?: boolean
 }> {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
@@ -448,6 +484,26 @@ export async function isRegistrationOpen(eventId: string): Promise<{
     return { isOpen: false, reason: "You are already a participant in this event", canOverride: false }
   }
 
+  // Check if the user already has a pending registration request
+  if (event.requiresApproval) {
+    const existingRequest = await db.query.eventRegistrationRequests.findFirst({
+      where: and(
+        eq(eventRegistrationRequests.eventId, eventId),
+        eq(eventRegistrationRequests.userId, session.user.id),
+        eq(eventRegistrationRequests.status, "pending"),
+      ),
+    })
+
+    if (existingRequest) {
+      return {
+        isOpen: false,
+        reason: "You already have a pending registration request for this event",
+        canOverride: false,
+        requiresApproval: true,
+      }
+    }
+  }
+
   // Check if the event is locked
   if (event.locked) {
     // Check if the user is an admin (can override)
@@ -456,6 +512,7 @@ export async function isRegistrationOpen(eventId: string): Promise<{
       isOpen: false,
       reason: "This event is locked for registration",
       canOverride: isAdmin,
+      requiresApproval: event.requiresApproval,
     }
   }
 
@@ -467,21 +524,92 @@ export async function isRegistrationOpen(eventId: string): Promise<{
       isOpen: false,
       reason: `Registration deadline (${new Date(event.registrationDeadline).toLocaleString()}) has passed`,
       canOverride: isAdmin,
+      requiresApproval: event.requiresApproval,
     }
   }
 
   // Check if the event has ended
   if (new Date() > new Date(event.endDate)) {
-    return { isOpen: false, reason: "This event has ended", canOverride: false }
+    return {
+      isOpen: false,
+      reason: "This event has ended",
+      canOverride: false,
+      requiresApproval: event.requiresApproval,
+    }
   }
 
-  return { isOpen: true, canOverride: false }
+  return {
+    isOpen: true,
+    canOverride: false,
+    requiresApproval: event.requiresApproval,
+  }
+}
+
+export async function requestToJoinEvent(eventId: string, message = "") {
+  const session = await getServerAuthSession()
+  if (!session || !session.user) {
+    throw new Error("You must be logged in to request to join an event")
+  }
+
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+  })
+
+  if (!event) {
+    throw new Error("Event not found")
+  }
+
+  if (!event.requiresApproval) {
+    throw new Error("This event does not require approval to join")
+  }
+
+  // Check if registration is open
+  const registrationStatus = await isRegistrationOpen(eventId)
+  if (!registrationStatus.isOpen) {
+    throw new Error(registrationStatus.reason ?? "Registration is closed for this event")
+  }
+
+  // Check if the user already has a pending request
+  const existingRequest = await db.query.eventRegistrationRequests.findFirst({
+    where: and(
+      eq(eventRegistrationRequests.eventId, eventId),
+      eq(eventRegistrationRequests.userId, session.user.id),
+      eq(eventRegistrationRequests.status, "pending"),
+    ),
+  })
+
+  if (existingRequest) {
+    throw new Error("You already have a pending request to join this event")
+  }
+
+  // Create a new registration request
+  await db.insert(eventRegistrationRequests).values({
+    eventId,
+    userId: session.user.id,
+    status: "pending",
+    message: message || null,
+  })
+
+  return { success: true }
 }
 
 export async function joinEvent(eventId: string, override = false) {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
     throw new Error("You must be logged in to join an event")
+  }
+
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+  })
+
+  if (!event) {
+    throw new Error("Event not found")
+  }
+
+  // If the event requires approval and we're not overriding, redirect to request flow
+  if (event.requiresApproval && !override) {
+    throw new Error("This event requires approval to join. Please submit a registration request.")
   }
 
   // Skip registration checks if override is true and user is admin
@@ -493,11 +621,7 @@ export async function joinEvent(eventId: string, override = false) {
     }
   } else {
     // If override is true, verify the user is an admin
-    const event = await db.query.events.findFirst({
-      where: eq(events.id, eventId),
-    })
-
-    if (!event || event.creatorId !== session.user.id) {
+    if (event.creatorId !== session.user.id) {
       throw new Error("You don't have permission to override registration restrictions")
     }
   }
@@ -565,6 +689,17 @@ export async function joinEventViaInvite(inviteCode: string) {
 
   if (existingParticipant) {
     throw new Error("You are already a participant in this event")
+  }
+
+  // If the event requires approval, create a registration request instead
+  if (invite.event.requiresApproval) {
+    await db.insert(eventRegistrationRequests).values({
+      eventId: invite.eventId,
+      userId: session!.user.id,
+      status: "pending",
+      message: `Joined via invite code: ${inviteCode}`,
+    })
+    return { ...invite.event, pendingApproval: true }
   }
 
   await db.insert(eventParticipants).values({
@@ -853,6 +988,208 @@ export async function updateParticipantBuyIn(eventId: string, participantId: str
   } catch (error) {
     console.error("Error updating participant buy-in:", error)
     throw error
+  }
+}
+
+// Registration request management functions
+export async function getRegistrationRequests(
+  eventId: string,
+  filters: {
+    status?: "pending" | "approved" | "rejected"
+    search?: string
+  } = {},
+): Promise<RegistrationRequest[]> {
+  try {
+    const session = await getServerAuthSession()
+    if (!session || !session.user) {
+      throw new Error("You must be logged in to view registration requests")
+    }
+
+    // Check if user is admin or management for this event
+    const userRole = await getUserRole(eventId)
+    if (userRole !== "admin" && userRole !== "management") {
+      throw new Error("You don't have permission to view registration requests")
+    }
+
+    const query = db.query.eventRegistrationRequests.findMany({
+      where: (reqs, { and, eq, like, or }) => {
+        const conditions = [eq(reqs.eventId, eventId)]
+
+        if (filters.status) {
+          conditions.push(eq(reqs.status, filters.status))
+        }
+
+        return and(...conditions)
+      },
+      with: {
+        user: true,
+        event: true,
+        reviewer: true,
+      },
+      orderBy: [desc(eventRegistrationRequests.createdAt)],
+    })
+
+    let requests = await query
+
+    // Apply search filter in memory if provided
+    if (filters.search && filters.search.trim() !== "") {
+      const searchTerm = filters.search.toLowerCase()
+      requests = requests.filter(
+        (req) =>
+          req.user.name?.toLowerCase().includes(searchTerm) ??
+          req.user.email?.toLowerCase().includes(searchTerm) ??
+          req.user.runescapeName?.toLowerCase().includes(searchTerm) ??
+          req.message?.toLowerCase().includes(searchTerm),
+      )
+    }
+
+    return requests
+  } catch (error) {
+    console.error("Error fetching registration requests:", error)
+    throw new Error("Failed to fetch registration requests")
+  }
+}
+
+export async function approveRegistrationRequest(requestId: string, responseMessage?: string) {
+  const session = await getServerAuthSession()
+  if (!session || !session.user) {
+    throw new Error("You must be logged in to approve registration requests")
+  }
+
+  return await db.transaction(async (tx) => {
+    // Get the request
+    const request = await tx.query.eventRegistrationRequests.findFirst({
+      where: eq(eventRegistrationRequests.id, requestId),
+    })
+
+    if (!request) {
+      throw new Error("Registration request not found")
+    }
+
+    // Check if user is admin or management for this event
+    const userRole = await getUserRole(request.eventId)
+    if (userRole !== "admin" && userRole !== "management") {
+      throw new Error("You don't have permission to approve registration requests")
+    }
+
+    // Update the request status
+    await tx
+      .update(eventRegistrationRequests)
+      .set({
+        status: "approved",
+        reviewedBy: session.user.id,
+        reviewedAt: new Date(),
+        responseMessage: responseMessage ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(eventRegistrationRequests.id, requestId))
+
+    // Add the user as a participant
+    const existingParticipant = await tx.query.eventParticipants.findFirst({
+      where: and(eq(eventParticipants.eventId, request.eventId), eq(eventParticipants.userId, request.userId)),
+    })
+
+    if (!existingParticipant) {
+      await tx.insert(eventParticipants).values({
+        eventId: request.eventId,
+        userId: request.userId,
+        role: "participant",
+      })
+    }
+
+    revalidatePath(`/events/${request.eventId}`)
+    revalidatePath(`/events/${request.eventId}/registrations`)
+
+    return { success: true }
+  })
+}
+
+export async function rejectRegistrationRequest(requestId: string, responseMessage?: string) {
+  const session = await getServerAuthSession()
+  if (!session || !session.user) {
+    throw new Error("You must be logged in to reject registration requests")
+  }
+
+  // Get the request
+  const request = await db.query.eventRegistrationRequests.findFirst({
+    where: eq(eventRegistrationRequests.id, requestId),
+  })
+
+  if (!request) {
+    throw new Error("Registration request not found")
+  }
+
+  // Check if user is admin or management for this event
+  const userRole = await getUserRole(request.eventId)
+  if (userRole !== "admin" && userRole !== "management") {
+    throw new Error("You don't have permission to reject registration requests")
+  }
+
+  // Update the request status
+  await db
+    .update(eventRegistrationRequests)
+    .set({
+      status: "rejected",
+      reviewedBy: session.user.id,
+      reviewedAt: new Date(),
+      responseMessage: responseMessage ?? null,
+      updatedAt: new Date(),
+    })
+    .where(eq(eventRegistrationRequests.id, requestId))
+
+  revalidatePath(`/events/${request.eventId}/registrations`)
+
+  return { success: true }
+}
+
+export async function getUserRegistrationStatus(eventId: string): Promise<{
+  status: "not_requested" | "pending" | "approved" | "rejected"
+  message?: string
+  responseMessage?: string
+}> {
+  const session = await getServerAuthSession()
+  if (!session || !session.user) {
+    return { status: "not_requested" }
+  }
+
+  // Check if user is already a participant
+  const existingParticipant = await db.query.eventParticipants.findFirst({
+    where: and(eq(eventParticipants.eventId, eventId), eq(eventParticipants.userId, session.user.id)),
+  })
+
+  if (existingParticipant) {
+    return { status: "approved" }
+  }
+
+  // Check for registration request
+  const request = await db.query.eventRegistrationRequests.findFirst({
+    where: and(eq(eventRegistrationRequests.eventId, eventId), eq(eventRegistrationRequests.userId, session.user.id)),
+    orderBy: [desc(eventRegistrationRequests.createdAt)],
+  })
+
+  if (!request) {
+    return { status: "not_requested" }
+  }
+
+  return {
+    status: request.status,
+    message: request.message ?? undefined,
+    responseMessage: request.responseMessage ?? undefined,
+  }
+}
+
+export async function getPendingRegistrationCount(eventId: string): Promise<number> {
+  try {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(eventRegistrationRequests)
+      .where(and(eq(eventRegistrationRequests.eventId, eventId), eq(eventRegistrationRequests.status, "pending")))
+      .limit(1)
+
+    return result[0]?.count ?? 0
+  } catch (error) {
+    console.error("Error counting pending registrations:", error)
+    return 0
   }
 }
 

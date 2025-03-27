@@ -39,6 +39,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   submissions: many(submissions),
   bingoTemplates: many(bingoTemplates), // Add this line
   apiKeys: many(apiKeys),
+  registrationRequests: many(eventRegistrationRequests), // Add relation to registration requests
 }))
 
 export const accounts = createTable(
@@ -118,6 +119,7 @@ export const submissionStatusEnum = pgEnum("submission_status", [
 ])
 export const clanRoleEnum = pgEnum("clan_role", ["admin", "management", "member", "guest"])
 export const eventRoleEnum = pgEnum("event_role", ["admin", "management", "participant"])
+export const registrationStatusEnum = pgEnum("registration_status", ["pending", "approved", "rejected"])
 
 export const events = createTable("events", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -136,6 +138,7 @@ export const events = createTable("events", {
   public: boolean("public").default(false).notNull(), // Renamed from 'visible' to 'public'
   basePrizePool: bigint("basePrizePool", { mode: "number" }).default(0).notNull(),
   minimumBuyIn: bigint("minimumBuyIn", { mode: "number" }).default(0).notNull(),
+  requiresApproval: boolean("requires_approval").default(false).notNull(), // New field for registration approval
 })
 
 export const eventsRelations = relations(events, ({ many, one }) => ({
@@ -148,6 +151,41 @@ export const eventsRelations = relations(events, ({ many, one }) => ({
   teams: many(teams),
   clan: one(clans, { fields: [events.clanId], references: [clans.id] }),
   invites: many(eventInvites),
+  registrationRequests: many(eventRegistrationRequests), // Add relation to registration requests
+}))
+
+// New table for event registration requests
+export const eventRegistrationRequests = createTable("event_registration_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventId: uuid("event_id")
+    .notNull()
+    .references(() => events.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  status: registrationStatusEnum("status").default("pending").notNull(),
+  message: text("message"), // Optional message from the user
+  adminNotes: text("admin_notes"), // Optional notes from admin
+  responseMessage: text("response_message"), // Optional response message to the user
+  reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const eventRegistrationRequestsRelations = relations(eventRegistrationRequests, ({ one }) => ({
+  event: one(events, {
+    fields: [eventRegistrationRequests.eventId],
+    references: [events.id],
+  }),
+  user: one(users, {
+    fields: [eventRegistrationRequests.userId],
+    references: [users.id],
+  }),
+  reviewer: one(users, {
+    fields: [eventRegistrationRequests.reviewedBy],
+    references: [users.id],
+  }),
 }))
 
 export const bingos = createTable("bingos", {
