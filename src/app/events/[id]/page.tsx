@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CreateBingoModal } from "@/components/create-bingo-modal"
 import BingoGrid from "@/components/bingogrid"
@@ -9,6 +9,7 @@ import {
     getTotalBuyInsForEvent,
     isRegistrationOpen,
     getPendingRegistrationCount,
+    getUserRegistrationStatus,
 } from "@/app/actions/events"
 import type { UUID } from "crypto"
 import { getUserClans } from "@/app/actions/clan"
@@ -29,6 +30,8 @@ import { TeamSelector } from "@/components/team-selector"
 import { BingoImportExportModal } from "@/components/bingo-import-export-modal"
 import { ShareEventButton } from "@/components/share-event-button"
 import { Badge } from "@/components/ui/badge"
+import { JoinEventButton } from "@/components/join-event-button"
+import { RegistrationStatus } from "@/components/registration-status"
 
 export default async function EventBingosPage({ params }: { params: { id: UUID } }) {
     const session = await getServerAuthSession()
@@ -43,6 +46,50 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
     }
 
     const { event, userRole } = data
+
+    // If userRole is null, the user is not a participant
+    if (!userRole) {
+        // Get registration status to show appropriate UI
+        const registrationStatus = await getUserRegistrationStatus(params.id)
+        const regOpenStatus = await isRegistrationOpen(params.id)
+
+        return (
+            <div className="container mx-auto py-10">
+                <Card className="max-w-2xl mx-auto">
+                    <CardHeader>
+                        <CardTitle>Event Access Restricted</CardTitle>
+                        <CardDescription>You are not a participant in this event: {event.title}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {registrationStatus.status !== "not_requested" ? (
+                            <RegistrationStatus
+                                eventId={event.id}
+                                eventTitle={event.title}
+                                status={registrationStatus.status}
+                                message={registrationStatus.message}
+                                responseMessage={registrationStatus.responseMessage}
+                            />
+                        ) : (
+                            <div className="space-y-4">
+                                <p>You need to join this event to view its details.</p>
+                                <JoinEventButton
+                                    eventId={event.id}
+                                    registrationStatus={regOpenStatus}
+                                    requiresApproval={event.requiresApproval}
+                                />
+                            </div>
+                        )}
+                    </CardContent>
+                    <CardFooter className="flex justify-between">
+                        <Button variant="outline" asChild>
+                            <Link href="/">Return to Home</Link>
+                        </Button>
+                    </CardFooter>
+                </Card>
+            </div>
+        )
+    }
+
     const userClans = await getUserClans()
     const currentTeam = await getCurrentTeamForUser(params.id)
     const prizePool = await getTotalBuyInsForEvent(params.id)

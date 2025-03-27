@@ -1,41 +1,80 @@
-import { getServerAuthSession } from "@/server/auth"
-import { getEventById, getUserRegistrationStatus } from "@/app/actions/events"
-import { notFound, redirect } from "next/navigation"
+"use client"
+
+import { useEffect, useState } from "react"
+import { useParams } from "next/navigation"
+import { getUserRegistrationStatus } from "@/app/actions/events"
 import { RegistrationStatus } from "@/components/registration-status"
+import { Loader2 } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
 
-export default async function EventRegistrationStatusPage({ params }: { params: { id: string } }) {
-  const session = await getServerAuthSession()
-  if (!session || !session.user) {
-    redirect(`/sign-in?callbackUrl=/events/${params.id}/status`)
+export default function StatusPage() {
+  const params = useParams()
+  const eventId = params.id as string
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [registrationData, setRegistrationData] = useState<{
+    status: "pending" | "approved" | "rejected"
+    message?: string
+    responseMessage?: string
+    eventTitle: string
+  } | null>(null)
+
+  useEffect(() => {
+    async function fetchRegistrationStatus() {
+      try {
+        const status = await getUserRegistrationStatus(eventId)
+        setRegistrationData(status as any)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to fetch registration status")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchRegistrationStatus().then(() => console.log("Registration status fetched")).catch(err => console.error(err))
+  }, [eventId])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin" role="status" />
+      </div>
+    )
   }
 
-  const eventData = await getEventById(params.id)
-  if (!eventData) {
-    notFound()
+  if (error) {
+    return (
+      <div className="container mx-auto py-10">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
+    )
   }
 
-  // Check if the user is already a participant
-  if (eventData.userRole) {
-    // If they're already a participant, redirect to the event page
-    redirect(`/events/${params.id}`)
-  }
-
-  // Get the registration status
-  const registrationStatus = await getUserRegistrationStatus(params.id)
-
-  // If they haven't requested to join, redirect to the event page
-  if (registrationStatus.status === "not_requested") {
-    redirect(`/events/${params.id}`)
+  if (!registrationData) {
+    return (
+      <div className="container mx-auto py-10">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>No Registration Found</AlertTitle>
+          <AlertDescription>You have not registered for this event yet.</AlertDescription>
+        </Alert>
+      </div>
+    )
   }
 
   return (
     <div className="container mx-auto py-10">
       <RegistrationStatus
-        eventId={params.id}
-        eventTitle={eventData.event.title}
-        status={registrationStatus.status}
-        message={registrationStatus.message}
-        responseMessage={registrationStatus.responseMessage}
+        eventId={eventId}
+        eventTitle={registrationData.eventTitle}
+        status={registrationData.status}
+        message={registrationData.message}
+        responseMessage={registrationData.responseMessage}
       />
     </div>
   )
