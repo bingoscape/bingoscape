@@ -11,6 +11,7 @@ import { useState } from "react"
 import { Textarea } from "@/components/ui/textarea"
 import { requestToJoinEvent } from "@/app/actions/events"
 import { toast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
 
 interface EventCardProps {
   eventData: EventData
@@ -34,6 +35,7 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [requestMessage, setRequestMessage] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const router = useRouter()
 
   const getStatusBadge = () => {
     if (!status) return null
@@ -59,7 +61,9 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
         description: "Your registration request has been submitted for review.",
       })
       setShowRequestForm(false)
-      if (onJoin) onJoin()
+
+      // Navigate to the registration status page
+      router.push(`/events/${eventData.event.id}/status`)
     } catch (error) {
       toast({
         title: "Error",
@@ -68,6 +72,28 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
       })
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleJoinClick = async () => {
+    if (eventData.event.requiresApproval) {
+      // If approval is required, show the request form
+      setShowRequestForm(true)
+    } else {
+      // If no approval needed, join directly
+      if (onJoin) {
+        try {
+          onJoin()
+          // After successful join, redirect to the event page
+          router.push(`/events/${eventData.event.id}`)
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: error instanceof Error ? error.message : "Failed to join event",
+            variant: "destructive",
+          })
+        }
+      }
     }
   }
 
@@ -191,20 +217,20 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
           <>
             {eventData.event.requiresApproval ? (
               registrationStatus?.status === "pending" ? (
-                <Button disabled className="ml-2" title="Request pending">
-                  Pending
-                </Button>
+                <Link href={`/events/${eventData.event.id}/status`} className="ml-2">
+                  <Button variant="outline">View Status</Button>
+                </Link>
               ) : registrationStatus?.status === "rejected" ? (
-                <Button disabled className="ml-2" title="Request rejected">
-                  Rejected
-                </Button>
+                <Link href={`/events/${eventData.event.id}/status`} className="ml-2">
+                  <Button variant="outline">View Status</Button>
+                </Link>
               ) : (
-                <Button onClick={() => setShowRequestForm(true)} className="ml-2">
+                <Button onClick={handleJoinClick} className="ml-2">
                   Request to Join
                 </Button>
               )
             ) : (
-              <Button onClick={onJoin} className="ml-2">
+              <Button onClick={handleJoinClick} className="ml-2">
                 Join
               </Button>
             )}

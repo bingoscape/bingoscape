@@ -708,7 +708,7 @@ export async function joinEventViaInvite(inviteCode: string) {
     role: "participant",
   })
 
-  return invite.event
+  return { ...invite.event, pendingApproval: false }
 }
 
 export async function getUserRole(eventId: string): Promise<EventRole> {
@@ -987,6 +987,63 @@ export async function updateParticipantBuyIn(eventId: string, participantId: str
     return { success: true }
   } catch (error) {
     console.error("Error updating participant buy-in:", error)
+    throw error
+  }
+}
+
+// Add this new server action to remove a participant from an event
+export async function removeParticipantFromEvent(eventId: string, userId: string) {
+  const session = await getServerAuthSession()
+  if (!session || !session.user) {
+    throw new Error("You must be logged in to remove participants")
+  }
+
+  // Check if the current user has admin or management permissions
+  const userRole = await getUserRole(eventId)
+  if (userRole !== "admin" && userRole !== "management") {
+    throw new Error("You don't have permission to remove participants")
+  }
+
+  try {
+    // Find the participant record
+    const participant = await db.query.eventParticipants.findFirst({
+      where: and(eq(eventParticipants.eventId, eventId), eq(eventParticipants.userId, userId)),
+    })
+
+    if (!participant) {
+      throw new Error("Participant not found")
+    }
+
+    // Check if trying to remove an admin (only admins can remove other admins)
+    if (participant.role === "admin" && userRole !== "admin") {
+      throw new Error("Only admins can remove other admins")
+    }
+
+    // Remove the participant from any teams they might be in
+    const teamMemberships = await db.query.teamMembers.findMany({
+      where: eq(teamMembers.userId, userId),
+      with: {
+        team: true,
+      },
+    })
+
+    // Only remove from teams in this event
+    for (const membership of teamMemberships) {
+      if (membership.team.eventId === eventId) {
+        await db.delete(teamMembers).where(eq(teamMembers.id, membership.id))
+      }
+    }
+
+    // Remove any buy-ins
+    await db.delete(eventBuyIns).where(eq(eventBuyIns.eventParticipantId, participant.id))
+
+    // Remove the participant from the event
+    await db.delete(eventParticipants).where(eq(eventParticipants.id, participant.id))
+
+    revalidatePath(`/events/${eventId}/participants`)
+    return { success: true }
+  } catch (error) {
+    console.error("Error removing participant:", error)
     throw error
   }
 }

@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { toast } from "@/hooks/use-toast"
-import { Loader2, CheckCircle, CircleAlert } from "lucide-react"
+import { Loader2, CheckCircle, CircleAlert, UserMinus } from "lucide-react"
 import {
   getEventParticipants,
   updateParticipantRole,
   assignParticipantToTeam,
   updateParticipantBuyIn,
+  removeParticipantFromEvent,
 } from "@/app/actions/events"
 import { getTeamsByEventId } from "@/app/actions/team"
 import { getEventById } from "@/app/actions/events"
@@ -18,6 +19,67 @@ import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import type { UUID } from "crypto"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import debounce from "lodash/debounce"
+import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+
+interface RemoveParticipantDialogProps {
+  isOpen: boolean
+  onClose: () => void
+  onConfirm: () => Promise<void>
+  participantName: string
+}
+
+function RemoveParticipantDialog({ isOpen, onClose, onConfirm, participantName }: RemoveParticipantDialogProps) {
+  const [isRemoving, setIsRemoving] = useState(false)
+
+  const handleConfirm = async () => {
+    setIsRemoving(true)
+    try {
+      await onConfirm()
+      onClose()
+    } catch (error) {
+      console.error("Error removing participant:", error)
+    } finally {
+      setIsRemoving(false)
+    }
+  }
+
+  return (
+    <AlertDialog open={isOpen} onOpenChange={onClose}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remove Participant</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to remove {participantName} from this event? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isRemoving}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(e) => {
+              e.preventDefault()
+              void handleConfirm()
+            }}
+            disabled={isRemoving}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {isRemoving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserMinus className="h-4 w-4 mr-2" />}
+            Remove
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
 
 interface Participant {
   id: string
@@ -39,6 +101,35 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
   const [searchTerm, setSearchTerm] = useState("")
   const [minimumBuyIn, setMinimumBuyIn] = useState(0)
   const [eventName, setEventName] = useState("")
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false)
+  const [participantToRemove, setParticipantToRemove] = useState<Participant | null>(null)
+
+  const handleRemoveParticipant = async () => {
+    if (!participantToRemove) return
+
+    try {
+      await removeParticipantFromEvent(params.id as string, participantToRemove.id)
+
+      setParticipants(participants.filter((p) => p.id !== participantToRemove.id))
+
+      toast({
+        title: "Success",
+        description: `${participantToRemove.runescapeName} has been removed from the event`,
+      })
+    } catch (error) {
+      console.error("Error removing participant:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to remove participant",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const openRemoveDialog = (participant: Participant) => {
+    setParticipantToRemove(participant)
+    setRemoveDialogOpen(true)
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -187,6 +278,7 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
               <TableHead className="w-40">Buy-In (GP)</TableHead>
               <TableHead className="w-40"></TableHead>
               <TableHead className="w-20">Status</TableHead>
+              <TableHead className="w-20">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -244,11 +336,30 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
                     )}
                   </div>
                 </TableCell>
+                <TableCell className="w-20">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openRemoveDialog(participant)}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <UserMinus className="h-4 w-4" />
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
+      {participantToRemove && (
+        <RemoveParticipantDialog
+          isOpen={removeDialogOpen}
+          onClose={() => setRemoveDialogOpen(false)}
+          onConfirm={handleRemoveParticipant}
+          participantName={participantToRemove.runescapeName}
+        />
+      )}
     </div>
   )
 }
