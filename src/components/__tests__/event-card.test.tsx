@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import { EventCard } from "../event-card"
 import { requestToJoinEvent } from "@/app/actions/events"

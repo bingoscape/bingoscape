@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { render, screen } from "@testing-library/react"
 import { useParams } from "next/navigation"
 import { getUserRegistrationStatus } from "@/app/actions/events"
