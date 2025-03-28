@@ -1,6 +1,4 @@
 # Bingoscape
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/T6T5108046)
-[![buy-me-a-coffee](https://cdn.buymeacoffee.com/buttons/default-orange.png)](https://www.buymeacoffee.com/majorspace)
 
 Bingoscape is an Old School RuneScape (OSRS) clan bingo management tool built with Next.js, React, and TypeScript. This tool helps you organize and manage bingo events for your clan, providing an intuitive and interactive interface for tracking progress and results.
 
