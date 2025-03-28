@@ -3,6 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Add this line to skip validation during build
+ENV SKIP_ENV_VALIDATION=1
+
 # Copy package files
 COPY package*.json ./
 
@@ -22,7 +25,6 @@ WORKDIR /app
 
 # Set to production
 ENV NODE_ENV=production
-ENV SKIP_ENV_VALIDATION=1
 
 # Copy necessary files from builder
 COPY --from=builder /app/package*.json ./
