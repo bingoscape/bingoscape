@@ -13,6 +13,7 @@
     "dbg": "NODE_OPTIONS='--inspect' next dev",
     "lint": "next lint",
     "start": "next start -p 3344",
+    "start:prod": "next start -p 3333",
     "test": "jest",
     "test:watch": "jest --watch"
   },

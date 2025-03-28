@@ -35,7 +35,7 @@ COPY --from=builder /app/next-env.d.ts ./
 #COPY --from=builder /app/.env ./.env
 
 # Expose the port the app runs on
-EXPOSE 3344
+EXPOSE 3333
 
 # Start the application
-CMD ["npm", "run", "start"] 
+CMD ["npm", "run", "start:prod"] 
