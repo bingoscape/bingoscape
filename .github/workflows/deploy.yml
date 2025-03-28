@@ -74,13 +74,14 @@ jobs:
             # Stop existing containers
             docker-compose -f docker-compose.prod.yml down
             
-            # Ensure .env file exists
+            # Ensure runtime .env file exists
             if [ ! -f .env ]; then
-              echo "Error: .env file not found on server"
+              echo "Error: Runtime .env file not found on server"
+              echo "Please ensure .env file exists with production values"
               exit 1
             fi
             
-            # Start with new image and .env file
+            # Start with new image and runtime .env file
             docker-compose -f docker-compose.prod.yml --env-file .env up -d
             
             # Verify containers are running
