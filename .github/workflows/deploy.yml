@@ -63,6 +63,39 @@ jobs:
             # Navigate to app directory
             cd bingoscape
             
+            # Create docker-compose.prod.yml from template
+            cat > docker-compose.prod.yml << 'EOL'
+            version: '3.8'
+
+            services:
+              app:
+                image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+                ports:
+                  - "3333:3333"
+                env_file:
+                  - .env
+                environment:
+                  - NODE_ENV=production
+                depends_on:
+                  - db
+                restart: unless-stopped
+                volumes:
+                  - ${UPLOADS_PATH:-./uploads}:/app/public/uploads
+
+              db:
+                image: postgres:16-alpine
+                container_name: bingoscape-next-postgres
+                ports:
+                  - "5555:5432"
+                environment:
+                  - POSTGRES_USER=postgres
+                  - POSTGRES_PASSWORD=${DB_PASSWORD:-password}
+                  - POSTGRES_DB=bingoscape-next
+                volumes:
+                  - ${POSTGRES_PATH:-./data/postgres}:/var/lib/postgresql/data
+                restart: unless-stopped
+            EOL
+            
             # Pull the latest image
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
             
