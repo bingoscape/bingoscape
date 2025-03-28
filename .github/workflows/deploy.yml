@@ -1,9 +1,6 @@
 name: Deploy to Production
 
-on:
-  push:
-    branches: [ main ]  # or your default branch name
-  workflow_dispatch:
+on: workflow_dispatch
 
 env:
   REGISTRY: ghcr.io
@@ -55,8 +52,6 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'  # Only deploy on main branch
-
     steps:
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
