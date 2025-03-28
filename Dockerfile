@@ -21,9 +21,8 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 # Set to production
-# Required variables for build
 ENV NODE_ENV=production
-ENV SKIP_ENV_VALIDATION=true
+ENV SKIP_ENV_VALIDATION=1
 
 # Copy necessary files from builder
 COPY --from=builder /app/package*.json ./
