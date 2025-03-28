@@ -56,16 +56,16 @@ jobs:
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          port: ${{ secrets.SSH_PORT }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: '${{ secrets.SSH_HOST }}'
+          username: '${{ secrets.SSH_USERNAME }}'
+          port: '${{ secrets.SSH_PORT }}'
+          key: '${{ secrets.SSH_PRIVATE_KEY }}'
           script: |
             # Navigate to app directory
-            if [ ! -d "bingoscape" ]; then
-                mkdir bingoscape
+            if [ ! -d ".config/bingoscape" ]; then
+                mkdir -p .config/bingoscape
             fi
-            cd bingoscape
+            cd .config/bingoscape
 
             # Create docker-compose.prod.yml from template
             cat > docker-compose.prod.yml << 'EOL'
