@@ -43,3 +43,6 @@ yarn-error.log*
 *.tsbuildinfo
 
 /public/uploads/**/*
+
+# Sentry Config File
+.env.sentry-build-plugin
