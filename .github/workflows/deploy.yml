@@ -62,8 +62,11 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             # Navigate to app directory
+            if [ ! -d "bingoscape" ]; then
+                mkdir bingoscape
+            fi
             cd bingoscape
-            
+
             # Create docker-compose.prod.yml from template
             cat > docker-compose.prod.yml << 'EOL'
             version: '3.8'
@@ -96,22 +99,39 @@ jobs:
                   - ${POSTGRES_PATH:-./data/postgres}:/var/lib/postgresql/data
                 restart: unless-stopped
             EOL
-            
+
+            cat > .env << 'EOL'
+            # When adding additional environment variables, the schema in "/src/env.js"
+            # should be updated accordingly.
+
+            # Drizzle
+            DATABASE_URL="${{ secrets.DATABASE_URL }}"
+
+            NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" # Added by `npx auth`. Read more: https://cli.authjs.dev
+            NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}"
+
+            # Next Auth Discord Provider
+            DISCORD_CLIENT_ID="${{ secrets.DISCORD_CLIENT_ID }}"
+            DISCORD_CLIENT_SECRET="${{ secrets.DISCORD_CLIENT_SECRET }}"
+
+            SENTRY_AUTH_TOKEN="${{ secrets.SENTRY_AUTH_TOKEN }}"
+            EOL
+
             # Pull the latest image
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
-            
+
             # Stop existing containers
             docker-compose -f docker-compose.prod.yml down
-            
+
             # Ensure runtime .env file exists
             if [ ! -f .env ]; then
               echo "Error: Runtime .env file not found on server"
               echo "Please ensure .env file exists with production values"
               exit 1
             fi
-            
+
             # Start with new image and runtime .env file
             docker-compose -f docker-compose.prod.yml --env-file .env up -d
-            
+
             # Verify containers are running
-            docker-compose -f docker-compose.prod.yml ps 
+            docker-compose -f docker-compose.prod.yml ps
