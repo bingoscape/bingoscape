@@ -9,8 +9,9 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci
 
-# Copy source code
+# Copy source code and build-time env
 COPY . .
+COPY .env.build .env
 
 # Build application
 RUN npm run build
@@ -31,7 +32,7 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/next-env.d.ts ./
-# COPY --from=builder /app/.env ./.env
+#COPY --from=builder /app/.env ./.env
 
 # Expose the port the app runs on
 EXPOSE 3344
