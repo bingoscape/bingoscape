@@ -117,6 +117,7 @@ jobs:
             SENTRY_AUTH_TOKEN="${{ secrets.SENTRY_AUTH_TOKEN }}"
             EOL
 
+            echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u kaffeed --password-stdin
             # Pull the latest image
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
 
