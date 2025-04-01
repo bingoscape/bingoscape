@@ -700,8 +700,9 @@ export async function generateEventInviteLink(eventId: string) {
   }
 
   const inviteCode = nanoid(10)
-  const expiresAt = new Date()
-  expiresAt.setDate(expiresAt.getDate() + 7) // Invite expires in 7 days
+
+
+  const expiresAt = (event.registrationDeadline ?? event.endDate)
 
   const [invite] = await db
     .insert(eventInvites)
