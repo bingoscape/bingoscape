@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createBingo } from '@/app/actions/bingo'
 import { Textarea } from './ui/textarea'
+import generateOSRSCodePhrase from '@/lib/codephraseGenerator'
 
 export function CreateBingoModal({ eventId }: { eventId: string }) {
   const [open, setOpen] = useState(false)
@@ -55,7 +56,7 @@ export function CreateBingoModal({ eventId }: { eventId: string }) {
           </div>
           <div>
             <Label htmlFor="codephrase">Codephrase</Label>
-            <Input id="codephrase" name="codephrase" required />
+            <Input id="codephrase" name="codephrase" value={generateOSRSCodePhrase()} required />
           </div>
           <div>
             <Label htmlFor="description">Description</Label>

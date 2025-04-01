@@ -74,7 +74,7 @@ const creatures = [
  * Generates a random OSRS-themed code phrase
  * @returns {string} A phrase in the format "adjective-noun-creature"
  */
-function generateOSRSCodePhrase(): string {
+export default function generateOSRSCodePhrase(): string {
   const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
   const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
   const randomCreature = creatures[Math.floor(Math.random() * creatures.length)];
