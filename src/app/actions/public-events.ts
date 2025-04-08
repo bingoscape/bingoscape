@@ -1,8 +1,8 @@
 "use server"
 
 import { db } from "@/server/db"
-import { events, bingos } from "@/server/db/schema"
-import { eq, and, count } from "drizzle-orm"
+import { events, bingos, teams, teamTileSubmissions, tiles } from "@/server/db/schema"
+import { eq, and, count, inArray } from "drizzle-orm"
 import type { UUID } from "crypto"
 
 export interface PublicEventData {
@@ -15,6 +15,13 @@ export interface PublicEventData {
   bingoCount: number
   basePrizePool: number
   minimumBuyIn: number
+}
+
+export interface PublicTeamData {
+  id: string
+  name: string
+  completedTiles: string[] // Array of tile IDs that the team has completed
+  inProgressTiles: string[] // Array of tile IDs that are in progress (pending, requires_interaction, declined)
 }
 
 /**
@@ -94,3 +101,104 @@ export async function getPublicBingos(eventId: string) {
   }
 }
 
+/**
+ * Fetch public teams for an event and specific bingo board
+ * Returns all teams participating in the event with their progress on the specified bingo board
+ */
+export async function getPublicTeams(eventId: string, bingoId: string): Promise<PublicTeamData[]> {
+  try {
+    const eventTeams = await db.query.teams.findMany({
+      where: eq(teams.eventId, eventId as UUID),
+      columns: {
+        id: true,
+        name: true,
+      },
+    })
+
+    // Get all tile IDs for this bingo board
+    const bingoTiles = await db
+      .select({
+        id: tiles.id,
+      })
+      .from(tiles)
+      .where(eq(tiles.bingoId, bingoId as UUID))
+
+    const bingoTileIds = bingoTiles.map((tile) => tile.id)
+
+    const result: PublicTeamData[] = []
+
+    // For each team, get their completed and in-progress tiles for this specific bingo board
+    for (const team of eventTeams) {
+      // Get completed tiles (status = "accepted") for this bingo board
+      const completedTileSubmissions = await db
+        .select({
+          tileId: teamTileSubmissions.tileId,
+        })
+        .from(teamTileSubmissions)
+        .where(
+          and(
+            eq(teamTileSubmissions.teamId, team.id),
+            eq(teamTileSubmissions.status, "accepted"),
+            inArray(teamTileSubmissions.tileId, bingoTileIds),
+          ),
+        )
+
+      // Get in-progress tiles (status = "pending", "requires_interaction", or "declined") for this bingo board
+      const inProgressTileSubmissions = await db
+        .select({
+          tileId: teamTileSubmissions.tileId,
+        })
+        .from(teamTileSubmissions)
+        .where(
+          and(
+            eq(teamTileSubmissions.teamId, team.id),
+            inArray(teamTileSubmissions.status, ["pending", "requires_interaction", "declined"]),
+            inArray(teamTileSubmissions.tileId, bingoTileIds),
+          ),
+        )
+
+      result.push({
+        id: team.id,
+        name: team.name,
+        completedTiles: completedTileSubmissions.map((submission) => submission.tileId),
+        inProgressTiles: inProgressTileSubmissions.map((submission) => submission.tileId),
+      })
+    }
+
+    return result
+  } catch (error) {
+    console.error("Error fetching public teams:", error)
+    return []
+  }
+}
+
+/**
+ * Get detailed public bingo data including tiles and their goals
+ */
+export async function getPublicBingoDetails(bingoId: string) {
+  try {
+    const bingo = await db.query.bingos.findFirst({
+      where: and(eq(bingos.id, bingoId as UUID), eq(bingos.visible, true)),
+    })
+
+    if (!bingo) {
+      return null
+    }
+
+    // Get visible tiles with their goals
+    const bingoTiles = await db.query.tiles.findMany({
+      where: and(eq(tiles.bingoId, bingoId as UUID), eq(tiles.isHidden, false)),
+      with: {
+        goals: true,
+      },
+    })
+
+    return {
+      ...bingo,
+      tiles: bingoTiles,
+    }
+  } catch (error) {
+    console.error("Error fetching public bingo details:", error)
+    return null
+  }
+}
