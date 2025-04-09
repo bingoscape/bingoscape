@@ -30,6 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useSession } from "next-auth/react"
 
 interface RemoveParticipantDialogProps {
   isOpen: boolean
@@ -103,6 +104,8 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
   const [eventName, setEventName] = useState("")
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false)
   const [participantToRemove, setParticipantToRemove] = useState<Participant | null>(null)
+  const { data, status } = useSession()
+  const [isEditable, setIsEditable] = useState(false)
 
   const handleRemoveParticipant = async () => {
     if (!participantToRemove) return
@@ -139,7 +142,10 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
           getTeamsByEventId(params.id as string),
           getEventById(params.id as string),
         ])
+        const userRole = participantsData.find((p) => p.id === data?.user.id)?.role
+        setIsEditable(userRole === "admin")
         setParticipants(participantsData)
+
         setTeams(teamsData)
         setMinimumBuyIn(eventData?.event.minimumBuyIn ?? 0)
         setEventName(eventData?.event.title ?? "")
@@ -286,16 +292,18 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
               <TableRow key={participant.id}>
                 <TableCell className="w-48">{participant.runescapeName}</TableCell>
                 <TableCell className="w-40">
-                  <Select value={participant.role} onValueChange={(value) => handleRoleChange(participant.id, value)}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="management">Management</SelectItem>
-                      <SelectItem value="participant">Participant</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {isEditable ? (
+                    <Select value={participant.role} onValueChange={(value) => handleRoleChange(participant.id, value)}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="management">Management</SelectItem>
+                        <SelectItem value="participant">Participant</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : <span className="text-sm font-medium">{participant.role}</span>}
                 </TableCell>
                 <TableCell className="w-40">
                   <Select
