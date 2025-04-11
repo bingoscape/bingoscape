@@ -262,7 +262,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
       <div className="flex flex-col space-y-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => router.push(`/events/${eventId}/bingos/${bingoId}`)}>
+            <Button variant="ghost" size="icon" onClick={() => router.push(`/events/${eventId}`)}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-2xl font-bold">{bingo?.title} - Team Submissions</h1>
