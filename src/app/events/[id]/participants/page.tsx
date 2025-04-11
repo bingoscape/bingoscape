@@ -143,7 +143,7 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
           getEventById(params.id as string),
         ])
         const userRole = participantsData.find((p) => p.id === data?.user.id)?.role
-        setIsEditable(userRole === "admin")
+        setIsEditable(userRole === "admin" || eventData?.event.creatorId === data?.user.id)
         setParticipants(participantsData)
 
         setTeams(teamsData)

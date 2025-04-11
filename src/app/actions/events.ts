@@ -837,6 +837,14 @@ export async function updateParticipantRole(
   newRole: "admin" | "management" | "participant",
 ) {
   try {
+    const userRoleInEvent = await getUserRole(eventId)
+    const event = await getEventById(eventId)
+    const hasPermission = userRoleInEvent === "admin" || event?.event.creatorId === userId
+
+    if (!hasPermission) {
+      throw new Error("You don't have permission to update participant roles")
+    }
+
     await db
       .update(eventParticipants)
       .set({ role: newRole })
