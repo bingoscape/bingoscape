@@ -20,7 +20,7 @@ import { TeamDisplay } from "@/components/team-display"
 import { DeleteBingoButton } from "@/components/delete-bingo-button"
 import { BingoInfoModal } from "@/components/bingo-info-modal"
 import Link from "next/link"
-import { Users, Clock, ClipboardList } from "lucide-react"
+import { Users, Clock, ClipboardList, ListFilter } from "lucide-react"
 import { getCurrentTeamForUser } from "@/app/actions/team"
 import { PrizePoolDisplay } from "@/components/prize-pool-display"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
@@ -173,10 +173,18 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
                                             />
                                         </div>
                                     </CardContent>
-                                    <CardFooter>
+                                    <CardFooter className="flex justify-between">
                                         <Link href={`/events/${bingo.eventId}/bingos/${bingo.id}`} passHref>
                                             <Button variant="outline">View Bingo</Button>
                                         </Link>
+                                        {isAdminOrManagement && (
+                                            <Link href={`/events/${bingo.eventId}/bingos/${bingo.id}/submissions`} passHref>
+                                                <Button variant="outline" className="flex items-center gap-2">
+                                                    <ListFilter className="h-4 w-4" />
+                                                    Submissions
+                                                </Button>
+                                            </Link>
+                                        )}
                                     </CardFooter>
                                 </Card>
                             ))}
@@ -238,4 +246,3 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
         </div>
     )
 }
-
