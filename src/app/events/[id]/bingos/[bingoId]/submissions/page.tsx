@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "@/hooks/use-toast"
-import { ArrowLeft, Check, RefreshCw, X, AlertTriangle, Search, Clock, Award, ChevronDown, Filter } from "lucide-react"
+import { ArrowLeft, Check, RefreshCw, X, AlertTriangle, Search, Clock, Award, ChevronDown, Filter, CircleCheck, Circle } from "lucide-react"
 import { FullSizeImageDialog } from "@/components/full-size-image-dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -74,10 +74,10 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
         setTeams(teamsData)
         setUserRole(userRoleData)
 
-        // Set the first team as selected by default
-        if (teamsData.length > 0 && selectedTeamIds.length === 0) {
-          setSelectedTeamIds([teamsData[0]!.id])
-        }
+        // // Set the first team as selected by default
+        // if (teamsData.length > 0 && selectedTeamIds.length === 0) {
+        //   setSelectedTeamIds([teamsData[0]!.id])
+        // }
       } catch (error) {
         console.error("Error fetching data:", error)
         toast({
@@ -312,8 +312,6 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
   }
 
   const isAdminOrManagement = userRole === "admin" || userRole === "management"
-  const selectedTeamsInfo =
-    selectedTeamIds.length === 1 ? { name: getTeamName(selectedTeamIds[0]!) } : { count: selectedTeamIds.length }
 
   return (
     <div className="container mx-auto px-4 py-4">
@@ -380,11 +378,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                           onSelect={() => toggleTeamSelection(team.id)}
                           className="flex items-center gap-2"
                         >
-                          <Checkbox
-                            checked={selectedTeamIds.includes(team.id)}
-                            onCheckedChange={() => toggleTeamSelection(team.id)}
-                            className="mr-2"
-                          />
+                          {selectedTeamIds.includes(team.id) ? <CircleCheck className="mr-2" /> : <Circle className="mr-2" />}
                           <span>{team.name}</span>
                         </CommandItem>
                       ))}
@@ -439,11 +433,8 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                           onSelect={() => toggleStatusSelection(status.value)}
                           className="flex items-center gap-2"
                         >
-                          <Checkbox
-                            checked={statusFilters.includes(status.value)}
-                            onCheckedChange={() => toggleStatusSelection(status.value)}
-                            className="mr-2"
-                          />
+
+                          {statusFilters.includes(status.value) ? <CircleCheck className="mr-2" /> : <Circle className="mr-2" />}
                           <span>{status.label}</span>
                         </CommandItem>
                       ))}
