@@ -12,7 +12,7 @@ import {
   teamTileSubmissions,
 } from "@/server/db/schema"
 import type { UUID } from "crypto"
-import { asc, eq, inArray } from "drizzle-orm"
+import { asc, eq, inArray, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import fs from "fs/promises"
@@ -202,7 +202,45 @@ export async function getTileGoalsAndProgress(tileId: string) {
   return tileGoals
 }
 
-export async function getBingoById(bingoId: string) {
+export interface GoalData {
+  id: string
+  description: string
+  createdAt: Date
+  updatedAt: Date
+  tileId: string
+  targetValue: number
+}
+
+export interface TileData {
+  id: string
+  title: string
+  description: string
+  createdAt: Date
+  updatedAt: Date
+  bingoId: string
+  headerImage: string | null
+  weight: number
+  index: number
+  isHidden: boolean
+  goals: GoalData[]
+}
+
+export interface BingoData {
+  id: string
+  title: string
+  description: string | null
+  columns: number
+  createdAt: Date
+  updatedAt: Date
+  locked: boolean
+  eventId: string
+  rows: number
+  codephrase: string
+  visible: boolean
+  tiles: TileData[]
+}
+
+export async function getBingoById(bingoId: string): Promise<BingoData | null> {
   try {
     const result = await db.query.bingos.findFirst({
       where: eq(bingos.id, bingoId),
@@ -245,6 +283,53 @@ export async function getSubmissions(tileId: string): Promise<TeamTileSubmission
   } catch (error) {
     console.error("Error fetching submissions:", error)
     throw new Error("Failed to fetch submissions")
+  }
+}
+
+export async function getAllSubmissionsForTeam(
+  bingoId: string,
+  teamId: string,
+): Promise<Record<string, TeamTileSubmission[]>> {
+  try {
+    // First, get all tiles for this bingo
+    const bingoTiles = await db.select({ id: tiles.id }).from(tiles).where(eq(tiles.bingoId, bingoId))
+
+    if (!bingoTiles.length) {
+      return {}
+    }
+
+    // Get all tile IDs
+    const tileIds = bingoTiles.map((tile) => tile.id)
+
+    // Fetch all submissions for this team across all tiles in the bingo
+    const teamSubmissions = await db.query.teamTileSubmissions.findMany({
+      with: {
+        submissions: {
+          with: {
+            image: true,
+          },
+        },
+        team: true,
+        tile: true,
+      },
+      where: and(eq(teamTileSubmissions.teamId, teamId), inArray(teamTileSubmissions.tileId, tileIds)),
+    })
+
+    // Group submissions by tile ID
+    const submissionsByTile: Record<string, TeamTileSubmission[]> = {}
+
+    for (const submission of teamSubmissions) {
+      const tileId = submission.tileId
+      if (!submissionsByTile[tileId]) {
+        submissionsByTile[tileId] = []
+      }
+      submissionsByTile[tileId].push(submission)
+    }
+
+    return submissionsByTile
+  } catch (error) {
+    console.error("Error fetching team submissions:", error)
+    throw new Error("Failed to fetch team submissions")
   }
 }
 
@@ -650,4 +735,3 @@ export async function updateBingo(bingoId: string, data: UpdateBingoData) {
     return { success: false, error: "Failed to update bingo" }
   }
 }
-
