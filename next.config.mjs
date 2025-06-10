@@ -7,6 +7,10 @@ await import("./src/env.js");
 /** @type {import("next").NextConfig} */
 const config = {
   // TODO: Remove this once it's fixed by Sentry
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production",
+  },
+
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.ignoreWarnings = [

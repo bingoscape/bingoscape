@@ -187,7 +187,7 @@ export async function getClanDetails(clanId: string) {
     .where(eq(events.clanId, clanId));
 
   const owner = await db.query.users.findFirst({
-    where: eq(users.id, clanDetails.ownerId),
+    where: eq(users.id, clanDetails.ownerId!),
     columns: {
       id: true,
       name: true,
@@ -218,7 +218,7 @@ export async function getClanMembers(clanId: string) {
     .innerJoin(users, eq(clanMembers.userId, users.id))
     .where(eq(clanMembers.clanId, clanId))
     .orderBy(
-      sql`CASE 
+      sql`CASE
         WHEN ${clanMembers.role} = 'admin' THEN 1
         WHEN ${clanMembers.role} = 'management' THEN 2
         WHEN ${clanMembers.role} = 'member' THEN 3
