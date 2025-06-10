@@ -11,9 +11,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, User, Home, Users, Menu, Calendar, FileJson } from "lucide-react"
+import { LogOut, User, Home, Users, Menu, Calendar, FileJson, Shield } from "lucide-react"
 import { usePathname } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import ModeToggle from "./mode-toggle"
 import { NotificationBell } from "./notification-bell"
@@ -22,12 +22,24 @@ export function Navbar() {
   const { data: session, status } = useSession()
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
+  const [isSuperAdminUser, setIsSuperAdminUser] = useState(false)
+
+  useEffect(() => {
+    if (session?.user?.email) {
+      // Check if user is super admin
+      fetch("/api/super-admin/check")
+        .then((res) => res.json())
+        .then((data) => setIsSuperAdminUser(data.isSuperAdmin))
+        .catch(() => setIsSuperAdminUser(false))
+    }
+  }, [session?.user?.email])
 
   const navItems = [
     { href: "/", label: "Home", icon: Home },
     { href: "/clans", label: "Clans", icon: Users },
     { href: "/events/mine", label: "My Events", icon: Calendar },
     { href: "/templates", label: "Templates", icon: FileJson },
+    { href: "/super-admin", label: "Admin Panel", icon: Shield, adminOnly: true },
   ]
 
   return (
@@ -43,17 +55,19 @@ export function Navbar() {
             </SheetTrigger>
             <SheetContent side="left">
               <div className="flex flex-col space-y-4 mt-4">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center space-x-2 hover:text-foreground/80 transition-colors ${pathname === item.href ? "font-semibold" : ""}`}
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <item.icon className="h-5 w-5" />
-                    <span>{item.label}</span>
-                  </Link>
-                ))}
+                {navItems
+                  .filter((item) => !item.adminOnly || isSuperAdminUser)
+                  .map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center space-x-2 hover:text-foreground/80 transition-colors ${pathname === item.href ? "font-semibold" : ""}`}
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <item.icon className="h-5 w-5" />
+                      <span>{item.label}</span>
+                    </Link>
+                  ))}
               </div>
             </SheetContent>
           </Sheet>
@@ -63,16 +77,18 @@ export function Navbar() {
           {session?.user && (
             <>
               <div className="hidden md:flex items-center space-x-4">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center space-x-1 hover:text-foreground/80 transition-colors ${pathname === item.href ? "font-semibold" : ""}`}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.label}</span>
-                  </Link>
-                ))}
+                {navItems
+                  .filter((item) => !item.adminOnly || isSuperAdminUser)
+                  .map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center space-x-1 hover:text-foreground/80 transition-colors ${pathname === item.href ? "font-semibold" : ""}`}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.label}</span>
+                    </Link>
+                  ))}
               </div>
             </>
           )}
@@ -117,4 +133,3 @@ export function Navbar() {
     </nav>
   )
 }
-
