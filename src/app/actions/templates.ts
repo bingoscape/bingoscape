@@ -7,13 +7,14 @@ import { getServerAuthSession } from "@/server/auth"
 import { exportBingoBoard } from "./bingo-import-export"
 import type { ExportedBingo } from "./bingo-import-export"
 import { revalidatePath } from "next/cache"
+import getRandomFrog from "@/lib/getRandomFrog"
 
 export interface BingoTemplate {
   id: string
   title: string
   description: string | null
   previewImage: string | null
-  creatorId: string
+  creatorId: string | null
   originalBingoId: string | null
   category: string | null
   tags: string | null
@@ -148,8 +149,8 @@ export async function getPublicTemplates(
     // Format the results
     const formattedTemplates = templates.map((template) => ({
       ...template,
-      creatorName: template.creator.name,
-      creatorImage: template.creator.image,
+      creatorName: template.creator?.name ?? "Unknown Creator",
+      creatorImage: template.creator?.image ?? getRandomFrog(),
     }))
 
     return {
@@ -186,8 +187,8 @@ export async function getTemplateById(templateId: string): Promise<BingoTemplate
 
     return {
       ...template,
-      creatorName: template.creator.name,
-      creatorImage: template.creator.image,
+      creatorName: template.creator?.name ?? "Unknown Creator",
+      creatorImage: template.creator?.image ?? getRandomFrog(),
     }
   } catch (error) {
     console.error("Error fetching template:", error)
@@ -221,8 +222,8 @@ export async function getUserTemplates(): Promise<BingoTemplate[]> {
 
     return templates.map((template) => ({
       ...template,
-      creatorName: template.creator.name,
-      creatorImage: template.creator.image,
+      creatorName: template.creator?.name ?? "Unknown Creator",
+      creatorImage: template.creator?.image ?? getRandomFrog(),
     }))
   } catch (error) {
     console.error("Error fetching user templates:", error)

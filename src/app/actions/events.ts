@@ -120,7 +120,7 @@ export interface Event {
   description: string | null
   startDate: Date
   endDate: Date
-  creatorId: string
+  creatorId: string | null
   clanId: string | null
   createdAt: Date
   updatedAt: Date

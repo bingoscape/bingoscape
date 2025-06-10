@@ -129,7 +129,6 @@ export const events = createTable("events", {
   endDate: timestamp("end_date").notNull(),
   registrationDeadline: timestamp("registration_deadline"),
   creatorId: uuid("creator_id")
-    .notNull()
     .references(() => users.id, { onDelete: "set null" }),
   clanId: uuid("clan_id").references(() => clans.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -398,7 +397,7 @@ export const clans = createTable("clans", {
   name: varchar("name", { length: 255 }).notNull(),
   description: varchar("description", { length: 1000 }),
   ownerId: uuid("owner_id")
-    .notNull()
+    // .notNull()
     .references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -576,7 +575,7 @@ export const bingoTemplates = createTable("bingo_templates", {
   description: text("description"),
   previewImage: varchar("preview_image", { length: 255 }),
   creatorId: uuid("creator_id")
-    .notNull()
+    // .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   originalBingoId: uuid("original_bingo_id").references(() => bingos.id, { onDelete: "set null" }),
   category: varchar("category", { length: 100 }),
