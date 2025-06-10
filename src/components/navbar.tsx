@@ -29,7 +29,7 @@ export function Navbar() {
       // Check if user is super admin
       fetch("/api/super-admin/check")
         .then((res) => res.json())
-        .then((data) => setIsSuperAdminUser(data.isSuperAdmin))
+        .then((data: { isSuperAdmin: boolean }) => setIsSuperAdminUser(data.isSuperAdmin))
         .catch(() => setIsSuperAdminUser(false))
     }
   }, [session?.user?.email])
