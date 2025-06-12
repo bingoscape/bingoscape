@@ -435,7 +435,7 @@ export function SubmissionsTab({
       )}
 
       {!currentTeamId && !hasSufficientRights && (
-        <div className="p-4 bg-gray-50 rounded-md text-center">
+        <div className="p-4 bg-muted/50 rounded-md text-center">
           <p>You need to be part of a team to submit images.</p>
         </div>
       )}
