@@ -1,10 +1,11 @@
+/* eslint-disable */
 "use client"
 
 import type React from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Upload, Check, Clock, X, Trash2, ImageIcon, LockIcon } from "lucide-react"
+import { Upload, Check, Clock, X, Trash2, ImageIcon, LockIcon, AlertTriangle } from "lucide-react"
 import type { Tile, Team } from "@/app/actions/events"
 import {
   AlertDialog,
@@ -24,6 +25,21 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import getRandomFrog from "@/lib/getRandomFrog"
 
+// Add this helper function at the top of the component
+const getSubmissionStatusBadge = (status: string) => {
+  switch (status) {
+    case "accepted":
+      return <Badge className="bg-green-500 text-xs">✓</Badge>
+    case "requires_interaction":
+      return <Badge className="bg-yellow-500 text-xs">!</Badge>
+    case "declined":
+      return <Badge className="bg-red-500 text-xs">✗</Badge>
+    default:
+      return <Badge className="bg-blue-500 text-xs">⏳</Badge>
+  }
+}
+
+// Add this new prop to the interface
 interface SubmissionsTabProps {
   selectedTile: Tile | null
   currentTeamId: string | undefined
@@ -38,10 +54,12 @@ interface SubmissionsTabProps {
     teamTileSubmissionId: string | undefined,
     newStatus: "accepted" | "requires_interaction" | "declined",
   ) => void
+  onSubmissionStatusUpdate?: (submissionId: string, newStatus: "accepted" | "requires_interaction" | "declined") => void
   onDeleteSubmission?: (submissionId: string) => Promise<void>
   isSubmissionsLocked?: boolean
 }
 
+// Update the component to use the new prop
 export function SubmissionsTab({
   selectedTile,
   currentTeamId,
@@ -53,6 +71,7 @@ export function SubmissionsTab({
   onImageSubmit,
   onFullSizeImageView,
   onTeamTileSubmissionStatusUpdate,
+  onSubmissionStatusUpdate,
   onDeleteSubmission,
   isSubmissionsLocked = false,
 }: SubmissionsTabProps) {
@@ -85,6 +104,107 @@ export function SubmissionsTab({
 
   // Determine if submissions are allowed
   const canSubmit = !isSubmissionsLocked && currentStatus !== "accepted" && currentTeamId
+
+  const renderSubmissionWithControls = (submission: any, teamName?: string) => (
+    <div key={submission.id} className="relative group aspect-square">
+      <Image
+        src={submission.image.path ?? getRandomFrog()}
+        alt={`Submission for ${selectedTile?.title}${teamName ? ` by ${teamName}` : ""}`}
+        fill
+        style={{ objectFit: "cover" }}
+        className="rounded-md cursor-pointer"
+        onClick={() =>
+          onFullSizeImageView(
+            submission.image.path,
+            `Submission for ${selectedTile?.title}${teamName ? ` by ${teamName}` : ""}`,
+          )
+        }
+      />
+
+      {/* Individual submission status badge */}
+      <div className="absolute top-1 left-1">{getSubmissionStatusBadge(submission.status || "pending")}</div>
+
+      {/* Individual submission controls for admins */}
+      {
+        hasSufficientRights && onSubmissionStatusUpdate && !isSubmissionsLocked && (
+          <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 bg-white/80 hover:bg-white"
+              onClick={(e) => {
+                e.stopPropagation()
+                onSubmissionStatusUpdate(submission.id, "accepted")
+              }}
+              disabled={submission.status === "accepted"}
+            >
+              <Check className="h-3 w-3 text-green-500" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 bg-white/80 hover:bg-white"
+              onClick={(e) => {
+                e.stopPropagation()
+                onSubmissionStatusUpdate(submission.id, "requires_interaction")
+              }}
+              disabled={submission.status === "requires_interaction"}
+            >
+              <AlertTriangle className="h-3 w-3 text-yellow-500" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 bg-white/80 hover:bg-white"
+              onClick={(e) => {
+                e.stopPropagation()
+                onSubmissionStatusUpdate(submission.id, "declined")
+              }}
+              disabled={submission.status === "declined"}
+            >
+              <X className="h-3 w-3 text-red-500" />
+            </Button>
+          </div>
+        )
+      }
+
+      {/* Delete button */}
+      {
+        canDeleteSubmissions && !isSubmissionsLocked && (
+          <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="icon" className="h-6 w-6">
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Submission</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete this submission{teamName ? ` from ${teamName}` : ""}?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => onDeleteSubmission?.(submission.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )
+      }
+
+      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate">
+        {new Date(submission.createdAt).toLocaleDateString()}
+      </div>
+    </div >
+  )
 
   return (
     <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
@@ -138,49 +258,7 @@ export function SubmissionsTab({
             {/* Existing submissions */}
             {teamSubmissions.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {teamSubmissions.map((submission) => (
-                  <div key={submission.id} className="relative group aspect-square">
-                    <Image
-                      src={submission.image.path ?? getRandomFrog()}
-                      alt={`Submission for ${selectedTile.title}`}
-                      fill
-                      style={{ objectFit: "cover" }}
-                      className="rounded-md cursor-pointer"
-                      onClick={() => onFullSizeImageView(submission.image.path, `Submission for ${selectedTile.title}`)}
-                    />
-                    {canDeleteSubmissions && !isSubmissionsLocked && (
-                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon" className="h-6 w-6">
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Submission</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this submission? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => onDeleteSubmission?.(submission.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    )}
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate">
-                      {new Date(submission.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                ))}
+                {teamSubmissions.map((submission) => renderSubmissionWithControls(submission))}
               </div>
             ) : (
               <p className="text-sm text-gray-500 italic">No submissions yet</p>
@@ -195,8 +273,6 @@ export function SubmissionsTab({
             <TabsTrigger value="pending">Pending Review</TabsTrigger>
             <TabsTrigger value="all">All Submissions</TabsTrigger>
           </TabsList>
-
-
 
           <TabsContent value="pending" className="mt-2 space-y-4">
             {teams.map((team) => {
@@ -268,56 +344,9 @@ export function SubmissionsTab({
                     </div>
 
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                      {teamTileSubmission?.submissions.map((submission) => (
-                        <div key={submission.id} className="relative group aspect-square">
-                          <Image
-                            src={submission.image.path ?? getRandomFrog()}
-                            alt={`Submission for ${selectedTile?.title} by ${team.name}`}
-                            fill
-                            style={{ objectFit: "cover" }}
-                            className="rounded-md cursor-pointer"
-                            onClick={() =>
-                              onFullSizeImageView(
-                                submission.image.path,
-                                `Submission for ${selectedTile?.title} by ${team.name}`,
-                              )
-                            }
-                          />
-
-                          {canDeleteSubmissions && !isSubmissionsLocked && (
-                            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="destructive" size="icon" className="h-6 w-6">
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Submission</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to delete this submission from {team.name}?
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => onDeleteSubmission?.(submission.id)}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          )}
-
-                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate">
-                            {new Date(submission.createdAt).toLocaleDateString()}
-                          </div>
-                        </div>
-                      ))}
+                      {teamTileSubmission?.submissions.map((submission) =>
+                        renderSubmissionWithControls(submission, team.name),
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -393,56 +422,9 @@ export function SubmissionsTab({
                     </div>
 
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                      {teamTileSubmission?.submissions.map((submission) => (
-                        <div key={submission.id} className="relative group aspect-square">
-                          <Image
-                            src={submission.image.path ?? getRandomFrog()}
-                            alt={`Submission for ${selectedTile?.title} by ${team.name}`}
-                            fill
-                            style={{ objectFit: "cover" }}
-                            className="rounded-md cursor-pointer"
-                            onClick={() =>
-                              onFullSizeImageView(
-                                submission.image.path,
-                                `Submission for ${selectedTile?.title} by ${team.name}`,
-                              )
-                            }
-                          />
-
-                          {canDeleteSubmissions && !isSubmissionsLocked && (
-                            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="destructive" size="icon" className="h-6 w-6">
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Submission</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to delete this submission from {team.name}?
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => onDeleteSubmission?.(submission.id)}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          )}
-
-                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate">
-                            {new Date(submission.createdAt).toLocaleDateString()}
-                          </div>
-                        </div>
-                      ))}
+                      {teamTileSubmission?.submissions.map((submission) =>
+                        renderSubmissionWithControls(submission, team.name),
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -460,4 +442,3 @@ export function SubmissionsTab({
     </div>
   )
 }
-

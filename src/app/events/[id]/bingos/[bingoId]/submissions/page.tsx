@@ -8,6 +8,7 @@ import { getTeamsByEventId } from "@/app/actions/team"
 import {
   getAllSubmissionsForTeam,
   updateTeamTileSubmissionStatus,
+  updateSubmissionStatus,
   deleteSubmission,
   getBingoById,
   type BingoData,
@@ -21,11 +22,36 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "@/hooks/use-toast"
-import { ArrowLeft, Check, RefreshCw, X, AlertTriangle, Search, Clock, Award, ChevronDown, Filter, CircleCheck, Circle } from "lucide-react"
+import {
+  ArrowLeft,
+  Check,
+  RefreshCw,
+  X,
+  AlertTriangle,
+  Search,
+  Clock,
+  Award,
+  ChevronDown,
+  Filter,
+  CircleCheck,
+  Circle,
+  Trash2,
+} from "lucide-react"
 import { FullSizeImageDialog } from "@/components/full-size-image-dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import type { TeamTileSubmission } from "@/app/actions/events"
 
 export default function BingoSubmissionsPage({ params }: { params: { id: string; bingoId: string } }) {
@@ -73,11 +99,6 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
         setTiles(bingoData.tiles || [])
         setTeams(teamsData)
         setUserRole(userRoleData)
-
-        // // Set the first team as selected by default
-        // if (teamsData.length > 0 && selectedTeamIds.length === 0) {
-        //   setSelectedTeamIds([teamsData[0]!.id])
-        // }
       } catch (error) {
         console.error("Error fetching data:", error)
         toast({
@@ -93,7 +114,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
     fetchData()
       .then(() => console.log("Data fetched"))
       .catch((error) => console.error("Error fetching data:", error))
-  }, [eventId, bingoId, router, selectedTeamIds.length, refreshKey, teams.length])
+  }, [eventId, bingoId, router, refreshKey])
 
   useEffect(() => {
     const fetchSubmissions = async () => {
@@ -175,7 +196,8 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
     setStatusFilters([])
   }
 
-  const handleStatusUpdate = async (
+  // Handle team-level status updates
+  const handleTileStatusUpdate = async (
     teamTileSubmissionId: string,
     newStatus: "accepted" | "requires_interaction" | "declined",
   ) => {
@@ -194,11 +216,50 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
         setTileSubmissions(updatedSubmissions)
 
         toast({
-          title: "Status updated",
-          description: `Submission marked as ${newStatus.replace("_", " ")}`,
+          title: "Tile status updated",
+          description: `Tile marked as ${newStatus.replace("_", " ")}`,
         })
       } else {
-        throw new Error(result.error || "Failed to update status")
+        throw new Error(result.error || "Failed to update team status")
+      }
+    } catch (error) {
+      console.error("Error updating team submission status:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update team submission status",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Handle individual submission status updates
+  const handleSubmissionStatusUpdate = async (
+    submissionId: string,
+    newStatus: "accepted" | "requires_interaction" | "declined",
+  ) => {
+    try {
+      const result = await updateSubmissionStatus(submissionId, newStatus)
+      if (result.success) {
+        // Update local state
+        const updatedSubmissions = { ...tileSubmissions }
+
+        Object.keys(updatedSubmissions).forEach((tileId) => {
+          updatedSubmissions[tileId] = updatedSubmissions[tileId]!.map((teamSub) => ({
+            ...teamSub,
+            submissions: teamSub.submissions.map((sub) =>
+              sub.id === submissionId ? { ...sub, status: newStatus } : sub,
+            ),
+          }))
+        })
+
+        setTileSubmissions(updatedSubmissions)
+
+        toast({
+          title: "Submission status updated",
+          description: `Individual submission marked as ${newStatus.replace("_", " ")}`,
+        })
+      } else {
+        throw new Error(result.error || "Failed to update submission status")
       }
     } catch (error) {
       console.error("Error updating submission status:", error)
@@ -243,13 +304,13 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "accepted":
-        return <Badge className="bg-green-500">Accepted</Badge>
-      case "declined":
-        return <Badge className="bg-red-500">Declined</Badge>
+        return <Badge className="bg-green-500 text-xs">✓</Badge>
       case "requires_interaction":
-        return <Badge className="bg-yellow-500">Requires Interaction</Badge>
+        return <Badge className="bg-yellow-500 text-xs">!</Badge>
+      case "declined":
+        return <Badge className="bg-red-500 text-xs">✗</Badge>
       default:
-        return <Badge className="bg-blue-500">Pending</Badge>
+        return <Badge className="bg-blue-500 text-xs">⏳</Badge>
     }
   }
 
@@ -264,9 +325,15 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
 
     const tileSubmissionsArray = tileSubmissions[tile.id] || []
 
-    return tileSubmissionsArray.some(
-      (sub) => selectedTeamIds.includes(sub.teamId) && statusFilters.includes(sub.status),
-    )
+    return tileSubmissionsArray.some((sub) => {
+      const teamMatches = selectedTeamIds.includes(sub.teamId)
+      const teamStatusMatches = statusFilters.includes(sub.status)
+      const hasIndividualSubmissions = sub.submissions.some((individualSub) =>
+        statusFilters.includes(individualSub.status || "pending"),
+      )
+
+      return teamMatches && (teamStatusMatches || hasIndividualSubmissions)
+    })
   })
 
   const filteredSubmissions = (tileId: string) => {
@@ -278,9 +345,16 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
         return false
       }
 
-      // Filter by selected statuses
-      if (statusFilters.length > 0 && !statusFilters.includes(submission.status)) {
-        return false
+      // Filter by selected statuses (either team status or individual submission status)
+      if (statusFilters.length > 0) {
+        const teamStatusMatches = statusFilters.includes(submission.status)
+        const hasMatchingIndividualSubmissions = submission.submissions.some((individualSub) =>
+          statusFilters.includes(individualSub.status || "pending"),
+        )
+
+        if (!teamStatusMatches && !hasMatchingIndividualSubmissions) {
+          return false
+        }
       }
 
       // Filter by search query (tile title or submission details)
@@ -321,7 +395,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
             <Button variant="ghost" size="icon" onClick={() => router.push(`/events/${eventId}`)}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold">{bingo?.title} - Team Submissions</h1>
+            <h1 className="text-2xl font-bold">{bingo?.title} - Tile Submissions</h1>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={handleRefresh} title="Refresh">
@@ -378,7 +452,11 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                           onSelect={() => toggleTeamSelection(team.id)}
                           className="flex items-center gap-2"
                         >
-                          {selectedTeamIds.includes(team.id) ? <CircleCheck className="mr-2" /> : <Circle className="mr-2" />}
+                          {selectedTeamIds.includes(team.id) ? (
+                            <CircleCheck className="mr-2" />
+                          ) : (
+                            <Circle className="mr-2" />
+                          )}
                           <span>{team.name}</span>
                         </CommandItem>
                       ))}
@@ -433,8 +511,11 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                           onSelect={() => toggleStatusSelection(status.value)}
                           className="flex items-center gap-2"
                         >
-
-                          {statusFilters.includes(status.value) ? <CircleCheck className="mr-2" /> : <Circle className="mr-2" />}
+                          {statusFilters.includes(status.value) ? (
+                            <CircleCheck className="mr-2" />
+                          ) : (
+                            <Circle className="mr-2" />
+                          )}
                           <span>{status.label}</span>
                         </CommandItem>
                       ))}
@@ -559,7 +640,10 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                           >
                             <div className="flex justify-between items-center mb-2">
                               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                                {getStatusBadge(teamSubmission.status)}
+                                <div className="flex items-center gap-2">
+                                  {getStatusBadge(teamSubmission.status)}
+                                  <span className="text-xs text-muted-foreground">Tile Status</span>
+                                </div>
                                 {selectedTeamIds.length > 1 && (
                                   <Badge variant="outline" className="text-xs">
                                     {getTeamName(teamSubmission.teamId)}
@@ -571,33 +655,56 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                               </div>
                               {isAdminOrManagement && (
                                 <div className="flex gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7"
-                                    onClick={() => handleStatusUpdate(teamSubmission.id, "accepted")}
-                                    disabled={teamSubmission.status === "accepted"}
-                                  >
-                                    <Check className="h-4 w-4 text-green-500" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7"
-                                    onClick={() => handleStatusUpdate(teamSubmission.id, "requires_interaction")}
-                                    disabled={teamSubmission.status === "requires_interaction"}
-                                  >
-                                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7"
-                                    onClick={() => handleStatusUpdate(teamSubmission.id, "declined")}
-                                    disabled={teamSubmission.status === "declined"}
-                                  >
-                                    <X className="h-4 w-4 text-red-500" />
-                                  </Button>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7"
+                                          onClick={() => handleTileStatusUpdate(teamSubmission.id, "accepted")}
+                                          disabled={teamSubmission.status === "accepted"}
+                                        >
+                                          <Check className="h-4 w-4 text-green-500" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Accept Tile</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7"
+                                          onClick={() =>
+                                            handleTileStatusUpdate(teamSubmission.id, "requires_interaction")
+                                          }
+                                          disabled={teamSubmission.status === "requires_interaction"}
+                                        >
+                                          <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Tile Requires Interaction</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7"
+                                          onClick={() => handleTileStatusUpdate(teamSubmission.id, "declined")}
+                                          disabled={teamSubmission.status === "declined"}
+                                        >
+                                          <X className="h-4 w-4 text-red-500" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Decline Tile</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 </div>
                               )}
                             </div>
@@ -615,16 +722,95 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                       })
                                     }
                                   />
+
+                                  {/* Individual submission status badge */}
+                                  <div className="absolute top-1 left-1">
+                                    {getStatusBadge(submission.status || "pending")}
+                                  </div>
+
+                                  {/* Individual submission controls */}
                                   {isAdminOrManagement && (
-                                    <Button
-                                      variant="destructive"
-                                      size="icon"
-                                      className="h-6 w-6 absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                      onClick={() => handleDeleteSubmission(submission.id)}
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </Button>
+                                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-6 w-6 bg-white/80"
+                                              onClick={() => handleSubmissionStatusUpdate(submission.id, "accepted")}
+                                              disabled={submission.status === "accepted"}
+                                            >
+                                              <Check className="h-3 w-3 text-green-500" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Accept Individual Submission</TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-6 w-6 bg-white/80"
+                                              onClick={() =>
+                                                handleSubmissionStatusUpdate(submission.id, "requires_interaction")
+                                              }
+                                              disabled={submission.status === "requires_interaction"}
+                                            >
+                                              <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Individual Requires Interaction</TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-6 w-6 bg-white/80"
+                                              onClick={() => handleSubmissionStatusUpdate(submission.id, "declined")}
+                                              disabled={submission.status === "declined"}
+                                            >
+                                              <X className="h-3 w-3 text-red-500" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Decline Individual Submission</TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button variant="destructive" size="icon" className="h-6 w-6">
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Delete Submission</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Are you sure you want to delete this submission? This action cannot be
+                                              undone.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                              onClick={() => handleDeleteSubmission(submission.id)}
+                                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                            >
+                                              Delete
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    </div>
                                   )}
+                                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate">
+                                    {new Date(submission.createdAt).toLocaleDateString()}
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -671,7 +857,10 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                             <div key={teamSubmission.id} className="border rounded-md p-3">
                               <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 mb-3">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  {getStatusBadge(teamSubmission.status)}
+                                  <div className="flex items-center gap-2">
+                                    {getStatusBadge(teamSubmission.status)}
+                                    <span className="text-xs text-muted-foreground">Tile Status</span>
+                                  </div>
                                   {selectedTeamIds.length > 1 && (
                                     <Badge variant="outline" className="text-xs">
                                       {getTeamName(teamSubmission.teamId)}
@@ -688,31 +877,31 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                       variant="ghost"
                                       size="sm"
                                       className="h-8"
-                                      onClick={() => handleStatusUpdate(teamSubmission.id, "accepted")}
+                                      onClick={() => handleTileStatusUpdate(teamSubmission.id, "accepted")}
                                       disabled={teamSubmission.status === "accepted"}
                                     >
                                       <Check className="h-4 w-4 mr-1 text-green-500" />
-                                      Accept
+                                      Accept Tile
                                     </Button>
                                     <Button
                                       variant="ghost"
                                       size="sm"
                                       className="h-8"
-                                      onClick={() => handleStatusUpdate(teamSubmission.id, "requires_interaction")}
+                                      onClick={() => handleTileStatusUpdate(teamSubmission.id, "requires_interaction")}
                                       disabled={teamSubmission.status === "requires_interaction"}
                                     >
                                       <AlertTriangle className="h-4 w-4 mr-1 text-yellow-500" />
-                                      Needs Review
+                                      Tile Needs Review
                                     </Button>
                                     <Button
                                       variant="ghost"
                                       size="sm"
                                       className="h-8"
-                                      onClick={() => handleStatusUpdate(teamSubmission.id, "declined")}
+                                      onClick={() => handleTileStatusUpdate(teamSubmission.id, "declined")}
                                       disabled={teamSubmission.status === "declined"}
                                     >
                                       <X className="h-4 w-4 mr-1 text-red-500" />
-                                      Decline
+                                      Decline Tile
                                     </Button>
                                   </div>
                                 )}
@@ -731,16 +920,96 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                         })
                                       }
                                     />
+
+                                    {/* Individual submission status badge */}
+                                    <div className="absolute top-1 left-1">
+                                      {getStatusBadge(submission.status || "pending")}
+                                    </div>
+
+                                    {/* Individual submission controls */}
                                     {isAdminOrManagement && (
-                                      <Button
-                                        variant="destructive"
-                                        size="icon"
-                                        className="h-6 w-6 absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        onClick={() => handleDeleteSubmission(submission.id)}
-                                      >
-                                        <X className="h-3 w-3" />
-                                      </Button>
+                                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 bg-white/80"
+                                                onClick={() => handleSubmissionStatusUpdate(submission.id, "accepted")}
+                                                disabled={submission.status === "accepted"}
+                                              >
+                                                <Check className="h-3 w-3 text-green-500" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Accept Individual</TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 bg-white/80"
+                                                onClick={() =>
+                                                  handleSubmissionStatusUpdate(submission.id, "requires_interaction")
+                                                }
+                                                disabled={submission.status === "requires_interaction"}
+                                              >
+                                                <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Individual Needs Review</TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 bg-white/80"
+                                                onClick={() => handleSubmissionStatusUpdate(submission.id, "declined")}
+                                                disabled={submission.status === "declined"}
+                                              >
+                                                <X className="h-3 w-3 text-red-500" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Decline Individual</TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                        <AlertDialog>
+                                          <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" size="icon" className="h-6 w-6">
+                                              <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                          <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                              <AlertDialogTitle>Delete Submission</AlertDialogTitle>
+                                              <AlertDialogDescription>
+                                                Are you sure you want to delete this submission from{" "}
+                                                {getTeamName(teamSubmission.teamId)}?
+                                              </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                              <AlertDialogAction
+                                                onClick={() => handleDeleteSubmission(submission.id)}
+                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                              >
+                                                Delete
+                                              </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                          </AlertDialogContent>
+                                        </AlertDialog>
+                                      </div>
                                     )}
+
+                                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate">
+                                      {new Date(submission.createdAt).toLocaleDateString()}
+                                    </div>
                                   </div>
                                 ))}
                               </div>

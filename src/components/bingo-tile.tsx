@@ -6,6 +6,7 @@ import { Check, Clock, Send, X, Zap, EyeOff } from "lucide-react"
 import type { Tile } from "@/app/actions/events"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import getRandomFrog from "@/lib/getRandomFrog"
+import { Badge } from "./ui/badge"
 
 interface BingoTileProps {
   tile: Tile
@@ -38,10 +39,10 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
 
   const renderStatusIcon = (status: "accepted" | "requires_interaction" | "declined" | "pending" | undefined) => {
     const iconMap = {
-      accepted: <Check className="h-5 w-5 text-green-500" />,
-      requires_interaction: <Clock className="h-5 w-5 text-yellow-500" />,
-      declined: <X className="h-5 w-5 text-red-500" />,
-      pending: <Send className="h-5 w-5 text-blue-500" />,
+      accepted: <Badge className="bg-green-500 text-xs">✓</Badge>,
+      requires_interaction: <Badge className="bg-yellow-500 text-xs">!</Badge>,
+      declined: <Badge className="bg-red-500 text-xs">✗</Badge>,
+      pending: <Badge className="bg-blue-500 text-xs">⏳</Badge>,
     }
     return status ? iconMap[status] : null
   }
