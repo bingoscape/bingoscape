@@ -668,7 +668,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                           <Check className="h-4 w-4 text-green-500" />
                                         </Button>
                                       </TooltipTrigger>
-                                      <TooltipContent>Accept Tile</TooltipContent>
+                                      <TooltipContent>Accept</TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                   <TooltipProvider>
@@ -686,7 +686,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                           <AlertTriangle className="h-4 w-4 text-yellow-500" />
                                         </Button>
                                       </TooltipTrigger>
-                                      <TooltipContent>Tile Requires Interaction</TooltipContent>
+                                      <TooltipContent>Requires Interaction</TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                   <TooltipProvider>
@@ -702,7 +702,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                           <X className="h-4 w-4 text-red-500" />
                                         </Button>
                                       </TooltipTrigger>
-                                      <TooltipContent>Decline Tile</TooltipContent>
+                                      <TooltipContent>Decline</TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                 </div>
@@ -744,7 +744,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                               <Check className="h-3 w-3 text-green-500" />
                                             </Button>
                                           </TooltipTrigger>
-                                          <TooltipContent>Accept Individual Submission</TooltipContent>
+                                          <TooltipContent>Accept</TooltipContent>
                                         </Tooltip>
                                       </TooltipProvider>
                                       <TooltipProvider>
@@ -762,7 +762,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                               <AlertTriangle className="h-3 w-3 text-yellow-500" />
                                             </Button>
                                           </TooltipTrigger>
-                                          <TooltipContent>Individual Requires Interaction</TooltipContent>
+                                          <TooltipContent>Requires Interaction</TooltipContent>
                                         </Tooltip>
                                       </TooltipProvider>
                                       <TooltipProvider>
@@ -778,7 +778,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                               <X className="h-3 w-3 text-red-500" />
                                             </Button>
                                           </TooltipTrigger>
-                                          <TooltipContent>Decline Individual Submission</TooltipContent>
+                                          <TooltipContent>Decline</TooltipContent>
                                         </Tooltip>
                                       </TooltipProvider>
                                       <AlertDialog>
@@ -928,7 +928,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
 
                                     {/* Individual submission controls */}
                                     {isAdminOrManagement && (
-                                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
+                                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                                         <TooltipProvider>
                                           <Tooltip>
                                             <TooltipTrigger asChild>
