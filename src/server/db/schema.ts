@@ -128,8 +128,7 @@ export const events = createTable("events", {
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   registrationDeadline: timestamp("registration_deadline"),
-  creatorId: uuid("creator_id")
-    .references(() => users.id, { onDelete: "set null" }),
+  creatorId: uuid("creator_id").references(() => users.id, { onDelete: "set null" }),
   clanId: uuid("clan_id").references(() => clans.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -347,6 +346,10 @@ export const submissions = createTable("submissions", {
   submittedBy: uuid("submitted_by")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  // Add individual submission status
+  status: submissionStatusEnum("status").default("pending").notNull(),
+  reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+  reviewedAt: timestamp("reviewed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
@@ -363,6 +366,11 @@ export const submissionsRelations = relations(submissions, ({ one }) => ({
   // Add relation to user
   user: one(users, {
     fields: [submissions.submittedBy],
+    references: [users.id],
+  }),
+  // Add relation to reviewer
+  reviewer: one(users, {
+    fields: [submissions.reviewedBy],
     references: [users.id],
   }),
 }))
@@ -619,4 +627,3 @@ export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
     references: [users.id],
   }),
 }))
-

@@ -17,6 +17,7 @@ import {
   updateTeamTileSubmissionStatus,
   deleteTile,
   deleteSubmission,
+  updateSubmissionStatus,
 } from "@/app/actions/bingo"
 import "@mdxeditor/editor/style.css"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -31,6 +32,7 @@ import { StatsDialog } from "./stats-dialog"
 import { BarChart, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSearchParams } from "next/navigation"
+import { useSession } from "next-auth/react"
 
 interface BingoGridProps {
   bingo: Bingo
@@ -65,6 +67,7 @@ export default function BingoGrid({
   const sortableRef = useRef<Sortable | null>(null)
   const [isStatsDialogOpen, setIsStatsDialogOpen] = useState(false)
   const searchParams = useSearchParams()
+  const session = useSession()
 
   // Get the selected team ID from URL params or use the current team ID
   const selectedTeamId = searchParams.get("teamId") ?? currentTeamId
@@ -540,6 +543,69 @@ export default function BingoGrid({
     }
   }
 
+  const handleSubmissionStatusUpdate = async (
+    submissionId: string,
+    newStatus: "accepted" | "requires_interaction" | "declined",
+  ) => {
+    try {
+      const result = await updateSubmissionStatus(submissionId, newStatus)
+      if (result.success) {
+        // Update local state for both individual submission and potentially team status
+        const updateSubmissionInState = (submissions: any[] | undefined) =>
+          submissions?.map((sub) =>
+            sub.id === submissionId
+              ? { ...sub, status: newStatus, reviewedBy: session.data?.user?.id, reviewedAt: new Date() }
+              : sub,
+          )
+
+        setSelectedTile((prev) => {
+          if (!prev) return null
+
+          const updatedTeamTileSubmissions = prev.teamTileSubmissions?.map((tts) => ({
+            ...tts,
+            submissions: updateSubmissionInState(tts.submissions) || [],
+          }))
+
+          return {
+            ...prev,
+            teamTileSubmissions: updatedTeamTileSubmissions,
+          }
+        })
+
+        setTiles((prevTiles) =>
+          prevTiles.map((tile) => {
+            if (tile.id === selectedTile?.id) {
+              const updatedTeamTileSubmissions = tile.teamTileSubmissions?.map((tts) => ({
+                ...tts,
+                submissions: updateSubmissionInState(tts.submissions) || [],
+              }))
+
+              return {
+                ...tile,
+                teamTileSubmissions: updatedTeamTileSubmissions,
+              }
+            }
+            return tile
+          }),
+        )
+
+        toast({
+          title: "Submission status updated",
+          description: `Individual submission marked as ${newStatus.replace("_", " ")}`,
+        })
+      } else {
+        throw new Error(result.error || "Failed to update submission status")
+      }
+    } catch (error) {
+      console.error("Error updating submission status:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update submission status",
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-4">
@@ -618,6 +684,7 @@ export default function BingoGrid({
                 onImageSubmit={handleImageSubmit}
                 onFullSizeImageView={(src, alt) => setFullSizeImage({ src, alt })}
                 onTeamTileSubmissionStatusUpdate={handleTeamTileSubmissionStatusUpdate}
+                onSubmissionStatusUpdate={handleSubmissionStatusUpdate}
                 onDeleteSubmission={handleDeleteSubmission}
               />
             </TabsContent>
@@ -646,4 +713,3 @@ export default function BingoGrid({
     return userRole === "admin" || userRole === "management"
   }
 }
-

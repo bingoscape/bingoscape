@@ -272,6 +272,7 @@ export async function getSubmissions(tileId: string): Promise<TeamTileSubmission
         submissions: {
           with: {
             image: true,
+            user: true,
           },
         },
         team: true,
@@ -307,6 +308,7 @@ export async function getAllSubmissionsForTeam(
         submissions: {
           with: {
             image: true,
+            user: true,
           },
         },
         team: true,
@@ -450,20 +452,69 @@ export async function submitImage(formData: FormData) {
   }
 }
 
+// Add new server action for updating individual submission status
+export async function updateSubmissionStatus(
+  submissionId: string,
+  newStatus: "accepted" | "requires_interaction" | "declined",
+) {
+  try {
+    const session = await getServerAuthSession()
+    if (!session) {
+      throw new Error("Not authenticated")
+    }
+
+    const [updatedSubmission] = await db
+      .update(submissions)
+      .set({
+        status: newStatus,
+        reviewedBy: session.user.id,
+        reviewedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(submissions.id, submissionId))
+      .returning()
+
+    if (!updatedSubmission) {
+      throw new Error("Submission not found")
+    }
+
+    // Revalidate the submissions page
+    revalidatePath("/bingo")
+
+    return { success: true, submission: updatedSubmission }
+  } catch (error) {
+    console.error("Error updating submission status:", error)
+    return { success: false, error: "Failed to update submission status" }
+  }
+}
+
+// Keep the existing updateTeamTileSubmissionStatus function but remove any automatic propagation
 export async function updateTeamTileSubmissionStatus(
   teamTileSubmissionId: string,
   newStatus: "accepted" | "requires_interaction" | "declined",
 ) {
   try {
+    const session = await getServerAuthSession()
+    if (!session) {
+      throw new Error("Not authenticated")
+    }
+
     const [updatedTeamTileSubmission] = await db
       .update(teamTileSubmissions)
-      .set({ status: newStatus })
+      .set({
+        status: newStatus,
+        reviewedBy: session.user.id,
+        updatedAt: new Date(),
+      })
       .where(eq(teamTileSubmissions.id, teamTileSubmissionId))
       .returning()
 
     if (!updatedTeamTileSubmission) {
       throw new Error("Team tile submission not found")
     }
+
+    // Revalidate the submissions page
+    revalidatePath("/bingo")
 
     return { success: true, teamTileSubmission: updatedTeamTileSubmission }
   } catch (error) {
@@ -512,19 +563,8 @@ export async function deleteSubmission(submissionId: string) {
         await tx.delete(images).where(eq(images.id, submission.imageId))
       }
 
-      // Check if this was the last submission for this teamTileSubmission
-      const remainingSubmissions = await tx
-        .select({ count: submissions.id })
-        .from(submissions)
-        .where(eq(submissions.teamTileSubmissionId, submission.teamTileSubmissionId))
-
-      // If no submissions remain, update the status to 'pending'
-      if (remainingSubmissions.length === 0) {
-        await tx
-          .update(teamTileSubmissions)
-          .set({ status: "pending" })
-          .where(eq(teamTileSubmissions.id, submission.teamTileSubmissionId))
-      }
+      // Note: We no longer automatically update the team tile submission status
+      // when individual submissions are deleted - they remain independent
 
       return { success: true }
     })

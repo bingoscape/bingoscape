@@ -29,8 +29,16 @@ export interface Submission {
   id: string
   teamTileSubmissionId: string
   image: Image
+  status: "pending" | "accepted" | "requires_interaction" | "declined"
+  reviewedBy: string | null
+  reviewedAt: Date | null
   createdAt: Date
   updatedAt: Date
+  user: {
+    id: string
+    name: string | null
+    runescapeName: string | null
+  }
 }
 
 export interface TeamTileSubmission {
@@ -304,6 +312,7 @@ export async function getEventById(eventId: string): Promise<GetEventByIdResult 
                   submissions: {
                     with: {
                       image: true,
+                      user: true
                     },
                   },
                   team: true,
@@ -690,8 +699,7 @@ export async function generateEventInviteLink(eventId: string) {
     throw new Error("Event does not exist!")
   }
 
-  const userRoleInEvent = (await getEventParticipants(event.id)).find(p => p.id === session?.user.id)?.role
-
+  const userRoleInEvent = (await getEventParticipants(event.id)).find((p) => p.id === session?.user.id)?.role
 
   const hasPermission = userRoleInEvent === "admin" || event.creatorId === session?.user.id
 
@@ -701,8 +709,7 @@ export async function generateEventInviteLink(eventId: string) {
 
   const inviteCode = nanoid(10)
 
-
-  const expiresAt = (event.registrationDeadline ?? event.endDate)
+  const expiresAt = event.registrationDeadline ?? event.endDate
 
   const [invite] = await db
     .insert(eventInvites)
@@ -1245,7 +1252,7 @@ export async function getUserRegistrationStatus(eventId: string): Promise<{
     orderBy: [desc(eventRegistrationRequests.createdAt)],
     with: {
       event: true,
-    }
+    },
   })
 
   if (!request) {
@@ -1274,4 +1281,3 @@ export async function getPendingRegistrationCount(eventId: string): Promise<numb
     return 0
   }
 }
-
