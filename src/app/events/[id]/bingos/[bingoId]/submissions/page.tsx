@@ -35,6 +35,7 @@ import {
   CircleCheck,
   Circle,
   Trash2,
+  Link,
 } from "lucide-react"
 import { FullSizeImageDialog } from "@/components/full-size-image-dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -52,6 +53,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import type { TeamTileSubmission } from "@/app/actions/events"
+// Add imports for the Select component
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function BingoSubmissionsPage({ params }: { params: { id: string; bingoId: string } }) {
   const { id: eventId, bingoId } = params
@@ -70,6 +73,8 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [teamsPopoverOpen, setTeamsPopoverOpen] = useState(false)
   const [statusPopoverOpen, setStatusPopoverOpen] = useState(false)
+  const [selectedSubmissionForGoal, setSelectedSubmissionForGoal] = useState<string | null>(null)
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null)
 
   // Update the statusOptions array to remove "declined" and use new names
   const statusOptions = [
@@ -296,6 +301,83 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
     }
   }
 
+  // Add this function after the handleDeleteSubmission function
+  const handleGoalAssignment = async (submissionId: string, goalId: string | null) => {
+    try {
+      // Find the current submission to get its status
+      let currentStatus = "pending"
+
+      // Look through all tile submissions to find the current status
+      Object.keys(tileSubmissions).forEach((tileId) => {
+        tileSubmissions[tileId]?.forEach((teamSub) => {
+          teamSub.submissions.forEach((sub) => {
+            if (sub.id === submissionId) {
+              currentStatus = sub.status || "pending"
+            }
+          })
+        })
+      })
+
+      const result = await updateSubmissionStatus(
+        submissionId,
+        currentStatus as "approved" | "needs_review" | "pending",
+        goalId,
+      )
+
+      if (result.success) {
+        // Update local state
+        const updatedSubmissions = { ...tileSubmissions }
+
+        Object.keys(updatedSubmissions).forEach((tileId) => {
+          updatedSubmissions[tileId] = updatedSubmissions[tileId]!.map((teamSub) => ({
+            ...teamSub,
+            submissions: teamSub.submissions.map((sub) => (sub.id === submissionId ? { ...sub, goalId } : sub)),
+          }))
+        })
+
+        setTileSubmissions(updatedSubmissions)
+
+        toast({
+          title: goalId ? "Goal assigned" : "Goal removed",
+          description: goalId
+            ? "Goal has been assigned to the submission"
+            : "Goal has been removed from the submission",
+        })
+
+        // Reset selection
+        setSelectedSubmissionForGoal(null)
+        setSelectedGoalId(null)
+      } else {
+        throw new Error(result.error || "Failed to assign goal")
+      }
+    } catch (error) {
+      console.error("Error assigning goal:", error)
+      toast({
+        title: "Error",
+        description: "Failed to assign goal to submission",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Add this helper function to find a tile by ID
+  const findTileById = (tileId: string) => {
+    return tiles.find((tile) => tile.id === tileId)
+  }
+
+  // Add this helper function to get goals for a tile
+  const getTileGoals = (tileId: string) => {
+    const tile = findTileById(tileId)
+    return tile?.goals || []
+  }
+
+  // Add this helper function to find the goal description
+  const getGoalDescription = (goalId: string | null | undefined, tileId: string) => {
+    if (!goalId) return null
+    const goals = getTileGoals(tileId)
+    return goals.find((goal) => goal.id === goalId)?.description || "Unknown Goal"
+  }
+
   const handleRefresh = () => {
     setRefreshKey((prev) => prev + 1)
   }
@@ -384,6 +466,71 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
   }
 
   const isAdminOrManagement = userRole === "admin" || userRole === "management"
+
+  // Add this AlertDialog component right before the return statement in the component
+  // Add this right before the return statement
+  const renderGoalAssignmentDialog = () => {
+    if (!selectedSubmissionForGoal) return null
+
+    // Find the submission and its tile
+    let tileId = ""
+    let submission = null
+
+    Object.keys(tileSubmissions).forEach((id) => {
+      tileSubmissions[id]?.forEach((teamSub) => {
+        teamSub.submissions.forEach((sub) => {
+          if (sub.id === selectedSubmissionForGoal) {
+            submission = sub
+            tileId = id
+          }
+        })
+      })
+    })
+
+    if (!submission || !tileId) return null
+
+    const goals = getTileGoals(tileId)
+
+    return (
+      <AlertDialog
+        open={!!selectedSubmissionForGoal}
+        onOpenChange={(open) => !open && setSelectedSubmissionForGoal(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Assign Goal to Submission</AlertDialogTitle>
+            <AlertDialogDescription>
+              Select a goal to associate with this submission or select "No Goal" to remove the association.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Select
+              value={selectedGoalId || "none"}
+              onValueChange={(value) => setSelectedGoalId(value === "none" ? null : value)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a goal" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No Goal</SelectItem>
+                {goals.map((goal) => (
+                  <SelectItem key={goal.id} value={goal.id}>
+                    {goal.description} (Target: {goal.targetValue})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleGoalAssignment(selectedSubmissionForGoal, selectedGoalId)}>
+              Assign Goal
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    )
+  }
 
   return (
     <div className="container mx-auto px-4 py-4">
@@ -747,6 +894,28 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                           <TooltipContent>Requires Interaction</TooltipContent>
                                         </Tooltip>
                                       </TooltipProvider>
+                                      {/* Add the goal assignment button here */}
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-6 w-6 bg-blue-500/80 hover:bg-blue-500 text-white"
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                setSelectedSubmissionForGoal(submission.id)
+                                                setSelectedGoalId(submission.goalId || null)
+                                              }}
+                                            >
+                                              <Link className="h-3 w-3" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            {submission.goalId ? "Change Goal Assignment" : "Assign to Goal"}
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
                                       {/* Remove the "declined" button entirely */}
                                       <AlertDialog>
                                         <AlertDialogTrigger asChild>
@@ -775,8 +944,36 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                       </AlertDialog>
                                     </div>
                                   )}
-                                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate">
-                                    {new Date(submission.createdAt).toLocaleDateString()}
+                                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1">
+                                    <div className="flex justify-between items-center">
+                                      <div className="truncate">
+                                        {new Date(submission.createdAt).toLocaleDateString()}
+                                      </div>
+                                      {submission.goalId && (
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <div className="bg-blue-500 text-white text-xs px-1 py-0.5 rounded ml-1 max-w-[60%] truncate cursor-help">
+                                                {getGoalDescription(submission.goalId, tile.id)}
+                                              </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <div className="max-w-[300px]">
+                                                <p className="font-medium">Goal:</p>
+                                                <p>{getGoalDescription(submission.goalId, tile.id)}</p>
+                                                <p className="mt-1">
+                                                  <span className="font-medium">Target:</span>{" "}
+                                                  {
+                                                    getTileGoals(tile.id).find((g) => g.id === submission.goalId)
+                                                      ?.targetValue
+                                                  }
+                                                </p>
+                                              </div>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               ))}
@@ -921,6 +1118,28 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                             <TooltipContent>Individual Needs Review</TooltipContent>
                                           </Tooltip>
                                         </TooltipProvider>
+                                        {/* Add the goal assignment button here */}
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 bg-blue-500/80 hover:bg-blue-500 text-white"
+                                                onClick={(e) => {
+                                                  e.stopPropagation()
+                                                  setSelectedSubmissionForGoal(submission.id)
+                                                  setSelectedGoalId(submission.goalId || null)
+                                                }}
+                                              >
+                                                <Link className="h-3 w-3" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              {submission.goalId ? "Change Goal Assignment" : "Assign to Goal"}
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
                                         {/* Remove the "declined" button entirely */}
                                         <AlertDialog>
                                           <AlertDialogTrigger asChild>
@@ -950,8 +1169,36 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                       </div>
                                     )}
 
-                                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate">
-                                      {new Date(submission.createdAt).toLocaleDateString()}
+                                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1">
+                                      <div className="flex justify-between items-center">
+                                        <div className="truncate">
+                                          {new Date(submission.createdAt).toLocaleDateString()}
+                                        </div>
+                                        {submission.goalId && (
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <div className="bg-blue-500 text-white text-xs px-1 py-0.5 rounded ml-1 max-w-[60%] truncate cursor-help">
+                                                  {getGoalDescription(submission.goalId, tile.id)}
+                                                </div>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <div className="max-w-[300px]">
+                                                  <p className="font-medium">Goal:</p>
+                                                  <p>{getGoalDescription(submission.goalId, tile.id)}</p>
+                                                  <p className="mt-1">
+                                                    <span className="font-medium">Target:</span>{" "}
+                                                    {
+                                                      getTileGoals(tile.id).find((g) => g.id === submission.goalId)
+                                                        ?.targetValue
+                                                    }
+                                                  </p>
+                                                </div>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 ))}
@@ -968,7 +1215,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
           </Tabs>
         )}
       </div>
-
+      {renderGoalAssignmentDialog()}
       <FullSizeImageDialog
         isOpen={!!fullSizeImage}
         onClose={() => setFullSizeImage(null)}
