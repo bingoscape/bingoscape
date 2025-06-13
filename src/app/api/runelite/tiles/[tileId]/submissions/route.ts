@@ -6,7 +6,6 @@ import { validateApiKey } from "@/lib/api-auth"
 import { nanoid } from "nanoid"
 import fs from "fs/promises"
 import path from "path"
-import { getTeamForUserInEvent } from "@/lib/team-utils"
 import { mapStatus } from "@/lib/statusMapping"
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
@@ -48,11 +47,11 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
             tiles: {
               with: {
                 goals: true,
-              }
-            }
-          }
+              },
+            },
+          },
         },
-        teamTileSubmissions: true
+        teamTileSubmissions: true,
       },
     })
 
@@ -78,8 +77,8 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
             db
               .select()
               .from(teamMembers)
-              .where(and(eq(teamMembers.teamId, teams.id), eq(teamMembers.userId, userId)))
-          )
+              .where(and(eq(teamMembers.teamId, teams.id), eq(teamMembers.userId, userId))),
+          ),
         ),
       with: {
         teamMembers: {
@@ -87,9 +86,9 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
             user: {
               columns: {
                 runescapeName: true,
-              }
-            }
-          }
+              },
+            },
+          },
         },
       },
     })
@@ -158,7 +157,7 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
         })
         .returning({
           id: submissions.id,
-          createdAt: submissions.createdAt
+          createdAt: submissions.createdAt,
         })
 
       return {
@@ -169,8 +168,6 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
 
     // Create a notification for admin and management users
     // This would typically be handled by your existing notification system
-
-
 
     // Create a map of tile IDs to submission data
     const tileSubmissionMap: Record<
@@ -265,9 +262,8 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
             description: goal.description,
             targetValue: goal.targetValue,
           })) ?? [],
-      }))
+      })),
     }
-
 
     return NextResponse.json(formattedBingo)
   } catch (error) {
@@ -275,4 +271,3 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
     return NextResponse.json({ error: "Failed to submit image" }, { status: 500 })
   }
 }
-
