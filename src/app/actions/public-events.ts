@@ -138,12 +138,12 @@ export async function getPublicTeams(eventId: string, bingoId: string): Promise<
         .where(
           and(
             eq(teamTileSubmissions.teamId, team.id),
-            eq(teamTileSubmissions.status, "accepted"),
+            eq(teamTileSubmissions.status, "approved"),
             inArray(teamTileSubmissions.tileId, bingoTileIds),
           ),
         )
 
-      // Get in-progress tiles (status = "pending", "requires_interaction", or "declined") for this bingo board
+      // Get in-progress tiles (status = "pending", "requires_interaction") for this bingo board
       const inProgressTileSubmissions = await db
         .select({
           tileId: teamTileSubmissions.tileId,
@@ -152,7 +152,7 @@ export async function getPublicTeams(eventId: string, bingoId: string): Promise<
         .where(
           and(
             eq(teamTileSubmissions.teamId, team.id),
-            inArray(teamTileSubmissions.status, ["pending", "requires_interaction", "declined"]),
+            inArray(teamTileSubmissions.status, ["pending", "needs_review"]),
             inArray(teamTileSubmissions.tileId, bingoTileIds),
           ),
         )

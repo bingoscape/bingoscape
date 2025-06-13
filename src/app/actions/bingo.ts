@@ -455,7 +455,7 @@ export async function submitImage(formData: FormData) {
 // Add new server action for updating individual submission status
 export async function updateSubmissionStatus(
   submissionId: string,
-  newStatus: "accepted" | "requires_interaction" | "declined",
+  newStatus: "approved" | "needs_review",
 ) {
   try {
     const session = await getServerAuthSession()
@@ -491,7 +491,7 @@ export async function updateSubmissionStatus(
 // Keep the existing updateTeamTileSubmissionStatus function but remove any automatic propagation
 export async function updateTeamTileSubmissionStatus(
   teamTileSubmissionId: string,
-  newStatus: "accepted" | "requires_interaction" | "declined",
+  newStatus: "approved" | "needs_review",
 ) {
   try {
     const session = await getServerAuthSession()

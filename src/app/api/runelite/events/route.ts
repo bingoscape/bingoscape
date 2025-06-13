@@ -3,6 +3,7 @@ import { db } from "@/server/db"
 import { teams, eventParticipants, events, teamTileSubmissions, tiles, teamMembers, bingos } from "@/server/db/schema"
 import { eq, asc } from "drizzle-orm"
 import { validateApiKey } from "@/lib/api-auth"
+import { mapStatus } from "@/lib/statusMapping"
 
 // Get all events for the authenticated user
 export async function GET(req: Request) {
@@ -128,7 +129,7 @@ export async function GET(req: Request) {
 
             tileSubmissionMap[tile.id] = {
               id: tile.id,
-              status: submission ? submission.status : "not_submitted",
+              status: submission ? mapStatus(submission.status) : "not_submitted",
               lastUpdated: submission ? submission.updatedAt : null,
               submissionCount: submission?.submissions.length ?? 0,
               ...(submission?.submissions.length
