@@ -408,7 +408,7 @@ export default function BingoGrid({
 
   const handleTeamTileSubmissionStatusUpdate = async (
     teamTileSubmissionId: string | undefined,
-    newStatus: "accepted" | "requires_interaction" | "declined",
+    newStatus: "approved" | "needs_review", // removed "declined"
   ) => {
     if (!teamTileSubmissionId || !selectedTile) {
       toast({
@@ -545,7 +545,7 @@ export default function BingoGrid({
 
   const handleSubmissionStatusUpdate = async (
     submissionId: string,
-    newStatus: "accepted" | "requires_interaction" | "declined",
+    newStatus: "approved" | "needs_review", // removed "declined"
   ) => {
     try {
       const result = await updateSubmissionStatus(submissionId, newStatus)

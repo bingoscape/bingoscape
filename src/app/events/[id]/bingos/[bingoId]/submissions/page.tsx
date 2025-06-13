@@ -26,7 +26,6 @@ import {
   ArrowLeft,
   Check,
   RefreshCw,
-  X,
   AlertTriangle,
   Search,
   Clock,
@@ -72,11 +71,11 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
   const [teamsPopoverOpen, setTeamsPopoverOpen] = useState(false)
   const [statusPopoverOpen, setStatusPopoverOpen] = useState(false)
 
+  // Update the statusOptions array to remove "declined" and use new names
   const statusOptions = [
     { value: "pending", label: "Pending" },
-    { value: "accepted", label: "Accepted" },
-    { value: "declined", label: "Declined" },
-    { value: "requires_interaction", label: "Requires Interaction" },
+    { value: "approved", label: "Approved" }, // renamed from "accepted"
+    { value: "needs_review", label: "Needs Review" }, // renamed from "requires_interaction"
   ]
 
   useEffect(() => {
@@ -196,10 +195,10 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
     setStatusFilters([])
   }
 
-  // Handle team-level status updates
+  // Update handleTileStatusUpdate function to use new status names
   const handleTileStatusUpdate = async (
     teamTileSubmissionId: string,
-    newStatus: "accepted" | "requires_interaction" | "declined",
+    newStatus: "approved" | "needs_review", // removed "declined"
   ) => {
     try {
       const result = await updateTeamTileSubmissionStatus(teamTileSubmissionId, newStatus)
@@ -232,10 +231,10 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
     }
   }
 
-  // Handle individual submission status updates
+  // Update handleSubmissionStatusUpdate function to use new status names
   const handleSubmissionStatusUpdate = async (
     submissionId: string,
-    newStatus: "accepted" | "requires_interaction" | "declined",
+    newStatus: "approved" | "needs_review", // removed "declined"
   ) => {
     try {
       const result = await updateSubmissionStatus(submissionId, newStatus)
@@ -301,14 +300,13 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
     setRefreshKey((prev) => prev + 1)
   }
 
+  // Update getStatusBadge function to use new status names and remove "declined"
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "accepted":
+      case "approved":
         return <Badge className="bg-green-500 text-xs">✓</Badge>
-      case "requires_interaction":
+      case "needs_review":
         return <Badge className="bg-yellow-500 text-xs">!</Badge>
-      case "declined":
-        return <Badge className="bg-red-500 text-xs">✗</Badge>
       default:
         return <Badge className="bg-blue-500 text-xs">⏳</Badge>
     }
@@ -655,6 +653,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                               </div>
                               {isAdminOrManagement && (
                                 <div className="flex gap-1">
+                                  {/* Update the UI buttons to remove "declined" option and use new status names */}
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
@@ -662,13 +661,13 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                           variant="ghost"
                                           size="icon"
                                           className="h-7 w-7"
-                                          onClick={() => handleTileStatusUpdate(teamSubmission.id, "accepted")}
-                                          disabled={teamSubmission.status === "accepted"}
+                                          onClick={() => handleTileStatusUpdate(teamSubmission.id, "approved")}
+                                          disabled={teamSubmission.status === "approved"}
                                         >
                                           <Check className="h-4 w-4 text-green-500" />
                                         </Button>
                                       </TooltipTrigger>
-                                      <TooltipContent>Accept</TooltipContent>
+                                      <TooltipContent>Approve</TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                   <TooltipProvider>
@@ -678,33 +677,16 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                           variant="ghost"
                                           size="icon"
                                           className="h-7 w-7"
-                                          onClick={() =>
-                                            handleTileStatusUpdate(teamSubmission.id, "requires_interaction")
-                                          }
-                                          disabled={teamSubmission.status === "requires_interaction"}
+                                          onClick={() => handleTileStatusUpdate(teamSubmission.id, "needs_review")}
+                                          disabled={teamSubmission.status === "needs_review"}
                                         >
                                           <AlertTriangle className="h-4 w-4 text-yellow-500" />
                                         </Button>
                                       </TooltipTrigger>
-                                      <TooltipContent>Requires Interaction</TooltipContent>
+                                      <TooltipContent>Needs Review</TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-7 w-7"
-                                          onClick={() => handleTileStatusUpdate(teamSubmission.id, "declined")}
-                                          disabled={teamSubmission.status === "declined"}
-                                        >
-                                          <X className="h-4 w-4 text-red-500" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>Decline</TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
+                                  {/* Remove the "declined" button entirely */}
                                 </div>
                               )}
                             </div>
@@ -738,8 +720,8 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                               variant="ghost"
                                               size="icon"
                                               className="h-6 w-6 bg-white/80"
-                                              onClick={() => handleSubmissionStatusUpdate(submission.id, "accepted")}
-                                              disabled={submission.status === "accepted"}
+                                              onClick={() => handleSubmissionStatusUpdate(submission.id, "approved")}
+                                              disabled={submission.status === "approved"}
                                             >
                                               <Check className="h-3 w-3 text-green-500" />
                                             </Button>
@@ -755,9 +737,9 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                               size="icon"
                                               className="h-6 w-6 bg-white/80"
                                               onClick={() =>
-                                                handleSubmissionStatusUpdate(submission.id, "requires_interaction")
+                                                handleSubmissionStatusUpdate(submission.id, "needs_review")
                                               }
-                                              disabled={submission.status === "requires_interaction"}
+                                              disabled={submission.status === "needs_review"}
                                             >
                                               <AlertTriangle className="h-3 w-3 text-yellow-500" />
                                             </Button>
@@ -765,22 +747,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                           <TooltipContent>Requires Interaction</TooltipContent>
                                         </Tooltip>
                                       </TooltipProvider>
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-6 w-6 bg-white/80"
-                                              onClick={() => handleSubmissionStatusUpdate(submission.id, "declined")}
-                                              disabled={submission.status === "declined"}
-                                            >
-                                              <X className="h-3 w-3 text-red-500" />
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>Decline</TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
+                                      {/* Remove the "declined" button entirely */}
                                       <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                           <Button variant="destructive" size="icon" className="h-6 w-6">
@@ -877,32 +844,23 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                       variant="ghost"
                                       size="sm"
                                       className="h-8"
-                                      onClick={() => handleTileStatusUpdate(teamSubmission.id, "accepted")}
-                                      disabled={teamSubmission.status === "accepted"}
+                                      onClick={() => handleTileStatusUpdate(teamSubmission.id, "approved")}
+                                      disabled={teamSubmission.status === "approved"}
                                     >
                                       <Check className="h-4 w-4 mr-1 text-green-500" />
-                                      Accept Tile
+                                      Approve Tile
                                     </Button>
                                     <Button
                                       variant="ghost"
                                       size="sm"
                                       className="h-8"
-                                      onClick={() => handleTileStatusUpdate(teamSubmission.id, "requires_interaction")}
-                                      disabled={teamSubmission.status === "requires_interaction"}
+                                      onClick={() => handleTileStatusUpdate(teamSubmission.id, "needs_review")}
+                                      disabled={teamSubmission.status === "needs_review"}
                                     >
                                       <AlertTriangle className="h-4 w-4 mr-1 text-yellow-500" />
                                       Tile Needs Review
                                     </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-8"
-                                      onClick={() => handleTileStatusUpdate(teamSubmission.id, "declined")}
-                                      disabled={teamSubmission.status === "declined"}
-                                    >
-                                      <X className="h-4 w-4 mr-1 text-red-500" />
-                                      Decline Tile
-                                    </Button>
+                                    {/* Remove the "declined" button entirely */}
                                   </div>
                                 )}
                               </div>
@@ -936,8 +894,8 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                                 variant="ghost"
                                                 size="icon"
                                                 className="h-6 w-6 bg-white/80"
-                                                onClick={() => handleSubmissionStatusUpdate(submission.id, "accepted")}
-                                                disabled={submission.status === "accepted"}
+                                                onClick={() => handleSubmissionStatusUpdate(submission.id, "approved")}
+                                                disabled={submission.status === "approved"}
                                               >
                                                 <Check className="h-3 w-3 text-green-500" />
                                               </Button>
@@ -953,9 +911,9 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                                 size="icon"
                                                 className="h-6 w-6 bg-white/80"
                                                 onClick={() =>
-                                                  handleSubmissionStatusUpdate(submission.id, "requires_interaction")
+                                                  handleSubmissionStatusUpdate(submission.id, "needs_review")
                                                 }
-                                                disabled={submission.status === "requires_interaction"}
+                                                disabled={submission.status === "needs_review"}
                                               >
                                                 <AlertTriangle className="h-3 w-3 text-yellow-500" />
                                               </Button>
@@ -963,22 +921,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                             <TooltipContent>Individual Needs Review</TooltipContent>
                                           </Tooltip>
                                         </TooltipProvider>
-                                        <TooltipProvider>
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-6 w-6 bg-white/80"
-                                                onClick={() => handleSubmissionStatusUpdate(submission.id, "declined")}
-                                                disabled={submission.status === "declined"}
-                                              >
-                                                <X className="h-3 w-3 text-red-500" />
-                                              </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent>Decline Individual</TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
+                                        {/* Remove the "declined" button entirely */}
                                         <AlertDialog>
                                           <AlertDialogTrigger asChild>
                                             <Button variant="destructive" size="icon" className="h-6 w-6">

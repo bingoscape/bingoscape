@@ -5,7 +5,7 @@ import type React from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Upload, Check, Clock, X, Trash2, ImageIcon, LockIcon, AlertTriangle } from "lucide-react"
+import { Upload, Check, Clock, ImageIcon, LockIcon, AlertTriangle, Trash2 } from "lucide-react"
 import type { Tile, Team } from "@/app/actions/events"
 import {
   AlertDialog,
@@ -25,21 +25,20 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import getRandomFrog from "@/lib/getRandomFrog"
 
-// Add this helper function at the top of the component
+// Update the getSubmissionStatusBadge function to use new status names and remove "declined"
 const getSubmissionStatusBadge = (status: string) => {
   switch (status) {
-    case "accepted":
+    case "approved":
       return <Badge className="bg-green-500 text-xs">✓</Badge>
-    case "requires_interaction":
+    case "needs_review":
       return <Badge className="bg-yellow-500 text-xs">!</Badge>
-    case "declined":
-      return <Badge className="bg-red-500 text-xs">✗</Badge>
     default:
       return <Badge className="bg-blue-500 text-xs">⏳</Badge>
   }
 }
 
 // Add this new prop to the interface
+// Update the props interface to use new status names and remove "declined"
 interface SubmissionsTabProps {
   selectedTile: Tile | null
   currentTeamId: string | undefined
@@ -52,9 +51,9 @@ interface SubmissionsTabProps {
   onFullSizeImageView: (src: string, alt: string) => void
   onTeamTileSubmissionStatusUpdate: (
     teamTileSubmissionId: string | undefined,
-    newStatus: "accepted" | "requires_interaction" | "declined",
+    newStatus: "approved" | "needs_review",
   ) => void
-  onSubmissionStatusUpdate?: (submissionId: string, newStatus: "accepted" | "requires_interaction" | "declined") => void
+  onSubmissionStatusUpdate?: (submissionId: string, newStatus: "approved" | "needs_review") => void
   onDeleteSubmission?: (submissionId: string) => Promise<void>
   isSubmissionsLocked?: boolean
 }
@@ -89,21 +88,21 @@ export function SubmissionsTab({
   const currentStatus = currentTeamSubmission?.status ?? "pending"
 
   // Status badge colors
+  // Update the getStatusBadge function to use new status names and remove "declined"
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "accepted":
-        return <Badge className="bg-green-500">Accepted</Badge>
-      case "requires_interaction":
-        return <Badge className="bg-yellow-500">Requires Interaction</Badge>
-      case "declined":
-        return <Badge className="bg-red-500">Declined</Badge>
+      case "approved":
+        return <Badge className="bg-green-500">Approved</Badge>
+      case "needs_review":
+        return <Badge className="bg-yellow-500">Needs Review</Badge>
       default:
         return <Badge className="bg-blue-500">Pending</Badge>
     }
   }
 
   // Determine if submissions are allowed
-  const canSubmit = !isSubmissionsLocked && currentStatus !== "accepted" && currentTeamId
+  // Update the canSubmit condition to use "approved" instead of "accepted"
+  const canSubmit = !isSubmissionsLocked && currentStatus !== "approved" && currentTeamId
 
   const renderSubmissionWithControls = (submission: any, teamName?: string) => (
     <div key={submission.id} className="relative group aspect-square">
@@ -125,85 +124,69 @@ export function SubmissionsTab({
       <div className="absolute top-1 left-1">{getSubmissionStatusBadge(submission.status || "pending")}</div>
 
       {/* Individual submission controls for admins */}
-      {
-        hasSufficientRights && onSubmissionStatusUpdate && !isSubmissionsLocked && (
-          <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 bg-white/80 hover:bg-white"
-              onClick={(e) => {
-                e.stopPropagation()
-                onSubmissionStatusUpdate(submission.id, "accepted")
-              }}
-              disabled={submission.status === "accepted"}
-            >
-              <Check className="h-3 w-3 text-green-500" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 bg-white/80 hover:bg-white"
-              onClick={(e) => {
-                e.stopPropagation()
-                onSubmissionStatusUpdate(submission.id, "requires_interaction")
-              }}
-              disabled={submission.status === "requires_interaction"}
-            >
-              <AlertTriangle className="h-3 w-3 text-yellow-500" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 bg-white/80 hover:bg-white"
-              onClick={(e) => {
-                e.stopPropagation()
-                onSubmissionStatusUpdate(submission.id, "declined")
-              }}
-              disabled={submission.status === "declined"}
-            >
-              <X className="h-3 w-3 text-red-500" />
-            </Button>
-          </div>
-        )
-      }
+      {hasSufficientRights && onSubmissionStatusUpdate && !isSubmissionsLocked && (
+        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 bg-white/80 hover:bg-white"
+            onClick={(e) => {
+              e.stopPropagation()
+              onSubmissionStatusUpdate(submission.id, "approved")
+            }}
+            disabled={submission.status === "approved"}
+          >
+            <Check className="h-3 w-3 text-green-500" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 bg-white/80 hover:bg-white"
+            onClick={(e) => {
+              e.stopPropagation()
+              onSubmissionStatusUpdate(submission.id, "needs_review")
+            }}
+            disabled={submission.status === "needs_review"}
+          >
+            <AlertTriangle className="h-3 w-3 text-yellow-500" />
+          </Button>
+        </div>
+      )}
 
       {/* Delete button */}
-      {
-        canDeleteSubmissions && !isSubmissionsLocked && (
-          <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="icon" className="h-6 w-6">
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Submission</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete this submission{teamName ? ` from ${teamName}` : ""}?
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => onDeleteSubmission?.(submission.id)}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        )
-      }
+      {canDeleteSubmissions && !isSubmissionsLocked && (
+        <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="icon" className="h-6 w-6">
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Submission</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this submission{teamName ? ` from ${teamName}` : ""}?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onDeleteSubmission?.(submission.id)}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
 
       <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate">
         {new Date(submission.createdAt).toLocaleDateString()}
       </div>
-    </div >
+    </div>
   )
 
   return (
@@ -248,10 +231,10 @@ export function SubmissionsTab({
                 </div>
                 <Input id="file-input" type="file" accept="image/*" onChange={onImageChange} className="hidden" />
               </>
-            ) : currentStatus === "accepted" ? (
+            ) : currentStatus === "approved" ? (
               <div className="flex items-center gap-2 p-2 bg-green-50 rounded-md mb-3 text-green-700 text-sm">
                 <Check className="h-4 w-4" />
-                <span>Your submission has been accepted!</span>
+                <span>Your submission has been approved!</span>
               </div>
             ) : null}
 
@@ -297,7 +280,7 @@ export function SubmissionsTab({
                                   size="sm"
                                   variant="outline"
                                   className="h-6 w-6 p-0"
-                                  onClick={() => onTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, "accepted")}
+                                  onClick={() => onTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, "approved")}
                                 >
                                   <Check className="h-3 w-3 text-green-500" />
                                 </Button>
@@ -314,29 +297,13 @@ export function SubmissionsTab({
                                   variant="outline"
                                   className="h-6 w-6 p-0"
                                   onClick={() =>
-                                    onTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, "requires_interaction")
+                                    onTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, "needs_review")
                                   }
                                 >
                                   <Clock className="h-3 w-3 text-yellow-500" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>Requires Interaction</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => onTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, "declined")}
-                                >
-                                  <X className="h-3 w-3 text-red-500" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Decline</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </div>
@@ -375,7 +342,7 @@ export function SubmissionsTab({
                                   size="sm"
                                   variant="outline"
                                   className="h-6 w-6 p-0"
-                                  onClick={() => onTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, "accepted")}
+                                  onClick={() => onTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, "approved")}
                                 >
                                   <Check className="h-3 w-3 text-green-500" />
                                 </Button>
@@ -392,29 +359,13 @@ export function SubmissionsTab({
                                   variant="outline"
                                   className="h-6 w-6 p-0"
                                   onClick={() =>
-                                    onTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, "requires_interaction")
+                                    onTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, "needs_review")
                                   }
                                 >
                                   <Clock className="h-3 w-3 text-yellow-500" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>Requires Interaction</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => onTeamTileSubmissionStatusUpdate(teamTileSubmission?.id, "declined")}
-                                >
-                                  <X className="h-3 w-3 text-red-500" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Decline</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </div>

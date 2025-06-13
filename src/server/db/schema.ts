@@ -111,11 +111,11 @@ export const verificationTokens = createTable(
 
 // Enums
 export const userRoleEnum = pgEnum("user_role", ["user", "admin", "management"])
+// Change the submissionStatusEnum to remove "declined" and use clearer names
 export const submissionStatusEnum = pgEnum("submission_status", [
   "pending",
-  "accepted",
-  "requires_interaction",
-  "declined",
+  "approved", // renamed from "accepted"
+  "needs_review", // renamed from "requires_interaction"
 ])
 export const clanRoleEnum = pgEnum("clan_role", ["admin", "management", "member", "guest"])
 export const eventRoleEnum = pgEnum("event_role", ["admin", "management", "participant"])
