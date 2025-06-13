@@ -459,7 +459,7 @@ function TileProgress({
 
           <div className="space-y-5">
             {selectedTile.goals?.map((goal) => {
-              const teamProgress = goal.teamProgress.find((progress) => progress.teamId === team.id)
+              const teamProgress = goal.teamProgress?.find((progress) => progress.teamId === team.id)
               const currentValue = teamProgress?.currentValue ?? 0
               const progressPercentage = (currentValue / goal.targetValue) * 100
 
@@ -512,7 +512,7 @@ function TileProgress({
               <span className="text-muted-foreground">
                 {
                   (selectedTile.goals ?? []).filter((goal) => {
-                    const teamProgress = goal.teamProgress.find((p) => p.teamId === team.id)
+                    const teamProgress = goal.teamProgress?.find((p) => p.teamId === team.id)
                     return teamProgress?.currentValue === goal.targetValue
                   }).length
                 }{" "}
@@ -525,4 +525,3 @@ function TileProgress({
     </div>
   )
 }
-

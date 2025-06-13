@@ -279,9 +279,10 @@ export default function BingoGrid({
               goal.id === goalId
                 ? {
                   ...goal,
-                  teamProgress: goal.teamProgress.map((progress) =>
-                    progress.teamId === teamId ? { ...progress, currentValue: newValue } : progress,
-                  ),
+                  teamProgress:
+                    goal.teamProgress?.map((progress) =>
+                      progress.teamId === teamId ? { ...progress, currentValue: newValue } : progress,
+                    ) || [],
                 }
                 : goal,
             ),

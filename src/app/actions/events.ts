@@ -39,6 +39,8 @@ export interface Submission {
     name: string | null
     runescapeName: string | null
   }
+  goalId?: string | null
+  goal?: Goal | null
 }
 
 export interface TeamTileSubmission {
@@ -76,7 +78,7 @@ export interface Goal {
   createdAt?: Date
   updatedAt?: Date
   tileId: string
-  teamProgress: TeamProgress[]
+  teamProgress?: TeamProgress[] // Make teamProgress optional
 }
 
 export interface Tile {
@@ -312,7 +314,7 @@ export async function getEventById(eventId: string): Promise<GetEventByIdResult 
                   submissions: {
                     with: {
                       image: true,
-                      user: true
+                      user: true,
                     },
                   },
                   team: true,
