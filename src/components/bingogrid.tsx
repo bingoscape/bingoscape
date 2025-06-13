@@ -21,7 +21,7 @@ import {
 } from "@/app/actions/bingo"
 import "@mdxeditor/editor/style.css"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Bingo, Tile, Team, EventRole, Goal } from "@/app/actions/events"
+import type { Bingo, Tile, Team, EventRole, Goal, Submission } from "@/app/actions/events"
 import Sortable, { type SortableEvent } from "sortablejs"
 import { BingoGridLayout } from "./bingo-grid-layout"
 import { TileDetailsTab } from "./tile-details-tab"
@@ -33,6 +33,11 @@ import { BarChart, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
+
+// Define an extended submission type that includes goalId
+interface ExtendedSubmission extends Submission {
+  goalId?: string | null
+}
 
 interface BingoGridProps {
   bingo: Bingo
@@ -408,7 +413,7 @@ export default function BingoGrid({
 
   const handleTeamTileSubmissionStatusUpdate = async (
     teamTileSubmissionId: string | undefined,
-    newStatus: "approved" | "needs_review", // removed "declined"
+    newStatus: "approved" | "needs_review",
   ) => {
     if (!teamTileSubmissionId || !selectedTile) {
       toast({
@@ -543,55 +548,102 @@ export default function BingoGrid({
     }
   }
 
+  // Updated to handle goal assignment with proper typing
   const handleSubmissionStatusUpdate = async (
     submissionId: string,
-    newStatus: "approved" | "needs_review", // removed "declined"
+    newStatus: "pending" | "approved" | "needs_review",
+    goalId?: string | null,
   ) => {
     try {
-      const result = await updateSubmissionStatus(submissionId, newStatus)
+      console.log(`Updating submission ${submissionId} with status ${newStatus} and goalId ${goalId}`)
+
+      // Only allow approved or needs_review to be passed to the server action
+      const validStatus = newStatus === "pending" ? "needs_review" : newStatus
+
+      const result = await updateSubmissionStatus(submissionId, validStatus, goalId)
       if (result.success) {
         // Update local state for both individual submission and potentially team status
-        const updateSubmissionInState = (submissions: any[] | undefined) =>
-          submissions?.map((sub) =>
-            sub.id === submissionId
-              ? { ...sub, status: newStatus, reviewedBy: session.data?.user?.id, reviewedAt: new Date() }
-              : sub,
-          )
-
         setSelectedTile((prev) => {
           if (!prev) return null
 
-          const updatedTeamTileSubmissions = prev.teamTileSubmissions?.map((tts) => ({
-            ...tts,
-            submissions: updateSubmissionInState(tts.submissions) || [],
-          }))
+          // Create a deep copy of the tile with updated submissions
+          const updatedTile = { ...prev }
 
-          return {
-            ...prev,
-            teamTileSubmissions: updatedTeamTileSubmissions,
+          if (updatedTile.teamTileSubmissions) {
+            updatedTile.teamTileSubmissions = updatedTile.teamTileSubmissions.map((tts) => {
+              return {
+                ...tts,
+                submissions: tts.submissions.map((sub) => {
+                  if (sub.id === submissionId) {
+                    // Create a new submission object with updated fields
+                    // Use type assertion to handle the goalId property
+                    const updatedSub = { ...sub } as ExtendedSubmission
+                    updatedSub.status = newStatus
+                    updatedSub.reviewedBy = session.data?.user?.id || null
+                    updatedSub.reviewedAt = new Date()
+
+                    // Only update goalId if it was provided
+                    if (goalId !== undefined) {
+                      updatedSub.goalId = goalId
+                    }
+
+                    return updatedSub
+                  }
+                  return sub
+                }),
+              }
+            })
           }
+
+          return updatedTile
         })
 
+        // Also update the tiles state
         setTiles((prevTiles) =>
           prevTiles.map((tile) => {
             if (tile.id === selectedTile?.id) {
-              const updatedTeamTileSubmissions = tile.teamTileSubmissions?.map((tts) => ({
-                ...tts,
-                submissions: updateSubmissionInState(tts.submissions) || [],
-              }))
+              const updatedTile = { ...tile }
 
-              return {
-                ...tile,
-                teamTileSubmissions: updatedTeamTileSubmissions,
+              if (updatedTile.teamTileSubmissions) {
+                updatedTile.teamTileSubmissions = updatedTile.teamTileSubmissions.map((tts) => {
+                  return {
+                    ...tts,
+                    submissions: tts.submissions.map((sub) => {
+                      if (sub.id === submissionId) {
+                        // Create a new submission object with updated fields
+                        // Use type assertion to handle the goalId property
+                        const updatedSub = { ...sub } as ExtendedSubmission
+                        updatedSub.status = newStatus
+                        updatedSub.reviewedBy = session.data?.user?.id || null
+                        updatedSub.reviewedAt = new Date()
+
+                        // Only update goalId if it was provided
+                        if (goalId !== undefined) {
+                          updatedSub.goalId = goalId
+                        }
+
+                        return updatedSub
+                      }
+                      return sub
+                    }),
+                  }
+                })
               }
+
+              return updatedTile
             }
             return tile
           }),
         )
 
+        const message =
+          goalId !== undefined
+            ? `Submission ${newStatus.replace("_", " ")} and goal ${goalId ? "assigned" : "removed"}`
+            : `Submission marked as ${newStatus.replace("_", " ")}`
+
         toast({
-          title: "Submission status updated",
-          description: `Individual submission marked as ${newStatus.replace("_", " ")}`,
+          title: "Submission updated",
+          description: message,
         })
       } else {
         throw new Error(result.error || "Failed to update submission status")

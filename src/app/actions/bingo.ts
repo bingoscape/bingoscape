@@ -265,6 +265,7 @@ export async function getBingoById(bingoId: string): Promise<BingoData | null> {
   }
 }
 
+// Update the getSubmissions function to include goal information
 export async function getSubmissions(tileId: string): Promise<TeamTileSubmission[]> {
   try {
     const result = await db.query.teamTileSubmissions.findMany({
@@ -273,6 +274,7 @@ export async function getSubmissions(tileId: string): Promise<TeamTileSubmission
           with: {
             image: true,
             user: true,
+            goal: true, // Include goal information
           },
         },
         team: true,
@@ -287,6 +289,7 @@ export async function getSubmissions(tileId: string): Promise<TeamTileSubmission
   }
 }
 
+// Update the getAllSubmissionsForTeam function to include goal information
 export async function getAllSubmissionsForTeam(
   bingoId: string,
   teamId: string,
@@ -309,6 +312,7 @@ export async function getAllSubmissionsForTeam(
           with: {
             image: true,
             user: true,
+            goal: true, // Include goal information
           },
         },
         team: true,
@@ -335,6 +339,7 @@ export async function getAllSubmissionsForTeam(
   }
 }
 
+// Update the submitImage function to not accept goalId
 export async function submitImage(formData: FormData) {
   try {
     const tileId = formData.get("tileId") as string
@@ -414,13 +419,14 @@ export async function submitImage(formData: FormData) {
         .returning()
 
       const session = await sessionPromise
-      // Insert the submission record
+      // Insert the submission record without goalId
       const [insertedSubmission] = await tx
         .insert(submissions)
         .values({
           teamTileSubmissionId: teamTileSubmission!.id,
           submittedBy: session!.user.id,
           imageId: insertedImage!.id,
+          // No goalId here - will be assigned during review
         })
         .returning()
 
@@ -452,10 +458,11 @@ export async function submitImage(formData: FormData) {
   }
 }
 
-// Add new server action for updating individual submission status
+// Add new server action for updating individual submission status and assigning a goal
 export async function updateSubmissionStatus(
   submissionId: string,
-  newStatus: "approved" | "needs_review",
+  newStatus: "approved" | "needs_review" | "pending",
+  goalId?: string | null,
 ) {
   try {
     const session = await getServerAuthSession()
@@ -463,14 +470,24 @@ export async function updateSubmissionStatus(
       throw new Error("Not authenticated")
     }
 
+    console.log(`Server action: Updating submission ${submissionId} to status ${newStatus} with goal ${goalId}`)
+
+    // Create the update data object
+    const updateData: Record<string, any> = {
+      status: newStatus,
+      reviewedBy: session.user.id,
+      reviewedAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    // Only update goalId if it's provided (including null to remove a goal)
+    if (goalId !== undefined) {
+      updateData.goalId = goalId
+    }
+
     const [updatedSubmission] = await db
       .update(submissions)
-      .set({
-        status: newStatus,
-        reviewedBy: session.user.id,
-        reviewedAt: new Date(),
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(submissions.id, submissionId))
       .returning()
 
@@ -620,6 +637,7 @@ export async function addRowOrColumn(bingoId: string, type: "row" | "column"): P
     return { success: false, error: "Failed to add row or column" }
   }
 }
+
 export async function deleteTile(tileId: string, bingoId: string) {
   try {
     await db.transaction(async (tx) => {

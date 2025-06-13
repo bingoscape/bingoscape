@@ -342,6 +342,8 @@ export const submissions = createTable("submissions", {
   imageId: uuid("image_id")
     .notNull()
     .references(() => images.id, { onDelete: "cascade" }),
+  // Add goalId to link submissions to specific goals
+  goalId: uuid("goal_id").references(() => goals.id, { onDelete: "set null" }),
   // Add userId to track which user submitted the image
   submittedBy: uuid("submitted_by")
     .notNull()
@@ -362,6 +364,11 @@ export const submissionsRelations = relations(submissions, ({ one }) => ({
   teamTileSubmission: one(teamTileSubmissions, {
     fields: [submissions.teamTileSubmissionId],
     references: [teamTileSubmissions.id],
+  }),
+  // Add relation to goal
+  goal: one(goals, {
+    fields: [submissions.goalId],
+    references: [goals.id],
   }),
   // Add relation to user
   user: one(users, {
