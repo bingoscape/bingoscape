@@ -10,10 +10,9 @@ import { Button } from "@/components/ui/button"
 import { ForwardRefEditor } from "./forward-ref-editor"
 import type { Tile, Team } from "@/app/actions/events"
 import { Progress } from "@/components/ui/progress"
-import { Pencil, X, Zap, EyeOff, Search, ExternalLink } from "lucide-react"
+import { Pencil, X, Zap, EyeOff, Search, ExternalLink, CheckCircle2, Clock } from "lucide-react"
 import Markdown from "react-markdown"
 import { Switch } from "@/components/ui/switch"
-import { ProgressSlider } from "./progress-slider"
 import {
   Dialog,
   DialogContent,
@@ -24,6 +23,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import getRandomFrog from "@/lib/getRandomFrog"
 
 type EditableTileFields = {
@@ -49,6 +49,11 @@ interface WikiImage {
   title: string
   url: string
   thumbnail: string
+}
+
+interface GoalProgress {
+  approved: number
+  total: number
 }
 
 function isValidImageUrl(url: string): boolean {
@@ -441,7 +446,21 @@ function TileProgress({
     )
   }
 
-  const canUpdateProgress = userRole === "admin" || userRole === "management"
+  // Calculate goal progress based on submissions
+  const calculateGoalProgress = (goalId: string, teamId: string): GoalProgress => {
+    // Find all submissions for this team and tile
+    const teamSubmissions = selectedTile.teamTileSubmissions?.find((tts) => tts.teamId === teamId)
+    if (!teamSubmissions) return { approved: 0, total: 0 }
+
+    // Count submissions assigned to this goal
+    const goalSubmissions = teamSubmissions.submissions.filter((sub) => sub.goalId === goalId)
+    const approvedSubmissions = goalSubmissions.filter((sub) => sub.status === "approved")
+
+    return {
+      approved: approvedSubmissions.length,
+      total: goalSubmissions.length,
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -459,9 +478,17 @@ function TileProgress({
 
           <div className="space-y-5">
             {selectedTile.goals?.map((goal) => {
-              const teamProgress = goal.teamProgress?.find((progress) => progress.teamId === team.id)
-              const currentValue = teamProgress?.currentValue ?? 0
-              const progressPercentage = (currentValue / goal.targetValue) * 100
+              // Get progress based on submissions
+              const progress = calculateGoalProgress(goal.id, team.id)
+              const approvedProgress = progress.approved
+              const totalProgress = progress.total
+
+              // Calculate percentages
+              const approvedPercentage =
+                goal.targetValue > 0 ? Math.min(100, (approvedProgress / goal.targetValue) * 100) : 0
+
+              const virtualPercentage =
+                goal.targetValue > 0 ? Math.min(100, (totalProgress / goal.targetValue) * 100) : 0
 
               return (
                 <div key={goal.id} className="space-y-2">
@@ -472,34 +499,69 @@ function TileProgress({
                     </div>
                   </div>
 
-                  {canUpdateProgress ? (
-                    <div className="bg-muted/30 p-3 rounded-md">
-                      <ProgressSlider
-                        goalId={goal.id}
-                        teamId={team.id}
-                        currentValue={currentValue}
-                        maxValue={goal.targetValue}
-                        onUpdateProgress={onUpdateProgress}
-                      />
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
+                  <div className="space-y-3">
+                    {/* Official Progress (Approved Submissions) */}
+                    <div className="space-y-1">
                       <div className="flex items-center gap-2">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-1">
+                                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                <span className="text-xs text-muted-foreground">Approved</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Progress based on approved submissions</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <Progress
-                          value={progressPercentage}
-                          className="h-2.5 flex-1"
-                          aria-label={`Progress for ${team.name} on ${goal.description}`}
+                          value={approvedPercentage}
+                          className="h-2.5 flex-1 bg-muted"
+                          aria-label={`Approved progress for ${team.name} on ${goal.description}`}
                         />
                         <span className="text-sm font-medium min-w-[80px] text-right">
-                          {currentValue} / {goal.targetValue}
+                          {approvedProgress} / {goal.targetValue}
                         </span>
                       </div>
-
                       <div className="text-xs text-right text-muted-foreground">
-                        {progressPercentage.toFixed(0)}% complete
+                        {approvedPercentage.toFixed(0)}% complete
                       </div>
                     </div>
-                  )}
+
+                    {/* Virtual Progress (All Submissions) */}
+                    {totalProgress > approvedProgress && (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-4 w-4 text-amber-500" />
+                                  <span className="text-xs text-muted-foreground">Virtual</span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Progress including pending and in-review submissions</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <Progress
+                            value={virtualPercentage}
+                            className="h-2.5 flex-1 bg-muted"
+                            aria-label={`Virtual progress for ${team.name} on ${goal.description}`}
+                          />
+                          <span className="text-sm font-medium min-w-[80px] text-right">
+                            {totalProgress} / {goal.targetValue}
+                          </span>
+                        </div>
+                        <div className="text-xs text-right text-muted-foreground">
+                          {virtualPercentage.toFixed(0)}% potential
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )
             })}
@@ -512,8 +574,8 @@ function TileProgress({
               <span className="text-muted-foreground">
                 {
                   (selectedTile.goals ?? []).filter((goal) => {
-                    const teamProgress = goal.teamProgress?.find((p) => p.teamId === team.id)
-                    return teamProgress?.currentValue === goal.targetValue
+                    const progress = calculateGoalProgress(goal.id, team.id)
+                    return progress.approved >= goal.targetValue
                   }).length
                 }{" "}
                 of {(selectedTile.goals ?? []).length} goals
