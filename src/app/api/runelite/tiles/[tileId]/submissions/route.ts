@@ -7,6 +7,7 @@ import { nanoid } from "nanoid"
 import fs from "fs/promises"
 import path from "path"
 import { getTeamForUserInEvent } from "@/lib/team-utils"
+import { mapStatus } from "@/lib/statusMapping"
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
 
@@ -102,7 +103,7 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
     }
 
     const teamSubmissionForTile = tile.teamTileSubmissions.find((submission) => submission.teamId === userTeam.id)
-    if (!!teamSubmissionForTile && teamSubmissionForTile.status === "accepted") {
+    if (!!teamSubmissionForTile && teamSubmissionForTile.status === "approved") {
       return NextResponse.json({ error: "Your submission has already been approved!" }, { status: 423 })
     }
 
@@ -216,7 +217,7 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
       const submission = teamSubmissions.find((sub) => sub.tileId === t.id)
       tileSubmissionMap[t.id] = {
         id: t.id,
-        status: submission ? submission.status : "not_submitted",
+        status: submission ? mapStatus(submission.status) : "not_submitted",
         lastUpdated: submission ? submission.updatedAt : null,
         submissionCount: submission?.submissions.length ?? 0,
         ...(submission?.submissions.length

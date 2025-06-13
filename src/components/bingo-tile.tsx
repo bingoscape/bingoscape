@@ -2,7 +2,7 @@
 
 import React from "react"
 import Image from "next/image"
-import { Check, Clock, Send, X, Zap, EyeOff } from "lucide-react"
+import { Zap, EyeOff } from "lucide-react"
 import type { Tile } from "@/app/actions/events"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import getRandomFrog from "@/lib/getRandomFrog"
@@ -28,7 +28,7 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
         acc[tts.status]++
         return acc
       },
-      { accepted: 0, pending: 0, requires_interaction: 0, declined: 0 },
+      { approved: 0, pending: 0, needs_review: 0 },
     )
   }, [isManagement, tile.teamTileSubmissions])
 
@@ -37,11 +37,10 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
     return tile.teamTileSubmissions.find((tts) => tts.teamId === currentTeamId)
   }, [currentTeamId, tile.teamTileSubmissions])
 
-  const renderStatusIcon = (status: "accepted" | "requires_interaction" | "declined" | "pending" | undefined) => {
+  const renderStatusIcon = (status: "approved" | "needs_review" | "pending" | undefined) => {
     const iconMap = {
-      accepted: <Badge className="bg-green-500 text-xs">✓</Badge>,
-      requires_interaction: <Badge className="bg-yellow-500 text-xs">!</Badge>,
-      declined: <Badge className="bg-red-500 text-xs">✗</Badge>,
+      approved: <Badge className="bg-green-500 text-xs">✓</Badge>,
+      needs_review: <Badge className="bg-yellow-500 text-xs">!</Badge>,
       pending: <Badge className="bg-blue-500 text-xs">⏳</Badge>,
     }
     return status ? iconMap[status] : null

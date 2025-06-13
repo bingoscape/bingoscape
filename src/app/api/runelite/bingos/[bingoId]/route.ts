@@ -3,6 +3,7 @@ import { validateApiKey } from "@/lib/api-auth"
 import { db } from "@/server/db"
 import { bingos, teamMembers, teamTileSubmissions, tiles } from "@/server/db/schema"
 import { asc, eq } from "drizzle-orm"
+import { mapStatus } from "@/lib/statusMapping"
 
 export async function GET(request: NextRequest, { params }: { params: { bingoId: string } }) {
   try {
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest, { params }: { params: { bingoId:
       string,
       {
         id: string
-        status: "pending" | "accepted" | "requires_interaction" | "declined" | "not_submitted"
+        status: "pending" | "accepted" | "requires_interaction" | "not_submitted"
         lastUpdated: Date | null
         submissionCount: number
         latestSubmission?: {
@@ -116,7 +117,7 @@ export async function GET(request: NextRequest, { params }: { params: { bingoId:
       const submission = teamSubmissions.find((sub) => sub.tileId === tile.id)
       tileSubmissionMap[tile.id] = {
         id: tile.id,
-        status: submission ? submission.status : "not_submitted",
+        status: submission ? mapStatus(submission.status) : "not_submitted",
         lastUpdated: submission ? submission.updatedAt : null,
         submissionCount: submission?.submissions.length ?? 0,
         ...(submission?.submissions.length

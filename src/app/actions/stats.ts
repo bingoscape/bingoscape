@@ -123,7 +123,7 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
         and(
           eq(teamTileSubmissions.teamId, team.id),
           eq(tiles.bingoId, bingoId),
-          eq(teamTileSubmissions.status, "accepted"),
+          eq(teamTileSubmissions.status, "approved"),
         ),
       )
 
@@ -157,10 +157,9 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
 
     // Fill in actual counts
     submissionStats.forEach((stat) => {
-      if (stat.status === "accepted") submissionCounts.accepted = Number(stat.count)
+      if (stat.status === "approved") submissionCounts.accepted = Number(stat.count)
       else if (stat.status === "pending") submissionCounts.pending = Number(stat.count)
-      else if (stat.status === "declined") submissionCounts.declined = Number(stat.count)
-      else if (stat.status === "requires_interaction") submissionCounts.requiresInteraction = Number(stat.count)
+      else if (stat.status === "needs_review") submissionCounts.requiresInteraction = Number(stat.count)
     })
 
     submissionCounts.total =
@@ -297,7 +296,7 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
       const submissionStatus = teamSubmissionData.find((s) => s.id === submissionId)?.status
 
       // Only count accepted submissions for the weighted average
-      if (submissionStatus === "accepted") {
+      if (submissionStatus === "approved") {
         // Initialize user map if needed
         if (!userTileSubmissionsMap.has(userId)) {
           userTileSubmissionsMap.set(userId, new Map())
@@ -413,7 +412,7 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
     .from(tiles)
     .leftJoin(
       teamTileSubmissions,
-      and(eq(teamTileSubmissions.tileId, tiles.id), eq(teamTileSubmissions.status, "accepted")),
+      and(eq(teamTileSubmissions.tileId, tiles.id), eq(teamTileSubmissions.status, "approved")),
     )
     .where(eq(tiles.bingoId, bingoId))
     .groupBy(tiles.id, tiles.title, tiles.weight)

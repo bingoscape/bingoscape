@@ -29,7 +29,7 @@ export interface Submission {
   id: string
   teamTileSubmissionId: string
   image: Image
-  status: "pending" | "accepted" | "requires_interaction" | "declined"
+  status: "pending" | "approved" | "needs_review"
   reviewedBy: string | null
   reviewedAt: Date | null
   createdAt: Date
@@ -44,7 +44,7 @@ export interface Submission {
 export interface TeamTileSubmission {
   id: string
   teamId: string
-  status: "pending" | "accepted" | "requires_interaction" | "declined"
+  status: "pending" | "approved" | "needs_review"
   createdAt: Date
   updatedAt: Date
   tileId: string
