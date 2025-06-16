@@ -67,6 +67,8 @@ export function SubmissionsTab({
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null)
   const [submissionForGoal, setSubmissionForGoal] = useState<string | null>(null)
   const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<string>("pending")
+  const [teamFilter, setTeamFilter] = useState<string>("all")
 
   // Add this effect to set the current goal when opening the dialog
   useEffect(() => {
@@ -128,11 +130,43 @@ export function SubmissionsTab({
     setSubmissionForGoal(null)
   }
 
+  // Filter submissions based on user role and selected filters
+  const getFilteredSubmissions = () => {
+    if (!selectedTile?.teamTileSubmissions) return []
+
+    let submissions = selectedTile.teamTileSubmissions
+
+    // If user is a normal participant, only show their team's submissions
+    if (!hasSufficientRights && currentTeamId) {
+      submissions = submissions.filter((teamSub) => teamSub.teamId === currentTeamId)
+    }
+
+    // Apply team filter (for admin/management users)
+    if (hasSufficientRights && teamFilter !== "all") {
+      submissions = submissions.filter((teamSub) => teamSub.teamId === teamFilter)
+    }
+
+    // Apply status filter
+    if (statusFilter !== "all") {
+      submissions = submissions.filter((teamSub) => {
+        // Check team submission status
+        if (teamSub.status === statusFilter) return true
+
+        // Also check individual submission statuses
+        return teamSub.submissions.some((sub) => (sub.status || "pending") === statusFilter)
+      })
+    }
+
+    return submissions
+  }
+
+  const filteredSubmissions = getFilteredSubmissions()
+
   return (
-    <div className="p-4 space-y-6">
-      {/* Current team submission form */}
+    <div className="h-full flex flex-col">
+      {/* Current team submission form - fixed at top */}
       {currentTeamId && !isSubmissionsLocked && (
-        <div className="border rounded-lg p-4 space-y-4">
+        <div className="border rounded-lg p-4 space-y-4 mb-4">
           <h3 className="font-medium">Submit for {currentTeam?.name}</h3>
           <div className="space-y-3">
             <div>
@@ -170,240 +204,299 @@ export function SubmissionsTab({
         </div>
       )}
 
-      {/* Team submissions */}
-      <div className="space-y-6">
-        {selectedTile?.teamTileSubmissions && selectedTile.teamTileSubmissions.length > 0 ? (
-          selectedTile.teamTileSubmissions.map((teamSubmission) => (
-            <div key={teamSubmission.id} className="border rounded-lg overflow-hidden">
-              <div className="bg-muted/30 p-4">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="h-3 w-3 rounded-full"
-                      style={{
-                        backgroundColor: `hsl(${(teamSubmission.team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`,
-                      }}
-                    />
-                    <h3 className="font-medium">{teamSubmission.team.name}</h3>
-                    {getStatusBadge(teamSubmission.status)}
-                  </div>
-                  {hasSufficientRights && (
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-                        onClick={() => onTeamTileSubmissionStatusUpdate(teamSubmission.id, "approved")}
-                        disabled={teamSubmission.status === "approved"}
-                      >
-                        <Check className="h-4 w-4 mr-1" />
-                        Approve
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
-                        onClick={() => onTeamTileSubmissionStatusUpdate(teamSubmission.id, "needs_review")}
-                        disabled={teamSubmission.status === "needs_review"}
-                      >
-                        <AlertTriangle className="h-4 w-4 mr-1" />
-                        Needs Review
-                      </Button>
-                    </div>
-                  )}
-                </div>
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {/* Filters - only show for admin/management */}
+        {hasSufficientRights && (
+          <div className="border rounded-lg p-4 space-y-4">
+            <h3 className="font-medium">Filters</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="status-filter" className="block text-sm font-medium mb-1">
+                  Status Filter
+                </Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="needs_review">Needs Review</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              {teamSubmission.submissions.length > 0 ? (
-                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {teamSubmission.submissions.map((submission) => (
-                    <div key={submission.id} className="border rounded-md overflow-hidden">
-                      <div className="relative aspect-video">
-                        <Image
-                          src={submission.image.path || "/placeholder.svg"}
-                          alt={`Submission by ${submission.user.name || "Unknown"}`}
-                          fill
-                          className="object-cover cursor-pointer"
-                          onClick={() =>
-                            onFullSizeImageView(
-                              submission.image.path,
-                              `Submission by ${submission.user.name || "Unknown"}`,
-                            )
-                          }
-                        />
+              <div>
+                <Label htmlFor="team-filter" className="block text-sm font-medium mb-1">
+                  Team Filter
+                </Label>
+                <Select value={teamFilter} onValueChange={setTeamFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Teams</SelectItem>
+                    {teams.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Team submissions */}
+        <div className="space-y-6">
+          {filteredSubmissions.length > 0 ? (
+            filteredSubmissions.map((teamSubmission) => (
+              <div key={teamSubmission.id} className="border rounded-lg overflow-hidden">
+                <div className="bg-muted/30 p-4">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-3 w-3 rounded-full"
+                        style={{
+                          backgroundColor: `hsl(${(teamSubmission.team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`,
+                        }}
+                      />
+                      <h3 className="font-medium">{teamSubmission.team.name}</h3>
+                      {getStatusBadge(teamSubmission.status)}
+                    </div>
+                    {hasSufficientRights && (
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                          onClick={() => onTeamTileSubmissionStatusUpdate(teamSubmission.id, "approved")}
+                          disabled={teamSubmission.status === "approved"}
+                        >
+                          <Check className="h-4 w-4 mr-1" />
+                          Approve
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                          onClick={() => onTeamTileSubmissionStatusUpdate(teamSubmission.id, "needs_review")}
+                          disabled={teamSubmission.status === "needs_review"}
+                        >
+                          <AlertTriangle className="h-4 w-4 mr-1" />
+                          Needs Review
+                        </Button>
                       </div>
-                      <div className="p-3 space-y-2">
-                        <div className="flex justify-between items-center">
-                          <div className="text-sm font-medium truncate">
-                            {submission.user.name || submission.user.runescapeName || "Unknown"}
-                          </div>
-                          {getStatusBadge(submission.status || "pending")}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(submission.createdAt).toLocaleString()}
-                        </div>
+                    )}
+                  </div>
+                </div>
 
-                        {/* Goal assignment display - now editable */}
-                        {submission.goalId ? (
-                          <div
-                            className="flex items-center justify-between gap-1 mt-1 bg-blue-50 p-1.5 rounded text-xs cursor-pointer hover:bg-blue-100"
-                            onClick={() => setSubmissionForGoal(submission.id)}
-                          >
-                            <div className="flex items-center gap-1 truncate">
-                              <CheckCircle2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                              <span className="text-blue-700 font-medium truncate">
-                                {selectedTile.goals?.find((g) => g.id === submission.goalId)?.description || "Goal"}
-                              </span>
+                {teamSubmission.submissions.length > 0 ? (
+                  <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {teamSubmission.submissions
+                      .filter((submission) => {
+                        // Apply status filter to individual submissions
+                        if (statusFilter === "all") return true
+                        return (submission.status || "pending") === statusFilter
+                      })
+                      .map((submission) => (
+                        <div key={submission.id} className="border rounded-md overflow-hidden">
+                          <div className="relative aspect-video">
+                            <Image
+                              src={submission.image.path || "/placeholder.svg"}
+                              alt={`Submission by ${submission.user.name || "Unknown"}`}
+                              fill
+                              className="object-cover cursor-pointer"
+                              onClick={() =>
+                                onFullSizeImageView(
+                                  submission.image.path,
+                                  `Submission by ${submission.user.name || "Unknown"}`,
+                                )
+                              }
+                            />
+                          </div>
+                          <div className="p-3 space-y-2">
+                            <div className="flex justify-between items-center">
+                              <div className="text-sm font-medium truncate">
+                                {submission.user.runescapeName || submission.user.name || "Unknown"}
+                              </div>
+                              {getStatusBadge(submission.status || "pending")}
                             </div>
-                            <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
-                              <Link className="h-3 w-3 text-blue-500" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full mt-1 h-7 text-xs"
-                            onClick={() => setSubmissionForGoal(submission.id)}
-                          >
-                            <Link className="h-3.5 w-3.5 mr-1" />
-                            Assign Goal
-                          </Button>
-                        )}
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(submission.createdAt).toLocaleString()}
+                            </div>
 
-                        {hasSufficientRights && (
-                          <div className="flex justify-end gap-1 mt-2 pt-2 border-t">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                    onClick={() => onSubmissionStatusUpdate(submission.id, "approved")}
-                                    disabled={submission.status === "approved"}
-                                  >
-                                    <Check className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Approve Submission</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            {/* Goal assignment display - now editable */}
+                            {submission.goalId ? (
+                              <div
+                                className="flex items-center justify-between gap-1 mt-1 bg-blue-50 p-1.5 rounded text-xs cursor-pointer hover:bg-blue-100"
+                                onClick={() => setSubmissionForGoal(submission.id)}
+                              >
+                                <div className="flex items-center gap-1 truncate">
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                                  <span className="text-blue-700 font-medium truncate">
+                                    {selectedTile?.goals?.find((g) => g.id === submission.goalId)?.description || "Goal"}
+                                  </span>
+                                </div>
+                                <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
+                                  <Link className="h-3 w-3 text-blue-500" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full mt-1 h-7 text-xs"
+                                onClick={() => setSubmissionForGoal(submission.id)}
+                              >
+                                <Link className="h-3.5 w-3.5 mr-1" />
+                                Assign Goal
+                              </Button>
+                            )}
 
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
-                                    onClick={() => onSubmissionStatusUpdate(submission.id, "needs_review")}
-                                    disabled={submission.status === "needs_review"}
-                                  >
-                                    <AlertTriangle className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Mark as Needs Review</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-
-                            <AlertDialog
-                              open={submissionToDelete === submission.id}
-                              onOpenChange={(open) => !open && setSubmissionToDelete(null)}
-                            >
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <AlertDialogTrigger asChild>
+                            {hasSufficientRights && (
+                              <div className="flex justify-end gap-1 mt-2 pt-2 border-t">
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        onClick={() => setSubmissionToDelete(submission.id)}
+                                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                        onClick={() => onSubmissionStatusUpdate(submission.id, "approved")}
+                                        disabled={submission.status === "approved"}
                                       >
-                                        <X className="h-4 w-4" />
+                                        <Check className="h-4 w-4" />
                                       </Button>
-                                    </AlertDialogTrigger>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Delete Submission</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Submission</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete this submission? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => {
-                                      onDeleteSubmission(submission.id)
-                                      setSubmissionToDelete(null)
-                                    }}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-4 text-center text-muted-foreground">No submissions yet</div>
-              )}
-            </div>
-          ))
-        ) : (
-          <div className="text-center py-8 bg-muted/30 rounded-lg">
-            <p className="text-muted-foreground">No submissions for this tile yet.</p>
-          </div>
-        )}
-      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Approve Submission</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
 
-      {/* Goal Assignment Dialog */}
-      <AlertDialog open={!!submissionForGoal} onOpenChange={(open) => !open && setSubmissionForGoal(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Assign Goal to Submission</AlertDialogTitle>
-            <AlertDialogDescription>
-              Select a goal to associate with this submission or select "No Goal" to remove the association.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="py-4">
-            <Select
-              value={selectedGoalId || "none"}
-              onValueChange={(value) => setSelectedGoalId(value === "none" ? null : value)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a goal" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No Goal</SelectItem>
-                {selectedTile?.goals?.map((goal) => (
-                  <SelectItem key={goal.id} value={goal.id}>
-                    {goal.description} (Target: {goal.targetValue})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => submissionForGoal && handleGoalAssignment(submissionForGoal, selectedGoalId)}
-            >
-              Assign Goal
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                                        onClick={() => onSubmissionStatusUpdate(submission.id, "needs_review")}
+                                        disabled={submission.status === "needs_review"}
+                                      >
+                                        <AlertTriangle className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Mark as Needs Review</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+
+                                <AlertDialog
+                                  open={submissionToDelete === submission.id}
+                                  onOpenChange={(open) => !open && setSubmissionToDelete(null)}
+                                >
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <AlertDialogTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                            onClick={() => setSubmissionToDelete(submission.id)}
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Delete Submission</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Submission</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete this submission? This action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => {
+                                          onDeleteSubmission(submission.id)
+                                          setSubmissionToDelete(null)
+                                        }}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center text-muted-foreground">No submissions yet</div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 bg-muted/30 rounded-lg">
+              <p className="text-muted-foreground">
+                {!hasSufficientRights && !currentTeamId
+                  ? "You need to be part of a team to view submissions."
+                  : statusFilter === "pending"
+                    ? "No pending submissions for this tile yet."
+                    : "No submissions match the current filters."}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Goal Assignment Dialog */}
+        <AlertDialog open={!!submissionForGoal} onOpenChange={(open) => !open && setSubmissionForGoal(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Assign Goal to Submission</AlertDialogTitle>
+              <AlertDialogDescription>
+                Select a goal to associate with this submission or select "No Goal" to remove the association.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4">
+              <Select
+                value={selectedGoalId || "none"}
+                onValueChange={(value) => setSelectedGoalId(value === "none" ? null : value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a goal" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Goal</SelectItem>
+                  {selectedTile?.goals?.map((goal) => (
+                    <SelectItem key={goal.id} value={goal.id}>
+                      {goal.description} (Target: {goal.targetValue})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => submissionForGoal && handleGoalAssignment(submissionForGoal, selectedGoalId)}
+              >
+                Assign Goal
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </div>
   )
 }
