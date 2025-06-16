@@ -163,49 +163,48 @@ export function SubmissionsTab({
   const filteredSubmissions = getFilteredSubmissions()
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Current team submission form - fixed at top */}
-      {currentTeamId && !isSubmissionsLocked && (
-        <div className="border rounded-lg p-4 space-y-4 mb-4">
-          <h3 className="font-medium">Submit for {currentTeam?.name}</h3>
-          <div className="space-y-3">
-            <div>
-              <Label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
-                Upload Image
-              </Label>
-              <div className="flex items-center gap-2">
-                <Input id="image" type="file" accept="image/*" onChange={onImageChange} className="flex-1" />
-                <Button onClick={onImageSubmit} disabled={!selectedImage && !pastedImage}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Submit
-                </Button>
-              </div>
-              {(selectedImage || pastedImage) && (
-                <div className="mt-2">
-                  <p className="text-sm text-muted-foreground">
-                    {selectedImage ? selectedImage.name : "Pasted image"} ready to submit
-                  </p>
+    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
+      <div className="space-y-6 p-4">
+        {/* Current team submission form */}
+        {currentTeamId && !isSubmissionsLocked && (
+          <div className="border rounded-lg p-4 space-y-4">
+            <h3 className="font-medium">Submit for {currentTeam?.name}</h3>
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
+                  Upload Image
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input id="image" type="file" accept="image/*" onChange={onImageChange} className="flex-1" />
+                  <Button onClick={onImageSubmit} disabled={!selectedImage && !pastedImage}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Submit
+                  </Button>
                 </div>
-              )}
-              <p className="text-xs text-muted-foreground mt-1">
-                You can also paste an image directly (Ctrl+V / Cmd+V)
-              </p>
+                {(selectedImage || pastedImage) && (
+                  <div className="mt-2">
+                    <p className="text-sm text-muted-foreground">
+                      {selectedImage ? selectedImage.name : "Pasted image"} ready to submit
+                    </p>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  You can also paste an image directly (Ctrl+V / Cmd+V)
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {isSubmissionsLocked && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-yellow-500" />
-            <p className="text-yellow-700">Submissions are currently locked for this bingo board.</p>
+        {isSubmissionsLocked && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              <p className="text-yellow-700">Submissions are currently locked for this bingo board.</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Scrollable content area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {/* Filters - only show for admin/management */}
         {hasSufficientRights && (
           <div className="border rounded-lg p-4 space-y-4">
@@ -307,13 +306,13 @@ export function SubmissionsTab({
                           <div className="relative aspect-video">
                             <Image
                               src={submission.image.path || "/placeholder.svg"}
-                              alt={`Submission by ${submission.user.name || "Unknown"}`}
+                              alt={`Submission by ${submission.user.runescapeName || "Unknown"}`}
                               fill
                               className="object-cover cursor-pointer"
                               onClick={() =>
                                 onFullSizeImageView(
                                   submission.image.path,
-                                  `Submission by ${submission.user.name || "Unknown"}`,
+                                  `Submission by ${submission.user.runescapeName || "Unknown"}`,
                                 )
                               }
                             />
@@ -458,45 +457,45 @@ export function SubmissionsTab({
             </div>
           )}
         </div>
-
-        {/* Goal Assignment Dialog */}
-        <AlertDialog open={!!submissionForGoal} onOpenChange={(open) => !open && setSubmissionForGoal(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Assign Goal to Submission</AlertDialogTitle>
-              <AlertDialogDescription>
-                Select a goal to associate with this submission or select "No Goal" to remove the association.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="py-4">
-              <Select
-                value={selectedGoalId || "none"}
-                onValueChange={(value) => setSelectedGoalId(value === "none" ? null : value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a goal" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No Goal</SelectItem>
-                  {selectedTile?.goals?.map((goal) => (
-                    <SelectItem key={goal.id} value={goal.id}>
-                      {goal.description} (Target: {goal.targetValue})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => submissionForGoal && handleGoalAssignment(submissionForGoal, selectedGoalId)}
-              >
-                Assign Goal
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
+
+      {/* Goal Assignment Dialog */}
+      <AlertDialog open={!!submissionForGoal} onOpenChange={(open) => !open && setSubmissionForGoal(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Assign Goal to Submission</AlertDialogTitle>
+            <AlertDialogDescription>
+              Select a goal to associate with this submission or select "No Goal" to remove the association.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Select
+              value={selectedGoalId || "none"}
+              onValueChange={(value) => setSelectedGoalId(value === "none" ? null : value)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a goal" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No Goal</SelectItem>
+                {selectedTile?.goals?.map((goal) => (
+                  <SelectItem key={goal.id} value={goal.id}>
+                    {goal.description} (Target: {goal.targetValue})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => submissionForGoal && handleGoalAssignment(submissionForGoal, selectedGoalId)}
+            >
+              Assign Goal
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
