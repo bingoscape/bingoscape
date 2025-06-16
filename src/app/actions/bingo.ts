@@ -473,7 +473,6 @@ export async function updateSubmissionStatus(
 
     console.log(`Server action: Updating submission ${submissionId} to status ${newStatus} with goal ${goalId}`)
 
-
     // Create the update data object
     const updateData: Record<string, any> = {
       status: newStatus,
@@ -495,6 +494,18 @@ export async function updateSubmissionStatus(
 
     if (!updatedSubmission) {
       throw new Error("Submission not found")
+    }
+
+    // If marking individual submission as "needs_review", update the parent tile status
+    if (newStatus === "needs_review") {
+      await db
+        .update(teamTileSubmissions)
+        .set({
+          status: "needs_review",
+          reviewedBy: session.user.id,
+          updatedAt: new Date(),
+        })
+        .where(eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId))
     }
 
     // Revalidate the submissions page
@@ -530,6 +541,19 @@ export async function updateTeamTileSubmissionStatus(
 
     if (!updatedTeamTileSubmission) {
       throw new Error("Team tile submission not found")
+    }
+
+    // If approving the whole tile, approve all individual submissions
+    if (newStatus === "approved") {
+      await db
+        .update(submissions)
+        .set({
+          status: "approved",
+          reviewedBy: session.user.id,
+          reviewedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(submissions.teamTileSubmissionId, teamTileSubmissionId))
     }
 
     // Revalidate the submissions page

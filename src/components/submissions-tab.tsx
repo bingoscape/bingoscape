@@ -70,6 +70,14 @@ export function SubmissionsTab({
   const [statusFilter, setStatusFilter] = useState<string>("pending")
   const [teamFilter, setTeamFilter] = useState<string>("all")
 
+  // Local state to track real-time status changes
+  const [localTileStatuses, setLocalTileStatuses] = useState<Record<string, "approved" | "needs_review" | "pending">>(
+    {},
+  )
+  const [localSubmissionStatuses, setLocalSubmissionStatuses] = useState<
+    Record<string, "approved" | "needs_review" | "pending">
+  >({})
+
   // Add this effect to set the current goal when opening the dialog
   useEffect(() => {
     if (submissionForGoal) {
@@ -135,13 +143,72 @@ export function SubmissionsTab({
     selectedTile?.teamTileSubmissions?.forEach((teamSub) => {
       teamSub.submissions.forEach((sub) => {
         if (sub.id === submissionId) {
-          currentStatus = sub.status
+          currentStatus = localSubmissionStatuses[sub.id] || sub.status
         }
       })
     })
 
     onSubmissionStatusUpdate(submissionId, currentStatus as "pending" | "approved" | "needs_review", goalId)
     setSubmissionForGoal(null)
+  }
+
+  // Enhanced handlers with real-time updates
+  const handleTeamTileSubmissionStatusUpdate = async (
+    teamTileSubmissionId: string | undefined,
+    newStatus: "approved" | "needs_review",
+  ) => {
+    if (!teamTileSubmissionId) return
+
+    // Optimistically update local state
+    setLocalTileStatuses((prev) => ({ ...prev, [teamTileSubmissionId]: newStatus }))
+
+    // If approving the tile, also update all submissions in that tile
+    if (newStatus === "approved") {
+      const teamSubmission = selectedTile?.teamTileSubmissions?.find((ts) => ts.id === teamTileSubmissionId)
+      if (teamSubmission) {
+        const updatedSubmissionStatuses: Record<string, "approved"> = {}
+        teamSubmission.submissions.forEach((sub) => {
+          updatedSubmissionStatuses[sub.id] = "approved"
+        })
+        setLocalSubmissionStatuses((prev) => ({ ...prev, ...updatedSubmissionStatuses }))
+      }
+    }
+
+    // Call the original handler
+    onTeamTileSubmissionStatusUpdate(teamTileSubmissionId, newStatus)
+  }
+
+  const handleSubmissionStatusUpdate = async (
+    submissionId: string,
+    newStatus: "pending" | "approved" | "needs_review",
+    goalId?: string | null,
+  ) => {
+    // Optimistically update local state
+    setLocalSubmissionStatuses((prev) => ({ ...prev, [submissionId]: newStatus }))
+
+    // If marking submission as needs_review, also update the parent tile
+    if (newStatus === "needs_review") {
+      // Find the parent tile submission
+      selectedTile?.teamTileSubmissions?.forEach((teamSub) => {
+        teamSub.submissions.forEach((sub) => {
+          if (sub.id === submissionId) {
+            setLocalTileStatuses((prev) => ({ ...prev, [teamSub.id]: "needs_review" }))
+          }
+        })
+      })
+    }
+
+    // Call the original handler
+    onSubmissionStatusUpdate(submissionId, newStatus, goalId)
+  }
+
+  // Helper function to get the current status (local override or original)
+  const getTileStatus = (teamTileSubmissionId: string, originalStatus: string) => {
+    return localTileStatuses[teamTileSubmissionId] || originalStatus
+  }
+
+  const getSubmissionStatus = (submissionId: string, originalStatus: string) => {
+    return localSubmissionStatuses[submissionId] || originalStatus
   }
 
   // Filter submissions based on user role and selected filters
@@ -163,11 +230,15 @@ export function SubmissionsTab({
     // Apply status filter
     if (statusFilter !== "all") {
       submissions = submissions.filter((teamSub) => {
-        // Check team submission status
-        if (teamSub.status === statusFilter) return true
+        // Check team submission status (with local override)
+        const currentTileStatus = getTileStatus(teamSub.id, teamSub.status)
+        if (currentTileStatus === statusFilter) return true
 
-        // Also check individual submission statuses
-        return teamSub.submissions.some((sub) => (sub.status || "pending") === statusFilter)
+        // Also check individual submission statuses (with local override)
+        return teamSub.submissions.some((sub) => {
+          const currentSubmissionStatus = getSubmissionStatus(sub.id, sub.status || "pending")
+          return currentSubmissionStatus === statusFilter
+        })
       })
     }
 
@@ -266,199 +337,216 @@ export function SubmissionsTab({
         {/* Team submissions */}
         <div className="space-y-6">
           {filteredSubmissions.length > 0 ? (
-            filteredSubmissions.map((teamSubmission) => (
-              <div key={teamSubmission.id} className="border rounded-lg overflow-hidden">
-                <div className="bg-muted/30 p-4">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="h-3 w-3 rounded-full"
-                        style={{
-                          backgroundColor: `hsl(${(teamSubmission.team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`,
-                        }}
-                      />
-                      <h3 className="font-medium">{teamSubmission.team.name}</h3>
-                      {getStatusBadge(teamSubmission.status)}
-                    </div>
-                    {hasSufficientRights && (
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-                          onClick={() => onTeamTileSubmissionStatusUpdate(teamSubmission.id, "approved")}
-                          disabled={teamSubmission.status === "approved"}
-                        >
-                          <Check className="h-4 w-4 mr-1" />
-                          Approve
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
-                          onClick={() => onTeamTileSubmissionStatusUpdate(teamSubmission.id, "needs_review")}
-                          disabled={teamSubmission.status === "needs_review"}
-                        >
-                          <AlertTriangle className="h-4 w-4 mr-1" />
-                          Needs Review
-                        </Button>
+            filteredSubmissions.map((teamSubmission) => {
+              const currentTileStatus = getTileStatus(teamSubmission.id, teamSubmission.status)
+
+              return (
+                <div key={teamSubmission.id} className="border rounded-lg overflow-hidden">
+                  <div className="bg-muted/30 p-4">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-3 w-3 rounded-full"
+                          style={{
+                            backgroundColor: `hsl(${(teamSubmission.team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`,
+                          }}
+                        />
+                        <h3 className="font-medium">{teamSubmission.team.name}</h3>
+                        {getStatusBadge(currentTileStatus)}
                       </div>
-                    )}
+                      {hasSufficientRights && (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            onClick={() => handleTeamTileSubmissionStatusUpdate(teamSubmission.id, "approved")}
+                            disabled={currentTileStatus === "approved"}
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                            onClick={() => handleTeamTileSubmissionStatusUpdate(teamSubmission.id, "needs_review")}
+                            disabled={currentTileStatus === "needs_review"}
+                          >
+                            <AlertTriangle className="h-4 w-4 mr-1" />
+                            Needs Review
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {teamSubmission.submissions.length > 0 ? (
-                  <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {teamSubmission.submissions
-                      .filter((submission) => {
-                        // Apply status filter to individual submissions
-                        if (statusFilter === "all") return true
-                        return (submission.status || "pending") === statusFilter
-                      })
-                      .map((submission) => (
-                        <div key={submission.id} className="border rounded-md overflow-hidden">
-                          <div className="relative aspect-video">
-                            <Image
-                              src={submission.image.path || "/placeholder.svg"}
-                              alt={`Submission by ${submission.user.runescapeName || "Unknown"}`}
-                              fill
-                              className="object-cover cursor-pointer"
-                              onClick={() =>
-                                onFullSizeImageView(
-                                  submission.image.path,
-                                  `Submission by ${submission.user.runescapeName || "Unknown"}`,
-                                )
-                              }
-                            />
-                          </div>
-                          <div className="p-3 space-y-2">
-                            <div className="flex justify-between items-center">
-                              <div className="text-sm font-medium truncate">
-                                {submission.user.runescapeName || submission.user.name || "Unknown"}
+                  {teamSubmission.submissions.length > 0 ? (
+                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {teamSubmission.submissions
+                        .filter((submission) => {
+                          // Apply status filter to individual submissions (with local override)
+                          if (statusFilter === "all") return true
+                          const currentSubmissionStatus = getSubmissionStatus(
+                            submission.id,
+                            submission.status || "pending",
+                          )
+                          return currentSubmissionStatus === statusFilter
+                        })
+                        .map((submission) => {
+                          const currentSubmissionStatus = getSubmissionStatus(
+                            submission.id,
+                            submission.status || "pending",
+                          )
+
+                          return (
+                            <div key={submission.id} className="border rounded-md overflow-hidden">
+                              <div className="relative aspect-video">
+                                <Image
+                                  src={submission.image.path || "/placeholder.svg"}
+                                  alt={`Submission by ${submission.user.runescapeName || "Unknown"}`}
+                                  fill
+                                  className="object-cover cursor-pointer"
+                                  onClick={() =>
+                                    onFullSizeImageView(
+                                      submission.image.path,
+                                      `Submission by ${submission.user.runescapeName || "Unknown"}`,
+                                    )
+                                  }
+                                />
                               </div>
-                              {getStatusBadge(submission.status || "pending")}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(submission.createdAt).toLocaleString()}
-                            </div>
-
-                            {/* Goal assignment display - now editable */}
-                            {submission.goalId ? (
-                              <div
-                                className="flex items-center justify-between gap-1 mt-1 bg-blue-50 p-1.5 rounded text-xs cursor-pointer hover:bg-blue-100"
-                                onClick={() => setSubmissionForGoal(submission.id)}
-                              >
-                                <div className="flex items-center gap-1 truncate">
-                                  <CheckCircle2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                                  <span className="text-blue-700 font-medium truncate">
-                                    {selectedTile?.goals?.find((g) => g.id === submission.goalId)?.description || "Goal"}
-                                  </span>
+                              <div className="p-3 space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <div className="text-sm font-medium truncate">
+                                    {submission.user.runescapeName || submission.user.name || "Unknown"}
+                                  </div>
+                                  {getStatusBadge(currentSubmissionStatus)}
                                 </div>
-                                <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
-                                  <Link className="h-3 w-3 text-blue-500" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full mt-1 h-7 text-xs"
-                                onClick={() => setSubmissionForGoal(submission.id)}
-                              >
-                                <Link className="h-3.5 w-3.5 mr-1" />
-                                Assign Goal
-                              </Button>
-                            )}
+                                <div className="text-xs text-muted-foreground">
+                                  {new Date(submission.createdAt).toLocaleString()}
+                                </div>
 
-                            {hasSufficientRights && (
-                              <div className="flex justify-end gap-1 mt-2 pt-2 border-t">
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                        onClick={() => onSubmissionStatusUpdate(submission.id, "approved")}
-                                        disabled={submission.status === "approved"}
-                                      >
-                                        <Check className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Approve Submission</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
+                                {/* Goal assignment display - now editable */}
+                                {submission.goalId ? (
+                                  <div
+                                    className="flex items-center justify-between gap-1 mt-1 bg-blue-50 p-1.5 rounded text-xs cursor-pointer hover:bg-blue-100"
+                                    onClick={() => setSubmissionForGoal(submission.id)}
+                                  >
+                                    <div className="flex items-center gap-1 truncate">
+                                      <CheckCircle2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                                      <span className="text-blue-700 font-medium truncate">
+                                        {selectedTile?.goals?.find((g) => g.id === submission.goalId)?.description ||
+                                          "Goal"}
+                                      </span>
+                                    </div>
+                                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
+                                      <Link className="h-3 w-3 text-blue-500" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full mt-1 h-7 text-xs"
+                                    onClick={() => setSubmissionForGoal(submission.id)}
+                                  >
+                                    <Link className="h-3.5 w-3.5 mr-1" />
+                                    Assign Goal
+                                  </Button>
+                                )}
 
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
-                                        onClick={() => onSubmissionStatusUpdate(submission.id, "needs_review")}
-                                        disabled={submission.status === "needs_review"}
-                                      >
-                                        <AlertTriangle className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Mark as Needs Review</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-
-                                <AlertDialog
-                                  open={submissionToDelete === submission.id}
-                                  onOpenChange={(open) => !open && setSubmissionToDelete(null)}
-                                >
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <AlertDialogTrigger asChild>
+                                {hasSufficientRights && (
+                                  <div className="flex justify-end gap-1 mt-2 pt-2 border-t">
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
                                           <Button
                                             variant="ghost"
                                             size="sm"
-                                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                            onClick={() => setSubmissionToDelete(submission.id)}
+                                            className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                            onClick={() => handleSubmissionStatusUpdate(submission.id, "approved")}
+                                            disabled={currentSubmissionStatus === "approved"}
                                           >
-                                            <X className="h-4 w-4" />
+                                            <Check className="h-4 w-4" />
                                           </Button>
-                                        </AlertDialogTrigger>
-                                      </TooltipTrigger>
-                                      <TooltipContent>Delete Submission</TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Delete Submission</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to delete this submission? This action cannot be undone.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() => {
-                                          onDeleteSubmission(submission.id)
-                                          setSubmissionToDelete(null)
-                                        }}
-                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                      >
-                                        Delete
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Approve Submission</TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                                            onClick={() => handleSubmissionStatusUpdate(submission.id, "needs_review")}
+                                            disabled={currentSubmissionStatus === "needs_review"}
+                                          >
+                                            <AlertTriangle className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Mark as Needs Review</TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+
+                                    <AlertDialog
+                                      open={submissionToDelete === submission.id}
+                                      onOpenChange={(open) => !open && setSubmissionToDelete(null)}
+                                    >
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <AlertDialogTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                onClick={() => setSubmissionToDelete(submission.id)}
+                                              >
+                                                <X className="h-4 w-4" />
+                                              </Button>
+                                            </AlertDialogTrigger>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Delete Submission</TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Delete Submission</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Are you sure you want to delete this submission? This action cannot be
+                                            undone.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => {
+                                              onDeleteSubmission(submission.id)
+                                              setSubmissionToDelete(null)
+                                            }}
+                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                          >
+                                            Delete
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                ) : (
-                  <div className="p-4 text-center text-muted-foreground">No submissions yet</div>
-                )}
-              </div>
-            ))
+                            </div>
+                          )
+                        })}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center text-muted-foreground">No submissions yet</div>
+                  )}
+                </div>
+              )
+            })
           ) : (
             <div className="text-center py-8 bg-muted/30 rounded-lg">
               <p className="text-muted-foreground">
