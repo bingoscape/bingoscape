@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Check, AlertTriangle, X, Upload, Clock, CheckCircle2, Link } from "lucide-react"
+import { Check, AlertTriangle, X, Upload, Clock, CheckCircle2, Link, Users } from "lucide-react"
 import type { Tile, Team } from "@/app/actions/events"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
@@ -88,6 +88,20 @@ export function SubmissionsTab({
 
   const currentTeam = teams.find((team) => team.id === currentTeamId)
   const currentTeamSubmission = selectedTile?.teamTileSubmissions?.find((sub) => sub.teamId === currentTeamId)
+
+  // If user is not part of a team and doesn't have sufficient rights, show empty state
+  if (!hasSufficientRights && !currentTeamId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+        <Users className="h-12 w-12 text-muted-foreground mb-4" />
+        <h3 className="text-lg font-medium text-muted-foreground mb-2">Join a Team to View Submissions</h3>
+        <p className="text-sm text-muted-foreground max-w-md">
+          You need to be part of a team to view and submit entries for this bingo tile. Contact an event organizer to
+          join a team.
+        </p>
+      </div>
+    )
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -448,11 +462,9 @@ export function SubmissionsTab({
           ) : (
             <div className="text-center py-8 bg-muted/30 rounded-lg">
               <p className="text-muted-foreground">
-                {!hasSufficientRights && !currentTeamId
-                  ? "You need to be part of a team to view submissions."
-                  : statusFilter === "pending"
-                    ? "No pending submissions for this tile yet."
-                    : "No submissions match the current filters."}
+                {statusFilter === "pending"
+                  ? "No pending submissions for this tile yet."
+                  : "No submissions match the current filters."}
               </p>
             </div>
           )}
