@@ -306,31 +306,35 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
                   ) : <span className="text-sm font-medium">{participant.role}</span>}
                 </TableCell>
                 <TableCell className="w-40">
-                  <Select
-                    value={participant.teamId ?? "no-team"}
-                    onValueChange={(value) => handleTeamAssignment(participant.id, value === "no-team" ? null : value)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Assign to team" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="no-team">No Team</SelectItem>
-                      {teams.map((team) => (
-                        <SelectItem key={team.id} value={team.id}>
-                          {team.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {isEditable ? (
+                    <Select
+                      value={participant.teamId ?? "no-team"}
+                      onValueChange={(value) => handleTeamAssignment(participant.id, value === "no-team" ? null : value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Assign to team" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no-team">No Team</SelectItem>
+                        {teams.map((team) => (
+                          <SelectItem key={team.id} value={team.id}>
+                            {team.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : <span className="text-sm font-medium">{participant.teamId ? teams.find((team) => team.id === participant.teamId)?.name : "No Team"}</span>}
                 </TableCell>
                 <TableCell className="w-40">
-                  <Input
-                    type="number"
-                    value={participant.buyIn}
-                    onChange={(e) => handleBuyInChange(participant.id, Number(e.target.value))}
-                    min={0}
-                    className="w-full"
-                  />
+                  {isEditable && (
+                    <Input
+                      type="number"
+                      value={participant.buyIn}
+                      onChange={(e) => handleBuyInChange(participant.id, Number(e.target.value))}
+                      min={0}
+                      className="w-full"
+                    />
+                  )}
                 </TableCell>
                 <TableCell className="w-40">
                   <span className="text-sm font-medium">{formatRunescapeGold(participant.buyIn)} GP</span>
@@ -345,14 +349,16 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
                   </div>
                 </TableCell>
                 <TableCell className="w-20">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openRemoveDialog(participant)}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  >
-                    <UserMinus className="h-4 w-4" />
-                  </Button>
+                  {isEditable && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openRemoveDialog(participant)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <UserMinus className="h-4 w-4" />
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -360,15 +366,17 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
         </Table>
       </div>
 
-      {participantToRemove && (
-        <RemoveParticipantDialog
-          isOpen={removeDialogOpen}
-          onClose={() => setRemoveDialogOpen(false)}
-          onConfirm={handleRemoveParticipant}
-          participantName={participantToRemove.runescapeName}
-        />
-      )}
-    </div>
+      {
+        participantToRemove && (
+          <RemoveParticipantDialog
+            isOpen={removeDialogOpen}
+            onClose={() => setRemoveDialogOpen(false)}
+            onConfirm={handleRemoveParticipant}
+            participantName={participantToRemove.runescapeName}
+          />
+        )
+      }
+    </div >
   )
 }
 
