@@ -22,6 +22,9 @@ import type { Tile, TeamTileSubmission, Bingo } from "./events"
 import { createNotification } from "./notifications"
 import { getServerAuthSession } from "@/server/auth"
 import getRandomFrog from "@/lib/getRandomFrog"
+import { sendDiscordWebhook, createSubmissionEmbed } from "@/lib/discord-webhook"
+import { discordWebhooks } from "@/server/db/schema"
+import { sql } from "drizzle-orm"
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
 
@@ -353,7 +356,7 @@ export async function submitImage(formData: FormData) {
 
     // Check if the tile exists and get its bingoId
     const tileResult = await db
-      .select({ id: tiles.id, bingoId: tiles.bingoId, title: tiles.title })
+      .select({ id: tiles.id, bingoId: tiles.bingoId, title: tiles.title, description: tiles.description })
       .from(tiles)
       .where(eq(tiles.id, tileId))
       .execute()
@@ -362,8 +365,19 @@ export async function submitImage(formData: FormData) {
       throw new Error("Tile not found")
     }
 
-    const bingoId = tileResult[0]!.bingoId
-    const tileTitle = tileResult[0]!.title
+    const tile = tileResult[0]!
+
+    // Get bingo and event information
+    const bingoResult = await db.query.bingos.findFirst({
+      where: eq(bingos.id, tile.bingoId),
+      with: {
+        event: true,
+      },
+    })
+
+    if (!bingoResult) {
+      throw new Error("Bingo not found")
+    }
 
     // Check if the team exists and get its name
     const teamResult = await db
@@ -376,7 +390,7 @@ export async function submitImage(formData: FormData) {
       throw new Error("Team not found")
     }
 
-    const teamName = teamResult[0]
+    const team = teamResult[0]!
 
     // Ensure the upload directory exists
     await ensureUploadDir()
@@ -431,28 +445,75 @@ export async function submitImage(formData: FormData) {
         })
         .returning()
 
-      return insertedSubmission
-    })
-
-    const b = await db.query.bingos.findFirst({
-      where: eq(bingos.id, bingoId),
-      with: {
-        event: true,
-      },
+      return { submission: insertedSubmission, image: insertedImage, teamTileSubmission }
     })
 
     // Create a notification for admin and management users
     await createNotification(
-      b!.eventId,
+      bingoResult.event.id,
       tileId,
       teamId,
-      `Team ${teamName!.name} has submitted an image for tile "${tileTitle}"`,
+      `Team ${team.name} has submitted an image for tile "${tile.title}"`,
     )
+
+    // Send Discord webhook notifications
+    try {
+      const session = await getServerAuthSession()
+      const user = session?.user
+
+      // Get active Discord webhooks for this event
+      const activeWebhooks = await db.query.discordWebhooks.findMany({
+        where: and(eq(discordWebhooks.eventId, bingoResult.event.id), eq(discordWebhooks.isActive, true)),
+      })
+
+      if (activeWebhooks.length > 0 && user) {
+        // Get submission count for this team/tile combination
+        const submissionCount = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(submissions)
+          .innerJoin(teamTileSubmissions, eq(submissions.teamTileSubmissionId, teamTileSubmissions.id))
+          .where(and(eq(teamTileSubmissions.tileId, tileId), eq(teamTileSubmissions.teamId, teamId)))
+
+        const count = submissionCount[0]?.count || 1
+
+        // Create the full image URL
+        const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
+        const fullImageUrl = `${baseUrl}${relativePath}`
+
+        // Generate team color
+        const teamColor = `hsl(${(team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`
+
+        const embedData = {
+          submissionImageUrl: fullImageUrl,
+          userName: user.name || "Unknown",
+          runescapeName: user.runescapeName,
+          teamName: team.name,
+          tileName: tile.title,
+          tileDescription: tile.description,
+          eventTitle: bingoResult.event.title,
+          bingoTitle: bingoResult.title,
+          submissionCount: count,
+          teamColor,
+        }
+
+        const embed = createSubmissionEmbed(embedData)
+
+        // Send to all active webhooks
+        const webhookPromises = activeWebhooks.map((webhook) =>
+          sendDiscordWebhook(webhook.webhookUrl, { embeds: [embed] }),
+        )
+
+        await Promise.allSettled(webhookPromises)
+      }
+    } catch (discordError) {
+      // Log Discord errors but don't fail the submission
+      console.error("Discord webhook error:", discordError)
+    }
 
     // Revalidate the bingo page
     revalidatePath("/bingo")
 
-    return { success: true, submission: newSubmission }
+    return { success: true, submission: newSubmission.submission }
   } catch (error) {
     console.error("Error submitting image:", error)
     return { success: false, error: (error as Error).message }

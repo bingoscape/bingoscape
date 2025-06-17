@@ -32,6 +32,7 @@ import { ShareEventButton } from "@/components/share-event-button"
 import { Badge } from "@/components/ui/badge"
 import { JoinEventButton } from "@/components/join-event-button"
 import { RegistrationStatus } from "@/components/registration-status"
+import { DiscordWebhookManagement } from "@/components/discord-webhook-management"
 
 export default async function EventBingosPage({ params }: { params: { id: UUID } }) {
     const session = await getServerAuthSession()
@@ -207,6 +208,11 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
                     )}
                     {isAdminOrManagement && (
                         <GenerateEventInviteLink eventId={event.id as UUID}>Generate Invite Link</GenerateEventInviteLink>
+                    )}
+                    {(userRole === "admin" || userRole === "management") && (
+                        <div className="mt-8">
+                            <DiscordWebhookManagement eventId={event.id} />
+                        </div>
                     )}
                     {(userRole === "admin" || userRole === "management") && (
                         <Link href={`/events/${params.id}/registrations`} passHref>
