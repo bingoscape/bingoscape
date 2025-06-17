@@ -478,7 +478,7 @@ export async function submitImage(formData: FormData) {
 
         // Create the full image URL
         const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
-        const fullImageUrl = `${baseUrl}${relativePath}`
+        const fullImageUrl = `${baseUrl}$_next/image?url=${relativePath}`
 
         // Generate team color
         const teamColor = `hsl(${(team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`
