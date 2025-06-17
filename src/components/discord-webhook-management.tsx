@@ -166,7 +166,7 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
   const handleTestWebhook = async (webhookId: string) => {
     try {
       const result = await testDiscordWebhook(webhookId)
-      if (result.success) {
+      if (!result) {
         toast({
           title: "Success",
           description: "Test message sent successfully!",
@@ -174,7 +174,7 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
       } else {
         toast({
           title: "Error",
-          description: result.error ?? "Failed to send test message",
+          description: "Failed to send test message",
           variant: "destructive",
         })
       }
