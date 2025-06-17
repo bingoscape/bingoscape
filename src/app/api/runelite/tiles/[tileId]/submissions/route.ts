@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server"
 import { db } from "@/server/db"
-import { tiles, eventParticipants, teamTileSubmissions, submissions, images, teamMembers } from "@/server/db/schema"
-import { eq, and } from "drizzle-orm"
+import { tiles, eventParticipants, teamTileSubmissions, submissions, images, teamMembers, discordWebhooks } from "@/server/db/schema"
+import { eq, and, sql } from "drizzle-orm"
 import { validateApiKey } from "@/lib/api-auth"
 import { nanoid } from "nanoid"
 import fs from "fs/promises"
 import path from "path"
 import { mapStatus } from "@/lib/statusMapping"
+import { createSubmissionEmbed, sendDiscordWebhook } from "@/lib/discord-webhook"
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
 
@@ -49,6 +50,7 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
                 goals: true,
               },
             },
+            event: true
           },
         },
         teamTileSubmissions: true,
@@ -62,6 +64,9 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
     // Check if user is a participant in this event
     const participant = await db.query.eventParticipants.findFirst({
       where: and(eq(eventParticipants.eventId, tile.bingo.eventId), eq(eventParticipants.userId, userId)),
+      with: {
+        user: true
+      }
     })
 
     if (!participant) {
@@ -233,6 +238,68 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
           : {}),
       }
     })
+
+
+    // Send Discord webhook notifications
+    try {
+
+      // Get active Discord webhooks for this event
+      const activeWebhooks = await db.query.discordWebhooks.findMany({
+        where: and(eq(discordWebhooks.eventId, tile.bingo.eventId), eq(discordWebhooks.isActive, true)),
+      })
+
+      if (activeWebhooks.length > 0 && participant) {
+        // Get submission count for this team/tile combination
+        const submissionCount = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(submissions)
+          .innerJoin(teamTileSubmissions, eq(submissions.teamTileSubmissionId, teamTileSubmissions.id))
+          .where(and(eq(teamTileSubmissions.tileId, tileId), eq(teamTileSubmissions.teamId, userTeam.id)))
+
+        const count = submissionCount[0]?.count || 1
+
+        // Generate team color
+        const teamColor = `hsl(${(userTeam.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`
+
+        const embedData = {
+          userName: participant.user.name || "Unknown",
+          runescapeName: participant.user.runescapeName,
+          teamName: userTeam.name,
+          tileName: tile.title,
+          tileDescription: tile.description,
+          eventTitle: tile.bingo.event.title,
+          bingoTitle: tile.bingo.title,
+          submissionCount: count,
+          teamColor,
+        }
+
+        const embed = createSubmissionEmbed(embedData)
+
+        // Prepare the image file for Discord attachment
+        const imageExtension = image.name.split(".").pop() || "png"
+        const discordFileName = `submission_${nanoid()}.${imageExtension}`
+
+        // Send to all active webhooks
+        const webhookPromises = activeWebhooks.map((webhook) =>
+          sendDiscordWebhook(webhook.webhookUrl, {
+            embeds: [embed],
+            files: [
+              {
+                attachment: buffer,
+                name: discordFileName,
+              },
+            ],
+          }),
+        )
+
+        await Promise.allSettled(webhookPromises)
+      }
+    } catch (discordError) {
+      // Log Discord errors but don't fail the submission
+      console.error("Discord webhook error:", discordError)
+    }
+
+
 
     // Get the event data to include event context
     // const eventData = await getEventById(bingo.eventId)
