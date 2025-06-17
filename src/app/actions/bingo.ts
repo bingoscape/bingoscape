@@ -343,7 +343,7 @@ export async function getAllSubmissionsForTeam(
   }
 }
 
-// Update the submitImage function to not accept goalId
+// Update the submitImage function to send image as Discord attachment
 export async function submitImage(formData: FormData) {
   try {
     const tileId = formData.get("tileId") as string
@@ -476,15 +476,10 @@ export async function submitImage(formData: FormData) {
 
         const count = submissionCount[0]?.count || 1
 
-        // Create the full image URL
-        const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
-        const fullImageUrl = `${baseUrl}/_next/image?url=${encodeURI(relativePath)}`
-
         // Generate team color
         const teamColor = `hsl(${(team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`
 
         const embedData = {
-          submissionImageUrl: fullImageUrl,
           userName: user.name || "Unknown",
           runescapeName: user.runescapeName,
           teamName: team.name,
@@ -498,9 +493,21 @@ export async function submitImage(formData: FormData) {
 
         const embed = createSubmissionEmbed(embedData)
 
+        // Prepare the image file for Discord attachment
+        const imageExtension = image.name.split(".").pop() || "png"
+        const discordFileName = `submission_${nanoid()}.${imageExtension}`
+
         // Send to all active webhooks
         const webhookPromises = activeWebhooks.map((webhook) =>
-          sendDiscordWebhook(webhook.webhookUrl, { embeds: [embed] }),
+          sendDiscordWebhook(webhook.webhookUrl, {
+            embeds: [embed],
+            files: [
+              {
+                attachment: buffer,
+                name: discordFileName,
+              },
+            ],
+          }),
         )
 
         await Promise.allSettled(webhookPromises)

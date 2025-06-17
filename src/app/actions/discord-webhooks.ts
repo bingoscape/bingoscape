@@ -73,8 +73,8 @@ export async function createDiscordWebhook(
 
     // Test the webhook first
     const testResult = await testDiscordWebhook(webhookUrl)
-    if (!testResult.success) {
-      return { success: false, error: `Webhook test failed: ${testResult.error}` }
+    if (!testResult) {
+      return { success: false, error: `Webhook test failed` }
     }
 
     // Check permissions
@@ -162,8 +162,8 @@ export async function updateDiscordWebhook(
       }
 
       const testResult = await testDiscordWebhook(updates.webhookUrl)
-      if (!testResult.success) {
-        return { success: false, error: `Webhook test failed: ${testResult.error}` }
+      if (!testResult) {
+        return { success: false, error: `Webhook test failed` }
       }
     }
 
@@ -245,7 +245,7 @@ export async function testWebhook(webhookId: string): Promise<{ success: boolean
       return { success: false, error: "Webhook not found" }
     }
 
-    return await testDiscordWebhook(webhook.webhookUrl)
+    return { success: await testDiscordWebhook(webhook.webhookUrl), error: "Failed to test webhook" }
   } catch (error) {
     console.error("Error testing webhook:", error)
     return { success: false, error: "Failed to test webhook" }
