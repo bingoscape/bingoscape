@@ -150,6 +150,7 @@ export const eventsRelations = relations(events, ({ many, one }) => ({
   clan: one(clans, { fields: [events.clanId], references: [clans.id] }),
   invites: many(eventInvites),
   registrationRequests: many(eventRegistrationRequests), // Add relation to registration requests
+  discordWebhooks: many(discordWebhooks),
 }))
 
 // New table for event registration requests
@@ -631,6 +632,32 @@ export const apiKeys = createTable("api_keys", {
 export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
   user: one(users, {
     fields: [apiKeys.userId],
+    references: [users.id],
+  }),
+}))
+
+export const discordWebhooks = createTable("discord_webhooks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventId: uuid("event_id")
+    .notNull()
+    .references(() => events.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  webhookUrl: text("webhook_url").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const discordWebhooksRelations = relations(discordWebhooks, ({ one }) => ({
+  event: one(events, {
+    fields: [discordWebhooks.eventId],
+    references: [events.id],
+  }),
+  creator: one(users, {
+    fields: [discordWebhooks.createdBy],
     references: [users.id],
   }),
 }))
