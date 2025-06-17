@@ -256,13 +256,13 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
           .innerJoin(teamTileSubmissions, eq(submissions.teamTileSubmissionId, teamTileSubmissions.id))
           .where(and(eq(teamTileSubmissions.tileId, tileId), eq(teamTileSubmissions.teamId, userTeam.id)))
 
-        const count = submissionCount[0]?.count || 1
+        const count = submissionCount[0]?.count ?? 1
 
         // Generate team color
         const teamColor = `hsl(${(userTeam.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`
 
         const embedData = {
-          userName: participant.user.name || "Unknown",
+          userName: participant.user.name ?? "Unknown",
           runescapeName: participant.user.runescapeName,
           teamName: userTeam.name,
           tileName: tile.title,
@@ -276,7 +276,7 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
         const embed = createSubmissionEmbed(embedData)
 
         // Prepare the image file for Discord attachment
-        const imageExtension = image.name.split(".").pop() || "png"
+        const imageExtension = image.name.split(".").pop() ?? "png"
         const discordFileName = `submission_${nanoid()}.${imageExtension}`
 
         // Send to all active webhooks
