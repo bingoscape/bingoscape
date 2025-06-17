@@ -75,10 +75,11 @@ export function createSubmissionEmbed(data: {
     teamColor
   } = data
 
-  const displayName = runescapeName || userName || 'Unknown Player'
+  const displayName = runescapeName ?? userName ?? 'Unknown Player'
 
   // Convert team color to Discord color (hex to decimal)
-  const colorMatch = teamColor.match(/hsl\((\d+),/)
+  const hslCode = /hsl\((\d+),/
+  const colorMatch = hslCode.exec(teamColor)
   const hue = colorMatch ? parseInt(colorMatch[1]!) : 0
   const discordColor = Math.floor((hue / 360) * 16777215) // Convert HSL hue to approximate hex color
 
@@ -135,7 +136,7 @@ export function createSubmissionEmbed(data: {
   return embed
 }
 
-function createProgressBar(percentage: number, length: number = 10): string {
+function createProgressBar(percentage: number, length = 10): string {
   const filled = Math.round((percentage / 100) * length)
   const empty = length - filled
   return '█'.repeat(filled) + '░'.repeat(empty)

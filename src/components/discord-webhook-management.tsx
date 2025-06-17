@@ -64,7 +64,7 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
 
   useEffect(() => {
     if (open) {
-      loadWebhooks()
+      loadWebhooks().then(() => { console.log("Webhooks loaded") }).catch((error) => { console.error("Error loading webhooks:", error) })
     }
   }, [open])
 
@@ -92,11 +92,11 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
           description: "Discord webhook created successfully",
         })
         setNewWebhook({ name: "", webhookUrl: "" })
-        loadWebhooks()
+        loadWebhooks().then(() => console.log("Webhooks reloaded after creation")).catch((error) => { console.error("Error reloading webhooks:", error) })
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to create webhook",
+          description: result.error ?? "Failed to create webhook",
           variant: "destructive",
         })
       }
@@ -119,11 +119,11 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
           title: "Success",
           description: `Webhook ${isActive ? "enabled" : "disabled"}`,
         })
-        loadWebhooks()
+        loadWebhooks().then(() => console.log("Webhooks reloaded after toggle")).catch((error) => { console.error("Error reloading webhooks:", error) })
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to update webhook",
+          description: result.error ?? "Failed to update webhook",
           variant: "destructive",
         })
       }
@@ -146,11 +146,11 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
           title: "Success",
           description: "Webhook deleted successfully",
         })
-        loadWebhooks()
+        loadWebhooks().then(() => console.log("Webhooks reloaded after deletion")).catch((error) => { console.error("Error reloading webhooks:", error) })
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to delete webhook",
+          description: result.error ?? "Failed to delete webhook",
           variant: "destructive",
         })
       }
@@ -174,7 +174,7 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to send test message",
+          description: result.error ?? "Failed to send test message",
           variant: "destructive",
         })
       }
