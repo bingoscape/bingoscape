@@ -20,7 +20,7 @@ import { TeamDisplay } from "@/components/team-display"
 import { DeleteBingoButton } from "@/components/delete-bingo-button"
 import { BingoInfoModal } from "@/components/bingo-info-modal"
 import Link from "next/link"
-import { Users, Clock, ClipboardList, ListFilter } from "lucide-react"
+import { Users, Clock, ClipboardList, ListFilter, BarChart3 } from "lucide-react"
 import { getCurrentTeamForUser } from "@/app/actions/team"
 import { PrizePoolDisplay } from "@/components/prize-pool-display"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
@@ -234,6 +234,14 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
                             <Button variant="outline" className="w-full">
                                 <Users className="mr-2 h-4 w-4" />
                                 Participants
+                            </Button>
+                        </Link>
+                    )}
+                    {isAdminOrManagement && (
+                        <Link href={`/events/${event.id}/stats`} passHref>
+                            <Button variant="outline" className="w-full">
+                                <BarChart3 className="mr-2 h-4 w-4" />
+                                Event Statistics
                             </Button>
                         </Link>
                     )}

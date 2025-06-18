@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/server/db"
-import { teams, teamTileSubmissions, tiles, teamMembers, users, submissions } from "@/server/db/schema"
+import { teams, teamTileSubmissions, tiles, teamMembers, users, submissions, bingos } from "@/server/db/schema"
 import { eq, and, sql, count, inArray, desc, asc, gte, lte } from "drizzle-orm"
 
 export interface TeamPointsOverTime {
@@ -480,3 +480,154 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
   }
 }
 
+export interface EventTeamPoints {
+  teamId: string
+  name: string
+  totalXP: number
+  bingoBreakdown: {
+    bingoId: string
+    bingoTitle: string
+    xp: number
+  }[]
+}
+
+export interface EventStatsData {
+  eventTeamPoints: EventTeamPoints[]
+  bingoSummary: {
+    bingoId: string
+    title: string
+    totalPossibleXP: number
+    completionRate: number
+    totalTeamsXP: number
+  }[]
+  totalEventXP: number
+  totalPossibleEventXP: number
+}
+
+/**
+ * Get comprehensive statistics for an entire event across all bingo boards
+ */
+export async function getEventStats(eventId: string): Promise<EventStatsData> {
+  // Get all bingos for this event
+  const eventBingos = await db.query.bingos.findMany({
+    where: eq(bingos.eventId, eventId),
+    with: {
+      tiles: true,
+    },
+    orderBy: [asc(bingos.createdAt)],
+  })
+
+  if (eventBingos.length === 0) {
+    return {
+      eventTeamPoints: [],
+      bingoSummary: [],
+      totalEventXP: 0,
+      totalPossibleEventXP: 0,
+    }
+  }
+
+  // Get all teams that have submissions for any bingo in this event
+  const participatingTeams = await db
+    .select({
+      id: teams.id,
+      name: teams.name,
+    })
+    .from(teams)
+    .innerJoin(teamTileSubmissions, eq(teamTileSubmissions.teamId, teams.id))
+    .innerJoin(tiles, eq(tiles.id, teamTileSubmissions.tileId))
+    .innerJoin(bingos, eq(bingos.id, tiles.bingoId))
+    .where(eq(bingos.eventId, eventId))
+    .groupBy(teams.id, teams.name)
+
+  const eventTeamPoints: EventTeamPoints[] = []
+  const bingoSummary: {
+    bingoId: string
+    title: string
+    totalPossibleXP: number
+    completionRate: number
+    totalTeamsXP: number
+  }[] = []
+  let totalPossibleEventXP = 0
+
+  const numberOfTeams = participatingTeams.length
+
+  // Process each bingo to get summary data
+  for (const bingo of eventBingos) {
+    const bingoTotalXP = bingo.tiles.reduce((sum, tile) => sum + tile.weight, 0)
+    totalPossibleEventXP += bingoTotalXP
+
+    // Calculate total XP earned by all teams for this bingo
+    const totalTeamsXPResult = await db
+      .select({
+        totalXP: sql<number>`SUM(${tiles.weight})`,
+      })
+      .from(teamTileSubmissions)
+      .innerJoin(tiles, eq(teamTileSubmissions.tileId, tiles.id))
+      .where(and(eq(tiles.bingoId, bingo.id), eq(teamTileSubmissions.status, "approved")))
+
+    const totalTeamsXP = Math.round(totalTeamsXPResult[0]?.totalXP ?? 0)
+
+    // Calculate completion rate based on total possible XP across all teams
+    const maxPossibleXPForAllTeams = bingoTotalXP * numberOfTeams
+    const completionRate = maxPossibleXPForAllTeams > 0 ? (totalTeamsXP / maxPossibleXPForAllTeams) * 100 : 0
+
+    bingoSummary.push({
+      bingoId: bingo.id,
+      title: bingo.title,
+      totalPossibleXP: bingoTotalXP,
+      completionRate: Number(completionRate.toFixed(1)),
+      totalTeamsXP: totalTeamsXP,
+    })
+  }
+
+  // For each participating team, calculate their total XP and breakdown by bingo
+  for (const team of participatingTeams) {
+    const bingoBreakdown: { bingoId: string; bingoTitle: string; xp: number }[] = []
+    let totalTeamXP = 0
+
+    // Calculate XP for each bingo
+    for (const bingo of eventBingos) {
+      const bingoXP = await db
+        .select({
+          totalXP: sql<number>`SUM(${tiles.weight})`,
+        })
+        .from(teamTileSubmissions)
+        .innerJoin(tiles, eq(teamTileSubmissions.tileId, tiles.id))
+        .where(
+          and(
+            eq(teamTileSubmissions.teamId, team.id),
+            eq(tiles.bingoId, bingo.id),
+            eq(teamTileSubmissions.status, "approved"),
+          ),
+        )
+
+      const xp = Math.round(bingoXP[0]?.totalXP ?? 0)
+      totalTeamXP += xp
+
+      bingoBreakdown.push({
+        bingoId: bingo.id,
+        bingoTitle: bingo.title,
+        xp: xp,
+      })
+    }
+
+    eventTeamPoints.push({
+      teamId: team.id,
+      name: team.name,
+      totalXP: totalTeamXP,
+      bingoBreakdown: bingoBreakdown,
+    })
+  }
+
+  // Sort teams by total XP in descending order
+  eventTeamPoints.sort((a, b) => b.totalXP - a.totalXP)
+
+  const totalEventXP = eventTeamPoints.reduce((sum, team) => sum + team.totalXP, 0)
+
+  return {
+    eventTeamPoints,
+    bingoSummary,
+    totalEventXP,
+    totalPossibleEventXP,
+  }
+}
