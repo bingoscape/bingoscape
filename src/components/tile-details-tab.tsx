@@ -452,13 +452,17 @@ function TileProgress({
     const teamSubmissions = selectedTile.teamTileSubmissions?.find((tts) => tts.teamId === teamId)
     if (!teamSubmissions) return { approved: 0, total: 0 }
 
-    // Count submissions assigned to this goal
+    // Get submissions assigned to this goal
     const goalSubmissions = teamSubmissions.submissions.filter((sub) => sub.goalId === goalId)
     const approvedSubmissions = goalSubmissions.filter((sub) => sub.status === "approved")
 
+    // Sum the submission values instead of counting submissions
+    const approvedSum = approvedSubmissions.reduce((sum, sub) => sum + (sub.submissionValue || 0), 0)
+    const totalSum = goalSubmissions.reduce((sum, sub) => sum + (sub.submissionValue || 0), 0)
+
     return {
-      approved: approvedSubmissions.length,
-      total: goalSubmissions.length,
+      approved: approvedSum,
+      total: totalSum,
     }
   }
 
@@ -483,7 +487,7 @@ function TileProgress({
               const approvedProgress = progress.approved
               const totalProgress = progress.total
 
-              // Calculate percentages
+              // Calculate percentages based on submission values
               const approvedPercentage =
                 goal.targetValue > 0 ? Math.min(100, (approvedProgress / goal.targetValue) * 100) : 0
 
@@ -512,7 +516,7 @@ function TileProgress({
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Progress based on approved submissions</p>
+                              <p>Progress based on sum of approved submission values</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -543,7 +547,7 @@ function TileProgress({
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Progress including pending and in-review submissions</p>
+                                <p>Progress including sum of all submission values (pending and in-review)</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>

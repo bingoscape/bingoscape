@@ -200,6 +200,7 @@ export async function getTileGoalsAndProgress(tileId: string) {
     where: eq(goals.tileId, tileId),
     with: {
       teamProgress: true,
+      goalValues: true, // Add this line to include goal values
     },
   })
 
@@ -532,6 +533,7 @@ export async function updateSubmissionStatus(
   submissionId: string,
   newStatus: "approved" | "needs_review" | "pending",
   goalId?: string | null,
+  submissionValue?: number | null
 ) {
   try {
     const session = await getServerAuthSession()
@@ -539,7 +541,9 @@ export async function updateSubmissionStatus(
       throw new Error("Not authenticated")
     }
 
-    console.log(`Server action: Updating submission ${submissionId} to status ${newStatus} with goal ${goalId}`)
+    console.log(
+      `Server action: Updating submission ${submissionId} to status ${newStatus} with goal ${goalId}, value ${submissionValue}`,
+    )
 
     // Create the update data object
     const updateData: Record<string, any> = {
@@ -553,6 +557,12 @@ export async function updateSubmissionStatus(
     if (goalId !== undefined) {
       updateData.goalId = goalId
     }
+
+    // Update submission value if provided
+    if (submissionValue !== undefined) {
+      updateData.submissionValue = submissionValue
+    }
+
 
     const [updatedSubmission] = await db
       .update(submissions)
