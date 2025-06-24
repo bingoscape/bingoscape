@@ -7,6 +7,7 @@ import {
   pgEnum,
   pgTableCreator,
   primaryKey,
+  real,
   text,
   timestamp,
   uniqueIndex,
@@ -289,12 +290,31 @@ export const goals = createTable("goals", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
+export const goalValues = createTable("goal_values", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  goalId: uuid("goal_id")
+    .notNull()
+    .references(() => goals.id, { onDelete: "cascade" }),
+  value: real("value").notNull(), // Using real for float values
+  description: text("description").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const goalValuesRelations = relations(goalValues, ({ one }) => ({
+  goal: one(goals, {
+    fields: [goalValues.goalId],
+    references: [goals.id],
+  }),
+}))
+
 export const goalsRelations = relations(goals, ({ one, many }) => ({
   tile: one(tiles, {
     fields: [goals.tileId],
     references: [tiles.id],
   }),
   teamProgress: many(teamGoalProgress),
+  goalValues: many(goalValues), // Add this line
 }))
 
 export const teamTileSubmissions = createTable(
@@ -349,6 +369,8 @@ export const submissions = createTable("submissions", {
   submittedBy: uuid("submitted_by")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  // Add submission value - can be from goalValues or custom
+  submissionValue: real("submission_value").default(1.0).notNull(), // The actual value assigned to this submission
   // Add individual submission status
   status: submissionStatusEnum("status").default("pending").notNull(),
   reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),

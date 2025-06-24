@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button"
 import { useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 
-// Define an extended submission type that includes goalId
+// Define an extended submission type that includes goalId, submissionValue, and weight
 interface ExtendedSubmission extends Submission {
   goalId?: string | null
 }
@@ -549,25 +549,28 @@ export default function BingoGrid({
     }
   }
 
-  // Updated to handle goal assignment with proper typing
+  // Updated to handle goal assignment with proper typing including value and weight
   const handleSubmissionStatusUpdate = async (
     submissionId: string,
     newStatus: "pending" | "approved" | "needs_review",
     goalId?: string | null,
+    submissionValue?: number | null
   ) => {
     try {
-      console.log(`Updating submission ${submissionId} with status ${newStatus} and goalId ${goalId}`)
+      console.log(
+        `Updating submission ${submissionId} with status ${newStatus}, goalId ${goalId}, value ${submissionValue}`,
+      )
 
       // Only allow approved or needs_review to be passed to the server action
       const validStatus = newStatus === "pending" ? "needs_review" : newStatus
 
-      const result = await updateSubmissionStatus(submissionId, validStatus, goalId)
+      const result = await updateSubmissionStatus(submissionId, validStatus, goalId, submissionValue)
       if (result.success) {
         // Update local state for both individual submission and potentially team status
         setSelectedTile((prev) => {
           if (!prev) return null
 
-          // Create a deep copy of the tile with updated submissions
+          // Create a deep copy of the tile, weight ${weight} with updated submissions
           const updatedTile = { ...prev }
 
           if (updatedTile.teamTileSubmissions) {
@@ -583,9 +586,12 @@ export default function BingoGrid({
                     updatedSub.reviewedBy = session.data?.user?.id || null
                     updatedSub.reviewedAt = new Date()
 
-                    // Only update goalId if it was provided
+                    // Update goalId, submissionValue, and weight if provided
                     if (goalId !== undefined) {
                       updatedSub.goalId = goalId
+                    }
+                    if (submissionValue !== undefined) {
+                      updatedSub.submissionValue = submissionValue
                     }
 
                     return updatedSub
@@ -618,9 +624,12 @@ export default function BingoGrid({
                         updatedSub.reviewedBy = session.data?.user?.id || null
                         updatedSub.reviewedAt = new Date()
 
-                        // Only update goalId if it was provided
+                        // Update goalId, submissionValue, and weight if provided
                         if (goalId !== undefined) {
                           updatedSub.goalId = goalId
+                        }
+                        if (submissionValue !== undefined) {
+                          updatedSub.submissionValue = submissionValue
                         }
 
                         return updatedSub
@@ -639,7 +648,7 @@ export default function BingoGrid({
 
         const message =
           goalId !== undefined
-            ? `Submission ${newStatus.replace("_", " ")} and goal ${goalId ? "assigned" : "removed"}`
+            ? `Submission ${newStatus.replace("_", " ")}, goal ${goalId ? "assigned" : "removed"}${submissionValue ? ` with value ${submissionValue}` : ""}`
             : `Submission marked as ${newStatus.replace("_", " ")}`
 
         toast({

@@ -15,6 +15,13 @@
       "when": 1750164720185,
       "tag": "0001_even_tag",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1750759881850,
+      "tag": "0002_nifty_naoko",
+      "breakpoints": true
     }
   ]
 }

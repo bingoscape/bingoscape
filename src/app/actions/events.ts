@@ -17,6 +17,7 @@ import {
 import { eq, and, asc, sum, sql, desc } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { revalidatePath } from "next/cache"
+import { GoalValue } from "./goals"
 
 export interface Image {
   id: string
@@ -41,6 +42,7 @@ export interface Submission {
   }
   goalId?: string | null
   goal?: Goal | null
+  submissionValue: number | null
 }
 
 export interface TeamTileSubmission {
@@ -78,6 +80,7 @@ export interface Goal {
   createdAt?: Date
   updatedAt?: Date
   tileId: string
+  goalValues?: GoalValue[] // Make goalValues optional
   teamProgress?: TeamProgress[] // Make teamProgress optional
 }
 

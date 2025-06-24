@@ -1,24 +1,16 @@
-/* eslint-disable */
 "use client"
 
-import { useState } from "react"
-import { Input } from "@/components/ui/input"
+/* eslint-disable */
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Trash2, Plus, CheckCircle2, Clock } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Trash2, Plus } from "lucide-react"
 import type { Tile, Goal } from "@/app/actions/events"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Progress } from "@/components/ui/progress"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { addGoalValue, deleteGoalValue, type GoalValue } from "@/app/actions/goals"
+import { toast } from "@/hooks/use-toast"
 
 interface GoalsTabProps {
   selectedTile: Tile | null
@@ -26,12 +18,8 @@ interface GoalsTabProps {
   hasSufficientRights: boolean
   onDeleteGoal: (goalId: string) => void
   onAddGoal: () => void
-  onNewGoalChange: <K extends keyof Goal>(field: K, value: Goal[K]) => void
-}
-
-interface GoalProgress {
-  approved: number
-  total: number
+  onNewGoalChange: (field: string, value: any) => void
+  onGoalValuesUpdate?: (goalId: string, goalValues: GoalValue[]) => void
 }
 
 export function GoalsTab({
@@ -41,234 +29,259 @@ export function GoalsTab({
   onDeleteGoal,
   onAddGoal,
   onNewGoalChange,
+  onGoalValuesUpdate,
 }: GoalsTabProps) {
-  const [goalToDelete, setGoalToDelete] = useState<string | null>(null)
+  const [newGoalValue, setNewGoalValue] = useState({ value: "", description: "" })
+  const [selectedGoalForValue, setSelectedGoalForValue] = useState<string | null>(null)
+  const [goalValuesState, setGoalValuesState] = useState<Record<string, GoalValue[]>>({})
 
-  // Calculate goal progress based on submissions
-  const calculateGoalProgress = (goalId: string): GoalProgress => {
-    // Find all submissions for this goal across all teams
-    let approvedCount = 0
-    let totalCount = 0
+  // Initialize goal values state when selectedTile changes
+  useEffect(() => {
+    if (selectedTile?.goals) {
+      const initialState: Record<string, GoalValue[]> = {}
+      selectedTile.goals.forEach((goal) => {
+        initialState[goal.id] = goal.goalValues || []
+      })
+      setGoalValuesState(initialState)
+    }
+  }, [selectedTile])
 
-    selectedTile?.teamTileSubmissions?.forEach((teamSubmission) => {
-      const goalSubmissions = teamSubmission.submissions.filter((sub) => sub.goalId === goalId)
-      totalCount += goalSubmissions.length
-      approvedCount += goalSubmissions.filter((sub) => sub.status === "approved").length
-    })
+  const handleAddGoalValue = async (goalId: string) => {
+    if (!newGoalValue.value || !newGoalValue.description) {
+      toast({
+        title: "Error",
+        description: "Please provide both value and description",
+        variant: "destructive",
+      })
+      return
+    }
 
-    return {
-      approved: approvedCount,
-      total: totalCount,
+    const result = await addGoalValue(goalId, Number.parseFloat(newGoalValue.value), newGoalValue.description)
+
+    if (result.success && result.goalValue) {
+      toast({
+        title: "Goal value added",
+        description: "The goal value has been successfully added.",
+      })
+
+      // Update local state
+      setGoalValuesState((prev) => ({
+        ...prev,
+        [goalId]: [...(prev[goalId] || []), result.goalValue!],
+      }))
+
+      // Notify parent component if callback provided
+      if (onGoalValuesUpdate) {
+        const updatedValues = [...(goalValuesState[goalId] || []), result.goalValue]
+        onGoalValuesUpdate(goalId, updatedValues)
+      }
+
+      setNewGoalValue({ value: "", description: "" })
+      setSelectedGoalForValue(null)
+    } else {
+      toast({
+        title: "Error",
+        description: result.error || "Failed to add goal value",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteGoalValue = async (goalValueId: string, goalId: string) => {
+    const result = await deleteGoalValue(goalValueId)
+
+    if (result.success) {
+      toast({
+        title: "Goal value deleted",
+        description: "The goal value has been successfully deleted.",
+      })
+
+      // Update local state
+      setGoalValuesState((prev) => ({
+        ...prev,
+        [goalId]: (prev[goalId] || []).filter((gv) => gv.id !== goalValueId),
+      }))
+
+      // Notify parent component if callback provided
+      if (onGoalValuesUpdate) {
+        const updatedValues = (goalValuesState[goalId] || []).filter((gv) => gv.id !== goalValueId)
+        onGoalValuesUpdate(goalId, updatedValues)
+      }
+    } else {
+      toast({
+        title: "Error",
+        description: result.error || "Failed to delete goal value",
+        variant: "destructive",
+      })
     }
   }
 
   return (
-    <div className="p-4 space-y-6 max-h-[60vh] flex flex-col">
-      <div className="overflow-y-auto flex-1 pr-2">
+    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
+      <div className="space-y-6 p-4">
+        {/* Existing goals */}
         {selectedTile?.goals && selectedTile.goals.length > 0 ? (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {selectedTile.goals.map((goal) => {
-              const progress = calculateGoalProgress(goal.id)
-              const approvedProgress = progress.approved
-              const totalProgress = progress.total
-
-              // Calculate percentages
-              const approvedPercentage =
-                goal.targetValue > 0 ? Math.min(100, (approvedProgress / goal.targetValue) * 100) : 0
-
-              const virtualPercentage =
-                goal.targetValue > 0 ? Math.min(100, (totalProgress / goal.targetValue) * 100) : 0
+              const currentGoalValues = goalValuesState[goal.id] || goal.goalValues || []
 
               return (
-                <div key={goal.id} className="border rounded-lg p-4 relative">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <h3 className="font-medium">{goal.description}</h3>
-                      <p className="text-sm text-muted-foreground">Target: {goal.targetValue}</p>
+                <Card key={goal.id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-base">{goal.description}</CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1">Target: {goal.targetValue}</p>
+                      </div>
+                      {hasSufficientRights && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDeleteGoal(goal.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
-                    {hasSufficientRights && (
-                      <AlertDialog
-                        open={goalToDelete === goal.id}
-                        onOpenChange={(open) => !open && setGoalToDelete(null)}
-                      >
-                        <AlertDialogTrigger asChild>
+                  </CardHeader>
+
+                  <CardContent className="space-y-4">
+                    {/* Goal Values */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <Label className="text-sm font-medium">Predefined Values</Label>
+                        {hasSufficientRights && (
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                            onClick={() => setGoalToDelete(goal.id)}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedGoalForValue(goal.id)}
+                            className="h-7"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add Value
                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Goal</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete this goal? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => {
-                                onDeleteGoal(goal.id)
-                                setGoalToDelete(null)
-                              }}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                  </div>
-
-                  <div className="mt-4 space-y-3">
-                    {/* Official Progress (Approved Submissions) */}
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center gap-1">
-                                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                <span className="text-xs text-muted-foreground">Approved</span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Progress based on approved submissions</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <Progress
-                          value={approvedPercentage}
-                          className="h-2.5 flex-1 bg-muted"
-                          aria-label={`Approved progress for ${goal.description}`}
-                        />
-                        <span className="text-sm font-medium min-w-[80px] text-right">
-                          {approvedProgress} / {goal.targetValue}
-                        </span>
+                        )}
                       </div>
-                      <div className="text-xs text-right text-muted-foreground">
-                        {approvedPercentage.toFixed(0)}% complete
-                      </div>
-                    </div>
 
-                    {/* Virtual Progress (All Submissions) */}
-                    {totalProgress > approvedProgress && (
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center gap-1">
-                                  <Clock className="h-4 w-4 text-amber-500" />
-                                  <span className="text-xs text-muted-foreground">Virtual</span>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Progress including pending and in-review submissions</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          <Progress
-                            value={virtualPercentage}
-                            className="h-2.5 flex-1 bg-muted"
-                            aria-label={`Virtual progress for ${goal.description}`}
-                          />
-                          <span className="text-sm font-medium min-w-[80px] text-right">
-                            {totalProgress} / {goal.targetValue}
-                          </span>
-                        </div>
-                        <div className="text-xs text-right text-muted-foreground">
-                          {virtualPercentage.toFixed(0)}% potential
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Submission counts by team */}
-                  {selectedTile.teamTileSubmissions && selectedTile.teamTileSubmissions.length > 0 && (
-                    <div className="mt-4 pt-3 border-t">
-                      <h4 className="text-sm font-medium mb-2">Team Submissions</h4>
-                      <div className="space-y-2">
-                        {selectedTile.teamTileSubmissions.map((teamSubmission) => {
-                          const teamGoalSubmissions = teamSubmission.submissions.filter((sub) => sub.goalId === goal.id)
-                          if (teamGoalSubmissions.length === 0) return null
-
-                          const approvedTeamSubmissions = teamGoalSubmissions.filter(
-                            (sub) => sub.status === "approved",
-                          ).length
-
-                          return (
-                            <div key={teamSubmission.teamId} className="flex justify-between items-center text-sm">
-                              <span>{teamSubmission.team.name}</span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-green-600 font-medium">{approvedTeamSubmissions}</span>
-                                {approvedTeamSubmissions < teamGoalSubmissions.length && (
-                                  <span className="text-amber-500">
-                                    (+{teamGoalSubmissions.length - approvedTeamSubmissions})
-                                  </span>
+                      {currentGoalValues.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {currentGoalValues.map((goalValue) => (
+                            <div key={goalValue.id} className="flex items-center gap-1">
+                              <Badge variant="secondary" className="flex items-center gap-1">
+                                <span className="font-mono">{goalValue.value}</span>
+                                <span>-</span>
+                                <span>{goalValue.description}</span>
+                                {hasSufficientRights && (
+                                  <button
+                                    onClick={() => handleDeleteGoalValue(goalValue.id, goal.id)}
+                                    className="ml-1 text-red-500 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
                                 )}
-                              </div>
+                              </Badge>
                             </div>
-                          )
-                        })}
-                      </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No predefined values yet</p>
+                      )}
                     </div>
-                  )}
-                </div>
+
+                    {/* Add Goal Value Form */}
+                    {selectedGoalForValue === goal.id && hasSufficientRights && (
+                      <div className="border rounded-lg p-3 bg-muted/30">
+                        <div className="grid grid-cols-2 gap-2 mb-2">
+                          <div>
+                            <Label htmlFor="goalValue" className="text-xs">
+                              Value
+                            </Label>
+                            <Input
+                              id="goalValue"
+                              type="number"
+                              step="0.1"
+                              value={newGoalValue.value}
+                              onChange={(e) => setNewGoalValue((prev) => ({ ...prev, value: e.target.value }))}
+                              placeholder="1.0"
+                              className="h-8"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="goalDescription" className="text-xs">
+                              Description
+                            </Label>
+                            <Input
+                              id="goalDescription"
+                              value={newGoalValue.description}
+                              onChange={(e) => setNewGoalValue((prev) => ({ ...prev, description: e.target.value }))}
+                              placeholder="Full completion"
+                              className="h-8"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => handleAddGoalValue(goal.id)} className="h-7">
+                            Add Value
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedGoalForValue(null)
+                              setNewGoalValue({ value: "", description: "" })
+                            }}
+                            className="h-7"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               )
             })}
           </div>
         ) : (
-          <div className="text-center py-8 bg-muted/30 rounded-lg">
+          <div className="text-center py-6 bg-muted/30 rounded-lg">
             <p className="text-muted-foreground">No goals have been set for this tile yet.</p>
           </div>
         )}
-      </div>
 
-      {hasSufficientRights && (
-        <div className="border rounded-lg p-4 space-y-4 mt-4">
-          <h3 className="font-medium">Add New Goal</h3>
-          <div className="space-y-3">
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <Input
-                id="description"
-                value={newGoal.description ?? ""}
-                onChange={(e) => onNewGoalChange("description", e.target.value)}
-                placeholder="Enter goal description"
-              />
-            </div>
-            <div>
-              <label htmlFor="targetValue" className="block text-sm font-medium text-gray-700 mb-1">
-                Target Value
-              </label>
-              <Input
-                id="targetValue"
-                type="number"
-                min="1"
-                value={newGoal.targetValue?.toString() ?? ""}
-                onChange={(e) => onNewGoalChange("targetValue", Number(e.target.value))}
-                placeholder="Enter target value"
-              />
-            </div>
-            <Button
-              onClick={onAddGoal}
-              disabled={!newGoal.description || !newGoal.targetValue || newGoal.targetValue < 1}
-              className="w-full"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Goal
-            </Button>
-          </div>
-        </div>
-      )}
+        {/* Add new goal form */}
+        {hasSufficientRights && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Add New Goal</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="goalDescription">Description</Label>
+                <Input
+                  id="goalDescription"
+                  value={newGoal.description || ""}
+                  onChange={(e) => onNewGoalChange("description", e.target.value)}
+                  placeholder="Complete the task..."
+                />
+              </div>
+              <div>
+                <Label htmlFor="targetValue">Target Value</Label>
+                <Input
+                  id="targetValue"
+                  type="number"
+                  value={newGoal.targetValue?.toString() || ""}
+                  onChange={(e) => onNewGoalChange("targetValue", Number.parseInt(e.target.value))}
+                  placeholder="1"
+                />
+              </div>
+              <Button onClick={onAddGoal} className="w-full">
+                Add Goal
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   )
 }
