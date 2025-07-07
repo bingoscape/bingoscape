@@ -14,6 +14,7 @@ import {
   type BingoData,
   type TileData,
 } from "@/app/actions/bingo"
+import { type TeamTileSubmission } from "@/app/actions/events"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -54,7 +55,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import type { TeamTileSubmission } from "@/app/actions/events"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 
@@ -479,10 +479,10 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
 
     const tileSubmissionsArray = tileSubmissions[tile.id] || []
 
-    return tileSubmissionsArray.some((sub) => {
-      const teamMatches = selectedTeamIds.includes(sub.teamId)
-      const teamStatusMatches = statusFilters.includes(sub.status)
-      const hasIndividualSubmissions = sub.submissions.some((individualSub) =>
+    return tileSubmissionsArray.some((submission) => {
+      const teamMatches = selectedTeamIds.includes(submission.teamId)
+      const teamStatusMatches = statusFilters.includes(submission.status)
+      const hasIndividualSubmissions = submission.submissions.some((individualSub) =>
         statusFilters.includes(individualSub.status || "pending"),
       )
 
@@ -567,7 +567,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                   variant="outline"
                   role="combobox"
                   aria-expanded={teamsPopoverOpen}
-                  className="w-full md:w-[250px] justify-between"
+                  className="w-full md:w-[250px] justify-between bg-transparent"
                 >
                   <div className="flex items-center gap-1 truncate">
                     <span>
@@ -627,7 +627,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                   variant="outline"
                   role="combobox"
                   aria-expanded={statusPopoverOpen}
-                  className="w-full md:w-[250px] justify-between"
+                  className="w-full md:w-[250px] justify-between bg-transparent"
                 >
                   <div className="flex items-center gap-1 truncate">
                     <Filter className="h-4 w-4 mr-1" />
@@ -859,131 +859,133 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                   <div className="flex flex-wrap gap-1">
                                     {submission.goalId ? (
                                       <div
-                                        className="flex items-center gap-1 bg-blue-50 p-1.5 rounded text-xs cursor-pointer hover:bg-blue-100"
-                                        onClick={() => setSubmissionForGoal(submission.id)}
+                                        className={`flex items-center gap-1 bg-blue-50 p-1.5 rounded text-xs ${isAdminOrManagement ? "cursor-pointer hover:bg-blue-100" : ""
+                                          }`}
+                                        onClick={
+                                          isAdminOrManagement ? () => setSubmissionForGoal(submission.id) : undefined
+                                        }
                                       >
                                         <CheckCircle2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
                                         <span className="text-blue-700 font-medium truncate">
                                           {getTileGoals(tile.id).find((g) => g.id === submission.goalId)?.description ||
                                             "Goal"}
                                         </span>
-                                        <Link className="h-3 w-3 text-blue-500 ml-1" />
+                                        {isAdminOrManagement && <Link className="h-3 w-3 text-blue-500 ml-1" />}
                                       </div>
                                     ) : (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-7 text-xs"
-                                        onClick={() => setSubmissionForGoal(submission.id)}
-                                      >
-                                        <Link className="h-3.5 w-3.5 mr-1" />
-                                        Assign Goal
-                                      </Button>
+                                      isAdminOrManagement && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-7 text-xs bg-transparent"
+                                          onClick={() => setSubmissionForGoal(submission.id)}
+                                        >
+                                          <Link className="h-3.5 w-3.5 mr-1" />
+                                          Assign Goal
+                                        </Button>
+                                      )
                                     )}
-
-                                    {/* Submission Value Badge with Tooltip */}
-                                    {submission.submissionValue !== null &&
-                                      submission.submissionValue !== undefined && (
-                                        <TooltipProvider>
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <Badge variant="secondary" className="text-xs">
-                                                <Hash className="h-3 w-3 mr-1" />
-                                                {submission.submissionValue}
-                                              </Badge>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              <p>Submission Value: {submission.submissionValue}</p>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
-                                      )}
                                   </div>
 
-                                  {isAdminOrManagement && (
-                                    <div className="flex justify-end gap-1 mt-2 pt-2 border-t">
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                              onClick={() => handleSubmissionStatusUpdate(submission.id, "approved")}
-                                              disabled={submission.status === "approved"}
-                                            >
-                                              <Check className="h-4 w-4" />
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>Approve Submission</TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
-                                              onClick={() =>
-                                                handleSubmissionStatusUpdate(submission.id, "needs_review")
-                                              }
-                                              disabled={submission.status === "needs_review"}
-                                            >
-                                              <AlertTriangle className="h-4 w-4" />
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>Mark as Needs Review</TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-
-                                      <AlertDialog
-                                        open={submissionToDelete === submission.id}
-                                        onOpenChange={(open) => !open && setSubmissionToDelete(null)}
-                                      >
-                                        <TooltipProvider>
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <AlertDialogTrigger asChild>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                  onClick={() => setSubmissionToDelete(submission.id)}
-                                                >
-                                                  <X className="h-4 w-4" />
-                                                </Button>
-                                              </AlertDialogTrigger>
-                                            </TooltipTrigger>
-                                            <TooltipContent>Delete Submission</TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
-                                        <AlertDialogContent>
-                                          <AlertDialogHeader>
-                                            <AlertDialogTitle>Delete Submission</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                              Are you sure you want to delete this submission? This action cannot be
-                                              undone.
-                                            </AlertDialogDescription>
-                                          </AlertDialogHeader>
-                                          <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction
-                                              onClick={() => {
-                                                handleDeleteSubmission(submission.id)
-                                                setSubmissionToDelete(null)
-                                              }}
-                                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                            >
-                                              Delete
-                                            </AlertDialogAction>
-                                          </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                      </AlertDialog>
-                                    </div>
+                                  {/* Submission Value Badge with Tooltip */}
+                                  {submission.submissionValue !== null && submission.submissionValue !== undefined && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Badge variant="secondary" className="text-xs">
+                                            <Hash className="h-3 w-3 mr-1" />
+                                            {submission.submissionValue}
+                                          </Badge>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Submission Value: {submission.submissionValue}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
                                   )}
                                 </div>
+
+                                {isAdminOrManagement && (
+                                  <div className="flex justify-end gap-1 mt-2 pt-2 border-t">
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                            onClick={() => handleSubmissionStatusUpdate(submission.id, "approved")}
+                                            disabled={submission.status === "approved"}
+                                          >
+                                            <Check className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Approve Submission</TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                                            onClick={() => handleSubmissionStatusUpdate(submission.id, "needs_review")}
+                                            disabled={submission.status === "needs_review"}
+                                          >
+                                            <AlertTriangle className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Mark as Needs Review</TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+
+                                    <AlertDialog
+                                      open={submissionToDelete === submission.id}
+                                      onOpenChange={(open) => !open && setSubmissionToDelete(null)}
+                                    >
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <AlertDialogTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                onClick={() => setSubmissionToDelete(submission.id)}
+                                              >
+                                                <X className="h-4 w-4" />
+                                              </Button>
+                                            </AlertDialogTrigger>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Delete Submission</TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Delete Submission</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Are you sure you want to delete this submission? This action cannot be
+                                            undone.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => {
+                                              handleDeleteSubmission(submission.id)
+                                              setSubmissionToDelete(null)
+                                            }}
+                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                          >
+                                            Delete
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -1000,80 +1002,82 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
         )}
       </div>
 
-      {/* Goal Assignment Dialog */}
-      <AlertDialog open={!!submissionForGoal} onOpenChange={(open) => !open && setSubmissionForGoal(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Assign Goal to Submission</AlertDialogTitle>
-            <AlertDialogDescription>
-              Select a goal to associate with this submission. A value is required when assigning a goal.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="py-4 space-y-4">
-            <div>
-              <Label className="text-sm font-medium">Goal</Label>
-              <Select
-                value={selectedGoalId || "none"}
-                onValueChange={(value) => setSelectedGoalId(value === "none" ? null : value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a goal" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No Goal</SelectItem>
-                  {submissionForGoal &&
-                    (() => {
-                      // Find the tile ID for this submission
-                      let tileId = ""
-                      Object.keys(tileSubmissions).forEach((id) => {
-                        tileSubmissions[id]?.forEach((teamSub) => {
-                          teamSub.submissions.forEach((sub) => {
-                            if (sub.id === submissionForGoal) {
-                              tileId = id
-                            }
+      {/* Goal Assignment Dialog - Only for admin/management users */}
+      {isAdminOrManagement && (
+        <AlertDialog open={!!submissionForGoal} onOpenChange={(open) => !open && setSubmissionForGoal(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Assign Goal to Submission</AlertDialogTitle>
+              <AlertDialogDescription>
+                Select a goal to associate with this submission. A value is required when assigning a goal.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4 space-y-4">
+              <div>
+                <Label className="text-sm font-medium">Goal</Label>
+                <Select
+                  value={selectedGoalId || "none"}
+                  onValueChange={(value) => setSelectedGoalId(value === "none" ? null : value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a goal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Goal</SelectItem>
+                    {submissionForGoal &&
+                      (() => {
+                        // Find the tile ID for this submission
+                        let tileId = ""
+                        Object.keys(tileSubmissions).forEach((id) => {
+                          tileSubmissions[id]?.forEach((teamSub) => {
+                            teamSub.submissions.forEach((sub) => {
+                              if (sub.id === submissionForGoal) {
+                                tileId = id
+                              }
+                            })
                           })
                         })
-                      })
 
-                      const goals = getTileGoals(tileId)
-                      return goals.map((goal) => (
-                        <SelectItem key={goal.id} value={goal.id}>
-                          {goal.description} (Target: {goal.targetValue})
-                        </SelectItem>
-                      ))
-                    })()}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Value input - show when a goal is selected */}
-            {selectedGoalId && selectedGoalId !== "none" && (
-              <div>
-                <Label className="text-sm font-medium">Submission Value *</Label>
-                <p className="text-xs text-muted-foreground mb-2">A value is required when assigning a goal.</p>
-                <Input
-                  type="number"
-                  step="0.1"
-                  value={submissionValue}
-                  onChange={(e) => setSubmissionValue(e.target.value)}
-                  placeholder="Enter submission value (default: 1)"
-                  className="w-full"
-                  required
-                />
+                        const goals = getTileGoals(tileId)
+                        return goals.map((goal) => (
+                          <SelectItem key={goal.id} value={goal.id}>
+                            {goal.description} (Target: {goal.targetValue})
+                          </SelectItem>
+                        ))
+                      })()}
+                  </SelectContent>
+                </Select>
               </div>
-            )}
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => submissionForGoal && handleGoalAssignment(submissionForGoal, selectedGoalId)}
-              disabled={!!(selectedGoalId && selectedGoalId !== "none" && !submissionValue)}
-            >
-              Assign Goal
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
+              {/* Value input - show when a goal is selected */}
+              {selectedGoalId && selectedGoalId !== "none" && (
+                <div>
+                  <Label className="text-sm font-medium">Submission Value *</Label>
+                  <p className="text-xs text-muted-foreground mb-2">A value is required when assigning a goal.</p>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={submissionValue}
+                    onChange={(e) => setSubmissionValue(e.target.value)}
+                    placeholder="Enter submission value (default: 1)"
+                    className="w-full"
+                    required
+                  />
+                </div>
+              )}
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => submissionForGoal && handleGoalAssignment(submissionForGoal, selectedGoalId)}
+                disabled={!!(selectedGoalId && selectedGoalId !== "none" && !submissionValue)}
+              >
+                Assign Goal
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
       <FullSizeImageDialog
         isOpen={!!fullSizeImage}
