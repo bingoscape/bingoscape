@@ -364,7 +364,8 @@ export function SubmissionsTab({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>)}
+              </div>
+            )}
           </div>
         </div>
 
@@ -464,28 +465,33 @@ export function SubmissionsTab({
                                 <div className="flex flex-wrap gap-1">
                                   {submission.goalId ? (
                                     <div
-                                      className="flex items-center gap-1 bg-blue-50 p-1.5 rounded text-xs cursor-pointer hover:bg-blue-100"
-                                      onClick={() => setSubmissionForGoal(submission.id)}
+                                      className={`flex items-center gap-1 bg-blue-50 p-1.5 rounded text-xs ${
+                                        hasSufficientRights ? "cursor-pointer hover:bg-blue-100" : ""
+                                      }`}
+                                      onClick={
+                                        hasSufficientRights ? () => setSubmissionForGoal(submission.id) : undefined
+                                      }
                                     >
                                       <CheckCircle2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
                                       <span className="text-blue-700 font-medium truncate">
                                         {selectedTile?.goals?.find((g) => g.id === submission.goalId)?.description ||
                                           "Goal"}
                                       </span>
-                                      <Link className="h-3 w-3 text-blue-500 ml-1" />
+                                      {hasSufficientRights && <Link className="h-3 w-3 text-blue-500 ml-1" />}
                                     </div>
                                   ) : (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-7 text-xs"
-                                      onClick={() => setSubmissionForGoal(submission.id)}
-                                    >
-                                      <Link className="h-3.5 w-3.5 mr-1" />
-                                      Assign Goal
-                                    </Button>
+                                    hasSufficientRights && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 text-xs bg-transparent"
+                                        onClick={() => setSubmissionForGoal(submission.id)}
+                                      >
+                                        <Link className="h-3.5 w-3.5 mr-1" />
+                                        Assign Goal
+                                      </Button>
+                                    )
                                   )}
-
                                   {/* Submission Value Badge with Tooltip */}
                                   {submission.submissionValue !== null && submission.submissionValue !== undefined && (
                                     <TooltipProvider>
@@ -608,99 +614,102 @@ export function SubmissionsTab({
         </div>
       </div>
 
-      {/* Goal Assignment Dialog */}
-      <AlertDialog open={!!submissionForGoal} onOpenChange={(open) => !open && setSubmissionForGoal(null)}>
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Assign Goal to Submission</AlertDialogTitle>
-            <AlertDialogDescription>
-              Select a goal and specify the value and weight for this submission.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="py-4 space-y-4">
-            {/* Goal Selection */}
-            <div>
-              <Label className="text-sm font-medium">Goal</Label>
-              <Select
-                value={selectedGoalId || "none"}
-                onValueChange={(value) => setSelectedGoalId(value === "none" ? null : value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a goal" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No Goal</SelectItem>
-                  {selectedTile?.goals?.map((goal) => (
-                    <SelectItem key={goal.id} value={goal.id}>
-                      {goal.description} (Target: {goal.targetValue})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Value Selection - only show if a goal is selected */}
-            {selectedGoalId && selectedGoalId !== "none" && (
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Submission Value *</Label>
-                <p className="text-xs text-muted-foreground">A value is required when assigning a goal.</p>
-
-                {/* Rest of the value selection UI remains the same */}
-                {goalValues.length > 0 && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Predefined Values</Label>
-                    <div className="grid grid-cols-1 gap-1 mt-1">
-                      {goalValues.map((gv) => (
-                        <button
-                          key={gv.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedSubmissionValue(gv.value)
-                            setCustomValue("")
-                          }}
-                          className={`text-left p-2 rounded border text-sm hover:bg-muted/50 ${selectedSubmissionValue === gv.value ? "bg-primary/10 border-primary" : ""
-                            }`}
-                        >
-                          <span className="font-mono font-medium">{gv.value}</span> - {gv.description}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Custom Value */}
-                <div>
-                  <Label htmlFor="customValue" className="text-xs text-muted-foreground">
-                    Or Custom Value
-                  </Label>
-                  <Input
-                    id="customValue"
-                    type="number"
-                    step="0.1"
-                    value={customValue}
-                    onChange={(e) => {
-                      setCustomValue(e.target.value)
-                      setSelectedSubmissionValue(null)
-                    }}
-                    placeholder="Enter custom value (default: 1)"
-                    className="mt-1"
-                    required={selectedGoalId !== "none"}
-                  />
-                </div>
+      {/* Goal Assignment Dialog - Only for users with sufficient rights */}
+      {hasSufficientRights && (
+        <AlertDialog open={!!submissionForGoal} onOpenChange={(open) => !open && setSubmissionForGoal(null)}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Assign Goal to Submission</AlertDialogTitle>
+              <AlertDialogDescription>
+                Select a goal and specify the value and weight for this submission.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4 space-y-4">
+              {/* Goal Selection */}
+              <div>
+                <Label className="text-sm font-medium">Goal</Label>
+                <Select
+                  value={selectedGoalId || "none"}
+                  onValueChange={(value) => setSelectedGoalId(value === "none" ? null : value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a goal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Goal</SelectItem>
+                    {selectedTile?.goals?.map((goal) => (
+                      <SelectItem key={goal.id} value={goal.id}>
+                        {goal.description} (Target: {goal.targetValue})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            )}
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => submissionForGoal && handleGoalAssignment(submissionForGoal, selectedGoalId)}
-              disabled={!!(selectedGoalId && selectedGoalId !== "none" && !selectedSubmissionValue && !customValue)}
-            >
-              Assign Goal
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
+              {/* Value Selection - only show if a goal is selected */}
+              {selectedGoalId && selectedGoalId !== "none" && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Submission Value *</Label>
+                  <p className="text-xs text-muted-foreground">A value is required when assigning a goal.</p>
+
+                  {/* Rest of the value selection UI remains the same */}
+                  {goalValues.length > 0 && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Predefined Values</Label>
+                      <div className="grid grid-cols-1 gap-1 mt-1">
+                        {goalValues.map((gv) => (
+                          <button
+                            key={gv.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedSubmissionValue(gv.value)
+                              setCustomValue("")
+                            }}
+                            className={`text-left p-2 rounded border text-sm hover:bg-muted/50 ${
+                              selectedSubmissionValue === gv.value ? "bg-primary/10 border-primary" : ""
+                            }`}
+                          >
+                            <span className="font-mono font-medium">{gv.value}</span> - {gv.description}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Custom Value */}
+                  <div>
+                    <Label htmlFor="customValue" className="text-xs text-muted-foreground">
+                      Or Custom Value
+                    </Label>
+                    <Input
+                      id="customValue"
+                      type="number"
+                      step="0.1"
+                      value={customValue}
+                      onChange={(e) => {
+                        setCustomValue(e.target.value)
+                        setSelectedSubmissionValue(null)
+                      }}
+                      placeholder="Enter custom value (default: 1)"
+                      className="mt-1"
+                      required={selectedGoalId !== "none"}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => submissionForGoal && handleGoalAssignment(submissionForGoal, selectedGoalId)}
+                disabled={!!(selectedGoalId && selectedGoalId !== "none" && !selectedSubmissionValue && !customValue)}
+              >
+                Assign Goal
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   )
 }
