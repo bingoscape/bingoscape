@@ -2,7 +2,6 @@ import { notFound } from "next/navigation"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CreateBingoModal } from "@/components/create-bingo-modal"
-import BingoGrid from "@/components/bingogrid"
 import { getServerAuthSession } from "@/server/auth"
 import {
     getEventById,
@@ -17,22 +16,19 @@ import AssignEventToClanModal from "@/components/assign-event-to-clan-modal"
 import { TeamManagement } from "@/components/team-management"
 import { GenerateEventInviteLink } from "@/components/generate-event-invite-link"
 import { TeamDisplay } from "@/components/team-display"
-import { DeleteBingoButton } from "@/components/delete-bingo-button"
-import { BingoInfoModal } from "@/components/bingo-info-modal"
 import Link from "next/link"
-import { Users, Clock, ClipboardList, ListFilter, BarChart3 } from "lucide-react"
+import { Users, Clock, ClipboardList, BarChart3 } from "lucide-react"
 import { getCurrentTeamForUser } from "@/app/actions/team"
 import { PrizePoolDisplay } from "@/components/prize-pool-display"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import { EditEventModal } from "@/components/edit-event-modal"
-import { EditBingoModal } from "@/components/edit-bingo-modal"
-import { TeamSelector } from "@/components/team-selector"
 import { BingoImportExportModal } from "@/components/bingo-import-export-modal"
 import { ShareEventButton } from "@/components/share-event-button"
 import { Badge } from "@/components/ui/badge"
 import { JoinEventButton } from "@/components/join-event-button"
 import { RegistrationStatus } from "@/components/registration-status"
 import { DiscordWebhookManagement } from "@/components/discord-webhook-management"
+import { EventBingosClient } from "@/components/event-bingos-client"
 
 export default async function EventBingosPage({ params }: { params: { id: UUID } }) {
     const session = await getServerAuthSession()
@@ -99,13 +95,6 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 
     const isAdminOrManagement = userRole === "admin" || userRole === "management"
 
-    // Filter bingos based on user role and visibility
-    const visibleBingos = event.bingos?.filter((bingo) => isAdminOrManagement || bingo.visible === true) ?? []
-
-    const bingoCount = visibleBingos.length
-    const gridClass = bingoCount <= 1 ? "grid-cols-1" : "md:grid-cols-2 lg:grid-cols-2"
-    const cardClass = bingoCount <= 1 ? "max-w-3xl" : ""
-
     return (
         <div className="container mx-auto py-10">
             <div className="flex flex-col lg:flex-row justify-between mb-6 space-y-5 lg:space-y-0">
@@ -135,62 +124,13 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
                     )}
                     {event.locked && <p className="text-sm text-destructive mt-2">This event is locked for registration</p>}
 
-                    <div className="flex justify-between items-center mt-6 mb-4">
-                        <h2 className="text-2xl font-bold">Bingos</h2>
-                        {isAdminOrManagement && event.teams && event.teams.length > 0 && (
-                            <TeamSelector teams={event.teams} currentTeamId={currentTeam?.id} userRole={userRole} />
-                        )}
-                    </div>
-
-                    {visibleBingos.length === 0 ? (
-                        <p>No bingos have been created for this event yet.</p>
-                    ) : (
-                        <div className={`grid ${gridClass} gap-6`}>
-                            {visibleBingos.map((bingo) => (
-                                <Card key={bingo.id} className={cardClass}>
-                                    <CardHeader>
-                                        <div className="flex justify-between items-center">
-                                            <CardTitle>{bingo.title}</CardTitle>
-                                            <div className="flex space-x-2">
-                                                <BingoInfoModal bingo={bingo} />
-                                                {isAdminOrManagement && (
-                                                    <>
-                                                        <EditBingoModal bingo={bingo} />
-                                                        <DeleteBingoButton bingoId={bingo.id as UUID} />
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="relative">
-                                            <BingoGrid
-                                                bingo={bingo}
-                                                currentTeamId={currentTeam?.id}
-                                                teams={event.teams ?? []}
-                                                highlightedTiles={[]}
-                                                isLayoutLocked={true}
-                                                userRole={userRole}
-                                            />
-                                        </div>
-                                    </CardContent>
-                                    <CardFooter className="flex justify-between">
-                                        <Link href={`/events/${bingo.eventId}/bingos/${bingo.id}`} passHref>
-                                            <Button variant="outline">View Bingo</Button>
-                                        </Link>
-                                        {isAdminOrManagement && (
-                                            <Link href={`/events/${bingo.eventId}/bingos/${bingo.id}/submissions`} passHref>
-                                                <Button variant="outline" className="flex items-center gap-2">
-                                                    <ListFilter className="h-4 w-4" />
-                                                    Submissions
-                                                </Button>
-                                            </Link>
-                                        )}
-                                    </CardFooter>
-                                </Card>
-                            ))}
-                        </div>
-                    )}
+                    {/* Client-side bingo display with team selection */}
+                    <EventBingosClient
+                        event={event}
+                        userRole={userRole}
+                        currentTeam={currentTeam}
+                        isAdminOrManagement={isAdminOrManagement}
+                    />
 
                     <div className="mt-12">
                         <h2 className="text-2xl font-bold mb-4">Teams</h2>
@@ -202,8 +142,8 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
                     {isAdminOrManagement && (
                         <BingoImportExportModal
                             eventId={event.id}
-                            bingoId={visibleBingos.length > 0 ? visibleBingos[0]?.id : undefined}
-                            bingoTitle={visibleBingos.length > 0 ? visibleBingos[0]?.title : undefined}
+                            bingoId={(event.bingos?.length ?? 0) > 0 ? event.bingos![0]?.id : undefined}
+                            bingoTitle={(event.bingos?.length ?? 0) > 0 ? event.bingos![0]?.title : undefined}
                         />
                     )}
                     {isAdminOrManagement && (
