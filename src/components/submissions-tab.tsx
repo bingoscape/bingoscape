@@ -326,27 +326,27 @@ export function SubmissionsTab({
         )}
 
         {/* Filters - only show for admin/management */}
-        {hasSufficientRights && (
-          <div className="border rounded-lg p-4 space-y-4">
-            <h3 className="font-medium">Filters</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="status-filter" className="block text-sm font-medium mb-1">
-                  Status Filter
-                </Label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="needs_review">Needs Review</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        <div className="border rounded-lg p-4 space-y-4">
+          <h3 className="font-medium">Filters</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="status-filter" className="block text-sm font-medium mb-1">
+                Status Filter
+              </Label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="needs_review">Needs Review</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
+            {hasSufficientRights && (
               <div>
                 <Label htmlFor="team-filter" className="block text-sm font-medium mb-1">
                   Team Filter
@@ -364,10 +364,9 @@ export function SubmissionsTab({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
+              </div>)}
           </div>
-        )}
+        </div>
 
         {/* Team submissions */}
         <div className="space-y-6">

@@ -25,6 +25,7 @@ export default function BingoDetailPage({ params }: { params: { id: UUID; bingoI
   const [userRole, setUserRole] = useState<"participant" | "management" | "admin">("participant")
   const [bingo, setBingo] = useState<Bingo | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [selectedTeamId, setSelectedTeamId] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,6 +46,15 @@ export default function BingoDetailPage({ params }: { params: { id: UUID; bingoI
         setTeams(teamsData)
         setCurrentTeam(currentTeamData)
         setUserRole(userRoleData!)
+
+        // Set initial selected team based on user role
+        if (userRoleData === "admin" || userRoleData === "management") {
+          // Admins and management can start with any team, default to current team if available
+          setSelectedTeamId(currentTeamData?.id || teamsData[0]?.id)
+        } else {
+          // Participants can only see their own team
+          setSelectedTeamId(currentTeamData?.id)
+        }
 
         const foundBingo = eventData.event.bingos!.find((b: any) => b.id == bingoId)
         if (!foundBingo) {
@@ -67,7 +77,17 @@ export default function BingoDetailPage({ params }: { params: { id: UUID; bingoI
     setRefreshKey((prev) => prev + 1)
   }
 
+  const handleTeamChange = (teamId: string | undefined) => {
+    // Only allow team changes for admins and management
+    if (userRole === "admin" || userRole === "management") {
+      setSelectedTeamId(teamId)
+    }
+  }
+
   const isAdminOrManagement = userRole === "admin" || userRole === "management"
+
+  // Determine which team ID to use for the bingo grid
+  const effectiveTeamId = isAdminOrManagement ? selectedTeamId : currentTeam?.id
 
   if (loading) {
     return (
@@ -105,7 +125,13 @@ export default function BingoDetailPage({ params }: { params: { id: UUID; bingoI
               <RefreshCw className="h-4 w-4" />
             </Button>
             {isAdminOrManagement && teams.length > 0 && (
-              <TeamSelector teams={teams} currentTeamId={currentTeam?.id} userRole={userRole} />
+              <TeamSelector
+                teams={teams}
+                currentTeamId={currentTeam?.id}
+                userRole={userRole}
+                onTeamChange={handleTeamChange}
+                selectedTeamId={selectedTeamId}
+              />
             )}
             {isAdminOrManagement && (
               <BingoImportExportModal eventId={eventId} bingoId={bingoId} bingoTitle={bingo.title} />
@@ -117,10 +143,10 @@ export default function BingoDetailPage({ params }: { params: { id: UUID; bingoI
           <CardContent className="p-2 sm:p-4">
             <div className="aspect-square w-full max-w-[80vh] mx-auto">
               <BingoGridWrapper
-                key={`bingo-${refreshKey}`}
+                key={`bingo-${refreshKey}-${effectiveTeamId}`}
                 bingo={bingo}
                 userRole={userRole}
-                currentTeamId={currentTeam?.id}
+                currentTeamId={effectiveTeamId}
                 teams={teams}
               />
             </div>

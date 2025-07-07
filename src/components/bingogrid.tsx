@@ -31,7 +31,6 @@ import { FullSizeImageDialog } from "./full-size-image-dialog"
 import { StatsDialog } from "./stats-dialog"
 import { BarChart, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 
 // Define an extended submission type that includes goalId, submissionValue, and weight
@@ -71,11 +70,7 @@ export default function BingoGrid({
   const gridRef = useRef<HTMLDivElement>(null)
   const sortableRef = useRef<Sortable | null>(null)
   const [isStatsDialogOpen, setIsStatsDialogOpen] = useState(false)
-  const searchParams = useSearchParams()
   const session = useSession()
-
-  // Get the selected team ID from URL params or use the current team ID
-  const selectedTeamId = searchParams.get("teamId") ?? currentTeamId
 
   useEffect(() => {
     if (gridRef.current && hasSufficientRights() && !isLayoutLocked) {
@@ -554,7 +549,7 @@ export default function BingoGrid({
     submissionId: string,
     newStatus: "pending" | "approved" | "needs_review",
     goalId?: string | null,
-    submissionValue?: number | null
+    submissionValue?: number | null,
   ) => {
     try {
       console.log(
@@ -570,7 +565,7 @@ export default function BingoGrid({
         setSelectedTile((prev) => {
           if (!prev) return null
 
-          // Create a deep copy of the tile, weight ${weight} with updated submissions
+          // Create a deep copy of the tile with updated submissions
           const updatedTile = { ...prev }
 
           if (updatedTile.teamTileSubmissions) {
@@ -687,7 +682,7 @@ export default function BingoGrid({
         columns={bingo.columns}
         rows={bingo.rows}
         userRole={userRole}
-        currentTeamId={selectedTeamId}
+        currentTeamId={currentTeamId}
         onTileClick={handleTileClick}
         onTogglePlaceholder={handleTogglePlaceholder}
         highlightedTiles={highlightedTiles}
@@ -736,7 +731,7 @@ export default function BingoGrid({
             <TabsContent value="submissions" className="flex-1 overflow-y-auto">
               <SubmissionsTab
                 selectedTile={selectedTile}
-                currentTeamId={selectedTeamId}
+                currentTeamId={currentTeamId}
                 teams={teams}
                 hasSufficientRights={hasSufficientRights()}
                 selectedImage={selectedImage}
@@ -764,7 +759,7 @@ export default function BingoGrid({
         isOpen={isStatsDialogOpen}
         onOpenChange={setIsStatsDialogOpen}
         userRole={userRole}
-        currentTeamId={selectedTeamId}
+        currentTeamId={currentTeamId}
         teams={teams}
         bingoId={bingo.id}
       />
