@@ -215,7 +215,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
                 <main className="flex-grow min-w-0">
 
                     {/* Client-side bingo display with team selection */}
-                    <section aria-label="Event bingos">
+                    <section aria-label="Event boards">
                         <EventBingosClient
                             event={event}
                             userRole={userRole}
