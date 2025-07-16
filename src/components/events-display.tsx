@@ -4,7 +4,7 @@ import { useState } from "react"
 import type { EventData } from "@/app/actions/events"
 import { EventCard } from "@/components/event-card"
 import { Button } from "@/components/ui/button"
-import { LayoutGrid, List, Calendar, Clock, Archive, Layers } from "lucide-react"
+import { LayoutGrid, List, Calendar, Clock, Archive, Layers, Check, CheckCircle2 } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -98,10 +98,10 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
                   <TableCell>
                     <span
                       className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${status === "active"
-                        ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
+                        ? "bg-green-500 text-white"
                         : status === "upcoming"
-                          ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-                          : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                          ? "bg-blue-500 text-white"
+                          : "bg-muted text-muted-foreground"
                         }`}
                     >
                       {status === "active" ? "Active" : status === "upcoming" ? "Upcoming" : "Completed"}
@@ -192,7 +192,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Events</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div className="text-2xl font-bold">{totalEvents}</div>
             <p className="text-xs text-muted-foreground mt-1">Across all time periods</p>
           </CardContent>
@@ -201,7 +201,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Active Events</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div className="text-2xl font-bold">{activeEvents}</div>
             <p className="text-xs text-muted-foreground mt-1">Currently running</p>
           </CardContent>
@@ -210,7 +210,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Prize Pool</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div className="text-2xl font-bold">{formatRunescapeGold(totalPrizePool)}</div>
             <p className="text-xs text-muted-foreground mt-1">Across all events</p>
           </CardContent>

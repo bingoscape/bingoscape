@@ -41,8 +41,8 @@ export default async function TemplatesPage({
 
       <div className="flex flex-col md:flex-row gap-6">
         <div className="w-full">
-          <h1 className="text-3xl font-bold mb-6">Bingo Board Templates</h1>
-          <p className="text-muted-foreground mb-8">
+          <h1 className="text-4xl font-bold mb-6">Bingo Board Templates</h1>
+          <p className="text-lg text-muted-foreground mb-8">
             Browse and use community-created bingo board templates for your events. Find the perfect template or create
             your own to share with others.
           </p>

@@ -15,7 +15,10 @@
     "start": "next start -p 3344",
     "start:prod": "next start -p 3333",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.1.0",
@@ -79,6 +82,7 @@
     "zod": "^3.23.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.1",
     "@tailwindcss/typography": "^0.5.15",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",

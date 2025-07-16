@@ -20,48 +20,61 @@ export default async function ClansPage() {
   return (
     <div className="container mx-auto py-10">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Your Clans</h1>
+        <h1 className="text-4xl font-bold">Your Clans</h1>
         <CreateClanModal />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {userClans.map((userClan) => (
-          <Card key={userClan.clan.id}>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle>{userClan.clan.name}</CardTitle>
-                  <CardDescription>{userClan.isMain ? "Main Clan" : "Guest Clan"}</CardDescription>
+      {userClans.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+          <Users className="h-20 w-20 text-muted-foreground mb-6" />
+          <h2 className="text-2xl font-semibold mb-4">
+            No Clans Yet
+          </h2>
+          <p className="text-base text-muted-foreground max-w-md mb-8">
+            Join or create a clan to compete with other players and organize bingo events together.
+          </p>
+          <CreateClanModal />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {userClans.map((userClan) => (
+            <Card key={userClan.clan.id}>
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle>{userClan.clan.name}</CardTitle>
+                    <CardDescription>{userClan.isMain ? "Main Clan" : "Guest Clan"}</CardDescription>
+                  </div>
+                  <Badge variant={userClan.isMain ? "default" : "secondary"}>
+                    {userClan.isMain ? "Main" : "Guest"}
+                  </Badge>
                 </div>
-                <Badge variant={userClan.isMain ? "default" : "secondary"}>
-                  {userClan.isMain ? "Main" : "Guest"}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">{userClan.clan.description}</p>
-              <div className="flex items-center space-x-2 mb-2">
-                <Crown className="h-4 w-4" />
-                <span className="text-sm font-medium">Owner:</span>
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={userClan.owner.image ?? undefined} alt={userClan.owner.name ?? ''} />
-                  <AvatarFallback>{userClan.owner.runescapeName?.[0] ?? 'O'}</AvatarFallback>
-                </Avatar>
-                <span className="text-sm">{userClan.owner.runescapeName ?? userClan.owner.name}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Users className="h-4 w-4" />
-                <span className="text-sm font-medium">Members:</span>
-                <span className="text-sm">{userClan.memberCount}</span>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Link href={`/clans/${userClan.clan.id}`} passHref>
-                <Button variant="outline">View Clan</Button>
-              </Link>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">{userClan.clan.description}</p>
+                <div className="flex items-center space-x-2 mb-2">
+                  <Crown className="h-4 w-4" />
+                  <span className="text-sm font-medium">Owner:</span>
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={userClan.owner.image ?? undefined} alt={userClan.owner.name ?? ''} />
+                    <AvatarFallback>{userClan.owner.runescapeName?.[0] ?? 'O'}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm">{userClan.owner.runescapeName ?? userClan.owner.name}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Users className="h-4 w-4" />
+                  <span className="text-sm font-medium">Members:</span>
+                  <span className="text-sm">{userClan.memberCount}</span>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Link href={`/clans/${userClan.clan.id}`} passHref>
+                  <Button variant="outline">View Clan</Button>
+                </Link>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

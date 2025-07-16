@@ -53,3 +53,7 @@ yarn-error.log*
 docker-compose.override.yml
 *.env
 !docker-compose.prod.yml
+
+#playwright
+playwright-report
+test-results

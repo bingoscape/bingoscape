@@ -8,8 +8,8 @@ export default async function SuperAdminDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <p className="text-muted-foreground">Overview of your BingoScape platform</p>
+        <h2 className="text-4xl font-bold tracking-tight">Dashboard</h2>
+        <p className="text-lg text-muted-foreground">Overview of your BingoScape platform</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -18,7 +18,7 @@ export default async function SuperAdminDashboard() {
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div className="text-2xl font-bold">{stats.totalUsers}</div>
             <p className="text-xs text-muted-foreground">Registered users on the platform</p>
           </CardContent>
@@ -29,7 +29,7 @@ export default async function SuperAdminDashboard() {
             <CardTitle className="text-sm font-medium">Total Clans</CardTitle>
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div className="text-2xl font-bold">{stats.totalClans}</div>
             <p className="text-xs text-muted-foreground">Active clans created</p>
           </CardContent>
@@ -40,7 +40,7 @@ export default async function SuperAdminDashboard() {
             <CardTitle className="text-sm font-medium">Total Events</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div className="text-2xl font-bold">{stats.totalEvents}</div>
             <p className="text-xs text-muted-foreground">Events created on platform</p>
           </CardContent>

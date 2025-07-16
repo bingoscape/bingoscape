@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { PrizePoolDisplay } from "./prize-pool-display"
 import type { EventData } from "@/app/actions/events"
-import { CalendarIcon, Users, Trophy, ArrowRight, Clock, CheckCircle2, XCircle, Clock3 } from "lucide-react"
+import { CalendarIcon, Users, Trophy, ArrowRight, Clock, CheckCircle2, XCircle, Clock3, Check, AlertTriangle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useState } from "react"
 import { Textarea } from "@/components/ui/textarea"
@@ -42,11 +42,26 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
 
     switch (status) {
       case "active":
-        return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>
+        return (
+          <Badge className="bg-green-500 text-white hover:bg-green-600">
+            <Check className="h-3 w-3 mr-1" />
+            Active
+          </Badge>
+        )
       case "upcoming":
-        return <Badge className="bg-blue-500 hover:bg-blue-600">Upcoming</Badge>
+        return (
+          <Badge className="bg-blue-500 text-white hover:bg-blue-600">
+            <Clock className="h-3 w-3 mr-1" />
+            Upcoming
+          </Badge>
+        )
       case "past":
-        return <Badge className="bg-gray-500 hover:bg-gray-600">Completed</Badge>
+        return (
+          <Badge className="bg-gray-400 text-white hover:bg-gray-500">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Completed
+          </Badge>
+        )
       default:
         return null
     }
