@@ -36,7 +36,7 @@ export function CreateBingoModal({ eventId }: { eventId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className='w-full'>Create New Bingo</Button>
+        <Button className='w-full'>Create New Board</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>

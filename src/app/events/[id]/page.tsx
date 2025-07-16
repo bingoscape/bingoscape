@@ -100,7 +100,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
     const startDate = new Date(event.startDate)
     const endDate = new Date(event.endDate)
     let eventStatus: "upcoming" | "active" | "completed" = "upcoming"
-    
+
     if (now > endDate) {
         eventStatus = "completed"
     } else if (now >= startDate) {
@@ -126,7 +126,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
                         <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
                                 <h1 className="text-3xl font-bold">{event.title}</h1>
-                                <Badge 
+                                <Badge
                                     variant={eventStatus === "active" ? "default" : eventStatus === "upcoming" ? "secondary" : "outline"}
                                     className={eventStatus === "active" ? "bg-green-500 text-white" : ""}
                                     aria-label={`Event status: ${eventStatus === "active" ? "Active" : eventStatus === "upcoming" ? "Upcoming" : "Completed"}`}
@@ -176,8 +176,8 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
                             <div>
                                 <p className="text-sm font-medium">Buy-In</p>
                                 <p className="text-sm text-muted-foreground">
-                                    {event.minimumBuyIn ? 
-                                        `${formatRunescapeGold(event.minimumBuyIn)} GP` : 
+                                    {event.minimumBuyIn ?
+                                        `${formatRunescapeGold(event.minimumBuyIn)} GP` :
                                         "No Buy-In!"
                                     }
                                 </p>
@@ -202,7 +202,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
                             </div>
                         )}
                     </div>
-                    
+
                     {event.locked && (
                         <div className="mt-4 p-3 bg-destructive/10 rounded-lg">
                             <p className="text-sm text-destructive font-medium">⚠️ This event is locked for registration</p>
@@ -236,7 +236,7 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
                         {isAdminOrManagement ? <TeamManagement eventId={event.id} /> : <TeamDisplay eventId={event.id} />}
                     </section>
                 </main>
-                
+
                 {/* Organized Action Sidebar */}
                 <aside className="xl:w-80 xl:flex-shrink-0" aria-label="Event actions">
                     <Card className="border-2">
@@ -300,10 +300,10 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
                                             Generate Invite Link
                                         </GenerateEventInviteLink>
                                         <DiscordWebhookManagement eventId={event.id} />
-                                        <ShareEventButton 
-                                            eventId={event.id} 
-                                            eventTitle={event.title} 
-                                            isPublic={event.public ?? false} 
+                                        <ShareEventButton
+                                            eventId={event.id}
+                                            eventTitle={event.title}
+                                            isPublic={event.public ?? false}
                                         />
                                     </div>
                                 </div>

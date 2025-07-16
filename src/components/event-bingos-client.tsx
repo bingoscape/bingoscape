@@ -74,7 +74,7 @@ export function EventBingosClient({ event, userRole, currentTeam, isAdminOrManag
           <div>
             <h2 className="text-2xl font-bold">Boards</h2>
             <p className="text-muted-foreground text-sm mt-1">
-              {visibleBingos.length} bingo{visibleBingos.length !== 1 ? "s" : ""} available
+              {visibleBingos.length} board{visibleBingos.length !== 1 ? "s" : ""} available
             </p>
           </div>
           {visibleBingos.length > 1 && (
