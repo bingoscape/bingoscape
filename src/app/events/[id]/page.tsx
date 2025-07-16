@@ -17,7 +17,7 @@ import { TeamManagement } from "@/components/team-management"
 import { GenerateEventInviteLink } from "@/components/generate-event-invite-link"
 import { TeamDisplay } from "@/components/team-display"
 import Link from "next/link"
-import { Users, Clock, ClipboardList, BarChart3 } from "lucide-react"
+import { Users, Clock, ClipboardList, BarChart3, Calendar, Trophy, ArrowLeft } from "lucide-react"
 import { getCurrentTeamForUser } from "@/app/actions/team"
 import { PrizePoolDisplay } from "@/components/prize-pool-display"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
@@ -95,107 +95,238 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 
     const isAdminOrManagement = userRole === "admin" || userRole === "management"
 
-    return (
-        <div className="container mx-auto py-10">
-            <div className="flex flex-col lg:flex-row justify-between mb-6 space-y-5 lg:space-y-0">
-                <div className="lg:mr-5 flex-grow">
-                    <h1 className="text-3xl font-bold">{event.title}</h1>
-                    <PrizePoolDisplay prizePool={prizePool} />
-                    {event.clan && <p className="text-sm text-muted-foreground mt-2">Clan: {event.clan.name}</p>}
-                    {event.minimumBuyIn ? (
-                        <p className="text-sm text-muted-foreground mt-2">
-                            Minimum BuyIn: {formatRunescapeGold(event.minimumBuyIn)} GP
-                        </p>
-                    ) : (
-                        <p className="text-sm text-muted-foreground mt-2">No Buy-In!</p>
-                    )}
+    // Calculate event status
+    const now = new Date()
+    const startDate = new Date(event.startDate)
+    const endDate = new Date(event.endDate)
+    let eventStatus: "upcoming" | "active" | "completed" = "upcoming"
+    
+    if (now > endDate) {
+        eventStatus = "completed"
+    } else if (now >= startDate) {
+        eventStatus = "active"
+    }
 
-                    {/* Registration Deadline Information */}
-                    {event.registrationDeadline && (
-                        <div className="flex items-center mt-2">
-                            <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                            <p className="text-sm text-muted-foreground">
-                                Registration Deadline: {event.registrationDeadline.toDateString()}
-                                {!registrationStatus.isOpen && registrationStatus.reason?.includes("deadline") && (
-                                    <span className="ml-2 text-destructive font-medium">(Closed)</span>
-                                )}
-                            </p>
+    return (
+        <div className="container mx-auto py-6">
+            {/* Breadcrumb Navigation */}
+            <div className="flex items-center gap-2 mb-6">
+                <Link href="/" className="text-muted-foreground hover:text-foreground">
+                    <Button variant="ghost" size="sm">
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Back to Events
+                    </Button>
+                </Link>
+            </div>
+
+            {/* Enhanced Event Header */}
+            <Card className="mb-8" role="banner">
+                <CardHeader>
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                        <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                                <h1 className="text-3xl font-bold">{event.title}</h1>
+                                <Badge 
+                                    variant={eventStatus === "active" ? "default" : eventStatus === "upcoming" ? "secondary" : "outline"}
+                                    className={eventStatus === "active" ? "bg-green-500 text-white" : ""}
+                                    aria-label={`Event status: ${eventStatus === "active" ? "Active" : eventStatus === "upcoming" ? "Upcoming" : "Completed"}`}
+                                >
+                                    {eventStatus === "active" ? "Active" : eventStatus === "upcoming" ? "Upcoming" : "Completed"}
+                                </Badge>
+                            </div>
+                            {event.clan && (
+                                <p className="text-muted-foreground">
+                                    Hosted by <span className="font-medium">{event.clan.name}</span>
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {/* Event Dates */}
+                        <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
+                            <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                                <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium">Event Period</p>
+                                <p className="text-sm text-muted-foreground">
+                                    {startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Prize Pool */}
+                        <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
+                            <div className="flex-shrink-0 w-8 h-8 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center">
+                                <Trophy className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium">Prize Pool</p>
+                                <PrizePoolDisplay prizePool={prizePool} />
+                            </div>
+                        </div>
+
+                        {/* Buy-In */}
+                        <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
+                            <div className="flex-shrink-0 w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+                                <Clock className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium">Buy-In</p>
+                                <p className="text-sm text-muted-foreground">
+                                    {event.minimumBuyIn ? 
+                                        `${formatRunescapeGold(event.minimumBuyIn)} GP` : 
+                                        "No Buy-In!"
+                                    }
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Registration Status */}
+                        {event.registrationDeadline && (
+                            <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
+                                <div className="flex-shrink-0 w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                                    <Users className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium">Registration</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Until {event.registrationDeadline.toLocaleDateString()}
+                                        {!registrationStatus.isOpen && registrationStatus.reason?.includes("deadline") && (
+                                            <span className="ml-2 text-destructive font-medium">(Closed)</span>
+                                        )}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {event.locked && (
+                        <div className="mt-4 p-3 bg-destructive/10 rounded-lg">
+                            <p className="text-sm text-destructive font-medium">⚠️ This event is locked for registration</p>
                         </div>
                     )}
-                    {event.locked && <p className="text-sm text-destructive mt-2">This event is locked for registration</p>}
+                </CardContent>
+            </Card>
+
+            <div className="flex flex-col xl:flex-row justify-between gap-8">
+                <main className="flex-grow min-w-0">
 
                     {/* Client-side bingo display with team selection */}
-                    <EventBingosClient
-                        event={event}
-                        userRole={userRole}
-                        currentTeam={currentTeam}
-                        isAdminOrManagement={isAdminOrManagement}
-                    />
+                    <section aria-label="Event bingos">
+                        <EventBingosClient
+                            event={event}
+                            userRole={userRole}
+                            currentTeam={currentTeam}
+                            isAdminOrManagement={isAdminOrManagement}
+                        />
+                    </section>
 
-                    <div className="mt-12">
-                        <h2 className="text-2xl font-bold mb-4">Teams</h2>
-                        {isAdminOrManagement ? <TeamManagement eventId={event.id} /> : <TeamDisplay eventId={event.id} />}
-                    </div>
-                </div>
-                <div className="flex flex-col space-y-4 lg:w-64">
-                    {isAdminOrManagement && <CreateBingoModal eventId={event.id} />}
-                    {isAdminOrManagement && (
-                        <BingoImportExportModal
-                            eventId={event.id}
-                            bingoId={(event.bingos?.length ?? 0) > 0 ? event.bingos![0]?.id : undefined}
-                            bingoTitle={(event.bingos?.length ?? 0) > 0 ? event.bingos![0]?.title : undefined}
-                        />
-                    )}
-                    {isAdminOrManagement && (
-                        <GenerateEventInviteLink eventId={event.id as UUID}>Generate Invite Link</GenerateEventInviteLink>
-                    )}
-                    {(userRole === "admin" || userRole === "management") && (
-                        <div className="mt-8">
-                            <DiscordWebhookManagement eventId={event.id} />
+                    <section className="mt-12" aria-label="Team management">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                            <div>
+                                <h2 className="text-2xl font-bold">Teams</h2>
+                                <p className="text-muted-foreground text-sm mt-1">
+                                    Manage team assignments and member roles
+                                </p>
+                            </div>
                         </div>
-                    )}
-                    {(userRole === "admin" || userRole === "management") && (
-                        <Link href={`/events/${params.id}/registrations`} passHref>
-                            <Button variant="outline" className="w-full flex items-center">
-                                <div className="flex items-center">
-                                    <ClipboardList className="mr-2 h-4 w-4" />
-                                    <span>Registration Requests</span>
+                        {isAdminOrManagement ? <TeamManagement eventId={event.id} /> : <TeamDisplay eventId={event.id} />}
+                    </section>
+                </main>
+                
+                {/* Organized Action Sidebar */}
+                <aside className="xl:w-80 xl:flex-shrink-0" aria-label="Event actions">
+                    <Card className="border-2">
+                        <CardHeader className="pb-4">
+                            <CardTitle className="text-lg font-semibold">Event Actions</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            {/* Primary Actions */}
+                            {isAdminOrManagement && (
+                                <div className="space-y-3">
+                                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">BINGO MANAGEMENT</h4>
+                                    <div className="space-y-2">
+                                        <CreateBingoModal eventId={event.id} />
+                                        <BingoImportExportModal
+                                            eventId={event.id}
+                                            bingoId={(event.bingos?.length ?? 0) > 0 ? event.bingos![0]?.id : undefined}
+                                            bingoTitle={(event.bingos?.length ?? 0) > 0 ? event.bingos![0]?.title : undefined}
+                                        />
+                                    </div>
                                 </div>
-                                {pendingRegistrationsCount > 0 && (
-                                    <Badge variant="secondary" className="bg-amber-100 text-amber-800">
-                                        {pendingRegistrationsCount}
-                                    </Badge>
-                                )}
-                            </Button>
-                        </Link>
-                    )}
-                    {isAdminOrManagement && (
-                        <Link href={`/events/${event.id}/participants`} passHref>
-                            <Button variant="outline" className="w-full">
-                                <Users className="mr-2 h-4 w-4" />
-                                Participants
-                            </Button>
-                        </Link>
-                    )}
-                    {isAdminOrManagement && (
-                        <Link href={`/events/${event.id}/stats`} passHref>
-                            <Button variant="outline" className="w-full">
-                                <BarChart3 className="mr-2 h-4 w-4" />
-                                Event Statistics
-                            </Button>
-                        </Link>
-                    )}
-                    {userRole == "admin" && !event.clan && (
-                        <AssignEventToClanModal
-                            eventId={event.id}
-                            clans={userClans.map((uc) => ({ id: uc.clan.id, name: uc.clan.name }))}
-                        />
-                    )}
-                    {userRole === "admin" && <EditEventModal event={event} />}
-                    {isAdminOrManagement && (
-                        <ShareEventButton eventId={event.id} eventTitle={event.title} isPublic={event.public ?? false} />
-                    )}
-                </div>
+                            )}
+
+                            {/* Event Management */}
+                            {isAdminOrManagement && (
+                                <div className="space-y-3">
+                                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">EVENT MANAGEMENT</h4>
+                                    <div className="space-y-2">
+                                        <Link href={`/events/${params.id}/registrations`} passHref>
+                                            <Button variant="outline" className="w-full justify-start hover:bg-primary/10">
+                                                <ClipboardList className="mr-2 h-4 w-4" />
+                                                Registration Requests
+                                                {pendingRegistrationsCount > 0 && (
+                                                    <Badge variant="secondary" className="ml-auto bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                                                        {pendingRegistrationsCount}
+                                                    </Badge>
+                                                )}
+                                            </Button>
+                                        </Link>
+                                        <Link href={`/events/${event.id}/participants`} passHref>
+                                            <Button variant="outline" className="w-full justify-start hover:bg-primary/10">
+                                                <Users className="mr-2 h-4 w-4" />
+                                                Participants
+                                            </Button>
+                                        </Link>
+                                        <Link href={`/events/${event.id}/stats`} passHref>
+                                            <Button variant="outline" className="w-full justify-start hover:bg-primary/10">
+                                                <BarChart3 className="mr-2 h-4 w-4" />
+                                                Event Statistics
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Sharing & Communication */}
+                            {isAdminOrManagement && (
+                                <div className="space-y-3">
+                                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">SHARING & COMMUNICATION</h4>
+                                    <div className="space-y-2">
+                                        <GenerateEventInviteLink eventId={event.id as UUID}>
+                                            Generate Invite Link
+                                        </GenerateEventInviteLink>
+                                        <DiscordWebhookManagement eventId={event.id} />
+                                        <ShareEventButton 
+                                            eventId={event.id} 
+                                            eventTitle={event.title} 
+                                            isPublic={event.public ?? false} 
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Admin Settings */}
+                            {userRole === "admin" && (
+                                <div className="space-y-3">
+                                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">ADMIN SETTINGS</h4>
+                                    <div className="space-y-2">
+                                        <EditEventModal event={event} />
+                                        {!event.clan && (
+                                            <AssignEventToClanModal
+                                                eventId={event.id}
+                                                clans={userClans.map((uc) => ({ id: uc.clan.id, name: uc.clan.name }))}
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </aside>
             </div>
         </div>
     )

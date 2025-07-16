@@ -12,24 +12,29 @@ interface BingoGridLayoutProps {
   onTogglePlaceholder: (tile: Tile) => void
   isLocked: boolean
   highlightedTiles: number[]
+  loadingTileId?: string
 }
 
 export const BingoGridLayout = React.forwardRef<HTMLDivElement, BingoGridLayoutProps>(
-  ({ tiles, columns, rows, userRole, currentTeamId, onTileClick, onTogglePlaceholder, isLocked, highlightedTiles }, ref) => {
+  ({ tiles, columns, rows, userRole, currentTeamId, onTileClick, onTogglePlaceholder, isLocked, highlightedTiles, loadingTileId }, ref) => {
     return (
       <div
         ref={ref}
-        className={`grid gap-2`}
+        className="grid gap-4 p-4"
         style={{
           gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
           gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
         }}
+        role="grid"
+        aria-label={`Bingo grid with ${columns} columns and ${rows} rows`}
       >
-        {tiles.map((tile) => (
+        {tiles.map((tile, index) => (
           <div
-
             key={tile.id}
             className={`relative ${highlightedTiles.includes(tile.index) ? 'ring-2 ring-red-500' : ''}`}
+            role="gridcell"
+            aria-posinset={index + 1}
+            aria-setsize={tiles.length}
           >
             <BingoTile
               tile={tile}
@@ -38,6 +43,7 @@ export const BingoGridLayout = React.forwardRef<HTMLDivElement, BingoGridLayoutP
               userRole={userRole}
               currentTeamId={currentTeamId}
               isLocked={isLocked}
+              isLoading={loadingTileId === tile.id}
             />
           </div>
         ))}

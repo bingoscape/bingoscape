@@ -11,8 +11,8 @@ export default async function EventList({ userId }: { userId: string }) {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Your Events</h1>
-          <p className="text-muted-foreground mt-1">Manage and track your RuneScape bingo events</p>
+          <h1 className="text-4xl font-bold">Your Events</h1>
+          <p className="text-lg text-muted-foreground mt-2">Manage and track your RuneScape bingo events</p>
         </div>
         <CreateEventModal />
       </div>

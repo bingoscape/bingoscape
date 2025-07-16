@@ -150,8 +150,8 @@ function TeamCard({
   })
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-2">
+    <Card className="overflow-hidden border-2 hover:shadow-md transition-shadow">
+      <CardHeader className="pb-2 bg-secondary/30">
         <CardTitle className="flex justify-between items-center text-base">
           {editingTeamId === team.id ? (
             <Input
@@ -163,13 +163,13 @@ function TeamCard({
             />
           ) : (
             <div className="flex items-center gap-2">
-              {team.name}
+              <span className="font-semibold">{team.name}</span>
               <Button variant="ghost" size="icon" onClick={() => onEditName(team.id, team.name)} className="h-6 w-6">
                 <Edit2 className="h-3.5 w-3.5" />
               </Button>
             </div>
           )}
-          <Button variant="ghost" size="icon" onClick={() => onDelete(team.id)} className="h-6 w-6 text-destructive">
+          <Button variant="ghost" size="icon" onClick={() => onDelete(team.id)} className="h-6 w-6 text-destructive hover:bg-destructive/10">
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </CardTitle>
@@ -181,8 +181,9 @@ function TeamCard({
             }`}
         >
           {team.teamMembers.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-muted-foreground text-sm italic">
-              Drag members here
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm">
+              <Users className="h-8 w-8 mb-2 opacity-50" />
+              <span className="italic">Drag members here</span>
             </div>
           ) : (
             <ul className="divide-y">
@@ -241,7 +242,26 @@ function UnassignedParticipantsPool({ participants }: { participants: Participan
   })
 
   if (participants.length === 0) {
-    return null
+    return (
+      <Card className="mb-6 border-dashed border-2">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Unassigned Participants
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+              <Users className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              All participants have been assigned to teams
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -545,7 +565,52 @@ export function TeamManagement({ eventId }: { eventId: string }) {
   }
 
   if (loading) {
-    return <div className="flex justify-center p-8">Loading teams...</div>
+    return (
+      <div className="space-y-6">
+        {/* Loading skeleton for team creation */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-2 flex-1">
+            <div className="h-10 w-40 bg-muted rounded-md animate-pulse" />
+            <div className="h-10 w-20 bg-muted rounded-md animate-pulse" />
+          </div>
+          <div className="h-10 w-40 bg-muted rounded-md animate-pulse" />
+        </div>
+
+        {/* Loading skeleton for unassigned participants */}
+        <Card className="mb-6">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Unassigned Participants
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-muted/20 rounded-md p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-12 bg-muted rounded-md animate-pulse" />
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Loading skeleton for team cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(2)].map((_, i) => (
+            <Card key={i} className="overflow-hidden">
+              <CardHeader className="pb-2">
+                <div className="h-6 bg-muted rounded-md animate-pulse" />
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="h-24 bg-muted/20 rounded-md animate-pulse mb-3" />
+                <div className="h-8 bg-muted rounded-md animate-pulse" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -554,13 +619,15 @@ export function TeamManagement({ eventId }: { eventId: string }) {
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex items-center gap-2 flex-1">
             <Input
-              placeholder="New team name"
+              placeholder="Enter team name (e.g., 'Team Alpha')"
               value={newTeamName}
               onChange={(e) => setNewTeamName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleCreateTeam()}
               className="max-w-xs"
             />
-            <Button onClick={handleCreateTeam}>Create Team</Button>
+            <Button onClick={handleCreateTeam} disabled={!newTeamName.trim()}>
+              Create Team
+            </Button>
           </div>
 
           <Button variant="outline" className="flex items-center gap-2" onClick={() => setIsAutoTeamModalOpen(true)}>
