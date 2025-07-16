@@ -40,7 +40,7 @@ export function CreateBingoModal({ eventId }: { eventId: string }) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
-          <DialogTitle>Create New Bingo</DialogTitle>
+          <DialogTitle>Create New Board</DialogTitle>
           <DialogDescription>Set up the basic structure for your new bingo game. Tiles will be automatically created.</DialogDescription>
         </DialogHeader>
         {error && (

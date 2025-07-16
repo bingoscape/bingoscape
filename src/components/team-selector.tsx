@@ -38,7 +38,7 @@ export function TeamSelector({ teams, currentTeamId, userRole, selectedTeamId, o
 
   return (
     <div className="flex items-center space-x-2">
-      <span className="text-sm font-medium">View Team:</span>
+      <span className="text-sm text-muted-foreground">View Team:</span>
       <Select value={getSelectValue()} onValueChange={handleTeamChange}>
         <SelectTrigger className="w-48">
           <SelectValue placeholder="Select team to view" />

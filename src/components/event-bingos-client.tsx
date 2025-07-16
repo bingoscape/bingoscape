@@ -72,7 +72,7 @@ export function EventBingosClient({ event, userRole, currentTeam, isAdminOrManag
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-6 mb-6 gap-4">
         <div className="flex items-center gap-4">
           <div>
-            <h2 className="text-2xl font-bold">Bingos</h2>
+            <h2 className="text-2xl font-bold">Boards</h2>
             <p className="text-muted-foreground text-sm mt-1">
               {visibleBingos.length} bingo{visibleBingos.length !== 1 ? "s" : ""} available
             </p>
@@ -93,7 +93,6 @@ export function EventBingosClient({ event, userRole, currentTeam, isAdminOrManag
         </div>
         {isAdminOrManagement && event.teams && event.teams.length > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">View Team:</span>
             <TeamSelector
               teams={event.teams}
               currentTeamId={currentTeam?.id}
@@ -110,11 +109,11 @@ export function EventBingosClient({ event, userRole, currentTeam, isAdminOrManag
           <div className="mx-auto w-24 h-24 rounded-full bg-muted flex items-center justify-center mb-4">
             <ListFilter className="h-12 w-12 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-semibold mb-2">No bingos available</h3>
+          <h3 className="text-lg font-semibold mb-2">No bingo boards available</h3>
           <p className="text-muted-foreground max-w-md mx-auto">
             {isAdminOrManagement
               ? "Create your first bingo to get started with this event."
-              : "The event organizers haven't created any bingos yet. Check back later!"}
+              : "The event organizers haven't created any bingo boards yet. Check back later!"}
           </p>
         </div>
       ) : currentBingo ? (
