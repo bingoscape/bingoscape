@@ -65,12 +65,12 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
   const tileClasses = `
     relative rounded-lg overflow-hidden aspect-square group
     transition-all duration-300 ease-in-out
-    min-h-[80px] sm:min-h-[100px] lg:min-h-[120px]
+    min-h-[60px] sm:min-h-[80px] md:min-h-[100px] lg:min-h-[120px]
     touch-manipulation
     ${tile.isHidden && isLocked ? "bg-transparent" : ""}
     ${tile.isHidden && !isLocked ? "border-2 border-dashed border-muted-foreground/40 bg-muted/20 cursor-pointer hover:bg-muted/40 hover:border-muted-foreground/60" : ""}
     ${!tile.isHidden ? `
-      border-2 cursor-pointer transform hover:scale-[1.05] hover:z-10 hover:shadow-2xl
+      border-2 cursor-pointer transform hover:scale-[1.01] sm:hover:scale-[1.02] lg:hover:scale-[1.05] hover:z-10 hover:shadow-2xl
       active:scale-[0.98] active:transition-transform active:duration-100
       ${completionStatus === "completed" ? "border-green-500 bg-green-50 dark:bg-green-900/20 shadow-green-200/50 hover:shadow-green-300/60" : ""}
       ${completionStatus === "needs_review" ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 shadow-yellow-200/50 hover:shadow-yellow-300/60" : ""}
@@ -109,7 +109,7 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
     <HoverCard openDelay={200} closeDelay={100}>
       <HoverCardTrigger asChild>
         <div 
-          className={`${tileClasses} focus:outline-none focus:ring-4 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-background focus:scale-105`} 
+          className={`${tileClasses} focus:outline-none focus:ring-2 sm:focus:ring-4 focus:ring-primary/50 focus:ring-offset-1 sm:focus:ring-offset-2 focus:ring-offset-background focus:scale-[1.01] sm:focus:scale-[1.02] lg:focus:scale-105`} 
           onClick={handleClick}
           role="button"
           tabIndex={0}

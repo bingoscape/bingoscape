@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Check, AlertTriangle, X, Upload, Clock, CheckCircle2, Link, Users, Hash } from "lucide-react"
+import { Check, AlertTriangle, X, Upload, Clock, CheckCircle2, Link, Users, Hash, Search, Star, ChevronsUpDown } from "lucide-react"
 import type { Tile, Team } from "@/app/actions/events"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { getGoalValues } from "@/app/actions/goals"
+import { toast } from "@/hooks/use-toast"
 
 interface SubmissionsTabProps {
   selectedTile: Tile | null
@@ -83,6 +86,8 @@ export function SubmissionsTab({
   const [goalValues, setGoalValues] = useState<any[]>([])
   const [selectedSubmissionValue, setSelectedSubmissionValue] = useState<number | null>(null)
   const [customValue, setCustomValue] = useState("")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [dropdownOpen, setDropdownOpen] = useState(false)
 
   // Add this effect to set the current goal when opening the dialog
   useEffect(() => {
@@ -136,21 +141,21 @@ export function SubmissionsTab({
     switch (status) {
       case "approved":
         return (
-          <Badge className="bg-green-500 text-white">
+          <Badge className="bg-green-100 text-green-800 border-green-200 px-3 py-1">
             <Check className="h-3 w-3 mr-1" />
             Approved
           </Badge>
         )
       case "needs_review":
         return (
-          <Badge className="bg-yellow-500 text-white">
+          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 px-3 py-1">
             <AlertTriangle className="h-3 w-3 mr-1" />
             Needs Review
           </Badge>
         )
       default:
         return (
-          <Badge className="bg-blue-500 text-white">
+          <Badge className="bg-blue-100 text-blue-800 border-blue-200 px-3 py-1">
             <Clock className="h-3 w-3 mr-1" />
             Pending
           </Badge>
@@ -175,15 +180,64 @@ export function SubmissionsTab({
       finalValue = Number.parseFloat(customValue)
     }
 
-    // If a goal is selected, a value is required
-    if (goalId && goalId !== "none" && (finalValue === null || finalValue === undefined)) {
-      return // Don't proceed if no value is provided for a goal
+    // Enhanced validation with user feedback
+    if (goalId && goalId !== "none") {
+      if (finalValue === null || finalValue === undefined) {
+        toast({
+          title: "Value Required",
+          description: "Please select a predefined value or enter a custom value for this goal.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (finalValue <= 0) {
+        toast({
+          title: "Invalid Value",
+          description: "The submission value must be greater than 0.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Check if the value exceeds the goal's target (warning, not blocking)
+      const selectedGoal = selectedTile?.goals?.find(g => g.id === goalId)
+      if (selectedGoal && finalValue > selectedGoal.targetValue) {
+        // Allow but warn
+        toast({
+          title: "Value Exceeds Target",
+          description: `The value ${finalValue} exceeds the goal target of ${selectedGoal.targetValue}. This is allowed but may indicate an error.`,
+          variant: "default",
+        })
+      }
     }
 
-    onSubmissionStatusUpdate(submissionId, currentStatus as "pending" | "approved" | "needs_review", goalId, finalValue)
-    setSubmissionForGoal(null)
-    setSelectedSubmissionValue(null)
-    setCustomValue("")
+    try {
+      onSubmissionStatusUpdate(submissionId, currentStatus as "pending" | "approved" | "needs_review", goalId, finalValue)
+
+      // Success feedback
+      const goalDescription = goalId ? selectedTile?.goals?.find(g => g.id === goalId)?.description : null
+      const message = goalId
+        ? `Goal "${goalDescription}" assigned with value ${finalValue}`
+        : "Goal assignment removed from submission"
+
+      toast({
+        title: "Goal Assignment Updated",
+        description: message,
+      })
+
+      // Reset form state
+      setSubmissionForGoal(null)
+      setSelectedSubmissionValue(null)
+      setCustomValue("")
+      setSearchTerm("")
+    } catch (error) {
+      toast({
+        title: "Assignment Failed",
+        description: "Failed to assign goal to submission. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   // Enhanced handlers with real-time updates
@@ -283,83 +337,170 @@ export function SubmissionsTab({
   const filteredSubmissions = getFilteredSubmissions()
 
   return (
-    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
+    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4 bg-background text-foreground">
       <div className="space-y-6 p-4">
         {/* Current team submission form */}
         {currentTeamId && !isSubmissionsLocked && (
-          <div className="border rounded-lg p-4 space-y-4">
-            <h3 className="font-medium">Submit for {currentTeam?.name}</h3>
-            <div className="space-y-3">
+          <div className="border border-border rounded-lg p-6 space-y-4 bg-card shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <div
+                className="h-3 w-3 rounded-full"
+                style={{
+                  backgroundColor: `hsl(${(currentTeam?.name?.charCodeAt(0) || 0) * 10 % 360}, 70%, 50%)`,
+                }}
+              />
+              <h3 className="font-semibold text-lg text-foreground">Submit for {currentTeam?.name}</h3>
+            </div>
+
+            <div className="space-y-4">
               <div>
-                <Label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
+                <Label htmlFor="image" className="block text-sm font-medium text-muted-foreground mb-2">
                   Upload Image
                 </Label>
-                <div className="flex items-center gap-2">
-                  <Input id="image" type="file" accept="image/*" onChange={onImageChange} className="flex-1" />
-                  <Button onClick={onImageSubmit} disabled={!selectedImage && !pastedImage}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Submit
-                  </Button>
-                </div>
-                {(selectedImage || pastedImage) && (
-                  <div className="mt-2">
-                    <p className="text-sm text-muted-foreground">
-                      {selectedImage ? selectedImage.name : "Pasted image"} ready to submit
-                    </p>
+
+                {/* Enhanced drag-and-drop upload area */}
+                <div className="relative">
+                  <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-muted-foreground transition-colors bg-muted/20 upload-area">
+                    <div className="flex flex-col items-center space-y-4">
+                      <div className="p-4 bg-blue-500/20 rounded-full">
+                        <Upload className="h-8 w-8 text-blue-500" />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-foreground">
+                          Drag and drop your image here, or click to browse
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          PNG, JPG, GIF up to 10MB
+                        </p>
+                      </div>
+                      <Input
+                        id="image"
+                        type="file"
+                        accept="image/*"
+                        onChange={onImageChange}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                    </div>
                   </div>
-                )}
-                <p className="text-xs text-muted-foreground mt-1">
-                  You can also paste an image directly (Ctrl+V / Cmd+V)
-                </p>
+
+                  {/* Image preview */}
+                  {(selectedImage || pastedImage) && (
+                    <div className="mt-4 p-4 bg-green-500/20 border border-green-500 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-green-500/30 rounded-full">
+                          <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-green-500">
+                            Image ready to submit
+                          </p>
+                          <p className="text-xs text-green-500/80">
+                            {selectedImage ? selectedImage.name : "Pasted image"}
+                          </p>
+                        </div>
+                        <Button
+                          onClick={onImageSubmit}
+                          className="bg-green-500 hover:bg-green-600 text-foreground"
+                          size="sm"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Submit
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <kbd className="px-2 py-1 bg-muted rounded text-xs text-foreground">Ctrl</kbd>
+                    <span>+</span>
+                    <kbd className="px-2 py-1 bg-muted rounded text-xs text-foreground">V</kbd>
+                  </div>
+                  <span>to paste an image directly</span>
+                </div>
               </div>
             </div>
           </div>
         )}
 
         {isSubmissionsLocked && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="bg-yellow-500/20 border border-yellow-500 rounded-lg p-4">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-yellow-500" />
-              <p className="text-yellow-700">Submissions are currently locked for this bingo board.</p>
+              <p className="text-yellow-500">Submissions are currently locked for this bingo board.</p>
             </div>
           </div>
         )}
 
-        {/* Filters - only show for admin/management */}
-        <div className="border rounded-lg p-4 space-y-4">
-          <h3 className="font-medium">Filters</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Enhanced Filters */}
+        <div className="border border-border rounded-lg p-6 space-y-4 bg-card shadow-sm">
+          <h3 className="font-semibold text-lg text-foreground">Filters</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="status-filter" className="block text-sm font-medium mb-1">
+              <Label htmlFor="status-filter" className="block text-sm font-medium mb-2 text-muted-foreground">
                 Status Filter
               </Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="needs_review">Needs Review</SelectItem>
+                  <SelectItem value="all">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-gray-400" />
+                      All Statuses
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="pending">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-blue-500" />
+                      Pending
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="approved">
+                    <div className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-500" />
+                      Approved
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="needs_review">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                      Needs Review
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {hasSufficientRights && (
               <div>
-                <Label htmlFor="team-filter" className="block text-sm font-medium mb-1">
+                <Label htmlFor="team-filter" className="block text-sm font-medium mb-2 text-muted-foreground">
                   Team Filter
                 </Label>
                 <Select value={teamFilter} onValueChange={setTeamFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Filter by team" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Teams</SelectItem>
+                    <SelectItem value="all">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-gray-500" />
+                        All Teams
+                      </div>
+                    </SelectItem>
                     {teams.map((team) => (
                       <SelectItem key={team.id} value={team.id}>
-                        {team.name}
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="h-2 w-2 rounded-full"
+                            style={{
+                              backgroundColor: `hsl(${(team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`,
+                            }}
+                          />
+                          {team.name}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -376,25 +517,25 @@ export function SubmissionsTab({
               const currentTileStatus = getTileStatus(teamSubmission.id, teamSubmission.status)
 
               return (
-                <div key={teamSubmission.id} className="border rounded-lg overflow-hidden">
-                  <div className="bg-muted/30 p-4">
+                <div key={teamSubmission.id} className="border border-border rounded-lg overflow-hidden shadow-sm bg-card">
+                  <div className="bg-muted/30 p-4 border-b border-border">
                     <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <div
-                          className="h-3 w-3 rounded-full"
+                          className="h-4 w-4 rounded-full shadow-sm"
                           style={{
                             backgroundColor: `hsl(${(teamSubmission.team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`,
                           }}
                         />
-                        <h3 className="font-medium">{teamSubmission.team.name}</h3>
+                        <h3 className="font-semibold text-foreground">{teamSubmission.team.name}</h3>
                         {getStatusBadge(currentTileStatus)}
                       </div>
                       {hasSufficientRights && (
-                        <div className="flex gap-1">
+                        <div className="flex gap-2">
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
                             onClick={() => handleTeamTileSubmissionStatusUpdate(teamSubmission.id, "approved")}
                             disabled={currentTileStatus === "approved"}
                           >
@@ -402,9 +543,9 @@ export function SubmissionsTab({
                             Approve
                           </Button>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            className="h-8 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                            className="h-8 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50 border-yellow-200"
                             onClick={() => handleTeamTileSubmissionStatusUpdate(teamSubmission.id, "needs_review")}
                             disabled={currentTileStatus === "needs_review"}
                           >
@@ -417,7 +558,7 @@ export function SubmissionsTab({
                   </div>
 
                   {teamSubmission.submissions.length > 0 ? (
-                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 submission-grid">
                       {teamSubmission.submissions
                         .filter((submission) => {
                           // Apply status filter to individual submissions (with local override)
@@ -435,13 +576,13 @@ export function SubmissionsTab({
                           )
 
                           return (
-                            <div key={submission.id} className="border rounded-md overflow-hidden">
+                            <div key={submission.id} className="border border-border rounded-md overflow-hidden shadow-sm bg-card hover:shadow-md transition-shadow">
                               <div className="relative aspect-video">
                                 <Image
                                   src={submission.image.path || "/placeholder.svg"}
                                   alt={`Submission by ${submission.user.runescapeName || "Unknown"}`}
                                   fill
-                                  className="object-cover cursor-pointer"
+                                  className="object-cover cursor-pointer hover:opacity-90 transition-opacity"
                                   onClick={() =>
                                     onFullSizeImageView(
                                       submission.image.path,
@@ -449,31 +590,35 @@ export function SubmissionsTab({
                                     )
                                   }
                                 />
-                              </div>
-                              <div className="p-3 space-y-2">
-                                <div className="flex justify-between items-center">
-                                  <div className="text-sm font-medium truncate">
-                                    {submission.user.runescapeName || submission.user.name || "Unknown"}
-                                  </div>
+                                {/* Status overlay */}
+                                <div className="absolute top-2 right-2">
                                   {getStatusBadge(currentSubmissionStatus)}
                                 </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {new Date(submission.createdAt).toLocaleString()}
+                              </div>
+                              <div className="p-3 space-y-3">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <div className="text-sm font-medium text-foreground truncate">
+                                      {submission.user.runescapeName || submission.user.name || "Unknown"}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                      {new Date(submission.createdAt).toLocaleString()}
+                                    </div>
+                                  </div>
                                 </div>
 
                                 {/* Goal assignment and value display */}
                                 <div className="flex flex-wrap gap-1">
                                   {submission.goalId ? (
                                     <div
-                                      className={`flex items-center gap-1 bg-blue-50 p-1.5 rounded text-xs ${
-                                        hasSufficientRights ? "cursor-pointer hover:bg-blue-100" : ""
-                                      }`}
+                                      className={`flex items-center gap-1 bg-blue-500/20 p-1.5 rounded text-xs ${hasSufficientRights ? "cursor-pointer hover:bg-[#3B82F6]/30" : ""
+                                        }`}
                                       onClick={
                                         hasSufficientRights ? () => setSubmissionForGoal(submission.id) : undefined
                                       }
                                     >
                                       <CheckCircle2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                                      <span className="text-blue-700 font-medium truncate">
+                                      <span className="text-blue-500 font-medium truncate">
                                         {selectedTile?.goals?.find((g) => g.id === submission.goalId)?.description ||
                                           "Goal"}
                                       </span>
@@ -511,7 +656,7 @@ export function SubmissionsTab({
                                 </div>
 
                                 {hasSufficientRights && (
-                                  <div className="flex justify-end gap-1 mt-2 pt-2 border-t">
+                                  <div className="flex justify-end gap-1 mt-2 pt-2 border-t border-border">
                                     <TooltipProvider>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
@@ -614,102 +759,195 @@ export function SubmissionsTab({
         </div>
       </div>
 
-      {/* Goal Assignment Dialog - Only for users with sufficient rights */}
+      {/* Enhanced Goal Assignment Dialog - Only for users with sufficient rights */}
       {hasSufficientRights && (
-        <AlertDialog open={!!submissionForGoal} onOpenChange={(open) => !open && setSubmissionForGoal(null)}>
-          <AlertDialogContent className="max-w-md">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Assign Goal to Submission</AlertDialogTitle>
-              <AlertDialogDescription>
-                Select a goal and specify the value and weight for this submission.
-              </AlertDialogDescription>
+        <AlertDialog open={!!submissionForGoal} onOpenChange={(open) => {
+          if (!open) {
+            setSubmissionForGoal(null)
+            setSearchTerm("")
+            setDropdownOpen(false)
+          }
+        }}>
+          <AlertDialogContent className="max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col bg-background border-border">
+            <AlertDialogHeader className="pb-4 border-b border-border">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/20 rounded-full">
+                  <Link className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <AlertDialogTitle className="text-xl font-semibold text-foreground">
+                    Assign Goal to Submission
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-sm text-muted-foreground mt-1">
+                    Link this submission to a specific goal and set its contribution value.
+                  </AlertDialogDescription>
+                </div>
+              </div>
             </AlertDialogHeader>
-            <div className="py-4 space-y-4">
-              {/* Goal Selection */}
-              <div>
-                <Label className="text-sm font-medium">Goal</Label>
+
+            <div className="flex-1 overflow-y-auto py-6 space-y-6">
+              {/* Goal Selection Section */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  <Label className="text-sm font-semibold text-foreground">Select Goal</Label>
+                </div>
                 <Select
                   value={selectedGoalId || "none"}
-                  onValueChange={(value) => setSelectedGoalId(value === "none" ? null : value)}
+                  onValueChange={(value) => {
+                    setSelectedGoalId(value === "none" ? null : value)
+                    setSearchTerm("")
+                    setSelectedSubmissionValue(null)
+                    setCustomValue("")
+                    setDropdownOpen(false)
+                  }}
                 >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a goal" />
+                  <SelectTrigger className="w-full h-12 bg-muted/30 border-border hover:bg-muted/50 transition-colors">
+                    <SelectValue placeholder="Choose a goal for this submission" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No Goal</SelectItem>
+                    <SelectItem value="none" className="text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <X className="h-4 w-4" />
+                        No Goal
+                      </div>
+                    </SelectItem>
                     {selectedTile?.goals?.map((goal) => (
                       <SelectItem key={goal.id} value={goal.id}>
-                        {goal.description} (Target: {goal.targetValue})
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-medium">{goal.description}</span>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            Target: {goal.targetValue}
+                          </span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Value Selection - only show if a goal is selected */}
+              {/* Value Selection Section - Enhanced with searchable dropdown */}
               {selectedGoalId && selectedGoalId !== "none" && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Submission Value *</Label>
-                  <p className="text-xs text-muted-foreground">A value is required when assigning a goal.</p>
+                <div className="space-y-4 p-4 bg-muted/20 rounded-lg border border-border">
+                  <div className="flex items-center gap-2">
+                    <Hash className="h-4 w-4 text-green-500" />
+                    <Label className="text-sm font-semibold text-foreground">Submission Value *</Label>
+                    <div className="ml-auto">
+                      <span className="text-xs bg-red-500/20 text-red-500 px-2 py-1 rounded-full font-medium">
+                        Required
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Specify how much this submission contributes towards the goal target.
+                  </p>
 
-                  {/* Rest of the value selection UI remains the same */}
+                  {/* Searchable Predefined Values Dropdown */}
                   {goalValues.length > 0 && (
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Predefined Values</Label>
-                      <div className="grid grid-cols-1 gap-1 mt-1">
-                        {goalValues.map((gv) => (
-                          <button
-                            key={gv.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedSubmissionValue(gv.value)
-                              setCustomValue("")
-                            }}
-                            className={`text-left p-2 rounded border text-sm hover:bg-muted/50 ${
-                              selectedSubmissionValue === gv.value ? "bg-primary/10 border-primary" : ""
-                            }`}
-                          >
-                            <span className="font-mono font-medium">{gv.value}</span> - {gv.description}
-                          </button>
-                        ))}
-                      </div>
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium text-foreground">Predefined Values</Label>
+
+                      <Select
+                        value={selectedSubmissionValue?.toString() || ""}
+                        onValueChange={(value) => {
+                          if (value) {
+                            setSelectedSubmissionValue(Number.parseFloat(value))
+                            setCustomValue("")
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-full h-12 bg-background border-border hover:bg-muted/50">
+                          <SelectValue placeholder="Select a predefined value..." />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px]">
+                          {goalValues.map((gv) => (
+                            <SelectItem key={gv.id} value={gv.value.toString()}>
+                              <div className="flex items-center gap-3 w-full">
+                                <div className="px-2 py-1 bg-blue-500/20 rounded text-xs font-mono font-medium text-blue-500 min-w-[50px] text-center">
+                                  {gv.value}
+                                </div>
+                                <div className="flex-1 text-left">
+                                  <div className="font-medium text-sm">{gv.description}</div>
+                                </div>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   )}
 
-                  {/* Custom Value */}
-                  <div>
-                    <Label htmlFor="customValue" className="text-xs text-muted-foreground">
-                      Or Custom Value
-                    </Label>
+                  {/* Custom Value Section */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="customValue" className="text-sm font-medium text-foreground">
+                        Custom Value
+                      </Label>
+                      {selectedSubmissionValue !== null && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedSubmissionValue(null)
+                            setCustomValue("")
+                          }}
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          Clear selection
+                        </Button>
+                      )}
+                    </div>
                     <Input
                       id="customValue"
                       type="number"
                       step="0.1"
+                      min="0"
                       value={customValue}
                       onChange={(e) => {
                         setCustomValue(e.target.value)
                         setSelectedSubmissionValue(null)
                       }}
-                      placeholder="Enter custom value (default: 1)"
-                      className="mt-1"
-                      required={selectedGoalId !== "none"}
+                      placeholder="Enter a custom value (e.g., 1.5, 2, 0.5)"
+                      className="h-12 bg-background border-border"
+                      disabled={selectedSubmissionValue !== null}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Enter a custom numeric value if none of the predefined options fit your needs.
+                    </p>
                   </div>
+
+                  {/* Value Preview */}
+                  {(selectedSubmissionValue !== null || customValue) && (
+                    <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <span className="text-sm font-medium text-green-500">
+                          Value set to: {selectedSubmissionValue !== null ? selectedSubmissionValue : parseFloat(customValue) || 0}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+
+            <AlertDialogFooter className="border-t border-border pt-4">
+              <AlertDialogCancel className="mr-auto">
+                Cancel
+              </AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => submissionForGoal && handleGoalAssignment(submissionForGoal, selectedGoalId)}
                 disabled={!!(selectedGoalId && selectedGoalId !== "none" && !selectedSubmissionValue && !customValue)}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6"
               >
+                <Link className="h-4 w-4 mr-2" />
                 Assign Goal
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      )}
-    </div>
+      )
+      }
+    </div >
   )
 }

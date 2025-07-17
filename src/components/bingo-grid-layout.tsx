@@ -20,7 +20,7 @@ export const BingoGridLayout = React.forwardRef<HTMLDivElement, BingoGridLayoutP
     return (
       <div
         ref={ref}
-        className="grid gap-4 p-4"
+        className="grid gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 md:p-4 w-full max-w-full"
         style={{
           gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
           gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,

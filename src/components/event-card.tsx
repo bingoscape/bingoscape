@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { PrizePoolDisplay } from "./prize-pool-display"
 import type { EventData } from "@/app/actions/events"
-import { CalendarIcon, Users, Trophy, ArrowRight, Clock, CheckCircle2, XCircle, Clock3, Check, AlertTriangle } from "lucide-react"
+import { CalendarIcon, Users, Trophy, ArrowRight, Clock, CheckCircle2, XCircle, Clock3, Check, AlertTriangle, Star, MapPin } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useState } from "react"
 import { Textarea } from "@/components/ui/textarea"
 import { requestToJoinEvent } from "@/app/actions/events"
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
+import { cn } from "@/lib/utils"
 
 interface EventCardProps {
   eventData: EventData
@@ -43,21 +44,21 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
     switch (status) {
       case "active":
         return (
-          <Badge className="bg-green-500 text-white hover:bg-green-600">
+          <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all duration-300 animate-pulse">
             <Check className="h-3 w-3 mr-1" />
             Active
           </Badge>
         )
       case "upcoming":
         return (
-          <Badge className="bg-blue-500 text-white hover:bg-blue-600">
+          <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-300">
             <Clock className="h-3 w-3 mr-1" />
             Upcoming
           </Badge>
         )
       case "past":
         return (
-          <Badge className="bg-gray-400 text-white hover:bg-gray-500">
+          <Badge className="bg-gradient-to-r from-slate-500 to-slate-600 text-white shadow-lg shadow-slate-500/25 hover:shadow-slate-500/40 transition-all duration-300">
             <CheckCircle2 className="h-3 w-3 mr-1" />
             Completed
           </Badge>
@@ -144,58 +145,77 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
   }
 
   return (
-    <Card className="overflow-hidden transition-all hover:shadow-md">
+    <Card className={cn(
+      "group overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 hover:border-primary/20 cursor-pointer h-full flex flex-col",
+      status === "past" && "opacity-90 hover:opacity-100"
+    )}>
       <div className="relative">
+        {/* Background gradient overlay for visual depth */}
+        <div className="absolute inset-0 bg-gradient-to-br from-background/50 to-background/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        
+        {/* Prize pool display */}
         {eventData.totalPrizePool > 0 && (
-          <div className="absolute left-4 top-4 z-10">
+          <div className="absolute left-4 top-4 z-10 transform group-hover:scale-110 transition-transform duration-300">
             <PrizePoolDisplay prizePool={eventData.totalPrizePool} variant="badge" />
           </div>
         )}
-        <CardHeader className="pb-2">
-          <div className="flex justify-between items-start">
+        
+        {/* Status badge */}
+        <div className="absolute right-4 top-4 z-10 transform group-hover:scale-110 transition-transform duration-300">
+          {getStatusBadge()}
+        </div>
+        
+        <CardHeader className="pb-3 pt-6">
+          <div className="flex flex-col space-y-2">
             <div className={`${eventData.totalPrizePool > 0 ? "mt-6" : ""}`}>
-              <CardTitle className="text-xl font-bold">{eventData.event.title}</CardTitle>
-              <CardDescription className="flex items-center mt-1">
-                <CalendarIcon className="h-3.5 w-3.5 mr-1" />
-                {startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}
+              <CardTitle className="text-xl font-bold tracking-tight group-hover:text-primary transition-colors duration-300">
+                {eventData.event.title}
+              </CardTitle>
+              <CardDescription className="flex items-center mt-2 text-sm">
+                <CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span className="font-medium">
+                  {startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}
+                </span>
               </CardDescription>
             </div>
-            {getStatusBadge()}
           </div>
         </CardHeader>
       </div>
-      <CardContent className="pb-2">
-        <div className="space-y-3">
+      <CardContent className="pb-4 flex-1">
+        <div className="space-y-4">
           {eventData.event.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">{eventData.event.description}</p>
+            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+              {eventData.event.description}
+            </p>
           )}
 
-          <div className="flex flex-wrap gap-3 text-sm">
+          {/* Event metadata in a structured grid */}
+          <div className="grid grid-cols-2 gap-3">
             {eventData.event.clan && (
-              <div className="flex items-center text-muted-foreground">
-                <Users className="h-3.5 w-3.5 mr-1" />
-                <span>{eventData.event.clan?.name}</span>
+              <div className="flex items-center space-x-2 p-2 rounded-lg bg-muted/50 group-hover:bg-muted/70 transition-colors">
+                <Users className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium truncate">{eventData.event.clan?.name}</span>
               </div>
             )}
 
-            <div className="flex items-center text-muted-foreground">
-              <Trophy className="h-3.5 w-3.5 mr-1" />
-              <span>{eventData.event.bingos?.length ?? 0} Bingos</span>
+            <div className="flex items-center space-x-2 p-2 rounded-lg bg-muted/50 group-hover:bg-muted/70 transition-colors">
+              <Trophy className="h-4 w-4 text-amber-500" />
+              <span className="text-sm font-medium">{eventData.event.bingos?.length ?? 0} Bingos</span>
             </div>
 
             {registrationDeadline && (
-              <div className="flex items-center text-muted-foreground">
-                <Clock className="h-3.5 w-3.5 mr-1" />
-                <span>Registration: {registrationDeadline.toLocaleDateString()}</span>
-                {isRegistrationClosed && <span className="ml-1 text-destructive">(Closed)</span>}
+              <div className="col-span-2 flex items-center space-x-2 p-2 rounded-lg bg-muted/50 group-hover:bg-muted/70 transition-colors">
+                <Clock className="h-4 w-4 text-blue-500" />
+                <span className="text-sm font-medium">Registration: {registrationDeadline.toLocaleDateString()}</span>
+                {isRegistrationClosed && <span className="ml-1 text-destructive font-semibold">(Closed)</span>}
               </div>
             )}
           </div>
 
           {eventData.event.requiresApproval && !isParticipant && (
-            <div className="flex items-center text-amber-500">
-              <Clock className="h-3.5 w-3.5 mr-1" />
-              <span>Requires approval to join</span>
+            <div className="flex items-center space-x-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <span className="text-sm font-medium text-amber-700 dark:text-amber-300">Requires approval to join</span>
             </div>
           )}
 
@@ -221,40 +241,65 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
           )}
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between pt-3 border-t">
-        <Link href={`/events/${eventData.event.id}`} className="w-full">
-          <Button variant="outline" className="w-full flex justify-between items-center">
-            <span>View Event</span>
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </Link>
-        {!isParticipant && !isRegistrationClosed && !eventData.event.locked && (
-          <>
-            {eventData.event.requiresApproval ? (
-              registrationStatus?.status === "pending" ? (
-                <Link href={`/events/${eventData.event.id}/status`} className="ml-2">
-                  <Button variant="outline">View Status</Button>
-                </Link>
-              ) : registrationStatus?.status === "rejected" ? (
-                <Link href={`/events/${eventData.event.id}/status`} className="ml-2">
-                  <Button variant="outline">View Status</Button>
-                </Link>
+      <CardFooter className="flex flex-col gap-3 pt-4 border-t bg-muted/20">
+        <div className="flex gap-3 w-full">
+          <Link href={`/events/${eventData.event.id}`} className="flex-1">
+            <Button 
+              variant="outline" 
+              className="w-full flex justify-between items-center group/btn hover:bg-primary hover:text-primary-foreground transition-all duration-200"
+            >
+              <span>View Event</span>
+              <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform duration-200" />
+            </Button>
+          </Link>
+          
+          {!isParticipant && !isRegistrationClosed && !eventData.event.locked && (
+            <>
+              {eventData.event.requiresApproval ? (
+                registrationStatus?.status === "pending" ? (
+                  <Link href={`/events/${eventData.event.id}/status`}>
+                    <Button variant="outline" className="hover:bg-yellow-500 hover:text-white">
+                      View Status
+                    </Button>
+                  </Link>
+                ) : registrationStatus?.status === "rejected" ? (
+                  <Link href={`/events/${eventData.event.id}/status`}>
+                    <Button variant="outline" className="hover:bg-red-500 hover:text-white">
+                      View Status
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button 
+                    onClick={handleJoinClick} 
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-200"
+                  >
+                    Request to Join
+                  </Button>
+                )
               ) : (
-                <Button onClick={handleJoinClick} className="ml-2">
-                  Request to Join
+                <Button 
+                  onClick={handleJoinClick} 
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-200"
+                >
+                  Join
                 </Button>
-              )
-            ) : (
-              <Button onClick={handleJoinClick} className="ml-2">
-                Join
-              </Button>
-            )}
-          </>
-        )}
-        {!isParticipant && (isRegistrationClosed ?? eventData.event.locked) && (
-          <Button disabled className="ml-2" title="Registration is closed">
-            Closed
-          </Button>
+              )}
+            </>
+          )}
+          
+          {!isParticipant && (isRegistrationClosed ?? eventData.event.locked) && (
+            <Button disabled className="opacity-50" title="Registration is closed">
+              Closed
+            </Button>
+          )}
+        </div>
+        
+        {/* Additional event info for completed events */}
+        {status === "past" && (
+          <div className="flex items-center justify-center text-xs text-muted-foreground">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            <span>Event completed on {endDate.toLocaleDateString()}</span>
+          </div>
         )}
       </CardFooter>
     </Card>

@@ -117,7 +117,7 @@ export function GoalsTab({
   }
 
   return (
-    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
+    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4 bg-background text-foreground">
       <div className="space-y-6 p-4">
         {/* Existing goals */}
         {selectedTile?.goals && selectedTile.goals.length > 0 ? (
@@ -126,19 +126,26 @@ export function GoalsTab({
               const currentGoalValues = goalValuesState[goal.id] || goal.goalValues || []
 
               return (
-                <Card key={goal.id}>
-                  <CardHeader className="pb-3">
+                <Card key={goal.id} className="shadow-sm hover:shadow-md transition-shadow bg-card border-border goal-card">
+                  <CardHeader className="pb-4">
                     <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-base">{goal.description}</CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">Target: {goal.targetValue}</p>
+                      <div className="flex-1">
+                        <CardTitle className="text-base text-foreground">{goal.description}</CardTitle>
+                        <div className="flex items-center gap-2 mt-2">
+                          <div className="px-2 py-1 bg-green-500 text-foreground rounded-full text-xs font-medium">
+                            Target: {goal.targetValue}
+                          </div>
+                          <div className="px-2 py-1 bg-blue-500 text-foreground rounded-full text-xs font-medium">
+                            {currentGoalValues.length} values
+                          </div>
+                        </div>
                       </div>
                       {hasSufficientRights && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => onDeleteGoal(goal.id)}
-                          className="text-red-600 hover:text-red-700"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -165,33 +172,39 @@ export function GoalsTab({
                       </div>
 
                       {currentGoalValues.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                           {currentGoalValues.map((goalValue) => (
-                            <div key={goalValue.id} className="flex items-center gap-1">
-                              <Badge variant="secondary" className="flex items-center gap-1">
-                                <span className="font-mono">{goalValue.value}</span>
-                                <span>-</span>
-                                <span>{goalValue.description}</span>
-                                {hasSufficientRights && (
-                                  <button
-                                    onClick={() => handleDeleteGoalValue(goalValue.id, goal.id)}
-                                    className="ml-1 text-red-500 hover:text-red-700"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </button>
-                                )}
-                              </Badge>
+                            <div key={goalValue.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors">
+                              <div className="flex items-center gap-2 flex-1">
+                                <div className="px-2 py-1 bg-blue-500 text-foreground rounded-full text-xs font-mono font-medium">
+                                  {goalValue.value}
+                                </div>
+                                <span className="text-muted-foreground text-sm">{goalValue.description}</span>
+                              </div>
+                              {hasSufficientRights && (
+                                <button
+                                  onClick={() => handleDeleteGoalValue(goalValue.id, goal.id)}
+                                  className="text-red-500 hover:text-red-300 p-1 rounded hover:bg-muted/80 transition-colors"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              )}
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground">No predefined values yet</p>
+                        <div className="text-center py-4 bg-muted rounded-lg border-2 border-dashed border-muted-foreground">
+                          <p className="text-sm text-muted-foreground">No predefined values yet</p>
+                          {hasSufficientRights && (
+                            <p className="text-xs text-muted-foreground mt-1">Click "Add Value" to create predefined values</p>
+                          )}
+                        </div>
                       )}
                     </div>
 
                     {/* Add Goal Value Form */}
                     {selectedGoalForValue === goal.id && hasSufficientRights && (
-                      <div className="border rounded-lg p-3 bg-muted/30">
+                      <div className="border border-border rounded-lg p-3 bg-muted/30">
                         <div className="grid grid-cols-2 gap-2 mb-2">
                           <div>
                             <Label htmlFor="goalValue" className="text-xs">
@@ -251,31 +264,43 @@ export function GoalsTab({
 
         {/* Add new goal form */}
         {hasSufficientRights && (
-          <Card>
+          <Card className="border-2 border-dashed border-border bg-muted/20 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader>
-              <CardTitle className="text-base">Add New Goal</CardTitle>
+              <CardTitle className="text-base text-foreground flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Add New Goal
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="goalDescription">Description</Label>
-                <Input
-                  id="goalDescription"
-                  value={newGoal.description || ""}
-                  onChange={(e) => onNewGoalChange("description", e.target.value)}
-                  placeholder="Complete the task..."
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="goalDescription" className="text-sm font-medium text-muted-foreground">
+                    Description
+                  </Label>
+                  <Input
+                    id="goalDescription"
+                    value={newGoal.description || ""}
+                    onChange={(e) => onNewGoalChange("description", e.target.value)}
+                    placeholder="Complete the task..."
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="targetValue" className="text-sm font-medium text-muted-foreground">
+                    Target Value
+                  </Label>
+                  <Input
+                    id="targetValue"
+                    type="number"
+                    value={newGoal.targetValue?.toString() || ""}
+                    onChange={(e) => onNewGoalChange("targetValue", Number.parseInt(e.target.value))}
+                    placeholder="1"
+                    className="mt-1"
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="targetValue">Target Value</Label>
-                <Input
-                  id="targetValue"
-                  type="number"
-                  value={newGoal.targetValue?.toString() || ""}
-                  onChange={(e) => onNewGoalChange("targetValue", Number.parseInt(e.target.value))}
-                  placeholder="1"
-                />
-              </div>
-              <Button onClick={onAddGoal} className="w-full">
+              <Button onClick={onAddGoal} className="w-full bg-green-500 hover:bg-green-600 text-foreground">
+                <Plus className="h-4 w-4 mr-2" />
                 Add Goal
               </Button>
             </CardContent>

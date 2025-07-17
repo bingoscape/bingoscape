@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { ForwardRefEditor } from "./forward-ref-editor"
 import type { Tile, Team } from "@/app/actions/events"
 import { Progress } from "@/components/ui/progress"
+import { AnimatedProgress } from "@/components/ui/animated-progress"
 import { Pencil, X, Zap, EyeOff, Search, ExternalLink, CheckCircle2, Clock } from "lucide-react"
 import Markdown from "react-markdown"
 import { Switch } from "@/components/ui/switch"
@@ -194,7 +195,7 @@ export function TileDetailsTab({
   }
 
   return (
-    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4">
+    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4 bg-background text-foreground">
       <div className="space-y-6 p-4">
         <div className="flex flex-col md:flex-row gap-6 items-start">
           <div className="w-full md:w-1/3 relative aspect-square">
@@ -467,127 +468,156 @@ function TileProgress({
   }
 
   return (
-    <div className="space-y-8">
-      {teams.map((team) => (
-        <div key={team.id} className="border rounded-lg p-4 shadow-sm transition-all hover:shadow-md">
-          <div className="flex items-center gap-2 mb-4">
-            <div
-              className="h-3 w-3 rounded-full"
-              style={{
-                backgroundColor: `hsl(${(team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`,
-              }}
-            />
-            <h4 className="font-semibold text-lg">{team.name}</h4>
-          </div>
+    <div className="space-y-6">
+      {teams.map((team) => {
+        const completedGoals = (selectedTile.goals ?? []).filter((goal) => {
+          const progress = calculateGoalProgress(goal.id, team.id)
+          return progress.approved >= goal.targetValue
+        }).length
+        const totalGoals = (selectedTile.goals ?? []).length
+        const completionPercentage = totalGoals > 0 ? (completedGoals / totalGoals) * 100 : 0
 
-          <div className="space-y-5">
-            {selectedTile.goals?.map((goal) => {
-              // Get progress based on submissions
-              const progress = calculateGoalProgress(goal.id, team.id)
-              const approvedProgress = progress.approved
-              const totalProgress = progress.total
+        return (
+          <div key={team.id} className="border border-border rounded-lg p-6 shadow-sm transition-all hover:shadow-md bg-card team-progress-card">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div
+                  className="h-4 w-4 rounded-full shadow-sm"
+                  style={{
+                    backgroundColor: `hsl(${(team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`,
+                  }}
+                />
+                <h4 className="font-semibold text-lg text-foreground">{team.name}</h4>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="text-sm text-muted-foreground">
+                  {completedGoals} / {totalGoals} goals
+                </div>
+                <div className="px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                  {completionPercentage.toFixed(0)}% complete
+                </div>
+              </div>
+            </div>
 
-              // Calculate percentages based on submission values
-              const approvedPercentage =
-                goal.targetValue > 0 ? Math.min(100, (approvedProgress / goal.targetValue) * 100) : 0
+            <div className="space-y-6">
+              {selectedTile.goals?.map((goal) => {
+                // Get progress based on submissions
+                const progress = calculateGoalProgress(goal.id, team.id)
+                const approvedProgress = progress.approved
+                const totalProgress = progress.total
 
-              const virtualPercentage =
-                goal.targetValue > 0 ? Math.min(100, (totalProgress / goal.targetValue) * 100) : 0
+                // Calculate percentages based on submission values
+                const approvedPercentage =
+                  goal.targetValue > 0 ? Math.min(100, (approvedProgress / goal.targetValue) * 100) : 0
 
-              return (
-                <div key={goal.id} className="space-y-2">
-                  <div className="flex justify-between items-center text-sm">
-                    <div className="font-medium">{goal.description}</div>
-                    <div className="text-muted-foreground">
-                      Target: <span className="font-medium">{goal.targetValue}</span>
-                    </div>
-                  </div>
+                const virtualPercentage =
+                  goal.targetValue > 0 ? Math.min(100, (totalProgress / goal.targetValue) * 100) : 0
 
-                  <div className="space-y-3">
-                    {/* Official Progress (Approved Submissions) */}
-                    <div className="space-y-1">
+                const isCompleted = approvedProgress >= goal.targetValue
+
+                return (
+                  <div key={goal.id} className="space-y-3">
+                    <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center gap-1">
-                                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                <span className="text-xs text-muted-foreground">Approved</span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Progress based on sum of approved submission values</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <Progress
-                          value={approvedPercentage}
-                          className="h-2.5 flex-1 bg-muted"
-                          aria-label={`Approved progress for ${team.name} on ${goal.description}`}
-                        />
-                        <span className="text-sm font-medium min-w-[80px] text-right">
-                          {approvedProgress} / {goal.targetValue}
-                        </span>
+                        <div className="font-medium text-foreground">{goal.description}</div>
+                        {isCompleted && (
+                          <div className="px-2 py-1 bg-green-500 text-foreground text-xs rounded-full font-medium">
+                            Completed
+                          </div>
+                        )}
                       </div>
-                      <div className="text-xs text-right text-muted-foreground">
-                        {approvedPercentage.toFixed(0)}% complete
+                      <div className="text-sm text-muted-foreground">
+                        Target: <span className="font-medium text-foreground">{goal.targetValue}</span>
                       </div>
                     </div>
 
-                    {/* Virtual Progress (All Submissions) */}
-                    {totalProgress > approvedProgress && (
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
+                    <div className="space-y-3">
+                      {/* Official Progress (Approved Submissions) */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="flex items-center gap-1">
-                                  <Clock className="h-4 w-4 text-amber-500" />
-                                  <span className="text-xs text-muted-foreground">Virtual</span>
+                                <div className="flex items-center gap-2 min-w-[80px]">
+                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                  <span className="text-sm text-muted-foreground">Approved</span>
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Progress including sum of all submission values (pending and in-review)</p>
+                                <p>Progress based on sum of approved submission values</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
-                          <Progress
-                            value={virtualPercentage}
-                            className="h-2.5 flex-1 bg-muted"
-                            aria-label={`Virtual progress for ${team.name} on ${goal.description}`}
+                          <AnimatedProgress
+                            value={approvedPercentage}
+                            className="h-3 flex-1 bg-muted"
+                            indicatorClassName="bg-green-500"
+                            aria-label={`Approved progress for ${team.name} on ${goal.description}`}
                           />
-                          <span className="text-sm font-medium min-w-[80px] text-right">
-                            {totalProgress} / {goal.targetValue}
+                          <span className="text-sm font-medium min-w-[80px] text-right text-foreground">
+                            {approvedProgress} / {goal.targetValue}
                           </span>
                         </div>
                         <div className="text-xs text-right text-muted-foreground">
-                          {virtualPercentage.toFixed(0)}% potential
+                          {approvedPercentage.toFixed(0)}% complete
                         </div>
                       </div>
-                    )}
+
+                      {/* Virtual Progress (All Submissions) */}
+                      {totalProgress > approvedProgress && (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-3">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-2 min-w-[80px]">
+                                    <Clock className="h-4 w-4 text-yellow-500" />
+                                    <span className="text-sm text-muted-foreground">Virtual</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Progress including sum of all submission values (pending and in-review)</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <AnimatedProgress
+                              value={virtualPercentage}
+                              className="h-3 flex-1 bg-muted"
+                              indicatorClassName="bg-yellow-500"
+                              aria-label={`Virtual progress for ${team.name} on ${goal.description}`}
+                            />
+                            <span className="text-sm font-medium min-w-[80px] text-right text-foreground">
+                              {totalProgress} / {goal.targetValue}
+                            </span>
+                          </div>
+                          <div className="text-xs text-right text-muted-foreground">
+                            {virtualPercentage.toFixed(0)}% potential
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Summary section */}
+            {totalGoals > 0 && (
+              <div className="mt-6 pt-4 border-t border-border">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-foreground">Overall Progress</span>
+                  <div className="flex items-center gap-2">
+                    <AnimatedProgress value={completionPercentage} className="h-2 w-24 bg-muted" indicatorClassName="bg-blue-500" />
+                    <span className="text-sm font-medium min-w-[40px] text-foreground">
+                      {completionPercentage.toFixed(0)}%
+                    </span>
                   </div>
                 </div>
-              )
-            })}
+              </div>
+            )}
           </div>
-
-          {/* Summary section */}
-          <div className="mt-4 pt-3 border-t">
-            <div className="flex justify-between items-center text-sm">
-              <span className="font-medium">Overall completion</span>
-              <span className="text-muted-foreground">
-                {
-                  (selectedTile.goals ?? []).filter((goal) => {
-                    const progress = calculateGoalProgress(goal.id, team.id)
-                    return progress.approved >= goal.targetValue
-                  }).length
-                }{" "}
-                of {(selectedTile.goals ?? []).length} goals
-              </span>
-            </div>
-          </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
