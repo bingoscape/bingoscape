@@ -21,7 +21,7 @@ export default function TemplatePreviewWithTooltip({
   title,
   className,
   isDetailView = false,
-  fixedTooltipIndex = 0,
+  fixedTooltipIndex = 9,
 }: TemplatePreviewWithTooltipProps) {
   const [parsedData, setParsedData] = useState<ExportedBingo | null>(null)
   const [error, setError] = useState<string | null>(null)

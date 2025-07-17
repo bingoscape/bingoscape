@@ -20,6 +20,7 @@ import {
   updateSubmissionStatus,
 } from "@/app/actions/bingo"
 import "@mdxeditor/editor/style.css"
+import "@/styles/modal-animations.css"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Bingo, Tile, Team, EventRole, Goal, Submission } from "@/app/actions/events"
 import Sortable, { type SortableEvent } from "sortablejs"
@@ -407,6 +408,38 @@ export default function BingoGrid({
     }
   }, [handlePaste])
 
+  // Add keyboard navigation support
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle keyboard shortcuts when modal is open
+      if (!isDialogOpen) return
+
+      // Handle tab switching with Ctrl+1,2,3
+      if (event.ctrlKey && ['1', '2', '3'].includes(event.key)) {
+        event.preventDefault()
+        const tabValues = ['details', 'goals', 'submissions']
+        const tabIndex = parseInt(event.key) - 1
+        const tabValue = tabValues[tabIndex]
+        if (tabValue) {
+          const tabTrigger = document.querySelector(`[data-state]:not([data-state="active"])[value="${tabValue}"]`) as HTMLElement
+          if (tabTrigger) {
+            tabTrigger.click()
+          }
+        }
+      }
+
+      // Handle Escape key to close modal
+      if (event.key === 'Escape' && isDialogOpen) {
+        setIsDialogOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isDialogOpen])
+
   const handleTeamTileSubmissionStatusUpdate = async (
     teamTileSubmissionId: string | undefined,
     newStatus: "approved" | "needs_review",
@@ -690,23 +723,43 @@ export default function BingoGrid({
       />
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[900px] h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>{selectedTile?.title}</DialogTitle>
-            <DialogDescription>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-md">
-                <Zap className="h-4 w-4 text-amber-500" />
-                <span className="font-medium">{selectedTile?.weight} XP</span>
+        <DialogContent className="w-[95vw] max-w-[1400px] h-[90vh] overflow-hidden flex flex-col bg-background border-border modal-content">
+          <DialogHeader className="pb-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <DialogTitle className="text-2xl font-bold text-foreground">{selectedTile?.title}</DialogTitle>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 border border-yellow-500/30">
+                  <Zap className="h-4 w-4 text-yellow-500" />
+                  <span className="font-semibold text-yellow-500">{selectedTile?.weight} XP</span>
+                </div>
               </div>
+            </div>
+            <DialogDescription className="text-sm text-muted-foreground mt-2">
+              Manage tile details, goals, and submissions for your bingo event
             </DialogDescription>
           </DialogHeader>
           <Tabs defaultValue="details" className="flex-1 flex flex-col">
-            <TabsList>
-              <TabsTrigger value="details">Tile Details</TabsTrigger>
-              <TabsTrigger value="goals">Goals</TabsTrigger>
-              <TabsTrigger value="submissions">Submissions</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 mb-4 bg-muted/50 border border-border p-1 h-14 rounded-lg">
+              <TabsTrigger value="details" className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground transition-all duration-200 rounded-md font-medium">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                  <span>Tile Details</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger value="goals" className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground transition-all duration-200 rounded-md font-medium">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  <span>Goals</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger value="submissions" className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground transition-all duration-200 rounded-md font-medium">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                  <span>Submissions</span>
+                </div>
+              </TabsTrigger>
             </TabsList>
-            <TabsContent value="details" className="flex-1 overflow-y-auto">
+            <TabsContent value="details" className="flex-1 overflow-y-auto space-y-6 tab-content">
               <TileDetailsTab
                 selectedTile={selectedTile}
                 editedTile={editedTile}
@@ -718,7 +771,7 @@ export default function BingoGrid({
                 onUpdateProgress={handleProgressUpdate}
               />
             </TabsContent>
-            <TabsContent value="goals" className="flex-1 overflow-y-auto">
+            <TabsContent value="goals" className="flex-1 overflow-y-auto space-y-6 tab-content">
               <GoalsTab
                 selectedTile={selectedTile}
                 newGoal={newGoal}
@@ -728,7 +781,7 @@ export default function BingoGrid({
                 onNewGoalChange={(field, value) => setNewGoal({ ...newGoal, [field]: value })}
               />
             </TabsContent>
-            <TabsContent value="submissions" className="flex-1 overflow-y-auto">
+            <TabsContent value="submissions" className="flex-1 overflow-y-auto space-y-6 tab-content">
               <SubmissionsTab
                 selectedTile={selectedTile}
                 currentTeamId={currentTeamId}

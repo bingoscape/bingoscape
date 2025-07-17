@@ -93,7 +93,7 @@ export function CreateEventModal() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200">
           <Plus className="mr-2 h-4 w-4" />
           Create Event
         </Button>
