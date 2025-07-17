@@ -217,7 +217,7 @@ function ChangeTeamDialog({ isOpen, onClose, participant, teams, onTeamChange }:
 
   useEffect(() => {
     if (participant) {
-      setSelectedTeam(participant.teamId || "no-team")
+      setSelectedTeam(participant.teamId ?? "no-team")
     }
   }, [participant])
 
@@ -406,7 +406,7 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
         ])
 
         const userParticipant = participantsData.find((p) => p.id === data?.user.id)
-        const userRole = userParticipant?.role || "participant"
+        const userRole = userParticipant?.role ?? "participant"
         const isCreator = eventData?.event.creatorId === data?.user.id
 
         setCurrentUserRole(userRole)
@@ -583,8 +583,8 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
           bValue = b.role
           break
         case "team":
-          aValue = a.teamName || "zzz" // Put no team at end
-          bValue = b.teamName || "zzz"
+          aValue = a.teamName ?? "zzz" // Put no team at end
+          bValue = b.teamName ?? "zzz"
           break
         case "buyIn":
           aValue = a.buyIn
