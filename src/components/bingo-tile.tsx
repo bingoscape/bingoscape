@@ -2,11 +2,13 @@
 
 import React from "react"
 import Image from "next/image"
-import { Zap, EyeOff } from "lucide-react"
+import { Zap, EyeOff, CheckCircle2, Clock } from "lucide-react"
 import type { Tile } from "@/app/actions/events"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import getRandomFrog from "@/lib/getRandomFrog"
 import { Badge } from "./ui/badge"
+import { Progress } from "./ui/progress"
+import Markdown from "react-markdown"
 
 interface BingoTileProps {
   tile: Tile
@@ -108,8 +110,8 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
   return (
     <HoverCard openDelay={200} closeDelay={100}>
       <HoverCardTrigger asChild>
-        <div 
-          className={`${tileClasses} focus:outline-none focus:ring-2 sm:focus:ring-4 focus:ring-primary/50 focus:ring-offset-1 sm:focus:ring-offset-2 focus:ring-offset-background focus:scale-[1.01] sm:focus:scale-[1.02] lg:focus:scale-105`} 
+        <div
+          className={`${tileClasses} focus:outline-none focus:ring-2 sm:focus:ring-4 focus:ring-primary/50 focus:ring-offset-1 sm:focus:ring-offset-2 focus:ring-offset-background focus:scale-[1.01] sm:focus:scale-[1.02] lg:focus:scale-105`}
           onClick={handleClick}
           role="button"
           tabIndex={0}
@@ -130,20 +132,18 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
                   src={tile.headerImage || getRandomFrog()}
                   alt={tile.title}
                   fill
-                  className={`object-contain transition-all duration-500 ease-in-out group-hover:scale-110 ${
-                    completionStatus === "completed" ? "brightness-110 saturate-110" : 
-                    completionStatus === "needs_review" ? "brightness-95 saturate-95" : 
-                    completionStatus === "pending" ? "brightness-100 saturate-100" : 
-                    "brightness-100 saturate-100 group-hover:brightness-110"
-                  }`}
+                  className={`object-contain transition-all duration-500 ease-in-out group-hover:scale-110 ${completionStatus === "completed" ? "brightness-110 saturate-110" :
+                    completionStatus === "needs_review" ? "brightness-95 saturate-95" :
+                      completionStatus === "pending" ? "brightness-100 saturate-100" :
+                        "brightness-100 saturate-100 group-hover:brightness-110"
+                    }`}
                 />
               ) : (
-                <div className={`w-full h-full flex items-center justify-center transition-all duration-300 ${
-                  completionStatus === "completed" ? "bg-green-500" : 
-                  completionStatus === "needs_review" ? "bg-yellow-500" : 
-                  completionStatus === "pending" ? "bg-blue-500" : 
-                  "bg-primary group-hover:bg-primary/90"
-                }`}>
+                <div className={`w-full h-full flex items-center justify-center transition-all duration-300 ${completionStatus === "completed" ? "bg-green-500" :
+                  completionStatus === "needs_review" ? "bg-yellow-500" :
+                    completionStatus === "pending" ? "bg-blue-500" :
+                      "bg-primary group-hover:bg-primary/90"
+                  }`}>
                   <span className="text-primary-foreground text-lg font-semibold text-center px-2">{tile.title}</span>
                 </div>
               )}
@@ -169,7 +169,7 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
                   </div>
                 </div>
               )}
-              
+
               {/* XP indicator - simple and clean */}
               <div className="absolute bottom-2 right-2 z-10 bg-background/90 border border-border rounded px-2 py-1 shadow-sm">
                 <div className="flex items-center gap-1">
@@ -177,7 +177,7 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
                   <span className="text-xs font-medium text-foreground">{tile.weight}</span>
                 </div>
               </div>
-              
+
               {/* Loading overlay */}
               {isLoading && (
                 <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-30">
@@ -192,10 +192,10 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
         </div>
       </HoverCardTrigger>
       {shouldShowHoverCard && (
-        <HoverCardContent side="right" align="start" className="w-80 p-4">
+        <HoverCardContent side="right" align="start" className="w-80 max-w-[90vw] p-4">
           <div className="space-y-3">
             <div className="flex items-start justify-between gap-2">
-              <h4 className="font-semibold text-base flex-1">{tile.title}</h4>
+              <h4 className="font-semibold text-base flex-1 leading-tight break-words">{tile.title}</h4>
               <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 rounded-full flex-shrink-0">
                 <Zap className="h-3.5 w-3.5 text-amber-500" />
                 <span className="text-xs font-medium">{tile.weight} XP</span>
@@ -209,19 +209,100 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
               </div>
             )}
 
-            {tile.description && <p className="text-sm text-muted-foreground">{tile.description}</p>}
+            {tile.description && (
+              <div className="text-sm text-muted-foreground prose prose-sm max-w-none dark:prose-invert">
+                <Markdown
+                  components={{
+                    p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed break-words">{children}</p>,
+                    strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+                    em: ({ children }) => <em className="italic">{children}</em>,
+                    ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
+                    li: ({ children }) => <li className="text-sm break-words">{children}</li>,
+                    h1: ({ children }) => <h1 className="text-base font-semibold mb-1 text-foreground">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-sm font-semibold mb-1 text-foreground">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-sm font-medium mb-1 text-foreground">{children}</h3>,
+                    a: ({ children, href }) => (
+                      <a href={href} className="text-primary hover:text-primary/80 underline break-all" target="_blank" rel="noopener noreferrer">
+                        {children}
+                      </a>
+                    ),
+                  }}
+                >
+                  {tile.description.length > 200 ? `${tile.description.substring(0, 200)}...` : tile.description}
+                </Markdown>
+              </div>
+            )}
 
             {tile.goals && tile.goals.length > 0 && (
               <div className="pt-1">
                 <h5 className="text-xs font-semibold mb-2">Goals:</h5>
-                <ul className="text-xs space-y-1">
-                  {tile.goals.map((goal, idx) => (
-                    <li key={idx} className="flex justify-between items-center p-1 bg-muted/30 rounded">
-                      <span className="text-muted-foreground">{goal.description}</span>
-                      <span className="font-medium">Target: {goal.targetValue}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="text-xs space-y-2">
+                  {tile.goals.map((goal, idx) => {
+                    // Calculate progress for current team if available
+                    const teamSubmissions = currentTeamSubmission?.submissions.filter(sub => sub.goalId === goal.id) ?? []
+                    const approvedProgress = teamSubmissions
+                      .filter(sub => sub.status === "approved")
+                      .reduce((sum, sub) => sum + (sub.submissionValue ?? 0), 0)
+                    const totalProgress = teamSubmissions
+                      .reduce((sum, sub) => sum + (sub.submissionValue ?? 0), 0)
+
+                    const approvedPercentage = goal.targetValue > 0 ? Math.min(100, (approvedProgress / goal.targetValue) * 100) : 0
+                    const isCompleted = approvedProgress >= goal.targetValue
+
+                    return (
+                      <div key={idx} className="p-2 bg-muted/30 rounded-lg space-y-1">
+                        <div className="flex justify-between items-start gap-2">
+                          <span className="text-muted-foreground flex-1 line-clamp-2 break-words leading-tight">{goal.description}</span>
+                          <span className="font-medium text-foreground text-right flex-shrink-0">
+                            Target: {goal.targetValue}
+                          </span>
+                        </div>
+
+                        {currentTeamSubmission && (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1 min-w-[60px]">
+                                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                <span className="text-[10px] text-muted-foreground">Progress</span>
+                              </div>
+                              <Progress
+                                value={approvedPercentage}
+                                className="h-2 flex-1 bg-muted"
+                              />
+                              <span className="text-[10px] font-medium min-w-[40px] text-right">
+                                {approvedProgress}/{goal.targetValue}
+                              </span>
+                            </div>
+
+                            {isCompleted && (
+                              <div className="flex items-center gap-1">
+                                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                <span className="text-[10px] text-green-600 font-medium">Completed!</span>
+                              </div>
+                            )}
+
+                            {totalProgress > approvedProgress && (
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1 min-w-[60px]">
+                                  <Clock className="h-3 w-3 text-yellow-500" />
+                                  <span className="text-[10px] text-muted-foreground">Pending</span>
+                                </div>
+                                <Progress
+                                  value={goal.targetValue > 0 ? Math.min(100, (totalProgress / goal.targetValue) * 100) : 0}
+                                  className="h-2 flex-1 bg-muted"
+                                />
+                                <span className="text-[10px] font-medium min-w-[40px] text-right">
+                                  {totalProgress}/{goal.targetValue}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
 
