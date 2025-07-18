@@ -30,10 +30,10 @@ export async function generateMetadata(
   }
 
   return {
-    title: `${bingo.title} | ${event.title} | BingoScape`,
+    title: `${event.title} | ${bingo.title} | BingoScape`,
     description: bingo.description ?? `View this bingo board from the ${event.title} event`,
     openGraph: {
-      title: `${bingo.title} | ${event.title}`,
+      title: `${event.title} | ${bingo.title}`,
       description: bingo.description ?? `View this bingo board from the ${event.title} event`,
       type: "website",
     },
