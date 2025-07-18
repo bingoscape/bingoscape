@@ -17,7 +17,7 @@ export async function GET(
           <div
             style={{
               fontSize: 48,
-              background: "linear-gradient(90deg, #1e293b 0%, #0f172a 100%)",
+              background: "linear-gradient(135deg, #0f172a 0%, #020617 50%, #0c0a09 100%)",
               width: "100%",
               height: "100%",
               display: "flex",
@@ -43,11 +43,12 @@ export async function GET(
       (
         <div
           style={{
-            background: "linear-gradient(90deg, #1e293b 0%, #0f172a 100%)",
+            background: "linear-gradient(135deg, #0f172a 0%, #020617 50%, #0c0a09 100%)",
             width: "100%",
             height: "100%",
             display: "flex",
             color: "white",
+            position: "relative",
           }}
         >
           {/* Left side - Event Information */}
@@ -63,12 +64,13 @@ export async function GET(
           >
             <div
               style={{
-                fontSize: 40,
+                fontSize: 52,
                 fontWeight: "bold",
                 marginBottom: "20px",
                 color: "#f8fafc",
                 display: "flex",
                 lineHeight: 1.2,
+                textShadow: "0 2px 4px rgba(0,0,0,0.8)",
               }}
             >
               {event.title}
@@ -77,10 +79,11 @@ export async function GET(
             {event.clanName && (
               <div
                 style={{
-                  fontSize: 20,
+                  fontSize: 22,
                   marginBottom: "15px",
-                  color: "#94a3b8",
+                  color: "#cbd5e1",
                   display: "flex",
+                  fontWeight: "500",
                 }}
               >
                 Hosted by {event.clanName}
@@ -89,10 +92,11 @@ export async function GET(
 
             <div
               style={{
-                fontSize: 18,
+                fontSize: 20,
                 marginBottom: "30px",
-                color: "#cbd5e1",
+                color: "#e2e8f0",
                 display: "flex",
+                fontWeight: "500",
               }}
             >
               {new Date(event.startDate).toLocaleDateString()} - {new Date(event.endDate).toLocaleDateString()}
@@ -108,19 +112,29 @@ export async function GET(
             >
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <span style={{ fontSize: "20px" }}>🎯</span>
-                <span style={{ fontSize: "16px", color: "#e2e8f0" }}>
+                <span style={{ fontSize: "18px", color: "#f1f5f9", fontWeight: "600" }}>
                   {event.bingoCount > 0 ? `${event.bingoCount} ${event.bingoCount === 1 ? "Bingo" : "Bingos"}` : "0 Bingos"}
                 </span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <span style={{ fontSize: "20px" }}>💰</span>
-                <span style={{ fontSize: "16px", color: "#e2e8f0" }}>
+                <span style={{ 
+                  fontSize: "18px", 
+                  color: event.minimumBuyIn > 0 ? "#fbbf24" : "#10b981",
+                  fontWeight: "700",
+                  textShadow: "0 1px 2px rgba(0,0,0,0.8)"
+                }}>
                   {event.minimumBuyIn > 0 ? `${event.minimumBuyIn.toLocaleString()} GP` : "Free"}
                 </span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <span style={{ fontSize: "20px" }}>🏆</span>
-                <span style={{ fontSize: "16px", color: "#e2e8f0" }}>
+                <span style={{ 
+                  fontSize: "18px", 
+                  color: event.basePrizePool > 0 ? "#fbbf24" : "#e2e8f0",
+                  fontWeight: "700",
+                  textShadow: "0 1px 2px rgba(0,0,0,0.8)"
+                }}>
                   {event.basePrizePool > 0 ? `${event.basePrizePool.toLocaleString()} GP` : "No Prize"}
                 </span>
               </div>
@@ -128,9 +142,10 @@ export async function GET(
 
             <div
               style={{
-                fontSize: 14,
-                color: "#64748b",
+                fontSize: 16,
+                color: "#94a3b8",
                 display: "flex",
+                fontWeight: "500",
               }}
             >
               BingoScape • RuneScape Bingo Events
@@ -145,15 +160,30 @@ export async function GET(
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              padding: "40px",
+              padding: "5px",
+              position: "relative",
             }}
           >
+            {/* Subtle overlay for better text contrast */}
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: "linear-gradient(45deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.3) 100%)",
+                zIndex: 1,
+              }}
+            />
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                gap: "3px",
+                gap: "2px",
+                position: "relative",
+                zIndex: 2,
               }}
             >
               {firstBingo ? (
@@ -162,18 +192,18 @@ export async function GET(
                     key={rowIndex}
                     style={{
                       display: "flex",
-                      gap: "3px",
+                      gap: "2px",
                     }}
                   >
                     {Array.from({ length: firstBingo.columns }).map((_, colIndex) => {
                       const tileIndex = rowIndex * firstBingo.columns + colIndex
                       const tile = firstBingo.tiles[tileIndex]
 
-                      // Calculate tile size to fit in right half (approximately 550px available)
-                      const maxGridWidth = 520
-                      const maxGridHeight = 520
-                      const tileWidth = Math.min(60, Math.floor(maxGridWidth / firstBingo.columns))
-                      const tileHeight = Math.min(60, Math.floor(maxGridHeight / firstBingo.rows))
+                      // Calculate tile size with right margin space (580px available width, 620px height)
+                      const maxGridWidth = 580
+                      const maxGridHeight = 620
+                      const tileWidth = Math.floor(maxGridWidth / firstBingo.columns)
+                      const tileHeight = Math.floor(maxGridHeight / firstBingo.rows)
                       const tileSize = Math.min(tileWidth, tileHeight)
 
                       return (
@@ -183,12 +213,12 @@ export async function GET(
                             width: `${tileSize}px`,
                             height: `${tileSize}px`,
                             backgroundColor: "#334155",
-                            border: "2px solid #475569",
-                            borderRadius: "4px",
+                            border: "1px solid #475569",
+                            borderRadius: "3px",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            fontSize: `${Math.max(8, tileSize / 8)}px`,
+                            fontSize: `${Math.max(8, tileSize / 12)}px`,
                             fontWeight: "bold",
                             color: "#f1f5f9",
                             position: "relative",
@@ -202,12 +232,12 @@ export async function GET(
                               style={{
                                 width: "100%",
                                 height: "100%",
-                                objectFit: "cover",
+                                objectFit: "contain",
                               }}
                             />
                           ) : (
-                            <div style={{ textAlign: "center", padding: "2px" }}>
-                              {tile ? tile.title.substring(0, Math.max(4, Math.floor(tileSize / 8))) : "?"}
+                            <div style={{ textAlign: "center", padding: "1px" }}>
+                              {tile ? tile.title.substring(0, Math.max(4, Math.floor(tileSize / 12))) : "?"}
                             </div>
                           )}
                         </div>
@@ -229,15 +259,15 @@ export async function GET(
                       <div
                         key={index}
                         style={{
-                          width: "70px",
-                          height: "70px",
+                          width: "100px",
+                          height: "100px",
                           backgroundColor: "#334155",
                           border: "2px solid #475569",
                           borderRadius: "8px",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontSize: "28px",
+                          fontSize: "40px",
                           fontWeight: "bold",
                           color: "#f1f5f9",
                         }}
@@ -248,7 +278,7 @@ export async function GET(
                   </div>
                   <div
                     style={{
-                      fontSize: "16px",
+                      fontSize: "20px",
                       color: "#94a3b8",
                       marginTop: "10px",
                       display: "flex",
@@ -260,6 +290,7 @@ export async function GET(
               )}
             </div>
           </div>
+          
         </div>
       ),
       {
@@ -275,7 +306,7 @@ export async function GET(
         <div
           style={{
             fontSize: 48,
-            background: "linear-gradient(90deg, #1e293b 0%, #0f172a 100%)",
+            background: "linear-gradient(135deg, #0f172a 0%, #020617 50%, #0c0a09 100%)",
             width: "100%",
             height: "100%",
             display: "flex",
