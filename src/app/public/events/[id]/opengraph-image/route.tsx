@@ -10,7 +10,7 @@ export async function GET(
   try {
     const { getPublicEvent, getPublicBingos, getPublicBingoDetails } = await import("@/app/actions/public-events")
     const event = await getPublicEvent(params.id)
-    
+
     if (!event) {
       return new ImageResponse(
         (
@@ -168,14 +168,14 @@ export async function GET(
                     {Array.from({ length: firstBingo.columns }).map((_, colIndex) => {
                       const tileIndex = rowIndex * firstBingo.columns + colIndex
                       const tile = firstBingo.tiles[tileIndex]
-                      
+
                       // Calculate tile size to fit in right half (approximately 550px available)
                       const maxGridWidth = 520
                       const maxGridHeight = 520
                       const tileWidth = Math.min(60, Math.floor(maxGridWidth / firstBingo.columns))
                       const tileHeight = Math.min(60, Math.floor(maxGridHeight / firstBingo.rows))
                       const tileSize = Math.min(tileWidth, tileHeight)
-                      
+
                       return (
                         <div
                           key={colIndex}
@@ -269,7 +269,7 @@ export async function GET(
     )
   } catch (error) {
     console.error('Error generating OpenGraph image:', error)
-    
+
     return new ImageResponse(
       (
         <div

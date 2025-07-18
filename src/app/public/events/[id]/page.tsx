@@ -22,7 +22,7 @@ export async function generateMetadata(
     }
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://bingoscape.com"
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://next.bingoscape.org"
   const eventUrl = `${baseUrl}/public/events/${params.id}`
   
   // Format dates for description
