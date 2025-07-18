@@ -11,7 +11,7 @@ import { PublicBingoGrid } from "@/components/public-bingo-grid"
 // Generate metadata for SEO
 export async function generateMetadata(
   { params }: { params: { id: string } },
-  parent: ResolvingMetadata,
+  _parent: ResolvingMetadata,
 ): Promise<Metadata> {
   const event = await getPublicEvent(params.id)
 
@@ -22,16 +22,52 @@ export async function generateMetadata(
     }
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://bingoscape.com"
+  const eventUrl = `${baseUrl}/public/events/${params.id}`
+  
+  // Format dates for description
+  const startDate = new Date(event.startDate).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  })
+  const endDate = new Date(event.endDate).toLocaleDateString("en-US", {
+    month: "long", 
+    day: "numeric",
+    year: "numeric",
+  })
+
+  const description = event.description ?? 
+    `Join this RuneScape bingo event from ${startDate} to ${endDate}. ${event.clanName ? `Hosted by ${event.clanName}.` : ""} ${event.bingoCount > 0 ? `Features ${event.bingoCount} bingo board${event.bingoCount === 1 ? "" : "s"}.` : ""}`
+
   return {
     title: `${event.title} | BingoScape`,
-    description:
-      event.description ??
-      `View this RuneScape bingo event from ${new Date(event.startDate).toLocaleDateString()} to ${new Date(event.endDate).toLocaleDateString()}`,
+    description,
     openGraph: {
       title: event.title,
-      description: event.description ?? `View this RuneScape bingo event!`,
+      description,
       type: "website",
+      url: eventUrl,
+      siteName: "BingoScape",
+      images: [
+        {
+          url: `${eventUrl}/opengraph-image`,
+          width: 1200,
+          height: 630,
+          alt: `${event.title} - BingoScape Event`,
+        },
+      ],
+      locale: "en_US",
     },
+    twitter: {
+      card: "summary_large_image",
+      title: event.title,
+      description,
+      images: [`${eventUrl}/opengraph-image`],
+      creator: "@bingoscape",
+      site: "@bingoscape",
+    },
+    metadataBase: new URL(baseUrl),
   }
 }
 
