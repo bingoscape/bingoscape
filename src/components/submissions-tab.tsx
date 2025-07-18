@@ -378,7 +378,7 @@ export function SubmissionsTab({
                         type="file"
                         accept="image/*"
                         onChange={onImageChange}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        className={`absolute inset-0 w-full h-full opacity-0 cursor-pointer ${(selectedImage || pastedImage) ? 'pointer-events-none' : ''}`}
                       />
                     </div>
                   </div>
