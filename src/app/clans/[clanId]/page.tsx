@@ -6,8 +6,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
-import { UserIcon, CalendarIcon, Users } from "lucide-react";
+import { UserIcon, CalendarIcon, Users, Search, Filter, Activity, Crown, Shield, UserPlus, MessageSquare, MoreHorizontal } from "lucide-react";
 import { GenerateClanInviteLink } from "@/components/generate-clan-invite-link";
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
@@ -52,6 +55,8 @@ export default function ClanDetailPage({ params }: { params: { clanId: string } 
   const [members, setMembers] = useState<ClanMember[]>([]);
   const [clanDetails, setClanDetails] = useState<ClanDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
   const { status } = useSession();
   const router = useRouter();
 
@@ -158,49 +163,109 @@ export default function ClanDetailPage({ params }: { params: { clanId: string } 
 
   const breadcrumbItems = [
     { label: 'Home', href: '/' },
-    { label: 'Clans', href: '/' },
+    { label: 'Clans', href: '/clans' },
     { label: clanDetails.name, href: `/clans/${clanDetails.id}` },
   ];
 
+  const filteredMembers = members.filter(member => {
+    const matchesSearch = member.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         member.runescapeName?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = roleFilter === "all" || member.role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
+
+  const getRoleIcon = (role: Role) => {
+    switch (role) {
+      case 'admin': return Crown;
+      case 'management': return Shield;
+      case 'member': return UserIcon;
+      case 'guest': return UserPlus;
+      default: return UserIcon;
+    }
+  };
+
+  const getRoleColor = (role: Role) => {
+    switch (role) {
+      case 'admin': return 'text-red-500';
+      case 'management': return 'text-blue-500';
+      case 'member': return 'text-green-500';
+      case 'guest': return 'text-gray-500';
+      default: return 'text-gray-500';
+    }
+  };
+
   return (
-    <div className="container mx-auto py-10 space-y-5">
+    <div className="container mx-auto py-10 space-y-6">
       <Breadcrumbs items={breadcrumbItems} />
-      <Card>
-        <CardHeader>
-          <CardTitle>{clanDetails.name}</CardTitle>
-          <CardDescription>{clanDetails.description}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-row justify-between">
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <Users className="h-4 w-4" />
-                <span>Members: {clanDetails.memberCount}</span>
+      
+      {/* Clan Header */}
+      <Card className="overflow-hidden bg-gradient-to-br from-card to-card/50 border-2">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-accent" />
+        <CardHeader className="pb-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                <Activity className="h-10 w-10 text-primary" />
               </div>
-              <div className="flex items-center space-x-2 mb-4">
-                <CalendarIcon className="h-4 w-4" />
-                <span>Events: {clanDetails.eventCount}</span>
-              </div>
-              <div className="flex items-center space-x-2 mb-6">
-                <UserIcon className="h-4 w-4" />
-                <span>Owner:</span>
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={clanDetails.owner.image ?? undefined} alt={clanDetails.owner.runescapeName ?? ''} />
-                  <AvatarFallback>{clanDetails.owner?.runescapeName?.[0] ?? 'O'}</AvatarFallback>
-                </Avatar>
-                <span>{clanDetails.owner?.runescapeName ?? clanDetails.owner?.name}</span>
+              <div>
+                <CardTitle className="text-2xl">{clanDetails.name}</CardTitle>
+                <CardDescription className="text-base mt-1">
+                  {clanDetails.description || "No description available"}
+                </CardDescription>
               </div>
             </div>
-            <div className="flex flex-col space-y-2">
+            <div className="flex space-x-2">
               {isOwnerOrAdmin && (
                 <GenerateClanInviteLink clanId={params.clanId} />
               )}
               <Link href={`/clans/${params.clanId}/events`} passHref>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline">
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   View Events
                 </Button>
               </Link>
+            </div>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="flex items-center space-x-3 p-4 rounded-lg bg-secondary/30">
+              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                <Users className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Members</p>
+                <p className="text-2xl font-bold">{clanDetails.memberCount}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3 p-4 rounded-lg bg-secondary/30">
+              <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                <CalendarIcon className="h-5 w-5 text-purple-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Events</p>
+                <p className="text-2xl font-bold">{clanDetails.eventCount}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3 p-4 rounded-lg bg-secondary/30">
+              <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                <Crown className="h-5 w-5 text-yellow-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Owner</p>
+                <div className="flex items-center space-x-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={clanDetails.owner.image ?? undefined} alt={clanDetails.owner.runescapeName ?? ''} />
+                    <AvatarFallback className="text-xs">{clanDetails.owner?.runescapeName?.[0] ?? 'O'}</AvatarFallback>
+                  </Avatar>
+                  <span className="font-semibold text-sm">
+                    {clanDetails.owner?.runescapeName ?? clanDetails.owner?.name}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
