@@ -71,9 +71,9 @@ export default async function ClansPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {userClan.clan.description || "No description available"}
+                  {userClan.clan.description ?? "No description available"}
                 </p>
-                
+
                 <div className="grid grid-cols-1 gap-3">
                   <div className="flex items-center space-x-2 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
                     <Crown className="h-4 w-4 text-yellow-600" />
@@ -86,7 +86,7 @@ export default async function ClansPage() {
                       {userClan.owner.runescapeName ?? userClan.owner.name}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
                     <div className="flex items-center space-x-2">
                       <Users className="h-4 w-4 text-blue-600" />
@@ -97,14 +97,14 @@ export default async function ClansPage() {
                       <TrendingUp className="h-3 w-3 text-green-600" />
                     </div>
                   </div>
-                  
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-purple-600" />
-                      <span className="text-sm font-medium text-muted-foreground">Events:</span>
-                    </div>
-                    <span className="text-sm font-bold">{userClan.eventCount || 0}</span>
-                  </div>
+
+                  //<div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
+                  //  <div className="flex items-center space-x-2">
+                  //    <Calendar className="h-4 w-4 text-purple-600" />
+                  //    <span className="text-sm font-medium text-muted-foreground">Events:</span>
+                  //  </div>
+                  //  <span className="text-sm font-bold">userClan.eventCount || 0</span>
+                  //</div>
                 </div>
               </CardContent>
               <CardFooter className="pt-2">
