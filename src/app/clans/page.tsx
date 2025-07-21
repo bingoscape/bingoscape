@@ -98,14 +98,14 @@ export default async function ClansPage() {
                     </div>
                   </div>
 
-                  //<div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
-                  //  <div className="flex items-center space-x-2">
-                  //    <Calendar className="h-4 w-4 text-purple-600" />
-                  //    <span className="text-sm font-medium text-muted-foreground">Events:</span>
-                  //  </div>
-                  //  <span className="text-sm font-bold">userClan.eventCount || 0</span>
-                  //</div>
-                </div>
+                  {/*<div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="h-4 w-4 text-purple-600" />
+                      <span className="text-sm font-medium text-muted-foreground">Events:</span>
+                    </div>
+                    <span className="text-sm font-bold">{userClan.eventCount || 0}</span>
+                  </div>
+                </div>*/}
               </CardContent>
               <CardFooter className="pt-2">
                 <Link href={`/clans/${userClan.clan.id}`} passHref className="w-full">
