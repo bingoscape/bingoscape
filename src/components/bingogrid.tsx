@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Bingo, Tile, Team, EventRole, Goal, Submission } from "@/app/actions/events"
 import Sortable, { type SortableEvent } from "sortablejs"
 import { BingoGridLayout } from "./bingo-grid-layout"
+import { ProgressionBingoGrid } from "./progression-bingo-grid"
 import { TileDetailsTab } from "./tile-details-tab"
 import { GoalsTab } from "./goals-tab"
 import { SubmissionsTab } from "./submissions-tab"
@@ -33,6 +34,7 @@ import { StatsDialog } from "./stats-dialog"
 import { BarChart, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSession } from "next-auth/react"
+import { getTeamTierProgress, initializeTeamTierProgress } from "@/app/actions/bingo"
 
 // Define an extended submission type that includes goalId, submissionValue, and weight
 interface ExtendedSubmission extends Submission {
@@ -72,6 +74,43 @@ export default function BingoGrid({
   const sortableRef = useRef<Sortable | null>(null)
   const [isStatsDialogOpen, setIsStatsDialogOpen] = useState(false)
   const session = useSession()
+  
+  // Progression bingo state
+  const [tierProgress, setTierProgress] = useState<Array<{
+    tier: number
+    isUnlocked: boolean
+    unlockedAt: Date | null
+  }>>([])
+  const [unlockedTiers, setUnlockedTiers] = useState<Set<number>>(new Set([0]))
+
+  // Load tier progress for progression bingo
+  useEffect(() => {
+    const loadTierProgress = async () => {
+      if (bingo.bingoType === "progression" && currentTeamId) {
+        try {
+          // Initialize tier progress if needed
+          await initializeTeamTierProgress(currentTeamId, bingo.id)
+          
+          // Load tier progress
+          const progress = await getTeamTierProgress(currentTeamId, bingo.id)
+          setTierProgress(progress.map(p => ({
+            tier: p.tier,
+            isUnlocked: p.isUnlocked,
+            unlockedAt: p.unlockedAt
+          })))
+          
+          const unlockedTierSet = new Set(
+            progress.filter(p => p.isUnlocked).map(p => p.tier)
+          )
+          setUnlockedTiers(unlockedTierSet)
+        } catch (error) {
+          console.error("Error loading tier progress:", error)
+        }
+      }
+    }
+
+    loadTierProgress()
+  }, [bingo.id, bingo.bingoType, currentTeamId])
 
   useEffect(() => {
     if (gridRef.current && hasSufficientRights() && !isLayoutLocked) {
@@ -115,10 +154,21 @@ export default function BingoGrid({
   }, [tiles, isLayoutLocked, onReorderTiles])
 
   const handleTileClick = async (tile: Tile) => {
+    // Check if tile is locked due to progression
+    if (bingo.bingoType === "progression" && !unlockedTiers.has(tile.tier)) {
+      toast({
+        title: "Tier locked",
+        description: `Complete more tiles in tier ${tile.tier} to unlock this tier`,
+        variant: "destructive",
+      })
+      return
+    }
+
     if (tile.isHidden && !isLayoutLocked && hasSufficientRights()) {
       await handleTogglePlaceholder(tile)
       return
     }
+    
     try {
       const goals = await getTileGoalsAndProgress(tile.id)
       const teamTileSubmissions = await getSubmissions(tile.id)
@@ -709,18 +759,27 @@ export default function BingoGrid({
           Stats
         </Button>
       </div>
-      <BingoGridLayout
-        ref={gridRef}
-        tiles={tiles}
-        columns={bingo.columns}
-        rows={bingo.rows}
-        userRole={userRole}
-        currentTeamId={currentTeamId}
-        onTileClick={handleTileClick}
-        onTogglePlaceholder={handleTogglePlaceholder}
-        highlightedTiles={highlightedTiles}
-        isLocked={isLayoutLocked}
-      />
+      {bingo.bingoType === "progression" ? (
+        <ProgressionBingoGrid
+          tiles={tiles}
+          currentTeamId={currentTeamId}
+          onTileClick={handleTileClick}
+          tierProgress={tierProgress}
+        />
+      ) : (
+        <BingoGridLayout
+          ref={gridRef}
+          tiles={tiles}
+          columns={bingo.columns}
+          rows={bingo.rows}
+          userRole={userRole}
+          currentTeamId={currentTeamId}
+          onTileClick={handleTileClick}
+          onTogglePlaceholder={handleTogglePlaceholder}
+          highlightedTiles={highlightedTiles}
+          isLocked={isLayoutLocked}
+        />
+      )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="w-[95vw] max-w-[1400px] h-[90vh] overflow-hidden flex flex-col bg-background border-border modal-content">
@@ -765,6 +824,7 @@ export default function BingoGrid({
                 editedTile={editedTile}
                 userRole={userRole}
                 teams={teams}
+                isProgressionBingo={bingo.bingoType === "progression"}
                 onEditTile={(field, value) => setEditedTile({ ...editedTile, [field]: value })}
                 onUpdateTile={handleTileUpdate}
                 onEditorChange={handleEditorChange}

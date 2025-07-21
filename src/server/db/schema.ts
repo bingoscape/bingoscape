@@ -121,6 +121,7 @@ export const submissionStatusEnum = pgEnum("submission_status", [
 export const clanRoleEnum = pgEnum("clan_role", ["admin", "management", "member", "guest"])
 export const eventRoleEnum = pgEnum("event_role", ["admin", "management", "participant"])
 export const registrationStatusEnum = pgEnum("registration_status", ["pending", "approved", "rejected"])
+export const bingoTypeEnum = pgEnum("bingo_type", ["standard", "progression"])
 
 export const events = createTable("events", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -198,6 +199,8 @@ export const bingos = createTable("bingos", {
   rows: integer("rows").notNull(),
   columns: integer("columns").notNull(),
   codephrase: varchar("codephrase", { length: 255 }).notNull(),
+  bingoType: bingoTypeEnum("bingo_type").default("standard").notNull(),
+  tiersUnlockRequirement: integer("tiers_unlock_requirement").default(1).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   locked: boolean("locked").default(false).notNull(),
@@ -210,6 +213,7 @@ export const bingosRelations = relations(bingos, ({ one, many }) => ({
     references: [events.id],
   }),
   tiles: many(tiles),
+  tierProgress: many(teamTierProgress),
 }))
 
 export const teams = createTable("teams", {
@@ -229,6 +233,7 @@ export const teamsRelations = relations(teams, ({ many, one }) => ({
     references: [events.id],
   }),
   goalProgress: many(teamGoalProgress),
+  tierProgress: many(teamTierProgress),
 }))
 
 export const teamMembers = createTable("team_members", {
@@ -266,6 +271,7 @@ export const tiles = createTable("tiles", {
   weight: integer("weight").notNull(),
   index: integer("index").notNull(),
   isHidden: boolean("is_hidden").default(true).notNull(),
+  tier: integer("tier").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
@@ -546,6 +552,39 @@ export const teamGoalProgressRelations = relations(teamGoalProgress, ({ one }) =
   goal: one(goals, {
     fields: [teamGoalProgress.goalId],
     references: [goals.id],
+  }),
+}))
+
+export const teamTierProgress = createTable(
+  "team_tier_progress",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    bingoId: uuid("bingo_id")
+      .notNull()
+      .references(() => bingos.id, { onDelete: "cascade" }),
+    tier: integer("tier").notNull(),
+    isUnlocked: boolean("is_unlocked").default(false).notNull(),
+    unlockedAt: timestamp("unlocked_at"),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      teamBingoTierUnique: uniqueIndex("team_bingo_tier_unique").on(table.teamId, table.bingoId, table.tier),
+    }
+  },
+)
+
+export const teamTierProgressRelations = relations(teamTierProgress, ({ one }) => ({
+  team: one(teams, {
+    fields: [teamTierProgress.teamId],
+    references: [teams.id],
+  }),
+  bingo: one(bingos, {
+    fields: [teamTierProgress.bingoId],
+    references: [bingos.id],
   }),
 }))
 

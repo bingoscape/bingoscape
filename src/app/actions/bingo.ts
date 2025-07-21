@@ -11,6 +11,7 @@ import {
   images,
   teams,
   teamTileSubmissions,
+  teamTierProgress,
 } from "@/server/db/schema"
 import type { UUID } from "crypto"
 import { asc, eq, inArray, and } from "drizzle-orm"
@@ -81,6 +82,8 @@ export async function createBingo(formData: FormData) {
   const rowsStr = formData.get("rows") as string
   const columnsStr = formData.get("columns") as string
   const codephrase = formData.get("codephrase") as string
+  const bingoType = (formData.get("bingoType") as "standard" | "progression") || "standard"
+  const tiersUnlockRequirementStr = formData.get("tiersUnlockRequirement") as string
 
   console.log(formData)
 
@@ -90,6 +93,7 @@ export async function createBingo(formData: FormData) {
 
   const rows = Number.parseInt(rowsStr)
   const columns = Number.parseInt(columnsStr)
+  const tiersUnlockRequirement = tiersUnlockRequirementStr ? Number.parseInt(tiersUnlockRequirementStr) : 1
 
   if (isNaN(rows) || isNaN(columns) || rows < 1 || columns < 1) {
     throw new Error("Invalid rows or columns")
@@ -104,6 +108,8 @@ export async function createBingo(formData: FormData) {
       rows,
       codephrase,
       columns,
+      bingoType,
+      tiersUnlockRequirement,
     })
     .returning({ id: bingos.id })
 
@@ -119,6 +125,7 @@ export async function createBingo(formData: FormData) {
       weight: 1,
       isHidden: false,
       index: idx,
+      tier: bingoType === "progression" ? Math.floor(idx / columns) : 0, // Assign tiers based on rows for progression
     })
   }
 
@@ -632,6 +639,16 @@ export async function updateTeamTileSubmissionStatus(
           updatedAt: new Date(),
         })
         .where(eq(submissions.teamTileSubmissionId, teamTileSubmissionId))
+
+      // Check for tier unlock in progression bingo
+      const tile = await db.query.tiles.findFirst({
+        where: eq(tiles.id, updatedTeamTileSubmission.tileId),
+        with: { bingo: true }
+      })
+
+      if (tile && tile.bingo.bingoType === "progression") {
+        await checkAndUnlockNextTier(updatedTeamTileSubmission.teamId, tile.bingoId)
+      }
     }
 
     // Revalidate the submissions page
@@ -871,21 +888,30 @@ interface UpdateBingoData {
   visible: boolean
   locked: boolean
   codephrase: string
+  bingoType?: "standard" | "progression"
+  tiersUnlockRequirement?: number
 }
 
 export async function updateBingo(bingoId: string, data: UpdateBingoData) {
   try {
-    await db
-      .update(bingos)
-      .set({
-        title: data.title,
-        description: data.description,
-        visible: data.visible,
-        locked: data.locked,
-        codephrase: data.codephrase,
-        updatedAt: new Date(),
-      })
-      .where(eq(bingos.id, bingoId))
+    const updateData: any = {
+      title: data.title,
+      description: data.description,
+      visible: data.visible,
+      locked: data.locked,
+      codephrase: data.codephrase,
+      updatedAt: new Date(),
+    }
+
+    if (data.bingoType !== undefined) {
+      updateData.bingoType = data.bingoType
+    }
+
+    if (data.tiersUnlockRequirement !== undefined) {
+      updateData.tiersUnlockRequirement = data.tiersUnlockRequirement
+    }
+
+    await db.update(bingos).set(updateData).where(eq(bingos.id, bingoId))
 
     // Revalidate the bingo page
     revalidatePath(`/events/[id]/bingos/${bingoId}`)
@@ -895,5 +921,197 @@ export async function updateBingo(bingoId: string, data: UpdateBingoData) {
   } catch (error) {
     console.error("Error updating bingo:", error)
     return { success: false, error: "Failed to update bingo" }
+  }
+}
+
+// Progression Bingo Functions
+
+export async function getTeamTierProgress(teamId: string, bingoId: string) {
+  try {
+    const tierProgress = await db.query.teamTierProgress.findMany({
+      where: and(eq(teamTierProgress.teamId, teamId), eq(teamTierProgress.bingoId, bingoId)),
+      orderBy: asc(teamTierProgress.tier),
+    })
+
+    return tierProgress
+  } catch (error) {
+    console.error("Error fetching team tier progress:", error)
+    throw new Error("Failed to fetch team tier progress")
+  }
+}
+
+export async function initializeTeamTierProgress(teamId: string, bingoId: string) {
+  try {
+    // Check if this is a progression bingo
+    const [bingo] = await db.select({ bingoType: bingos.bingoType }).from(bingos).where(eq(bingos.id, bingoId))
+    
+    if (!bingo || bingo.bingoType !== "progression") {
+      return { success: false, error: "Not a progression bingo" }
+    }
+
+    // Get all tiers for this bingo
+    const tiersQuery = await db
+      .select({ tier: tiles.tier })
+      .from(tiles)
+      .where(eq(tiles.bingoId, bingoId))
+      .groupBy(tiles.tier)
+      .orderBy(asc(tiles.tier))
+
+    const uniqueTiers = tiersQuery.map(t => t.tier)
+
+    // Initialize tier progress for this team, unlocking only tier 0
+    const tierProgressData = uniqueTiers.map(tier => ({
+      teamId,
+      bingoId,
+      tier,
+      isUnlocked: tier === 0, // Only unlock tier 0 initially
+      unlockedAt: tier === 0 ? new Date() : null,
+    }))
+
+    await db
+      .insert(teamTierProgress)
+      .values(tierProgressData)
+      .onConflictDoNothing()
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error initializing team tier progress:", error)
+    return { success: false, error: "Failed to initialize team tier progress" }
+  }
+}
+
+export async function checkAndUnlockNextTier(teamId: string, bingoId: string) {
+  try {
+    // Get bingo unlock requirements
+    const [bingo] = await db
+      .select({ tiersUnlockRequirement: bingos.tiersUnlockRequirement })
+      .from(bingos)
+      .where(eq(bingos.id, bingoId))
+
+    if (!bingo) {
+      throw new Error("Bingo not found")
+    }
+
+    // Get team's current tier progress
+    const tierProgress = await db.query.teamTierProgress.findMany({
+      where: and(eq(teamTierProgress.teamId, teamId), eq(teamTierProgress.bingoId, bingoId)),
+      orderBy: asc(teamTierProgress.tier),
+    })
+
+    // Find the highest unlocked tier
+    const highestUnlockedTier = Math.max(...tierProgress.filter(tp => tp.isUnlocked).map(tp => tp.tier))
+    
+    // Check if we can unlock the next tier
+    const nextTier = highestUnlockedTier + 1
+    const nextTierProgress = tierProgress.find(tp => tp.tier === nextTier)
+
+    if (!nextTierProgress || nextTierProgress.isUnlocked) {
+      return { success: true, unlockedTier: null } // No next tier or already unlocked
+    }
+
+    // Count completed tiles in current highest tier
+    const currentTierTiles = await db
+      .select({ 
+        id: tiles.id,
+        teamTileSubmissions: {
+          status: teamTileSubmissions.status
+        }
+      })
+      .from(tiles)
+      .leftJoin(teamTileSubmissions, and(
+        eq(teamTileSubmissions.tileId, tiles.id),
+        eq(teamTileSubmissions.teamId, teamId)
+      ))
+      .where(and(
+        eq(tiles.bingoId, bingoId),
+        eq(tiles.tier, highestUnlockedTier)
+      ))
+
+    const completedTilesCount = currentTierTiles.filter(
+      tile => tile.teamTileSubmissions?.status === "approved"
+    ).length
+
+    // Check if unlock requirement is met
+    if (completedTilesCount >= bingo.tiersUnlockRequirement) {
+      // Unlock the next tier
+      await db
+        .update(teamTierProgress)
+        .set({
+          isUnlocked: true,
+          unlockedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(teamTierProgress.teamId, teamId),
+          eq(teamTierProgress.bingoId, bingoId),
+          eq(teamTierProgress.tier, nextTier)
+        ))
+
+      return { success: true, unlockedTier: nextTier }
+    }
+
+    return { success: true, unlockedTier: null }
+  } catch (error) {
+    console.error("Error checking tier unlock:", error)
+    return { success: false, error: "Failed to check tier unlock" }
+  }
+}
+
+export async function getProgressionBingoTiles(bingoId: string, teamId?: string) {
+  try {
+    // Get bingo info
+    const [bingo] = await db
+      .select({ bingoType: bingos.bingoType })
+      .from(bingos)
+      .where(eq(bingos.id, bingoId))
+
+    if (!bingo || bingo.bingoType !== "progression") {
+      throw new Error("Not a progression bingo")
+    }
+
+    // Get all tiles
+    const allTiles = await db.query.tiles.findMany({
+      where: eq(tiles.bingoId, bingoId),
+      with: {
+        goals: true,
+        teamTileSubmissions: teamId ? {
+          where: eq(teamTileSubmissions.teamId, teamId),
+        } : undefined,
+      },
+      orderBy: [asc(tiles.tier), asc(tiles.index)],
+    })
+
+    // If no team specified, return all tiles
+    if (!teamId) {
+      return allTiles
+    }
+
+    // Get team's tier progress
+    const tierProgress = await getTeamTierProgress(teamId, bingoId)
+    const unlockedTiers = new Set(
+      tierProgress.filter(tp => tp.isUnlocked).map(tp => tp.tier)
+    )
+
+    // Filter tiles based on unlocked tiers
+    const accessibleTiles = allTiles.filter(tile => unlockedTiers.has(tile.tier))
+
+    return accessibleTiles
+  } catch (error) {
+    console.error("Error fetching progression bingo tiles:", error)
+    throw new Error("Failed to fetch progression bingo tiles")
+  }
+}
+
+export async function updateTileTier(tileId: string, newTier: number) {
+  try {
+    await db
+      .update(tiles)
+      .set({ tier: newTier, updatedAt: new Date() })
+      .where(eq(tiles.id, tileId))
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error updating tile tier:", error)
+    return { success: false, error: "Failed to update tile tier" }
   }
 }
