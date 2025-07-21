@@ -4,7 +4,7 @@ import React from "react"
 import Image from "next/image"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Lock, ArrowRight, Check, Clock, AlertTriangle } from "lucide-react"
+import { Lock, ArrowDown, Check, Clock, AlertTriangle } from "lucide-react"
 import type { Tile } from "@/app/actions/events"
 import { cn } from "@/lib/utils"
 
@@ -16,6 +16,10 @@ interface ProgressionBingoGridProps {
     tier: number
     isUnlocked: boolean
     unlockedAt: Date | null
+  }>
+  tierXpRequirements: Array<{
+    tier: number
+    xpRequired: number
   }>
 }
 
@@ -30,7 +34,8 @@ export function ProgressionBingoGrid({
   tiles,
   currentTeamId,
   onTileClick,
-  tierProgress = []
+  tierProgress = [],
+  tierXpRequirements
 }: ProgressionBingoGridProps) {
   // Group tiles by tier
   const tierData: TierData[] = React.useMemo(() => {
@@ -71,16 +76,20 @@ export function ProgressionBingoGrid({
   }
 
   const getTierCompletionStatus = (tierTiles: Tile[]) => {
-    if (!currentTeamId) return { completed: 0, total: tierTiles.length }
+    if (!currentTeamId) return { completedXP: 0, totalXP: tierTiles.reduce((sum, tile) => sum + tile.weight, 0) }
     
-    const completed = tierTiles.filter(tile => {
-      const submission = tile.teamTileSubmissions?.find(
-        tts => tts.teamId === currentTeamId
-      )
-      return submission?.status === "approved"
-    }).length
+    const completedXP = tierTiles
+      .filter(tile => {
+        const submission = tile.teamTileSubmissions?.find(
+          tts => tts.teamId === currentTeamId
+        )
+        return submission?.status === "approved"
+      })
+      .reduce((sum, tile) => sum + tile.weight, 0)
 
-    return { completed, total: tierTiles.length }
+    const totalXP = tierTiles.reduce((sum, tile) => sum + tile.weight, 0)
+    
+    return { completedXP, totalXP }
   }
 
   return (
@@ -109,7 +118,11 @@ export function ProgressionBingoGrid({
                     {isLocked && <span className="text-muted-foreground"> (Locked)</span>}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    {completionStatus.completed}/{completionStatus.total} completed
+                    {completionStatus.completedXP}/{completionStatus.totalXP} XP completed
+                    {(() => {
+                      const tierReq = tierXpRequirements.find(req => req.tier === tierInfo.tier)
+                      return tierReq ? ` (${tierReq.xpRequired} XP required to unlock next tier)` : ""
+                    })()}
                     {tierInfo.unlockedAt && (
                       <span className="ml-2">
                         • Unlocked {new Date(tierInfo.unlockedAt).toLocaleDateString()}
@@ -124,7 +137,7 @@ export function ProgressionBingoGrid({
                 <Badge variant={tierInfo.isUnlocked ? "default" : "secondary"}>
                   {tierInfo.isUnlocked ? "Unlocked" : "Locked"}
                 </Badge>
-                {completionStatus.completed === completionStatus.total && completionStatus.total > 0 && (
+                {completionStatus.completedXP === completionStatus.totalXP && completionStatus.totalXP > 0 && (
                   <Badge variant="outline" className="text-green-600 border-green-600">
                     <Check className="h-3 w-3 mr-1" />
                     Complete
@@ -216,7 +229,7 @@ export function ProgressionBingoGrid({
                         </div>
 
                         {/* Tile Weight */}
-                        <Badge variant="outline" size="sm">
+                        <Badge variant="outline" className="text-xs">
                           {tile.weight} XP
                         </Badge>
                       </div>
@@ -229,10 +242,10 @@ export function ProgressionBingoGrid({
             {/* Arrow to next tier */}
             {tierIndex < tierData.length - 1 && (
               <div className="flex justify-center py-4">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <div className="h-px flex-1 bg-border"></div>
-                  <ArrowRight className="h-5 w-5" />
-                  <div className="h-px flex-1 bg-border"></div>
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <div className="w-px h-4 bg-border"></div>
+                  <ArrowDown className="h-5 w-5" />
+                  <div className="w-px h-4 bg-border"></div>
                 </div>
               </div>
             )}

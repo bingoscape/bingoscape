@@ -18,6 +18,7 @@ import {
   deleteTile,
   deleteSubmission,
   updateSubmissionStatus,
+  getTierXpRequirements,
 } from "@/app/actions/bingo"
 import "@mdxeditor/editor/style.css"
 import "@/styles/modal-animations.css"
@@ -81,28 +82,41 @@ export default function BingoGrid({
     isUnlocked: boolean
     unlockedAt: Date | null
   }>>([])
+  const [tierXpRequirements, setTierXpRequirements] = useState<Array<{
+    tier: number
+    xpRequired: number
+  }>>([])
   const [unlockedTiers, setUnlockedTiers] = useState<Set<number>>(new Set([0]))
 
   // Load tier progress for progression bingo
   useEffect(() => {
     const loadTierProgress = async () => {
-      if (bingo.bingoType === "progression" && currentTeamId) {
+      if (bingo.bingoType === "progression") {
         try {
-          // Initialize tier progress if needed
-          await initializeTeamTierProgress(currentTeamId, bingo.id)
-          
-          // Load tier progress
-          const progress = await getTeamTierProgress(currentTeamId, bingo.id)
-          setTierProgress(progress.map(p => ({
-            tier: p.tier,
-            isUnlocked: p.isUnlocked,
-            unlockedAt: p.unlockedAt
+          // Load tier XP requirements
+          const xpRequirements = await getTierXpRequirements(bingo.id)
+          setTierXpRequirements(xpRequirements.map(req => ({
+            tier: req.tier,
+            xpRequired: req.xpRequired
           })))
-          
-          const unlockedTierSet = new Set(
-            progress.filter(p => p.isUnlocked).map(p => p.tier)
-          )
-          setUnlockedTiers(unlockedTierSet)
+
+          if (currentTeamId) {
+            // Initialize tier progress if needed
+            await initializeTeamTierProgress(currentTeamId, bingo.id)
+            
+            // Load tier progress
+            const progress = await getTeamTierProgress(currentTeamId, bingo.id)
+            setTierProgress(progress.map(p => ({
+              tier: p.tier,
+              isUnlocked: p.isUnlocked,
+              unlockedAt: p.unlockedAt
+            })))
+            
+            const unlockedTierSet = new Set(
+              progress.filter(p => p.isUnlocked).map(p => p.tier)
+            )
+            setUnlockedTiers(unlockedTierSet)
+          }
         } catch (error) {
           console.error("Error loading tier progress:", error)
         }
@@ -765,6 +779,7 @@ export default function BingoGrid({
           currentTeamId={currentTeamId}
           onTileClick={handleTileClick}
           tierProgress={tierProgress}
+          tierXpRequirements={tierXpRequirements}
         />
       ) : (
         <BingoGridLayout

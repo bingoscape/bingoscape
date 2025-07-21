@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { UUID } from "crypto"
 import { TeamSelector } from "@/components/team-selector"
 import { BingoImportExportModal } from "@/components/bingo-import-export-modal"
+import { TierManagementModal } from "@/components/tier-management-modal"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, RefreshCw } from "lucide-react"
@@ -131,6 +132,12 @@ export default function BingoDetailPage({ params }: { params: { id: UUID; bingoI
                 userRole={userRole}
                 onTeamChange={handleTeamChange}
                 selectedTeamId={selectedTeamId}
+              />
+            )}
+            {isAdminOrManagement && bingo.bingoType === "progression" && (
+              <TierManagementModal 
+                bingo={bingo} 
+                onTilesUpdated={handleRefresh}
               />
             )}
             {isAdminOrManagement && (
