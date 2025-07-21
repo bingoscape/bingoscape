@@ -95,6 +95,7 @@ export interface Tile {
   updatedAt: Date
   bingoId: string
   isHidden: boolean
+  tier: number
   teamTileSubmissions?: TeamTileSubmission[]
   goals?: Goal[]
 }
@@ -111,6 +112,8 @@ export interface Bingo {
   updatedAt: Date
   locked: boolean
   visible: boolean
+  bingoType: "standard" | "progression"
+  tiersUnlockRequirement: number
   tiles?: Tile[]
 }
 

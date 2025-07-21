@@ -33,6 +33,7 @@ type EditableTileFields = {
   weight: number
   headerImage: string
   isHidden: boolean
+  tier: number
 }
 
 interface TileDetailsTabProps {
@@ -40,6 +41,7 @@ interface TileDetailsTabProps {
   editedTile: Partial<Tile>
   userRole: "admin" | "management" | "participant"
   teams: Team[]
+  isProgressionBingo?: boolean
   onEditTile: <K extends keyof EditableTileFields>(field: K, value: EditableTileFields[K]) => void
   onUpdateTile: () => void
   onEditorChange: (content: string) => void
@@ -71,6 +73,7 @@ export function TileDetailsTab({
   editedTile,
   userRole,
   teams,
+  isProgressionBingo = false,
   onEditTile,
   onUpdateTile,
   onEditorChange,
@@ -243,7 +246,7 @@ export function TileDetailsTab({
                       className="mt-1"
                     />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label htmlFor="xp" className="block text-sm font-medium">
                         XP
@@ -261,6 +264,24 @@ export function TileDetailsTab({
                         />
                       </div>
                     </div>
+                    {isProgressionBingo && (
+                      <div>
+                        <label htmlFor="tier" className="block text-sm font-medium">
+                          Tier
+                        </label>
+                        <Input
+                          id="tier"
+                          type="number"
+                          min="0"
+                          value={editedTile.tier?.toString() ?? "0"}
+                          onChange={(e) => onEditTile("tier", Number(e.target.value))}
+                          className="mt-1"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Tier 0 is unlocked by default
+                        </p>
+                      </div>
+                    )}
                     <div className="flex items-center space-x-2 h-full pt-6">
                       <Switch
                         id="isHidden"

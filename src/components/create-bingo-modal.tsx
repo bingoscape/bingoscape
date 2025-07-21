@@ -8,17 +8,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createBingo } from '@/app/actions/bingo'
 import { Textarea } from './ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import generateOSRSCodePhrase from '@/lib/codephraseGenerator'
 
 export function CreateBingoModal({ eventId }: { eventId: string }) {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [bingoType, setBingoType] = useState<"standard" | "progression">("standard")
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
     formData.append('eventId', eventId)
+    formData.append('bingoType', bingoType)
 
     try {
       await createBingo(formData)
@@ -63,10 +66,50 @@ export function CreateBingoModal({ eventId }: { eventId: string }) {
             <Textarea id="description" name="description" className="max-w-full" />
           </div>
 
+          <div>
+            <Label htmlFor="bingoType">Bingo Type</Label>
+            <Select value={bingoType} onValueChange={(value: "standard" | "progression") => setBingoType(value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select bingo type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="standard">Standard Bingo</SelectItem>
+                <SelectItem value="progression">Progression Bingo</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground mt-1">
+              {bingoType === "standard" 
+                ? "Traditional bingo where all tiles are available from the start" 
+                : "Progression-based bingo where teams unlock tiers by completing previous ones"
+              }
+            </p>
+          </div>
+
+          {bingoType === "progression" && (
+            <div>
+              <Label htmlFor="tiersUnlockRequirement">Tiles Required to Unlock Next Tier</Label>
+              <Input 
+                id="tiersUnlockRequirement" 
+                name="tiersUnlockRequirement" 
+                type="number" 
+                min="1" 
+                max="20" 
+                defaultValue={1} 
+                required 
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Number of tiles that must be completed in each tier before the next tier unlocks
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="rows">Number of Rows</Label>
               <Input id="rows" name="rows" type="number" min="1" max="10" defaultValue={5} required />
+              {bingoType === "progression" && (
+                <p className="text-sm text-muted-foreground mt-1">Each row becomes a progression tier</p>
+              )}
             </div>
             <div>
               <Label htmlFor="columns">Number of Columns</Label>
