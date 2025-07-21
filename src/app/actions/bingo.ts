@@ -12,6 +12,7 @@ import {
   teams,
   teamTileSubmissions,
   teamTierProgress,
+  tierXpRequirements,
 } from "@/server/db/schema"
 import type { UUID } from "crypto"
 import { asc, eq, inArray, and } from "drizzle-orm"
@@ -131,6 +132,11 @@ export async function createBingo(formData: FormData) {
 
   await db.insert(tiles).values(tilesToInsert)
 
+  // Initialize tier XP requirements for progression bingos
+  if (bingoType === "progression") {
+    await initializeTierXpRequirements(bingoId, tiersUnlockRequirement)
+  }
+
   return { success: true }
 }
 
@@ -234,6 +240,7 @@ export interface TileData {
   weight: number
   index: number
   isHidden: boolean
+  tier: number
   goals: GoalData[]
 }
 
@@ -982,15 +989,10 @@ export async function initializeTeamTierProgress(teamId: string, bingoId: string
 
 export async function checkAndUnlockNextTier(teamId: string, bingoId: string) {
   try {
-    // Get bingo unlock requirements
-    const [bingo] = await db
-      .select({ tiersUnlockRequirement: bingos.tiersUnlockRequirement })
-      .from(bingos)
-      .where(eq(bingos.id, bingoId))
-
-    if (!bingo) {
-      throw new Error("Bingo not found")
-    }
+    // Get tier-specific XP requirements for this bingo
+    const tierXpReqs = await db.query.tierXpRequirements.findMany({
+      where: eq(tierXpRequirements.bingoId, bingoId),
+    })
 
     // Get team's current tier progress
     const tierProgress = await db.query.teamTierProgress.findMany({
@@ -1013,6 +1015,7 @@ export async function checkAndUnlockNextTier(teamId: string, bingoId: string) {
     const currentTierTiles = await db
       .select({ 
         id: tiles.id,
+        weight: tiles.weight,
         teamTileSubmissions: {
           status: teamTileSubmissions.status
         }
@@ -1027,12 +1030,16 @@ export async function checkAndUnlockNextTier(teamId: string, bingoId: string) {
         eq(tiles.tier, highestUnlockedTier)
       ))
 
-    const completedTilesCount = currentTierTiles.filter(
-      tile => tile.teamTileSubmissions?.status === "approved"
-    ).length
+    const completedTilesXP = currentTierTiles
+      .filter(tile => tile.teamTileSubmissions?.status === "approved")
+      .reduce((totalXP, tile) => totalXP + tile.weight, 0)
 
-    // Check if unlock requirement is met
-    if (completedTilesCount >= bingo.tiersUnlockRequirement) {
+    // Get XP requirement for current tier to unlock next tier
+    const tierXpReq = tierXpReqs.find(req => req.tier === highestUnlockedTier)
+    const xpRequired = tierXpReq?.xpRequired ?? 5 // Default to 5 if not found
+
+    // Check if unlock requirement is met (XP-based)
+    if (completedTilesXP >= xpRequired) {
       // Unlock the next tier
       await db
         .update(teamTierProgress)
@@ -1113,5 +1120,72 @@ export async function updateTileTier(tileId: string, newTier: number) {
   } catch (error) {
     console.error("Error updating tile tier:", error)
     return { success: false, error: "Failed to update tile tier" }
+  }
+}
+
+export async function getTierXpRequirements(bingoId: string) {
+  try {
+    const requirements = await db.query.tierXpRequirements.findMany({
+      where: eq(tierXpRequirements.bingoId, bingoId),
+      orderBy: asc(tierXpRequirements.tier),
+    })
+    return requirements
+  } catch (error) {
+    console.error("Error fetching tier XP requirements:", error)
+    throw new Error("Failed to fetch tier XP requirements")
+  }
+}
+
+export async function setTierXpRequirement(bingoId: string, tier: number, xpRequired: number) {
+  try {
+    // Try to update existing record
+    const existingReq = await db.query.tierXpRequirements.findFirst({
+      where: and(
+        eq(tierXpRequirements.bingoId, bingoId),
+        eq(tierXpRequirements.tier, tier)
+      ),
+    })
+
+    if (existingReq) {
+      await db
+        .update(tierXpRequirements)
+        .set({ xpRequired, updatedAt: new Date() })
+        .where(eq(tierXpRequirements.id, existingReq.id))
+    } else {
+      await db.insert(tierXpRequirements).values({
+        bingoId,
+        tier,
+        xpRequired,
+      })
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error setting tier XP requirement:", error)
+    return { success: false, error: "Failed to set tier XP requirement" }
+  }
+}
+
+export async function initializeTierXpRequirements(bingoId: string, defaultXpRequired: number = 5) {
+  try {
+    // Get all unique tiers for this bingo
+    const tierResults = await db
+      .selectDistinct({ tier: tiles.tier })
+      .from(tiles)
+      .where(eq(tiles.bingoId, bingoId))
+      .orderBy(asc(tiles.tier))
+
+    const tiers = tierResults.map(r => r.tier)
+
+    // Create tier XP requirements for each tier (except the last tier)
+    // The last tier doesn't need a requirement since there's no next tier to unlock
+    for (const tier of tiers.slice(0, -1)) {
+      await setTierXpRequirement(bingoId, tier, defaultXpRequired)
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error initializing tier XP requirements:", error)
+    return { success: false, error: "Failed to initialize tier XP requirements" }
   }
 }

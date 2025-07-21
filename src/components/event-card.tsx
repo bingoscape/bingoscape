@@ -44,7 +44,7 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
     switch (status) {
       case "active":
         return (
-          <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all duration-300 animate-pulse">
+          <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all duration-300">
             <Check className="h-3 w-3 mr-1" />
             Active
           </Badge>
@@ -152,19 +152,19 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
       <div className="relative">
         {/* Background gradient overlay for visual depth */}
         <div className="absolute inset-0 bg-gradient-to-br from-background/50 to-background/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        
+
         {/* Prize pool display */}
         {eventData.totalPrizePool > 0 && (
           <div className="absolute left-4 top-4 z-10 transform group-hover:scale-110 transition-transform duration-300">
             <PrizePoolDisplay prizePool={eventData.totalPrizePool} variant="badge" />
           </div>
         )}
-        
+
         {/* Status badge */}
         <div className="absolute right-4 top-4 z-10 transform group-hover:scale-110 transition-transform duration-300">
           {getStatusBadge()}
         </div>
-        
+
         <CardHeader className="pb-3 pt-6">
           <div className="flex flex-col space-y-2">
             <div className={`${eventData.totalPrizePool > 0 ? "mt-6" : ""}`}>
@@ -244,15 +244,15 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
       <CardFooter className="flex flex-col gap-3 pt-4 border-t bg-muted/20">
         <div className="flex gap-3 w-full">
           <Link href={`/events/${eventData.event.id}`} className="flex-1">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full flex justify-between items-center group/btn hover:bg-primary hover:text-primary-foreground transition-all duration-200"
             >
               <span>View Event</span>
               <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform duration-200" />
             </Button>
           </Link>
-          
+
           {!isParticipant && !isRegistrationClosed && !eventData.event.locked && (
             <>
               {eventData.event.requiresApproval ? (
@@ -269,16 +269,16 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
                     </Button>
                   </Link>
                 ) : (
-                  <Button 
-                    onClick={handleJoinClick} 
+                  <Button
+                    onClick={handleJoinClick}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-200"
                   >
                     Request to Join
                   </Button>
                 )
               ) : (
-                <Button 
-                  onClick={handleJoinClick} 
+                <Button
+                  onClick={handleJoinClick}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-200"
                 >
                   Join
@@ -286,14 +286,14 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
               )}
             </>
           )}
-          
+
           {!isParticipant && (isRegistrationClosed ?? eventData.event.locked) && (
             <Button disabled className="opacity-50" title="Registration is closed">
               Closed
             </Button>
           )}
         </div>
-        
+
         {/* Additional event info for completed events */}
         {status === "past" && (
           <div className="flex items-center justify-center text-xs text-muted-foreground">

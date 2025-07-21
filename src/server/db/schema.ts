@@ -200,7 +200,7 @@ export const bingos = createTable("bingos", {
   columns: integer("columns").notNull(),
   codephrase: varchar("codephrase", { length: 255 }).notNull(),
   bingoType: bingoTypeEnum("bingo_type").default("standard").notNull(),
-  tiersUnlockRequirement: integer("tiers_unlock_requirement").default(1).notNull(),
+  tiersUnlockRequirement: integer("tiers_unlock_requirement").default(5).notNull(), // XP required to unlock next tier
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   locked: boolean("locked").default(false).notNull(),
@@ -214,6 +214,7 @@ export const bingosRelations = relations(bingos, ({ one, many }) => ({
   }),
   tiles: many(tiles),
   tierProgress: many(teamTierProgress),
+  tierXpRequirements: many(tierXpRequirements),
 }))
 
 export const teams = createTable("teams", {
@@ -584,6 +585,32 @@ export const teamTierProgressRelations = relations(teamTierProgress, ({ one }) =
   }),
   bingo: one(bingos, {
     fields: [teamTierProgress.bingoId],
+    references: [bingos.id],
+  }),
+}))
+
+export const tierXpRequirements = createTable(
+  "tier_xp_requirements",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    bingoId: uuid("bingo_id")
+      .notNull()
+      .references(() => bingos.id, { onDelete: "cascade" }),
+    tier: integer("tier").notNull(),
+    xpRequired: integer("xp_required").notNull().default(5), // XP required to unlock NEXT tier
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      bingoTierUnique: uniqueIndex("bingo_tier_unique").on(table.bingoId, table.tier),
+    }
+  },
+)
+
+export const tierXpRequirementsRelations = relations(tierXpRequirements, ({ one }) => ({
+  bingo: one(bingos, {
+    fields: [tierXpRequirements.bingoId],
     references: [bingos.id],
   }),
 }))

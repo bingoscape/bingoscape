@@ -87,18 +87,18 @@ export function CreateBingoModal({ eventId }: { eventId: string }) {
 
           {bingoType === "progression" && (
             <div>
-              <Label htmlFor="tiersUnlockRequirement">Tiles Required to Unlock Next Tier</Label>
+              <Label htmlFor="tiersUnlockRequirement">XP Required to Unlock Next Tier</Label>
               <Input 
                 id="tiersUnlockRequirement" 
                 name="tiersUnlockRequirement" 
                 type="number" 
                 min="1" 
-                max="20" 
-                defaultValue={1} 
+                max="100" 
+                defaultValue={5} 
                 required 
               />
               <p className="text-sm text-muted-foreground mt-1">
-                Number of tiles that must be completed in each tier before the next tier unlocks
+                Amount of XP (weight) that must be earned in each tier before the next tier unlocks
               </p>
             </div>
           )}
