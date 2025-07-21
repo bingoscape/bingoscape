@@ -168,8 +168,8 @@ export default function ClanDetailPage({ params }: { params: { clanId: string } 
   ];
 
   const filteredMembers = members.filter(member => {
-    const matchesSearch = member.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         member.runescapeName?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = member.name?.toLowerCase().includes(searchTerm.toLowerCase()) ??
+      member.runescapeName?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === "all" || member.role === roleFilter;
     return matchesSearch && matchesRole;
   });
@@ -197,7 +197,7 @@ export default function ClanDetailPage({ params }: { params: { clanId: string } 
   return (
     <div className="container mx-auto py-10 space-y-6">
       <Breadcrumbs items={breadcrumbItems} />
-      
+
       {/* Clan Header */}
       <Card className="overflow-hidden bg-gradient-to-br from-card to-card/50 border-2">
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-accent" />
@@ -227,7 +227,7 @@ export default function ClanDetailPage({ params }: { params: { clanId: string } 
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent className="pt-0">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="flex items-center space-x-3 p-4 rounded-lg bg-secondary/30">
@@ -239,7 +239,7 @@ export default function ClanDetailPage({ params }: { params: { clanId: string } 
                 <p className="text-2xl font-bold">{clanDetails.memberCount}</p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-3 p-4 rounded-lg bg-secondary/30">
               <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
                 <CalendarIcon className="h-5 w-5 text-purple-500" />
@@ -249,7 +249,7 @@ export default function ClanDetailPage({ params }: { params: { clanId: string } 
                 <p className="text-2xl font-bold">{clanDetails.eventCount}</p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-3 p-4 rounded-lg bg-secondary/30">
               <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
                 <Crown className="h-5 w-5 text-yellow-500" />
