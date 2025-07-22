@@ -11,7 +11,7 @@ import { AlertCircle } from "lucide-react"
 
 export default function StatusPage() {
   const params = useParams()
-  const eventId = params.id as string
+  const eventId = params?.id as string
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [registrationData, setRegistrationData] = useState<{

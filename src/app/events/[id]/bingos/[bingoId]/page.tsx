@@ -10,11 +10,11 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { UUID } from "crypto"
 import { TeamSelector } from "@/components/team-selector"
 import { BingoImportExportModal } from "@/components/bingo-import-export-modal"
-import { TierManagementModal } from "@/components/tier-management-modal"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, RefreshCw } from "lucide-react"
 import type { Bingo } from "@/app/actions/events"
+import { cn } from "@/lib/utils"
 
 export default function BingoDetailPage({ params }: { params: { id: UUID; bingoId: string } }) {
   const { id: eventId, bingoId } = params
@@ -134,12 +134,6 @@ export default function BingoDetailPage({ params }: { params: { id: UUID; bingoI
                 selectedTeamId={selectedTeamId}
               />
             )}
-            {isAdminOrManagement && bingo.bingoType === "progression" && (
-              <TierManagementModal 
-                bingo={bingo} 
-                onTilesUpdated={handleRefresh}
-              />
-            )}
             {isAdminOrManagement && (
               <BingoImportExportModal eventId={eventId} bingoId={bingoId} bingoTitle={bingo.title} />
             )}
@@ -148,7 +142,10 @@ export default function BingoDetailPage({ params }: { params: { id: UUID; bingoI
 
         <Card className="border-none shadow-sm">
           <CardContent className="p-2 sm:p-4">
-            <div className="aspect-square w-full max-w-[80vh] mx-auto">
+            <div className={cn(
+              "w-full mx-auto",
+              bingo.bingoType === "progression" ? "max-w-full" : "aspect-square max-w-[80vh]"
+            )}>
               <BingoGridWrapper
                 key={`bingo-${refreshKey}-${effectiveTeamId}`}
                 bingo={bingo}

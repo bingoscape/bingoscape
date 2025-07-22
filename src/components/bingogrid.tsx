@@ -780,6 +780,9 @@ export default function BingoGrid({
           onTileClick={handleTileClick}
           tierProgress={tierProgress}
           tierXpRequirements={tierXpRequirements}
+          userRole={userRole}
+          bingoId={bingo.id}
+          onTilesUpdated={onTileUpdated}
         />
       ) : (
         <BingoGridLayout

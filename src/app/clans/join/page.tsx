@@ -109,7 +109,7 @@ function JoinClanContent({ inviteCode }: { inviteCode: string | null }) {
 
 function JoinClanWrapper() {
   const searchParams = useSearchParams()
-  const inviteCode = searchParams.get("code")
+  const inviteCode = searchParams?.get("code") ?? null
 
   return <JoinClanContent inviteCode={inviteCode} />
 }

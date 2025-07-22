@@ -15,7 +15,7 @@ import {
   tierXpRequirements,
 } from "@/server/db/schema"
 import type { UUID } from "crypto"
-import { asc, eq, inArray, and } from "drizzle-orm"
+import { asc, eq, inArray, and, gt } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import fs from "fs/promises"
@@ -748,6 +748,7 @@ export async function addRowOrColumn(bingoId: string, type: "row" | "column"): P
           description: "",
           weight: 1,
           index: i,
+          isHidden: false,
         })
       }
 
@@ -811,9 +812,11 @@ export async function addTile(bingoId: string): Promise<AddRowOrColumnResult> {
         .values({
           bingoId,
           title: `New Tile ${totalTiles}`,
+          headerImage: getRandomFrog(),
           description: "",
           weight: 1,
           index: totalTiles - 1,
+          isHidden: false,
         })
         .returning()
 
@@ -1187,5 +1190,145 @@ export async function initializeTierXpRequirements(bingoId: string, defaultXpReq
   } catch (error) {
     console.error("Error initializing tier XP requirements:", error)
     return { success: false, error: "Failed to initialize tier XP requirements" }
+  }
+}
+
+export async function createNewTier(bingoId: string) {
+  try {
+    return await db.transaction(async (tx) => {
+      // Get the highest tier number for this bingo
+      const maxTierResult = await tx
+        .select({ maxTier: sql<number>`MAX(${tiles.tier})` })
+        .from(tiles)
+        .where(eq(tiles.bingoId, bingoId))
+
+      const maxTier = maxTierResult[0]?.maxTier ?? -1
+      const newTier = maxTier + 1
+
+      // Get the next index for the new tile
+      const maxIndexResult = await tx
+        .select({ maxIndex: sql<number>`MAX(${tiles.index})` })
+        .from(tiles)
+        .where(eq(tiles.bingoId, bingoId))
+
+      const maxIndex = maxIndexResult[0]?.maxIndex ?? -1
+      const nextIndex = maxIndex + 1
+
+      // Create a tile in the new tier to persist it
+      const [createdTile] = await tx
+        .insert(tiles)
+        .values({
+          bingoId,
+          title: `New Tile`,
+          headerImage: getRandomFrog(),
+          description: "",
+          weight: 1,
+          index: nextIndex,
+          isHidden: false,
+          tier: newTier,
+        })
+        .returning()
+
+      // Initialize XP requirement for the previous tier (if it doesn't exist)
+      if (newTier > 0) {
+        const existingReq = await tx
+          .select()
+          .from(tierXpRequirements)
+          .where(and(
+            eq(tierXpRequirements.bingoId, bingoId),
+            eq(tierXpRequirements.tier, newTier - 1)
+          ))
+
+        if (existingReq.length === 0) {
+          await tx.insert(tierXpRequirements).values({
+            bingoId,
+            tier: newTier - 1,
+            xpRequired: 5,
+          })
+        }
+      }
+
+      return { success: true, newTier, createdTile }
+    })
+  } catch (error) {
+    console.error("Error creating new tier:", error)
+    return { success: false, error: "Failed to create new tier" }
+  }
+}
+
+export async function deleteTier(bingoId: string, tierToDelete: number) {
+  try {
+    return await db.transaction(async (tx) => {
+      // First, delete all tiles in the specified tier
+      const deletedTiles = await tx
+        .delete(tiles)
+        .where(and(
+          eq(tiles.bingoId, bingoId),
+          eq(tiles.tier, tierToDelete)
+        ))
+        .returning({ id: tiles.id })
+
+      // Delete any XP requirements for the deleted tier
+      await tx
+        .delete(tierXpRequirements)
+        .where(and(
+          eq(tierXpRequirements.bingoId, bingoId),
+          eq(tierXpRequirements.tier, tierToDelete)
+        ))
+
+      // Shift all tiles in higher tiers down by one tier
+      const updatedTiles = await tx
+        .update(tiles)
+        .set({
+          tier: sql`${tiles.tier} - 1`
+        })
+        .where(and(
+          eq(tiles.bingoId, bingoId),
+          gt(tiles.tier, tierToDelete)
+        ))
+        .returning()
+
+      // Shift all XP requirements for higher tiers down by one
+      await tx
+        .update(tierXpRequirements)
+        .set({
+          tier: sql`${tierXpRequirements.tier} - 1`
+        })
+        .where(and(
+          eq(tierXpRequirements.bingoId, bingoId),
+          gt(tierXpRequirements.tier, tierToDelete)
+        ))
+
+      // Delete team tier progress for the deleted tier
+      await tx
+        .delete(teamTierProgress)
+        .where(and(
+          eq(teamTierProgress.bingoId, bingoId),
+          eq(teamTierProgress.tier, tierToDelete)
+        ))
+
+      // Shift team tier progress for higher tiers down by one
+      await tx
+        .update(teamTierProgress)
+        .set({
+          tier: sql`${teamTierProgress.tier} - 1`
+        })
+        .where(and(
+          eq(teamTierProgress.bingoId, bingoId),
+          gt(teamTierProgress.tier, tierToDelete)
+        ))
+
+      return { 
+        success: true, 
+        deletedTileIds: deletedTiles.map(t => t.id),
+        updatedTiles: updatedTiles
+      }
+    })
+  } catch (error) {
+    console.error("Error deleting tier:", error)
+    return { success: false, error: "Failed to delete tier" }
+  } finally {
+    // Revalidate the page to refresh cached data
+    revalidatePath("/events")
   }
 }

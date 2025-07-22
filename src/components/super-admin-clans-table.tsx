@@ -49,7 +49,7 @@ export function SuperAdminClansTable({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    const params = new URLSearchParams(searchParams)
+    const params = new URLSearchParams(searchParams ?? '')
     if (search) {
       params.set("search", search)
     } else {
@@ -60,7 +60,7 @@ export function SuperAdminClansTable({
   }
 
   const handlePageChange = (page: number) => {
-    const params = new URLSearchParams(searchParams)
+    const params = new URLSearchParams(searchParams ?? '')
     params.set("page", page.toString())
     router.push(`/super-admin/clans?${params.toString()}`)
   }

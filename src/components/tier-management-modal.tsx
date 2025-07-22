@@ -14,7 +14,6 @@ import { Plus, Trash2, Settings, Move } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { getBingoById, addTile, deleteTile, updateTileTier, getTierXpRequirements, setTierXpRequirement, type TileData } from "@/app/actions/bingo"
 import type { Bingo } from "@/app/actions/events"
-import { cn } from "@/lib/utils"
 import getRandomFrog from "@/lib/getRandomFrog"
 
 interface TierManagementModalProps {
@@ -175,7 +174,26 @@ export function TierManagementModal({ bingo, onTilesUpdated }: TierManagementMod
     }
   }
 
+  const getTotalPrecedingXP = (targetTier: number) => {
+    return allTiers
+      .filter(tier => tier < targetTier)
+      .reduce((total, tier) => {
+        return total + (tilesByTier[tier] ?? []).reduce((tierTotal, tile) => tierTotal + tile.weight, 0)
+      }, 0)
+  }
+
   const handleUpdateXpRequirement = async (tier: number, xpRequired: number) => {
+    const maxAllowedXP = getTotalPrecedingXP(tier + 1)
+    
+    if (xpRequired > maxAllowedXP) {
+      toast({
+        title: "Invalid XP requirement",
+        description: `XP requirement cannot exceed ${maxAllowedXP} (total XP available from all preceding tiers)`,
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
       setLoading(true)
       const result = await setTierXpRequirement(bingo.id, tier, xpRequired)
@@ -272,7 +290,7 @@ export function TierManagementModal({ bingo, onTilesUpdated }: TierManagementMod
                                 id={`xp-req-${tier}`}
                                 type="number"
                                 min="1"
-                                max="100"
+                                max={getTotalPrecedingXP(tier + 1)}
                                 value={tierXpRequirements[tier] ?? 5}
                                 onChange={(e) => {
                                   const newValue = Number(e.target.value)
@@ -282,6 +300,7 @@ export function TierManagementModal({ bingo, onTilesUpdated }: TierManagementMod
                                 }}
                                 className="w-20"
                                 disabled={loading}
+                                title={`Maximum XP: ${getTotalPrecedingXP(tier + 1)} (total XP from preceding tiers)`}
                               />
                             </div>
                           )}

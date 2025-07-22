@@ -47,7 +47,7 @@ export function TemplateGallery({
   const totalPages = Math.ceil(totalTemplates / limit)
 
   const createQueryString = (params: Record<string, string | null>) => {
-    const newParams = new URLSearchParams(searchParams.toString())
+    const newParams = new URLSearchParams(searchParams?.toString() ?? '')
 
     Object.entries(params).forEach(([key, value]) => {
       if (value === null) {
@@ -89,7 +89,7 @@ export function TemplateGallery({
 
   const handleClearFilters = () => {
     setSearchInput("")
-    router.push(pathname)
+    router.push(pathname ?? "")
   }
 
   const hasFilters = currentSearch || currentCategory || currentSize
