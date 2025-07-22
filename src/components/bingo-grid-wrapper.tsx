@@ -30,7 +30,7 @@ export default function BingoGridWrapper({
   const searchParams = useSearchParams()
 
   // Get the selected team ID from URL params or use the current team ID
-  const selectedTeamId = searchParams.get("teamId") ?? currentTeamId
+  const selectedTeamId = searchParams?.get("teamId") ?? currentTeamId
 
   useEffect(() => {
     setUpdateKey((prev) => prev + 1)
