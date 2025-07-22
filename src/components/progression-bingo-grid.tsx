@@ -6,10 +6,13 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Lock, ArrowDown, Check, Clock, AlertTriangle, Edit2, Plus, Trash2, GripVertical, Save, X } from "lucide-react"
+import { Lock, ArrowDown, Check, Clock, AlertTriangle, Edit2, Plus, Trash2, GripVertical, Save, X, Zap, EyeOff, CheckCircle2 } from "lucide-react"
 import type { Tile } from "@/app/actions/events"
 import { cn } from "@/lib/utils"
 import { toast } from "@/hooks/use-toast"
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
+import { Progress } from "@/components/ui/progress"
+import Markdown from "react-markdown"
 import {
   DndContext,
   closestCenter,
@@ -68,6 +71,7 @@ interface SortableTileProps {
   onUpdateTile: (tileId: string, updates: Partial<Tile>) => void
   onDeleteTile: (tileId: string) => void
   getTileStatus: (tile: Tile) => string
+  currentTeamId?: string
 }
 
 function SortableTile({
@@ -78,6 +82,7 @@ function SortableTile({
   onUpdateTile,
   onDeleteTile,
   getTileStatus,
+  currentTeamId,
 }: SortableTileProps) {
   const [editingField, setEditingField] = useState<string | null>(null)
   const [tempValue, setTempValue] = useState<string>("")
@@ -122,25 +127,49 @@ function SortableTile({
     setTempValue(String(currentValue))
   }
 
+  // Get current team's submission for this tile
+  const currentTeamSubmission = currentTeamId ? tile.teamTileSubmissions?.find(tts => tts.teamId === currentTeamId) : undefined
+
+  // Render status icon function (similar to BingoTile)
+  const renderStatusIcon = (status: "approved" | "needs_review" | "pending" | undefined) => {
+    const iconMap = {
+      approved: <div className="bg-green-500 text-white rounded-full w-7 h-7 flex items-center justify-center shadow-lg ring-2 ring-green-200 dark:ring-green-800 transition-all duration-300">
+        <span className="text-sm font-bold">✓</span>
+      </div>,
+      needs_review: <div className="bg-yellow-500 text-white rounded-full w-7 h-7 flex items-center justify-center shadow-lg ring-2 ring-yellow-200 dark:ring-yellow-800 transition-all duration-300">
+        <span className="text-sm font-bold">!</span>
+      </div>,
+      pending: <div className="bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center shadow-lg ring-2 ring-blue-200 dark:ring-blue-800 transition-all duration-300">
+        <span className="text-sm font-bold">⏳</span>
+      </div>,
+    }
+    return status ? iconMap[status] : null
+  }
+
+  // Only show hover card if tile is not hidden or if user has management rights
+  const shouldShowHoverCard = !tile.isHidden || isEditing
+
   return (
-    <Card
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "relative overflow-hidden transition-all duration-200",
-        // Fixed size for all tiles with proper spacing
-        "w-44 h-auto min-h-[180px] max-w-44",
-        isClickable ? "cursor-pointer hover:shadow-lg hover:scale-105" : "cursor-not-allowed",
-        tileStatus === "completed" && "ring-2 ring-green-500 bg-green-50 dark:bg-green-950/20",
-        tileStatus === "pending" && "ring-2 ring-yellow-500 bg-yellow-50 dark:bg-yellow-950/20",
-        tileStatus === "review" && "ring-2 ring-orange-500 bg-orange-50 dark:bg-orange-950/20",
-        isLocked && !isEditing && "bg-muted/50 text-muted-foreground",
-        isEditing && "border-primary/50",
-        isEditing && isLocked && "border-orange-300 bg-orange-50/30 dark:bg-orange-950/10",
-        isDragging && "shadow-lg ring-2 ring-primary/20",
-      )}
-      onClick={() => isClickable && onTileClick(tile)}
-    >
+    <HoverCard openDelay={200} closeDelay={100}>
+      <HoverCardTrigger asChild>
+        <Card
+          ref={setNodeRef}
+          style={style}
+          className={cn(
+            "relative overflow-hidden transition-all duration-200",
+            // Fixed size for all tiles with proper spacing
+            "w-44 h-auto min-h-[180px] max-w-44",
+            isClickable ? "cursor-pointer hover:shadow-lg hover:scale-105" : "cursor-not-allowed",
+            tileStatus === "completed" && "ring-2 ring-green-500 bg-green-50 dark:bg-green-950/20",
+            tileStatus === "pending" && "ring-2 ring-yellow-500 bg-yellow-50 dark:bg-yellow-950/20",
+            tileStatus === "review" && "ring-2 ring-orange-500 bg-orange-50 dark:bg-orange-950/20",
+            isLocked && !isEditing && "bg-muted/50 text-muted-foreground",
+            isEditing && "border-primary/50",
+            isEditing && isLocked && "border-orange-300 bg-orange-50/30 dark:bg-orange-950/10",
+            isDragging && "shadow-lg ring-2 ring-primary/20",
+          )}
+          onClick={() => isClickable && onTileClick(tile)}
+        >
       {/* Drag Handle */}
       {isEditing && (
         <div
@@ -353,6 +382,132 @@ function SortableTile({
         </div>
       </div>
     </Card>
+    </HoverCardTrigger>
+    {shouldShowHoverCard && (
+      <HoverCardContent side="right" align="start" className="w-80 max-w-[90vw] p-4">
+        <div className="space-y-3">
+          <div className="flex items-start justify-between gap-2">
+            <h4 className="font-semibold text-base flex-1 leading-tight break-words">{tile.isHidden ? "Hidden Tile" : tile.title}</h4>
+            <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 rounded-full flex-shrink-0">
+              <Zap className="h-3.5 w-3.5 text-amber-500" />
+              <span className="text-xs font-medium">{tile.weight} XP</span>
+            </div>
+          </div>
+
+          {currentTeamSubmission && (
+            <div className="flex items-center gap-2 p-2 bg-secondary/30 rounded-lg">
+              {renderStatusIcon(currentTeamSubmission.status)}
+              <span className="text-sm font-medium capitalize">{currentTeamSubmission.status?.replace("_", " ")}</span>
+            </div>
+          )}
+
+          {tile.description && !tile.isHidden && (
+            <div className="text-sm text-muted-foreground prose prose-sm max-w-none dark:prose-invert">
+              <Markdown
+                components={{
+                  p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed break-words">{children}</p>,
+                  strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+                  em: ({ children }) => <em className="italic">{children}</em>,
+                  ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
+                  li: ({ children }) => <li className="text-sm break-words">{children}</li>,
+                  h1: ({ children }) => <h1 className="text-base font-semibold mb-1 text-foreground">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-sm font-semibold mb-1 text-foreground">{children}</h2>,
+                  h3: ({ children }) => <h3 className="text-sm font-medium mb-1 text-foreground">{children}</h3>,
+                  a: ({ children, href }) => (
+                    <a href={href} className="text-primary hover:text-primary/80 underline break-all" target="_blank" rel="noopener noreferrer">
+                      {children}
+                    </a>
+                  ),
+                }}
+              >
+                {tile.description.length > 200 ? `${tile.description.substring(0, 200)}...` : tile.description}
+              </Markdown>
+            </div>
+          )}
+
+          {tile.goals && tile.goals.length > 0 && !tile.isHidden && (
+            <div className="pt-1">
+              <h5 className="text-xs font-semibold mb-2">Goals:</h5>
+              <div className="text-xs space-y-2">
+                {tile.goals.map((goal, idx) => {
+                  // Calculate progress for current team if available
+                  const teamSubmissions = currentTeamSubmission?.submissions.filter(sub => sub.goalId === goal.id) ?? []
+                  const approvedProgress = teamSubmissions
+                    .filter(sub => sub.status === "approved")
+                    .reduce((sum, sub) => sum + (sub.submissionValue ?? 0), 0)
+                  const totalProgress = teamSubmissions
+                    .reduce((sum, sub) => sum + (sub.submissionValue ?? 0), 0)
+
+                  const approvedPercentage = goal.targetValue > 0 ? Math.min(100, (approvedProgress / goal.targetValue) * 100) : 0
+                  const isCompleted = approvedProgress >= goal.targetValue
+
+                  return (
+                    <div key={idx} className="p-2 bg-muted/30 rounded-lg space-y-1">
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="text-muted-foreground flex-1 line-clamp-2 break-words leading-tight">{goal.description}</span>
+                        <span className="font-medium text-foreground text-right flex-shrink-0">
+                          Target: {goal.targetValue}
+                        </span>
+                      </div>
+
+                      {currentTeamSubmission && (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 min-w-[60px]">
+                              <CheckCircle2 className="h-3 w-3 text-green-500" />
+                              <span className="text-[10px] text-muted-foreground">Progress</span>
+                            </div>
+                            <Progress
+                              value={approvedPercentage}
+                              className="h-2 flex-1 bg-muted"
+                            />
+                            <span className="text-[10px] font-medium min-w-[40px] text-right">
+                              {approvedProgress}/{goal.targetValue}
+                            </span>
+                          </div>
+
+                          {isCompleted && (
+                            <div className="flex items-center gap-1">
+                              <CheckCircle2 className="h-3 w-3 text-green-500" />
+                              <span className="text-[10px] text-green-600 font-medium">Completed!</span>
+                            </div>
+                          )}
+
+                          {totalProgress > approvedProgress && (
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1 min-w-[60px]">
+                                <Clock className="h-3 w-3 text-yellow-500" />
+                                <span className="text-[10px] text-muted-foreground">Pending</span>
+                              </div>
+                              <Progress
+                                value={goal.targetValue > 0 ? Math.min(100, (totalProgress / goal.targetValue) * 100) : 0}
+                                className="h-2 flex-1 bg-muted"
+                              />
+                              <span className="text-[10px] font-medium min-w-[40px] text-right">
+                                {totalProgress}/{goal.targetValue}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {tile.isHidden && (
+            <div className="mt-2 text-xs bg-secondary p-1.5 rounded flex items-center gap-1.5">
+              <EyeOff className="h-3.5 w-3.5" />
+              <span className="font-medium">Hidden tile</span>
+            </div>
+          )}
+        </div>
+      </HoverCardContent>
+    )}
+  </HoverCard>
   )
 }
 
@@ -946,6 +1101,7 @@ export function ProgressionBingoGrid({
                             onUpdateTile={handleUpdateTile}
                             onDeleteTile={handleDeleteTile}
                             getTileStatus={getTileStatus}
+                            currentTeamId={currentTeamId}
                           />
                         </div>
                       ))}
