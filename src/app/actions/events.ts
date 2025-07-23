@@ -26,6 +26,19 @@ export interface Image {
   updatedAt?: Date
 }
 
+export interface SubmissionComment {
+  id: string
+  submissionId: string
+  comment: string
+  createdAt: Date
+  updatedAt: Date
+  author: {
+    id: string
+    name: string | null
+    runescapeName: string | null
+  }
+}
+
 export interface Submission {
   id: string
   teamTileSubmissionId: string
@@ -43,6 +56,7 @@ export interface Submission {
   goalId?: string | null
   goal?: Goal | null
   submissionValue: number | null
+  comments?: SubmissionComment[]
 }
 
 export interface TeamTileSubmission {

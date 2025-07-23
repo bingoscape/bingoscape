@@ -10,7 +10,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Check, AlertTriangle, X, Upload, Clock, CheckCircle2, Link, Users, Hash, Search, Star, ChevronsUpDown } from "lucide-react"
-import type { Tile, Team } from "@/app/actions/events"
+import type { Tile, Team, SubmissionComment } from "@/app/actions/events"
+import { CommentForm } from "@/components/comment-form"
+import { SubmissionCommentDisplay } from "@/components/submission-comment"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
@@ -85,6 +87,11 @@ export function SubmissionsTab({
 
   const [goalValues, setGoalValues] = useState<any[]>([])
   const [selectedSubmissionValue, setSelectedSubmissionValue] = useState<number | null>(null)
+  
+  // Comment-related state
+  const [submissionComments, setSubmissionComments] = useState<Record<string, SubmissionComment[]>>({})
+  const [showCommentForm, setShowCommentForm] = useState<string | null>(null)
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [customValue, setCustomValue] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -299,6 +306,94 @@ export function SubmissionsTab({
   const getSubmissionStatus = (submissionId: string, originalStatus: string) => {
     return localSubmissionStatuses[submissionId] || originalStatus
   }
+
+  // Comment-related functions
+  const loadSubmissionComments = async (submissionId: string) => {
+    try {
+      const response = await fetch(`/api/submissions/${submissionId}/comments`)
+      if (response.ok) {
+        const comments = await response.json()
+        setSubmissionComments(prev => ({ ...prev, [submissionId]: comments }))
+      }
+    } catch (error) {
+      console.error("Failed to load comments:", error)
+    }
+  }
+
+  const handleNeedsReviewClick = (submissionId: string) => {
+    // Only allow reviewers (those with sufficient rights) to add comments
+    if (!hasSufficientRights) return
+    
+    const currentStatus = getSubmissionStatus(submissionId, selectedTile?.teamTileSubmissions?.find(teamSub => 
+      teamSub.submissions.some(sub => sub.id === submissionId)
+    )?.submissions.find(sub => sub.id === submissionId)?.status || "pending")
+    
+    if (currentStatus === "needs_review") return
+
+    // Load existing comments if not already loaded
+    if (!submissionComments[submissionId]) {
+      loadSubmissionComments(submissionId)
+    }
+    
+    setShowCommentForm(submissionId)
+  }
+
+  const handleCommentSubmit = async (submissionId: string, comment: string) => {
+    setIsSubmittingComment(true)
+    try {
+      // Update status with comment
+      await handleSubmissionStatusUpdate(submissionId, "needs_review")
+      
+      // Add comment via API
+      const response = await fetch(`/api/submissions/${submissionId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment }),
+      })
+
+      if (response.ok) {
+        const newComment = await response.json()
+        setSubmissionComments(prev => ({
+          ...prev,
+          [submissionId]: [newComment, ...(prev[submissionId] || [])]
+        }))
+        
+        toast({
+          title: "Review comment added",
+          description: "Submission marked as needs review with comment.",
+          duration: 3000,
+        })
+      }
+    } catch (error) {
+      console.error("Failed to submit comment:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add comment. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      })
+    } finally {
+      setIsSubmittingComment(false)
+      setShowCommentForm(null)
+    }
+  }
+
+  const handleCommentCancel = () => {
+    setShowCommentForm(null)
+  }
+
+  // Load comments for submissions that have "needs_review" status
+  useEffect(() => {
+    if (selectedTile?.teamTileSubmissions) {
+      selectedTile.teamTileSubmissions.forEach(teamSub => {
+        teamSub.submissions.forEach(submission => {
+          if (submission.status === "needs_review" && !submissionComments[submission.id]) {
+            loadSubmissionComments(submission.id)
+          }
+        })
+      })
+    }
+  }, [selectedTile?.id, submissionComments])
 
   // Filter submissions based on user role and selected filters
   const getFilteredSubmissions = () => {
@@ -681,7 +776,7 @@ export function SubmissionsTab({
                                             variant="ghost"
                                             size="sm"
                                             className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
-                                            onClick={() => handleSubmissionStatusUpdate(submission.id, "needs_review")}
+                                            onClick={() => handleNeedsReviewClick(submission.id)}
                                             disabled={currentSubmissionStatus === "needs_review"}
                                           >
                                             <AlertTriangle className="h-4 w-4" />
@@ -736,6 +831,23 @@ export function SubmissionsTab({
                                     </AlertDialog>
                                   </div>
                                 )}
+
+                                {/* Comment section - only show if user has sufficient rights to add comments */}
+                                {hasSufficientRights && showCommentForm === submission.id && (
+                                  <CommentForm
+                                    submissionId={submission.id}
+                                    onSubmit={(comment) => handleCommentSubmit(submission.id, comment)}
+                                    onCancel={handleCommentCancel}
+                                    isLoading={isSubmittingComment}
+                                  />
+                                )}
+
+                                {/* Display existing comments - everyone can view */}
+                                <SubmissionCommentDisplay
+                                  comments={submissionComments[submission.id] || []}
+                                  submissionId={submission.id}
+                                  canViewComments={true}
+                                />
                               </div>
                             </div>
                           )

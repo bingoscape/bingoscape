@@ -1,0 +1,275 @@
+/* Submission Comments Styling - Following the Style Guide */
+
+/* Ensure all comment elements inherit the Noto Sans font */
+.comment-section,
+.comment-section *,
+.comment-input,
+.comment-display,
+.comment-display *,
+.comment-indicator,
+.comment-indicator *,
+.comment-actions,
+.comment-actions *,
+.character-counter {
+  font-family: inherit !important;
+}
+
+/* Comment Section Container */
+.comment-section {
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 12px;
+  transition: all 0.3s ease-in-out;
+  overflow: hidden;
+  font-family: inherit;
+}
+
+.comment-section.collapsed {
+  max-height: 0;
+  padding: 0 16px;
+  margin-top: 0;
+  opacity: 0;
+}
+
+.comment-section.expanded {
+  max-height: 500px;
+  opacity: 1;
+}
+
+/* Comment Input Field */
+.comment-input {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  font-family: inherit;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.comment-input:focus {
+  outline: none;
+  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
+}
+
+.comment-input::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Comment Display */
+.comment-display {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  padding: 12px;
+  font-family: inherit;
+}
+
+.comment-display .comment-content {
+  margin-bottom: 8px;
+  line-height: 1.5;
+  color: hsl(var(--card-foreground));
+  font-family: inherit;
+}
+
+.comment-display .comment-metadata {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid hsl(var(--border));
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  font-family: inherit;
+}
+
+.comment-display .reviewer-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  font-size: 10px;
+  font-family: inherit;
+}
+
+/* Comment Indicator */
+.comment-indicator {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  background: hsl(var(--primary) / 0.1);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: hsl(var(--primary));
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border: none;
+  height: auto;
+  font-family: inherit;
+}
+
+.comment-indicator:hover {
+  background: hsl(var(--primary) / 0.15) !important;
+}
+
+.comment-indicator .icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Action Buttons */
+.comment-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.comment-actions .btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  font-family: inherit;
+}
+
+.comment-actions .btn-primary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+
+.comment-actions .btn-primary:hover:not(:disabled) {
+  background: hsl(var(--primary) / 0.9);
+  border-color: hsl(var(--primary) / 0.9);
+}
+
+.comment-actions .btn-primary:disabled {
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  border-color: hsl(var(--muted));
+  cursor: not-allowed;
+}
+
+.comment-actions .btn-secondary {
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border-color: hsl(var(--border));
+}
+
+.comment-actions .btn-secondary:hover {
+  background: hsl(var(--secondary) / 0.8);
+}
+
+/* Character Counter */
+.character-counter {
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+  text-align: right;
+  background: hsl(var(--background) / 0.8);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+/* Loading State */
+.comment-submitting {
+  position: relative;
+  color: transparent !important;
+}
+
+.comment-submitting::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid transparent;
+  border-top: 2px solid hsl(var(--primary-foreground));
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { 
+    transform: rotate(360deg); 
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 767px) {
+  .comment-section {
+    padding: 12px;
+    margin: 8px -12px 0;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  
+  .comment-actions {
+    flex-direction: column-reverse;
+  }
+  
+  .comment-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .comment-input {
+    min-height: 60px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .comment-section {
+    padding: 14px;
+  }
+  
+  .comment-actions {
+    justify-content: flex-end;
+  }
+}
+
+/* Animation Classes */
+.comment-section-enter {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.comment-section-enter-active {
+  max-height: 300px;
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.comment-section-exit {
+  max-height: 300px;
+  opacity: 1;
+}
+
+.comment-section-exit-active {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

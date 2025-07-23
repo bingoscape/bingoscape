@@ -386,7 +386,31 @@ export const submissions = createTable("submissions", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
-export const submissionsRelations = relations(submissions, ({ one }) => ({
+export const submissionComments = createTable("submission_comments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  submissionId: uuid("submission_id")
+    .notNull()
+    .references(() => submissions.id, { onDelete: "cascade" }),
+  authorId: uuid("author_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  comment: text("comment").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const submissionCommentsRelations = relations(submissionComments, ({ one }) => ({
+  submission: one(submissions, {
+    fields: [submissionComments.submissionId],
+    references: [submissions.id],
+  }),
+  author: one(users, {
+    fields: [submissionComments.authorId],
+    references: [users.id],
+  }),
+}))
+
+export const submissionsRelations = relations(submissions, ({ one, many }) => ({
   image: one(images, {
     fields: [submissions.imageId],
     references: [images.id],
@@ -410,6 +434,8 @@ export const submissionsRelations = relations(submissions, ({ one }) => ({
     fields: [submissions.reviewedBy],
     references: [users.id],
   }),
+  // Add relation to comments
+  comments: many(submissionComments),
 }))
 
 export const eventParticipants = createTable("event_participants", {
