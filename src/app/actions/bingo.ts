@@ -8,6 +8,7 @@ import {
   teamGoalProgress,
   tiles,
   submissions,
+  submissionComments,
   images,
   teams,
   teamTileSubmissions,
@@ -665,6 +666,84 @@ export async function updateTeamTileSubmissionStatus(
   } catch (error) {
     console.error("Error updating team tile submission status:", error)
     return { success: false, error: "Failed to update team tile submission status" }
+  }
+}
+
+// New function for updating submission status with comment (used when marking as "needs_review")
+export async function updateSubmissionStatusWithComment(
+  submissionId: string,
+  newStatus: "approved" | "needs_review" | "pending",
+  comment?: string,
+  goalId?: string | null,
+  submissionValue?: number | null
+) {
+  try {
+    const session = await getServerAuthSession()
+    if (!session) {
+      throw new Error("Not authenticated")
+    }
+
+    console.log(
+      `Server action: Updating submission ${submissionId} to status ${newStatus} with comment: ${comment}`,
+    )
+
+    return await db.transaction(async (tx) => {
+      // Create the update data object
+      const updateData: Record<string, any> = {
+        status: newStatus,
+        reviewedBy: session.user.id,
+        reviewedAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      // Only update goalId if it's provided (including null to remove a goal)
+      if (goalId !== undefined) {
+        updateData.goalId = goalId
+      }
+
+      // Update submission value if provided
+      if (submissionValue !== undefined) {
+        updateData.submissionValue = submissionValue
+      }
+
+      const [updatedSubmission] = await tx
+        .update(submissions)
+        .set(updateData)
+        .where(eq(submissions.id, submissionId))
+        .returning()
+
+      if (!updatedSubmission) {
+        throw new Error("Submission not found")
+      }
+
+      // Add comment if provided (required for "needs_review" status)
+      if (comment && comment.trim()) {
+        await tx.insert(submissionComments).values({
+          submissionId: submissionId,
+          authorId: session.user.id,
+          comment: comment.trim(),
+        })
+      }
+
+      // If marking individual submission as "needs_review", update the parent tile status
+      if (newStatus === "needs_review") {
+        await tx
+          .update(teamTileSubmissions)
+          .set({
+            status: "needs_review",
+            updatedAt: new Date(),
+          })
+          .where(eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId))
+      }
+
+      // Revalidate the submissions page
+      revalidatePath("/bingo")
+
+      return { success: true, submission: updatedSubmission }
+    })
+  } catch (error) {
+    console.error("Error updating submission status with comment:", error)
+    return { success: false, error: "Failed to update submission status" }
   }
 }
 
