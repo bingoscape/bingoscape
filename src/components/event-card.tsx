@@ -145,10 +145,11 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
   }
 
   return (
-    <Card className={cn(
-      "group overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 hover:border-primary/20 cursor-pointer h-full flex flex-col",
-      status === "past" && "opacity-90 hover:opacity-100"
-    )}>
+    <Link href={`/events/${eventData.event.id}`} className="block h-full">
+      <Card className={cn(
+        "group overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 hover:border-primary/20 cursor-pointer h-full flex flex-col",
+        status === "past" && "opacity-90 hover:opacity-100"
+      )}>
       <div className="relative">
         {/* Background gradient overlay for visual depth */}
         <div className="absolute inset-0 bg-gradient-to-br from-background/50 to-background/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -222,18 +223,33 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
           {renderRegistrationStatus()}
 
           {showRequestForm && (
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
               <Textarea
                 placeholder="Why do you want to join this event? (Optional)"
                 value={requestMessage}
                 onChange={(e) => setRequestMessage(e.target.value)}
                 className="h-24"
+                onClick={(e) => e.stopPropagation()}
               />
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setShowRequestForm(false)}>
+                <Button 
+                  variant="outline" 
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setShowRequestForm(false)
+                  }}
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleRequestSubmit} disabled={isSubmitting}>
+                <Button 
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    handleRequestSubmit()
+                  }} 
+                  disabled={isSubmitting}
+                >
                   {isSubmitting ? "Submitting..." : "Submit Request"}
                 </Button>
               </div>
@@ -242,57 +258,58 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
         </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-3 pt-4 border-t bg-muted/20">
-        <div className="flex gap-3 w-full">
-          <Link href={`/events/${eventData.event.id}`} className="flex-1">
-            <Button
-              variant="outline"
-              className="w-full flex justify-between items-center group/btn hover:bg-primary hover:text-primary-foreground transition-all duration-200"
-            >
-              <span>View Event</span>
-              <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform duration-200" />
-            </Button>
-          </Link>
-
-          {!isParticipant && !isRegistrationClosed && !eventData.event.locked && (
-            <>
-              {eventData.event.requiresApproval ? (
-                registrationStatus?.status === "pending" ? (
-                  <Link href={`/events/${eventData.event.id}/status`}>
-                    <Button variant="outline" className="hover:bg-yellow-500 hover:text-white">
-                      View Status
+        {(!isParticipant && !isRegistrationClosed && !eventData.event.locked) ||
+         (!isParticipant && (isRegistrationClosed ?? eventData.event.locked)) ? (
+          <div className="flex gap-3 w-full">
+            {!isParticipant && !isRegistrationClosed && !eventData.event.locked && (
+              <>
+                {eventData.event.requiresApproval ? (
+                  registrationStatus?.status === "pending" ? (
+                    <Link href={`/events/${eventData.event.id}/status`} onClick={(e) => e.stopPropagation()}>
+                      <Button variant="outline" className="hover:bg-yellow-500 hover:text-white">
+                        View Status
+                      </Button>
+                    </Link>
+                  ) : registrationStatus?.status === "rejected" ? (
+                    <Link href={`/events/${eventData.event.id}/status`} onClick={(e) => e.stopPropagation()}>
+                      <Button variant="outline" className="hover:bg-red-500 hover:text-white">
+                        View Status
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        handleJoinClick()
+                      }}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-200"
+                    >
+                      Request to Join
                     </Button>
-                  </Link>
-                ) : registrationStatus?.status === "rejected" ? (
-                  <Link href={`/events/${eventData.event.id}/status`}>
-                    <Button variant="outline" className="hover:bg-red-500 hover:text-white">
-                      View Status
-                    </Button>
-                  </Link>
+                  )
                 ) : (
                   <Button
-                    onClick={handleJoinClick}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleJoinClick()
+                    }}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-200"
                   >
-                    Request to Join
+                    Join
                   </Button>
-                )
-              ) : (
-                <Button
-                  onClick={handleJoinClick}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  Join
-                </Button>
-              )}
-            </>
-          )}
+                )}
+              </>
+            )}
 
-          {!isParticipant && (isRegistrationClosed ?? eventData.event.locked) && (
-            <Button disabled className="opacity-50" title="Registration is closed">
-              Closed
-            </Button>
-          )}
-        </div>
+            {!isParticipant && (isRegistrationClosed ?? eventData.event.locked) && (
+              <Button disabled className="opacity-50" title="Registration is closed">
+                Closed
+              </Button>
+            )}
+          </div>
+        ) : null}
 
         {/* Additional event info for completed events */}
         {status === "past" && (
@@ -303,6 +320,7 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
         )}
       </CardFooter>
     </Card>
+    </Link>
   )
 }
 
