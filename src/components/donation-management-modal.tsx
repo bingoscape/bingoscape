@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
@@ -76,9 +75,9 @@ export function DonationManagementModal({
 
   useEffect(() => {
     if (isOpen) {
-      fetchDonations()
+      void fetchDonations()
     }
-  }, [isOpen, eventId, participantId])
+  }, [isOpen, eventId, participantId, fetchDonations])
 
   const fetchDonations = async () => {
     setLoading(true)
@@ -185,7 +184,7 @@ export function DonationManagementModal({
 
   const EditableDonationRow = ({ donation }: { donation: Donation }) => {
     const [editAmount, setEditAmount] = useState(donation.amount.toString())
-    const [editDescription, setEditDescription] = useState(donation.description || "")
+    const [editDescription, setEditDescription] = useState(donation.description ?? "")
     const [isUpdating, setIsUpdating] = useState(false)
 
     const handleSave = async () => {
@@ -208,7 +207,7 @@ export function DonationManagementModal({
 
     const handleCancel = () => {
       setEditAmount(donation.amount.toString())
-      setEditDescription(donation.description || "")
+      setEditDescription(donation.description ?? "")
       setEditingDonation(null)
     }
 
@@ -385,7 +384,7 @@ export function DonationManagementModal({
                             {formatRunescapeGold(donation.amount)} GP
                           </TableCell>
                           <TableCell>
-                            {donation.description || (
+                            {donation.description ?? (
                               <span className="text-muted-foreground italic">No description</span>
                             )}
                           </TableCell>

@@ -26,7 +26,20 @@ Full-stack Next.js application for OSRS clan bingo management with sophisticated
 - **Last Commit**: `b85eae3` - feat(ui): enhance participants page with improved buy-in tracking and visual design
 
 ### Session Goals
-🎯 **READY**: Awaiting session objectives
+🎯 **IN PROGRESS**: Fix Build Errors and ESLint Issues
+
+#### Tasks:
+1. ✅ Identify build issues from build.log
+2. ✅ Fix null-coalescing operator errors in donation-management-modal.tsx
+3. ✅ Fix no-floating-promises errors in multiple components
+4. ✅ Clean up unused imports and variables (major ones)
+5. 🔄 Verify build passes successfully
+
+#### Completed Fixes:
+- **Null-coalescing operators**: Fixed 3 instances of `||` to `??` in donation-management-modal.tsx
+- **Floating promises**: Added `void` operator to async calls in event-card.tsx and prize-pool-breakdown.tsx
+- **Unused imports**: Removed unused imports from multiple components
+- **Type imports**: Fixed consistent-type-imports issues
 
 ---
 

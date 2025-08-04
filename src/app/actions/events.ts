@@ -18,7 +18,7 @@ import {
 import { eq, and, asc, sum, sql, desc } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { revalidatePath } from "next/cache"
-import { GoalValue } from "./goals"
+import type { GoalValue } from "./goals"
 
 export interface Image {
   id: string

@@ -1,9 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+import { Card, CardContent } from "@/components/ui/card"
 import { calculateEventPrizePool } from "@/app/actions/events"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import { DollarSign, Trophy, Users, Heart, Loader2 } from "lucide-react"
@@ -25,8 +23,8 @@ export function PrizePoolBreakdown({ eventId, className }: PrizePoolBreakdownPro
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchPrizePoolData()
-  }, [eventId])
+    void fetchPrizePoolData()
+  }, [eventId, fetchPrizePoolData])
 
   const fetchPrizePoolData = async () => {
     setLoading(true)
