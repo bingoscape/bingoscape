@@ -17,7 +17,44 @@ Full-stack Next.js application for OSRS clan bingo management with sophisticated
 
 ---
 
-## Recent Session (Aug 4, 2025)
+## Current Session (Aug 4, 2025 - Session 2)
+
+### Session Context
+- **Started**: August 4, 2025
+- **Branch**: main
+- **Status**: Clean working tree (just completed comprehensive documentation overhaul)
+- **Last Commit**: `114ef65` - docs: comprehensive documentation overhaul
+
+### Session Goals
+✅ **COMPLETED**: UI Enhancement - Event Card Navigation
+
+### Completed Work
+
+#### 1. Event Card UI Enhancement
+**File Modified**: `src/components/event-card.tsx`
+**Problem**: Event cards had a "View Event" button at the bottom, requiring users to click specifically on the button to navigate to the event details.
+**Solution**: Made the entire event card clickable while maintaining functionality of interactive elements.
+
+**Changes Made**:
+- Wrapped entire card in Link component pointing to event URL
+- Removed "View Event" button from card footer  
+- Added event propagation prevention (`e.stopPropagation()`) to interactive elements:
+  - Join/Request buttons
+  - Status view links
+  - Form inputs and submit buttons
+- Simplified footer logic to only show action buttons when relevant
+- Maintained all existing hover effects and visual feedback
+
+**Result**: 
+- ✅ Cleaner, more intuitive card design
+- ✅ Entire card surface is clickable
+- ✅ All interactive elements still function properly
+- ✅ Better user experience with larger click target
+- ✅ Maintains existing styling and accessibility
+
+---
+
+## Previous Session (Aug 4, 2025)
 
 ### Completed Work
 
