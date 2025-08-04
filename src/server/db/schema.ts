@@ -461,6 +461,7 @@ export const eventParticipantsRelations = relations(eventParticipants, ({ one, m
     references: [users.id],
   }),
   buyIns: many(eventBuyIns),
+  donations: many(eventDonations),
 }))
 
 export const clans = createTable("clans", {
@@ -654,6 +655,24 @@ export const eventBuyIns = createTable("event_buy_ins", {
 export const eventBuyInsRelations = relations(eventBuyIns, ({ one }) => ({
   eventParticipant: one(eventParticipants, {
     fields: [eventBuyIns.eventParticipantId],
+    references: [eventParticipants.id],
+  }),
+}))
+
+export const eventDonations = createTable("event_donations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventParticipantId: uuid("event_participant_id")
+    .notNull()
+    .references(() => eventParticipants.id, { onDelete: "cascade" }),
+  amount: bigint("amount", { mode: "number" }).notNull(),
+  description: text("description"), // Optional description for the donation
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const eventDonationsRelations = relations(eventDonations, ({ one }) => ({
+  eventParticipant: one(eventParticipants, {
+    fields: [eventDonations.eventParticipantId],
     references: [eventParticipants.id],
   }),
 }))

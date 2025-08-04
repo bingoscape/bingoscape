@@ -10,6 +10,7 @@ import {
   teamMembers,
   teams,
   eventBuyIns,
+  eventDonations,
   users,
   bingos,
   eventRegistrationRequests,
@@ -422,13 +423,13 @@ export async function getUserCreatedEvents() {
     })
 
     const eventDataPromises = userEvents.map(async (event) => {
-      const totalPrizePool = await getTotalBuyInsForEvent(event.id)
+      const prizePoolData = await calculateEventPrizePool(event.id)
       return {
         event: {
           ...event,
           role: event.creatorId === userId ? "admin" : (event.eventParticipants[0]?.role ?? "participant"),
         },
-        totalPrizePool,
+        totalPrizePool: prizePoolData.totalPrizePool,
       }
     })
 
@@ -463,13 +464,13 @@ export async function getEvents(userId: string): Promise<EventData[]> {
     })
 
     const eventDataPromises = userEvents.map(async (event) => {
-      const totalPrizePool = await getTotalBuyInsForEvent(event.id)
+      const prizePoolData = await calculateEventPrizePool(event.id)
       return {
         event: {
           ...event,
           role: event.creatorId === userId ? "admin" : (event.eventParticipants[0]?.role ?? "participant"),
         },
-        totalPrizePool,
+        totalPrizePool: prizePoolData.totalPrizePool,
       }
     })
 
@@ -816,6 +817,16 @@ export async function getEventParticipants(eventId: string) {
 
         const buyIn = buyInResult[0]?.amount ?? 0
 
+        // Get total donations for this participant
+        const donationsResult = await db
+          .select({
+            total: sql<number>`COALESCE(SUM(${eventDonations.amount}), 0)`.as("totalDonations"),
+          })
+          .from(eventDonations)
+          .where(eq(eventDonations.eventParticipantId, participant.id))
+
+        const totalDonations = donationsResult[0]?.total ?? 0
+
         // Get team info (if any) - Make sure we're getting the latest team assignment
         // const teamMember = await db.query.teamMembers.findFirst({
         //   where: eq(teamMembers.userId, participant.userId),
@@ -849,6 +860,7 @@ export async function getEventParticipants(eventId: string) {
           teamId: t != null ? t.id : null,
           teamName: t != null ? t.name : null,
           buyIn: buyIn,
+          totalDonations: totalDonations,
         }
       }),
     )
@@ -978,18 +990,15 @@ export async function getTotalBuyInsForEvent(eventId: string): Promise<number> {
       return 0
     }
 
-    const event = await db.query.events.findFirst({
-      where: eq(events.id, eventId),
-    })
-
-    return total + (event?.basePrizePool ?? 0)
+    // Return only the buy-ins total, don't add base prize pool here
+    return total
   } catch (error) {
     console.error("Error calculating total buy-ins for event:", error)
     return 0
   }
 }
 
-export async function updateParticipantBuyIn(eventId: string, participantId: string, buyIn: number) {
+export async function updateParticipantBuyIn(eventId: string, participantId: string, hasPaid: boolean) {
   try {
     // First, get the minimum buy-in for the event
     const event = await db.query.events.findFirst({
@@ -1009,6 +1018,9 @@ export async function updateParticipantBuyIn(eventId: string, participantId: str
       throw new Error("Participant not found for this event")
     }
 
+    // Calculate buy-in amount: use minimum buy-in if paid, 0 if not paid
+    const buyInAmount = hasPaid ? event.minimumBuyIn : 0
+
     // Check if a buy-in record already exists
     const existingBuyIn = await db.query.eventBuyIns.findFirst({
       where: eq(eventBuyIns.eventParticipantId, eventParticipant.id),
@@ -1019,21 +1031,23 @@ export async function updateParticipantBuyIn(eventId: string, participantId: str
       await db
         .update(eventBuyIns)
         .set({
-          amount: buyIn,
+          amount: buyInAmount,
           updatedAt: sql`CURRENT_TIMESTAMP`,
         })
         .where(eq(eventBuyIns.id, existingBuyIn.id))
     } else {
-      // Insert new record
-      await db.insert(eventBuyIns).values({
-        eventParticipantId: eventParticipant.id,
-        amount: buyIn,
-      })
+      // Insert new record only if they're paying
+      if (hasPaid) {
+        await db.insert(eventBuyIns).values({
+          eventParticipantId: eventParticipant.id,
+          amount: buyInAmount,
+        })
+      }
     }
     revalidatePath(`/events/${eventId}`)
     revalidatePath(`/`)
 
-    return { success: true }
+    return { success: true, buyInAmount }
   } catch (error) {
     console.error("Error updating participant buy-in:", error)
     throw error
@@ -1085,6 +1099,9 @@ export async function removeParticipantFromEvent(eventId: string, userId: string
 
     // Remove any buy-ins
     await db.delete(eventBuyIns).where(eq(eventBuyIns.eventParticipantId, participant.id))
+
+    // Remove any donations
+    await db.delete(eventDonations).where(eq(eventDonations.eventParticipantId, participant.id))
 
     // Remove the participant from the event
     await db.delete(eventParticipants).where(eq(eventParticipants.id, participant.id))
@@ -1301,5 +1318,199 @@ export async function getPendingRegistrationCount(eventId: string): Promise<numb
   } catch (error) {
     console.error("Error counting pending registrations:", error)
     return 0
+  }
+}
+
+// Donation management functions
+export async function addParticipantDonation(
+  eventId: string,
+  participantId: string,
+  amount: number,
+  description?: string
+) {
+  try {
+    const session = await getServerAuthSession()
+    if (!session || !session.user) {
+      throw new Error("You must be logged in to add donations")
+    }
+
+    // Check permissions
+    const userRole = await getUserRole(eventId)
+    if (userRole !== "admin" && userRole !== "management") {
+      throw new Error("You don't have permission to manage donations")
+    }
+
+    // Find the eventParticipant
+    const eventParticipant = await db.query.eventParticipants.findFirst({
+      where: and(eq(eventParticipants.eventId, eventId), eq(eventParticipants.userId, participantId)),
+    })
+
+    if (!eventParticipant) {
+      throw new Error("Participant not found for this event")
+    }
+
+    // Insert new donation record
+    const [donation] = await db.insert(eventDonations).values({
+      eventParticipantId: eventParticipant.id,
+      amount,
+      description,
+    }).returning()
+
+    revalidatePath(`/events/${eventId}/participants`)
+    revalidatePath(`/events/${eventId}`)
+
+    return { success: true, data: donation }
+  } catch (error) {
+    console.error("Error adding donation:", error)
+    throw error
+  }
+}
+
+export async function updateParticipantDonation(
+  eventId: string,
+  donationId: string,
+  amount: number,
+  description?: string
+) {
+  try {
+    const session = await getServerAuthSession()
+    if (!session || !session.user) {
+      throw new Error("You must be logged in to update donations")
+    }
+
+    // Check permissions
+    const userRole = await getUserRole(eventId)
+    if (userRole !== "admin" && userRole !== "management") {
+      throw new Error("You don't have permission to manage donations")
+    }
+
+    // Update donation record
+    const [donation] = await db
+      .update(eventDonations)
+      .set({
+        amount,
+        description,
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      })
+      .where(eq(eventDonations.id, donationId))
+      .returning()
+
+    if (!donation) {
+      throw new Error("Donation not found")
+    }
+
+    revalidatePath(`/events/${eventId}/participants`)
+    revalidatePath(`/events/${eventId}`)
+
+    return { success: true, data: donation }
+  } catch (error) {
+    console.error("Error updating donation:", error)
+    throw error
+  }
+}
+
+export async function removeParticipantDonation(eventId: string, donationId: string) {
+  try {
+    const session = await getServerAuthSession()
+    if (!session || !session.user) {
+      throw new Error("You must be logged in to remove donations")
+    }
+
+    // Check permissions
+    const userRole = await getUserRole(eventId)
+    if (userRole !== "admin" && userRole !== "management") {
+      throw new Error("You don't have permission to manage donations")
+    }
+
+    // Remove donation record
+    await db.delete(eventDonations).where(eq(eventDonations.id, donationId))
+
+    revalidatePath(`/events/${eventId}/participants`)
+    revalidatePath(`/events/${eventId}`)
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error removing donation:", error)
+    throw error
+  }
+}
+
+export async function getParticipantDonations(eventId: string, participantId: string) {
+  try {
+    // Find the eventParticipant
+    const eventParticipant = await db.query.eventParticipants.findFirst({
+      where: and(eq(eventParticipants.eventId, eventId), eq(eventParticipants.userId, participantId)),
+    })
+
+    if (!eventParticipant) {
+      return []
+    }
+
+    // Get all donations for this participant
+    const donations = await db.query.eventDonations.findMany({
+      where: eq(eventDonations.eventParticipantId, eventParticipant.id),
+      orderBy: [desc(eventDonations.createdAt)],
+    })
+
+    return donations
+  } catch (error) {
+    console.error("Error fetching participant donations:", error)
+    return []
+  }
+}
+
+export async function calculateEventPrizePool(eventId: string) {
+  try {
+    // Get base prize pool from event
+    const event = await db.query.events.findFirst({
+      where: eq(events.id, eventId),
+    })
+
+    if (!event) {
+      throw new Error("Event not found")
+    }
+
+    const basePrizePool = event.basePrizePool
+
+    // Calculate total buy-ins
+    const buyInsResult = await db
+      .select({
+        total: sql<number>`COALESCE(SUM(${eventBuyIns.amount}), 0)`,
+      })
+      .from(eventBuyIns)
+      .innerJoin(eventParticipants, eq(eventBuyIns.eventParticipantId, eventParticipants.id))
+      .where(eq(eventParticipants.eventId, eventId))
+
+    const totalBuyIns = Number(buyInsResult[0]?.total ?? 0)
+
+    // Calculate total donations
+    const donationsResult = await db
+      .select({
+        total: sql<number>`COALESCE(SUM(${eventDonations.amount}), 0)`,
+      })
+      .from(eventDonations)
+      .innerJoin(eventParticipants, eq(eventDonations.eventParticipantId, eventParticipants.id))
+      .where(eq(eventParticipants.eventId, eventId))
+
+    const totalDonations = Number(donationsResult[0]?.total ?? 0)
+
+    const totalPrizePool = basePrizePool + totalBuyIns + totalDonations
+
+    const all = {
+      basePrizePool,
+      totalBuyIns,
+      totalDonations,
+      totalPrizePool,
+    }
+    console.table(all)
+    return all
+  } catch (error) {
+    console.error("Error calculating event prize pool:", error)
+    return {
+      basePrizePool: 0,
+      totalBuyIns: 0,
+      totalDonations: 0,
+      totalPrizePool: 0,
+    }
   }
 }
