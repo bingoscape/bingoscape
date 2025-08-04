@@ -17,13 +17,141 @@ Full-stack Next.js application for OSRS clan bingo management with sophisticated
 
 ---
 
-## Current Session (Aug 4, 2025 - Session 2)
+## Current Session (Aug 4, 2025 - Session 4)
 
 ### Session Context
 - **Started**: August 4, 2025
 - **Branch**: main
-- **Status**: Clean working tree (just completed comprehensive documentation overhaul)
-- **Last Commit**: `114ef65` - docs: comprehensive documentation overhaul
+- **Status**: Ready for new development - previous session completed successfully
+- **Last Commit**: `b85eae3` - feat(ui): enhance participants page with improved buy-in tracking and visual design
+
+### Session Goals
+🎯 **READY**: Awaiting session objectives
+
+---
+
+## Previous Session (Aug 4, 2025 - Session 3)
+
+### Session Context
+- **Started**: August 4, 2025
+- **Branch**: main
+- **Status**: Major feature enhancement - buy-in tracking and UI/UX overhaul
+- **Last Commit**: `b85eae3` - feat(ui): enhance participants page with improved buy-in tracking and visual design
+
+### Session Goals
+✅ **COMPLETED**: Buy-In Tracking Enhancement & Comprehensive UI/UX Improvements
+
+### Completed Work
+
+#### 1. Buy-In Tracking System Overhaul
+**Files Modified**: 
+- `src/app/actions/events.ts`
+- `src/app/events/[id]/participants/page.tsx`
+- `src/server/db/schema.ts`
+
+**Problem**: Buy-in tracking used confusing number inputs, and there was no system for tracking donations separately from buy-ins.
+
+**Solution**: Complete redesign of financial tracking with checkbox-based buy-ins and comprehensive donation management.
+
+**Key Changes**:
+- **Checkbox-Based Buy-Ins**: Replaced number inputs with intuitive checkboxes
+  - Checked = participant paid minimum buy-in amount
+  - Unchecked = participant hasn't paid (0 GP)
+  - Clear "Paid/Unpaid" labels for immediate understanding
+- **Donation Tracking System**: 
+  - New `eventDonations` database table with participant relationships
+  - Modal-based donation management interface
+  - Support for multiple donations per participant with descriptions
+- **Enhanced Prize Pool Logic**:
+  - Fixed calculation bug in `getTotalBuyInsForEvent` (was double-counting base prize pool)
+  - Separate calculation for base pool + buy-ins + donations
+  - Real-time updates across all components
+
+#### 2. Comprehensive UI/UX Design Overhaul
+**Files Created/Modified**:
+- `src/components/prize-pool-breakdown.tsx` (new)
+- `src/components/donation-management-modal.tsx` (new)
+- `src/app/events/[id]/participants/page.tsx`
+
+**Problem**: The participants page had poor visual hierarchy, confusing interactions, and dense information presentation.
+
+**Solution**: Complete UI/UX redesign following modern design principles.
+
+**Visual Improvements**:
+- **Enhanced Visual Hierarchy**:
+  - Larger, more prominent page titles (`text-4xl` with `tracking-tight`)
+  - Better breadcrumb spacing and visibility
+  - Minimum buy-in displayed as clean badge instead of plain text
+- **Redesigned Prize Pool Component**:
+  - Gradient background with amber theming for prominence
+  - Grid-based breakdown with circular icon containers
+  - Color-coded categories (blue=base, green=buy-ins, red=donations)
+  - 3-column layout with percentages and visual hierarchy
+- **Improved Table Design**:
+  - Buy-in checkboxes with background containers and clear labels
+  - Compact donation management buttons (icon-only with hover states)
+  - Status badges replacing ambiguous icons ("Verified/Pending")
+  - Consistent green/orange color theming throughout
+- **Mobile Optimization**:
+  - Matching interaction patterns between desktop and mobile
+  - Optimized touch targets and spacing
+  - Consistent visual design across breakpoints
+
+#### 3. Database Schema Enhancements
+**Files Modified**: 
+- `src/server/db/schema.ts`
+- Database migration: `drizzle/0006_dark_ezekiel.sql`
+
+**New Tables Added**:
+```sql
+eventDonations {
+  id: uuid (primary key)
+  eventParticipantId: uuid (foreign key to eventParticipants)
+  amount: bigint (donation amount)
+  description: text (optional description)
+  createdAt: timestamp
+  updatedAt: timestamp
+}
+```
+
+**Enhanced Relations**:
+- `eventParticipantsRelations` now includes donations relationship
+- Proper cascade deletion for data integrity
+- Optimized queries for participant financial data
+
+### Technical Decisions
+
+#### Buy-In Logic Architecture
+- **Boolean State Management**: Simplified from complex number inputs to clear paid/unpaid states
+- **Server Action Enhancement**: `updateParticipantBuyIn` now accepts boolean and calculates amount
+- **Database Efficiency**: Only create buy-in records when participant has actually paid
+- **UI Consistency**: Matching checkbox patterns across desktop table and mobile cards
+
+#### Prize Pool Calculation Strategy
+- **Separation of Concerns**: Base pool, buy-ins, and donations calculated separately
+- **Real-time Updates**: Components refresh automatically when financial data changes
+- **Visual Hierarchy**: Most important info (total) gets prominent display treatment
+- **Performance**: Efficient database queries with proper joins and aggregations
+
+#### Component Architecture
+- **Modular Design**: Separate components for prize pool breakdown and donation management
+- **Reusable Patterns**: Consistent interaction patterns across similar UI elements
+- **Accessibility**: Proper ARIA labels, keyboard navigation, and screen reader support
+- **Responsive Design**: Mobile-first approach with desktop enhancements
+
+### Results Achieved
+- ✅ **Intuitive Financial Management**: Clear checkbox-based buy-in tracking
+- ✅ **Comprehensive Donation System**: Multi-donation support with descriptions
+- ✅ **Professional UI Design**: Modern visual hierarchy and interaction patterns
+- ✅ **Improved User Experience**: Reduced cognitive load and clearer affordances
+- ✅ **Better Information Architecture**: Prominent prize pool display with breakdown
+- ✅ **Consistent Design Language**: Unified color theming and visual patterns
+- ✅ **Mobile Optimization**: Touch-friendly interactions and responsive layouts
+- ✅ **Data Integrity**: Proper database relationships and cascade handling
+
+---
+
+## Previous Session (Aug 4, 2025 - Session 2)
 
 ### Session Goals
 ✅ **COMPLETED**: UI Enhancement - Event Card Navigation
@@ -32,6 +160,8 @@ Full-stack Next.js application for OSRS clan bingo management with sophisticated
 
 #### 1. Event Card UI Enhancement
 **File Modified**: `src/components/event-card.tsx`
+**Commit**: `ea4f989` - feat(ui): make entire event card clickable for navigation
+
 **Problem**: Event cards had a "View Event" button at the bottom, requiring users to click specifically on the button to navigate to the event details.
 **Solution**: Made the entire event card clickable while maintaining functionality of interactive elements.
 
@@ -123,16 +253,21 @@ src/
 │   ├── actions/
 │   │   ├── bingo-import-export.ts      # Export/import functionality
 │   │   ├── bingo.ts                    # Bingo CRUD operations
-│   │   └── events.ts                   # Event management
+│   │   └── events.ts                   # Event management & financial tracking
 │   ├── api/                           # REST API endpoints
+│   ├── events/[id]/
+│   │   ├── participants/page.tsx       # Enhanced participants management UI
+│   │   └── page.tsx                    # Event details with prize pool integration
 │   └── [routes]/                      # App Router pages
 ├── components/
 │   ├── bingo-import-export-modal.tsx  # UI for export/import
+│   ├── donation-management-modal.tsx  # NEW: Donation tracking interface
+│   ├── prize-pool-breakdown.tsx       # NEW: Enhanced prize pool component
 │   ├── progression-bingo-grid.tsx     # Progression board display
 │   └── ui/                           # shadcn/ui components
 └── server/
     ├── db/
-    │   ├── schema.ts                  # Drizzle schema definitions
+    │   ├── schema.ts                  # Enhanced with donation tracking tables
     │   └── index.ts                   # Database connection
     └── auth.ts                        # NextAuth configuration
 ```
@@ -148,35 +283,64 @@ src/
 ## Next Steps & Recommendations
 
 ### Immediate
-- Test progression board export/import in UI to ensure full functionality
-- Consider adding import preview to show board structure before import
+- **Database Migration**: Apply the new `eventDonations` table migration in production
+- **Testing**: Comprehensive testing of donation management system with multiple scenarios
+- **Performance**: Monitor database query performance with new donation joins
+- **Mobile Testing**: Verify improved mobile experience across different devices
 
 ### Future Enhancements
-- Export validation could include tile count vs grid dimensions check
-- Consider adding export metadata (created date, creator info)
-- Template system integration with export/import functionality
+- **Bulk Operations**: Add bulk buy-in/donation management for multiple participants
+- **Payment Integration**: Consider integrating with payment processors for actual transactions
+- **Export/Import Enhancement**: Include financial data in bingo export/import functionality
+- **Analytics Dashboard**: Prize pool trends and participant payment analytics
+- **Notification System**: Automated reminders for unpaid buy-ins
 
 ### Technical Debt
-- Multiple ESLint warnings across codebase (non-blocking but should be addressed)
-- Some unused imports and variables in various files
-- Consider consolidating similar API error handling patterns
+- **ESLint Warnings**: Address remaining linter warnings across codebase
+- **Component Consolidation**: Extract shared patterns from table/card participant displays
+- **Error Handling**: Standardize error handling patterns across financial operations
+- **Performance Optimization**: Consider implementing optimistic updates for buy-in changes
+- **Accessibility Audit**: Full accessibility review of new interactive elements
+
+### Architecture Considerations
+- **Caching Strategy**: Implement caching for prize pool calculations on high-traffic events
+- **Event Sourcing**: Consider event sourcing for financial transactions audit trail
+- **Data Validation**: Add client-side validation for donation amounts and descriptions
 
 ---
 
 ## Important Context for Future Sessions
 
 ### Code Patterns to Follow
-- Use server actions for data mutations (files in `src/app/actions/`)
-- Follow shadcn/ui component patterns for UI consistency
-- Use Drizzle queries with relations for complex data fetching
-- Maintain backwards compatibility for data formats
+- **Server Actions**: Use server actions for data mutations (files in `src/app/actions/`)
+- **UI Components**: Follow shadcn/ui component patterns for consistency
+- **Database Queries**: Use Drizzle queries with relations for complex data fetching
+- **Financial Operations**: Always wrap financial transactions in database transactions
+- **State Management**: Use optimistic updates for immediate UI feedback
+- **Error Handling**: Provide clear, actionable error messages for financial operations
+- **Accessibility**: Ensure all interactive elements have proper ARIA labels and keyboard navigation
 
 ### Testing Approach
-- Export/import functions are server actions (need integration testing)
-- UI components can be unit tested with React Testing Library
-- Database operations should be tested with actual DB transactions
+- **Financial Logic**: Unit test buy-in and donation calculations with edge cases
+- **UI Components**: Test checkbox interactions and modal behaviors with React Testing Library
+- **Database Operations**: Integration tests with actual DB transactions for financial data
+- **Mobile Responsive**: Visual regression tests for mobile card layouts
+- **Performance**: Load tests for prize pool calculations with large participant counts
+
+### Design System Guidelines
+- **Color Theming**: Green for positive/paid states, orange for pending, red for errors
+- **Interactive Elements**: Minimum 44px touch targets for mobile accessibility
+- **Information Hierarchy**: Most critical info (totals) gets prominent visual treatment
+- **Consistent Spacing**: Use consistent gap and padding values across similar components
+- **Loading States**: Always provide loading indicators for financial operations
 
 ### RuneLite Integration
 - API endpoints in `src/app/api/runelite/` handle plugin communication
 - Submission system allows players to upload screenshots from game
 - Authentication system supports API keys for plugin access
+
+### Database Schema Best Practices
+- **Financial Data**: Use bigint for all monetary amounts to avoid precision issues
+- **Cascade Deletion**: Proper cascade rules for data integrity when removing participants
+- **Timestamps**: Always include created/updated timestamps for audit trails
+- **Relations**: Use proper foreign key constraints and relations for data consistency
