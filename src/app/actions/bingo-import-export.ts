@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/server/db"
-import { bingos, tiles, goals } from "@/server/db/schema"
+import { bingos, tiles, goals, tierXpRequirements } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getServerAuthSession } from "@/server/auth"
@@ -16,6 +16,8 @@ export interface ExportedBingo {
     rows: number
     columns: number
     codephrase: string
+    bingoType: "standard" | "progression"
+    tiersUnlockRequirement?: number // For progression boards
   }
   tiles: Array<{
     title: string
@@ -24,11 +26,16 @@ export interface ExportedBingo {
     weight: number
     index: number
     isHidden: boolean
+    tier: number // 0 for standard, tier number for progression
     goals: Array<{
       description: string
       targetValue: number
     }>
   }>
+  tierXpRequirements?: Array<{
+    tier: number
+    xpRequired: number
+  }> // Only for progression boards
 }
 
 /**
@@ -41,7 +48,7 @@ export async function exportBingoBoard(bingoId: string): Promise<ExportedBingo |
   }
 
   try {
-    // Fetch the bingo with all its tiles and goals
+    // Fetch the bingo with all its tiles, goals, and tier requirements
     const bingo = await db.query.bingos.findFirst({
       where: eq(bingos.id, bingoId),
       with: {
@@ -50,6 +57,7 @@ export async function exportBingoBoard(bingoId: string): Promise<ExportedBingo |
             goals: true,
           },
         },
+        tierXpRequirements: true,
       },
     })
 
@@ -59,13 +67,17 @@ export async function exportBingoBoard(bingoId: string): Promise<ExportedBingo |
 
     // Transform the data into our export format
     const exportData: ExportedBingo = {
-      version: "1.0",
+      version: "1.1", // Updated version to support progression boards
       metadata: {
         title: bingo.title,
         description: bingo.description,
         rows: bingo.rows,
         columns: bingo.columns,
         codephrase: bingo.codephrase,
+        bingoType: bingo.bingoType,
+        ...(bingo.bingoType === "progression" && {
+          tiersUnlockRequirement: bingo.tiersUnlockRequirement,
+        }),
       },
       tiles: bingo.tiles.map((tile) => ({
         title: tile.title,
@@ -74,11 +86,18 @@ export async function exportBingoBoard(bingoId: string): Promise<ExportedBingo |
         weight: tile.weight,
         index: tile.index,
         isHidden: tile.isHidden,
+        tier: tile.tier,
         goals: tile.goals.map((goal) => ({
           description: goal.description,
           targetValue: goal.targetValue,
         })),
       })),
+      ...(bingo.bingoType === "progression" && bingo.tierXpRequirements && {
+        tierXpRequirements: bingo.tierXpRequirements.map((req) => ({
+          tier: req.tier,
+          xpRequired: req.xpRequired,
+        })),
+      }),
     }
 
     return exportData
@@ -105,6 +124,10 @@ export async function importBingoBoard(
     return { success: false, error: "Invalid import data format" }
   }
 
+  // Set default values for backwards compatibility
+  const bingoType = importData.metadata.bingoType ?? "standard"
+  const tiersUnlockRequirement = importData.metadata.tiersUnlockRequirement ?? 5
+
   try {
     return await db.transaction(async (tx) => {
       // Create the new bingo board
@@ -117,6 +140,8 @@ export async function importBingoBoard(
           rows: importData.metadata.rows,
           columns: importData.metadata.columns,
           codephrase: importData.metadata.codephrase,
+          bingoType: bingoType,
+          tiersUnlockRequirement: tiersUnlockRequirement,
           visible: false, // Default to not visible
           locked: true, // Default to locked
         })
@@ -138,6 +163,7 @@ export async function importBingoBoard(
             weight: tileData.weight,
             index: tileData.index,
             isHidden: tileData.isHidden,
+            tier: tileData.tier ?? 0, // Default to 0 for backwards compatibility
           })
           .returning()
 
@@ -155,6 +181,17 @@ export async function importBingoBoard(
 
           await tx.insert(goals).values(goalsToInsert)
         }
+      }
+
+      // Create tier XP requirements for progression boards
+      if (bingoType === "progression" && importData.tierXpRequirements) {
+        const tierXpReqsToInsert = importData.tierXpRequirements.map((req) => ({
+          bingoId: newBingo.id,
+          tier: req.tier,
+          xpRequired: req.xpRequired,
+        }))
+
+        await tx.insert(tierXpRequirements).values(tierXpReqsToInsert)
       }
 
       // Revalidate the event page to show the new bingo
@@ -193,6 +230,20 @@ export async function validateImportData(data: unknown): Promise<{ valid: boolea
       return { valid: false, error: "Invalid metadata" }
     }
 
+    // Validate progression-specific fields if present
+    if (metadata.bingoType === "progression") {
+      if (importData.tierXpRequirements && !Array.isArray(importData.tierXpRequirements)) {
+        return { valid: false, error: "Invalid tierXpRequirements format" }
+      }
+      if (importData.tierXpRequirements) {
+        for (const req of importData.tierXpRequirements) {
+          if (typeof req.tier !== "number" || typeof req.xpRequired !== "number") {
+            return { valid: false, error: "Invalid tier XP requirement data" }
+          }
+        }
+      }
+    }
+
     if (!importData.tiles || !Array.isArray(importData.tiles) || importData.tiles.length === 0) {
       return { valid: false, error: "Missing or empty tiles array" }
     }
@@ -209,6 +260,11 @@ export async function validateImportData(data: unknown): Promise<{ valid: boolea
     for (const tile of importData.tiles) {
       if (!tile.title || typeof tile.weight !== "number" || typeof tile.index !== "number") {
         return { valid: false, error: "Invalid tile data" }
+      }
+
+      // Validate tier field (should be number, defaults to 0 if not present)
+      if (tile.tier !== undefined && typeof tile.tier !== "number") {
+        return { valid: false, error: "Invalid tile tier data" }
       }
 
       // Validate goals if present
