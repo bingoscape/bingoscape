@@ -62,7 +62,7 @@ export async function POST(
     }
 
     const submissionId = params.id
-    const body = await request.json()
+    const body = await request.json() // eslint-disable-line
 
     // Validate request body
     const validatedData = createCommentSchema.parse(body)
@@ -88,7 +88,7 @@ export async function POST(
 
     // TODO: Add permission check to ensure user can comment on this submission
     // This should check if the user is an admin/management role for the event
-    
+
     // Create the comment
     const [newComment] = await db
       .insert(submissionComments)
@@ -115,8 +115,8 @@ export async function POST(
       })
       .from(submissionComments)
       .innerJoin(users, eq(submissionComments.authorId, users.id))
-      .where(eq(submissionComments.id, newComment.id))
-      
+      .where(eq(submissionComments.id, newComment!.id))
+
     if (commentWithAuthor.length === 0) {
       return NextResponse.json(
         { error: "Failed to retrieve created comment" },
