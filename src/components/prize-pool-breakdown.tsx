@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { calculateEventPrizePool } from "@/app/actions/events"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
@@ -24,9 +24,9 @@ export function PrizePoolBreakdown({ eventId, className }: PrizePoolBreakdownPro
 
   useEffect(() => {
     void fetchPrizePoolData()
-  }, [eventId, fetchPrizePoolData])
+  }, [fetchPrizePoolData])
 
-  const fetchPrizePoolData = async () => {
+  const fetchPrizePoolData = useCallback(async () => {
     setLoading(true)
     try {
       const data = await calculateEventPrizePool(eventId)
@@ -36,7 +36,7 @@ export function PrizePoolBreakdown({ eventId, className }: PrizePoolBreakdownPro
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId])
 
   if (loading) {
     return (

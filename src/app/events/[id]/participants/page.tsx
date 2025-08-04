@@ -320,7 +320,7 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
   const [sortField, setSortField] = useState<SortField>("name")
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
   const [currentPage, setCurrentPage] = useState(1)
-  const { data, status } = useSession()
+  const { data } = useSession()
   const [currentUserRole, setCurrentUserRole] = useState<"admin" | "management" | "participant">("participant")
   const [isEventCreator, setIsEventCreator] = useState(false)
   const [donationModalOpen, setDonationModalOpen] = useState(false)
@@ -555,7 +555,7 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
         title: "Success",
         description: `${selectedParticipants.size} participants removed`,
       })
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to remove some participants",

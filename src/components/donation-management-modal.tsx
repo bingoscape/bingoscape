@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -77,9 +77,9 @@ export function DonationManagementModal({
     if (isOpen) {
       void fetchDonations()
     }
-  }, [isOpen, eventId, participantId, fetchDonations])
+  }, [isOpen, fetchDonations])
 
-  const fetchDonations = async () => {
+  const fetchDonations = useCallback(async () => {
     setLoading(true)
     try {
       const donationsData = await getParticipantDonations(eventId, participantId)
@@ -94,7 +94,7 @@ export function DonationManagementModal({
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId, participantId])
 
   const handleAddDonation = async () => {
     if (!newDonation.amount || Number(newDonation.amount) <= 0) {
