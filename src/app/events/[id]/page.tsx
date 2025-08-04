@@ -5,7 +5,6 @@ import { CreateBingoModal } from "@/components/create-bingo-modal"
 import { getServerAuthSession } from "@/server/auth"
 import {
     getEventById,
-    getTotalBuyInsForEvent,
     calculateEventPrizePool,
     isRegistrationOpen,
     getPendingRegistrationCount,

@@ -246,7 +246,7 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
                   onClick={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
-                    handleRequestSubmit()
+                    void handleRequestSubmit()
                   }} 
                   disabled={isSubmitting}
                 >
@@ -281,7 +281,7 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
-                        handleJoinClick()
+                        void handleJoinClick()
                       }}
                       className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-200"
                     >
@@ -293,7 +293,7 @@ export function EventCard({ eventData, onJoin, isParticipant, status, registrati
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      handleJoinClick()
+                      void handleJoinClick()
                     }}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-200"
                   >

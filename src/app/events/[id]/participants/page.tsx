@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -25,7 +25,6 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  DollarSign,
   Heart,
 } from "lucide-react"
 import {
@@ -40,7 +39,6 @@ import { getEventById } from "@/app/actions/events"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import type { UUID } from "crypto"
 import { Breadcrumbs } from "@/components/breadcrumbs"
-import debounce from "lodash/debounce"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,7 +64,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useSession } from "next-auth/react"
 import { DonationManagementModal } from "@/components/donation-management-modal"
 import { PrizePoolBreakdown } from "@/components/prize-pool-breakdown"

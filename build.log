@@ -1,0 +1,255 @@
+
+> bingoscape-next@0.1.0 build
+> next build
+
+  ▲ Next.js 14.2.30
+  - Environments: .env
+  - Experiments (use with caution):
+    · instrumentationHook
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+
+Failed to compile.
+
+./src/app/actions/bingo-import-export.ts
+281:12  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/actions/clan.ts
+6:19  Warning: 'count' is defined but never used.  @typescript-eslint/no-unused-vars
+7:1  Warning: Imports "EventData" are only used as type.  @typescript-eslint/consistent-type-imports
+
+./src/app/actions/discord-webhooks.ts
+6:14  Warning: 'and' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/actions/events.ts
+21:1  Warning: All imports in the declaration are only used as types. Use `import type`.  @typescript-eslint/consistent-type-imports
+1138:32  Warning: 'like' is defined but never used. Allowed unused args must match /^_/u.  @typescript-eslint/no-unused-vars
+1138:38  Warning: 'or' is defined but never used. Allowed unused args must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./src/app/actions/stats.ts
+347:19  Warning: 'tileId' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/actions/super-admin.ts
+17:1  Warning: Imports "SQL" are only used as type.  @typescript-eslint/consistent-type-imports
+
+./src/app/api/runelite/events/route.ts
+3:10  Warning: 'teams' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/runelite/tiles/[tileId]/submissions/route.ts
+129:11  Warning: 'result' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/submissions/[id]/comments/route.ts
+1:1  Warning: Imports "NextRequest" are only used as type.  @typescript-eslint/consistent-type-imports
+6:14  Warning: 'and' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/uploads/[...path]/route.ts
+18:11  Warning: '_' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/clans/[clanId]/members/page.tsx
+53:16  Warning: 'session' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+105:12  Warning: '_' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/clans/[clanId]/page.tsx
+5:46  Warning: 'CardFooter' is defined but never used.  @typescript-eslint/no-unused-vars
+9:10  Warning: 'Input' is defined but never used.  @typescript-eslint/no-unused-vars
+10:10  Warning: 'Select' is defined but never used.  @typescript-eslint/no-unused-vars
+10:18  Warning: 'SelectContent' is defined but never used.  @typescript-eslint/no-unused-vars
+10:33  Warning: 'SelectItem' is defined but never used.  @typescript-eslint/no-unused-vars
+10:45  Warning: 'SelectTrigger' is defined but never used.  @typescript-eslint/no-unused-vars
+10:60  Warning: 'SelectValue' is defined but never used.  @typescript-eslint/no-unused-vars
+11:10  Warning: 'Separator' is defined but never used.  @typescript-eslint/no-unused-vars
+13:41  Warning: 'Search' is defined but never used.  @typescript-eslint/no-unused-vars
+13:49  Warning: 'Filter' is defined but never used.  @typescript-eslint/no-unused-vars
+13:92  Warning: 'MessageSquare' is defined but never used.  @typescript-eslint/no-unused-vars
+13:107  Warning: 'MoreHorizontal' is defined but never used.  @typescript-eslint/no-unused-vars
+58:22  Warning: 'setSearchTerm' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+59:22  Warning: 'setRoleFilter' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+108:14  Warning: '_' is defined but never used.  @typescript-eslint/no-unused-vars
+170:9  Warning: 'filteredMembers' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+177:9  Warning: 'getRoleIcon' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+187:9  Warning: 'getRoleColor' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/clans/join/page.tsx
+15:17  Warning: 'session' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/clans/page.tsx
+9:46  Warning: 'Calendar' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/events/[id]/bingos/new/page.tsx
+2:10  Warning: 'events' is defined but never used.  @typescript-eslint/no-unused-vars
+3:10  Warning: 'eq' is defined but never used.  @typescript-eslint/no-unused-vars
+12:24  Warning: 'getUserRole' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/events/[id]/page.tsx
+8:5  Warning: 'getTotalBuyInsForEvent' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/events/[id]/participants/page.tsx
+3:31  Warning: 'useCallback' is defined but never used.  @typescript-eslint/no-unused-vars
+28:3  Warning: 'DollarSign' is defined but never used.  @typescript-eslint/no-unused-vars
+43:8  Warning: 'debounce' is defined but never used.  @typescript-eslint/no-unused-vars
+69:10  Warning: 'Tooltip' is defined but never used.  @typescript-eslint/no-unused-vars
+69:19  Warning: 'TooltipContent' is defined but never used.  @typescript-eslint/no-unused-vars
+69:35  Warning: 'TooltipProvider' is defined but never used.  @typescript-eslint/no-unused-vars
+69:52  Warning: 'TooltipTrigger' is defined but never used.  @typescript-eslint/no-unused-vars
+326:17  Warning: 'status' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+561:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/public/events/[id]/bingos/[bingoId]/page.tsx
+12:3  Warning: 'parent' is defined but never used. Allowed unused args must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./src/app/public/events/[id]/opengraph-image/route.tsx
+229:29  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/app/super-admin/clans/page.tsx
+4:18  Warning: 'Users' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/super-admin/events/page.tsx
+4:40  Warning: 'XCircle' is defined but never used.  @typescript-eslint/no-unused-vars
+32:9  Warning: 'pastEvents' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/super-admin/users/page.tsx
+4:28  Warning: 'UserX' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/bingo-grid-layout.tsx
+32:11  Warning: The attribute aria-posinset is not supported by the role gridcell.  jsx-a11y/role-supports-aria-props
+32:11  Warning: The attribute aria-setsize is not supported by the role gridcell.  jsx-a11y/role-supports-aria-props
+
+./src/components/bingo-grid-wrapper.tsx
+182:5  Warning: React Hook useCallback has an unnecessary dependency: 'bingo.tiles'. Either exclude it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/bingo-import-export-modal.tsx
+64:16  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+74:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/bingo-tile.tsx
+9:10  Warning: 'Badge' is defined but never used.  @typescript-eslint/no-unused-vars
+26:9  Warning: 'submissionCounts' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+93:9  Warning: 'formatDescription' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/clan-events.tsx
+15:59  Warning: 'clanId' is defined but never used. Allowed unused args must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./src/components/comment-form.tsx
+15:31  Warning: 'submissionId' is defined but never used. Allowed unused args must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./src/components/create-event-modal.tsx
+82:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/create-template-button.tsx
+23:10  Warning: 'getBingoById' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/delete-bingo-button.tsx
+28:14  Warning: '_' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/discord-webhook-management.tsx
+56:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+69:6  Warning: React Hook useEffect has a missing dependency: 'loadWebhooks'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+103:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+130:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+157:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+181:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/donation-management-modal.tsx
+6:10  Warning: 'Textarea' is defined but never used.  @typescript-eslint/no-unused-vars
+79:7  Error: Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator.  @typescript-eslint/no-floating-promises
+81:6  Warning: React Hook useEffect has a missing dependency: 'fetchDonations'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+188:81  Error: Prefer using nullish coalescing operator (`??`) instead of a logical or (`||`), as it is a safer operator.  @typescript-eslint/prefer-nullish-coalescing
+211:47  Error: Prefer using nullish coalescing operator (`??`) instead of a logical or (`||`), as it is a safer operator.  @typescript-eslint/prefer-nullish-coalescing
+388:51  Error: Prefer using nullish coalescing operator (`??`) instead of a logical or (`||`), as it is a safer operator.  @typescript-eslint/prefer-nullish-coalescing
+
+./src/components/edit-event-modal.tsx
+67:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/event-card.tsx
+8:39  Warning: 'ArrowRight' is defined but never used.  @typescript-eslint/no-unused-vars
+8:111  Warning: 'Star' is defined but never used.  @typescript-eslint/no-unused-vars
+8:117  Warning: 'MapPin' is defined but never used.  @typescript-eslint/no-unused-vars
+249:21  Error: Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator.  @typescript-eslint/no-floating-promises
+284:25  Error: Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator.  @typescript-eslint/no-floating-promises
+296:23  Error: Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator.  @typescript-eslint/no-floating-promises
+
+./src/components/event-stats-display.tsx
+7:10  Warning: 'Trophy' is defined but never used.  @typescript-eslint/no-unused-vars
+19:49  Warning: 'eventTitle' is defined but never used. Allowed unused args must match /^_/u.  @typescript-eslint/no-unused-vars
+19:61  Warning: 'userRole' is defined but never used. Allowed unused args must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./src/components/eventlist.tsx
+5:10  Warning: 'Plus' is defined but never used.  @typescript-eslint/no-unused-vars
+6:29  Warning: 'CardDescription' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/events-display.tsx
+7:62  Warning: 'Check' is defined but never used.  @typescript-eslint/no-unused-vars
+7:69  Warning: 'CheckCircle2' is defined but never used.  @typescript-eslint/no-unused-vars
+11:10  Warning: 'Card' is defined but never used.  @typescript-eslint/no-unused-vars
+11:16  Warning: 'CardContent' is defined but never used.  @typescript-eslint/no-unused-vars
+11:29  Warning: 'CardHeader' is defined but never used.  @typescript-eslint/no-unused-vars
+11:41  Warning: 'CardTitle' is defined but never used.  @typescript-eslint/no-unused-vars
+44:9  Warning: 'totalEvents' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+45:9  Warning: 'activeEvents' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+46:9  Warning: 'totalPrizePool' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/generate-clan-invite-link.tsx
+40:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/notification-bell.tsx
+44:6  Warning: React Hook useEffect has a missing dependency: 'fetchNotifications'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/prize-pool-breakdown.tsx
+4:29  Warning: 'CardDescription' is defined but never used.  @typescript-eslint/no-unused-vars
+4:46  Warning: 'CardHeader' is defined but never used.  @typescript-eslint/no-unused-vars
+4:58  Warning: 'CardTitle' is defined but never used.  @typescript-eslint/no-unused-vars
+5:10  Warning: 'Badge' is defined but never used.  @typescript-eslint/no-unused-vars
+6:10  Warning: 'Separator' is defined but never used.  @typescript-eslint/no-unused-vars
+28:5  Error: Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator.  @typescript-eslint/no-floating-promises
+29:6  Warning: React Hook useEffect has a missing dependency: 'fetchPrizePoolData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/registration-requests-table.tsx
+28:72  Warning: 'eventId' is defined but never used. Allowed unused args must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./src/components/runescape-link-prompt.tsx
+46:14  Warning: '_' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/submission-comment.tsx
+15:54  Warning: 'submissionId' is defined but never used. Allowed unused args must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./src/components/super-admin-clan-delete-modal.tsx
+40:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/super-admin-clan-edit-modal.tsx
+63:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/super-admin-event-delete-modal.tsx
+40:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/super-admin-event-edit-modal.tsx
+74:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/super-admin-user-delete-modal.tsx
+41:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/super-admin-user-edit-modal.tsx
+52:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/template-preview-grid.tsx
+20:3  Warning: 'title' is defined but never used. Allowed unused args must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./src/components/template-preview-with-tooltip.tsx
+21:3  Warning: 'title' is defined but never used. Allowed unused args must match /^_/u.  @typescript-eslint/no-unused-vars
+
+./src/components/tier-management-modal.tsx
+68:6  Warning: React Hook useEffect has a missing dependency: 'loadTiles'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+327:35  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+428:27  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/components/ui/pagination.tsx
+5:1  Warning: Imports "ButtonProps" are only used as type.  @typescript-eslint/consistent-type-imports
+
+./src/hooks/use-toast.ts
+21:7  Warning: 'actionTypes' is assigned a value but only used as a type.  @typescript-eslint/no-unused-vars
+
+./src/server/auth.ts
+9:8  Warning: 'GithubProvider' is defined but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
