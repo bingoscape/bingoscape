@@ -22,9 +22,6 @@ export function PrizePoolBreakdown({ eventId, className }: PrizePoolBreakdownPro
   const [prizePoolData, setPrizePoolData] = useState<PrizePoolData | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    void fetchPrizePoolData()
-  }, [fetchPrizePoolData])
 
   const fetchPrizePoolData = useCallback(async () => {
     setLoading(true)
@@ -37,6 +34,10 @@ export function PrizePoolBreakdown({ eventId, className }: PrizePoolBreakdownPro
       setLoading(false)
     }
   }, [eventId])
+
+  useEffect(() => {
+    void fetchPrizePoolData()
+  }, [fetchPrizePoolData])
 
   if (loading) {
     return (
@@ -91,7 +92,7 @@ export function PrizePoolBreakdown({ eventId, className }: PrizePoolBreakdownPro
               {totalPrizePool > 0 ? Math.round((basePrizePool / totalPrizePool) * 100) : 0}%
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <div className="w-8 h-8 mx-auto rounded-full bg-green-500/20 flex items-center justify-center">
               <Users className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -102,7 +103,7 @@ export function PrizePoolBreakdown({ eventId, className }: PrizePoolBreakdownPro
               {totalPrizePool > 0 ? Math.round((totalBuyIns / totalPrizePool) * 100) : 0}%
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <div className="w-8 h-8 mx-auto rounded-full bg-red-500/20 flex items-center justify-center">
               <Heart className="h-4 w-4 text-red-600 dark:text-red-400" />

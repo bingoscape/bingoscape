@@ -42,7 +42,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 interface Donation {
   id: string
   amount: number
-  description?: string
+  description: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -73,12 +73,6 @@ export function DonationManagementModal({
     description: "",
   })
 
-  useEffect(() => {
-    if (isOpen) {
-      void fetchDonations()
-    }
-  }, [isOpen, fetchDonations])
-
   const fetchDonations = useCallback(async () => {
     setLoading(true)
     try {
@@ -96,6 +90,13 @@ export function DonationManagementModal({
     }
   }, [eventId, participantId])
 
+  useEffect(() => {
+    if (isOpen) {
+      void fetchDonations()
+    }
+  }, [isOpen, fetchDonations])
+
+
   const handleAddDonation = async () => {
     if (!newDonation.amount || Number(newDonation.amount) <= 0) {
       toast({
@@ -111,14 +112,14 @@ export function DonationManagementModal({
         eventId,
         participantId,
         Number(newDonation.amount),
-        newDonation.description || undefined
+        newDonation.description
       )
-      
+
       setNewDonation({ amount: "", description: "" })
       setIsAddingDonation(false)
       await fetchDonations()
       onDonationsUpdated()
-      
+
       toast({
         title: "Success",
         description: "Donation added successfully",
@@ -133,14 +134,14 @@ export function DonationManagementModal({
     }
   }
 
-  const handleUpdateDonation = async (donation: Donation, amount: number, description?: string) => {
+  const handleUpdateDonation = async (donation: Donation, amount: number, description: string | null) => {
     try {
-      await updateParticipantDonation(eventId, donation.id, amount, description)
-      
+      await updateParticipantDonation(eventId, donation.id, amount, description ?? "")
+
       setEditingDonation(null)
       await fetchDonations()
       onDonationsUpdated()
-      
+
       toast({
         title: "Success",
         description: "Donation updated successfully",
@@ -162,10 +163,10 @@ export function DonationManagementModal({
 
     try {
       await removeParticipantDonation(eventId, donationId)
-      
+
       await fetchDonations()
       onDonationsUpdated()
-      
+
       toast({
         title: "Success",
         description: "Donation removed successfully",
@@ -199,7 +200,7 @@ export function DonationManagementModal({
 
       setIsUpdating(true)
       try {
-        await handleUpdateDonation(donation, Number(editAmount), editDescription || undefined)
+        await handleUpdateDonation(donation, Number(editAmount), editDescription || null)
       } finally {
         setIsUpdating(false)
       }
@@ -375,7 +376,7 @@ export function DonationManagementModal({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {donations.map((donation) => 
+                    {donations.map((donation) =>
                       editingDonation?.id === donation.id ? (
                         <EditableDonationRow key={donation.id} donation={donation} />
                       ) : (
