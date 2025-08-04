@@ -6,6 +6,7 @@ import { getServerAuthSession } from "@/server/auth"
 import {
     getEventById,
     getTotalBuyInsForEvent,
+    calculateEventPrizePool,
     isRegistrationOpen,
     getPendingRegistrationCount,
     getUserRegistrationStatus,
@@ -89,7 +90,8 @@ export default async function EventBingosPage({ params }: { params: { id: UUID }
 
     const userClans = await getUserClans()
     const currentTeam = await getCurrentTeamForUser(params.id)
-    const prizePool = await getTotalBuyInsForEvent(params.id)
+    const prizePoolData = await calculateEventPrizePool(params.id)
+    const prizePool = prizePoolData.totalPrizePool
     const registrationStatus = await isRegistrationOpen(params.id)
     const pendingRegistrationsCount = await getPendingRegistrationCount(params.id)
 

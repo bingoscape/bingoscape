@@ -25,6 +25,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  DollarSign,
+  Heart,
 } from "lucide-react"
 import {
   getEventParticipants,
@@ -66,6 +68,8 @@ import {
 } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useSession } from "next-auth/react"
+import { DonationManagementModal } from "@/components/donation-management-modal"
+import { PrizePoolBreakdown } from "@/components/prize-pool-breakdown"
 
 interface RemoveParticipantDialogProps {
   isOpen: boolean
@@ -287,6 +291,7 @@ interface Participant {
   teamId: string | null
   teamName: string | null
   buyIn: number
+  totalDonations: number
 }
 
 interface Team {
@@ -294,7 +299,7 @@ interface Team {
   name: string
 }
 
-type SortField = "name" | "role" | "team" | "buyIn" | "status"
+type SortField = "name" | "role" | "team" | "buyIn" | "donations" | "status"
 type SortDirection = "asc" | "desc"
 
 const ITEMS_PER_PAGE = 20
@@ -321,6 +326,8 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
   const { data, status } = useSession()
   const [currentUserRole, setCurrentUserRole] = useState<"admin" | "management" | "participant">("participant")
   const [isEventCreator, setIsEventCreator] = useState(false)
+  const [donationModalOpen, setDonationModalOpen] = useState(false)
+  const [participantForDonations, setParticipantForDonations] = useState<Participant | null>(null)
 
   const handleRemoveParticipant = async () => {
     if (!participantToRemove) return
@@ -355,6 +362,21 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
   const openChangeTeamDialog = (participant: Participant) => {
     setParticipantToEdit(participant)
     setChangeTeamDialogOpen(true)
+  }
+
+  const openDonationModal = (participant: Participant) => {
+    setParticipantForDonations(participant)
+    setDonationModalOpen(true)
+  }
+
+  const handleDonationsUpdated = async () => {
+    // Refresh participants data to get updated donation totals
+    try {
+      const participantsData = await getEventParticipants(params.id as string)
+      setParticipants(participantsData)
+    } catch (error) {
+      console.error("Error refreshing participants:", error)
+    }
   }
 
   // Check if current user can manage a specific participant
@@ -455,34 +477,24 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
     }
   }
 
-  const debouncedBuyInChange = useCallback(
-    debounce(async (participantId: string, newBuyIn: number) => {
-      try {
-        await updateParticipantBuyIn(params.id as string, participantId, newBuyIn)
-        setParticipants((participants) =>
-          participants.map((p) => (p.id === participantId ? { ...p, buyIn: newBuyIn } : p)),
-        )
-        toast({
-          title: "Success",
-          description: "Participant buy-in updated",
-        })
-      } catch (error) {
-        console.error("Error updating buy-in:", error)
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to update participant buy-in",
-          variant: "destructive",
-        })
-      }
-    }, 500),
-    [params.id],
-  )
-
-  const handleBuyInChange = (participantId: string, newBuyIn: number) => {
-    setParticipants(participants.map((p) => (p.id === participantId ? { ...p, buyIn: newBuyIn } : p)))
-    debouncedBuyInChange(participantId, newBuyIn)
-      ?.then(() => console.log("done"))
-      .catch((err) => console.error(err))
+  const handleBuyInChange = async (participantId: string, hasPaid: boolean) => {
+    try {
+      const result = await updateParticipantBuyIn(params.id as string, participantId, hasPaid)
+      setParticipants((participants) =>
+        participants.map((p) => (p.id === participantId ? { ...p, buyIn: result.buyInAmount || 0 } : p)),
+      )
+      toast({
+        title: "Success",
+        description: hasPaid ? "Buy-in marked as paid" : "Buy-in marked as not paid",
+      })
+    } catch (error) {
+      console.error("Error updating buy-in:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update participant buy-in",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleTeamAssignment = async (participantId: string, teamId: string | null) => {
@@ -590,6 +602,10 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
           aValue = a.buyIn
           bValue = b.buyIn
           break
+        case "donations":
+          aValue = a.totalDonations
+          bValue = b.totalDonations
+          break
         case "status":
           aValue = a.buyIn >= minimumBuyIn ? 1 : 0
           bValue = b.buyIn >= minimumBuyIn ? 1 : 0
@@ -696,35 +712,61 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
           )}
         </TableCell>
         <TableCell>
-          {canEditBuyIns() ? (
-            <Input
-              type="number"
-              value={participant.buyIn}
-              onChange={(e) => handleBuyInChange(participant.id, Number(e.target.value))}
-              min={0}
-              className="w-32"
-            />
-          ) : (
-            <span className="font-medium">{formatRunescapeGold(participant.buyIn)} GP</span>
-          )}
+          <div className="flex items-center gap-3">
+            {canEditBuyIns() ? (
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                <Checkbox
+                  checked={participant.buyIn >= minimumBuyIn}
+                  onCheckedChange={(checked) => handleBuyInChange(participant.id, checked as boolean)}
+                  className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500 h-5 w-5"
+                />
+                <span className="text-sm font-medium">
+                  {participant.buyIn >= minimumBuyIn ? "Paid" : "Unpaid"}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{formatRunescapeGold(participant.buyIn)} GP</span>
+                {participant.buyIn >= minimumBuyIn ? (
+                  <Badge variant="default" className="bg-green-500 text-white">Paid</Badge>
+                ) : (
+                  <Badge variant="outline" className="text-orange-600 border-orange-600">Unpaid</Badge>
+                )}
+              </div>
+            )}
+          </div>
         </TableCell>
         <TableCell>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <div className="flex items-center justify-center">
-                  {participant.buyIn >= minimumBuyIn ? (
-                    <CheckCircle className="text-green-500 h-5 w-5" />
-                  ) : (
-                    <CircleAlert className="text-yellow-500 h-5 w-5" />
-                  )}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                {participant.buyIn >= minimumBuyIn ? "Buy-in verified" : "Buy-in below minimum"}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-green-600 dark:text-green-400">
+              {formatRunescapeGold(participant.totalDonations)} GP
+            </span>
+            {canEditBuyIns() && (
+              <Button
+                size="sm" 
+                variant="ghost"
+                onClick={() => openDonationModal(participant)}
+                className="h-7 w-7 p-0 text-green-600 hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-950"
+              >
+                <Heart className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="flex justify-center">
+            {participant.buyIn >= minimumBuyIn ? (
+              <Badge variant="default" className="bg-green-500 text-white border-0">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Verified
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-orange-600 border-orange-600">
+                <CircleAlert className="h-3 w-3 mr-1" />
+                Pending
+              </Badge>
+            )}
+          </div>
         </TableCell>
         <TableCell>
           {canManage && (canChangeRoles() || canChangeTeams() || canRemoveParticipants()) && (
@@ -832,25 +874,47 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Buy-in:</span>
             <div className="flex items-center gap-2">
-              <span className="font-medium">{formatRunescapeGold(participant.buyIn)} GP</span>
-              {participant.buyIn >= minimumBuyIn ? (
-                <CheckCircle className="text-green-500 h-4 w-4" />
+              {canEditBuyIns() ? (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                  <Checkbox
+                    checked={participant.buyIn >= minimumBuyIn}
+                    onCheckedChange={(checked) => handleBuyInChange(participant.id, checked as boolean)}
+                    className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500 h-4 w-4"
+                  />
+                  <span className="text-sm font-medium">
+                    {participant.buyIn >= minimumBuyIn ? "Paid" : "Unpaid"}
+                  </span>
+                </div>
               ) : (
-                <CircleAlert className="text-yellow-500 h-4 w-4" />
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{formatRunescapeGold(participant.buyIn)} GP</span>
+                  {participant.buyIn >= minimumBuyIn ? (
+                    <Badge variant="default" className="bg-green-500 text-white text-xs">Paid</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-orange-600 border-orange-600 text-xs">Unpaid</Badge>
+                  )}
+                </div>
               )}
             </div>
           </div>
-          {canEditBuyIns() && (
-            <div className="pt-2">
-              <Input
-                type="number"
-                value={participant.buyIn}
-                onChange={(e) => handleBuyInChange(participant.id, Number(e.target.value))}
-                min={0}
-                placeholder="Buy-in amount"
-              />
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Donations:</span>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-green-600 dark:text-green-400">
+                {formatRunescapeGold(participant.totalDonations)} GP
+              </span>
+              {canEditBuyIns() && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => openDonationModal(participant)}
+                  className="h-6 w-6 p-0 text-green-600 hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-950"
+                >
+                  <Heart className="h-3 w-3" />
+                </Button>
+              )}
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
     )
@@ -862,16 +926,20 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
     selectableParticipants.length > 0 && selectableParticipants.every((p) => selectedParticipants.has(p.id))
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Breadcrumbs items={breadcrumbItems} />
+    <div className="container mx-auto px-4 py-6">
+      <div className="mb-6">
+        <Breadcrumbs items={breadcrumbItems} />
+      </div>
 
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Event Participants</h1>
-            <p className="text-muted-foreground">
-              Minimum Buy-In: <span className="font-medium">{formatRunescapeGold(minimumBuyIn)} GP</span>
-            </p>
+      <div className="flex flex-col gap-8">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight">Event Participants</h1>
+            <div className="flex items-center gap-2 text-sm">
+              <Badge variant="outline" className="font-medium">
+                Minimum Buy-In: {formatRunescapeGold(minimumBuyIn)} GP
+              </Badge>
+            </div>
           </div>
 
           {canRemoveParticipants() && selectedParticipants.size > 0 && (
@@ -884,6 +952,9 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
             </div>
           )}
         </div>
+
+        {/* Prize Pool Breakdown */}
+        <PrizePoolBreakdown eventId={params.id as string} />
 
         {/* Filters and Search */}
         <Card>
@@ -995,6 +1066,16 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
                     <TableHead>
                       <Button
                         variant="ghost"
+                        onClick={() => handleSort("donations")}
+                        className="flex items-center gap-2 p-0 h-auto font-medium"
+                      >
+                        Donations
+                        {getSortIcon("donations")}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
                         onClick={() => handleSort("status")}
                         className="flex items-center gap-2 p-0 h-auto font-medium"
                       >
@@ -1080,6 +1161,21 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
         teams={teams}
         onTeamChange={handleTeamAssignment}
       />
+
+      {/* Donation Management Modal */}
+      {participantForDonations && (
+        <DonationManagementModal
+          isOpen={donationModalOpen}
+          onClose={() => {
+            setDonationModalOpen(false)
+            setParticipantForDonations(null)
+          }}
+          eventId={params.id as string}
+          participantId={participantForDonations.id}
+          participantName={participantForDonations.runescapeName}
+          onDonationsUpdated={handleDonationsUpdated}
+        />
+      )}
     </div>
   )
 }
