@@ -54,6 +54,7 @@ interface ProgressionBingoGridProps {
   userRole: "participant" | "management" | "admin"
   bingoId: string
   onTilesUpdated?: () => void
+  isEditMode?: boolean
 }
 
 interface TierData {
@@ -556,11 +557,17 @@ export function ProgressionBingoGrid({
   userRole,
   bingoId,
   onTilesUpdated,
+  isEditMode = false,
 }: ProgressionBingoGridProps) {
-  const [isEditing, setIsEditing] = useState(false)
+  const [isEditing, setIsEditing] = useState(isEditMode)
   const [localTiles, setLocalTiles] = useState<Tile[]>(tiles)
   const [draggedTile, setDraggedTile] = useState<Tile | null>(null)
   const [localTierXpRequirements, setLocalTierXpRequirements] = useState<Record<number, number>>({})
+
+  // Sync isEditing with parent's edit mode
+  React.useEffect(() => {
+    setIsEditing(isEditMode)
+  }, [isEditMode])
 
   const isManagement = userRole === "admin" || userRole === "management"
 
@@ -952,7 +959,7 @@ export function ProgressionBingoGrid({
 
         {tierData.map((tierInfo, tierIndex) => {
           const completionStatus = getTierCompletionStatus(tierInfo.tiles)
-          const isLocked = !tierInfo.isUnlocked
+          const isLocked = !tierInfo.isUnlocked && !isEditing
 
           return (
             <div key={tierInfo.tier} className="space-y-4">
@@ -981,8 +988,8 @@ export function ProgressionBingoGrid({
                       <div>
                         <h3 className="text-lg font-semibold">
                           Tier {tierInfo.tier + 1}
-                          {isLocked && !isEditing && <span className="text-muted-foreground"> (Locked)</span>}
-                          {isLocked && isEditing && <span className="text-orange-600"> (Locked - Editing)</span>}
+                          {!tierInfo.isUnlocked && !isEditing && <span className="text-muted-foreground"> (Locked)</span>}
+                          {!tierInfo.isUnlocked && isEditing && <span className="text-orange-600"> (Locked - Editing)</span>}
                         </h3>
                         <p className="text-sm text-muted-foreground">
                           {completionStatus.completedXP}/{completionStatus.totalXP} XP completed
@@ -1086,7 +1093,7 @@ export function ProgressionBingoGrid({
                       "p-6",
                       // Use negative margin approach for consistent spacing
                       "-m-3",
-                      isLocked && !isEditing && "opacity-50",
+                      !tierInfo.isUnlocked && !isEditing && "opacity-50",
                     )}
                   >
                     {tierInfo.tiles
