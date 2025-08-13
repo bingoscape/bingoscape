@@ -4,6 +4,7 @@ import { db } from "@/server/db"
 import { bingos, teamMembers, teamTileSubmissions, tiles } from "@/server/db/schema"
 import { asc, eq } from "drizzle-orm"
 import { mapStatus } from "@/lib/statusMapping"
+import { getProgressionBingoTiles, getTeamTierProgress, getTierXpRequirements } from "@/app/actions/bingo"
 
 export async function GET(request: NextRequest, { params }: { params: { bingoId: string } }) {
   try {
@@ -19,28 +20,6 @@ export async function GET(request: NextRequest, { params }: { params: { bingoId:
     // Get the bingo data
     const bingo = await db.query.bingos.findFirst({
       where: eq(bingos.id, bingoId),
-      with: {
-        tiles: {
-          orderBy: [asc(tiles.index)],
-          with: {
-            teamTileSubmissions: {
-              with: {
-                team: true,
-                submissions: {
-                  with: {
-                    image: true,
-                  }
-                },
-              }
-            },
-            goals: {
-              with: {
-                teamProgress: true,
-              },
-            },
-          },
-        },
-      },
     })
 
     if (!bingo) {
@@ -70,6 +49,44 @@ export async function GET(request: NextRequest, { params }: { params: { bingoId:
         },
       },
     })
+
+    // Get tiles based on bingo type - for progressive bingos, filter by unlocked tiers
+    let bingoTiles
+    let tierXpRequirements = null
+    let tierProgress = null
+
+    if (bingo.bingoType === "progression" && userTeam) {
+      // For progression bingo, get only unlocked tiles for the user's team
+      bingoTiles = await getProgressionBingoTiles(bingoId, userTeam.id)
+      tierXpRequirements = await getTierXpRequirements(bingoId)
+      tierProgress = await getTeamTierProgress(userTeam.id, bingoId)
+    } else if (bingo.bingoType === "progression" && !userTeam) {
+      // No team found - return empty tiles for progression bingo
+      bingoTiles = []
+    } else {
+      // Standard bingo - get all tiles
+      bingoTiles = await db.query.tiles.findMany({
+        where: eq(tiles.bingoId, bingoId),
+        orderBy: [asc(tiles.index)],
+        with: {
+          teamTileSubmissions: {
+            with: {
+              team: true,
+              submissions: {
+                with: {
+                  image: true,
+                }
+              },
+            }
+          },
+          goals: {
+            with: {
+              teamProgress: true,
+            },
+          },
+        },
+      })
+    }
 
     // Create a map of tile IDs to submission data
     const tileSubmissionMap: Record<
@@ -112,7 +129,7 @@ export async function GET(request: NextRequest, { params }: { params: { bingoId:
       })
       : []
 
-    bingo.tiles.forEach((tile) => {
+    bingoTiles.forEach((tile) => {
 
       const submission = teamSubmissions.find((sub) => sub.tileId === tile.id)
       tileSubmissionMap[tile.id] = {
@@ -150,13 +167,15 @@ export async function GET(request: NextRequest, { params }: { params: { bingoId:
       codephrase: bingo.codephrase,
       locked: bingo.locked,
       visible: bingo.visible,
-      tiles: bingo.tiles.map((tile) => ({
+      bingoType: bingo.bingoType, // Include bingo type for progressive support
+      tiles: bingoTiles.map((tile) => ({
         id: tile.id,
         title: tile.title,
         description: tile.description,
         headerImage: tile.headerImage,
         weight: tile.weight,
         index: tile.index,
+        tier: tile.tier, // Include tier information for progressive bingos
         isHidden: tile.isHidden,
         submission: tileSubmissionMap[tile.id],
         goals:
@@ -166,7 +185,22 @@ export async function GET(request: NextRequest, { params }: { params: { bingoId:
             targetValue: goal.targetValue,
             // progress: goalProgressMap[goal.id] || null,
           })) ?? [],
-      }))
+      })),
+      // Include progression bingo metadata when applicable
+      ...(bingo.bingoType === "progression" && userTeam && {
+        progression: {
+          tierXpRequirements: tierXpRequirements?.map(req => ({
+            tier: req.tier,
+            xpRequired: req.xpRequired,
+          })) ?? [],
+          unlockedTiers: tierProgress?.filter(tp => tp.isUnlocked).map(tp => tp.tier) ?? [],
+          tierProgress: tierProgress?.map(tp => ({
+            tier: tp.tier,
+            isUnlocked: tp.isUnlocked,
+            unlockedAt: tp.unlockedAt,
+          })) ?? [],
+        }
+      })
     }
 
 
