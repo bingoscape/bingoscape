@@ -17,7 +17,95 @@ Full-stack Next.js application for OSRS clan bingo management with sophisticated
 
 ---
 
-## Current Session (Aug 4, 2025 - Session 4)
+## Current Session (Aug 13, 2025 - Session 5)
+
+### Session Context
+- **Started**: August 13, 2025
+- **Branch**: main
+- **Status**: Bug fix session - progression bingo edit mode issue resolved
+- **Last Commit**: `c8ec36b` - fix(progression): allow editing locked tier tiles in edit mode
+
+### Session Goals
+✅ **COMPLETED**: Fix Progression Bingo Edit Mode Bug
+
+#### Problem Solved
+**Issue**: In progression bingo boards, when in edit mode, clicking on tiles in locked tiers (Tier 2+) would show "Tier locked" error messages instead of opening the tile edit modal. Management users should be able to access locked tier tiles when in edit mode for board configuration.
+
+#### Root Cause Analysis
+1. **Component State Synchronization**: The `ProgressionBingoGrid` component had local `isEditing` state that wasn't synchronized with the parent `BingoGrid`'s edit mode state (`!isLayoutLocked`)
+2. **Permission Logic**: The `handleTileClick` function in `BingoGrid` didn't account for management users having rights to bypass tier locks when in edit mode
+
+#### Solution Implemented
+**Files Modified**:
+- `src/components/progression-bingo-grid.tsx` - Added `isEditMode` prop and state synchronization
+- `src/components/bingogrid.tsx` - Updated tile click handler and added prop passing
+
+**Key Changes**:
+1. **State Synchronization Fix**:
+   - Added `isEditMode?: boolean` prop to `ProgressionBingoGrid` interface
+   - Added `useEffect` hook to sync local `isEditing` state with parent `isEditMode` prop
+   - Updated component initialization to use `isEditMode` default value
+
+2. **Permission Logic Enhancement**:
+   - Modified `handleTileClick` condition to include `&& !hasSufficientRights()`
+   - Updated condition: `if (bingo.bingoType === "progression" && !unlockedTiers.has(tile.tier) && isLayoutLocked && !hasSufficientRights())`
+   - Added prop passing: `isEditMode={!isLayoutLocked}` when rendering `ProgressionBingoGrid`
+
+3. **Visual State Updates**:
+   - Updated tier header displays to properly show locked/editing states
+   - Modified opacity logic for tier sections based on edit mode
+
+#### Technical Implementation Details
+
+**Component Interface Enhancement**:
+```typescript
+interface ProgressionBingoGridProps {
+  // ... existing props
+  isEditMode?: boolean  // New prop for parent sync
+}
+```
+
+**State Synchronization Pattern**:
+```typescript
+const [isEditing, setIsEditing] = useState(isEditMode)
+
+React.useEffect(() => {
+  setIsEditing(isEditMode)
+}, [isEditMode])
+```
+
+**Permission Logic**:
+```typescript
+// Before: Always blocked locked tiers
+if (bingo.bingoType === "progression" && !unlockedTiers.has(tile.tier)) {
+  // Show error
+}
+
+// After: Allow management users to bypass in edit mode
+if (bingo.bingoType === "progression" && !unlockedTiers.has(tile.tier) && isLayoutLocked && !hasSufficientRights()) {
+  // Show error
+}
+```
+
+#### Testing and Verification
+- ✅ Verified tiles in Tier 1 open modals correctly in edit mode
+- ✅ Verified tiles in Tier 2+ now open modals correctly in edit mode for management users
+- ✅ Confirmed no "Tier locked" error messages appear for management users in edit mode
+- ✅ Confirmed regular users still see appropriate tier lock restrictions
+- ✅ Verified edit mode state synchronization works properly across component hierarchy
+
+#### Results Achieved
+- ✅ **Edit Mode Functionality**: Management users can now edit locked tier tiles in edit mode
+- ✅ **State Synchronization**: Parent-child component edit state properly synchronized
+- ✅ **Permission Handling**: Proper bypass logic for management users maintains security
+- ✅ **User Experience**: Seamless tile editing workflow for board configuration
+- ✅ **Code Quality**: Clean prop passing and state management patterns
+
+**Commit**: `c8ec36b` - fix(progression): allow editing locked tier tiles in edit mode
+
+---
+
+## Previous Session (Aug 4, 2025 - Session 4)
 
 ### Session Context
 - **Started**: August 4, 2025
