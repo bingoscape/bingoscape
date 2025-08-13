@@ -168,8 +168,8 @@ export default function BingoGrid({
   }, [tiles, isLayoutLocked, onReorderTiles])
 
   const handleTileClick = async (tile: Tile) => {
-    // Check if tile is locked due to progression
-    if (bingo.bingoType === "progression" && !unlockedTiers.has(tile.tier)) {
+    // Check if tile is locked due to progression (but allow if user has management rights)
+    if (bingo.bingoType === "progression" && !unlockedTiers.has(tile.tier) && isLayoutLocked && !hasSufficientRights()) {
       toast({
         title: "Tier locked",
         description: `Complete more tiles in tier ${tile.tier} to unlock this tier`,
@@ -783,6 +783,7 @@ export default function BingoGrid({
           userRole={userRole}
           bingoId={bingo.id}
           onTilesUpdated={onTileUpdated}
+          isEditMode={!isLayoutLocked}
         />
       ) : (
         <BingoGridLayout
