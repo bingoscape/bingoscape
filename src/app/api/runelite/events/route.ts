@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 import { db } from "@/server/db"
-import { teams, eventParticipants, events, teamTileSubmissions, tiles, teamMembers, bingos } from "@/server/db/schema"
-import { eq, asc } from "drizzle-orm"
+import { eventParticipants, events, teamMembers, bingos } from "@/server/db/schema"
+import { eq, and } from "drizzle-orm"
 import { validateApiKey } from "@/lib/api-auth"
-import { mapStatus } from "@/lib/statusMapping"
+import { formatBingoData } from "@/lib/bingo-formatter"
 
 // Get all events for the authenticated user
 export async function GET(req: Request) {
@@ -32,20 +32,7 @@ export async function GET(req: Request) {
         },
         clan: true,
         bingos: {
-          where: eq(bingos.visible, true),
-          with: {
-            tiles: {
-              orderBy: [asc(tiles.index)],
-              with: {
-                teamTileSubmissions: true,
-                goals: {
-                  with: {
-                    teamProgress: true,
-                  },
-                },
-              },
-            },
-          },
+          where: (bingos, { eq, and }) => and(eq(bingos.visible, true), eq(bingos.bingoType, "standard")),
         },
       },
       orderBy: events.createdAt,
@@ -79,109 +66,12 @@ export async function GET(req: Request) {
           },
         })
 
-        // Get all team tile submissions for this team
-        const teamSubmissions = userTeam
-          ? await db.query.teamTileSubmissions.findMany({
-            where: eq(teamTileSubmissions.teamId, userTeam.id),
-            with: {
-              submissions: {
-                with: {
-                  image: true,
-                  user: {
-                    columns: {
-                      id: true,
-                      name: true,
-                      runescapeName: true,
-                    },
-                  },
-                },
-              },
-            },
+        // Process each bingo to get the correct tiles and data
+        const processedBingos = await Promise.all(
+          eventData.bingos.map(async (bingo) => {
+            return await formatBingoData(bingo, userTeam ?? null)
           })
-          : []
-
-        // Create a map of tile IDs to submission data
-        const tileSubmissionMap: Record<
-          string,
-          {
-            id: string
-            status: "pending" | "accepted" | "requires_interaction" | "declined" | "not_submitted"
-            lastUpdated: Date | null
-            submissionCount: number
-            latestSubmission?: {
-              id: string
-              imageUrl: string
-              submittedBy: {
-                id: string
-                name: string | null
-                runescapeName: string | null
-              }
-              createdAt: Date
-            }
-          }
-        > = {}
-
-        // Process each bingo and its tiles
-        eventData.bingos.forEach((bingo) => {
-          bingo.tiles.forEach((tile) => {
-            // Find submission for this tile
-            const submission = teamSubmissions.find((sub) => sub.tileId === tile.id)
-
-            tileSubmissionMap[tile.id] = {
-              id: tile.id,
-              status: submission ? mapStatus(submission.status) : "not_submitted",
-              lastUpdated: submission ? submission.updatedAt : null,
-              submissionCount: submission?.submissions.length ?? 0,
-              ...(submission?.submissions.length
-                ? {
-                  latestSubmission: {
-                    id: submission.submissions[submission.submissions.length - 1]!.id,
-                    imageUrl: submission.submissions[submission.submissions.length - 1]!.image.path,
-                    submittedBy: {
-                      id: submission.submissions[submission.submissions.length - 1]!.user.id,
-                      name: submission.submissions[submission.submissions.length - 1]!.user.name,
-                      runescapeName: submission.submissions[submission.submissions.length - 1]!.user.runescapeName,
-                    },
-                    createdAt: submission.submissions[submission.submissions.length - 1]!.createdAt,
-                  },
-                }
-                : {}),
-            }
-          })
-        })
-
-        // Process goal progress for this team
-        const goalProgressMap: Record<
-          string,
-          {
-            id: string
-            currentValue: number
-            targetValue: number
-            description: string
-            progress: number // percentage
-          }
-        > = {}
-
-        eventData.bingos.forEach((bingo) => {
-          bingo.tiles.forEach((tile) => {
-            if (tile.goals && tile.goals.length > 0) {
-              tile.goals.forEach((goal) => {
-                const teamProgress = goal.teamProgress.find((tp) => userTeam && tp.teamId === userTeam.id)
-                const currentValue = teamProgress?.currentValue ?? 0
-                const progress =
-                  goal.targetValue > 0 ? Math.min(100, Math.round((currentValue / goal.targetValue) * 100)) : 0
-
-                goalProgressMap[goal.id] = {
-                  id: goal.id,
-                  currentValue,
-                  targetValue: goal.targetValue,
-                  description: goal.description,
-                  progress,
-                }
-              })
-            }
-          })
-        })
+        )
 
         return {
           id: eventData.id,
@@ -204,33 +94,7 @@ export async function GET(req: Request) {
               runescapeName: member.user.runescapeName,
             }))
           } : null,
-          bingos: eventData.bingos.map((bingo) => ({
-            id: bingo.id,
-            title: bingo.title,
-            description: bingo.description,
-            rows: bingo.rows,
-            columns: bingo.columns,
-            codephrase: bingo.codephrase,
-            locked: bingo.locked,
-            visible: bingo.visible,
-            tiles: bingo.tiles.map((tile) => ({
-              id: tile.id,
-              title: tile.title,
-              description: tile.description,
-              headerImage: tile.headerImage,
-              weight: tile.weight,
-              index: tile.index,
-              isHidden: tile.isHidden,
-              submission: tileSubmissionMap[tile.id],
-              goals:
-                tile.goals?.map((goal) => ({
-                  id: goal.id,
-                  description: goal.description,
-                  targetValue: goal.targetValue,
-                  progress: goalProgressMap[goal.id] ?? null,
-                })) ?? [],
-            })),
-          })),
+          bingos: processedBingos,
         }
       }),
     )
