@@ -6,8 +6,8 @@ import { validateApiKey } from "@/lib/api-auth"
 import { nanoid } from "nanoid"
 import fs from "fs/promises"
 import path from "path"
-import { mapStatus } from "@/lib/statusMapping"
 import { createSubmissionEmbed, sendDiscordWebhook } from "@/lib/discord-webhook"
+import { formatBingoData } from "@/lib/bingo-formatter"
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
 
@@ -45,11 +45,6 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
       with: {
         bingo: {
           with: {
-            tiles: {
-              with: {
-                goals: true,
-              },
-            },
             event: true
           },
         },
@@ -174,72 +169,6 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
     // Create a notification for admin and management users
     // This would typically be handled by your existing notification system
 
-    // Create a map of tile IDs to submission data
-    const tileSubmissionMap: Record<
-      string,
-      {
-        id: string
-        status: "pending" | "accepted" | "requires_interaction" | "declined" | "not_submitted"
-        lastUpdated: Date | null
-        submissionCount: number
-        latestSubmission?: {
-          id: string
-          imageUrl: string
-          submittedBy: {
-            id: string
-            name: string | null
-            runescapeName: string | null
-          }
-          createdAt: Date
-        }
-      }
-    > = {}
-
-    const teamSubmissions = userTeam
-      ? await db.query.teamTileSubmissions.findMany({
-        where: eq(teamTileSubmissions.teamId, userTeam.id),
-        with: {
-          submissions: {
-            with: {
-              image: true,
-              user: {
-                columns: {
-                  id: true,
-                  name: true,
-                  runescapeName: true,
-                },
-              },
-            },
-          },
-        },
-      })
-      : []
-
-    tile.bingo.tiles.forEach((t) => {
-      const submission = teamSubmissions.find((sub) => sub.tileId === t.id)
-      tileSubmissionMap[t.id] = {
-        id: t.id,
-        status: submission ? mapStatus(submission.status) : "not_submitted",
-        lastUpdated: submission ? submission.updatedAt : null,
-        submissionCount: submission?.submissions.length ?? 0,
-        ...(submission?.submissions.length
-          ? {
-            latestSubmission: {
-              id: submission.submissions[submission.submissions.length - 1]!.id,
-              imageUrl: submission.submissions[submission.submissions.length - 1]!.image.path,
-              submittedBy: {
-                id: submission.submissions[submission.submissions.length - 1]!.user.id,
-                name: submission.submissions[submission.submissions.length - 1]!.user.name,
-                runescapeName: submission.submissions[submission.submissions.length - 1]!.user.runescapeName,
-              },
-              createdAt: submission.submissions[submission.submissions.length - 1]!.createdAt,
-            },
-          }
-          : {}),
-      }
-    })
-
-
     // Send Discord webhook notifications
     try {
 
@@ -301,36 +230,8 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
 
 
 
-    // Get the event data to include event context
-    // const eventData = await getEventById(bingo.eventId)
-
-    // Format the response
-    const formattedBingo = {
-      id: tile.bingo.id,
-      title: tile.bingo.title,
-      description: tile.bingo.description,
-      rows: tile.bingo.rows,
-      columns: tile.bingo.columns,
-      codephrase: tile.bingo.codephrase,
-      locked: tile.bingo.locked,
-      visible: tile.bingo.visible,
-      tiles: tile.bingo.tiles.map((tile) => ({
-        id: tile.id,
-        title: tile.title,
-        description: tile.description,
-        headerImage: tile.headerImage,
-        weight: tile.weight,
-        index: tile.index,
-        isHidden: tile.isHidden,
-        submission: tileSubmissionMap[tile.id],
-        goals:
-          tile.goals?.map((goal) => ({
-            id: goal.id,
-            description: goal.description,
-            targetValue: goal.targetValue,
-          })) ?? [],
-      })),
-    }
+    // Format the response using shared utility
+    const formattedBingo = await formatBingoData(tile.bingo, userTeam ?? null)
 
     return NextResponse.json(formattedBingo)
   } catch (error) {
