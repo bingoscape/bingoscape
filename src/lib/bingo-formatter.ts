@@ -43,6 +43,12 @@ export interface FormattedBingo {
       id: string
       description: string
       targetValue: number | null
+      progress?: {
+        approvedProgress: number
+        totalProgress: number
+        approvedPercentage: number
+        isCompleted: boolean
+      }
     }>
   }>
   progression?: {
@@ -123,22 +129,22 @@ export async function formatBingoData(
   // Get all team tile submissions for this team
   const teamSubmissions = userTeam
     ? await db.query.teamTileSubmissions.findMany({
-        where: eq(teamTileSubmissions.teamId, userTeam.id),
-        with: {
-          submissions: {
-            with: {
-              image: true,
-              user: {
-                columns: {
-                  id: true,
-                  name: true,
-                  runescapeName: true,
-                },
+      where: eq(teamTileSubmissions.teamId, userTeam.id),
+      with: {
+        submissions: {
+          with: {
+            image: true,
+            user: {
+              columns: {
+                id: true,
+                name: true,
+                runescapeName: true,
               },
             },
           },
         },
-      })
+      },
+    })
     : []
 
   // Create a map of tile IDs to submission data
@@ -153,17 +159,17 @@ export async function formatBingoData(
       submissionCount: submission?.submissions.length ?? 0,
       ...(submission?.submissions.length
         ? {
-            latestSubmission: {
-              id: submission.submissions[submission.submissions.length - 1]!.id,
-              imageUrl: submission.submissions[submission.submissions.length - 1]!.image.path,
-              submittedBy: {
-                id: submission.submissions[submission.submissions.length - 1]!.user.id,
-                name: submission.submissions[submission.submissions.length - 1]!.user.name,
-                runescapeName: submission.submissions[submission.submissions.length - 1]!.user.runescapeName,
-              },
-              createdAt: submission.submissions[submission.submissions.length - 1]!.createdAt,
+          latestSubmission: {
+            id: submission.submissions[submission.submissions.length - 1]!.id,
+            imageUrl: submission.submissions[submission.submissions.length - 1]!.image.path,
+            submittedBy: {
+              id: submission.submissions[submission.submissions.length - 1]!.user.id,
+              name: submission.submissions[submission.submissions.length - 1]!.user.name,
+              runescapeName: submission.submissions[submission.submissions.length - 1]!.user.runescapeName,
             },
-          }
+            createdAt: submission.submissions[submission.submissions.length - 1]!.createdAt,
+          },
+        }
         : {}),
     }
   })
@@ -190,11 +196,32 @@ export async function formatBingoData(
       isHidden: tile.isHidden,
       submission: tileSubmissionMap[tile.id]!,
       goals:
-        tile.goals?.map((goal) => ({
-          id: goal.id,
-          description: goal.description,
-          targetValue: goal.targetValue,
-        })) ?? [],
+        tile.goals?.map((goal) => {
+          // Calculate progress for current team if available
+          const currentTeamSubmission = teamSubmissions.find((sub) => sub.tileId === tile.id)
+          const teamSubmissionsForGoal = currentTeamSubmission?.submissions.filter(sub => sub.goalId === goal.id) ?? []
+          
+          const approvedProgress = teamSubmissionsForGoal
+            .filter(sub => sub.status === "approved")
+            .reduce((sum, sub) => sum + (sub.submissionValue ?? 0), 0)
+          const totalProgress = teamSubmissionsForGoal
+            .reduce((sum, sub) => sum + (sub.submissionValue ?? 0), 0)
+
+          const approvedPercentage = goal.targetValue && goal.targetValue > 0 ? Math.min(100, (approvedProgress / goal.targetValue) * 100) : 0
+          const isCompleted = goal.targetValue ? approvedProgress >= goal.targetValue : false
+
+          return {
+            id: goal.id,
+            description: goal.description,
+            targetValue: goal.targetValue,
+            progress: userTeam ? {
+              approvedProgress,
+              totalProgress,
+              approvedPercentage,
+              isCompleted,
+            } : undefined,
+          }
+        }) ?? [],
     })),
     // Include progression bingo metadata when applicable
     ...(bingo.bingoType === "progression" && userTeam && {
