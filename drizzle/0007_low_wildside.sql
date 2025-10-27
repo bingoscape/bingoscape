@@ -1,0 +1,1 @@
+ALTER TABLE "bingoscape-next_user" ADD COLUMN "password" varchar(255);
