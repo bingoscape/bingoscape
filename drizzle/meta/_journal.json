@@ -50,6 +50,20 @@
       "when": 1754295125296,
       "tag": "0006_dark_ezekiel",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1761553269637,
+      "tag": "0007_low_wildside",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1761556864731,
+      "tag": "0008_thin_morlocks",
+      "breakpoints": true
     }
   ]
 }

@@ -28,6 +28,12 @@ export const users = createTable("user", {
   }).default(sql`CURRENT_TIMESTAMP`),
   image: varchar("image", { length: 255 }),
   runescapeName: varchar("runescapeName", { length: 255 }),
+  // Username field for Credentials provider authentication
+  // Nullable to support OAuth-only users (Discord, GitHub, Google)
+  username: varchar("username", { length: 50 }),
+  // Password field for Credentials provider authentication
+  // Nullable to support OAuth-only users (Discord, GitHub, Google)
+  password: varchar("password", { length: 255 }),
 })
 
 export const usersRelations = relations(users, ({ many }) => ({

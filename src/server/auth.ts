@@ -5,8 +5,15 @@ import {
   type NextAuthOptions,
 } from "next-auth";
 import { type Adapter } from "next-auth/adapters";
+import CredentialsProvider from "next-auth/providers/credentials";
 import DiscordProvider from "next-auth/providers/discord";
 import GithubProvider from "next-auth/providers/github";
+import GoogleProvider from "next-auth/providers/google";
+import { eq } from "drizzle-orm";
+import { ZodError } from "zod";
+
+import { signInSchema } from "@/lib/validation/auth";
+import { verifyPassword } from "@/lib/password";
 
 import { env } from "@/env";
 import { db } from "@/server/db";
@@ -40,6 +47,14 @@ declare module "next-auth" {
   }
 }
 
+// Extend JWT type to include custom fields
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+    runescapeName: string;
+  }
+}
+
 /**
  * Options for NextAuth.js used to configure adapters, providers, callbacks, etc.
  *
@@ -47,14 +62,28 @@ declare module "next-auth" {
  */
 export const authOptions: NextAuthOptions = {
   callbacks: {
-    session: ({ session, user }) => ({
-      ...session,
-      user: {
-        ...session.user,
-        id: user.id,
-        runescapeName: user.runescapeName
-      },
-    }),
+    // JWT callback to add custom data to token
+    async jwt({ token, user, trigger, session: updateSession }) {
+      // Initial sign in
+      if (user) {
+        token.id = user.id
+        token.runescapeName = user.runescapeName
+      }
+      // Update session
+      if (trigger === "update" && updateSession) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        token.runescapeName = updateSession.runescapeName
+      }
+      return token
+    },
+    // Session callback to add custom data from token to session
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.id
+        session.user.runescapeName = token.runescapeName
+      }
+      return session
+    },
   },
   adapter: DrizzleAdapter(db, {
     usersTable: users,
@@ -62,20 +91,90 @@ export const authOptions: NextAuthOptions = {
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
   }) as Adapter,
+  session: {
+    // Use JWT for sessions when using Credentials provider
+    strategy: "jwt",
+  },
   providers: [
+    // Credentials Provider for username/password authentication
+    // Note: This is separate from OAuth providers
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        username: { label: "Username", type: "text", placeholder: "your_username" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        try {
+          // Validate credentials with Zod
+          const { username, password } = await signInSchema.parseAsync(credentials)
+
+          // Query database for user by username (case-insensitive)
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.username, username.toLowerCase()))
+            .limit(1)
+
+          // Check if user exists and has a password
+          if (!user?.password) {
+            // Return null to indicate authentication failed
+            // Don't reveal whether username exists
+            return null
+          }
+
+          // Verify password
+          const isValidPassword = await verifyPassword(password, user.password)
+
+          if (!isValidPassword) {
+            return null
+          }
+
+          // Return user object (without password)
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+            runescapeName: user.runescapeName ?? "",
+          }
+        } catch (error) {
+          // Log error but don't expose details
+          if (error instanceof ZodError) {
+            console.error("Validation error:", error.errors)
+          } else {
+            console.error("Authentication error:", error)
+          }
+          return null
+        }
+      },
+    }),
     DiscordProvider({
       clientId: env.DISCORD_CLIENT_ID,
       clientSecret: env.DISCORD_CLIENT_SECRET,
-    })
-    /**
-     * ...add more providers here.
-     *
-     * Most other providers require a bit more work than the Discord provider. For example, the
-     * GitHub provider requires you to add the `refresh_token_expires_in` field to the Account
-     * model. Refer to the NextAuth.js docs for the provider you want to use. Example:
-     *
-     * @see https://next-auth.js.org/providers/github
-     */
+    }),
+    // GitHub OAuth Provider
+    // Configure at: https://github.com/settings/developers
+    // Callback URL: {NEXTAUTH_URL}/api/auth/callback/github
+    ...(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
+      ? [
+          GithubProvider({
+            clientId: env.GITHUB_CLIENT_ID,
+            clientSecret: env.GITHUB_CLIENT_SECRET,
+          }),
+        ]
+      : []),
+    // Google OAuth Provider
+    // Configure at: https://console.cloud.google.com/
+    // Callback URL: {NEXTAUTH_URL}/api/auth/callback/google
+    ...(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+      ? [
+          GoogleProvider({
+            clientId: env.GOOGLE_CLIENT_ID,
+            clientSecret: env.GOOGLE_CLIENT_SECRET,
+          }),
+        ]
+      : []),
   ],
 };
 
