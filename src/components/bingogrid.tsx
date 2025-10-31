@@ -13,13 +13,13 @@ import {
   getTileGoalsAndProgress,
   updateGoalProgress,
   submitImage,
-  getSubmissions,
   updateTeamTileSubmissionStatus,
   deleteTile,
   deleteSubmission,
   updateSubmissionStatus,
   getTierXpRequirements,
 } from "@/app/actions/bingo"
+import { getSubmissions } from "@/app/actions/getSubmissions"
 import "@mdxeditor/editor/style.css"
 import "@/styles/modal-animations.css"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"

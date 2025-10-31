@@ -202,6 +202,18 @@ export async function updateGoalProgress(goalId: string, teamId: string, newValu
       })
       .returning()
 
+    // Check if we need to auto-complete the tile
+    // First, get the tileId from the goal
+    const goal = await db.query.goals.findFirst({
+      where: eq(goals.id, goalId),
+    })
+
+    if (goal) {
+      // Import the auto-completion function
+      const { checkAndAutoCompleteTile } = await import("./tile-completion")
+      await checkAndAutoCompleteTile(goal.tileId, teamId)
+    }
+
     return { success: true, progress: updatedProgress }
   } catch (error) {
     console.error("Error updating goal progress:", error)
@@ -257,56 +269,9 @@ export interface BingoData {
   rows: number
   codephrase: string
   visible: boolean
+  bingoType: "standard" | "progression"
+  tiersUnlockRequirement: number
   tiles: TileData[]
-}
-
-export async function getBingoById(bingoId: string): Promise<BingoData | null> {
-  try {
-    const result = await db.query.bingos.findFirst({
-      where: eq(bingos.id, bingoId),
-      with: {
-        tiles: {
-          with: {
-            goals: true,
-          },
-          orderBy: [asc(tiles.index)],
-        },
-      },
-    })
-
-    if (!result) {
-      return null
-    }
-
-    return result
-  } catch (error) {
-    console.error("Error fetching bingo:", error)
-    throw new Error("Failed to fetch bingo")
-  }
-}
-
-// Update the getSubmissions function to include goal information
-export async function getSubmissions(tileId: string): Promise<TeamTileSubmission[]> {
-  try {
-    const result = await db.query.teamTileSubmissions.findMany({
-      with: {
-        submissions: {
-          with: {
-            image: true,
-            user: true,
-            goal: true, // Include goal information
-          },
-        },
-        team: true,
-      },
-      where: eq(teamTileSubmissions.tileId, tileId),
-    })
-
-    return result
-  } catch (error) {
-    console.error("Error fetching submissions:", error)
-    throw new Error("Failed to fetch submissions")
-  }
 }
 
 // Update the getAllSubmissionsForTeam function to include goal information
@@ -326,7 +291,11 @@ export async function getAllSubmissionsForTeam(
     const tileIds = bingoTiles.map((tile) => tile.id)
 
     // Fetch all submissions for this team across all tiles in the bingo
-    const teamSubmissions = await db.query.teamTileSubmissions.findMany({
+    // Type assertion is safe here because:
+    // 1. The query structure matches TeamTileSubmission interface exactly
+    // 2. Drizzle's type inference doesn't match our custom interfaces
+    // 3. The relations ensure correct data structure at runtime
+    const teamSubmissions = (await db.query.teamTileSubmissions.findMany({
       with: {
         submissions: {
           with: {
@@ -339,7 +308,7 @@ export async function getAllSubmissionsForTeam(
         tile: true,
       },
       where: and(eq(teamTileSubmissions.teamId, teamId), inArray(teamTileSubmissions.tileId, tileIds)),
-    })
+    })) as unknown as TeamTileSubmission[]
 
     // Group submissions by tile ID
     const submissionsByTile: Record<string, TeamTileSubmission[]> = {}
@@ -466,7 +435,7 @@ export async function submitImage(formData: FormData) {
 
     // Create a notification for admin and management users
     await createNotification(
-      bingoResult.event.id,
+      bingoResult.eventId,
       tileId,
       teamId,
       `Team ${team.name} has submitted an image for tile "${tile.title}"`,
@@ -599,6 +568,66 @@ export async function updateSubmissionStatus(
           updatedAt: new Date(),
         })
         .where(eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId))
+    }
+
+    // If submission has a goal assignment, recalculate goal progress
+    if (updatedSubmission.goalId) {
+      // Get the team submission to find the team ID
+      const teamSubmission = await db.query.teamTileSubmissions.findFirst({
+        where: eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId),
+      })
+
+      if (teamSubmission) {
+        // Recalculate progress from ALL approved submissions for this goal and team
+        const approvedSubmissions = await db
+          .select({
+            submissionValue: submissions.submissionValue,
+          })
+          .from(submissions)
+          .innerJoin(teamTileSubmissions, eq(submissions.teamTileSubmissionId, teamTileSubmissions.id))
+          .where(
+            and(
+              eq(submissions.goalId, updatedSubmission.goalId),
+              eq(submissions.status, "approved"),
+              eq(teamTileSubmissions.teamId, teamSubmission.teamId)
+            )
+          )
+
+        const totalValue = approvedSubmissions.reduce((sum, s) => sum + (s.submissionValue || 0), 0)
+
+        // Get current goal progress for this team
+        const currentProgress = await db.query.teamGoalProgress.findFirst({
+          where: and(
+            eq(teamGoalProgress.goalId, updatedSubmission.goalId),
+            eq(teamGoalProgress.teamId, teamSubmission.teamId)
+          ),
+        })
+
+        if (currentProgress) {
+          // Update existing progress
+          await db
+            .update(teamGoalProgress)
+            .set({
+              currentValue: totalValue,
+              updatedAt: new Date(),
+            })
+            .where(eq(teamGoalProgress.id, currentProgress.id))
+        } else if (totalValue > 0) {
+          // Create new progress entry only if there's actual progress
+          await db.insert(teamGoalProgress).values({
+            goalId: updatedSubmission.goalId,
+            teamId: teamSubmission.teamId,
+            currentValue: totalValue,
+          })
+        }
+
+        // Check if we need to auto-complete the tile
+        const goal = await db.query.goals.findFirst({ where: eq(goals.id, updatedSubmission.goalId) })
+        if (goal) {
+          const { checkAndAutoCompleteTile } = await import("./tile-completion")
+          await checkAndAutoCompleteTile(goal.tileId, teamSubmission.teamId)
+        }
+      }
     }
 
     // Revalidate the submissions page
@@ -734,6 +763,66 @@ export async function updateSubmissionStatusWithComment(
             updatedAt: new Date(),
           })
           .where(eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId))
+      }
+
+      // If submission has a goal assignment, recalculate goal progress
+      if (updatedSubmission.goalId) {
+        // Get the team submission to find the team ID
+        const teamSubmission = await tx.query.teamTileSubmissions.findFirst({
+          where: eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId),
+        })
+
+        if (teamSubmission) {
+          // Recalculate progress from ALL approved submissions for this goal and team
+          const approvedSubmissions = await tx
+            .select({
+              submissionValue: submissions.submissionValue,
+            })
+            .from(submissions)
+            .innerJoin(teamTileSubmissions, eq(submissions.teamTileSubmissionId, teamTileSubmissions.id))
+            .where(
+              and(
+                eq(submissions.goalId, updatedSubmission.goalId),
+                eq(submissions.status, "approved"),
+                eq(teamTileSubmissions.teamId, teamSubmission.teamId)
+              )
+            )
+
+          const totalValue = approvedSubmissions.reduce((sum, s) => sum + (s.submissionValue || 0), 0)
+
+          // Get current goal progress for this team
+          const currentProgress = await tx.query.teamGoalProgress.findFirst({
+            where: and(
+              eq(teamGoalProgress.goalId, updatedSubmission.goalId),
+              eq(teamGoalProgress.teamId, teamSubmission.teamId)
+            ),
+          })
+
+          if (currentProgress) {
+            // Update existing progress
+            await tx
+              .update(teamGoalProgress)
+              .set({
+                currentValue: totalValue,
+                updatedAt: new Date(),
+              })
+              .where(eq(teamGoalProgress.id, currentProgress.id))
+          } else if (totalValue > 0) {
+            // Create new progress entry only if there's actual progress
+            await tx.insert(teamGoalProgress).values({
+              goalId: updatedSubmission.goalId,
+              teamId: teamSubmission.teamId,
+              currentValue: totalValue,
+            })
+          }
+
+          // Check if we need to auto-complete the tile
+          const goal = await tx.query.goals.findFirst({ where: eq(goals.id, updatedSubmission.goalId) })
+          if (goal) {
+            const { checkAndAutoCompleteTile } = await import("./tile-completion")
+            await checkAndAutoCompleteTile(goal.tileId, teamSubmission.teamId)
+          }
+        }
       }
 
       // Revalidate the submissions page
@@ -929,7 +1018,6 @@ export async function deleteRowOrColumn(bingoId: string, type: "row" | "column")
       }
 
       const newSize = type === "row" ? bingo.rows - 1 : bingo.columns - 1
-      const totalTiles = type === "row" ? newSize * bingo.columns : bingo.rows * newSize
 
       // Update bingo size
       await tx

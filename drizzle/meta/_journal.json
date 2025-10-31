@@ -64,6 +64,13 @@
       "when": 1761556864731,
       "tag": "0008_thin_morlocks",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1761896007260,
+      "tag": "0009_redundant_skin",
+      "breakpoints": true
     }
   ]
 }

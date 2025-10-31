@@ -1,4 +1,9 @@
 "use server"
+
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
 import {
@@ -1135,7 +1140,7 @@ export async function getRegistrationRequests(
     }
 
     const query = db.query.eventRegistrationRequests.findMany({
-      where: (reqs, { and, eq, like, or }) => {
+      where: (reqs, { and, eq }) => {
         const conditions = [eq(reqs.eventId, eventId)]
 
         if (filters.status) {

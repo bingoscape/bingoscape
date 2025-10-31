@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/server/db"
-import { events, bingos, teams, teamTileSubmissions, tiles } from "@/server/db/schema"
+import { events, bingos, teams, teamTileSubmissions, tiles, clans } from "@/server/db/schema"
 import { eq, and, count, inArray } from "drizzle-orm"
 import type { UUID } from "crypto"
 
@@ -35,23 +35,20 @@ export async function getPublicEvent(eventId: string): Promise<PublicEventData |
       where: and(
         eq(events.id, eventId as UUID),
         eq(events.public, true), // Only return public events
-      ),
-      with: {
-        clan: true,
-      },
+      )
     })
 
     if (!eventResult) {
       return null
     }
 
-    // Count visible bingos separately
     const bingoCountResult = await db
       .select({ count: count() })
       .from(bingos)
       .where(and(eq(bingos.eventId, eventId as UUID), eq(bingos.visible, true)))
 
     const bingoCount = bingoCountResult[0]?.count ?? 0
+    const clanName = await getClanName(eventResult.clanId);
 
     // Format the result
     return {
@@ -62,13 +59,21 @@ export async function getPublicEvent(eventId: string): Promise<PublicEventData |
       endDate: eventResult.endDate,
       basePrizePool: eventResult.basePrizePool,
       minimumBuyIn: eventResult.minimumBuyIn,
-      clanName: eventResult.clan?.name ?? null,
+      clanName: clanName,
       bingoCount: Number(bingoCount),
     }
   } catch (error) {
     console.error("Error fetching public event:", error)
     return null
   }
+}
+
+async function getClanName(clanId: string | null): Promise<string | null> {
+  if (!clanId) return null;
+  const clan = await db.query.clans.findFirst({
+    where: eq(clans.id, clanId)
+  })
+  return clan?.name ?? null
 }
 
 /**

@@ -2,7 +2,7 @@
 "use client"
 
 import { useCallback } from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type React from "react"
 import Image from "next/image"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,7 @@ import { ForwardRefEditor } from "./forward-ref-editor"
 import type { Tile, Team } from "@/app/actions/events"
 import { Progress } from "@/components/ui/progress"
 import { AnimatedProgress } from "@/components/ui/animated-progress"
-import { Pencil, X, Zap, EyeOff, Search, ExternalLink, CheckCircle2, Clock } from "lucide-react"
+import { Pencil, X, Zap, EyeOff, Search, ExternalLink, CheckCircle2, Clock, Network, List } from "lucide-react"
 import Markdown from "react-markdown"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -26,6 +26,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import getRandomFrog from "@/lib/getRandomFrog"
+import { GoalProgressTree } from "./goal-progress-tree"
+import { getGoalTreeWithProgress } from "@/app/actions/goal-groups"
 
 type EditableTileFields = {
   title: string
@@ -460,6 +462,27 @@ function TileProgress({
   onUpdateProgress: (goalId: string, teamId: string, newValue: number) => void
   userRole: "admin" | "management" | "participant"
 }) {
+  const [viewMode, setViewMode] = useState<"tree" | "list">("tree")
+  const [teamTreeData, setTeamTreeData] = useState<
+    Map<string, { tree: any[]; teamProgress: any[] }>
+  >(new Map())
+
+  useEffect(() => {
+    if (!selectedTile?.id) return
+
+    // Load tree data for all teams
+    const loadTreeData = async () => {
+      const newData = new Map()
+      for (const team of teams) {
+        const data = await getGoalTreeWithProgress(selectedTile.id, team.id)
+        newData.set(team.id, data)
+      }
+      setTeamTreeData(newData)
+    }
+
+    void loadTreeData()
+  }, [selectedTile?.id, teams, selectedTile?.teamTileSubmissions, selectedTile?.goals])
+
   if (!selectedTile?.goals || selectedTile.goals.length === 0) {
     return (
       <div className="text-center py-6 bg-muted/30 rounded-lg">
@@ -490,7 +513,51 @@ function TileProgress({
 
   return (
     <div className="space-y-6">
-      {teams.map((team) => {
+      <div className="flex justify-between items-center">
+        <h4 className="font-semibold text-lg">Team Progress</h4>
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === "tree" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("tree")}
+          >
+            <Network className="h-4 w-4 mr-2" />
+            Tree View
+          </Button>
+          <Button
+            variant={viewMode === "list" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("list")}
+          >
+            <List className="h-4 w-4 mr-2" />
+            List View
+          </Button>
+        </div>
+      </div>
+
+      {viewMode === "tree" ? (
+        <div className="space-y-6">
+          {teams.map((team) => {
+            const data = teamTreeData.get(team.id)
+            if (!data) return null
+
+            const teamColor = `hsl(${(team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`
+
+            return (
+              <GoalProgressTree
+                key={team.id}
+                tree={data.tree}
+                teamId={team.id}
+                teamProgress={data.teamProgress}
+                teamName={team.name}
+                teamColor={teamColor}
+              />
+            )
+          })}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {teams.map((team) => {
         const completedGoals = (selectedTile.goals ?? []).filter((goal) => {
           const progress = calculateGoalProgress(goal.id, team.id)
           return progress.approved >= goal.targetValue
@@ -639,6 +706,8 @@ function TileProgress({
           </div>
         )
       })}
+        </div>
+      )}
     </div>
   )
 }

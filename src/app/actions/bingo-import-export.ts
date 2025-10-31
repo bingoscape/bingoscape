@@ -1,5 +1,10 @@
 "use server"
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
 import { db } from "@/server/db"
 import { bingos, tiles, goals, tierXpRequirements } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
@@ -87,7 +92,7 @@ export async function exportBingoBoard(bingoId: string): Promise<ExportedBingo |
         index: tile.index,
         isHidden: tile.isHidden,
         tier: tile.tier,
-        goals: tile.goals.map((goal) => ({
+        goals: tile.goals.map((goal: any) => ({
           description: goal.description,
           targetValue: goal.targetValue,
         })),

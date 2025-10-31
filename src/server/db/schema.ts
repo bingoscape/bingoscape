@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm"
 import {
+    AnyPgColumn,
   bigint,
   boolean,
   index,
@@ -128,6 +129,7 @@ export const clanRoleEnum = pgEnum("clan_role", ["admin", "management", "member"
 export const eventRoleEnum = pgEnum("event_role", ["admin", "management", "participant"])
 export const registrationStatusEnum = pgEnum("registration_status", ["pending", "approved", "rejected"])
 export const bingoTypeEnum = pgEnum("bingo_type", ["standard", "progression"])
+export const logicalOperatorEnum = pgEnum("logical_operator", ["AND", "OR"])
 
 export const events = createTable("events", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -289,7 +291,39 @@ export const tilesRelations = relations(tiles, ({ one, many }) => ({
     references: [bingos.id],
   }),
   goals: many(goals),
+  goalGroups: many(goalGroups),
   teamTileSubmissions: many(teamTileSubmissions),
+}))
+
+export const goalGroups = createTable("goal_groups", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tileId: uuid("tile_id")
+    .notNull()
+    .references(() => tiles.id, { onDelete: "cascade" }),
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
+  parentGroupId: uuid("parent_group_id").references((): AnyPgColumn => goalGroups.id, { onDelete: "cascade" }),
+  logicalOperator: logicalOperatorEnum("logical_operator").notNull(),
+  orderIndex: integer("order_index").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const goalGroupsRelations = relations(goalGroups, ({ one, many }) => ({
+  tile: one(tiles, {
+    fields: [goalGroups.tileId],
+    references: [tiles.id],
+  }),
+  parentGroup: one(goalGroups, {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    fields: [goalGroups.parentGroupId],
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+    references: [goalGroups.id],
+    relationName: "groupHierarchy",
+  }),
+  childGroups: many(goalGroups, {
+    relationName: "groupHierarchy",
+  }),
+  goals: many(goals),
 }))
 
 export const goals = createTable("goals", {
@@ -297,8 +331,10 @@ export const goals = createTable("goals", {
   tileId: uuid("tile_id")
     .notNull()
     .references(() => tiles.id, { onDelete: "cascade" }),
+  parentGroupId: uuid("parent_group_id").references(() => goalGroups.id, { onDelete: "cascade" }),
   description: text("description").notNull(),
   targetValue: integer("target_value").notNull(),
+  orderIndex: integer("order_index").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
@@ -321,13 +357,19 @@ export const goalValuesRelations = relations(goalValues, ({ one }) => ({
   }),
 }))
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 export const goalsRelations = relations(goals, ({ one, many }) => ({
   tile: one(tiles, {
     fields: [goals.tileId],
     references: [tiles.id],
   }),
+  parentGroup: one(goalGroups, {
+    fields: [goals.parentGroupId],
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+    references: [goalGroups.id],
+  }),
   teamProgress: many(teamGoalProgress),
-  goalValues: many(goalValues), // Add this line
+  goalValues: many(goalValues),
 }))
 
 export const teamTileSubmissions = createTable(

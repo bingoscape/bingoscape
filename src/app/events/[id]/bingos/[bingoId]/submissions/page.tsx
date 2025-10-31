@@ -10,10 +10,10 @@ import {
   updateTeamTileSubmissionStatus,
   updateSubmissionStatus,
   deleteSubmission,
-  getBingoById,
   type BingoData,
   type TileData,
 } from "@/app/actions/bingo"
+import { getBingoById } from "@/app/actions/getBingoById"
 import { type TeamTileSubmission } from "@/app/actions/events"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
