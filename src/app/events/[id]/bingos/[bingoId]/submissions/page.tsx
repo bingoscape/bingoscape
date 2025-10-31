@@ -55,8 +55,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
+import { InlineGoalAssignment } from "@/components/inline-goal-assignment"
+import { getGoalValues } from "@/app/actions/goals"
 
 export default function BingoSubmissionsPage({ params }: { params: { id: string; bingoId: string } }) {
   const { id: eventId, bingoId } = params
@@ -75,10 +75,9 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [teamsPopoverOpen, setTeamsPopoverOpen] = useState(false)
   const [statusPopoverOpen, setStatusPopoverOpen] = useState(false)
-  const [submissionForGoal, setSubmissionForGoal] = useState<string | null>(null)
-  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null)
+  const [expandedGoalForms, setExpandedGoalForms] = useState<Set<string>>(new Set())
   const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(null)
-  const [submissionValue, setSubmissionValue] = useState<string>("")
+  const [goalValuesCache, setGoalValuesCache] = useState<Record<string, any[]>>({})
 
   // Update the statusOptions array to remove "declined" and use new names
   const statusOptions = [
@@ -167,40 +166,6 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
       .then(() => console.log("Submissions fetched"))
       .catch((error) => console.error("Error fetching submissions:", error))
   }, [bingoId, selectedTeamIds, refreshKey])
-
-  // Add this effect to set the current goal when opening the dialog
-  useEffect(() => {
-    if (submissionForGoal) {
-      // Find the current goal ID for this submission
-      let currentGoalId = null
-
-      // Look through all tile submissions to find the current goal ID
-      Object.keys(tileSubmissions).forEach((tileId) => {
-        tileSubmissions[tileId]?.forEach((teamSub) => {
-          teamSub.submissions.forEach((sub) => {
-            if (sub.id === submissionForGoal) {
-              currentGoalId = sub.goalId || null
-            }
-          })
-        })
-      })
-
-      setSelectedGoalId(currentGoalId)
-    }
-  }, [submissionForGoal, tileSubmissions])
-
-  // Add this useEffect after the existing useEffect for submissionForGoal
-  useEffect(() => {
-    if (selectedGoalId && selectedGoalId !== "none") {
-      // Set default value to 1 if no value is already set
-      if (!submissionValue) {
-        setSubmissionValue("1")
-      }
-    } else {
-      // Reset value when no goal is selected
-      setSubmissionValue("")
-    }
-  }, [selectedGoalId])
 
   const toggleTeamSelection = (teamId: string) => {
     setSelectedTeamIds((prev) => {
@@ -347,8 +312,21 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
     }
   }
 
-  // Add this function after the handleDeleteSubmission function
-  const handleGoalAssignment = async (submissionId: string, goalId: string | null) => {
+  // Toggle expanded state for inline goal assignment
+  const toggleGoalForm = (submissionId: string) => {
+    setExpandedGoalForms((prev) => {
+      const next = new Set(prev)
+      if (next.has(submissionId)) {
+        next.delete(submissionId)
+      } else {
+        next.add(submissionId)
+      }
+      return next
+    })
+  }
+
+  // Handle inline goal assignment
+  const handleInlineGoalAssignment = async (submissionId: string, goalId: string | null, value: number | null) => {
     try {
       // Find the current submission to get its status
       let currentStatus = "pending"
@@ -364,20 +342,11 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
         })
       })
 
-      // Parse the submission value
-      let finalValue = null
-      if (goalId && goalId !== "none") {
-        finalValue = submissionValue ? Number.parseFloat(submissionValue) : null
-        if (finalValue === null || isNaN(finalValue)) {
-          return // Don't proceed if no valid value is provided for a goal
-        }
-      }
-
       const result = await updateSubmissionStatus(
         submissionId,
         currentStatus as "approved" | "needs_review" | "pending",
         goalId,
-        finalValue,
+        value,
       )
 
       if (result.success) {
@@ -388,7 +357,7 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
           updatedSubmissions[tileId] = updatedSubmissions[tileId]!.map((teamSub) => ({
             ...teamSub,
             submissions: teamSub.submissions.map((sub) =>
-              sub.id === submissionId ? { ...sub, goalId, submissionValue: finalValue } : sub,
+              sub.id === submissionId ? { ...sub, goalId, submissionValue: value } : sub,
             ),
           }))
         })
@@ -402,10 +371,12 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
             : "Goal has been removed from the submission",
         })
 
-        // Reset selection
-        setSubmissionForGoal(null)
-        setSelectedGoalId(null)
-        setSubmissionValue("")
+        // Close the expanded form
+        setExpandedGoalForms((prev) => {
+          const next = new Set(prev)
+          next.delete(submissionId)
+          return next
+        })
       } else {
         throw new Error(result.error || "Failed to assign goal")
       }
@@ -416,6 +387,18 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
         description: "Failed to assign goal to submission",
         variant: "destructive",
       })
+    }
+  }
+
+  // Load goal values for a specific goal
+  const loadGoalValues = async (goalId: string, tileId: string) => {
+    if (!goalValuesCache[goalId]) {
+      try {
+        const values = await getGoalValues(goalId)
+        setGoalValuesCache((prev) => ({ ...prev, [goalId]: values }))
+      } catch (error) {
+        console.error("Failed to load goal values:", error)
+      }
     }
   }
 
@@ -855,54 +838,20 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                     {new Date(submission.createdAt).toLocaleString()}
                                   </div>
 
-                                  {/* Goal assignment and value display */}
-                                  <div className="flex flex-wrap gap-1">
-                                    {submission.goalId ? (
-                                      <div
-                                        className={`flex items-center gap-1 bg-blue-50 p-1.5 rounded text-xs ${isAdminOrManagement ? "cursor-pointer hover:bg-blue-100" : ""
-                                          }`}
-                                        onClick={
-                                          isAdminOrManagement ? () => setSubmissionForGoal(submission.id) : undefined
-                                        }
-                                      >
-                                        <CheckCircle2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                                        <span className="text-blue-700 font-medium truncate">
-                                          {getTileGoals(tile.id).find((g) => g.id === submission.goalId)?.description ||
-                                            "Goal"}
-                                        </span>
-                                        {isAdminOrManagement && <Link className="h-3 w-3 text-blue-500 ml-1" />}
-                                      </div>
-                                    ) : (
-                                      isAdminOrManagement && (
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          className="h-7 text-xs bg-transparent"
-                                          onClick={() => setSubmissionForGoal(submission.id)}
-                                        >
-                                          <Link className="h-3.5 w-3.5 mr-1" />
-                                          Assign Goal
-                                        </Button>
-                                      )
-                                    )}
-                                  </div>
-
-                                  {/* Submission Value Badge with Tooltip */}
-                                  {submission.submissionValue !== null && submission.submissionValue !== undefined && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Badge variant="secondary" className="text-xs">
-                                            <Hash className="h-3 w-3 mr-1" />
-                                            {submission.submissionValue}
-                                          </Badge>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Submission Value: {submission.submissionValue}</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
+                                  {/* Inline Goal Assignment */}
+                                  <InlineGoalAssignment
+                                    submissionId={submission.id}
+                                    currentGoalId={submission.goalId}
+                                    currentValue={submission.submissionValue}
+                                    goals={getTileGoals(tile.id)}
+                                    goalValues={goalValuesCache[submission.goalId || ""] || []}
+                                    onAssign={(goalId, value) =>
+                                      handleInlineGoalAssignment(submission.id, goalId, value)
+                                    }
+                                    hasSufficientRights={isAdminOrManagement}
+                                    isExpanded={expandedGoalForms.has(submission.id)}
+                                    onToggle={() => toggleGoalForm(submission.id)}
+                                  />
                                 </div>
 
                                 {isAdminOrManagement && (
@@ -1001,83 +950,6 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
           </div>
         )}
       </div>
-
-      {/* Goal Assignment Dialog - Only for admin/management users */}
-      {isAdminOrManagement && (
-        <AlertDialog open={!!submissionForGoal} onOpenChange={(open) => !open && setSubmissionForGoal(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Assign Goal to Submission</AlertDialogTitle>
-              <AlertDialogDescription>
-                Select a goal to associate with this submission. A value is required when assigning a goal.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="py-4 space-y-4">
-              <div>
-                <Label className="text-sm font-medium">Goal</Label>
-                <Select
-                  value={selectedGoalId || "none"}
-                  onValueChange={(value) => setSelectedGoalId(value === "none" ? null : value)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a goal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Goal</SelectItem>
-                    {submissionForGoal &&
-                      (() => {
-                        // Find the tile ID for this submission
-                        let tileId = ""
-                        Object.keys(tileSubmissions).forEach((id) => {
-                          tileSubmissions[id]?.forEach((teamSub) => {
-                            teamSub.submissions.forEach((sub) => {
-                              if (sub.id === submissionForGoal) {
-                                tileId = id
-                              }
-                            })
-                          })
-                        })
-
-                        const goals = getTileGoals(tileId)
-                        return goals.map((goal) => (
-                          <SelectItem key={goal.id} value={goal.id}>
-                            {goal.description} (Target: {goal.targetValue})
-                          </SelectItem>
-                        ))
-                      })()}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Value input - show when a goal is selected */}
-              {selectedGoalId && selectedGoalId !== "none" && (
-                <div>
-                  <Label className="text-sm font-medium">Submission Value *</Label>
-                  <p className="text-xs text-muted-foreground mb-2">A value is required when assigning a goal.</p>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={submissionValue}
-                    onChange={(e) => setSubmissionValue(e.target.value)}
-                    placeholder="Enter submission value (default: 1)"
-                    className="w-full"
-                    required
-                  />
-                </div>
-              )}
-            </div>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => submissionForGoal && handleGoalAssignment(submissionForGoal, selectedGoalId)}
-                disabled={!!(selectedGoalId && selectedGoalId !== "none" && !submissionValue)}
-              >
-                Assign Goal
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
 
       <FullSizeImageDialog
         isOpen={!!fullSizeImage}
