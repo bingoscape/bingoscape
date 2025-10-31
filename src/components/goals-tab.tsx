@@ -7,10 +7,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Trash2, Plus } from "lucide-react"
+import { Trash2, Plus, Network, List } from "lucide-react"
 import type { Tile, Goal } from "@/app/actions/events"
 import { addGoalValue, deleteGoalValue, type GoalValue } from "@/app/actions/goals"
 import { toast } from "@/hooks/use-toast"
+import { GoalTreeEditor } from "./goal-tree-editor"
+import { getGoalTree, type GoalTreeNode } from "@/app/actions/goal-groups"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface GoalsTabProps {
   selectedTile: Tile | null
@@ -34,6 +37,21 @@ export function GoalsTab({
   const [newGoalValue, setNewGoalValue] = useState({ value: "", description: "" })
   const [selectedGoalForValue, setSelectedGoalForValue] = useState<string | null>(null)
   const [goalValuesState, setGoalValuesState] = useState<Record<string, GoalValue[]>>({})
+  const [viewMode, setViewMode] = useState<"tree" | "list">("tree")
+  const [goalTree, setGoalTree] = useState<GoalTreeNode[]>([])
+
+  // Load goal tree when selectedTile changes
+  useEffect(() => {
+    if (selectedTile?.id) {
+      loadGoalTree()
+    }
+  }, [selectedTile?.id])
+
+  const loadGoalTree = async () => {
+    if (!selectedTile?.id) return
+    const tree = await getGoalTree(selectedTile.id)
+    setGoalTree(tree)
+  }
 
   // Initialize goal values state when selectedTile changes
   useEffect(() => {
@@ -118,7 +136,41 @@ export function GoalsTab({
 
   return (
     <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4 bg-background text-foreground">
-      <div className="space-y-6 p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">Goals Management</h3>
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === "tree" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("tree")}
+          >
+            <Network className="h-4 w-4 mr-2" />
+            Tree View
+          </Button>
+          <Button
+            variant={viewMode === "list" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("list")}
+          >
+            <List className="h-4 w-4 mr-2" />
+            List View
+          </Button>
+        </div>
+      </div>
+
+      {viewMode === "tree" ? (
+        <GoalTreeEditor
+          tileId={selectedTile?.id || ""}
+          tree={goalTree}
+          hasSufficientRights={hasSufficientRights}
+          onRefresh={loadGoalTree}
+          onDeleteGoal={onDeleteGoal}
+          onAddGoal={onAddGoal}
+          newGoal={newGoal}
+          onNewGoalChange={onNewGoalChange}
+        />
+      ) : (
+        <div className="space-y-6 p-4">
         {/* Existing goals */}
         {selectedTile?.goals && selectedTile.goals.length > 0 ? (
           <div className="space-y-4">
@@ -307,6 +359,7 @@ export function GoalsTab({
           </Card>
         )}
       </div>
+      )}
     </div>
   )
 }

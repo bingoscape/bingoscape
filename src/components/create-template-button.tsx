@@ -20,7 +20,7 @@ import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { saveBingoAsTemplate } from "@/app/actions/templates"
 import { getEventById, getUserCreatedEvents } from "@/app/actions/events"
-import { getBingoById } from "@/app/actions/bingo"
+import { getBingoById } from "@/app/actions/getBingoById"
 import { Plus } from "lucide-react"
 
 export function CreateTemplateButton() {
