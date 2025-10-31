@@ -28,6 +28,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { InlineGoalAssignment } from "@/components/inline-goal-assignment"
 import { getGoalValues } from "@/app/actions/goals"
 import { toast } from "@/hooks/use-toast"
 
@@ -70,9 +71,8 @@ export function SubmissionsTab({
   onSubmissionStatusUpdate,
   onDeleteSubmission,
 }: SubmissionsTabProps) {
-  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null)
-  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null)
-  const [submissionForGoal, setSubmissionForGoal] = useState<string | null>(null)
+  const [expandedGoalForms, setExpandedGoalForms] = useState<Set<string>>(new Set())
+  const [goalValuesCache, setGoalValuesCache] = useState<Record<string, any[]>>({})
   const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>("pending")
   const [teamFilter, setTeamFilter] = useState<string>("all")
@@ -85,47 +85,35 @@ export function SubmissionsTab({
     Record<string, "approved" | "needs_review" | "pending">
   >({})
 
-  const [goalValues, setGoalValues] = useState<any[]>([])
-  const [selectedSubmissionValue, setSelectedSubmissionValue] = useState<number | null>(null)
-  
   // Comment-related state
   const [submissionComments, setSubmissionComments] = useState<Record<string, SubmissionComment[]>>({})
   const [showCommentForm, setShowCommentForm] = useState<string | null>(null)
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
-  const [customValue, setCustomValue] = useState("")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [dropdownOpen, setDropdownOpen] = useState(false)
 
-  // Add this effect to set the current goal when opening the dialog
-  useEffect(() => {
-    if (submissionForGoal) {
-      // Find the current goal ID for this submission
-      let currentGoalId = null
-      selectedTile?.teamTileSubmissions?.forEach((teamSub) => {
-        teamSub.submissions.forEach((sub) => {
-          if (sub.id === submissionForGoal) {
-            currentGoalId = sub.goalId || null
-          }
-        })
-      })
-      setSelectedGoalId(currentGoalId)
-    }
-  }, [submissionForGoal, selectedTile])
-
-  useEffect(() => {
-    if (selectedGoalId && selectedGoalId !== "none") {
-      getGoalValues(selectedGoalId).then(setGoalValues)
-      // Set default value to 1 if no custom value is already set
-      if (!customValue && selectedSubmissionValue === null) {
-        setSelectedSubmissionValue(1)
+  // Toggle expanded state for inline goal assignment
+  const toggleGoalForm = (submissionId: string) => {
+    setExpandedGoalForms((prev) => {
+      const next = new Set(prev)
+      if (next.has(submissionId)) {
+        next.delete(submissionId)
+      } else {
+        next.add(submissionId)
       }
-    } else {
-      setGoalValues([])
-      // Reset values when no goal is selected
-      setSelectedSubmissionValue(null)
-      setCustomValue("")
-    }
-  }, [selectedGoalId])
+      return next
+    })
+  }
+
+  // Handle inline goal assignment
+  const handleInlineGoalAssignment = (submissionId: string, goalId: string | null, value: number | null) => {
+    onSubmissionStatusUpdate(submissionId, "pending", goalId, value)
+
+    // Close the expanded form
+    setExpandedGoalForms((prev) => {
+      const next = new Set(prev)
+      next.delete(submissionId)
+      return next
+    })
+  }
 
   const currentTeam = teams.find((team) => team.id === currentTeamId)
   const currentTeamSubmission = selectedTile?.teamTileSubmissions?.find((sub) => sub.teamId === currentTeamId)
@@ -167,83 +155,6 @@ export function SubmissionsTab({
             Pending
           </Badge>
         )
-    }
-  }
-
-  const handleGoalAssignment = (submissionId: string, goalId: string | null) => {
-    // Find the current status of the submission
-    let currentStatus = "pending"
-    selectedTile?.teamTileSubmissions?.forEach((teamSub) => {
-      teamSub.submissions.forEach((sub) => {
-        if (sub.id === submissionId) {
-          currentStatus = localSubmissionStatuses[sub.id] || sub.status
-        }
-      })
-    })
-
-    // Determine the final value to use
-    let finalValue = selectedSubmissionValue
-    if (customValue && !isNaN(Number.parseFloat(customValue))) {
-      finalValue = Number.parseFloat(customValue)
-    }
-
-    // Enhanced validation with user feedback
-    if (goalId && goalId !== "none") {
-      if (finalValue === null || finalValue === undefined) {
-        toast({
-          title: "Value Required",
-          description: "Please select a predefined value or enter a custom value for this goal.",
-          variant: "destructive",
-        })
-        return
-      }
-
-      if (finalValue <= 0) {
-        toast({
-          title: "Invalid Value",
-          description: "The submission value must be greater than 0.",
-          variant: "destructive",
-        })
-        return
-      }
-
-      // Check if the value exceeds the goal's target (warning, not blocking)
-      const selectedGoal = selectedTile?.goals?.find(g => g.id === goalId)
-      if (selectedGoal && finalValue > selectedGoal.targetValue) {
-        // Allow but warn
-        toast({
-          title: "Value Exceeds Target",
-          description: `The value ${finalValue} exceeds the goal target of ${selectedGoal.targetValue}. This is allowed but may indicate an error.`,
-          variant: "default",
-        })
-      }
-    }
-
-    try {
-      onSubmissionStatusUpdate(submissionId, currentStatus as "pending" | "approved" | "needs_review", goalId, finalValue)
-
-      // Success feedback
-      const goalDescription = goalId ? selectedTile?.goals?.find(g => g.id === goalId)?.description : null
-      const message = goalId
-        ? `Goal "${goalDescription}" assigned with value ${finalValue}`
-        : "Goal assignment removed from submission"
-
-      toast({
-        title: "Goal Assignment Updated",
-        description: message,
-      })
-
-      // Reset form state
-      setSubmissionForGoal(null)
-      setSelectedSubmissionValue(null)
-      setCustomValue("")
-      setSearchTerm("")
-    } catch (error) {
-      toast({
-        title: "Assignment Failed",
-        description: "Failed to assign goal to submission. Please try again.",
-        variant: "destructive",
-      })
     }
   }
 
@@ -702,53 +613,20 @@ export function SubmissionsTab({
                                   </div>
                                 </div>
 
-                                {/* Goal assignment and value display */}
-                                <div className="flex flex-wrap gap-1">
-                                  {submission.goalId ? (
-                                    <div
-                                      className={`flex items-center gap-1 bg-blue-500/20 p-1.5 rounded text-xs ${hasSufficientRights ? "cursor-pointer hover:bg-[#3B82F6]/30" : ""
-                                        }`}
-                                      onClick={
-                                        hasSufficientRights ? () => setSubmissionForGoal(submission.id) : undefined
-                                      }
-                                    >
-                                      <CheckCircle2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                                      <span className="text-blue-500 font-medium truncate">
-                                        {selectedTile?.goals?.find((g) => g.id === submission.goalId)?.description ||
-                                          "Goal"}
-                                      </span>
-                                      {hasSufficientRights && <Link className="h-3 w-3 text-blue-500 ml-1" />}
-                                    </div>
-                                  ) : (
-                                    hasSufficientRights && (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-7 text-xs bg-transparent"
-                                        onClick={() => setSubmissionForGoal(submission.id)}
-                                      >
-                                        <Link className="h-3.5 w-3.5 mr-1" />
-                                        Assign Goal
-                                      </Button>
-                                    )
-                                  )}
-                                  {/* Submission Value Badge with Tooltip */}
-                                  {submission.submissionValue !== null && submission.submissionValue !== undefined && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Badge variant="secondary" className="text-xs">
-                                            <Hash className="h-3 w-3 mr-1" />
-                                            {submission.submissionValue}
-                                          </Badge>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Submission Value: {submission.submissionValue}</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
-                                </div>
+                                {/* Inline Goal Assignment */}
+                                <InlineGoalAssignment
+                                  submissionId={submission.id}
+                                  currentGoalId={submission.goalId}
+                                  currentValue={submission.submissionValue}
+                                  goals={selectedTile?.goals || []}
+                                  goalValues={goalValuesCache[submission.goalId || ""] || []}
+                                  onAssign={(goalId, value) =>
+                                    handleInlineGoalAssignment(submission.id, goalId, value)
+                                  }
+                                  hasSufficientRights={hasSufficientRights}
+                                  isExpanded={expandedGoalForms.has(submission.id)}
+                                  onToggle={() => toggleGoalForm(submission.id)}
+                                />
 
                                 {hasSufficientRights && (
                                   <div className="flex justify-end gap-1 mt-2 pt-2 border-t border-border">
@@ -871,195 +749,6 @@ export function SubmissionsTab({
         </div>
       </div>
 
-      {/* Enhanced Goal Assignment Dialog - Only for users with sufficient rights */}
-      {hasSufficientRights && (
-        <AlertDialog open={!!submissionForGoal} onOpenChange={(open) => {
-          if (!open) {
-            setSubmissionForGoal(null)
-            setSearchTerm("")
-            setDropdownOpen(false)
-          }
-        }}>
-          <AlertDialogContent className="max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col bg-background border-border">
-            <AlertDialogHeader className="pb-4 border-b border-border">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-500/20 rounded-full">
-                  <Link className="h-5 w-5 text-blue-500" />
-                </div>
-                <div>
-                  <AlertDialogTitle className="text-xl font-semibold text-foreground">
-                    Assign Goal to Submission
-                  </AlertDialogTitle>
-                  <AlertDialogDescription className="text-sm text-muted-foreground mt-1">
-                    Link this submission to a specific goal and set its contribution value.
-                  </AlertDialogDescription>
-                </div>
-              </div>
-            </AlertDialogHeader>
-
-            <div className="flex-1 overflow-y-auto py-6 space-y-6">
-              {/* Goal Selection Section */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Star className="h-4 w-4 text-yellow-500" />
-                  <Label className="text-sm font-semibold text-foreground">Select Goal</Label>
-                </div>
-                <Select
-                  value={selectedGoalId || "none"}
-                  onValueChange={(value) => {
-                    setSelectedGoalId(value === "none" ? null : value)
-                    setSearchTerm("")
-                    setSelectedSubmissionValue(null)
-                    setCustomValue("")
-                    setDropdownOpen(false)
-                  }}
-                >
-                  <SelectTrigger className="w-full h-12 bg-muted/30 border-border hover:bg-muted/50 transition-colors">
-                    <SelectValue placeholder="Choose a goal for this submission" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none" className="text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <X className="h-4 w-4" />
-                        No Goal
-                      </div>
-                    </SelectItem>
-                    {selectedTile?.goals?.map((goal) => (
-                      <SelectItem key={goal.id} value={goal.id}>
-                        <div className="flex items-center justify-between w-full">
-                          <span className="font-medium">{goal.description}</span>
-                          <span className="text-xs text-muted-foreground ml-2">
-                            Target: {goal.targetValue}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Value Selection Section - Enhanced with searchable dropdown */}
-              {selectedGoalId && selectedGoalId !== "none" && (
-                <div className="space-y-4 p-4 bg-muted/20 rounded-lg border border-border">
-                  <div className="flex items-center gap-2">
-                    <Hash className="h-4 w-4 text-green-500" />
-                    <Label className="text-sm font-semibold text-foreground">Submission Value *</Label>
-                    <div className="ml-auto">
-                      <span className="text-xs bg-red-500/20 text-red-500 px-2 py-1 rounded-full font-medium">
-                        Required
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Specify how much this submission contributes towards the goal target.
-                  </p>
-
-                  {/* Searchable Predefined Values Dropdown */}
-                  {goalValues.length > 0 && (
-                    <div className="space-y-3">
-                      <Label className="text-sm font-medium text-foreground">Predefined Values</Label>
-
-                      <Select
-                        value={selectedSubmissionValue?.toString() || ""}
-                        onValueChange={(value) => {
-                          if (value) {
-                            setSelectedSubmissionValue(Number.parseFloat(value))
-                            setCustomValue("")
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="w-full h-12 bg-background border-border hover:bg-muted/50">
-                          <SelectValue placeholder="Select a predefined value..." />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[300px]">
-                          {goalValues.map((gv) => (
-                            <SelectItem key={gv.id} value={gv.value.toString()}>
-                              <div className="flex items-center gap-3 w-full">
-                                <div className="px-2 py-1 bg-blue-500/20 rounded text-xs font-mono font-medium text-blue-500 min-w-[50px] text-center">
-                                  {gv.value}
-                                </div>
-                                <div className="flex-1 text-left">
-                                  <div className="font-medium text-sm">{gv.description}</div>
-                                </div>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {/* Custom Value Section */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="customValue" className="text-sm font-medium text-foreground">
-                        Custom Value
-                      </Label>
-                      {selectedSubmissionValue !== null && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedSubmissionValue(null)
-                            setCustomValue("")
-                          }}
-                          className="text-xs text-muted-foreground hover:text-foreground"
-                        >
-                          Clear selection
-                        </Button>
-                      )}
-                    </div>
-                    <Input
-                      id="customValue"
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      value={customValue}
-                      onChange={(e) => {
-                        setCustomValue(e.target.value)
-                        setSelectedSubmissionValue(null)
-                      }}
-                      placeholder="Enter a custom value (e.g., 1.5, 2, 0.5)"
-                      className="h-12 bg-background border-border"
-                      disabled={selectedSubmissionValue !== null}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Enter a custom numeric value if none of the predefined options fit your needs.
-                    </p>
-                  </div>
-
-                  {/* Value Preview */}
-                  {(selectedSubmissionValue !== null || customValue) && (
-                    <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        <span className="text-sm font-medium text-green-500">
-                          Value set to: {selectedSubmissionValue !== null ? selectedSubmissionValue : parseFloat(customValue) || 0}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <AlertDialogFooter className="border-t border-border pt-4">
-              <AlertDialogCancel className="mr-auto">
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => submissionForGoal && handleGoalAssignment(submissionForGoal, selectedGoalId)}
-                disabled={!!(selectedGoalId && selectedGoalId !== "none" && !selectedSubmissionValue && !customValue)}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-6"
-              >
-                <Link className="h-4 w-4 mr-2" />
-                Assign Goal
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )
-      }
     </div >
   )
 }
