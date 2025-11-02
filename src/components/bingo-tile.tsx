@@ -2,13 +2,19 @@
 
 import React from "react"
 import Image from "next/image"
-import { Zap, EyeOff, CheckCircle2, Clock } from "lucide-react"
+import { Zap, EyeOff } from "lucide-react"
 import type { Tile } from "@/app/actions/events"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import getRandomFrog from "@/lib/getRandomFrog"
-import { Badge } from "./ui/badge"
-import { Progress } from "./ui/progress"
 import Markdown from "react-markdown"
+import { CompactGoalTree } from "./compact-goal-tree"
+import { getGoalTreeWithProgress, type GoalTreeNode } from "@/app/actions/goal-groups"
+
+interface TeamProgress {
+  goalId: string
+  currentValue: number
+  isComplete: boolean
+}
 
 interface BingoTileProps {
   tile: Tile
@@ -22,6 +28,29 @@ interface BingoTileProps {
 
 export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, currentTeamId, isLocked, isLoading = false }: BingoTileProps) {
   const isManagement = userRole === "management" || userRole === "admin"
+
+  // Goal tree data state for hovercard
+  const [goalTreeData, setGoalTreeData] = React.useState<{tree: GoalTreeNode[], teamProgress: TeamProgress[]} | null>(null)
+  const [isLoadingTree, setIsLoadingTree] = React.useState(false)
+  const [isHoverCardOpen, setIsHoverCardOpen] = React.useState(false)
+
+  // Load goal tree when hovercard opens
+  React.useEffect(() => {
+    if (isHoverCardOpen && tile.goals && tile.goals.length > 0 && !goalTreeData && currentTeamId) {
+      const loadTreeData = async () => {
+        setIsLoadingTree(true)
+        try {
+          const data = await getGoalTreeWithProgress(tile.id, currentTeamId)
+          setGoalTreeData(data)
+        } catch (error) {
+          console.error("Failed to load goal tree:", error)
+        } finally {
+          setIsLoadingTree(false)
+        }
+      }
+      void loadTreeData()
+    }
+  }, [isHoverCardOpen, tile.id, tile.goals, currentTeamId, goalTreeData])
 
   const submissionCounts = React.useMemo(() => {
     if (!isManagement || !tile.teamTileSubmissions) return null
@@ -108,7 +137,7 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
   const shouldShowHoverCard = !tile.isHidden || (tile.isHidden && isManagement && !isLocked)
 
   return (
-    <HoverCard openDelay={200} closeDelay={100}>
+    <HoverCard openDelay={200} closeDelay={100} onOpenChange={setIsHoverCardOpen}>
       <HoverCardTrigger asChild>
         <div
           className={`${tileClasses} focus:outline-none focus:ring-2 sm:focus:ring-4 focus:ring-primary/50 focus:ring-offset-1 sm:focus:ring-offset-2 focus:ring-offset-background focus:scale-[1.01] sm:focus:scale-[1.02] lg:focus:scale-105`}
@@ -234,74 +263,28 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
               </div>
             )}
 
-            {tile.goals && tile.goals.length > 0 && (
+            {tile.goals && tile.goals.length > 0 && currentTeamId && (
               <div className="pt-1">
                 <h5 className="text-xs font-semibold mb-2">Goals:</h5>
-                <div className="text-xs space-y-2">
-                  {tile.goals.map((goal, idx) => {
-                    // Calculate progress for current team if available
-                    const teamSubmissions = currentTeamSubmission?.submissions.filter(sub => sub.goalId === goal.id) ?? []
-                    const approvedProgress = teamSubmissions
-                      .filter(sub => sub.status === "approved")
-                      .reduce((sum, sub) => sum + (sub.submissionValue ?? 0), 0)
-                    const totalProgress = teamSubmissions
-                      .reduce((sum, sub) => sum + (sub.submissionValue ?? 0), 0)
+                {isLoadingTree ? (
+                  <div className="text-xs text-muted-foreground py-2">Loading goal tree...</div>
+                ) : goalTreeData ? (
+                  <CompactGoalTree
+                    tree={goalTreeData.tree}
+                    teamProgress={goalTreeData.teamProgress}
+                    showProgress={true}
+                  />
+                ) : (
+                  <div className="text-xs text-muted-foreground">Hover to load goals</div>
+                )}
+              </div>
+            )}
 
-                    const approvedPercentage = goal.targetValue > 0 ? Math.min(100, (approvedProgress / goal.targetValue) * 100) : 0
-                    const isCompleted = approvedProgress >= goal.targetValue
-
-                    return (
-                      <div key={idx} className="p-2 bg-muted/30 rounded-lg space-y-1">
-                        <div className="flex justify-between items-start gap-2">
-                          <span className="text-muted-foreground flex-1 line-clamp-2 break-words leading-tight">{goal.description}</span>
-                          <span className="font-medium text-foreground text-right flex-shrink-0">
-                            Target: {goal.targetValue}
-                          </span>
-                        </div>
-
-                        {currentTeamSubmission && (
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-1 min-w-[60px]">
-                                <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                <span className="text-[10px] text-muted-foreground">Progress</span>
-                              </div>
-                              <Progress
-                                value={approvedPercentage}
-                                className="h-2 flex-1 bg-muted"
-                              />
-                              <span className="text-[10px] font-medium min-w-[40px] text-right">
-                                {approvedProgress}/{goal.targetValue}
-                              </span>
-                            </div>
-
-                            {isCompleted && (
-                              <div className="flex items-center gap-1">
-                                <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                <span className="text-[10px] text-green-600 font-medium">Completed!</span>
-                              </div>
-                            )}
-
-                            {totalProgress > approvedProgress && (
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1 min-w-[60px]">
-                                  <Clock className="h-3 w-3 text-yellow-500" />
-                                  <span className="text-[10px] text-muted-foreground">Pending</span>
-                                </div>
-                                <Progress
-                                  value={goal.targetValue > 0 ? Math.min(100, (totalProgress / goal.targetValue) * 100) : 0}
-                                  className="h-2 flex-1 bg-muted"
-                                />
-                                <span className="text-[10px] font-medium min-w-[40px] text-right">
-                                  {totalProgress}/{goal.targetValue}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
+            {tile.goals && tile.goals.length > 0 && !currentTeamId && (
+              <div className="pt-1">
+                <h5 className="text-xs font-semibold mb-2">Goals:</h5>
+                <div className="text-xs text-muted-foreground">
+                  {tile.goals.length} goal{tile.goals.length !== 1 ? "s" : ""} defined
                 </div>
               </div>
             )}

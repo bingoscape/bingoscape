@@ -14,6 +14,7 @@ import {
   Target,
   CheckCircle2,
   Circle,
+  Package,
 } from "lucide-react"
 import type { GoalTreeNode } from "@/app/actions/goal-groups"
 
@@ -224,6 +225,7 @@ function ProgressTreeNode({ node, depth }: ProgressTreeNodeProps) {
   const currentValue = progress?.currentValue || 0
   const targetValue = goalData.targetValue
   const percentage = targetValue > 0 ? Math.min(100, (currentValue / targetValue) * 100) : 0
+  const isItemGoal = goalData.goalType === "item" && goalData.itemGoal
 
   return (
     <div style={{ marginLeft: `${marginLeft}px` }}>
@@ -231,7 +233,20 @@ function ProgressTreeNode({ node, depth }: ProgressTreeNodeProps) {
         <CardContent className="p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-1">
-              <Target className="h-4 w-4 text-green-500" />
+              {isItemGoal ? (
+                <div className="flex items-center gap-1.5">
+                  <img
+                    src={goalData.itemGoal.imageUrl}
+                    alt={goalData.itemGoal.baseName}
+                    className="h-6 w-6 object-contain flex-shrink-0"
+                  />
+                  <Badge variant="secondary" className="text-xs h-5 px-1.5 flex-shrink-0">
+                    <Package className="h-3 w-3" />
+                  </Badge>
+                </div>
+              ) : (
+                <Target className="h-4 w-4 text-green-500 flex-shrink-0" />
+              )}
               <span className="text-sm font-medium">{goalData.description}</span>
               {isComplete ? (
                 <CheckCircle2 className="h-4 w-4 text-green-500" />

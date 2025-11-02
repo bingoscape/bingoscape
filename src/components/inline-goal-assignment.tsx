@@ -6,13 +6,24 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle2, Link, Pencil, X, Hash, Save } from "lucide-react"
+import { CheckCircle2, Link, Pencil, X, Hash, Save, Package } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface Goal {
   id: string
   description: string
   targetValue: number
+  goalType?: "generic" | "item"
+  itemGoal?: {
+    id: string
+    goalId: string
+    itemId: number
+    baseName: string
+    exactVariant: string | null
+    imageUrl: string
+    createdAt: Date
+    updatedAt: Date
+  } | null
 }
 
 interface GoalValue {
@@ -164,16 +175,34 @@ export function InlineGoalAssignment({
                   No Goal
                 </div>
               </SelectItem>
-              {goals.map((goal) => (
-                <SelectItem key={goal.id} value={goal.id} className="text-xs">
-                  <div className="flex items-center justify-between w-full gap-2">
-                    <span className="font-medium truncate">{goal.description}</span>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      Target: {goal.targetValue}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
+              {goals.map((goal) => {
+                const isItemGoal = goal.goalType === "item" && goal.itemGoal
+                const itemGoal = goal.itemGoal
+                return (
+                  <SelectItem key={goal.id} value={goal.id} className="text-xs">
+                    <div className="flex items-center justify-between w-full gap-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {isItemGoal && itemGoal && (
+                          <img
+                            src={itemGoal.imageUrl}
+                            alt={itemGoal.baseName}
+                            className="h-5 w-5 object-contain flex-shrink-0"
+                          />
+                        )}
+                        <span className="font-medium truncate">{goal.description}</span>
+                        {isItemGoal && (
+                          <Badge variant="secondary" className="text-xs h-4 px-1 flex-shrink-0">
+                            <Package className="h-3 w-3" />
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        Target: {goal.targetValue}
+                      </span>
+                    </div>
+                  </SelectItem>
+                )
+              })}
             </SelectContent>
           </Select>
         </div>
@@ -286,13 +315,28 @@ export function InlineGoalAssignment({
 
   // State 3: Goal assigned (show badge with edit)
   if (currentGoalId && hasSufficientRights) {
+    const isItemGoal = currentGoal?.goalType === "item" && currentGoal?.itemGoal
+    const itemGoal = currentGoal?.itemGoal
+
     return (
       <div className={cn("flex items-center gap-2", className)}>
         <div className="flex items-center gap-1 bg-blue-500/20 p-1.5 rounded text-xs group cursor-pointer hover:bg-blue-500/30 transition-colors">
           <CheckCircle2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+          {isItemGoal && itemGoal && (
+            <img
+              src={itemGoal.imageUrl}
+              alt={itemGoal.baseName}
+              className="h-5 w-5 object-contain shrink-0"
+            />
+          )}
           <span className="text-blue-500 font-medium truncate">
             {currentGoal?.description ?? "Goal"}
           </span>
+          {isItemGoal && (
+            <Badge variant="secondary" className="text-xs h-4 px-1">
+              <Package className="h-3 w-3" />
+            </Badge>
+          )}
           {currentValue !== null && currentValue !== undefined && (
             <Badge variant="secondary" className="text-xs ml-1">
               <Hash className="h-3 w-3 mr-0.5" />
@@ -326,13 +370,28 @@ export function InlineGoalAssignment({
 
   // State 4: Goal assigned but user doesn't have rights (read-only)
   if (currentGoalId && !hasSufficientRights) {
+    const isItemGoal = currentGoal?.goalType === "item" && currentGoal?.itemGoal
+    const itemGoal = currentGoal?.itemGoal
+
     return (
       <div className={cn("flex items-center gap-2", className)}>
         <div className="flex items-center gap-1 bg-blue-500/20 p-1.5 rounded text-xs">
           <CheckCircle2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+          {isItemGoal && itemGoal && (
+            <img
+              src={itemGoal.imageUrl}
+              alt={itemGoal.baseName}
+              className="h-5 w-5 object-contain shrink-0"
+            />
+          )}
           <span className="text-blue-500 font-medium truncate">
             {currentGoal?.description ?? "Goal"}
           </span>
+          {isItemGoal && (
+            <Badge variant="secondary" className="text-xs h-4 px-1">
+              <Package className="h-3 w-3" />
+            </Badge>
+          )}
           {currentValue !== null && currentValue !== undefined && (
             <Badge variant="secondary" className="text-xs ml-1">
               <Hash className="h-3 w-3 mr-0.5" />

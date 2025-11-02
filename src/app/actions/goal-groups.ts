@@ -29,7 +29,18 @@ export interface GoalTreeNode {
     parentGroupId: string | null
     description: string
     targetValue: number
+    goalType?: "generic" | "item"
     orderIndex: number
+    itemGoal?: {
+      id: string
+      goalId: string
+      itemId: number
+      baseName: string
+      exactVariant: string | null
+      imageUrl: string
+      createdAt: Date
+      updatedAt: Date
+    } | null
   }
   children?: GoalTreeNode[]
 }
@@ -268,6 +279,7 @@ export async function getGoalTree(tileId: string): Promise<GoalTreeNode[]> {
       with: {
         goalValues: true,
         teamProgress: true,
+        itemGoal: true,
       },
     })
 

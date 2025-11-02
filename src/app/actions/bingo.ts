@@ -5,6 +5,7 @@ import { db } from "@/server/db"
 import {
   bingos,
   goals,
+  itemGoals,
   teamGoalProgress,
   tiles,
   submissions,
@@ -184,6 +185,136 @@ export async function deleteGoal(goalId: string) {
   } catch (error) {
     console.error("Error deleting goal:", error)
     return { success: false, error: "Failed to delete goal" }
+  }
+}
+
+/**
+ * Create an item goal with associated item metadata
+ */
+export async function createItemGoal(
+  tileId: string,
+  itemId: number,
+  itemName: string,
+  baseName: string,
+  imageUrl: string,
+  targetValue: number,
+  exactVariant?: string | null
+) {
+  try {
+    // Create the goal first
+    const [newGoal] = await db
+      .insert(goals)
+      .values({
+        tileId,
+        description: itemName,
+        targetValue,
+        goalType: "item",
+      })
+      .returning()
+
+    if (!newGoal) {
+      return { success: false, error: "Failed to create goal" }
+    }
+
+    // Create the item goal metadata
+    const [itemGoalData] = await db
+      .insert(itemGoals)
+      .values({
+        goalId: newGoal.id,
+        itemId,
+        baseName,
+        exactVariant: exactVariant ?? null,
+        imageUrl,
+      })
+      .returning()
+
+    return { success: true, goal: newGoal, itemGoal: itemGoalData }
+  } catch (error) {
+    console.error("Error creating item goal:", error)
+    return { success: false, error: "Failed to create item goal" }
+  }
+}
+
+/**
+ * Get goal with item data if it's an item goal
+ */
+export async function getGoalWithItemData(goalId: string) {
+  try {
+    const goal = await db.query.goals.findFirst({
+      where: eq(goals.id, goalId),
+      with: {
+        itemGoal: true,
+      },
+    })
+
+    if (!goal) {
+      return { success: false, error: "Goal not found" }
+    }
+
+    return { success: true, goal }
+  } catch (error) {
+    console.error("Error getting goal with item data:", error)
+    return { success: false, error: "Failed to get goal" }
+  }
+}
+
+/**
+ * Update item goal metadata
+ */
+export async function updateItemGoal(
+  goalId: string,
+  itemId: number,
+  itemName: string,
+  baseName: string,
+  imageUrl: string,
+  exactVariant?: string | null
+) {
+  try {
+    // Update goal description
+    await db
+      .update(goals)
+      .set({
+        description: itemName,
+        updatedAt: new Date(),
+      })
+      .where(eq(goals.id, goalId))
+
+    // Update item goal metadata
+    const [updatedItemGoal] = await db
+      .update(itemGoals)
+      .set({
+        itemId,
+        baseName,
+        exactVariant: exactVariant ?? null,
+        imageUrl,
+        updatedAt: new Date(),
+      })
+      .where(eq(itemGoals.goalId, goalId))
+      .returning()
+
+    return { success: true, itemGoal: updatedItemGoal }
+  } catch (error) {
+    console.error("Error updating item goal:", error)
+    return { success: false, error: "Failed to update item goal" }
+  }
+}
+
+/**
+ * Get all item goals for a tile
+ */
+export async function getItemGoalsForTile(tileId: string) {
+  try {
+    const itemGoalsList = await db.query.goals.findMany({
+      where: and(eq(goals.tileId, tileId), eq(goals.goalType, "item")),
+      with: {
+        itemGoal: true,
+      },
+    })
+
+    return { success: true, goals: itemGoalsList }
+  } catch (error) {
+    console.error("Error getting item goals for tile:", error)
+    return { success: false, error: "Failed to get item goals" }
   }
 }
 

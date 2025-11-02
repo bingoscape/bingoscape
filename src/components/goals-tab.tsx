@@ -7,13 +7,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Trash2, Plus, Network, List } from "lucide-react"
+import { Trash2, Plus, Network, List, Package } from "lucide-react"
 import type { Tile, Goal } from "@/app/actions/events"
 import { addGoalValue, deleteGoalValue, type GoalValue } from "@/app/actions/goals"
 import { toast } from "@/hooks/use-toast"
 import { GoalTreeEditor } from "./goal-tree-editor"
 import { getGoalTree, type GoalTreeNode } from "@/app/actions/goal-groups"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { OsrsItemSearch } from "./osrs-item-search"
+import { createItemGoal } from "@/app/actions/bingo"
+import { parseItemName } from "osrs-item-data"
+import type { OsrsItem } from "@/types/osrs-items"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 interface GoalsTabProps {
   selectedTile: Tile | null
@@ -39,6 +44,9 @@ export function GoalsTab({
   const [goalValuesState, setGoalValuesState] = useState<Record<string, GoalValue[]>>({})
   const [viewMode, setViewMode] = useState<"tree" | "list">("tree")
   const [goalTree, setGoalTree] = useState<GoalTreeNode[]>([])
+  const [goalType, setGoalType] = useState<"generic" | "item">("generic")
+  const [selectedItem, setSelectedItem] = useState<OsrsItem | null>(null)
+  const [itemGoalTargetValue, setItemGoalTargetValue] = useState<number>(1)
 
   // Load goal tree when selectedTile changes
   useEffect(() => {
@@ -51,6 +59,51 @@ export function GoalsTab({
     if (!selectedTile?.id) return
     const tree = await getGoalTree(selectedTile.id)
     setGoalTree(tree)
+  }
+
+  const handleAddItemGoal = async () => {
+    if (!selectedTile?.id || !selectedItem) {
+      toast({
+        title: "Error",
+        description: "Please select an item",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const itemId = Array.isArray(selectedItem.id) ? selectedItem.id[0]! : selectedItem.id
+    const parsed = parseItemName(selectedItem.name)
+
+    const result = await createItemGoal(
+      selectedTile.id,
+      itemId,
+      selectedItem.name,
+      parsed.baseName,
+      selectedItem.imageUrl,
+      itemGoalTargetValue,
+      parsed.variant ?? null
+    )
+
+    if (result.success) {
+      toast({
+        title: "Item goal created",
+        description: `Goal for ${selectedItem.name} has been created.`,
+      })
+
+      // Reset form
+      setSelectedItem(null)
+      setItemGoalTargetValue(1)
+      setGoalType("generic")
+
+      // Reload goal tree
+      void loadGoalTree()
+    } else {
+      toast({
+        title: "Error",
+        description: result.error ?? "Failed to create item goal",
+        variant: "destructive",
+      })
+    }
   }
 
   // Initialize goal values state when selectedTile changes
@@ -176,13 +229,23 @@ export function GoalsTab({
           <div className="space-y-4">
             {selectedTile.goals.map((goal) => {
               const currentGoalValues = goalValuesState[goal.id] || goal.goalValues || []
+              const isItemGoal = goal.goalType === "item" && (goal as any).itemGoal
 
               return (
                 <Card key={goal.id} className="shadow-sm hover:shadow-md transition-shadow bg-card border-border goal-card">
                   <CardHeader className="pb-4">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <CardTitle className="text-base text-foreground">{goal.description}</CardTitle>
+                        <div className="flex items-center gap-2">
+                          {isItemGoal && (
+                            <img
+                              src={(goal as any).itemGoal.imageUrl}
+                              alt={(goal as any).itemGoal.baseName}
+                              className="h-8 w-8 object-contain flex-shrink-0"
+                            />
+                          )}
+                          <CardTitle className="text-base text-foreground">{goal.description}</CardTitle>
+                        </div>
                         <div className="flex items-center gap-2 mt-2">
                           <div className="px-2 py-1 bg-green-500 text-foreground rounded-full text-xs font-medium">
                             Target: {goal.targetValue}
@@ -324,37 +387,114 @@ export function GoalsTab({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="goalDescription" className="text-sm font-medium text-muted-foreground">
-                    Description
-                  </Label>
-                  <Input
-                    id="goalDescription"
-                    value={newGoal.description || ""}
-                    onChange={(e) => onNewGoalChange("description", e.target.value)}
-                    placeholder="Complete the task..."
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="targetValue" className="text-sm font-medium text-muted-foreground">
-                    Target Value
-                  </Label>
-                  <Input
-                    id="targetValue"
-                    type="number"
-                    value={newGoal.targetValue?.toString() || ""}
-                    onChange={(e) => onNewGoalChange("targetValue", Number.parseInt(e.target.value))}
-                    placeholder="1"
-                    className="mt-1"
-                  />
-                </div>
+              {/* Goal Type Selector */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-muted-foreground">Goal Type</Label>
+                <RadioGroup
+                  value={goalType}
+                  onValueChange={(value) => setGoalType(value as "generic" | "item")}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="generic" id="generic" />
+                    <Label htmlFor="generic" className="cursor-pointer font-normal">
+                      Generic Goal
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="item" id="item" />
+                    <Label htmlFor="item" className="cursor-pointer font-normal flex items-center gap-1">
+                      <Package className="h-4 w-4" />
+                      OSRS Item Goal
+                    </Label>
+                  </div>
+                </RadioGroup>
               </div>
-              <Button onClick={onAddGoal} className="w-full bg-green-500 hover:bg-green-600 text-foreground">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Goal
-              </Button>
+
+              {/* Generic Goal Form */}
+              {goalType === "generic" && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="goalDescription" className="text-sm font-medium text-muted-foreground">
+                        Description
+                      </Label>
+                      <Input
+                        id="goalDescription"
+                        value={newGoal.description || ""}
+                        onChange={(e) => onNewGoalChange("description", e.target.value)}
+                        placeholder="Complete the task..."
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="targetValue" className="text-sm font-medium text-muted-foreground">
+                        Target Value
+                      </Label>
+                      <Input
+                        id="targetValue"
+                        type="number"
+                        value={newGoal.targetValue?.toString() || ""}
+                        onChange={(e) => onNewGoalChange("targetValue", Number.parseInt(e.target.value))}
+                        placeholder="1"
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={onAddGoal} className="w-full bg-green-500 hover:bg-green-600 text-foreground">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Goal
+                  </Button>
+                </>
+              )}
+
+              {/* Item Goal Form */}
+              {goalType === "item" && (
+                <>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Select OSRS Item</Label>
+                      <div className="mt-1">
+                        <OsrsItemSearch
+                          onItemSelect={setSelectedItem}
+                          selectedItem={selectedItem}
+                          placeholder="Search for an item..."
+                        />
+                      </div>
+                      {selectedItem && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Any variant of {selectedItem.baseName} will count toward this goal
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="itemTargetValue" className="text-sm font-medium text-muted-foreground">
+                        Quantity Required
+                      </Label>
+                      <Input
+                        id="itemTargetValue"
+                        type="number"
+                        value={itemGoalTargetValue}
+                        onChange={(e) => setItemGoalTargetValue(Number.parseInt(e.target.value) || 1)}
+                        placeholder="1"
+                        min="1"
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Number of times this item must be obtained
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleAddItemGoal}
+                    disabled={!selectedItem}
+                    className="w-full bg-green-500 hover:bg-green-600 text-foreground"
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    Add Item Goal
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         )}

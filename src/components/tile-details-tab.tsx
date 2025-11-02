@@ -7,11 +7,12 @@ import type React from "react"
 import Image from "next/image"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { ForwardRefEditor } from "./forward-ref-editor"
 import type { Tile, Team } from "@/app/actions/events"
 import { Progress } from "@/components/ui/progress"
 import { AnimatedProgress } from "@/components/ui/animated-progress"
-import { Pencil, X, Zap, EyeOff, Search, ExternalLink, CheckCircle2, Clock, Network, List } from "lucide-react"
+import { Pencil, X, Zap, EyeOff, Search, ExternalLink, CheckCircle2, Clock, Network, List, Package } from "lucide-react"
 import Markdown from "react-markdown"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -602,12 +603,26 @@ function TileProgress({
                   goal.targetValue > 0 ? Math.min(100, (totalProgress / goal.targetValue) * 100) : 0
 
                 const isCompleted = approvedProgress >= goal.targetValue
+                const isItemGoal = goal.goalType === "item" && goal.itemGoal
+                const itemGoal = goal.itemGoal
 
                 return (
                   <div key={goal.id} className="space-y-3">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
+                        {isItemGoal && itemGoal && (
+                          <img
+                            src={itemGoal.imageUrl}
+                            alt={itemGoal.baseName}
+                            className="h-6 w-6 object-contain flex-shrink-0"
+                          />
+                        )}
                         <div className="font-medium text-foreground">{goal.description}</div>
+                        {isItemGoal && (
+                          <Badge variant="secondary" className="text-xs h-5 px-1.5 flex-shrink-0">
+                            <Package className="h-3 w-3" />
+                          </Badge>
+                        )}
                         {isCompleted && (
                           <div className="px-2 py-1 bg-green-500 text-foreground text-xs rounded-full font-medium">
                             Completed

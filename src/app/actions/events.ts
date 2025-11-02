@@ -97,11 +97,22 @@ export interface Goal {
   id: string
   description: string
   targetValue: number
+  goalType?: "generic" | "item"
   createdAt?: Date
   updatedAt?: Date
   tileId: string
   goalValues?: GoalValue[] // Make goalValues optional
   teamProgress?: TeamProgress[] // Make teamProgress optional
+  itemGoal?: {
+    id: string
+    goalId: string
+    itemId: number
+    baseName: string
+    exactVariant: string | null
+    imageUrl: string
+    createdAt: Date
+    updatedAt: Date
+  } | null
 }
 
 export interface Tile {

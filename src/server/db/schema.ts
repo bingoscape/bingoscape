@@ -130,6 +130,7 @@ export const eventRoleEnum = pgEnum("event_role", ["admin", "management", "parti
 export const registrationStatusEnum = pgEnum("registration_status", ["pending", "approved", "rejected"])
 export const bingoTypeEnum = pgEnum("bingo_type", ["standard", "progression"])
 export const logicalOperatorEnum = pgEnum("logical_operator", ["AND", "OR"])
+export const goalTypeEnum = pgEnum("goal_type", ["generic", "item"])
 
 export const events = createTable("events", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -334,6 +335,7 @@ export const goals = createTable("goals", {
   parentGroupId: uuid("parent_group_id").references(() => goalGroups.id, { onDelete: "cascade" }),
   description: text("description").notNull(),
   targetValue: integer("target_value").notNull(),
+  goalType: goalTypeEnum("goal_type").notNull().default("generic"),
   orderIndex: integer("order_index").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -357,6 +359,27 @@ export const goalValuesRelations = relations(goalValues, ({ one }) => ({
   }),
 }))
 
+export const itemGoals = createTable("item_goals", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  goalId: uuid("goal_id")
+    .notNull()
+    .unique()
+    .references(() => goals.id, { onDelete: "cascade" }),
+  itemId: integer("item_id").notNull(),
+  baseName: text("base_name").notNull(),
+  exactVariant: text("exact_variant"),
+  imageUrl: text("image_url").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const itemGoalsRelations = relations(itemGoals, ({ one }) => ({
+  goal: one(goals, {
+    fields: [itemGoals.goalId],
+    references: [goals.id],
+  }),
+}))
+
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 export const goalsRelations = relations(goals, ({ one, many }) => ({
   tile: one(tiles, {
@@ -370,6 +393,10 @@ export const goalsRelations = relations(goals, ({ one, many }) => ({
   }),
   teamProgress: many(teamGoalProgress),
   goalValues: many(goalValues),
+  itemGoal: one(itemGoals, {
+    fields: [goals.id],
+    references: [itemGoals.goalId],
+  }),
 }))
 
 export const teamTileSubmissions = createTable(
