@@ -16,6 +16,7 @@ export interface GoalGroup {
   parentGroupId: string | null
   name: string | null
   logicalOperator: "AND" | "OR"
+  minRequiredGoals: number
   orderIndex: number
   createdAt: Date
   updatedAt: Date
@@ -53,6 +54,7 @@ export async function createGoalGroup(
   tileId: string,
   logicalOperator: "AND" | "OR",
   parentGroupId?: string | null,
+  minRequiredGoals = 1,
 ) {
   try {
     // Get the next order index for this parent
@@ -70,6 +72,7 @@ export async function createGoalGroup(
         tileId,
         parentGroupId: parentGroupId || null,
         logicalOperator,
+        minRequiredGoals,
         orderIndex,
       })
       .returning()
@@ -84,19 +87,21 @@ export async function createGoalGroup(
 }
 
 /**
- * Update a goal group's properties (logical operator and/or name)
+ * Update a goal group's properties (logical operator, name, and/or minRequiredGoals)
  */
 export async function updateGoalGroup(
   groupId: string,
   updates: {
     logicalOperator?: "AND" | "OR"
     name?: string | null
+    minRequiredGoals?: number
   }
 ) {
   try {
     const updateData: {
       logicalOperator?: "AND" | "OR"
       name?: string | null
+      minRequiredGoals?: number
       updatedAt: Date
     } = {
       updatedAt: new Date(),
@@ -109,6 +114,10 @@ export async function updateGoalGroup(
     if (updates.name !== undefined) {
       // Trim and convert empty strings to null
       updateData.name = updates.name?.trim() || null
+    }
+
+    if (updates.minRequiredGoals !== undefined) {
+      updateData.minRequiredGoals = updates.minRequiredGoals
     }
 
     const [updatedGroup] = await db

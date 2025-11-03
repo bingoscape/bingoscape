@@ -80,8 +80,10 @@ async function evaluateGroup(groupId: string, teamId: string): Promise<GoalEvalu
   if (group.logicalOperator === "AND") {
     isComplete = children.length > 0 && children.every((child) => child.isComplete)
   } else {
-    // OR
-    isComplete = children.some((child) => child.isComplete)
+    // OR - check if at least minRequiredGoals are complete
+    const completedCount = children.filter((child) => child.isComplete).length
+    const minRequired = group.minRequiredGoals || 1 // Default to 1 for backwards compatibility
+    isComplete = completedCount >= minRequired
   }
 
   return {

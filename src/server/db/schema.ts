@@ -305,6 +305,7 @@ export const goalGroups = createTable("goal_groups", {
   parentGroupId: uuid("parent_group_id").references((): AnyPgColumn => goalGroups.id, { onDelete: "cascade" }),
   name: text("name"), // Optional custom name for the group
   logicalOperator: logicalOperatorEnum("logical_operator").notNull(),
+  minRequiredGoals: integer("min_required_goals").notNull().default(1), // For OR groups: minimum number of goals that must be completed
   orderIndex: integer("order_index").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

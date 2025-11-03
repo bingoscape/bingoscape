@@ -80,15 +80,17 @@ export function CompactGoalTree({
 
     // Apply logical operator
     let isComplete = false
+    const minRequired = (groupData.minRequiredGoals as number) || 1
+
     if (groupData.logicalOperator === "AND") {
       isComplete = totalChildren > 0 && completedCount === totalChildren
     } else {
-      // OR
-      isComplete = completedCount > 0
+      // OR - check if at least minRequiredGoals are complete
+      isComplete = completedCount >= minRequired
     }
 
-    const displayTotal = groupData.logicalOperator === "OR" ? 1 : totalChildren
-    const displayCompleted = groupData.logicalOperator === "OR" ? (isComplete ? 1 : 0) : completedCount
+    const displayTotal = groupData.logicalOperator === "OR" ? minRequired : totalChildren
+    const displayCompleted = completedCount
 
     return {
       ...node,

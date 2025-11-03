@@ -1,0 +1,1 @@
+ALTER TABLE "bingoscape-next_goal_groups" ADD COLUMN "min_required_goals" integer DEFAULT 1 NOT NULL;

@@ -114,6 +114,7 @@ export function GoalTreeEditor({
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showNewGroupDialog, setShowNewGroupDialog] = useState(false)
   const [newGroupOperator, setNewGroupOperator] = useState<"AND" | "OR">("AND")
+  const [newGroupMinRequired, setNewGroupMinRequired] = useState<number>(1)
   const [goalType, setGoalType] = useState<"generic" | "item">("generic")
   const [selectedItems, setSelectedItems] = useState<OsrsItem[]>([])
   const [itemGoalTargetValue, setItemGoalTargetValue] = useState<number>(1)
@@ -397,7 +398,7 @@ export function GoalTreeEditor({
   }
 
   const handleCreateGroup = async () => {
-    const result = await createGoalGroup(tileId, newGroupOperator, newGroupParentId)
+    const result = await createGoalGroup(tileId, newGroupOperator, newGroupParentId, newGroupMinRequired)
     if (result.success) {
       toast({
         title: "Group created",
@@ -406,6 +407,7 @@ export function GoalTreeEditor({
       setShowNewGroupDialog(false)
       setNewGroupParentId(null)
       setNewGroupOperator("AND")
+      setNewGroupMinRequired(1)
       onRefresh()
     } else {
       toast({
@@ -685,21 +687,42 @@ export function GoalTreeEditor({
           <div className="space-y-4 py-4">
             <div>
               <Label htmlFor="operator">Logical Operator</Label>
-              <Select value={newGroupOperator} onValueChange={(v) => setNewGroupOperator(v as "AND" | "OR")}>
+              <Select value={newGroupOperator} onValueChange={(v) => {
+                setNewGroupOperator(v as "AND" | "OR")
+                if (v === "AND") {
+                  setNewGroupMinRequired(1) // Reset to 1 when switching to AND
+                }
+              }}>
                 <SelectTrigger id="operator">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="AND">AND (all required)</SelectItem>
-                  <SelectItem value="OR">OR (any required)</SelectItem>
+                  <SelectItem value="OR">OR (configurable required)</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
                 {newGroupOperator === "AND"
                   ? "All goals in this group must be completed"
-                  : "At least one goal in this group must be completed"}
+                  : `At least ${newGroupMinRequired} goal${newGroupMinRequired !== 1 ? 's' : ''} in this group must be completed`}
               </p>
             </div>
+            {newGroupOperator === "OR" && (
+              <div>
+                <Label htmlFor="minRequired">Minimum Required Goals</Label>
+                <Input
+                  id="minRequired"
+                  type="number"
+                  min="1"
+                  value={newGroupMinRequired}
+                  onChange={(e) => setNewGroupMinRequired(Math.max(1, Number.parseInt(e.target.value) || 1))}
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  How many goals must be completed for this OR group to be satisfied
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNewGroupDialog(false)}>
@@ -748,9 +771,13 @@ function TreeNode({
   const [isEditingGroupName, setIsEditingGroupName] = useState(false)
   const [editGroupName, setEditGroupName] = useState("")
 
+  // Group minRequiredGoals editing state
+  const [isEditingMinRequired, setIsEditingMinRequired] = useState(false)
+  const [editMinRequired, setEditMinRequired] = useState<number>(1)
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({
     id: node.id,
-    disabled: !hasSufficientRights || isEditing || isEditingGroupName,
+    disabled: !hasSufficientRights || isEditing || isEditingGroupName || isEditingMinRequired,
   })
 
   const style = {
@@ -890,6 +917,46 @@ function TreeNode({
     }
   }
 
+  const handleStartMinRequiredEdit = () => {
+    if (node.type !== "group") return
+    const groupData = node.data as any
+    setEditMinRequired((groupData.minRequiredGoals as number) || 1)
+    setIsEditingMinRequired(true)
+  }
+
+  const handleCancelMinRequiredEdit = () => {
+    setIsEditingMinRequired(false)
+    setEditMinRequired(1)
+  }
+
+  const handleSaveMinRequired = async () => {
+    if (node.type !== "group") return
+    setIsSaving(true)
+
+    try {
+      const result = await updateGoalGroup(node.id, {
+        minRequiredGoals: editMinRequired,
+      })
+
+      if (result.success) {
+        toast({
+          title: "Group updated",
+          description: "Minimum required goals has been updated successfully.",
+        })
+        handleCancelMinRequiredEdit()
+        onRefresh()
+      } else {
+        toast({
+          title: "Error",
+          description: result.error ?? "Failed to update minimum required goals",
+          variant: "destructive",
+        })
+      }
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   if (node.type === "group") {
     const groupData = node.data as any
     return (
@@ -971,6 +1038,72 @@ function TreeNode({
                       <Badge variant={groupData.logicalOperator === "AND" ? "default" : "secondary"}>
                         {groupData.logicalOperator}
                       </Badge>
+                    )}
+                    {groupData.logicalOperator === "OR" && (
+                      <>
+                        {isEditingMinRequired ? (
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min="1"
+                              value={editMinRequired}
+                              onChange={(e) => setEditMinRequired(Math.max(1, Number.parseInt(e.target.value) || 1))}
+                              className="h-7 w-16 text-xs"
+                              autoFocus
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => {
+                                e.stopPropagation()
+                                if (e.key === "Enter") {
+                                  void handleSaveMinRequired()
+                                } else if (e.key === "Escape") {
+                                  handleCancelMinRequiredEdit()
+                                }
+                              }}
+                            />
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                void handleSaveMinRequired()
+                              }}
+                              disabled={isSaving}
+                              className="h-7 w-7 p-0"
+                            >
+                              {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCancelMinRequiredEdit()
+                              }}
+                              className="h-7 w-7 p-0"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <Badge variant="outline" className="text-xs">
+                              Min: {(groupData.minRequiredGoals as number) || 1}
+                            </Badge>
+                            {hasSufficientRights && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleStartMinRequiredEdit()
+                                }}
+                                className="h-6 w-6 p-0"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                   {hasSufficientRights && (
