@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect } from "react"
-import { Search, Loader2 } from "lucide-react"
+import { Search, Loader2, CheckSquare, Square, X } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
@@ -11,24 +11,29 @@ import type { OsrsItem } from "@/types/osrs-items"
 import { cn } from "@/lib/utils"
 
 interface OsrsItemSearchProps {
-  onItemSelect: (item: OsrsItem) => void
+  onItemSelect: (item: OsrsItem | OsrsItem[]) => void
   selectedItem?: OsrsItem | null
+  selectedItems?: OsrsItem[]
   placeholder?: string
   className?: string
   disabled?: boolean
+  multiSelect?: boolean
 }
 
 export function OsrsItemSearch({
   onItemSelect,
   selectedItem,
+  selectedItems = [],
   placeholder = "Search for an item...",
   className,
   disabled = false,
+  multiSelect = false,
 }: OsrsItemSearchProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<OsrsItem[]>([])
   const [loading, setLoading] = useState(false)
+  const [internalSelectedItems, setInternalSelectedItems] = useState<OsrsItem[]>(selectedItems)
 
   // Debounced search
   useEffect(() => {
@@ -61,7 +66,49 @@ export function OsrsItemSearch({
   }
 
   const handleSelect = (item: OsrsItem) => {
-    onItemSelect(item)
+    if (multiSelect) {
+      // Toggle item in multi-select mode
+      const itemId = Array.isArray(item.id) ? item.id[0] : item.id
+      const isSelected = internalSelectedItems.some(
+        (selectedItem) => {
+          const selectedId = Array.isArray(selectedItem.id) ? selectedItem.id[0] : selectedItem.id
+          return selectedId === itemId
+        }
+      )
+
+      const newSelection = isSelected
+        ? internalSelectedItems.filter((selectedItem) => {
+            const selectedId = Array.isArray(selectedItem.id) ? selectedItem.id[0] : selectedItem.id
+            return selectedId !== itemId
+          })
+        : [...internalSelectedItems, item]
+
+      setInternalSelectedItems(newSelection)
+      onItemSelect(newSelection)
+    } else {
+      // Single select mode
+      onItemSelect(item)
+      setOpen(false)
+      setQuery("")
+      setResults([])
+    }
+  }
+
+  const isItemSelected = (item: OsrsItem): boolean => {
+    if (!multiSelect) return false
+    const itemId = Array.isArray(item.id) ? item.id[0] : item.id
+    return internalSelectedItems.some((selectedItem) => {
+      const selectedId = Array.isArray(selectedItem.id) ? selectedItem.id[0] : selectedItem.id
+      return selectedId === itemId
+    })
+  }
+
+  const handleClearAll = () => {
+    setInternalSelectedItems([])
+    onItemSelect([])
+  }
+
+  const handleDone = () => {
     setOpen(false)
     setQuery("")
     setResults([])
@@ -77,7 +124,12 @@ export function OsrsItemSearch({
           className={cn("w-full justify-between", className)}
           disabled={disabled}
         >
-          {selectedItem ? (
+          {multiSelect && internalSelectedItems.length > 0 ? (
+            <div className="flex items-center gap-2">
+              <CheckSquare className="h-4 w-4 text-blue-500" />
+              <span className="truncate">{internalSelectedItems.length} item{internalSelectedItems.length !== 1 ? 's' : ''} selected</span>
+            </div>
+          ) : selectedItem && !multiSelect ? (
             <div className="flex items-center gap-2">
               <img
                 src={selectedItem.imageUrl}
@@ -119,6 +171,7 @@ export function OsrsItemSearch({
                   // Handle items with multiple IDs (use first ID as unique key)
                   const itemId = Array.isArray(item.id) ? item.id[0] : item.id
                   const uniqueKey = `${itemId}-${item.name}`
+                  const selected = isItemSelected(item)
 
                   return (
                     <CommandItem
@@ -128,6 +181,13 @@ export function OsrsItemSearch({
                       className="cursor-pointer"
                     >
                       <div className="flex items-center gap-3 w-full">
+                        {multiSelect && (
+                          selected ? (
+                            <CheckSquare className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                          ) : (
+                            <Square className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                          )
+                        )}
                         <img
                           src={item.imageUrl}
                           alt={item.name}
@@ -151,6 +211,26 @@ export function OsrsItemSearch({
               </CommandGroup>
             )}
           </CommandList>
+          {multiSelect && internalSelectedItems.length > 0 && (
+            <div className="flex items-center gap-2 p-2 border-t bg-muted/30">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearAll}
+                className="flex-1 text-xs h-8"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Clear All
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleDone}
+                className="flex-1 text-xs h-8"
+              >
+                Done
+              </Button>
+            </div>
+          )}
         </Command>
       </PopoverContent>
     </Popover>
@@ -178,8 +258,10 @@ export function OsrsItemSearchCompact({
       <div className={className}>
         <OsrsItemSearch
           onItemSelect={(item) => {
-            onItemSelect(item)
-            setShowSearch(false)
+            if (!Array.isArray(item)) {
+              onItemSelect(item)
+              setShowSearch(false)
+            }
           }}
           placeholder="Select an item..."
         />
@@ -192,8 +274,10 @@ export function OsrsItemSearchCompact({
       <div className={className}>
         <OsrsItemSearch
           onItemSelect={(item) => {
-            onItemSelect(item)
-            setShowSearch(false)
+            if (!Array.isArray(item)) {
+              onItemSelect(item)
+              setShowSearch(false)
+            }
           }}
           selectedItem={selectedItem}
         />

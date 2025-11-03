@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Trash2, Plus, Network, List, Package } from "lucide-react"
+import { Trash2, Plus, Network, List, Package, Loader2 } from "lucide-react"
 import type { Tile, Goal } from "@/app/actions/events"
 import { addGoalValue, deleteGoalValue, type GoalValue } from "@/app/actions/goals"
 import { toast } from "@/hooks/use-toast"
@@ -45,8 +45,9 @@ export function GoalsTab({
   const [viewMode, setViewMode] = useState<"tree" | "list">("tree")
   const [goalTree, setGoalTree] = useState<GoalTreeNode[]>([])
   const [goalType, setGoalType] = useState<"generic" | "item">("generic")
-  const [selectedItem, setSelectedItem] = useState<OsrsItem | null>(null)
+  const [selectedItems, setSelectedItems] = useState<OsrsItem[]>([])
   const [itemGoalTargetValue, setItemGoalTargetValue] = useState<number>(1)
+  const [isCreatingBulk, setIsCreatingBulk] = useState(false)
 
   // Load goal tree when selectedTile changes
   useEffect(() => {
@@ -62,48 +63,70 @@ export function GoalsTab({
   }
 
   const handleAddItemGoal = async () => {
-    if (!selectedTile?.id || !selectedItem) {
+    if (!selectedTile?.id || selectedItems.length === 0) {
       toast({
         title: "Error",
-        description: "Please select an item",
+        description: "Please select at least one item",
         variant: "destructive",
       })
       return
     }
 
-    const itemId = Array.isArray(selectedItem.id) ? selectedItem.id[0]! : selectedItem.id
-    const parsed = parseItemName(selectedItem.name)
+    setIsCreatingBulk(true)
+    let successCount = 0
+    let failCount = 0
 
-    const result = await createItemGoal(
-      selectedTile.id,
-      itemId,
-      selectedItem.name,
-      parsed.baseName,
-      selectedItem.imageUrl,
-      itemGoalTargetValue,
-      parsed.variant ?? null
-    )
+    // Create goals for each selected item
+    for (const selectedItem of selectedItems) {
+      const itemId = Array.isArray(selectedItem.id) ? selectedItem.id[0]! : selectedItem.id
+      const parsed = parseItemName(selectedItem.name)
 
-    if (result.success) {
+      const result = await createItemGoal(
+        selectedTile.id,
+        itemId,
+        selectedItem.name,
+        parsed.baseName,
+        selectedItem.imageUrl,
+        itemGoalTargetValue,
+        parsed.variant ?? null
+      )
+
+      if (result.success) {
+        successCount++
+      } else {
+        failCount++
+      }
+    }
+
+    setIsCreatingBulk(false)
+
+    // Show summary toast
+    if (failCount === 0) {
       toast({
-        title: "Item goal created",
-        description: `Goal for ${selectedItem.name} has been created.`,
+        title: "Item goals created",
+        description: `Successfully created ${successCount} item goal${successCount !== 1 ? 's' : ''}.`,
       })
-
-      // Reset form
-      setSelectedItem(null)
-      setItemGoalTargetValue(1)
-      setGoalType("generic")
-
-      // Reload goal tree
-      void loadGoalTree()
-    } else {
+    } else if (successCount === 0) {
       toast({
         title: "Error",
-        description: result.error ?? "Failed to create item goal",
+        description: `Failed to create all ${failCount} item goals.`,
         variant: "destructive",
       })
+    } else {
+      toast({
+        title: "Partially completed",
+        description: `Created ${successCount} goal${successCount !== 1 ? 's' : ''}, ${failCount} failed.`,
+        variant: "default",
+      })
     }
+
+    // Reset form
+    setSelectedItems([])
+    setItemGoalTargetValue(1)
+    setGoalType("generic")
+
+    // Reload goal tree
+    void loadGoalTree()
   }
 
   // Initialize goal values state when selectedTile changes
@@ -453,17 +476,24 @@ export function GoalsTab({
                 <>
                   <div className="space-y-4">
                     <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Select OSRS Item</Label>
+                      <Label className="text-sm font-medium text-muted-foreground">Select OSRS Items</Label>
                       <div className="mt-1">
                         <OsrsItemSearch
-                          onItemSelect={setSelectedItem}
-                          selectedItem={selectedItem}
-                          placeholder="Search for an item..."
+                          onItemSelect={(items) => {
+                            if (Array.isArray(items)) {
+                              setSelectedItems(items)
+                            } else {
+                              setSelectedItems([items])
+                            }
+                          }}
+                          selectedItems={selectedItems}
+                          placeholder="Search for items..."
+                          multiSelect={true}
                         />
                       </div>
-                      {selectedItem && (
+                      {selectedItems.length > 0 && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          Any variant of {selectedItem.baseName} will count toward this goal
+                          {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected - a separate goal will be created for each item
                         </p>
                       )}
                     </div>
@@ -487,11 +517,20 @@ export function GoalsTab({
                   </div>
                   <Button
                     onClick={handleAddItemGoal}
-                    disabled={!selectedItem}
+                    disabled={selectedItems.length === 0 || isCreatingBulk}
                     className="w-full bg-green-500 hover:bg-green-600 text-foreground"
                   >
-                    <Package className="h-4 w-4 mr-2" />
-                    Add Item Goal
+                    {isCreatingBulk ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Creating {selectedItems.length} Goal{selectedItems.length !== 1 ? 's' : ''}...
+                      </>
+                    ) : (
+                      <>
+                        <Package className="h-4 w-4 mr-2" />
+                        Add Item Goal{selectedItems.length > 1 ? 's' : ''}
+                      </>
+                    )}
                   </Button>
                 </>
               )}

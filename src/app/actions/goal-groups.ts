@@ -14,6 +14,7 @@ export interface GoalGroup {
   id: string
   tileId: string
   parentGroupId: string | null
+  name: string | null
   logicalOperator: "AND" | "OR"
   orderIndex: number
   createdAt: Date
@@ -83,16 +84,36 @@ export async function createGoalGroup(
 }
 
 /**
- * Update a goal group's logical operator
+ * Update a goal group's properties (logical operator and/or name)
  */
-export async function updateGoalGroup(groupId: string, logicalOperator: "AND" | "OR") {
+export async function updateGoalGroup(
+  groupId: string,
+  updates: {
+    logicalOperator?: "AND" | "OR"
+    name?: string | null
+  }
+) {
   try {
+    const updateData: {
+      logicalOperator?: "AND" | "OR"
+      name?: string | null
+      updatedAt: Date
+    } = {
+      updatedAt: new Date(),
+    }
+
+    if (updates.logicalOperator !== undefined) {
+      updateData.logicalOperator = updates.logicalOperator
+    }
+
+    if (updates.name !== undefined) {
+      // Trim and convert empty strings to null
+      updateData.name = updates.name?.trim() || null
+    }
+
     const [updatedGroup] = await db
       .update(goalGroups)
-      .set({
-        logicalOperator,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(goalGroups.id, groupId))
       .returning()
 
@@ -261,6 +282,82 @@ export async function reorderItems(
   } catch (error) {
     console.error("Error reordering items:", error)
     return { success: false, error: "Failed to reorder items" }
+  }
+}
+
+/**
+ * Move multiple goals and/or groups to a target parent
+ */
+export async function moveMultipleItems(
+  items: Array<{ id: string; type: "goal" | "group" }>,
+  targetParentId: string | null,
+) {
+  try {
+    let successCount = 0
+    let failCount = 0
+    const errors: string[] = []
+
+    await db.transaction(async (tx) => {
+      for (const item of items) {
+        try {
+          if (item.type === "goal") {
+            // Move goal
+            await tx
+              .update(goals)
+              .set({
+                parentGroupId: targetParentId,
+                updatedAt: new Date(),
+              })
+              .where(eq(goals.id, item.id))
+            successCount++
+          } else {
+            // Move group - check for circular reference first
+            if (targetParentId) {
+              const isCircular = await checkCircularReference(item.id, targetParentId)
+              if (isCircular) {
+                errors.push(`Cannot move group ${item.id} - would create circular reference`)
+                failCount++
+                continue
+              }
+            }
+
+            await tx
+              .update(goalGroups)
+              .set({
+                parentGroupId: targetParentId,
+                updatedAt: new Date(),
+              })
+              .where(eq(goalGroups.id, item.id))
+            successCount++
+          }
+        } catch (error) {
+          console.error(`Error moving item ${item.id}:`, error)
+          failCount++
+          errors.push(`Failed to move ${item.type} ${item.id}`)
+        }
+      }
+    })
+
+    revalidatePath("/events/[id]/bingos/[bingoId]", "page")
+
+    if (failCount === 0) {
+      return { success: true, movedCount: successCount }
+    } else if (successCount === 0) {
+      return {
+        success: false,
+        error: errors.join(", ") || "Failed to move all items",
+      }
+    } else {
+      return {
+        success: true,
+        movedCount: successCount,
+        failedCount: failCount,
+        errors,
+      }
+    }
+  } catch (error) {
+    console.error("Error moving multiple items:", error)
+    return { success: false, error: "Failed to move items" }
   }
 }
 

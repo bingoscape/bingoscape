@@ -1,0 +1,1 @@
+ALTER TABLE "bingoscape-next_goal_groups" ADD COLUMN "name" text;

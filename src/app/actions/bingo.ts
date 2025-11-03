@@ -189,6 +189,53 @@ export async function deleteGoal(goalId: string) {
 }
 
 /**
+ * Update a goal's description and/or target value
+ */
+export async function updateGoal(
+  goalId: string,
+  updates: {
+    description?: string
+    targetValue?: number
+  }
+) {
+  try {
+    // Validate inputs
+    if (updates.targetValue !== undefined && updates.targetValue <= 0) {
+      return { success: false, error: "Target value must be greater than 0" }
+    }
+
+    if (updates.description !== undefined && updates.description.trim() === "") {
+      return { success: false, error: "Description cannot be empty" }
+    }
+
+    // Build update object
+    const updateData: Partial<typeof goals.$inferInsert> & { updatedAt: Date } = {
+      updatedAt: new Date(),
+    }
+
+    if (updates.description !== undefined) {
+      updateData.description = updates.description.trim()
+    }
+
+    if (updates.targetValue !== undefined) {
+      updateData.targetValue = updates.targetValue
+    }
+
+    // Update the goal
+    const [updatedGoal] = await db
+      .update(goals)
+      .set(updateData)
+      .where(eq(goals.id, goalId))
+      .returning()
+
+    return { success: true, goal: updatedGoal }
+  } catch (error) {
+    console.error("Error updating goal:", error)
+    return { success: false, error: "Failed to update goal" }
+  }
+}
+
+/**
  * Create an item goal with associated item metadata
  */
 export async function createItemGoal(
@@ -267,16 +314,24 @@ export async function updateItemGoal(
   itemName: string,
   baseName: string,
   imageUrl: string,
-  exactVariant?: string | null
+  exactVariant?: string | null,
+  targetValue?: number
 ) {
   try {
-    // Update goal description
+    // Build goal update object
+    const goalUpdate: Partial<typeof goals.$inferInsert> & { updatedAt: Date } = {
+      description: itemName,
+      updatedAt: new Date(),
+    }
+
+    if (targetValue !== undefined && targetValue > 0) {
+      goalUpdate.targetValue = targetValue
+    }
+
+    // Update goal description and optionally target value
     await db
       .update(goals)
-      .set({
-        description: itemName,
-        updatedAt: new Date(),
-      })
+      .set(goalUpdate)
       .where(eq(goals.id, goalId))
 
     // Update item goal metadata

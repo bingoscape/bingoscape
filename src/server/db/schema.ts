@@ -303,6 +303,7 @@ export const goalGroups = createTable("goal_groups", {
     .references(() => tiles.id, { onDelete: "cascade" }),
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
   parentGroupId: uuid("parent_group_id").references((): AnyPgColumn => goalGroups.id, { onDelete: "cascade" }),
+  name: text("name"), // Optional custom name for the group
   logicalOperator: logicalOperatorEnum("logical_operator").notNull(),
   orderIndex: integer("order_index").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
