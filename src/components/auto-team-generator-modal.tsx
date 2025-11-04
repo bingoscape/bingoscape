@@ -21,7 +21,9 @@ import { toast } from "@/hooks/use-toast"
 import { createTeam, addUserToTeam } from "@/app/actions/team"
 import { canUseBalancedGeneration, generateBalancedTeams } from "@/app/actions/team-balancing"
 import { calculateMetadataCoverage } from "@/app/actions/player-metadata"
-import { Loader2, Users, Sparkles, Shuffle, Info } from "lucide-react"
+import { Loader2, Users, Sparkles, Shuffle, Info, ChevronDown, ChevronUp, HelpCircle } from "lucide-react"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 type Participant = {
   id: string
@@ -72,6 +74,14 @@ export function AutoTeamGeneratorModal({
     skillLevel: 0.2,
   })
 
+  // Simulated Annealing configuration
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
+  const [saConfig, setSaConfig] = useState({
+    iterations: 1000,
+    initialTemperature: 1.0,
+    finalTemperature: 0.001,
+  })
+
   // Check if balanced generation is available when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -119,13 +129,14 @@ export function AutoTeamGeneratorModal({
 
     try {
       if (generationMode === "balanced") {
-        // Use balanced generation algorithm
+        // Use balanced generation algorithm with simulated annealing
         const result = await generateBalancedTeams(eventId, {
           generationMethod,
           teamSize: generationMethod === "teamSize" ? teamSize : undefined,
           teamCount: generationMethod === "teamCount" ? teamCount : undefined,
           teamNamePrefix,
           weights,
+          simulatedAnnealing: saConfig,
         })
 
         await onTeamsGenerated()
@@ -240,7 +251,7 @@ export function AutoTeamGeneratorModal({
             <div className="rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-800 dark:bg-green-950">
               <p className="text-sm text-green-900 dark:text-green-100">
                 <Sparkles className="inline h-4 w-4 mr-1" />
-                Balanced mode uses player metadata to create skill-balanced teams with snake draft algorithm.
+                Balanced mode uses player metadata to create skill-balanced teams with simulated annealing optimization.
               </p>
             </div>
 
@@ -324,6 +335,157 @@ export function AutoTeamGeneratorModal({
                 </div>
               </div>
             </div>
+
+            {/* Advanced Settings (Simulated Annealing) */}
+            <Collapsible open={showAdvancedSettings} onOpenChange={setShowAdvancedSettings}>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    Advanced Settings (Simulated Annealing)
+                  </span>
+                  {showAdvancedSettings ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </Button>
+              </CollapsibleTrigger>
+
+              <CollapsibleContent className="mt-4">
+                <div className="space-y-4 rounded-lg border p-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">Optimization Quality</Label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSaConfig({ iterations: 1000, initialTemperature: 1.0, finalTemperature: 0.001 })}
+                    >
+                      Reset
+                    </Button>
+                  </div>
+
+                  {/* Quality Presets */}
+                  <div className="grid grid-cols-4 gap-2">
+                    <Button
+                      variant={saConfig.iterations === 500 ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSaConfig({ iterations: 500, initialTemperature: 1.0, finalTemperature: 0.01 })}
+                    >
+                      Fast
+                    </Button>
+                    <Button
+                      variant={saConfig.iterations === 1000 ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSaConfig({ iterations: 1000, initialTemperature: 1.0, finalTemperature: 0.001 })}
+                    >
+                      Default
+                    </Button>
+                    <Button
+                      variant={saConfig.iterations === 2500 ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSaConfig({ iterations: 2500, initialTemperature: 2.0, finalTemperature: 0.0005 })}
+                    >
+                      High Quality
+                    </Button>
+                    <Button
+                      variant={saConfig.iterations === 5000 ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSaConfig({ iterations: 5000, initialTemperature: 3.0, finalTemperature: 0.0001 })}
+                    >
+                      Maximum
+                    </Button>
+                  </div>
+
+                  <div className="text-xs text-muted-foreground bg-secondary/30 p-2 rounded">
+                    <Info className="inline h-3 w-3 mr-1" />
+                    More iterations produce better team balance but take longer to compute. Default is recommended for most cases.
+                  </div>
+
+                  {/* Iterations Slider */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm">Iterations</Label>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              Number of optimization attempts. Higher values explore more team configurations for better balance.
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <span className="text-sm font-medium">{saConfig.iterations}</span>
+                    </div>
+                    <Slider
+                      value={[saConfig.iterations]}
+                      onValueChange={([value]) => setSaConfig((prev) => ({ ...prev, iterations: value! }))}
+                      min={500}
+                      max={5000}
+                      step={100}
+                    />
+                  </div>
+
+                  {/* Initial Temperature Slider */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm">Initial Temperature</Label>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              Starting exploration level. Higher values allow more radical changes early in optimization.
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <span className="text-sm font-medium">{saConfig.initialTemperature.toFixed(1)}</span>
+                    </div>
+                    <Slider
+                      value={[saConfig.initialTemperature * 10]}
+                      onValueChange={([value]) => setSaConfig((prev) => ({ ...prev, initialTemperature: value! / 10 }))}
+                      min={1}
+                      max={50}
+                      step={1}
+                    />
+                  </div>
+
+                  {/* Final Temperature Slider */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm">Final Temperature</Label>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              Ending precision level. Lower values make fine-tuned adjustments at the end of optimization.
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <span className="text-sm font-medium">{saConfig.finalTemperature.toFixed(4)}</span>
+                    </div>
+                    <Slider
+                      value={[saConfig.finalTemperature * 10000]}
+                      onValueChange={([value]) => setSaConfig((prev) => ({ ...prev, finalTemperature: value! / 10000 }))}
+                      min={1}
+                      max={1000}
+                      step={1}
+                    />
+                  </div>
+
+                  {/* Estimated time indicator */}
+                  <div className="text-xs text-muted-foreground">
+                    Estimated processing time: {saConfig.iterations < 1000 ? "~1s" : saConfig.iterations < 2500 ? "~2-3s" : saConfig.iterations < 4000 ? "~4-5s" : "~6-8s"}
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </TabsContent>
         </Tabs>
 

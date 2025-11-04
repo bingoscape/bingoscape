@@ -24,6 +24,8 @@ import { DndContext, DragOverlay, useDraggable, useDroppable } from "@dnd-kit/co
 import { restrictToWindowEdges } from "@dnd-kit/modifiers"
 import { AutoTeamGeneratorModal } from "./auto-team-generator-modal"
 import { PlayerMetadataModal } from "./player-metadata-modal"
+import { TeamStatisticsDisplay } from "./team-statistics-display"
+import { getEventTeamStatistics, type EventTeamStatistics } from "@/app/actions/team-statistics"
 
 type TeamMember = {
   user: {
@@ -403,6 +405,8 @@ export function TeamManagement({ eventId }: { eventId: string }) {
     userName: string | null
     runescapeName: string | null
   } | null>(null)
+  const [statistics, setStatistics] = useState<EventTeamStatistics | null>(null)
+  const [statisticsLoading, setStatisticsLoading] = useState(false)
 
   // Get unassigned participants
   const unassignedParticipants = useMemo(() => {
@@ -424,6 +428,11 @@ export function TeamManagement({ eventId }: { eventId: string }) {
       ])
       setTeams(fetchedTeams)
       setParticipants(fetchedParticipants)
+
+      // Fetch statistics if teams exist
+      if (fetchedTeams.length > 0) {
+        void fetchStatistics()
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -432,6 +441,24 @@ export function TeamManagement({ eventId }: { eventId: string }) {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchStatistics = async () => {
+    if (teams.length === 0) {
+      setStatistics(null)
+      return
+    }
+
+    setStatisticsLoading(true)
+    try {
+      const stats = await getEventTeamStatistics(eventId)
+      setStatistics(stats)
+    } catch (error) {
+      console.error("Failed to fetch team statistics:", error)
+      // Don't show error toast for statistics - it's not critical
+    } finally {
+      setStatisticsLoading(false)
     }
   }
 
@@ -723,6 +750,11 @@ export function TeamManagement({ eventId }: { eventId: string }) {
             Auto-Generate Teams
           </Button>
         </div>
+
+        {/* Team Statistics Display */}
+        {teams.length > 0 && statistics && (
+          <TeamStatisticsDisplay statistics={statistics} isLoading={statisticsLoading} />
+        )}
 
         {/* Unassigned participants pool */}
         <UnassignedParticipantsPool participants={unassignedParticipants} onEditMetadata={handleEditMetadata} />
