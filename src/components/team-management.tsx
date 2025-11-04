@@ -308,20 +308,19 @@ function TeamCard({
         )}
 
         {/* Team Statistics Footer */}
-        {teamStats && (
-          <div className="mt-4 pt-4 border-t">
-            <div className="flex flex-wrap gap-2">
-              {/* Team Size */}
-              <TeamStatBadge
-                icon={Users}
-                label="members"
-                value={String(teamStats.memberCount)}
-                variant="secondary"
-                tooltip="Number of team members"
-              />
+        <div className="mt-4 pt-4 border-t">
+          <div className="flex flex-wrap gap-2">
+            {/* Team Size - always show */}
+            <TeamStatBadge
+              icon={Users}
+              label="members"
+              value={String(team.teamMembers.length)}
+              variant="secondary"
+              tooltip="Number of team members"
+            />
 
-              {/* Average EHP */}
-              {teamStats.averageEHP !== null && (
+            {/* Average EHP */}
+            {teamStats?.averageEHP !== null && teamStats?.averageEHP !== undefined && (
                 <TeamStatBadge
                   icon={TrendingUp}
                   label="EHP"
@@ -338,7 +337,7 @@ function TeamCard({
               )}
 
               {/* Average EHB */}
-              {teamStats.averageEHB !== null && (
+              {teamStats?.averageEHB !== null && teamStats?.averageEHB !== undefined && (
                 <TeamStatBadge
                   icon={Target}
                   label="EHB"
@@ -355,22 +354,24 @@ function TeamCard({
               )}
 
               {/* Metadata Coverage */}
-              <TeamStatBadge
-                icon={CheckCircle2}
-                label="coverage"
-                value={`${teamStats.metadataCoverage.toFixed(0)}%`}
-                variant={
-                  teamStats.metadataCoverage >= 75
-                    ? "default"
-                    : teamStats.metadataCoverage >= 50
-                    ? "secondary"
-                    : "destructive"
-                }
-                tooltip={`${teamStats.membersWithMetadata} of ${teamStats.memberCount} members have complete metadata`}
-              />
+              {teamStats && (
+                <TeamStatBadge
+                  icon={CheckCircle2}
+                  label="coverage"
+                  value={`${teamStats.metadataCoverage.toFixed(0)}%`}
+                  variant={
+                    teamStats.metadataCoverage >= 75
+                      ? "default"
+                      : teamStats.metadataCoverage >= 50
+                      ? "secondary"
+                      : "destructive"
+                  }
+                  tooltip={`${teamStats.membersWithMetadata} of ${teamStats.memberCount} members have complete metadata`}
+                />
+              )}
 
               {/* Balance Indicator */}
-              {eventAvgEHP && eventAvgEHB && teamStats.averageEHP !== null && teamStats.averageEHB !== null && (
+              {eventAvgEHP && eventAvgEHB && teamStats?.averageEHP !== null && teamStats?.averageEHP !== undefined && teamStats?.averageEHB !== null && teamStats?.averageEHB !== undefined && (
                 <TeamStatBadge
                   icon={Scale}
                   label="balance"
@@ -394,7 +395,6 @@ function TeamCard({
               )}
             </div>
           </div>
-        )}
       </CardContent>
     </Card>
   )
@@ -580,17 +580,13 @@ export function TeamManagement({ eventId }: { eventId: string }) {
   }
 
   const fetchStatistics = async () => {
-    if (teams.length === 0) {
-      setStatistics(null)
-      return
-    }
-
     setStatisticsLoading(true)
     try {
       const stats = await getEventTeamStatistics(eventId)
       setStatistics(stats)
     } catch (error) {
       console.error("Failed to fetch team statistics:", error)
+      setStatistics(null)
       // Don't show error toast for statistics - it's not critical
     } finally {
       setStatisticsLoading(false)
@@ -894,6 +890,12 @@ export function TeamManagement({ eventId }: { eventId: string }) {
             const teamStats = statistics?.teams.find(s => s.teamId === team.id)
             const eventAvgEHP = statistics ? statistics.teams.reduce((sum, t) => sum + (t.averageEHP ?? 0), 0) / statistics.teams.filter(t => t.averageEHP !== null).length : undefined
             const eventAvgEHB = statistics ? statistics.teams.reduce((sum, t) => sum + (t.averageEHB ?? 0), 0) / statistics.teams.filter(t => t.averageEHB !== null).length : undefined
+
+            // Debug logging
+            if (team.teamMembers.length > 0 && !teamStats) {
+              console.log('Team has members but no stats:', team.id, team.name)
+              console.log('Available statistics:', statistics?.teams.map(t => t.teamId))
+            }
 
             return (
               <TeamCard
