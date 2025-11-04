@@ -132,7 +132,7 @@ export function AutoTeamGeneratorModal({
 
         toast({
           title: "Balanced teams generated",
-          description: `Successfully created ${result.teamsCreated} balanced teams with ${result.participantsAssigned} participants. Average score: ${(result.averageScore * 100).toFixed(1)}`,
+          description: `Successfully created ${result.teamsCreated} balanced teams with ${result.participantsAssigned} participants. Balance score: ${result.objectiveScore.toFixed(3)} (lower is better)`,
         })
       } else {
         // Use random generation (existing logic)

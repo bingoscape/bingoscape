@@ -1,7 +1,7 @@
 "use server"
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
-import { teams, teamMembers, eventParticipants, users } from "@/server/db/schema"
+import { teams, teamMembers, eventParticipants, users, playerMetadata } from "@/server/db/schema"
 import { eq, and, not, exists } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 
@@ -22,7 +22,29 @@ export async function getTeamsByEventId(eventId: string) {
       },
     },
   })
-  return eventTeams
+
+  // Fetch metadata status for all team members
+  const metadataRecords = await db.query.playerMetadata.findMany({
+    where: and(
+      eq(playerMetadata.eventId, eventId)
+    ),
+  })
+
+  const metadataMap = new Map(metadataRecords.map(m => [m.userId, true]))
+
+  // Add hasMetadata flag to team members
+  const teamsWithMetadata = eventTeams.map(team => ({
+    ...team,
+    teamMembers: team.teamMembers.map(member => ({
+      ...member,
+      user: {
+        ...member.user,
+        hasMetadata: metadataMap.has(member.user.id),
+      },
+    })),
+  }))
+
+  return teamsWithMetadata
 }
 
 export async function addUserToTeam(teamId: string, userId: string) {
@@ -85,7 +107,20 @@ export async function getEventParticipants(eventId: string) {
       ),
     )
 
-  return participants
+  // Fetch metadata status for all participants
+  const metadataRecords = await db.query.playerMetadata.findMany({
+    where: eq(playerMetadata.eventId, eventId),
+  })
+
+  const metadataMap = new Map(metadataRecords.map(m => [m.userId, true]))
+
+  // Add hasMetadata flag to participants
+  const participantsWithMetadata = participants.map(participant => ({
+    ...participant,
+    hasMetadata: metadataMap.has(participant.id),
+  }))
+
+  return participantsWithMetadata
 }
 
 export async function updateTeamName(teamId: string, newName: string) {

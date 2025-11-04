@@ -17,7 +17,7 @@ import {
   updateTeamName,
 } from "@/app/actions/team"
 import { toast } from "@/hooks/use-toast"
-import { Edit2, Trash2, UserPlus, UserMinus, Shield, ShieldOff, Users, Shuffle, GripVertical, User } from "lucide-react"
+import { Edit2, Trash2, UserPlus, UserMinus, Shield, ShieldOff, Users, Shuffle, GripVertical, User, CheckCircle2, AlertCircle } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { DndContext, DragOverlay, useDraggable, useDroppable } from "@dnd-kit/core"
@@ -31,6 +31,7 @@ type TeamMember = {
     name: string | null
     runescapeName: string | null
     image: string | null
+    hasMetadata?: boolean
   }
   isLeader: boolean
 }
@@ -46,6 +47,7 @@ type Participant = {
   name: string | null
   runescapeName: string | null
   image: string | null
+  hasMetadata?: boolean
 }
 
 // Draggable Team Member component
@@ -95,6 +97,22 @@ function DraggableMember({
           <User className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
         </button>
         {member.isLeader && <Shield className="h-4 w-4 text-yellow-500" aria-label="Team Leader" />}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex-shrink-0">
+                {member.user.hasMetadata ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-600" aria-label="Metadata configured" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 text-orange-500" aria-label="Metadata missing" />
+                )}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              {member.user.hasMetadata ? "Player metadata configured" : "Player metadata not configured"}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       <div className="flex space-x-1">
         <TooltipProvider>
@@ -350,6 +368,22 @@ function DraggableUnassignedParticipant({
         <span className="text-sm truncate group-hover:text-primary">{participant.runescapeName ?? participant.name}</span>
         <User className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
       </button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex-shrink-0">
+              {participant.hasMetadata ? (
+                <CheckCircle2 className="h-4 w-4 text-green-600" aria-label="Metadata configured" />
+              ) : (
+                <AlertCircle className="h-4 w-4 text-orange-500" aria-label="Metadata missing" />
+              )}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            {participant.hasMetadata ? "Player metadata configured" : "Player metadata not configured"}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </li>
   )
 }
