@@ -21,9 +21,11 @@ import { toast } from "@/hooks/use-toast"
 import { createTeam, addUserToTeam } from "@/app/actions/team"
 import { canUseBalancedGeneration, generateBalancedTeams } from "@/app/actions/team-balancing"
 import { calculateMetadataCoverage } from "@/app/actions/player-metadata"
+import { SA_PRESETS, estimateRuntime } from "@/lib/simulated-annealing-config"
 import { Loader2, Users, Sparkles, Shuffle, Info, ChevronDown, ChevronUp, HelpCircle } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 type Participant = {
   id: string
@@ -66,21 +68,90 @@ export function AutoTeamGeneratorModal({
   const [canUseBalanced, setCanUseBalanced] = useState(false)
   const [metadataCoverage, setMetadataCoverage] = useState(0)
   const [loadingCoverage, setLoadingCoverage] = useState(false)
-  const [weights, setWeights] = useState({
+
+  // Legacy weights for participant scoring (not used in SA, kept for backward compat)
+  const legacyWeights = {
     ehp: 0.2,
     ehb: 0.2,
     timezone: 0.2,
     dailyHours: 0.2,
     skillLevel: 0.2,
-  })
+  }
 
   // Simulated Annealing configuration
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
+  const [configPreset, setConfigPreset] = useState<'small' | 'medium' | 'large' | 'custom'>('medium')
   const [saConfig, setSaConfig] = useState({
-    iterations: 1000,
+    // Annealing schedule
+    iterations: 20000,
     initialTemperature: 1.0,
-    finalTemperature: 0.001,
+    finalTemperature: 0.0001,
+
+    // Termination
+    randomSeed: undefined as number | undefined,
+    stagnationLimit: 5000,
+
+    // Variance weights
+    varianceWeights: {
+      timezone: 2.0,
+      ehp: 1.0,
+      ehb: 1.0,
+      dailyHours: 1.0,
+      teamSize: 1.0,
+    },
+
+    // Move operators
+    moves: {
+      swapProbability: 0.7,
+      moveProbability: 0.3,
+    },
   })
+
+  // Helper: Handle preset change
+  const handlePresetChange = (preset: 'small' | 'medium' | 'large' | 'custom') => {
+    setConfigPreset(preset)
+    if (preset !== 'custom') {
+      const presetConfig = SA_PRESETS[preset]
+      setSaConfig({
+        iterations: presetConfig.annealing.iterations,
+        initialTemperature: presetConfig.annealing.initialTemperature,
+        finalTemperature: presetConfig.annealing.finalTemperature,
+        randomSeed: undefined,
+        stagnationLimit: presetConfig.termination.stagnationLimit ?? 5000,
+        varianceWeights: {
+          timezone: presetConfig.weights.timezoneVariance,
+          ehp: presetConfig.weights.averageEHP,
+          ehb: presetConfig.weights.averageEHB,
+          dailyHours: presetConfig.weights.averageDailyHours,
+          teamSize: presetConfig.weights.teamSizeVariance,
+        },
+        moves: {
+          swapProbability: presetConfig.moves.swapProbability,
+          moveProbability: presetConfig.moves.moveProbability,
+        },
+      })
+    }
+  }
+
+  // Helper: Update config value (automatically sets preset to custom)
+  const updateConfig = (path: string, value: any) => {
+    setConfigPreset('custom')
+    setSaConfig((prev) => {
+      const keys = path.split('.')
+      if (keys.length === 1) {
+        return { ...prev, [keys[0]!]: value }
+      } else if (keys.length === 2) {
+        return {
+          ...prev,
+          [keys[0]!]: {
+            ...(prev[keys[0]! as keyof typeof prev] as any),
+            [keys[1]!]: value,
+          },
+        }
+      }
+      return prev
+    })
+  }
 
   // Check if balanced generation is available when modal opens
   useEffect(() => {
@@ -135,7 +206,7 @@ export function AutoTeamGeneratorModal({
           teamSize: generationMethod === "teamSize" ? teamSize : undefined,
           teamCount: generationMethod === "teamCount" ? teamCount : undefined,
           teamNamePrefix,
-          weights,
+          weights: legacyWeights, // Legacy, not used in SA
           simulatedAnnealing: saConfig,
         })
 
@@ -251,154 +322,47 @@ export function AutoTeamGeneratorModal({
             <div className="rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-800 dark:bg-green-950">
               <p className="text-sm text-green-900 dark:text-green-100">
                 <Sparkles className="inline h-4 w-4 mr-1" />
-                Balanced mode uses player metadata to create skill-balanced teams with simulated annealing optimization.
+                Balanced mode uses simulated annealing optimization with player metadata to create well-balanced teams.
               </p>
             </div>
 
-            {/* Weight Sliders */}
-            <div className="space-y-4 rounded-lg border p-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">Balancing Weights</Label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setWeights({ ehp: 0.2, ehb: 0.2, timezone: 0.2, dailyHours: 0.2, skillLevel: 0.2 })}
-                >
-                  Reset
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">EHP (Efficient Hours Played)</Label>
-                    <span className="text-sm font-medium">{(weights.ehp * 100).toFixed(0)}%</span>
-                  </div>
-                  <Slider
-                    value={[weights.ehp * 100]}
-                    onValueChange={([value]) => setWeights((prev) => ({ ...prev, ehp: value! / 100 }))}
-                    max={100}
-                    step={5}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">EHB (Efficient Hours Bossed)</Label>
-                    <span className="text-sm font-medium">{(weights.ehb * 100).toFixed(0)}%</span>
-                  </div>
-                  <Slider
-                    value={[weights.ehb * 100]}
-                    onValueChange={([value]) => setWeights((prev) => ({ ...prev, ehb: value! / 100 }))}
-                    max={100}
-                    step={5}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">Timezone Overlap</Label>
-                    <span className="text-sm font-medium">{(weights.timezone * 100).toFixed(0)}%</span>
-                  </div>
-                  <Slider
-                    value={[weights.timezone * 100]}
-                    onValueChange={([value]) => setWeights((prev) => ({ ...prev, timezone: value! / 100 }))}
-                    max={100}
-                    step={5}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">Daily Hours Available</Label>
-                    <span className="text-sm font-medium">{(weights.dailyHours * 100).toFixed(0)}%</span>
-                  </div>
-                  <Slider
-                    value={[weights.dailyHours * 100]}
-                    onValueChange={([value]) => setWeights((prev) => ({ ...prev, dailyHours: value! / 100 }))}
-                    max={100}
-                    step={5}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">Skill Level</Label>
-                    <span className="text-sm font-medium">{(weights.skillLevel * 100).toFixed(0)}%</span>
-                  </div>
-                  <Slider
-                    value={[weights.skillLevel * 100]}
-                    onValueChange={([value]) => setWeights((prev) => ({ ...prev, skillLevel: value! / 100 }))}
-                    max={100}
-                    step={5}
-                  />
-                </div>
-              </div>
+            {/* Configuration Preset Selector */}
+            <div className="space-y-2">
+              <Label>Configuration Preset</Label>
+              <Select value={configPreset} onValueChange={handlePresetChange}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="small">Small Event (50-100 participants)</SelectItem>
+                  <SelectItem value="medium">Medium Event (100-200 participants) - Recommended</SelectItem>
+                  <SelectItem value="large">Large Event (200+ participants)</SelectItem>
+                  <SelectItem value="custom">Custom Configuration</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Presets automatically configure all optimization parameters for your event size.
+              </p>
             </div>
 
-            {/* Advanced Settings (Simulated Annealing) */}
+            {/* Advanced Settings - Comprehensive */}
             <Collapsible open={showAdvancedSettings} onOpenChange={setShowAdvancedSettings}>
               <CollapsibleTrigger asChild>
                 <Button variant="outline" className="w-full justify-between">
                   <span className="flex items-center gap-2">
                     <Sparkles className="h-4 w-4" />
-                    Advanced Settings (Simulated Annealing)
+                    Advanced Settings{configPreset === 'custom' && ' (Custom)'}
                   </span>
                   {showAdvancedSettings ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </Button>
               </CollapsibleTrigger>
 
-              <CollapsibleContent className="mt-4">
-                <div className="space-y-4 rounded-lg border p-4">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-base font-semibold">Optimization Quality</Label>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSaConfig({ iterations: 1000, initialTemperature: 1.0, finalTemperature: 0.001 })}
-                    >
-                      Reset
-                    </Button>
-                  </div>
+              <CollapsibleContent className="mt-4 space-y-4">
+                {/* Annealing Schedule */}
+                <div className="space-y-3 rounded-lg border p-4">
+                  <Label className="text-base font-semibold">Annealing Schedule</Label>
 
-                  {/* Quality Presets */}
-                  <div className="grid grid-cols-4 gap-2">
-                    <Button
-                      variant={saConfig.iterations === 500 ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSaConfig({ iterations: 500, initialTemperature: 1.0, finalTemperature: 0.01 })}
-                    >
-                      Fast
-                    </Button>
-                    <Button
-                      variant={saConfig.iterations === 1000 ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSaConfig({ iterations: 1000, initialTemperature: 1.0, finalTemperature: 0.001 })}
-                    >
-                      Default
-                    </Button>
-                    <Button
-                      variant={saConfig.iterations === 2500 ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSaConfig({ iterations: 2500, initialTemperature: 2.0, finalTemperature: 0.0005 })}
-                    >
-                      High Quality
-                    </Button>
-                    <Button
-                      variant={saConfig.iterations === 5000 ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSaConfig({ iterations: 5000, initialTemperature: 3.0, finalTemperature: 0.0001 })}
-                    >
-                      Maximum
-                    </Button>
-                  </div>
-
-                  <div className="text-xs text-muted-foreground bg-secondary/30 p-2 rounded">
-                    <Info className="inline h-3 w-3 mr-1" />
-                    More iterations produce better team balance but take longer to compute. Default is recommended for most cases.
-                  </div>
-
-                  {/* Iterations Slider */}
+                  {/* Iterations */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -409,23 +373,26 @@ export function AutoTeamGeneratorModal({
                               <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
-                              Number of optimization attempts. Higher values explore more team configurations for better balance.
+                              Number of optimization iterations. More iterations = better balance but longer runtime.
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </div>
-                      <span className="text-sm font-medium">{saConfig.iterations}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{saConfig.iterations.toLocaleString()}</span>
+                        <Badge variant="secondary" className="text-xs">~{estimateRuntime(saConfig.iterations)}s</Badge>
+                      </div>
                     </div>
                     <Slider
                       value={[saConfig.iterations]}
-                      onValueChange={([value]) => setSaConfig((prev) => ({ ...prev, iterations: value! }))}
-                      min={500}
-                      max={5000}
-                      step={100}
+                      onValueChange={([value]) => updateConfig('iterations', value!)}
+                      min={1000}
+                      max={50000}
+                      step={1000}
                     />
                   </div>
 
-                  {/* Initial Temperature Slider */}
+                  {/* Initial Temperature */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -436,7 +403,7 @@ export function AutoTeamGeneratorModal({
                               <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
-                              Starting exploration level. Higher values allow more radical changes early in optimization.
+                              Starting exploration level. Higher = more exploration early.
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -445,14 +412,14 @@ export function AutoTeamGeneratorModal({
                     </div>
                     <Slider
                       value={[saConfig.initialTemperature * 10]}
-                      onValueChange={([value]) => setSaConfig((prev) => ({ ...prev, initialTemperature: value! / 10 }))}
+                      onValueChange={([value]) => updateConfig('initialTemperature', value! / 10)}
                       min={1}
-                      max={50}
+                      max={20}
                       step={1}
                     />
                   </div>
 
-                  {/* Final Temperature Slider */}
+                  {/* Final Temperature */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -463,7 +430,7 @@ export function AutoTeamGeneratorModal({
                               <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
-                              Ending precision level. Lower values make fine-tuned adjustments at the end of optimization.
+                              Ending precision. Lower = finer adjustments at the end.
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -472,16 +439,240 @@ export function AutoTeamGeneratorModal({
                     </div>
                     <Slider
                       value={[saConfig.finalTemperature * 10000]}
-                      onValueChange={([value]) => setSaConfig((prev) => ({ ...prev, finalTemperature: value! / 10000 }))}
+                      onValueChange={([value]) => updateConfig('finalTemperature', value! / 10000)}
                       min={1}
-                      max={1000}
+                      max={100}
+                      step={1}
+                    />
+                  </div>
+                </div>
+
+                {/* Termination Criteria */}
+                <div className="space-y-3 rounded-lg border p-4">
+                  <Label className="text-base font-semibold">Termination Criteria</Label>
+
+                  {/* Random Seed */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm">Random Seed (optional)</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            Set a number for reproducible results. Same seed = same teams.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 12345 (leave empty for random)"
+                      value={saConfig.randomSeed ?? ''}
+                      onChange={(e) => updateConfig('randomSeed', e.target.value ? parseInt(e.target.value) : undefined)}
+                    />
+                  </div>
+
+                  {/* Stagnation Limit */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm">Stagnation Limit</Label>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              Stop early if no improvement for this many iterations. Saves time.
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <span className="text-sm font-medium">{saConfig.stagnationLimit}</span>
+                    </div>
+                    <Slider
+                      value={[saConfig.stagnationLimit]}
+                      onValueChange={([value]) => updateConfig('stagnationLimit', value!)}
+                      min={1000}
+                      max={10000}
+                      step={500}
+                    />
+                  </div>
+                </div>
+
+                {/* Variance Weights */}
+                <div className="space-y-3 rounded-lg border p-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">Variance Weights</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          Controls how much each metric contributes to team balance optimization.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+
+                  {/* Timezone Variance Weight */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm">Timezone Balance</Label>
+                      <span className="text-sm font-medium">{saConfig.varianceWeights.timezone.toFixed(1)}</span>
+                    </div>
+                    <Slider
+                      value={[saConfig.varianceWeights.timezone * 10]}
+                      onValueChange={([value]) => updateConfig('varianceWeights.timezone', value! / 10)}
+                      min={0}
+                      max={50}
                       step={1}
                     />
                   </div>
 
-                  {/* Estimated time indicator */}
-                  <div className="text-xs text-muted-foreground">
-                    Estimated processing time: {saConfig.iterations < 1000 ? "~1s" : saConfig.iterations < 2500 ? "~2-3s" : saConfig.iterations < 4000 ? "~4-5s" : "~6-8s"}
+                  {/* EHP Variance Weight */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm">EHP Balance</Label>
+                      <span className="text-sm font-medium">{saConfig.varianceWeights.ehp.toFixed(1)}</span>
+                    </div>
+                    <Slider
+                      value={[saConfig.varianceWeights.ehp * 10]}
+                      onValueChange={([value]) => updateConfig('varianceWeights.ehp', value! / 10)}
+                      min={0}
+                      max={50}
+                      step={1}
+                    />
+                  </div>
+
+                  {/* EHB Variance Weight */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm">EHB Balance</Label>
+                      <span className="text-sm font-medium">{saConfig.varianceWeights.ehb.toFixed(1)}</span>
+                    </div>
+                    <Slider
+                      value={[saConfig.varianceWeights.ehb * 10]}
+                      onValueChange={([value]) => updateConfig('varianceWeights.ehb', value! / 10)}
+                      min={0}
+                      max={50}
+                      step={1}
+                    />
+                  </div>
+
+                  {/* Daily Hours Variance Weight */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm">Daily Hours Balance</Label>
+                      <span className="text-sm font-medium">{saConfig.varianceWeights.dailyHours.toFixed(1)}</span>
+                    </div>
+                    <Slider
+                      value={[saConfig.varianceWeights.dailyHours * 10]}
+                      onValueChange={([value]) => updateConfig('varianceWeights.dailyHours', value! / 10)}
+                      min={0}
+                      max={50}
+                      step={1}
+                    />
+                  </div>
+
+                  {/* Team Size Variance Weight */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm">Team Size Balance</Label>
+                      <span className="text-sm font-medium">{saConfig.varianceWeights.teamSize.toFixed(1)}</span>
+                    </div>
+                    <Slider
+                      value={[saConfig.varianceWeights.teamSize * 10]}
+                      onValueChange={([value]) => updateConfig('varianceWeights.teamSize', value! / 10)}
+                      min={0}
+                      max={50}
+                      step={1}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Higher values promote equal-sized teams. Set to 0 to ignore team size balance.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Move Operators */}
+                <div className="space-y-3 rounded-lg border p-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">Move Operators</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          Probabilities of different move types during optimization.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+
+                  {/* Swap Probability */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm">Swap Probability</Label>
+                      <span className="text-sm font-medium">{saConfig.moves.swapProbability.toFixed(2)}</span>
+                    </div>
+                    <Slider
+                      value={[saConfig.moves.swapProbability * 100]}
+                      onValueChange={([value]) => {
+                        const swapProb = value! / 100
+                        updateConfig('moves.swapProbability', swapProb)
+                        updateConfig('moves.moveProbability', 1 - swapProb)
+                      }}
+                      min={0}
+                      max={100}
+                      step={5}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Swap two participants between teams
+                    </p>
+                  </div>
+
+                  {/* Move Probability (auto-calculated) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm text-muted-foreground">Move Probability (auto)</Label>
+                      <span className="text-sm font-medium text-muted-foreground">{saConfig.moves.moveProbability.toFixed(2)}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Move one participant to another team
+                    </p>
+                  </div>
+                </div>
+
+                {/* Scaling Constants Info */}
+                <div className="space-y-2 rounded-lg border p-4 bg-secondary/20">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-base font-semibold">Scaling Constants</Label>
+                    <Badge variant="secondary" className="text-xs">Info Only</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    These constants normalize metric contributions to the objective function
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">EHP Scale:</span>
+                      <span className="font-medium">1000</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">EHB Scale:</span>
+                      <span className="font-medium">1000</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Daily Hours:</span>
+                      <span className="font-medium">25</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Timezone:</span>
+                      <span className="font-medium">16</span>
+                    </div>
                   </div>
                 </div>
               </CollapsibleContent>

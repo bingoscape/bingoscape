@@ -17,15 +17,15 @@ import {
   updateTeamName,
 } from "@/app/actions/team"
 import { toast } from "@/hooks/use-toast"
-import { Edit2, Trash2, UserPlus, UserMinus, Shield, ShieldOff, Users, Shuffle, GripVertical, User, CheckCircle2, AlertCircle } from "lucide-react"
+import { Edit2, Trash2, UserPlus, UserMinus, Shield, ShieldOff, Users, Shuffle, GripVertical, User, CheckCircle2, AlertCircle, TrendingUp, Target, Scale } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { DndContext, DragOverlay, useDraggable, useDroppable } from "@dnd-kit/core"
 import { restrictToWindowEdges } from "@dnd-kit/modifiers"
 import { AutoTeamGeneratorModal } from "./auto-team-generator-modal"
 import { PlayerMetadataModal } from "./player-metadata-modal"
-import { TeamStatisticsDisplay } from "./team-statistics-display"
-import { getEventTeamStatistics, type EventTeamStatistics } from "@/app/actions/team-statistics"
+import { getEventTeamStatistics, type EventTeamStatistics, type TeamStatistics } from "@/app/actions/team-statistics"
+import { Badge } from "@/components/ui/badge"
 
 type TeamMember = {
   user: {
@@ -143,6 +143,46 @@ function DraggableMember({
   )
 }
 
+// Team Statistics Badge Component
+function TeamStatBadge({
+  icon: Icon,
+  label,
+  value,
+  variant,
+  tooltip
+}: {
+  icon: React.ElementType
+  label: string
+  value: string
+  variant?: "default" | "secondary" | "destructive" | "outline"
+  tooltip?: string
+}) {
+  const badge = (
+    <Badge variant={variant ?? "secondary"} className="flex items-center gap-1.5 text-xs">
+      <Icon className="h-3 w-3" />
+      <span className="font-medium">{value}</span>
+      <span className="text-muted-foreground">{label}</span>
+    </Badge>
+  )
+
+  if (tooltip) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {badge}
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs">
+            {tooltip}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
+  }
+
+  return badge
+}
+
 // Droppable Team Card component
 function TeamCard({
   team,
@@ -157,6 +197,9 @@ function TeamCard({
   editingTeamId,
   editedTeamName,
   setEditedTeamName,
+  teamStats,
+  eventAvgEHP,
+  eventAvgEHB,
 }: {
   team: Team
   participants: Participant[]
@@ -170,6 +213,9 @@ function TeamCard({
   editingTeamId: string | null
   editedTeamName: string
   setEditedTeamName: (name: string) => void
+  teamStats?: TeamStatistics
+  eventAvgEHP?: number
+  eventAvgEHB?: number
 }) {
   const availableParticipants = participants.filter((p) => !team.teamMembers.some((m) => m.user.id === p.id))
 
@@ -258,6 +304,95 @@ function TeamCard({
                 <TooltipContent>Add Participant</TooltipContent>
               </Tooltip>
             </TooltipProvider>
+          </div>
+        )}
+
+        {/* Team Statistics Footer */}
+        {teamStats && (
+          <div className="mt-4 pt-4 border-t">
+            <div className="flex flex-wrap gap-2">
+              {/* Team Size */}
+              <TeamStatBadge
+                icon={Users}
+                label="members"
+                value={String(teamStats.memberCount)}
+                variant="secondary"
+                tooltip="Number of team members"
+              />
+
+              {/* Average EHP */}
+              {teamStats.averageEHP !== null && (
+                <TeamStatBadge
+                  icon={TrendingUp}
+                  label="EHP"
+                  value={teamStats.averageEHP.toFixed(0)}
+                  variant={
+                    eventAvgEHP && teamStats.averageEHP >= eventAvgEHP * 1.1
+                      ? "default"
+                      : eventAvgEHP && teamStats.averageEHP <= eventAvgEHP * 0.9
+                      ? "destructive"
+                      : "secondary"
+                  }
+                  tooltip={`Average Efficient Hours Played: ${teamStats.averageEHP.toFixed(0)}${eventAvgEHP ? ` (Event avg: ${eventAvgEHP.toFixed(0)})` : ''}`}
+                />
+              )}
+
+              {/* Average EHB */}
+              {teamStats.averageEHB !== null && (
+                <TeamStatBadge
+                  icon={Target}
+                  label="EHB"
+                  value={teamStats.averageEHB.toFixed(0)}
+                  variant={
+                    eventAvgEHB && teamStats.averageEHB >= eventAvgEHB * 1.1
+                      ? "default"
+                      : eventAvgEHB && teamStats.averageEHB <= eventAvgEHB * 0.9
+                      ? "destructive"
+                      : "secondary"
+                  }
+                  tooltip={`Average Efficient Hours Bossed: ${teamStats.averageEHB.toFixed(0)}${eventAvgEHB ? ` (Event avg: ${eventAvgEHB.toFixed(0)})` : ''}`}
+                />
+              )}
+
+              {/* Metadata Coverage */}
+              <TeamStatBadge
+                icon={CheckCircle2}
+                label="coverage"
+                value={`${teamStats.metadataCoverage.toFixed(0)}%`}
+                variant={
+                  teamStats.metadataCoverage >= 75
+                    ? "default"
+                    : teamStats.metadataCoverage >= 50
+                    ? "secondary"
+                    : "destructive"
+                }
+                tooltip={`${teamStats.membersWithMetadata} of ${teamStats.memberCount} members have complete metadata`}
+              />
+
+              {/* Balance Indicator */}
+              {eventAvgEHP && eventAvgEHB && teamStats.averageEHP !== null && teamStats.averageEHB !== null && (
+                <TeamStatBadge
+                  icon={Scale}
+                  label="balance"
+                  value={
+                    Math.abs(teamStats.averageEHP - eventAvgEHP) / eventAvgEHP < 0.1 &&
+                    Math.abs(teamStats.averageEHB - eventAvgEHB) / eventAvgEHB < 0.1
+                      ? "excellent"
+                      : Math.abs(teamStats.averageEHP - eventAvgEHP) / eventAvgEHP < 0.2 &&
+                        Math.abs(teamStats.averageEHB - eventAvgEHB) / eventAvgEHB < 0.2
+                      ? "good"
+                      : "fair"
+                  }
+                  variant={
+                    Math.abs(teamStats.averageEHP - eventAvgEHP) / eventAvgEHP < 0.1 &&
+                    Math.abs(teamStats.averageEHB - eventAvgEHB) / eventAvgEHB < 0.1
+                      ? "default"
+                      : "secondary"
+                  }
+                  tooltip="Team balance relative to event average for EHP and EHB"
+                />
+              )}
+            </div>
           </div>
         )}
       </CardContent>
@@ -751,32 +886,36 @@ export function TeamManagement({ eventId }: { eventId: string }) {
           </Button>
         </div>
 
-        {/* Team Statistics Display */}
-        {teams.length > 0 && statistics && (
-          <TeamStatisticsDisplay statistics={statistics} isLoading={statisticsLoading} />
-        )}
-
         {/* Unassigned participants pool */}
         <UnassignedParticipantsPool participants={unassignedParticipants} onEditMetadata={handleEditMetadata} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {teams.map((team) => (
-            <TeamCard
-              key={team.id}
-              team={team}
-              participants={participants}
-              onEditName={handleEditTeamName}
-              onSaveName={handleSaveTeamName}
-              onDelete={handleDeleteTeam}
-              onAddUser={handleAddUserToTeam}
-              onRemoveUser={handleRemoveUserFromTeam}
-              onToggleLeader={handleToggleTeamLeader}
-              onEditMetadata={handleEditMetadata}
-              editingTeamId={editingTeamId}
-              editedTeamName={editedTeamName}
-              setEditedTeamName={setEditedTeamName}
-            />
-          ))}
+          {teams.map((team) => {
+            const teamStats = statistics?.teams.find(s => s.teamId === team.id)
+            const eventAvgEHP = statistics ? statistics.teams.reduce((sum, t) => sum + (t.averageEHP ?? 0), 0) / statistics.teams.filter(t => t.averageEHP !== null).length : undefined
+            const eventAvgEHB = statistics ? statistics.teams.reduce((sum, t) => sum + (t.averageEHB ?? 0), 0) / statistics.teams.filter(t => t.averageEHB !== null).length : undefined
+
+            return (
+              <TeamCard
+                key={team.id}
+                team={team}
+                participants={participants}
+                onEditName={handleEditTeamName}
+                onSaveName={handleSaveTeamName}
+                onDelete={handleDeleteTeam}
+                onAddUser={handleAddUserToTeam}
+                onRemoveUser={handleRemoveUserFromTeam}
+                onToggleLeader={handleToggleTeamLeader}
+                onEditMetadata={handleEditMetadata}
+                editingTeamId={editingTeamId}
+                editedTeamName={editedTeamName}
+                setEditedTeamName={setEditedTeamName}
+                teamStats={teamStats}
+                eventAvgEHP={eventAvgEHP}
+                eventAvgEHB={eventAvgEHB}
+              />
+            )
+          })}
         </div>
 
         <DragOverlay modifiers={[restrictToWindowEdges]}>{renderDragOverlay()}</DragOverlay>

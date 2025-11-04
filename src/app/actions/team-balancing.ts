@@ -7,6 +7,7 @@ import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getEventParticipantMetadata, calculateMetadataCoverage } from "./player-metadata"
 import { createTeam, addUserToTeam } from "./team"
+import { SA_STANDARD_CONFIG, SA_FORMULAS, type SAStandardConfig } from "@/lib/simulated-annealing-config"
 
 interface BalancingWeights {
   ehp: number // 0-1
@@ -16,15 +17,69 @@ interface BalancingWeights {
   skillLevel: number // 0-1
 }
 
+/**
+ * Extended simulated annealing configuration
+ * Supports both standard configuration and legacy options
+ */
 interface SimulatedAnnealingConfig {
   iterations: number // Number of optimization iterations
   initialTemperature: number // Starting temperature
   finalTemperature: number // Ending temperature
+
+  // Variance weights for objective function
   varianceWeights: {
     timezone: number // Weight for timezone variance
     ehp: number // Weight for EHP variance
     ehb: number // Weight for EHB variance
     dailyHours: number // Weight for daily hours variance
+    teamSize: number // Weight for team size variance (promotes equal-sized teams)
+  }
+
+  // New: Random seed for reproducibility (optional)
+  randomSeed?: number
+
+  // New: Stagnation limit for early termination (optional)
+  stagnationLimit?: number
+
+  // New: Move operator probabilities (optional, defaults to 0.7/0.3)
+  moves?: {
+    swapProbability: number
+    moveProbability: number
+  }
+
+  // New: Scaling constants for metric normalization (optional)
+  scales?: {
+    EHP: number
+    EHB: number
+    dailyHours: number
+    timezone: number
+  }
+}
+
+/**
+ * Convert standard configuration to internal format
+ */
+function convertStandardConfig(stdConfig: Partial<SAStandardConfig>): SimulatedAnnealingConfig {
+  const defaults = SA_STANDARD_CONFIG
+
+  return {
+    iterations: stdConfig.annealing?.iterations ?? defaults.annealing.iterations,
+    initialTemperature: stdConfig.annealing?.initialTemperature ?? defaults.annealing.initialTemperature,
+    finalTemperature: stdConfig.annealing?.finalTemperature ?? defaults.annealing.finalTemperature,
+    randomSeed: stdConfig.annealing?.randomSeed,
+    stagnationLimit: stdConfig.termination?.stagnationLimit,
+    moves: stdConfig.moves ? {
+      swapProbability: stdConfig.moves.swapProbability,
+      moveProbability: stdConfig.moves.moveProbability,
+    } : undefined,
+    scales: stdConfig.scales,
+    varianceWeights: {
+      timezone: stdConfig.weights?.timezoneVariance ?? defaults.weights.timezoneVariance,
+      ehp: stdConfig.weights?.averageEHP ?? defaults.weights.averageEHP,
+      ehb: stdConfig.weights?.averageEHB ?? defaults.weights.averageEHB,
+      dailyHours: stdConfig.weights?.averageDailyHours ?? defaults.weights.averageDailyHours,
+      teamSize: stdConfig.weights?.teamSizeVariance ?? defaults.weights.teamSizeVariance,
+    },
   }
 }
 
@@ -281,50 +336,66 @@ function preparePlayerFeatures(
 /**
  * Calculate objective function for team assignment
  * Lower values indicate better balance
+ *
+ * Uses scaling constants to normalize metrics before calculating variance
+ * Formula: E(S) = Σ(w_i * Var_i(S) / scale_i) + w_size * Var(team_sizes)
  */
 function calculateObjective(
   assignment: string[][],
   playerMap: Map<string, PlayerFeatures>,
   config: SimulatedAnnealingConfig
 ): number {
+  // Get scaling constants (use defaults if not provided)
+  const scales = config.scales ?? SA_STANDARD_CONFIG.scales
+
   const teamStats = assignment.map(team => {
     const players = team.map(userId => playerMap.get(userId)!).filter(p => p !== undefined)
     if (players.length === 0) {
       return { avgTimezone: 0, avgEhp: 0, avgEhb: 0, avgDailyHours: 0 }
     }
 
+    // Calculate averages with scaling applied
     return {
-      avgTimezone: players.reduce((sum, p) => sum + p.timezoneOffset, 0) / players.length,
-      avgEhp: players.reduce((sum, p) => sum + p.ehp, 0) / players.length,
-      avgEhb: players.reduce((sum, p) => sum + p.ehb, 0) / players.length,
-      avgDailyHours: players.reduce((sum, p) => sum + p.dailyHours, 0) / players.length,
+      avgTimezone: (players.reduce((sum, p) => sum + p.timezoneOffset, 0) / players.length) / scales.timezone,
+      avgEhp: (players.reduce((sum, p) => sum + p.ehp, 0) / players.length) / scales.EHP,
+      avgEhb: (players.reduce((sum, p) => sum + p.ehb, 0) / players.length) / scales.EHB,
+      avgDailyHours: (players.reduce((sum, p) => sum + p.dailyHours, 0) / players.length) / scales.dailyHours,
     }
   })
 
-  // Calculate variance for each metric across teams
+  // Calculate variance for each metric across teams (already scaled)
   const timezoneVariance = calculateVariance(teamStats.map(s => s.avgTimezone))
   const ehpVariance = calculateVariance(teamStats.map(s => s.avgEhp))
   const ehbVariance = calculateVariance(teamStats.map(s => s.avgEhb))
   const dailyHoursVariance = calculateVariance(teamStats.map(s => s.avgDailyHours))
+
+  // Calculate team size variance (promotes equal-sized teams)
+  const teamSizes = assignment.map(team => team.length)
+  const teamSizeVariance = calculateVariance(teamSizes)
 
   // Weighted sum of variances
   return (
     config.varianceWeights.timezone * timezoneVariance +
     config.varianceWeights.ehp * ehpVariance +
     config.varianceWeights.ehb * ehbVariance +
-    config.varianceWeights.dailyHours * dailyHoursVariance
+    config.varianceWeights.dailyHours * dailyHoursVariance +
+    config.varianceWeights.teamSize * teamSizeVariance
   )
 }
 
 /**
  * Generate a neighbor configuration by swapping or moving players
+ * Uses configurable move operator probabilities
  */
-function generateNeighbor(assignment: string[][]): string[][] {
+function generateNeighbor(assignment: string[][], config: SimulatedAnnealingConfig): string[][] {
   const newAssignment = assignment.map(team => [...team])
+
+  // Get move probabilities (use defaults if not provided)
+  const swapProb = config.moves?.swapProbability ?? 0.7
   const random = Math.random()
 
-  if (random < 0.7 && newAssignment.length >= 2) {
-    // 70% chance: Swap two members between teams
+  if (random < swapProb && newAssignment.length >= 2) {
+    // Swap two members between teams
     const team1Idx = Math.floor(Math.random() * newAssignment.length)
     let team2Idx = Math.floor(Math.random() * newAssignment.length)
 
@@ -345,7 +416,7 @@ function generateNeighbor(assignment: string[][]): string[][] {
       team2[player2Idx] = temp
     }
   } else if (newAssignment.length >= 2) {
-    // 30% chance: Move one member to another team
+    // Move one member to another team (remaining probability)
     const fromTeamIdx = Math.floor(Math.random() * newAssignment.length)
     let toTeamIdx = Math.floor(Math.random() * newAssignment.length)
 
@@ -369,16 +440,25 @@ function generateNeighbor(assignment: string[][]): string[][] {
 
 /**
  * Simulated annealing optimization for team balancing
+ * Implements exponential cooling schedule and optional stagnation detection
  */
 function simulatedAnnealing(
   players: PlayerFeatures[],
   numberOfTeams: number,
   config: SimulatedAnnealingConfig
 ): TeamAssignment {
+  // Set random seed if provided for reproducibility
+  if (config.randomSeed !== undefined) {
+    // Note: JavaScript doesn't have built-in seedable RNG
+    // This is a placeholder - for production, consider using a library like seedrandom
+    console.log(`Using random seed: ${config.randomSeed}`)
+    // TODO: Implement seedable random with library if reproducibility is critical
+  }
+
   // Create player map for quick lookup
   const playerMap = new Map(players.map(p => [p.userId, p]))
 
-  // Initialize with random assignment (round-robin)
+  // Initialize with random assignment (round-robin for consistency)
   const currentAssignment: string[][] = Array.from({ length: numberOfTeams }, () => [])
   players.forEach((player, idx) => {
     currentAssignment[idx % numberOfTeams]!.push(player.userId)
@@ -388,22 +468,36 @@ function simulatedAnnealing(
   let bestAssignment = currentAssignment.map(team => [...team])
   let bestObjective = currentObjective
 
+  // Stagnation detection variables
+  let noImprovementCount = 0
+  const stagnationLimit = config.stagnationLimit
+
   // Simulated annealing loop
   for (let iteration = 0; iteration < config.iterations; iteration++) {
-    // Calculate temperature using exponential cooling
-    const progress = iteration / config.iterations
-    const temperature = config.initialTemperature *
-      Math.pow(config.finalTemperature / config.initialTemperature, progress)
+    // Calculate temperature using exponential cooling schedule
+    // Formula: T(k) = T₀ * (T_f / T₀)^(k / N)
+    const temperature = SA_FORMULAS.exponentialCooling(
+      config.initialTemperature,
+      config.finalTemperature,
+      iteration,
+      config.iterations
+    )
+
+    // Early termination if temperature too low
+    if (temperature < config.finalTemperature) {
+      break
+    }
 
     // Generate neighbor configuration
-    const neighborAssignment = generateNeighbor(currentAssignment)
+    const neighborAssignment = generateNeighbor(currentAssignment, config)
     const neighborObjective = calculateObjective(neighborAssignment, playerMap, config)
 
     // Calculate delta
     const delta = neighborObjective - currentObjective
 
-    // Decide whether to accept the neighbor
-    const accept = delta <= 0 || Math.random() < Math.exp(-delta / temperature)
+    // Decide whether to accept the neighbor using Metropolis criterion
+    const acceptanceProbability = SA_FORMULAS.metropolisAcceptance(delta, temperature)
+    const accept = Math.random() < acceptanceProbability
 
     if (accept) {
       // Update current assignment
@@ -414,7 +508,18 @@ function simulatedAnnealing(
       if (neighborObjective < bestObjective) {
         bestAssignment = neighborAssignment.map(team => [...team])
         bestObjective = neighborObjective
+        noImprovementCount = 0 // Reset stagnation counter
+      } else {
+        noImprovementCount++
       }
+    } else {
+      noImprovementCount++
+    }
+
+    // Check for stagnation (early termination)
+    if (stagnationLimit !== undefined && noImprovementCount >= stagnationLimit) {
+      console.log(`Terminated early at iteration ${iteration} due to stagnation`)
+      break
     }
   }
 
@@ -443,11 +548,39 @@ export async function generateBalancedTeams(
     teamSize?: number
     generationMethod: "teamCount" | "teamSize"
     teamNamePrefix: string
-    weights: BalancingWeights
+    weights: BalancingWeights // Legacy: for participant scoring (deprecated, not used in SA)
     simulatedAnnealing?: {
+      // Basic parameters
       iterations?: number
       initialTemperature?: number
       finalTemperature?: number
+
+      // New: Extended parameters
+      randomSeed?: number
+      stagnationLimit?: number
+
+      // New: Variance weights (replaces participant weights in SA)
+      varianceWeights?: {
+        timezone?: number
+        ehp?: number
+        ehb?: number
+        dailyHours?: number
+        teamSize?: number
+      }
+
+      // New: Move operator probabilities
+      moves?: {
+        swapProbability?: number
+        moveProbability?: number
+      }
+
+      // New: Scaling constants
+      scales?: {
+        EHP?: number
+        EHB?: number
+        dailyHours?: number
+        timezone?: number
+      }
     }
   }
 ) {
@@ -525,17 +658,43 @@ export async function generateBalancedTeams(
     metadataMap
   )
 
-  // Configure simulated annealing with defaults
+  // Configure simulated annealing with standard defaults
+  const defaults = SA_STANDARD_CONFIG
   const saConfig: SimulatedAnnealingConfig = {
-    iterations: config.simulatedAnnealing?.iterations ?? 1000,
-    initialTemperature: config.simulatedAnnealing?.initialTemperature ?? 1.0,
-    finalTemperature: config.simulatedAnnealing?.finalTemperature ?? 0.001,
+    // Basic annealing parameters
+    iterations: config.simulatedAnnealing?.iterations ?? defaults.annealing.iterations,
+    initialTemperature: config.simulatedAnnealing?.initialTemperature ?? defaults.annealing.initialTemperature,
+    finalTemperature: config.simulatedAnnealing?.finalTemperature ?? defaults.annealing.finalTemperature,
+
+    // Variance weights (use provided or standard defaults)
     varianceWeights: {
-      timezone: config.weights.timezone,
-      ehp: config.weights.ehp,
-      ehb: config.weights.ehb,
-      dailyHours: config.weights.dailyHours,
-    }
+      timezone: config.simulatedAnnealing?.varianceWeights?.timezone ?? defaults.weights.timezoneVariance,
+      ehp: config.simulatedAnnealing?.varianceWeights?.ehp ?? defaults.weights.averageEHP,
+      ehb: config.simulatedAnnealing?.varianceWeights?.ehb ?? defaults.weights.averageEHB,
+      dailyHours: config.simulatedAnnealing?.varianceWeights?.dailyHours ?? defaults.weights.averageDailyHours,
+      teamSize: config.simulatedAnnealing?.varianceWeights?.teamSize ?? defaults.weights.teamSizeVariance,
+    },
+
+    // New: Extended parameters
+    randomSeed: config.simulatedAnnealing?.randomSeed,
+    stagnationLimit: config.simulatedAnnealing?.stagnationLimit ?? defaults.termination.stagnationLimit,
+
+    // New: Move operators
+    moves: config.simulatedAnnealing?.moves ? {
+      swapProbability: config.simulatedAnnealing.moves.swapProbability ?? defaults.moves.swapProbability,
+      moveProbability: config.simulatedAnnealing.moves.moveProbability ?? defaults.moves.moveProbability,
+    } : {
+      swapProbability: defaults.moves.swapProbability,
+      moveProbability: defaults.moves.moveProbability,
+    },
+
+    // New: Scaling constants
+    scales: config.simulatedAnnealing?.scales ? {
+      EHP: config.simulatedAnnealing.scales.EHP ?? defaults.scales.EHP,
+      EHB: config.simulatedAnnealing.scales.EHB ?? defaults.scales.EHB,
+      dailyHours: config.simulatedAnnealing.scales.dailyHours ?? defaults.scales.dailyHours,
+      timezone: config.simulatedAnnealing.scales.timezone ?? defaults.scales.timezone,
+    } : defaults.scales,
   }
 
   // Run simulated annealing optimization
