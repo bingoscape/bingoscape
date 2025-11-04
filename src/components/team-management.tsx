@@ -17,12 +17,13 @@ import {
   updateTeamName,
 } from "@/app/actions/team"
 import { toast } from "@/hooks/use-toast"
-import { Edit2, Trash2, UserPlus, UserMinus, Shield, ShieldOff, Users, Shuffle, GripVertical } from "lucide-react"
+import { Edit2, Trash2, UserPlus, UserMinus, Shield, ShieldOff, Users, Shuffle, GripVertical, User } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { DndContext, DragOverlay, useDraggable, useDroppable } from "@dnd-kit/core"
 import { restrictToWindowEdges } from "@dnd-kit/modifiers"
 import { AutoTeamGeneratorModal } from "./auto-team-generator-modal"
+import { PlayerMetadataModal } from "./player-metadata-modal"
 
 type TeamMember = {
   user: {
@@ -53,11 +54,13 @@ function DraggableMember({
   teamId,
   onToggleLeader,
   onRemove,
+  onEditMetadata,
 }: {
   member: TeamMember
   teamId: string
   onToggleLeader: () => void
   onRemove: () => void
+  onEditMetadata: () => void
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `member-${member.user.id}`,
@@ -72,17 +75,25 @@ function DraggableMember({
     <li
       className={`flex items-center justify-between py-2 border-b last:border-0 hover:bg-secondary/30 rounded-sm px-2 ${isDragging ? "opacity-50" : "opacity-100"}`}
     >
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-2 flex-1">
         {/* Drag handle - only this part is draggable */}
         <div ref={setNodeRef} {...attributes} {...listeners} className="cursor-grab p-1 hover:bg-secondary rounded-sm">
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </div>
 
-        <Avatar className="h-8 w-8">
-          <AvatarImage src={member.user.image ?? undefined} alt={member.user.name ?? ""} />
-          <AvatarFallback>{member.user.name?.[0] ?? "U"}</AvatarFallback>
-        </Avatar>
-        <span>{member.user.runescapeName ?? member.user.name}</span>
+        {/* Clickable area for metadata - avatar and name */}
+        <button
+          onClick={onEditMetadata}
+          className="flex items-center space-x-2 hover:bg-secondary/50 rounded-sm p-1 -ml-1 transition-colors group"
+          title="Click to edit player metadata"
+        >
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={member.user.image ?? undefined} alt={member.user.name ?? ""} />
+            <AvatarFallback>{member.user.name?.[0] ?? "U"}</AvatarFallback>
+          </Avatar>
+          <span className="group-hover:text-primary">{member.user.runescapeName ?? member.user.name}</span>
+          <User className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+        </button>
         {member.isLeader && <Shield className="h-4 w-4 text-yellow-500" aria-label="Team Leader" />}
       </div>
       <div className="flex space-x-1">
@@ -122,6 +133,7 @@ function TeamCard({
   onAddUser,
   onRemoveUser,
   onToggleLeader,
+  onEditMetadata,
   editingTeamId,
   editedTeamName,
   setEditedTeamName,
@@ -134,6 +146,7 @@ function TeamCard({
   onAddUser: (teamId: string, userId: string) => void
   onRemoveUser: (teamId: string, userId: string) => void
   onToggleLeader: (teamId: string, userId: string, isLeader: boolean) => void
+  onEditMetadata: (userId: string, userName: string | null, runescapeName: string | null) => void
   editingTeamId: string | null
   editedTeamName: string
   setEditedTeamName: (name: string) => void
@@ -194,6 +207,7 @@ function TeamCard({
                   teamId={team.id}
                   onToggleLeader={() => onToggleLeader(team.id, member.user.id, member.isLeader)}
                   onRemove={() => onRemoveUser(team.id, member.user.id)}
+                  onEditMetadata={() => onEditMetadata(member.user.id, member.user.name, member.user.runescapeName)}
                 />
               ))}
             </ul>
@@ -232,7 +246,13 @@ function TeamCard({
 }
 
 // Unassigned participants pool
-function UnassignedParticipantsPool({ participants }: { participants: Participant[] }) {
+function UnassignedParticipantsPool({
+  participants,
+  onEditMetadata,
+}: {
+  participants: Participant[]
+  onEditMetadata: (userId: string, userName: string | null, runescapeName: string | null) => void
+}) {
   // Make the unassigned pool a drop target
   const { setNodeRef, isOver } = useDroppable({
     id: "unassigned-pool",
@@ -280,7 +300,11 @@ function UnassignedParticipantsPool({ participants }: { participants: Participan
         >
           <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {participants.map((participant) => (
-              <DraggableUnassignedParticipant key={participant.id} participant={participant} />
+              <DraggableUnassignedParticipant
+                key={participant.id}
+                participant={participant}
+                onEditMetadata={() => onEditMetadata(participant.id, participant.name, participant.runescapeName)}
+              />
             ))}
           </ul>
         </div>
@@ -289,7 +313,13 @@ function UnassignedParticipantsPool({ participants }: { participants: Participan
   )
 }
 
-function DraggableUnassignedParticipant({ participant }: { participant: Participant }) {
+function DraggableUnassignedParticipant({
+  participant,
+  onEditMetadata,
+}: {
+  participant: Participant
+  onEditMetadata: () => void
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `unassigned-${participant.id}`,
     data: {
@@ -303,15 +333,23 @@ function DraggableUnassignedParticipant({ participant }: { participant: Particip
       className={`flex items-center space-x-2 p-2 border rounded-md hover:bg-secondary/30 ${isDragging ? "opacity-50" : "opacity-100"}`}
     >
       {/* Drag handle */}
-      <div ref={setNodeRef} {...attributes} {...listeners} className="cursor-grab p-1 hover:bg-secondary rounded-sm">
+      <div ref={setNodeRef} {...attributes} {...listeners} className="cursor-grab p-1 hover:bg-secondary rounded-sm flex-shrink-0">
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
 
-      <Avatar className="h-6 w-6">
-        <AvatarImage src={participant.image ?? undefined} alt={participant.name ?? ""} />
-        <AvatarFallback>{participant.name?.[0] ?? "U"}</AvatarFallback>
-      </Avatar>
-      <span className="text-sm truncate">{participant.runescapeName ?? participant.name}</span>
+      {/* Clickable area for metadata - avatar and name */}
+      <button
+        onClick={onEditMetadata}
+        className="flex items-center space-x-2 hover:bg-secondary/50 rounded-sm p-1 -ml-1 transition-colors group flex-1 min-w-0"
+        title="Click to edit player metadata"
+      >
+        <Avatar className="h-6 w-6 flex-shrink-0">
+          <AvatarImage src={participant.image ?? undefined} alt={participant.name ?? ""} />
+          <AvatarFallback>{participant.name?.[0] ?? "U"}</AvatarFallback>
+        </Avatar>
+        <span className="text-sm truncate group-hover:text-primary">{participant.runescapeName ?? participant.name}</span>
+        <User className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+      </button>
     </li>
   )
 }
@@ -325,6 +363,12 @@ export function TeamManagement({ eventId }: { eventId: string }) {
   const [editedTeamName, setEditedTeamName] = useState("")
   const [activeDragData, setActiveDragData] = useState<any>(null)
   const [isAutoTeamModalOpen, setIsAutoTeamModalOpen] = useState(false)
+  const [isMetadataModalOpen, setIsMetadataModalOpen] = useState(false)
+  const [selectedPlayer, setSelectedPlayer] = useState<{
+    userId: string
+    userName: string | null
+    runescapeName: string | null
+  } | null>(null)
 
   // Get unassigned participants
   const unassignedParticipants = useMemo(() => {
@@ -431,6 +475,16 @@ export function TeamManagement({ eventId }: { eventId: string }) {
         variant: "destructive",
       })
     }
+  }
+
+  const handleEditMetadata = (userId: string, userName: string | null, runescapeName: string | null) => {
+    setSelectedPlayer({ userId, userName, runescapeName })
+    setIsMetadataModalOpen(true)
+  }
+
+  const handleMetadataUpdated = async () => {
+    // Refresh teams and participants to update any metadata indicators
+    await fetchTeamsAndParticipants()
   }
 
   const handleEditTeamName = (teamId: string, currentName: string) => {
@@ -637,7 +691,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
         </div>
 
         {/* Unassigned participants pool */}
-        <UnassignedParticipantsPool participants={unassignedParticipants} />
+        <UnassignedParticipantsPool participants={unassignedParticipants} onEditMetadata={handleEditMetadata} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {teams.map((team) => (
@@ -651,6 +705,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
               onAddUser={handleAddUserToTeam}
               onRemoveUser={handleRemoveUserFromTeam}
               onToggleLeader={handleToggleTeamLeader}
+              onEditMetadata={handleEditMetadata}
               editingTeamId={editingTeamId}
               editedTeamName={editedTeamName}
               setEditedTeamName={setEditedTeamName}
@@ -669,6 +724,21 @@ export function TeamManagement({ eventId }: { eventId: string }) {
         existingTeams={teams}
         onTeamsGenerated={fetchTeamsAndParticipants}
       />
+
+      {selectedPlayer && (
+        <PlayerMetadataModal
+          isOpen={isMetadataModalOpen}
+          onClose={() => {
+            setIsMetadataModalOpen(false)
+            setSelectedPlayer(null)
+          }}
+          eventId={eventId}
+          userId={selectedPlayer.userId}
+          userName={selectedPlayer.userName}
+          runescapeName={selectedPlayer.runescapeName}
+          onMetadataUpdated={handleMetadataUpdated}
+        />
+      )}
     </DndContext>
   )
 }

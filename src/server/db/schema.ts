@@ -48,6 +48,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   bingoTemplates: many(bingoTemplates), // Add this line
   apiKeys: many(apiKeys),
   registrationRequests: many(eventRegistrationRequests), // Add relation to registration requests
+  playerMetadata: many(playerMetadata),
 }))
 
 export const accounts = createTable(
@@ -131,6 +132,50 @@ export const registrationStatusEnum = pgEnum("registration_status", ["pending", 
 export const bingoTypeEnum = pgEnum("bingo_type", ["standard", "progression"])
 export const logicalOperatorEnum = pgEnum("logical_operator", ["AND", "OR"])
 export const goalTypeEnum = pgEnum("goal_type", ["generic", "item"])
+export const skillLevelEnum = pgEnum("skill_level", ["beginner", "intermediate", "advanced", "expert"])
+
+export const playerMetadata = createTable(
+  "player_metadata",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    ehp: real("ehp"), // Efficient Hours Played (nullable)
+    ehb: real("ehb"), // Efficient Hours Bossed (nullable)
+    combatLevel: integer("combat_level"), // OSRS combat level from WiseOldMan
+    totalLevel: integer("total_level"), // Total skill level from WiseOldMan
+    timezone: varchar("timezone", { length: 100 }), // e.g., "America/New_York", "Europe/London"
+    dailyHoursAvailable: real("daily_hours_available"), // Planned daily participation time
+    skillLevel: skillLevelEnum("skill_level"), // Perceived skill level
+    notes: text("notes"), // Management notes about the player
+    womPlayerData: text("wom_player_data"), // JSON string of full WiseOldMan data (skills, bosses)
+    lastFetchedFromWOM: timestamp("last_fetched_from_wom"), // Timestamp of last WOM fetch
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    // Unique constraint: one metadata record per user per event
+    userEventUnique: uniqueIndex("player_metadata_user_event_unique").on(
+      table.userId,
+      table.eventId,
+    ),
+  }),
+)
+
+export const playerMetadataRelations = relations(playerMetadata, ({ one }) => ({
+  user: one(users, {
+    fields: [playerMetadata.userId],
+    references: [users.id],
+  }),
+  event: one(events, {
+    fields: [playerMetadata.eventId],
+    references: [events.id],
+  }),
+}))
 
 export const events = createTable("events", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -162,6 +207,7 @@ export const eventsRelations = relations(events, ({ many, one }) => ({
   invites: many(eventInvites),
   registrationRequests: many(eventRegistrationRequests), // Add relation to registration requests
   discordWebhooks: many(discordWebhooks),
+  playerMetadata: many(playerMetadata),
 }))
 
 // New table for event registration requests
