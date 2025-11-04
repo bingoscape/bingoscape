@@ -18,7 +18,6 @@ export interface TeamStatistics {
   totalDailyHours: number | null
   timezoneDistribution: Array<{ timezone: string; count: number }>
   timezoneDiversityScore: number
-  skillLevelDistribution: Array<{ level: string; count: number }>
   metadataCoverage: number // percentage of members with metadata
   membersWithMetadata: number
 }
@@ -51,7 +50,6 @@ export interface CoverageMetrics {
     ehb: number // percentage
     timezone: number // percentage
     dailyHours: number // percentage
-    skillLevel: number // percentage
   }
 }
 
@@ -160,20 +158,6 @@ export async function getEventTeamStatistics(
           )
         : 0
 
-    // Skill level distribution
-    const skillLevelMap = new Map<string, number>()
-    metadataList.forEach((m) => {
-      if (m?.skillLevel) {
-        skillLevelMap.set(
-          m.skillLevel,
-          (skillLevelMap.get(m.skillLevel) ?? 0) + 1
-        )
-      }
-    })
-    const skillLevelDistribution = Array.from(skillLevelMap.entries()).map(
-      ([level, count]) => ({ level, count })
-    )
-
     // Metadata coverage for this team
     const metadataCoverage =
       memberCount > 0
@@ -198,7 +182,6 @@ export async function getEventTeamStatistics(
         totalDailyHours && !isNaN(totalDailyHours) ? totalDailyHours : null,
       timezoneDistribution,
       timezoneDiversityScore,
-      skillLevelDistribution,
       metadataCoverage,
       membersWithMetadata: membersWithMetadata.length,
     }
@@ -356,7 +339,6 @@ async function calculateCoverageMetrics(
   const withDailyHours = allMetadata.filter(
     (m) => m.dailyHoursAvailable != null
   ).length
-  const withSkillLevel = allMetadata.filter((m) => m.skillLevel != null).length
   /* eslint-enable @typescript-eslint/no-explicit-any */
   /* eslint-enable @typescript-eslint/no-unsafe-return */
   /* eslint-enable @typescript-eslint/no-unsafe-member-access */
@@ -372,8 +354,6 @@ async function calculateCoverageMetrics(
       timezone: totalPlayers > 0 ? (withTimezone / totalPlayers) * 100 : 0,
       dailyHours:
         totalPlayers > 0 ? (withDailyHours / totalPlayers) * 100 : 0,
-      skillLevel:
-        totalPlayers > 0 ? (withSkillLevel / totalPlayers) * 100 : 0,
     },
   }
 }

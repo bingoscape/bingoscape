@@ -132,7 +132,6 @@ export const registrationStatusEnum = pgEnum("registration_status", ["pending", 
 export const bingoTypeEnum = pgEnum("bingo_type", ["standard", "progression"])
 export const logicalOperatorEnum = pgEnum("logical_operator", ["AND", "OR"])
 export const goalTypeEnum = pgEnum("goal_type", ["generic", "item"])
-export const skillLevelEnum = pgEnum("skill_level", ["beginner", "intermediate", "advanced", "expert"])
 
 export const playerMetadata = createTable(
   "player_metadata",
@@ -150,7 +149,6 @@ export const playerMetadata = createTable(
     totalLevel: integer("total_level"), // Total skill level from WiseOldMan
     timezone: varchar("timezone", { length: 100 }), // e.g., "America/New_York", "Europe/London"
     dailyHoursAvailable: real("daily_hours_available"), // Planned daily participation time
-    skillLevel: skillLevelEnum("skill_level"), // Perceived skill level
     notes: text("notes"), // Management notes about the player
     womPlayerData: text("wom_player_data"), // JSON string of full WiseOldMan data (skills, bosses)
     lastFetchedFromWOM: timestamp("last_fetched_from_wom"), // Timestamp of last WOM fetch

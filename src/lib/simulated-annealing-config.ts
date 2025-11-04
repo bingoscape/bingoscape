@@ -84,31 +84,34 @@ export interface SAStandardConfig {
   /**
    * Objective function weights
    * Controls relative importance of each metric in team balance optimization
-   * Higher weights emphasize that metric more strongly
+   *
+   * IMPORTANT: Weights must sum to 1.0 (100%)
+   * Each weight represents the proportional contribution to the objective function
+   * Higher weights emphasize that metric more strongly in the optimization
    */
   weights: {
     /**
      * Weight for timezone variance minimization
      * Higher value emphasizes keeping teams timezone-cohesive
-     * @default 2.0
+     * @default 0.333 (33.3%)
      */
     timezoneVariance: number
 
     /**
      * Weight for EHP (Efficient Hours Played) balance
-     * @default 1.0
+     * @default 0.167 (16.7%)
      */
     averageEHP: number
 
     /**
      * Weight for EHB (Efficient Hours Bossed) balance
-     * @default 1.0
+     * @default 0.167 (16.7%)
      */
     averageEHB: number
 
     /**
      * Weight for daily hours availability balance
-     * @default 1.0
+     * @default 0.167 (16.7%)
      */
     averageDailyHours: number
 
@@ -116,43 +119,9 @@ export interface SAStandardConfig {
      * Weight for team size variance minimization
      * Higher value emphasizes equal-sized teams
      * Set to 0 to ignore team size balance
-     * @default 1.0
+     * @default 0.167 (16.7%)
      */
     teamSizeVariance: number
-  }
-
-  /**
-   * Scaling constants for metric normalization
-   * These ensure all metrics contribute comparably to the objective function
-   */
-  scales: {
-    /**
-     * Normalization scale for EHP
-     * Typical EHP values are in hundreds to thousands
-     * @default 1000
-     */
-    EHP: number
-
-    /**
-     * Normalization scale for EHB
-     * Typical EHB values are in hundreds to thousands
-     * @default 1000
-     */
-    EHB: number
-
-    /**
-     * Normalization scale for daily hours
-     * Typical daily availability is 0-24 hours
-     * @default 25
-     */
-    dailyHours: number
-
-    /**
-     * Normalization scale for timezone offset
-     * UTC offsets range from -12 to +14 hours
-     * @default 16
-     */
-    timezone: number
   }
 
   /**
@@ -204,17 +173,14 @@ export const SA_STANDARD_CONFIG: SAStandardConfig = {
     moveProbability: 0.3,
   },
   weights: {
-    timezoneVariance: 2.0,  // Emphasize timezone cohesion
-    averageEHP: 1.0,
-    averageEHB: 1.0,
-    averageDailyHours: 1.0,
-    teamSizeVariance: 1.0,  // Promote equal-sized teams
-  },
-  scales: {
-    EHP: 1000,
-    EHB: 1000,
-    dailyHours: 25,
-    timezone: 16,
+    // Normalized weights (sum to 1.0)
+    // 2/6 = 0.333 for timezone (emphasized)
+    // 1/6 = 0.167 for each other metric
+    timezoneVariance: 0.333,  // Emphasize timezone cohesion (33.3%)
+    averageEHP: 0.167,        // 16.7%
+    averageEHB: 0.167,        // 16.7%
+    averageDailyHours: 0.167, // 16.7%
+    teamSizeVariance: 0.167,  // Promote equal-sized teams (16.7%)
   },
   termination: {
     minTemperature: 0.0001,
@@ -249,17 +215,11 @@ export const SA_PRESETS: Record<'small' | 'medium' | 'large', SAStandardConfig> 
       moveProbability: 0.3,
     },
     weights: {
-      timezoneVariance: 2.0,
-      averageEHP: 1.0,
-      averageEHB: 1.0,
-      averageDailyHours: 1.0,
-      teamSizeVariance: 1.0,
-    },
-    scales: {
-      EHP: 1000,
-      EHB: 1000,
-      dailyHours: 25,
-      timezone: 16,
+      timezoneVariance: 0.333,
+      averageEHP: 0.167,
+      averageEHB: 0.167,
+      averageDailyHours: 0.167,
+      teamSizeVariance: 0.167,
     },
     termination: {
       minTemperature: 0.0001,
@@ -297,17 +257,11 @@ export const SA_PRESETS: Record<'small' | 'medium' | 'large', SAStandardConfig> 
       moveProbability: 0.3,
     },
     weights: {
-      timezoneVariance: 2.0,
-      averageEHP: 1.0,
-      averageEHB: 1.0,
-      averageDailyHours: 1.0,
-      teamSizeVariance: 1.0,
-    },
-    scales: {
-      EHP: 1000,
-      EHB: 1000,
-      dailyHours: 25,
-      timezone: 16,
+      timezoneVariance: 0.333,
+      averageEHP: 0.167,
+      averageEHB: 0.167,
+      averageDailyHours: 0.167,
+      teamSizeVariance: 0.167,
     },
     termination: {
       minTemperature: 0.0001,
@@ -402,19 +356,19 @@ export function validateConfig(config: SAStandardConfig): { valid: boolean; erro
   if (config.weights.averageDailyHours < 0) {
     errors.push('Daily hours weight must be non-negative')
   }
+  if (config.weights.teamSizeVariance < 0) {
+    errors.push('Team size variance weight must be non-negative')
+  }
 
-  // Scale validation
-  if (config.scales.EHP <= 0) {
-    errors.push('EHP scale must be positive')
-  }
-  if (config.scales.EHB <= 0) {
-    errors.push('EHB scale must be positive')
-  }
-  if (config.scales.dailyHours <= 0) {
-    errors.push('Daily hours scale must be positive')
-  }
-  if (config.scales.timezone <= 0) {
-    errors.push('Timezone scale must be positive')
+  // Weight sum validation - must sum to 1.0 (with small tolerance for floating point)
+  const weightSum =
+    config.weights.timezoneVariance +
+    config.weights.averageEHP +
+    config.weights.averageEHB +
+    config.weights.averageDailyHours +
+    config.weights.teamSizeVariance
+  if (Math.abs(weightSum - 1.0) > 0.001) {
+    errors.push(`Weights must sum to 1.0 (currently ${weightSum.toFixed(3)})`)
   }
 
   // Termination validation

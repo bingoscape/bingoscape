@@ -71,11 +71,10 @@ export function AutoTeamGeneratorModal({
 
   // Legacy weights for participant scoring (not used in SA, kept for backward compat)
   const legacyWeights = {
-    ehp: 0.2,
-    ehb: 0.2,
-    timezone: 0.2,
-    dailyHours: 0.2,
-    skillLevel: 0.2,
+    ehp: 0.25,
+    ehb: 0.25,
+    timezone: 0.25,
+    dailyHours: 0.25,
   }
 
   // Simulated Annealing configuration
@@ -91,13 +90,13 @@ export function AutoTeamGeneratorModal({
     randomSeed: undefined as number | undefined,
     stagnationLimit: 5000,
 
-    // Variance weights
+    // Variance weights (normalized to sum to 1.0)
     varianceWeights: {
-      timezone: 2.0,
-      ehp: 1.0,
-      ehb: 1.0,
-      dailyHours: 1.0,
-      teamSize: 1.0,
+      timezone: 0.333,    // 33.3%
+      ehp: 0.167,         // 16.7%
+      ehb: 0.167,         // 16.7%
+      dailyHours: 0.167,  // 16.7%
+      teamSize: 0.167,    // 16.7%
     },
 
     // Move operators
@@ -133,9 +132,59 @@ export function AutoTeamGeneratorModal({
     }
   }
 
+  // Helper: Normalize variance weights to sum to 1.0
+  // When one weight changes, proportionally adjust all others
+  const normalizeWeights = (
+    currentWeights: typeof saConfig.varianceWeights,
+    changedKey: keyof typeof saConfig.varianceWeights,
+    newValue: number
+  ) => {
+    // Clamp new value between 0 and 1
+    const clampedValue = Math.max(0, Math.min(1, newValue))
+
+    // Calculate sum of other weights
+    const otherKeys = Object.keys(currentWeights).filter(k => k !== changedKey) as Array<keyof typeof currentWeights>
+    const otherSum = otherKeys.reduce((sum, key) => sum + currentWeights[key], 0)
+
+    // If other weights sum to zero, distribute remaining equally
+    if (otherSum === 0) {
+      const remaining = 1.0 - clampedValue
+      const perWeight = remaining / otherKeys.length
+      const newWeights = { ...currentWeights }
+      otherKeys.forEach(key => {
+        newWeights[key] = perWeight
+      })
+      newWeights[changedKey] = clampedValue
+      return newWeights
+    }
+
+    // Proportionally scale other weights to maintain their relative ratios
+    const remaining = 1.0 - clampedValue
+    const scaleFactor = remaining / otherSum
+
+    const newWeights = { ...currentWeights }
+    otherKeys.forEach(key => {
+      newWeights[key] = currentWeights[key] * scaleFactor
+    })
+    newWeights[changedKey] = clampedValue
+
+    return newWeights
+  }
+
   // Helper: Update config value (automatically sets preset to custom)
   const updateConfig = (path: string, value: any) => {
     setConfigPreset('custom')
+
+    // Special handling for variance weights to maintain sum = 1.0
+    if (path.startsWith('varianceWeights.')) {
+      const weightKey = path.split('.')[1] as keyof typeof saConfig.varianceWeights
+      setSaConfig((prev) => ({
+        ...prev,
+        varianceWeights: normalizeWeights(prev.varianceWeights, weightKey, value),
+      }))
+      return
+    }
+
     setSaConfig((prev) => {
       const keys = path.split('.')
       if (keys.length === 1) {
@@ -522,13 +571,13 @@ export function AutoTeamGeneratorModal({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm">Timezone Balance</Label>
-                      <span className="text-sm font-medium">{saConfig.varianceWeights.timezone.toFixed(1)}</span>
+                      <span className="text-sm font-medium">{(saConfig.varianceWeights.timezone * 100).toFixed(1)}%</span>
                     </div>
                     <Slider
-                      value={[saConfig.varianceWeights.timezone * 10]}
-                      onValueChange={([value]) => updateConfig('varianceWeights.timezone', value! / 10)}
+                      value={[saConfig.varianceWeights.timezone * 100]}
+                      onValueChange={([value]) => updateConfig('varianceWeights.timezone', value! / 100)}
                       min={0}
-                      max={50}
+                      max={100}
                       step={1}
                     />
                   </div>
@@ -537,13 +586,13 @@ export function AutoTeamGeneratorModal({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm">EHP Balance</Label>
-                      <span className="text-sm font-medium">{saConfig.varianceWeights.ehp.toFixed(1)}</span>
+                      <span className="text-sm font-medium">{(saConfig.varianceWeights.ehp * 100).toFixed(1)}%</span>
                     </div>
                     <Slider
-                      value={[saConfig.varianceWeights.ehp * 10]}
-                      onValueChange={([value]) => updateConfig('varianceWeights.ehp', value! / 10)}
+                      value={[saConfig.varianceWeights.ehp * 100]}
+                      onValueChange={([value]) => updateConfig('varianceWeights.ehp', value! / 100)}
                       min={0}
-                      max={50}
+                      max={100}
                       step={1}
                     />
                   </div>
@@ -552,13 +601,13 @@ export function AutoTeamGeneratorModal({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm">EHB Balance</Label>
-                      <span className="text-sm font-medium">{saConfig.varianceWeights.ehb.toFixed(1)}</span>
+                      <span className="text-sm font-medium">{(saConfig.varianceWeights.ehb * 100).toFixed(1)}%</span>
                     </div>
                     <Slider
-                      value={[saConfig.varianceWeights.ehb * 10]}
-                      onValueChange={([value]) => updateConfig('varianceWeights.ehb', value! / 10)}
+                      value={[saConfig.varianceWeights.ehb * 100]}
+                      onValueChange={([value]) => updateConfig('varianceWeights.ehb', value! / 100)}
                       min={0}
-                      max={50}
+                      max={100}
                       step={1}
                     />
                   </div>
@@ -567,13 +616,13 @@ export function AutoTeamGeneratorModal({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm">Daily Hours Balance</Label>
-                      <span className="text-sm font-medium">{saConfig.varianceWeights.dailyHours.toFixed(1)}</span>
+                      <span className="text-sm font-medium">{(saConfig.varianceWeights.dailyHours * 100).toFixed(1)}%</span>
                     </div>
                     <Slider
-                      value={[saConfig.varianceWeights.dailyHours * 10]}
-                      onValueChange={([value]) => updateConfig('varianceWeights.dailyHours', value! / 10)}
+                      value={[saConfig.varianceWeights.dailyHours * 100]}
+                      onValueChange={([value]) => updateConfig('varianceWeights.dailyHours', value! / 100)}
                       min={0}
-                      max={50}
+                      max={100}
                       step={1}
                     />
                   </div>
@@ -582,17 +631,17 @@ export function AutoTeamGeneratorModal({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm">Team Size Balance</Label>
-                      <span className="text-sm font-medium">{saConfig.varianceWeights.teamSize.toFixed(1)}</span>
+                      <span className="text-sm font-medium">{(saConfig.varianceWeights.teamSize * 100).toFixed(1)}%</span>
                     </div>
                     <Slider
-                      value={[saConfig.varianceWeights.teamSize * 10]}
-                      onValueChange={([value]) => updateConfig('varianceWeights.teamSize', value! / 10)}
+                      value={[saConfig.varianceWeights.teamSize * 100]}
+                      onValueChange={([value]) => updateConfig('varianceWeights.teamSize', value! / 100)}
                       min={0}
-                      max={50}
+                      max={100}
                       step={1}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Higher values promote equal-sized teams. Set to 0 to ignore team size balance.
+                      Weights must sum to 100%. Changing one weight proportionally adjusts others.
                     </p>
                   </div>
                 </div>
@@ -644,35 +693,6 @@ export function AutoTeamGeneratorModal({
                     <p className="text-xs text-muted-foreground">
                       Move one participant to another team
                     </p>
-                  </div>
-                </div>
-
-                {/* Scaling Constants Info */}
-                <div className="space-y-2 rounded-lg border p-4 bg-secondary/20">
-                  <div className="flex items-center gap-2">
-                    <Label className="text-base font-semibold">Scaling Constants</Label>
-                    <Badge variant="secondary" className="text-xs">Info Only</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    These constants normalize metric contributions to the objective function
-                  </p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">EHP Scale:</span>
-                      <span className="font-medium">1000</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">EHB Scale:</span>
-                      <span className="font-medium">1000</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Daily Hours:</span>
-                      <span className="font-medium">25</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Timezone:</span>
-                      <span className="font-medium">16</span>
-                    </div>
                   </div>
                 </div>
               </CollapsibleContent>

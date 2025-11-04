@@ -7,14 +7,13 @@ import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getEventParticipantMetadata, calculateMetadataCoverage } from "./player-metadata"
 import { createTeam, addUserToTeam } from "./team"
-import { SA_STANDARD_CONFIG, SA_FORMULAS, type SAStandardConfig } from "@/lib/simulated-annealing-config"
+import { SA_STANDARD_CONFIG, SA_FORMULAS } from "@/lib/simulated-annealing-config"
 
 interface BalancingWeights {
   ehp: number // 0-1
   ehb: number // 0-1
   timezone: number // 0-1
   dailyHours: number // 0-1
-  skillLevel: number // 0-1
 }
 
 /**
@@ -46,46 +45,12 @@ interface SimulatedAnnealingConfig {
     swapProbability: number
     moveProbability: number
   }
-
-  // New: Scaling constants for metric normalization (optional)
-  scales?: {
-    EHP: number
-    EHB: number
-    dailyHours: number
-    timezone: number
-  }
-}
-
-/**
- * Convert standard configuration to internal format
- */
-function convertStandardConfig(stdConfig: Partial<SAStandardConfig>): SimulatedAnnealingConfig {
-  const defaults = SA_STANDARD_CONFIG
-
-  return {
-    iterations: stdConfig.annealing?.iterations ?? defaults.annealing.iterations,
-    initialTemperature: stdConfig.annealing?.initialTemperature ?? defaults.annealing.initialTemperature,
-    finalTemperature: stdConfig.annealing?.finalTemperature ?? defaults.annealing.finalTemperature,
-    randomSeed: stdConfig.annealing?.randomSeed,
-    stagnationLimit: stdConfig.termination?.stagnationLimit,
-    moves: stdConfig.moves ? {
-      swapProbability: stdConfig.moves.swapProbability,
-      moveProbability: stdConfig.moves.moveProbability,
-    } : undefined,
-    scales: stdConfig.scales,
-    varianceWeights: {
-      timezone: stdConfig.weights?.timezoneVariance ?? defaults.weights.timezoneVariance,
-      ehp: stdConfig.weights?.averageEHP ?? defaults.weights.averageEHP,
-      ehb: stdConfig.weights?.averageEHB ?? defaults.weights.averageEHB,
-      dailyHours: stdConfig.weights?.averageDailyHours ?? defaults.weights.averageDailyHours,
-      teamSize: stdConfig.weights?.teamSizeVariance ?? defaults.weights.teamSizeVariance,
-    },
-  }
 }
 
 interface PlayerFeatures {
   userId: string
-  timezoneOffset: number // UTC offset in hours
+  timezoneOffset: number // UTC offset in hours (kept for reference)
+  timezoneAngle: number // Timezone converted to radians for circular statistics
   ehp: number // Imputed with mean if missing
   ehb: number // Imputed with mean if missing
   dailyHours: number // Imputed with mean if missing
@@ -106,18 +71,7 @@ interface ScoredParticipant {
     ehb: number
     timezone: number
     dailyHours: number
-    skillLevel: number
   }
-}
-
-/**
- * Skill level mapping to numeric values
- */
-const SKILL_LEVEL_SCORES: Record<string, number> = {
-  beginner: 0.25,
-  intermediate: 0.5,
-  advanced: 0.75,
-  expert: 1.0,
 }
 
 /**
@@ -238,7 +192,6 @@ function calculatePlayerScore(
     ehb: number | null
     timezone: string | null
     dailyHoursAvailable: number | null
-    skillLevel: "beginner" | "intermediate" | "advanced" | "expert" | null
   },
   allMetadata: Array<typeof metadata>,
   weights: BalancingWeights
@@ -261,23 +214,18 @@ function calculatePlayerScore(
     allMetadata.map(m => m.dailyHoursAvailable)
   )
 
-  const skillScore = metadata.skillLevel
-    ? (SKILL_LEVEL_SCORES[metadata.skillLevel] ?? 0.5)
-    : 0.5
-
   // Apply weights and calculate composite score
   const breakdown = {
     ehp: ehpScore * weights.ehp,
     ehb: ehbScore * weights.ehb,
     timezone: timezoneScore * weights.timezone,
     dailyHours: dailyHoursScore * weights.dailyHours,
-    skillLevel: skillScore * weights.skillLevel,
   }
 
   // Calculate total (normalize by sum of weights)
-  const totalWeight = weights.ehp + weights.ehb + weights.timezone + weights.dailyHours + weights.skillLevel
+  const totalWeight = weights.ehp + weights.ehb + weights.timezone + weights.dailyHours
   const score = totalWeight > 0
-    ? (breakdown.ehp + breakdown.ehb + breakdown.timezone + breakdown.dailyHours + breakdown.skillLevel) / totalWeight
+    ? (breakdown.ehp + breakdown.ehb + breakdown.timezone + breakdown.dailyHours) / totalWeight
     : 0.5
 
   return { score, breakdown }
@@ -302,8 +250,113 @@ function calculateVariance(values: number[]): number {
 }
 
 /**
+ * Calculate standard deviation of an array of numbers
+ */
+function calculateStandardDeviation(values: number[]): number {
+  return Math.sqrt(calculateVariance(values))
+}
+
+/**
+ * Calculate z-score for a value given population statistics
+ * Formula: z = (x - μ) / σ
+ * Returns 0 if standard deviation is 0 (no variance in population)
+ */
+function calculateZScore(value: number, mean: number, stdDev: number): number {
+  if (stdDev === 0) return 0
+  return (value - mean) / stdDev
+}
+
+/**
+ * Calculate circular variance for angles in radians
+ * Used for timezone distribution within teams
+ *
+ * Formula:
+ *   R = √(S² + C²)  where S = Σsin(θ)/n, C = Σcos(θ)/n
+ *   CircularVariance = 1 - R
+ *
+ * Range: [0, 1]
+ *   0 = all angles identical (perfect cohesion)
+ *   1 = angles uniformly distributed (maximum dispersion)
+ *
+ * @param angles - Array of angles in radians
+ * @returns Circular variance value between 0 and 1
+ */
+function calculateCircularVariance(angles: number[]): number {
+  if (angles.length === 0) return 0
+  if (angles.length === 1) return 0 // Single angle has no variance
+
+  const sumSin = angles.reduce((sum, angle) => sum + Math.sin(angle), 0)
+  const sumCos = angles.reduce((sum, angle) => sum + Math.cos(angle), 0)
+
+  const S = sumSin / angles.length
+  const C = sumCos / angles.length
+
+  // Mean resultant length (R)
+  const R = Math.sqrt(S * S + C * C)
+
+  // Circular variance = 1 - R
+  return 1 - R
+}
+
+/**
+ * Global statistics for normalizing features using z-scores
+ */
+interface GlobalStats {
+  ehp: { mean: number; stdDev: number }
+  ehb: { mean: number; stdDev: number }
+  dailyHours: { mean: number; stdDev: number }
+  // Note: Timezone uses circular statistics, not z-scores
+}
+
+/**
+ * Calculate global statistics for all players
+ * Used to normalize features with z-scores during objective calculation
+ *
+ * @param players - All player features in the dataset
+ * @returns Global mean and standard deviation for each metric
+ */
+function calculateGlobalStats(players: PlayerFeatures[]): GlobalStats {
+  const ehpValues = players.map(p => p.ehp)
+  const ehbValues = players.map(p => p.ehb)
+  const dailyHoursValues = players.map(p => p.dailyHours)
+
+  return {
+    ehp: {
+      mean: calculateMean(ehpValues),
+      stdDev: calculateStandardDeviation(ehpValues),
+    },
+    ehb: {
+      mean: calculateMean(ehbValues),
+      stdDev: calculateStandardDeviation(ehbValues),
+    },
+    dailyHours: {
+      mean: calculateMean(dailyHoursValues),
+      stdDev: calculateStandardDeviation(dailyHoursValues),
+    },
+  }
+}
+
+/**
+ * Convert timezone UTC offset (in hours) to angle in radians
+ * Formula: θ = (offset / 24) × 2π
+ *
+ * Examples:
+ *   UTC (0h) → 0 radians
+ *   UTC+6 (6h) → π/2 radians (90°)
+ *   UTC+12 (12h) → π radians (180°)
+ *   UTC-12 (-12h) → -π radians (-180°)
+ *
+ * @param offset - UTC offset in hours (-12 to +14)
+ * @returns Angle in radians (-π to +π)
+ */
+function timezoneOffsetToAngle(offset: number): number {
+  return (offset / 24) * 2 * Math.PI
+}
+
+/**
  * Prepare player features for simulated annealing
  * Imputes missing values with dataset mean
+ * Converts timezone offsets to angles for circular statistics
  */
 function preparePlayerFeatures(
   participants: Array<{ userId: string }>,
@@ -323,9 +376,12 @@ function preparePlayerFeatures(
 
   return participants.map(p => {
     const metadata = metadataMap.get(p.userId)
+    const timezoneOffset = getTimezoneOffset(metadata?.timezone)
+
     return {
       userId: p.userId,
-      timezoneOffset: getTimezoneOffset(metadata?.timezone),
+      timezoneOffset: timezoneOffset,
+      timezoneAngle: timezoneOffsetToAngle(timezoneOffset),
       ehp: metadata?.ehp ?? meanEhp,
       ehb: metadata?.ehb ?? meanEhb,
       dailyHours: metadata?.dailyHoursAvailable ?? meanDailyHours,
@@ -337,43 +393,69 @@ function preparePlayerFeatures(
  * Calculate objective function for team assignment
  * Lower values indicate better balance
  *
- * Uses scaling constants to normalize metrics before calculating variance
- * Formula: E(S) = Σ(w_i * Var_i(S) / scale_i) + w_size * Var(team_sizes)
+ * Uses z-score normalization and circular variance for timezone
+ * Formula: E(S) = Σ(w_i * Var_i(z-scores)) + w_tz * CircVar(timezones) + w_size * Var(team_sizes)
+ *
+ * @param assignment - Team assignments (array of player ID arrays)
+ * @param playerMap - Map of player IDs to their features
+ * @param config - Simulated annealing configuration
+ * @param globalStats - Global statistics for z-score normalization
+ * @returns Objective value (lower is better)
  */
 function calculateObjective(
   assignment: string[][],
   playerMap: Map<string, PlayerFeatures>,
-  config: SimulatedAnnealingConfig
+  config: SimulatedAnnealingConfig,
+  globalStats: GlobalStats
 ): number {
-  // Get scaling constants (use defaults if not provided)
-  const scales = config.scales ?? SA_STANDARD_CONFIG.scales
-
+  // Calculate team-level statistics
   const teamStats = assignment.map(team => {
     const players = team.map(userId => playerMap.get(userId)!).filter(p => p !== undefined)
     if (players.length === 0) {
-      return { avgTimezone: 0, avgEhp: 0, avgEhb: 0, avgDailyHours: 0 }
+      return {
+        avgEhp: 0,
+        avgEhb: 0,
+        avgDailyHours: 0,
+        timezoneAngles: [] as number[],
+      }
     }
 
-    // Calculate averages with scaling applied
     return {
-      avgTimezone: (players.reduce((sum, p) => sum + p.timezoneOffset, 0) / players.length) / scales.timezone,
-      avgEhp: (players.reduce((sum, p) => sum + p.ehp, 0) / players.length) / scales.EHP,
-      avgEhb: (players.reduce((sum, p) => sum + p.ehb, 0) / players.length) / scales.EHB,
-      avgDailyHours: (players.reduce((sum, p) => sum + p.dailyHours, 0) / players.length) / scales.dailyHours,
+      avgEhp: players.reduce((sum, p) => sum + p.ehp, 0) / players.length,
+      avgEhb: players.reduce((sum, p) => sum + p.ehb, 0) / players.length,
+      avgDailyHours: players.reduce((sum, p) => sum + p.dailyHours, 0) / players.length,
+      timezoneAngles: players.map(p => p.timezoneAngle),
     }
   })
 
-  // Calculate variance for each metric across teams (already scaled)
-  const timezoneVariance = calculateVariance(teamStats.map(s => s.avgTimezone))
-  const ehpVariance = calculateVariance(teamStats.map(s => s.avgEhp))
-  const ehbVariance = calculateVariance(teamStats.map(s => s.avgEhb))
-  const dailyHoursVariance = calculateVariance(teamStats.map(s => s.avgDailyHours))
+  // Convert team averages to z-scores
+  const ehpZScores = teamStats.map(s =>
+    calculateZScore(s.avgEhp, globalStats.ehp.mean, globalStats.ehp.stdDev)
+  )
+  const ehbZScores = teamStats.map(s =>
+    calculateZScore(s.avgEhb, globalStats.ehb.mean, globalStats.ehb.stdDev)
+  )
+  const dailyHoursZScores = teamStats.map(s =>
+    calculateZScore(s.avgDailyHours, globalStats.dailyHours.mean, globalStats.dailyHours.stdDev)
+  )
+
+  // Calculate variance of z-scores across teams (lower = more balanced)
+  const ehpVariance = calculateVariance(ehpZScores)
+  const ehbVariance = calculateVariance(ehbZScores)
+  const dailyHoursVariance = calculateVariance(dailyHoursZScores)
+
+  // Calculate circular variance for timezone cohesion within each team
+  // Then take variance of those circular variances across teams
+  const timezoneCircularVariances = teamStats.map(s =>
+    calculateCircularVariance(s.timezoneAngles)
+  )
+  const timezoneVariance = calculateVariance(timezoneCircularVariances)
 
   // Calculate team size variance (promotes equal-sized teams)
   const teamSizes = assignment.map(team => team.length)
   const teamSizeVariance = calculateVariance(teamSizes)
 
-  // Weighted sum of variances
+  // Weighted sum of variances (weights should sum to 1.0)
   return (
     config.varianceWeights.timezone * timezoneVariance +
     config.varianceWeights.ehp * ehpVariance +
@@ -441,6 +523,7 @@ function generateNeighbor(assignment: string[][], config: SimulatedAnnealingConf
 /**
  * Simulated annealing optimization for team balancing
  * Implements exponential cooling schedule and optional stagnation detection
+ * Uses z-score normalization and circular variance for improved metric comparison
  */
 function simulatedAnnealing(
   players: PlayerFeatures[],
@@ -455,6 +538,9 @@ function simulatedAnnealing(
     // TODO: Implement seedable random with library if reproducibility is critical
   }
 
+  // Calculate global statistics once for z-score normalization
+  const globalStats = calculateGlobalStats(players)
+
   // Create player map for quick lookup
   const playerMap = new Map(players.map(p => [p.userId, p]))
 
@@ -464,7 +550,7 @@ function simulatedAnnealing(
     currentAssignment[idx % numberOfTeams]!.push(player.userId)
   })
 
-  let currentObjective = calculateObjective(currentAssignment, playerMap, config)
+  let currentObjective = calculateObjective(currentAssignment, playerMap, config, globalStats)
   let bestAssignment = currentAssignment.map(team => [...team])
   let bestObjective = currentObjective
 
@@ -490,7 +576,7 @@ function simulatedAnnealing(
 
     // Generate neighbor configuration
     const neighborAssignment = generateNeighbor(currentAssignment, config)
-    const neighborObjective = calculateObjective(neighborAssignment, playerMap, config)
+    const neighborObjective = calculateObjective(neighborAssignment, playerMap, config, globalStats)
 
     // Calculate delta
     const delta = neighborObjective - currentObjective
@@ -572,14 +658,6 @@ export async function generateBalancedTeams(
       moves?: {
         swapProbability?: number
         moveProbability?: number
-      }
-
-      // New: Scaling constants
-      scales?: {
-        EHP?: number
-        EHB?: number
-        dailyHours?: number
-        timezone?: number
       }
     }
   }
@@ -687,14 +765,6 @@ export async function generateBalancedTeams(
       swapProbability: defaults.moves.swapProbability,
       moveProbability: defaults.moves.moveProbability,
     },
-
-    // New: Scaling constants
-    scales: config.simulatedAnnealing?.scales ? {
-      EHP: config.simulatedAnnealing.scales.EHP ?? defaults.scales.EHP,
-      EHB: config.simulatedAnnealing.scales.EHB ?? defaults.scales.EHB,
-      dailyHours: config.simulatedAnnealing.scales.dailyHours ?? defaults.scales.dailyHours,
-      timezone: config.simulatedAnnealing.scales.timezone ?? defaults.scales.timezone,
-    } : defaults.scales,
   }
 
   // Run simulated annealing optimization
@@ -755,11 +825,10 @@ export async function calculateTeamBalanceMetrics(eventId: string) {
 
   // Calculate average score per team (using equal weights for display)
   const defaultWeights: BalancingWeights = {
-    ehp: 0.2,
-    ehb: 0.2,
-    timezone: 0.2,
-    dailyHours: 0.2,
-    skillLevel: 0.2,
+    ehp: 0.25,
+    ehb: 0.25,
+    timezone: 0.25,
+    dailyHours: 0.25,
   }
 
   const allMetadata = existingTeams

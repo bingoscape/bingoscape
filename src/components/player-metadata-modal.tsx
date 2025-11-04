@@ -47,13 +47,6 @@ const COMMON_TIMEZONES = [
   { value: "Asia/Tokyo", label: "Tokyo (JST)" },
 ]
 
-const SKILL_LEVELS = [
-  { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
-  { value: "expert", label: "Expert" },
-]
-
 export function PlayerMetadataModal({
   isOpen,
   onClose,
@@ -74,7 +67,6 @@ export function PlayerMetadataModal({
     totalLevel: "",
     timezone: "",
     dailyHoursAvailable: "",
-    skillLevel: "",
     notes: "",
     womPlayerData: "",
   })
@@ -97,7 +89,6 @@ export function PlayerMetadataModal({
           totalLevel: metadata.totalLevel?.toString() ?? "",
           timezone: metadata.timezone ?? "",
           dailyHoursAvailable: metadata.dailyHoursAvailable?.toString() ?? "",
-          skillLevel: metadata.skillLevel ?? "",
           notes: metadata.notes ?? "",
           womPlayerData: metadata.womPlayerData ?? "",
         })
@@ -111,7 +102,6 @@ export function PlayerMetadataModal({
           totalLevel: "",
           timezone: "",
           dailyHoursAvailable: "",
-          skillLevel: "",
           notes: "",
           womPlayerData: "",
         })
@@ -140,9 +130,6 @@ export function PlayerMetadataModal({
         timezone: formData.timezone || null,
         dailyHoursAvailable: formData.dailyHoursAvailable
           ? parseFloat(formData.dailyHoursAvailable)
-          : null,
-        skillLevel: formData.skillLevel
-          ? (formData.skillLevel as "beginner" | "intermediate" | "advanced" | "expert")
           : null,
         notes: formData.notes || null,
         womPlayerData: formData.womPlayerData || null,
@@ -376,49 +363,23 @@ export function PlayerMetadataModal({
               </p>
             </div>
 
-            {/* Daily Hours & Skill Level */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="dailyHours">
-                  Daily Hours Available
-                </Label>
-                <Input
-                  id="dailyHours"
-                  type="text"
-                  placeholder="0.0"
-                  value={formData.dailyHoursAvailable}
-                  onChange={(e) =>
-                    handleNumberInput("dailyHoursAvailable", e.target.value)
-                  }
-                />
-                <p className="text-xs text-muted-foreground">
-                  Average hours/day player can participate
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="skillLevel">Skill Level</Label>
-                <Select
-                  value={formData.skillLevel}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, skillLevel: value }))
-                  }
-                >
-                  <SelectTrigger id="skillLevel">
-                    <SelectValue placeholder="Select skill level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SKILL_LEVELS.map((level) => (
-                      <SelectItem key={level.value} value={level.value}>
-                        {level.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Perceived player skill/experience level
-                </p>
-              </div>
+            {/* Daily Hours */}
+            <div className="space-y-2">
+              <Label htmlFor="dailyHours">
+                Daily Hours Available
+              </Label>
+              <Input
+                id="dailyHours"
+                type="text"
+                placeholder="0.0"
+                value={formData.dailyHoursAvailable}
+                onChange={(e) =>
+                  handleNumberInput("dailyHoursAvailable", e.target.value)
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Average hours/day player can participate
+              </p>
             </div>
 
             {/* Notes Section */}

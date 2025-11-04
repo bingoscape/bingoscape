@@ -65,7 +65,6 @@ export async function updatePlayerMetadata(
     totalLevel?: number | null
     timezone?: string | null
     dailyHoursAvailable?: number | null
-    skillLevel?: "beginner" | "intermediate" | "advanced" | "expert" | null
     notes?: string | null
     womPlayerData?: string | null
     lastFetchedFromWOM?: Date | null
