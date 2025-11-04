@@ -88,40 +88,35 @@ export interface SAStandardConfig {
    * IMPORTANT: Weights must sum to 1.0 (100%)
    * Each weight represents the proportional contribution to the objective function
    * Higher weights emphasize that metric more strongly in the optimization
+   *
+   * NOTE: Team size balance is enforced automatically as a hard constraint
+   * and is not configurable through these weights
    */
   weights: {
     /**
      * Weight for timezone variance minimization
      * Higher value emphasizes keeping teams timezone-cohesive
-     * @default 0.333 (33.3%)
+     * @default 0.40 (40%)
      */
     timezoneVariance: number
 
     /**
      * Weight for EHP (Efficient Hours Played) balance
-     * @default 0.167 (16.7%)
+     * @default 0.20 (20%)
      */
     averageEHP: number
 
     /**
      * Weight for EHB (Efficient Hours Bossed) balance
-     * @default 0.167 (16.7%)
+     * @default 0.20 (20%)
      */
     averageEHB: number
 
     /**
      * Weight for daily hours availability balance
-     * @default 0.167 (16.7%)
+     * @default 0.20 (20%)
      */
     averageDailyHours: number
-
-    /**
-     * Weight for team size variance minimization
-     * Higher value emphasizes equal-sized teams
-     * Set to 0 to ignore team size balance
-     * @default 0.167 (16.7%)
-     */
-    teamSizeVariance: number
   }
 
   /**
@@ -174,13 +169,13 @@ export const SA_STANDARD_CONFIG: SAStandardConfig = {
   },
   weights: {
     // Normalized weights (sum to 1.0)
-    // 2/6 = 0.333 for timezone (emphasized)
-    // 1/6 = 0.167 for each other metric
-    timezoneVariance: 0.333,  // Emphasize timezone cohesion (33.3%)
-    averageEHP: 0.167,        // 16.7%
-    averageEHB: 0.167,        // 16.7%
-    averageDailyHours: 0.167, // 16.7%
-    teamSizeVariance: 0.167,  // Promote equal-sized teams (16.7%)
+    // Team size is now enforced as a hard constraint (not a weight)
+    // 2/5 = 0.40 for timezone (emphasized)
+    // 1/5 = 0.20 for each other metric
+    timezoneVariance: 0.40,      // Emphasize timezone cohesion (40%)
+    averageEHP: 0.20,            // 20%
+    averageEHB: 0.20,            // 20%
+    averageDailyHours: 0.20,     // 20%
   },
   termination: {
     minTemperature: 0.0001,
@@ -215,11 +210,10 @@ export const SA_PRESETS: Record<'small' | 'medium' | 'large', SAStandardConfig> 
       moveProbability: 0.3,
     },
     weights: {
-      timezoneVariance: 0.333,
-      averageEHP: 0.167,
-      averageEHB: 0.167,
-      averageDailyHours: 0.167,
-      teamSizeVariance: 0.167,
+      timezoneVariance: 0.40,
+      averageEHP: 0.20,
+      averageEHB: 0.20,
+      averageDailyHours: 0.20,
     },
     termination: {
       minTemperature: 0.0001,
@@ -257,11 +251,10 @@ export const SA_PRESETS: Record<'small' | 'medium' | 'large', SAStandardConfig> 
       moveProbability: 0.3,
     },
     weights: {
-      timezoneVariance: 0.333,
-      averageEHP: 0.167,
-      averageEHB: 0.167,
-      averageDailyHours: 0.167,
-      teamSizeVariance: 0.167,
+      timezoneVariance: 0.40,
+      averageEHP: 0.20,
+      averageEHB: 0.20,
+      averageDailyHours: 0.20,
     },
     termination: {
       minTemperature: 0.0001,
@@ -356,17 +349,14 @@ export function validateConfig(config: SAStandardConfig): { valid: boolean; erro
   if (config.weights.averageDailyHours < 0) {
     errors.push('Daily hours weight must be non-negative')
   }
-  if (config.weights.teamSizeVariance < 0) {
-    errors.push('Team size variance weight must be non-negative')
-  }
 
   // Weight sum validation - must sum to 1.0 (with small tolerance for floating point)
+  // Note: Team size is now a hard constraint, not a configurable weight
   const weightSum =
     config.weights.timezoneVariance +
     config.weights.averageEHP +
     config.weights.averageEHB +
-    config.weights.averageDailyHours +
-    config.weights.teamSizeVariance
+    config.weights.averageDailyHours
   if (Math.abs(weightSum - 1.0) > 0.001) {
     errors.push(`Weights must sum to 1.0 (currently ${weightSum.toFixed(3)})`)
   }

@@ -91,12 +91,12 @@ export function AutoTeamGeneratorModal({
     stagnationLimit: 5000,
 
     // Variance weights (normalized to sum to 1.0)
+    // Note: Team size is now enforced as a hard constraint
     varianceWeights: {
-      timezone: 0.333,    // 33.3%
-      ehp: 0.167,         // 16.7%
-      ehb: 0.167,         // 16.7%
-      dailyHours: 0.167,  // 16.7%
-      teamSize: 0.167,    // 16.7%
+      timezone: 0.40,      // 40%
+      ehp: 0.20,           // 20%
+      ehb: 0.20,           // 20%
+      dailyHours: 0.20,    // 20%
     },
 
     // Move operators
@@ -122,7 +122,6 @@ export function AutoTeamGeneratorModal({
           ehp: presetConfig.weights.averageEHP,
           ehb: presetConfig.weights.averageEHB,
           dailyHours: presetConfig.weights.averageDailyHours,
-          teamSize: presetConfig.weights.teamSizeVariance,
         },
         moves: {
           swapProbability: presetConfig.moves.swapProbability,
@@ -627,24 +626,16 @@ export function AutoTeamGeneratorModal({
                     />
                   </div>
 
-                  {/* Team Size Variance Weight */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm">Team Size Balance</Label>
-                      <span className="text-sm font-medium">{(saConfig.varianceWeights.teamSize * 100).toFixed(1)}%</span>
-                    </div>
-                    <Slider
-                      value={[saConfig.varianceWeights.teamSize * 100]}
-                      onValueChange={([value]) => updateConfig('varianceWeights.teamSize', value! / 100)}
-                      min={0}
-                      max={100}
-                      step={1}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Weights must sum to 100%. Changing one weight proportionally adjusts others.
-                    </p>
+                  {/* Team Size Balance Note */}
+                  <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
+                    <p className="font-medium">Team Size Balance</p>
+                    <p className="mt-1">Team size is automatically balanced as a hard constraint. Focus on optimizing skill and timezone balance.</p>
                   </div>
                 </div>
+
+                <p className="text-xs text-muted-foreground mt-2">
+                  Weights must sum to 100%. Changing one weight proportionally adjusts others.
+                </p>
 
                 {/* Move Operators */}
                 <div className="space-y-3 rounded-lg border p-4">

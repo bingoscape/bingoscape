@@ -26,12 +26,12 @@ interface SimulatedAnnealingConfig {
   finalTemperature: number // Ending temperature
 
   // Variance weights for objective function
+  // Note: Team size is enforced as a hard constraint, not a configurable weight
   varianceWeights: {
     timezone: number // Weight for timezone variance
     ehp: number // Weight for EHP variance
     ehb: number // Weight for EHB variance
     dailyHours: number // Weight for daily hours variance
-    teamSize: number // Weight for team size variance (promotes equal-sized teams)
   }
 
   // New: Random seed for reproducibility (optional)
@@ -455,14 +455,27 @@ function calculateObjective(
   const teamSizes = assignment.map(team => team.length)
   const teamSizeVariance = calculateVariance(teamSizes)
 
-  // Weighted sum of variances (weights should sum to 1.0)
-  return (
+  // Pre-constraint validation: Reject solutions with excessive team size imbalance
+  const totalPlayers = assignment.reduce((sum, team) => sum + team.length, 0)
+  const targetSize = totalPlayers / assignment.length
+  const maxAllowedVariance = targetSize * targetSize * 0.25 // Allow ±1-2 members variation
+
+  if (teamSizeVariance > maxAllowedVariance) {
+    return Infinity // Reject this solution immediately
+  }
+
+  // Weighted sum of variances (weights should sum to 1.0, excluding teamSize)
+  const baseObjective = (
     config.varianceWeights.timezone * timezoneVariance +
     config.varianceWeights.ehp * ehpVariance +
     config.varianceWeights.ehb * ehbVariance +
-    config.varianceWeights.dailyHours * dailyHoursVariance +
-    config.varianceWeights.teamSize * teamSizeVariance
+    config.varianceWeights.dailyHours * dailyHoursVariance
   )
+
+  // Add small fixed penalty for team size variance as tiebreaker (not user-configurable)
+  const teamSizePenalty = teamSizeVariance * 0.1
+
+  return baseObjective + teamSizePenalty
 }
 
 /**
@@ -510,7 +523,8 @@ function generateNeighbor(assignment: string[][], config: SimulatedAnnealingConf
     const fromTeam = newAssignment[fromTeamIdx]!
     const toTeam = newAssignment[toTeamIdx]!
 
-    if (fromTeam.length > 0) {
+    // Hard constraint: Never empty a team (keep at least 1 member)
+    if (fromTeam.length > 1) {
       const playerIdx = Math.floor(Math.random() * fromTeam.length)
       const player = fromTeam.splice(playerIdx, 1)[0]!
       toTeam.push(player)
@@ -646,12 +660,12 @@ export async function generateBalancedTeams(
       stagnationLimit?: number
 
       // New: Variance weights (replaces participant weights in SA)
+      // Note: Team size is enforced as a hard constraint, not a weight
       varianceWeights?: {
         timezone?: number
         ehp?: number
         ehb?: number
         dailyHours?: number
-        teamSize?: number
       }
 
       // New: Move operator probabilities
@@ -745,12 +759,12 @@ export async function generateBalancedTeams(
     finalTemperature: config.simulatedAnnealing?.finalTemperature ?? defaults.annealing.finalTemperature,
 
     // Variance weights (use provided or standard defaults)
+    // Note: teamSize is now enforced as a hard constraint, not a weight
     varianceWeights: {
       timezone: config.simulatedAnnealing?.varianceWeights?.timezone ?? defaults.weights.timezoneVariance,
       ehp: config.simulatedAnnealing?.varianceWeights?.ehp ?? defaults.weights.averageEHP,
       ehb: config.simulatedAnnealing?.varianceWeights?.ehb ?? defaults.weights.averageEHB,
       dailyHours: config.simulatedAnnealing?.varianceWeights?.dailyHours ?? defaults.weights.averageDailyHours,
-      teamSize: config.simulatedAnnealing?.varianceWeights?.teamSize ?? defaults.weights.teamSizeVariance,
     },
 
     // New: Extended parameters
