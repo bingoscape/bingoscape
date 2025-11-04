@@ -17,7 +17,7 @@ import {
   updateTeamName,
 } from "@/app/actions/team"
 import { toast } from "@/hooks/use-toast"
-import { Edit2, Trash2, UserPlus, UserMinus, Shield, ShieldOff, Users, Shuffle, GripVertical, User, CheckCircle2, AlertCircle, TrendingUp, Target, Scale } from "lucide-react"
+import { Edit2, Trash2, UserPlus, UserMinus, Shield, ShieldOff, Users, Shuffle, GripVertical, User, CheckCircle2, AlertCircle, TrendingUp, Target, Scale, Globe } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { DndContext, DragOverlay, useDraggable, useDroppable } from "@dnd-kit/core"
@@ -318,6 +318,23 @@ function TeamCard({
               variant="secondary"
               tooltip="Number of team members"
             />
+
+            {/* Timezone Diversity */}
+            {teamStats && teamStats.timezoneDistribution.length > 0 && (
+              <TeamStatBadge
+                icon={Globe}
+                label="timezones"
+                value={String(teamStats.timezoneDistribution.length)}
+                variant={
+                  teamStats.timezoneDistribution.length === 1
+                    ? "default"
+                    : teamStats.timezoneDistribution.length <= 3
+                    ? "secondary"
+                    : "destructive"
+                }
+                tooltip={`${teamStats.timezoneDistribution.length} unique timezone${teamStats.timezoneDistribution.length !== 1 ? 's' : ''} (Diversity score: ${teamStats.timezoneDiversityScore.toFixed(2)}). ${teamStats.timezoneDistribution.length === 1 ? 'All members in same timezone - great for coordination!' : teamStats.timezoneDistribution.length <= 3 ? 'Moderate timezone spread' : 'Wide timezone spread - coordination may be challenging'}`}
+              />
+            )}
 
             {/* Average EHP */}
             {teamStats?.averageEHP !== null && teamStats?.averageEHP !== undefined && (
