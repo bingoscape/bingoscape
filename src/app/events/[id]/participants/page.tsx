@@ -67,6 +67,7 @@ import {
 import { useSession } from "next-auth/react"
 import { DonationManagementModal } from "@/components/donation-management-modal"
 import { PrizePoolBreakdown } from "@/components/prize-pool-breakdown"
+import { PlayerMetadataModal } from "@/components/player-metadata-modal"
 
 interface RemoveParticipantDialogProps {
   isOpen: boolean
@@ -325,6 +326,10 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
   const [isEventCreator, setIsEventCreator] = useState(false)
   const [donationModalOpen, setDonationModalOpen] = useState(false)
   const [participantForDonations, setParticipantForDonations] = useState<Participant | null>(null)
+  const [metadataModalOpen, setMetadataModalOpen] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [currentUserName, setCurrentUserName] = useState<string | null>(null)
+  const [currentUserRunescapeName, setCurrentUserRunescapeName] = useState<string | null>(null)
 
   const handleRemoveParticipant = async () => {
     if (!participantToRemove) return
@@ -434,6 +439,13 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
         setTeams(teamsData)
         setMinimumBuyIn(eventData?.event.minimumBuyIn ?? 0)
         setEventName(eventData?.event.title ?? "")
+
+        // Store current user info for metadata editing
+        if (userParticipant) {
+          setCurrentUserId(userParticipant.id)
+          setCurrentUserName(null) // Participant interface doesn't have name field
+          setCurrentUserRunescapeName(userParticipant.runescapeName)
+        }
       } catch (error) {
         console.error("Error fetching data:", error)
         toast({
@@ -939,15 +951,25 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
             </div>
           </div>
 
-          {canRemoveParticipants() && selectedParticipants.size > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">{selectedParticipants.size} selected</span>
-              <Button variant="destructive" size="sm" onClick={handleBulkRemove}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Remove Selected
+          <div className="flex items-center gap-2">
+            {/* Edit My Metadata button - visible to all participants */}
+            {currentUserId && (
+              <Button variant="outline" size="sm" onClick={() => setMetadataModalOpen(true)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit My Metadata
               </Button>
-            </div>
-          )}
+            )}
+
+            {canRemoveParticipants() && selectedParticipants.size > 0 && (
+              <>
+                <span className="text-sm text-muted-foreground">{selectedParticipants.size} selected</span>
+                <Button variant="destructive" size="sm" onClick={handleBulkRemove}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remove Selected
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Prize Pool Breakdown */}
@@ -1171,6 +1193,28 @@ export default function EventParticipantPool({ params }: { params: { id: UUID } 
           participantId={participantForDonations.id}
           participantName={participantForDonations.runescapeName}
           onDonationsUpdated={handleDonationsUpdated}
+        />
+      )}
+
+      {/* Player Metadata Modal - Self-Editing */}
+      {currentUserId && (
+        <PlayerMetadataModal
+          isOpen={metadataModalOpen}
+          onClose={() => setMetadataModalOpen(false)}
+          eventId={params.id as string}
+          userId={currentUserId}
+          userName={currentUserName}
+          runescapeName={currentUserRunescapeName}
+          isSelfEditing={true}
+          onMetadataUpdated={async () => {
+            // Refresh participants data to show updated metadata indicators
+            try {
+              const participantsData = await getEventParticipants(params.id as string)
+              setParticipants(participantsData)
+            } catch (error) {
+              console.error("Error refreshing participants:", error)
+            }
+          }}
         />
       )}
     </div>

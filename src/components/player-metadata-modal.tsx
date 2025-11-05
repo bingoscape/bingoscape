@@ -28,8 +28,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { toast } from "@/hooks/use-toast"
-import { getPlayerMetadata, updatePlayerMetadata, fetchWOMDataForPlayer } from "@/app/actions/player-metadata"
-import { Loader2, User, Download, Check, ChevronsUpDown } from "lucide-react"
+import { getPlayerMetadata, updatePlayerMetadata, updateOwnPlayerMetadata, fetchWOMDataForPlayer } from "@/app/actions/player-metadata"
+import { Loader2, User, Download, Check, ChevronsUpDown, Lock } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
 import { getPopularTimezones, getTimezonesByRegion } from "@/lib/timezones"
@@ -42,6 +43,7 @@ interface PlayerMetadataModalProps {
   userName: string | null
   runescapeName: string | null
   onMetadataUpdated?: () => void
+  isSelfEditing?: boolean // New prop to indicate if user is editing their own data
 }
 
 // Timezone data is now loaded from the comprehensive utilities module
@@ -54,6 +56,7 @@ export function PlayerMetadataModal({
   userName,
   runescapeName,
   onMetadataUpdated,
+  isSelfEditing = false,
 }: PlayerMetadataModalProps) {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -126,19 +129,30 @@ export function PlayerMetadataModal({
   const handleSave = async () => {
     setSaving(true)
     try {
-      await updatePlayerMetadata(userId, eventId, {
-        ehp: formData.ehp ? parseFloat(formData.ehp) : null,
-        ehb: formData.ehb ? parseFloat(formData.ehb) : null,
-        combatLevel: formData.combatLevel ? parseInt(formData.combatLevel) : null,
-        totalLevel: formData.totalLevel ? parseInt(formData.totalLevel) : null,
-        timezone: formData.timezone || null,
-        dailyHoursAvailable: formData.dailyHoursAvailable
-          ? parseFloat(formData.dailyHoursAvailable)
-          : null,
-        notes: formData.notes || null,
-        womPlayerData: formData.womPlayerData || null,
-        lastFetchedFromWOM: lastFetched,
-      })
+      if (isSelfEditing) {
+        // Use self-editing action (only timezone and dailyHoursAvailable)
+        await updateOwnPlayerMetadata(eventId, {
+          timezone: formData.timezone || null,
+          dailyHoursAvailable: formData.dailyHoursAvailable
+            ? parseFloat(formData.dailyHoursAvailable)
+            : null,
+        })
+      } else {
+        // Use admin action (all fields)
+        await updatePlayerMetadata(userId, eventId, {
+          ehp: formData.ehp ? parseFloat(formData.ehp) : null,
+          ehb: formData.ehb ? parseFloat(formData.ehb) : null,
+          combatLevel: formData.combatLevel ? parseInt(formData.combatLevel) : null,
+          totalLevel: formData.totalLevel ? parseInt(formData.totalLevel) : null,
+          timezone: formData.timezone || null,
+          dailyHoursAvailable: formData.dailyHoursAvailable
+            ? parseFloat(formData.dailyHoursAvailable)
+            : null,
+          notes: formData.notes || null,
+          womPlayerData: formData.womPlayerData || null,
+          lastFetchedFromWOM: lastFetched,
+        })
+      }
 
       toast({
         title: "Success",
@@ -238,49 +252,62 @@ export function PlayerMetadataModal({
           </div>
         ) : (
           <div className="grid gap-4 py-4">
-            {/* WiseOldMan Fetch Section */}
-            <div className="rounded-lg border bg-muted/50 p-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-semibold">WiseOldMan Data</h4>
-                  <p className="text-xs text-muted-foreground">
-                    {runescapeName
-                      ? `Fetch current stats for ${runescapeName}`
-                      : "No RuneScape name set for this player"}
-                  </p>
-                  {lastFetched && (
-                    <p className="text-xs text-muted-foreground">
-                      Last fetched: {formatDistanceToNow(lastFetched, { addSuffix: true })}
-                    </p>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleFetchFromWOM}
-                  disabled={!runescapeName || fetching || saving}
-                >
-                  {fetching ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Fetching...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="mr-2 h-4 w-4" />
-                      Fetch Data
-                    </>
-                  )}
-                </Button>
+            {/* Info banner for self-editing */}
+            {isSelfEditing && (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950">
+                <p className="text-sm text-blue-900 dark:text-blue-100">
+                  <Lock className="inline h-4 w-4 mr-1" />
+                  You can edit your timezone and availability. WiseOldMan stats (EHP, EHB, Combat, Total Level) are managed by event administrators.
+                </p>
               </div>
-            </div>
+            )}
 
-            {/* EHP/EHB Section */}
+            {/* WiseOldMan Fetch Section - Hidden for self-editing */}
+            {!isSelfEditing && (
+              <div className="rounded-lg border bg-muted/50 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-semibold">WiseOldMan Data</h4>
+                    <p className="text-xs text-muted-foreground">
+                      {runescapeName
+                        ? `Fetch current stats for ${runescapeName}`
+                        : "No RuneScape name set for this player"}
+                    </p>
+                    {lastFetched && (
+                      <p className="text-xs text-muted-foreground">
+                        Last fetched: {formatDistanceToNow(lastFetched, { addSuffix: true })}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleFetchFromWOM}
+                    disabled={!runescapeName || fetching || saving}
+                  >
+                    {fetching ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Fetching...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="mr-2 h-4 w-4" />
+                        Fetch Data
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* EHP/EHB Section - Read-only for self-editing */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="ehp">
+                <Label htmlFor="ehp" className="flex items-center gap-2">
                   EHP (Efficient Hours Played)
+                  {isSelfEditing && <Badge variant="secondary" className="text-xs"><Lock className="h-3 w-3 mr-1" />Admin Only</Badge>}
                 </Label>
                 <Input
                   id="ehp"
@@ -288,6 +315,8 @@ export function PlayerMetadataModal({
                   placeholder="0.0"
                   value={formData.ehp}
                   onChange={(e) => handleNumberInput("ehp", e.target.value)}
+                  disabled={isSelfEditing}
+                  className={isSelfEditing ? "bg-muted" : ""}
                 />
                 <p className="text-xs text-muted-foreground">
                   Player&apos;s efficiency metric for skilling
@@ -295,8 +324,9 @@ export function PlayerMetadataModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="ehb">
+                <Label htmlFor="ehb" className="flex items-center gap-2">
                   EHB (Efficient Hours Bossed)
+                  {isSelfEditing && <Badge variant="secondary" className="text-xs"><Lock className="h-3 w-3 mr-1" />Admin Only</Badge>}
                 </Label>
                 <Input
                   id="ehb"
@@ -304,6 +334,8 @@ export function PlayerMetadataModal({
                   placeholder="0.0"
                   value={formData.ehb}
                   onChange={(e) => handleNumberInput("ehb", e.target.value)}
+                  disabled={isSelfEditing}
+                  className={isSelfEditing ? "bg-muted" : ""}
                 />
                 <p className="text-xs text-muted-foreground">
                   Player&apos;s efficiency metric for bossing
@@ -311,16 +343,21 @@ export function PlayerMetadataModal({
               </div>
             </div>
 
-            {/* Combat & Total Level Section */}
+            {/* Combat & Total Level Section - Read-only for self-editing */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="combatLevel">Combat Level</Label>
+                <Label htmlFor="combatLevel" className="flex items-center gap-2">
+                  Combat Level
+                  {isSelfEditing && <Badge variant="secondary" className="text-xs"><Lock className="h-3 w-3 mr-1" />Admin Only</Badge>}
+                </Label>
                 <Input
                   id="combatLevel"
                   type="text"
                   placeholder="3"
                   value={formData.combatLevel}
                   onChange={(e) => handleNumberInput("combatLevel", e.target.value)}
+                  disabled={isSelfEditing}
+                  className={isSelfEditing ? "bg-muted" : ""}
                 />
                 <p className="text-xs text-muted-foreground">
                   Player&apos;s combat level (3-126)
@@ -328,13 +365,18 @@ export function PlayerMetadataModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="totalLevel">Total Level</Label>
+                <Label htmlFor="totalLevel" className="flex items-center gap-2">
+                  Total Level
+                  {isSelfEditing && <Badge variant="secondary" className="text-xs"><Lock className="h-3 w-3 mr-1" />Admin Only</Badge>}
+                </Label>
                 <Input
                   id="totalLevel"
                   type="text"
                   placeholder="32"
                   value={formData.totalLevel}
                   onChange={(e) => handleNumberInput("totalLevel", e.target.value)}
+                  disabled={isSelfEditing}
+                  className={isSelfEditing ? "bg-muted" : ""}
                 />
                 <p className="text-xs text-muted-foreground">
                   Total skill level (32-2277)
@@ -450,22 +492,24 @@ export function PlayerMetadataModal({
               </p>
             </div>
 
-            {/* Notes Section */}
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes (Management Only)</Label>
-              <Textarea
-                id="notes"
-                placeholder="Additional notes about this player..."
-                value={formData.notes}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, notes: e.target.value }))
-                }
-                rows={3}
-              />
-              <p className="text-xs text-muted-foreground">
-                Internal notes visible only to management
-              </p>
-            </div>
+            {/* Notes Section - Hidden for self-editing */}
+            {!isSelfEditing && (
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes (Management Only)</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Additional notes about this player..."
+                  value={formData.notes}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, notes: e.target.value }))
+                  }
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Internal notes visible only to management
+                </p>
+              </div>
+            )}
           </div>
         )}
 

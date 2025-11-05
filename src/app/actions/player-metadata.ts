@@ -123,6 +123,77 @@ export async function updatePlayerMetadata(
 }
 
 /**
+ * Update own player metadata (self-editing)
+ * Players can only update their timezone and dailyHoursAvailable
+ * WoM fields (ehp, ehb, combatLevel, totalLevel) remain admin-only
+ */
+export async function updateOwnPlayerMetadata(
+  eventId: string,
+  data: {
+    timezone?: string | null
+    dailyHoursAvailable?: number | null
+  }
+) {
+  const session = await getServerAuthSession()
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized: You must be logged in")
+  }
+
+  // Check if user is a participant in this event (any role)
+  const participant = await db.query.eventParticipants.findFirst({
+    where: and(
+      eq(eventParticipants.eventId, eventId),
+      eq(eventParticipants.userId, session.user.id)
+    ),
+  })
+
+  if (!participant) {
+    throw new Error("Unauthorized: You must be a participant in this event")
+  }
+
+  // Only allow updating timezone and dailyHoursAvailable
+  // Explicitly block any other fields to prevent tampering
+  const allowedData = {
+    timezone: data.timezone,
+    dailyHoursAvailable: data.dailyHoursAvailable,
+  }
+
+  // Check if metadata already exists
+  const existing = await db.query.playerMetadata.findFirst({
+    where: and(
+      eq(playerMetadata.userId, session.user.id),
+      eq(playerMetadata.eventId, eventId)
+    ),
+  })
+
+  let result
+  if (existing) {
+    // Update existing metadata
+    [result] = await db
+      .update(playerMetadata)
+      .set({
+        ...allowedData,
+        updatedAt: new Date(),
+      })
+      .where(eq(playerMetadata.id, existing.id))
+      .returning()
+  } else {
+    // Create new metadata
+    [result] = await db
+      .insert(playerMetadata)
+      .values({
+        userId: session.user.id,
+        eventId,
+        ...allowedData,
+      })
+      .returning()
+  }
+
+  revalidatePath(`/events/${eventId}`)
+  return result
+}
+
+/**
  * Delete player metadata for a specific event
  * Only accessible by management users
  */
