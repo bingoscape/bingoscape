@@ -69,14 +69,6 @@ export function AutoTeamGeneratorModal({
   const [metadataCoverage, setMetadataCoverage] = useState(0)
   const [loadingCoverage, setLoadingCoverage] = useState(false)
 
-  // Legacy weights for participant scoring (not used in SA, kept for backward compat)
-  const legacyWeights = {
-    ehp: 0.25,
-    ehb: 0.25,
-    timezone: 0.25,
-    dailyHours: 0.25,
-  }
-
   // Simulated Annealing configuration
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
   const [configPreset, setConfigPreset] = useState<'small' | 'medium' | 'large' | 'custom'>('medium')
@@ -254,7 +246,6 @@ export function AutoTeamGeneratorModal({
           teamSize: generationMethod === "teamSize" ? teamSize : undefined,
           teamCount: generationMethod === "teamCount" ? teamCount : undefined,
           teamNamePrefix,
-          weights: legacyWeights, // Legacy, not used in SA
           simulatedAnnealing: saConfig,
         })
 

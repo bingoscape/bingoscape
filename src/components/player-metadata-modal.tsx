@@ -14,16 +14,25 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { toast } from "@/hooks/use-toast"
 import { getPlayerMetadata, updatePlayerMetadata, fetchWOMDataForPlayer } from "@/app/actions/player-metadata"
-import { Loader2, User, Download } from "lucide-react"
+import { Loader2, User, Download, Check, ChevronsUpDown } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
+import { cn } from "@/lib/utils"
+import { getPopularTimezones, getTimezonesByRegion } from "@/lib/timezones"
 
 interface PlayerMetadataModalProps {
   isOpen: boolean
@@ -35,17 +44,7 @@ interface PlayerMetadataModalProps {
   onMetadataUpdated?: () => void
 }
 
-const COMMON_TIMEZONES = [
-  { value: "America/Los_Angeles", label: "Pacific (US/Canada)" },
-  { value: "America/Denver", label: "Mountain (US/Canada)" },
-  { value: "America/Chicago", label: "Central (US/Canada)" },
-  { value: "America/New_York", label: "Eastern (US/Canada)" },
-  { value: "Europe/London", label: "London (GMT/BST)" },
-  { value: "Europe/Paris", label: "Central Europe (CET/CEST)" },
-  { value: "Europe/Berlin", label: "Berlin (CET/CEST)" },
-  { value: "Australia/Sydney", label: "Sydney (AEDT/AEST)" },
-  { value: "Asia/Tokyo", label: "Tokyo (JST)" },
-]
+// Timezone data is now loaded from the comprehensive utilities module
 
 export function PlayerMetadataModal({
   isOpen,
@@ -60,6 +59,7 @@ export function PlayerMetadataModal({
   const [saving, setSaving] = useState(false)
   const [fetching, setFetching] = useState(false)
   const [lastFetched, setLastFetched] = useState<Date | null>(null)
+  const [timezoneOpen, setTimezoneOpen] = useState(false)
   const [formData, setFormData] = useState({
     ehp: "",
     ehb: "",
@@ -70,6 +70,10 @@ export function PlayerMetadataModal({
     notes: "",
     womPlayerData: "",
   })
+
+  // Load timezone data
+  const popularTimezones = getPopularTimezones()
+  const timezonesByRegion = getTimezonesByRegion()
 
   useEffect(() => {
     if (isOpen) {
@@ -341,23 +345,87 @@ export function PlayerMetadataModal({
             {/* Timezone Section */}
             <div className="space-y-2">
               <Label htmlFor="timezone">Timezone</Label>
-              <Select
-                value={formData.timezone}
-                onValueChange={(value) =>
-                  setFormData((prev) => ({ ...prev, timezone: value }))
-                }
-              >
-                <SelectTrigger id="timezone">
-                  <SelectValue placeholder="Select timezone" />
-                </SelectTrigger>
-                <SelectContent>
-                  {COMMON_TIMEZONES.map((tz) => (
-                    <SelectItem key={tz.value} value={tz.value}>
-                      {tz.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={timezoneOpen} onOpenChange={setTimezoneOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="timezone"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={timezoneOpen}
+                    className="w-full justify-between"
+                  >
+                    {formData.timezone ? (
+                      (() => {
+                        // Find the selected timezone to display its label and offset
+                        const selectedTz = [...popularTimezones, ...timezonesByRegion.flatMap(r => r.timezones)]
+                          .find(tz => tz.value === formData.timezone)
+                        return selectedTz ? `${selectedTz.label} (${selectedTz.offset})` : formData.timezone
+                      })()
+                    ) : (
+                      "Select timezone..."
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search timezones..." />
+                    <CommandList>
+                      <CommandEmpty>No timezone found.</CommandEmpty>
+
+                      {/* Popular Timezones */}
+                      <CommandGroup heading="Popular">
+                        {popularTimezones.map((tz) => (
+                          <CommandItem
+                            key={tz.value}
+                            value={`${tz.label} ${tz.value} ${tz.offset}`}
+                            onSelect={() => {
+                              setFormData((prev) => ({ ...prev, timezone: tz.value }))
+                              setTimezoneOpen(false)
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.timezone === tz.value ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <span className="flex-1">{tz.label}</span>
+                            <span className="text-xs text-muted-foreground">{tz.offset}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+
+                      <CommandSeparator />
+
+                      {/* Timezones by Region */}
+                      {timezonesByRegion.map((region) => (
+                        <CommandGroup key={region.name} heading={region.name}>
+                          {region.timezones.map((tz) => (
+                            <CommandItem
+                              key={tz.value}
+                              value={`${tz.label} ${tz.value} ${tz.offset}`}
+                              onSelect={() => {
+                                setFormData((prev) => ({ ...prev, timezone: tz.value }))
+                                setTimezoneOpen(false)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.timezone === tz.value ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <span className="flex-1">{tz.label}</span>
+                              <span className="text-xs text-muted-foreground">{tz.offset}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      ))}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <p className="text-xs text-muted-foreground">
                 Player&apos;s local timezone for activity scheduling
               </p>

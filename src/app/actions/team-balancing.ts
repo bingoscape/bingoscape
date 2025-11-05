@@ -8,11 +8,25 @@ import { revalidatePath } from "next/cache"
 import { getEventParticipantMetadata, calculateMetadataCoverage } from "./player-metadata"
 import { createTeam, addUserToTeam } from "./team"
 import { SA_STANDARD_CONFIG, SA_FORMULAS } from "@/lib/simulated-annealing-config"
+import * as timezoneUtils from "@/lib/timezones"
 
+/**
+ * Weights for player scoring calculation used in team balance metrics display.
+ *
+ * IMPORTANT: These weights are ONLY used for calculatePlayerScore() which is
+ * used by calculateTeamBalanceMetrics() for display purposes.
+ *
+ * The actual team balancing algorithm (simulated annealing) uses VARIANCE weights
+ * configured separately in SimulatedAnnealingConfig.varianceWeights.
+ *
+ * Note: Timezone is NOT included here because:
+ * - Timezone is not a player quality metric (no timezone is "better" than another)
+ * - Timezone balance is handled by SA algorithm using circular variance
+ * - This measures in-team timezone cohesion, not individual player scoring
+ */
 interface BalancingWeights {
   ehp: number // 0-1
   ehb: number // 0-1
-  timezone: number // 0-1
   dailyHours: number // 0-1
 }
 
@@ -69,7 +83,6 @@ interface ScoredParticipant {
   breakdown: {
     ehp: number
     ehb: number
-    timezone: number
     dailyHours: number
   }
 }
@@ -95,93 +108,11 @@ function percentileNormalize(value: number | null | undefined, allValues: (numbe
 function getTimezoneOffset(timezone: string | null | undefined): number {
   if (!timezone) return 0 // Neutral/unknown timezone (UTC)
 
-  // Common timezone UTC offsets (in hours)
-  const timezoneOffsets: Record<string, number> = {
-    // Americas
-    'America/Los_Angeles': -8,
-    'America/Vancouver': -8,
-    'America/Denver': -7,
-    'America/Phoenix': -7,
-    'America/Chicago': -6,
-    'America/Mexico_City': -6,
-    'America/New_York': -5,
-    'America/Toronto': -5,
-    'America/Sao_Paulo': -3,
-    'America/Argentina/Buenos_Aires': -3,
-
-    // Europe
-    'Europe/London': 0,
-    'Europe/Dublin': 0,
-    'Europe/Paris': 1,
-    'Europe/Berlin': 1,
-    'Europe/Rome': 1,
-    'Europe/Madrid': 1,
-    'Europe/Amsterdam': 1,
-    'Europe/Brussels': 1,
-    'Europe/Athens': 2,
-    'Europe/Helsinki': 2,
-    'Europe/Moscow': 3,
-
-    // Asia/Pacific
-    'Asia/Dubai': 4,
-    'Asia/Karachi': 5,
-    'Asia/Kolkata': 5.5,
-    'Asia/Bangkok': 7,
-    'Asia/Singapore': 8,
-    'Asia/Shanghai': 8,
-    'Asia/Hong_Kong': 8,
-    'Asia/Tokyo': 9,
-    'Asia/Seoul': 9,
-    'Australia/Sydney': 11,
-    'Australia/Melbourne': 11,
-    'Australia/Brisbane': 10,
-    'Pacific/Auckland': 13,
-  }
-
-  // Try exact match first
-  if (timezone in timezoneOffsets) {
-    return timezoneOffsets[timezone]!
-  }
-
-  // Try partial match
-  for (const [key, offset] of Object.entries(timezoneOffsets)) {
-    if (timezone.includes(key)) {
-      return offset
-    }
-  }
-
-  return 0 // Default to UTC for unknown timezones
+  // Use the DST-aware timezone utility
+  // This dynamically calculates offsets based on current date, handling DST automatically
+  return timezoneUtils.getTimezoneOffset(timezone)
 }
 
-/**
- * Calculate timezone overlap score (simplified approach)
- * Higher score = more available during peak times
- * @deprecated - kept for backwards compatibility, use getTimezoneOffset for SA algorithm
- */
-function calculateTimezoneScore(timezone: string | null | undefined): number {
-  if (!timezone) return 0.5 // Neutral for missing timezone
-
-  // Simplified: Just map known timezones to approximate scores
-  // In production, you'd want more sophisticated overlap calculation
-  const timezoneScores: Record<string, number> = {
-    'America/Los_Angeles': 0.6,
-    'America/Denver': 0.65,
-    'America/Chicago': 0.7,
-    'America/New_York': 0.75,
-    'Europe/London': 0.8,
-    'Europe/Paris': 0.85,
-    'Europe/Berlin': 0.85,
-    'Australia/Sydney': 0.4,
-    'Asia/Tokyo': 0.3,
-  }
-
-  // Try to find a match or return neutral
-  for (const [key, score] of Object.entries(timezoneScores)) {
-    if (timezone.includes(key)) return score
-  }
-
-  return 0.5 // Neutral for unknown timezones
-}
 
 /**
  * Calculate composite player score based on metadata and weights
@@ -207,8 +138,6 @@ function calculatePlayerScore(
     allMetadata.map(m => m.ehb)
   )
 
-  const timezoneScore = calculateTimezoneScore(metadata.timezone)
-
   const dailyHoursScore = percentileNormalize(
     metadata.dailyHoursAvailable,
     allMetadata.map(m => m.dailyHoursAvailable)
@@ -218,14 +147,13 @@ function calculatePlayerScore(
   const breakdown = {
     ehp: ehpScore * weights.ehp,
     ehb: ehbScore * weights.ehb,
-    timezone: timezoneScore * weights.timezone,
     dailyHours: dailyHoursScore * weights.dailyHours,
   }
 
   // Calculate total (normalize by sum of weights)
-  const totalWeight = weights.ehp + weights.ehb + weights.timezone + weights.dailyHours
+  const totalWeight = weights.ehp + weights.ehb + weights.dailyHours
   const score = totalWeight > 0
-    ? (breakdown.ehp + breakdown.ehb + breakdown.timezone + breakdown.dailyHours) / totalWeight
+    ? (breakdown.ehp + breakdown.ehb + breakdown.dailyHours) / totalWeight
     : 0.5
 
   return { score, breakdown }
@@ -444,8 +372,18 @@ function calculateObjective(
   const ehbVariance = calculateVariance(ehbZScores)
   const dailyHoursVariance = calculateVariance(dailyHoursZScores)
 
-  // Calculate circular variance for timezone cohesion within each team
-  // Then take variance of those circular variances across teams
+  // Calculate timezone balance using CIRCULAR VARIANCE (not player scoring)
+  // This is the CORRECT approach for timezone balancing:
+  // 1. Circular variance measures in-team timezone cohesion (0=cohesive, 1=dispersed)
+  //    - Low variance = teammates in similar timezones = easier coordination
+  //    - High variance = teammates across many timezones = harder coordination
+  // 2. Variance of circular variances balances coordination difficulty across teams
+  // 3. Result: All teams have similar timezone diversity (fair distribution)
+  //
+  // Example:
+  //   Team A (Europe): UTC+0, UTC+1, UTC+2 → CircVar ≈ 0.05 (cohesive)
+  //   Team B (Global): UTC-8, UTC+0, UTC+9 → CircVar ≈ 0.85 (dispersed)
+  //   Algorithm minimizes variance between 0.05 and 0.85 for fairness
   const timezoneCircularVariances = teamStats.map(s =>
     calculateCircularVariance(s.timezoneAngles)
   )
@@ -648,7 +586,6 @@ export async function generateBalancedTeams(
     teamSize?: number
     generationMethod: "teamCount" | "teamSize"
     teamNamePrefix: string
-    weights: BalancingWeights // Legacy: for participant scoring (deprecated, not used in SA)
     simulatedAnnealing?: {
       // Basic parameters
       iterations?: number
@@ -839,10 +776,9 @@ export async function calculateTeamBalanceMetrics(eventId: string) {
 
   // Calculate average score per team (using equal weights for display)
   const defaultWeights: BalancingWeights = {
-    ehp: 0.25,
-    ehb: 0.25,
-    timezone: 0.25,
-    dailyHours: 0.25,
+    ehp: 0.33,
+    ehb: 0.33,
+    dailyHours: 0.34,
   }
 
   const allMetadata = existingTeams
