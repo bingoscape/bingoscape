@@ -2,17 +2,19 @@ import EventList from "@/components/eventlist"
 import TemplatePreviewWithTooltip from "@/components/template-preview-with-tooltip"
 import getTemplateBoard from "@/lib/getTemplateBoard"
 import { getServerAuthSession } from "@/server/auth"
+import { getEvents } from "@/app/actions/events"
 import Link from "next/link"
 
 export default async function HomePage() {
   const session = await getServerAuthSession()
+  const events = session ? await getEvents(session.user.id) : []
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <main className="container mx-auto px-4 py-8">
         {session ? (
           <div className="space-y-8">
-            <EventList userId={session.user.id} />
+            <EventList userId={session.user.id} initialEvents={events} />
           </div>
         ) : (
           <>

@@ -11,7 +11,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,14 +20,18 @@ import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Plus } from "lucide-react"
+import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
 
-export function CreateEventModal() {
+interface CreateEventModalProps {
+  isOpen: boolean
+  onClose: () => void
+}
+
+export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
   const router = useRouter()
-  const [isOpen, setIsOpen] = useState(false)
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [startDate, setStartDate] = useState<Date | undefined>(undefined)
@@ -70,7 +73,7 @@ export function CreateEventModal() {
           title: "Event created",
           description: "Your event has been created successfully.",
         })
-        setIsOpen(false)
+        onClose()
         router.refresh()
       } else {
         toast({
@@ -91,13 +94,7 @@ export function CreateEventModal() {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200">
-          <Plus className="mr-2 h-4 w-4" />
-          Create Event
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[525px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>

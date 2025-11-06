@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,8 +11,13 @@ import { Textarea } from './ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import generateOSRSCodePhrase from '@/lib/codephraseGenerator'
 
-export function CreateBingoModal({ eventId }: { eventId: string }) {
-  const [open, setOpen] = useState(false)
+interface CreateBingoModalProps {
+  eventId: string
+  isOpen: boolean
+  onClose: () => void
+}
+
+export function CreateBingoModal({ eventId, isOpen, onClose }: CreateBingoModalProps) {
   const [error, setError] = useState<string | null>(null)
   const [bingoType, setBingoType] = useState<"standard" | "progression">("standard")
   const router = useRouter()
@@ -25,7 +30,7 @@ export function CreateBingoModal({ eventId }: { eventId: string }) {
 
     try {
       await createBingo(formData)
-      setOpen(false)
+      onClose()
       router.refresh()
     } catch (error) {
       if (error instanceof Error) {
@@ -37,10 +42,7 @@ export function CreateBingoModal({ eventId }: { eventId: string }) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className='w-full'>Create New Board</Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
           <DialogTitle>Create New Board</DialogTitle>

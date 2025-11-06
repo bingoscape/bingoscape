@@ -57,9 +57,7 @@ export function GenerateEventInviteLink({ eventId, children }: { eventId: UUID, 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full">
-          {children}
-        </Button>
+        {children}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>

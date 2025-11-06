@@ -1,3 +1,6 @@
+"use client"
+
+import { useState } from "react"
 import { CreateEventModal } from "./create-event-modal"
 import { getEvents } from "@/app/actions/events"
 import { EventDisplay } from "./events-display"
@@ -5,8 +8,14 @@ import { Button } from "@/components/ui/button"
 import { Plus, TrendingUp, Users, Trophy } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
-export default async function EventList({ userId }: { userId: string }) {
-  const allEvents = await getEvents(userId)
+interface EventListProps {
+  userId: string
+  initialEvents: Awaited<ReturnType<typeof getEvents>>
+}
+
+export default function EventList({ userId, initialEvents }: EventListProps) {
+  const [createModalOpen, setCreateModalOpen] = useState(false)
+  const allEvents = initialEvents
 
   const hasEvents = allEvents.length > 0
 
@@ -39,7 +48,14 @@ export default async function EventList({ userId }: { userId: string }) {
               )}
             </div>
             <div className="flex flex-col sm:flex-row gap-4">
-              <CreateEventModal />
+              <Button
+                size="lg"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200"
+                onClick={() => setCreateModalOpen(true)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Create Event
+              </Button>
               <Button variant="outline" size="lg" asChild>
                 <a href="/templates">
                   <Users className="h-4 w-4 mr-2" />
@@ -129,6 +145,12 @@ export default async function EventList({ userId }: { userId: string }) {
       <div className={hasEvents ? "" : "max-w-6xl mx-auto"}>
         <EventDisplay initialEvents={allEvents} />
       </div>
+
+      {/* Create Event Modal */}
+      <CreateEventModal
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+      />
     </div>
   )
 }

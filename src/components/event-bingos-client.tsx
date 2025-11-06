@@ -10,7 +10,7 @@ import { BingoInfoModal } from "@/components/bingo-info-modal"
 import { EditBingoModal } from "@/components/edit-bingo-modal"
 import { TeamSelector } from "@/components/team-selector"
 import Link from "next/link"
-import { ListFilter, ChevronLeft, ChevronRight } from "lucide-react"
+import { ListFilter, ChevronLeft, ChevronRight, Edit } from "lucide-react"
 import type { UUID } from "crypto"
 
 interface EventBingosClientProps {
@@ -25,6 +25,8 @@ export function EventBingosClient({ event, userRole, currentTeam, isAdminOrManag
   const [selectedTeamId, setSelectedTeamId] = useState<string | undefined>(currentTeam?.id)
   // State for current bingo index
   const [currentBingoIndex, setCurrentBingoIndex] = useState(0)
+  // State for modals
+  const [editBingoModalOpen, setEditBingoModalOpen] = useState(false)
 
   // Determine which team's data to show
   const effectiveTeamId = isAdminOrManagement ? selectedTeamId : currentTeam?.id
@@ -184,7 +186,13 @@ export function EventBingosClient({ event, userRole, currentTeam, isAdminOrManag
                 <BingoInfoModal bingo={currentBingo} />
                 {isAdminOrManagement && (
                   <>
-                    <EditBingoModal bingo={currentBingo} />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setEditBingoModalOpen(true)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
                     <DeleteBingoButton bingoId={currentBingo.id as UUID} />
                   </>
                 )}
@@ -221,6 +229,15 @@ export function EventBingosClient({ event, userRole, currentTeam, isAdminOrManag
           </CardFooter>
         </Card>
       ) : null}
+
+      {/* Edit Bingo Modal */}
+      {isAdminOrManagement && currentBingo && (
+        <EditBingoModal
+          bingo={currentBingo}
+          isOpen={editBingoModalOpen}
+          onClose={() => setEditBingoModalOpen(false)}
+        />
+      )}
     </>
   )
 }

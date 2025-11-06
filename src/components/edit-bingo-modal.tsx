@@ -29,8 +29,13 @@ interface Bingo {
   codephrase: string
 }
 
-export function EditBingoModal({ bingo }: { bingo: Bingo }) {
-  const [isOpen, setIsOpen] = useState(false)
+interface EditBingoModalProps {
+  bingo: Bingo
+  isOpen: boolean
+  onClose: () => void
+}
+
+export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) {
   const [formData, setFormData] = useState({
     title: bingo.title,
     description: bingo.description ?? "",
@@ -57,7 +62,7 @@ export function EditBingoModal({ bingo }: { bingo: Bingo }) {
           title: "Success",
           description: "Bingo updated successfully",
         })
-        setIsOpen(false)
+        onClose()
       } else {
         throw new Error(result.error)
       }
@@ -72,12 +77,7 @@ export function EditBingoModal({ bingo }: { bingo: Bingo }) {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <Edit className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Bingo</DialogTitle>

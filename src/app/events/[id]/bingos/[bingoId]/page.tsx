@@ -12,7 +12,7 @@ import { TeamSelector } from "@/components/team-selector"
 import { BingoImportExportModal } from "@/components/bingo-import-export-modal"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, RefreshCw } from "lucide-react"
+import { ArrowLeft, RefreshCw, FileJson } from "lucide-react"
 import type { Bingo } from "@/app/actions/events"
 import { cn } from "@/lib/utils"
 
@@ -27,6 +27,7 @@ export default function BingoDetailPage({ params }: { params: { id: UUID; bingoI
   const [bingo, setBingo] = useState<Bingo | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [selectedTeamId, setSelectedTeamId] = useState<string | undefined>(undefined)
+  const [importExportModalOpen, setImportExportModalOpen] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -135,7 +136,13 @@ export default function BingoDetailPage({ params }: { params: { id: UUID; bingoI
               />
             )}
             {isAdminOrManagement && (
-              <BingoImportExportModal eventId={eventId} bingoId={bingoId} bingoTitle={bingo.title} />
+              <Button
+                variant="outline"
+                onClick={() => setImportExportModalOpen(true)}
+              >
+                <FileJson className="mr-2 h-4 w-4" />
+                Import/Export
+              </Button>
             )}
           </div>
         </div>
@@ -157,6 +164,17 @@ export default function BingoDetailPage({ params }: { params: { id: UUID; bingoI
           </CardContent>
         </Card>
       </div>
+
+      {/* Import/Export Modal */}
+      {isAdminOrManagement && bingo && (
+        <BingoImportExportModal
+          eventId={eventId}
+          bingoId={bingoId}
+          bingoTitle={bingo.title}
+          isOpen={importExportModalOpen}
+          onClose={() => setImportExportModalOpen(false)}
+        />
+      )}
     </div>
   )
 }

@@ -9,7 +9,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,17 +18,18 @@ import { toast } from "@/hooks/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Settings } from "lucide-react"
+import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import type { Event } from "@/app/actions/events"
 
 interface EditEventModalProps {
   event: Event
+  isOpen: boolean
+  onClose: () => void
 }
 
-export function EditEventModal({ event }: EditEventModalProps) {
-  const [isOpen, setIsOpen] = useState(false)
+export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) {
   const [title, setTitle] = useState(event.title)
   const [description, setDescription] = useState(event.description ?? "")
   const [startDate, setStartDate] = useState<Date>(new Date(event.startDate))
@@ -63,7 +63,7 @@ export function EditEventModal({ event }: EditEventModalProps) {
         title: "Event updated",
         description: "Your event has been updated successfully.",
       })
-      setIsOpen(false)
+      onClose()
     } catch (error) {
       toast({
         title: "Error",
@@ -76,13 +76,7 @@ export function EditEventModal({ event }: EditEventModalProps) {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="w-full">
-          <Settings className="mr-2 h-4 w-4" />
-          Edit Event Settings
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
           <DialogTitle>Edit Event</DialogTitle>

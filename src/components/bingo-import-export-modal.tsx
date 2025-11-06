@@ -28,10 +28,11 @@ interface BingoImportExportModalProps {
   eventId: string
   bingoId?: string
   bingoTitle?: string
+  isOpen: boolean
+  onClose: () => void
 }
 
-export function BingoImportExportModal({ eventId, bingoId, bingoTitle }: BingoImportExportModalProps) {
-  const [isOpen, setIsOpen] = useState(false)
+export function BingoImportExportModal({ eventId, bingoId, bingoTitle, isOpen, onClose }: BingoImportExportModalProps) {
   const [activeTab, setActiveTab] = useState<"import" | "export">("import")
   const [isLoading, setIsLoading] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
@@ -93,7 +94,7 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle }: BingoIm
           title: "Import successful",
           description: "The bingo board has been imported successfully.",
         })
-        setIsOpen(false)
+        onClose()
         router.refresh()
 
         // Navigate to the new bingo if we have its ID
@@ -156,7 +157,7 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle }: BingoIm
         description: "The bingo board has been exported successfully.",
       })
 
-      setIsOpen(false)
+      onClose()
     } catch (error) {
       toast({
         title: "Export error",
@@ -169,13 +170,7 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle }: BingoIm
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2">
-          <FileJson className="h-4 w-4" />
-          <span>Import/Export</span>
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Bingo Board Import/Export</DialogTitle>
@@ -257,7 +252,7 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle }: BingoIm
         </Tabs>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)}>
+          <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
           {activeTab === "import" ? (
