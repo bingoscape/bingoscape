@@ -55,7 +55,7 @@ export function EventHeaderActions({
                                 asChild
                                 className="relative gap-2"
                             >
-                                <Link href={`/events/${eventId}/registrations`}>
+                                <Link href={`/events/${eventId}/participants?tab=registrations`}>
                                     <ClipboardList className="h-4 w-4" />
                                     <span>Requests</span>
                                     {pendingRegistrationsCount > 0 && (

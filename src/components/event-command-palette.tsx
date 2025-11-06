@@ -118,7 +118,7 @@ export function EventCommandPalette({
             label: "View Registrations",
             description: "Manage registration requests",
             badge: pendingRegistrationsCount > 0 ? pendingRegistrationsCount : undefined,
-            href: `/events/${eventId}/registrations`,
+            href: `/events/${eventId}/participants?tab=registrations`,
             category: "participants",
             keywords: ["registration", "requests", "pending", "approve"]
         },
