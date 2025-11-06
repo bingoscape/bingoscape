@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { X } from "lucide-react"
 import Link from "next/link"
 import type { UUID } from "crypto"
@@ -101,6 +102,12 @@ export function EventCommandPalette({
     const [open, setOpen] = useState(false)
     const [search, setSearch] = useState("")
     const [selectedIndex, setSelectedIndex] = useState(0)
+    const [isMac, setIsMac] = useState(false)
+
+    // Detect OS for keyboard shortcut display
+    useEffect(() => {
+        setIsMac(navigator.platform.toUpperCase().indexOf('MAC') >= 0)
+    }, [])
 
     // Build actions list with reorganized categories
     const actions: EventAction[] = [
@@ -286,9 +293,10 @@ export function EventCommandPalette({
             >
                 <Command className="h-4 w-4" />
                 <span>Quick Actions</span>
-                <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-                    <span className="text-xs">⌘</span>K
-                </kbd>
+                <KbdGroup className="hidden sm:flex">
+                    <Kbd>{isMac ? '⌘' : 'Ctrl'}</Kbd>
+                    <Kbd>K</Kbd>
+                </KbdGroup>
             </Button>
 
             <Dialog open={open} onOpenChange={setOpen}>
@@ -460,15 +468,15 @@ export function EventCommandPalette({
                     <div className="flex items-center justify-between border-t px-4 py-3 bg-muted/30">
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1.5">
-                                <kbd className="px-2 py-1 bg-background border rounded font-mono">↑↓</kbd>
+                                <Kbd>↑↓</Kbd>
                                 Navigate
                             </span>
                             <span className="flex items-center gap-1.5">
-                                <kbd className="px-2 py-1 bg-background border rounded font-mono">↵</kbd>
+                                <Kbd>↵</Kbd>
                                 Select
                             </span>
                             <span className="flex items-center gap-1.5">
-                                <kbd className="px-2 py-1 bg-background border rounded font-mono">Esc</kbd>
+                                <Kbd>Esc</Kbd>
                                 Close
                             </span>
                         </div>
