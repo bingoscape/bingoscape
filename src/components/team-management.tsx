@@ -17,15 +17,17 @@ import {
   updateTeamName,
 } from "@/app/actions/team"
 import { toast } from "@/hooks/use-toast"
-import { Edit2, Trash2, UserPlus, UserMinus, Shield, ShieldOff, Users, Shuffle, GripVertical, User, CheckCircle2, AlertCircle, TrendingUp, Target, Scale, Globe } from "lucide-react"
+import { Edit2, Trash2, UserPlus, UserMinus, Shield, ShieldOff, Users, Shuffle, GripVertical, User, CheckCircle2, AlertCircle, TrendingUp, Target, Scale, Globe, ChevronDown, ChevronUp, Crown, Info, LayoutGrid, BarChart3 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { DndContext, DragOverlay, useDraggable, useDroppable } from "@dnd-kit/core"
 import { restrictToWindowEdges } from "@dnd-kit/modifiers"
 import { AutoTeamGeneratorModal } from "./auto-team-generator-modal"
 import { PlayerMetadataModal } from "./player-metadata-modal"
+import { TeamComparisonView } from "./team-comparison-view"
 import { getEventTeamStatistics, type EventTeamStatistics, type TeamStatistics } from "@/app/actions/team-statistics"
 import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 type TeamMember = {
   user: {
@@ -75,52 +77,74 @@ function DraggableMember({
     },
   })
 
+  // Determine avatar ring color based on metadata status
+  const avatarRingClass = member.user.hasMetadata
+    ? "ring-2 ring-green-500 ring-offset-2 ring-offset-background"
+    : "ring-2 ring-orange-400 ring-offset-2 ring-offset-background"
+
   return (
     <li
-      className={`flex items-center justify-between py-2 border-b last:border-0 hover:bg-secondary/30 rounded-sm px-2 ${isDragging ? "opacity-50" : "opacity-100"}`}
+      className={`flex items-center justify-between py-2.5 px-2 border-b last:border-0 hover:bg-secondary/30 rounded-sm ${isDragging ? "opacity-50" : "opacity-100"}`}
     >
-      <div className="flex items-center space-x-2 flex-1">
+      <div className="flex items-center space-x-2 flex-1 min-w-0">
         {/* Drag handle - only this part is draggable */}
-        <div ref={setNodeRef} {...attributes} {...listeners} className="cursor-grab p-1 hover:bg-secondary rounded-sm">
+        <div ref={setNodeRef} {...attributes} {...listeners} className="cursor-grab p-1 hover:bg-secondary rounded-sm active:cursor-grabbing">
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </div>
 
         {/* Clickable area for metadata - avatar and name */}
         <button
           onClick={onEditMetadata}
-          className="flex items-center space-x-2 hover:bg-secondary/50 rounded-sm p-1 -ml-1 transition-colors group"
+          className="flex items-center space-x-2 hover:bg-secondary/50 rounded-sm p-1 -ml-1 transition-colors group flex-1 min-w-0"
           title="Click to edit player metadata"
         >
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={member.user.image ?? undefined} alt={member.user.name ?? ""} />
-            <AvatarFallback>{member.user.name?.[0] ?? "U"}</AvatarFallback>
-          </Avatar>
-          <span className="group-hover:text-primary">{member.user.runescapeName ?? member.user.name}</span>
-          <User className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="relative flex-shrink-0">
+            <Avatar className={`h-8 w-8 ${avatarRingClass}`}>
+              <AvatarImage src={member.user.image ?? undefined} alt={member.user.name ?? ""} />
+              <AvatarFallback>{member.user.name?.[0] ?? "U"}</AvatarFallback>
+            </Avatar>
+            {member.isLeader && (
+              <div className="absolute -top-1 -right-1 bg-yellow-500 rounded-full p-0.5">
+                <Crown className="h-3 w-3 text-white" aria-label="Team Leader" />
+              </div>
+            )}
+          </div>
+          <span className="group-hover:text-primary truncate">{member.user.runescapeName ?? member.user.name}</span>
+          <User className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
         </button>
-        {member.isLeader && <Shield className="h-4 w-4 text-yellow-500" aria-label="Team Leader" />}
+
+        {/* Enhanced metadata indicator with tooltip */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="flex-shrink-0">
+              <button
+                onClick={onEditMetadata}
+                className="flex-shrink-0 hover:scale-110 transition-transform"
+              >
                 {member.user.hasMetadata ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-600" aria-label="Metadata configured" />
+                  <Badge variant="default" className="text-xs px-1.5 py-0 h-5 bg-green-600 hover:bg-green-700">
+                    <CheckCircle2 className="h-3 w-3" aria-label="Metadata complete" />
+                  </Badge>
                 ) : (
-                  <AlertCircle className="h-4 w-4 text-orange-500" aria-label="Metadata missing" />
+                  <Badge variant="destructive" className="text-xs px-1.5 py-0 h-5 bg-orange-500 hover:bg-orange-600">
+                    <AlertCircle className="h-3 w-3" aria-label="Metadata incomplete" />
+                  </Badge>
                 )}
-              </div>
+              </button>
             </TooltipTrigger>
-            <TooltipContent>
-              {member.user.hasMetadata ? "Player metadata configured" : "Player metadata not configured"}
+            <TooltipContent className="max-w-xs">
+              {member.user.hasMetadata
+                ? "All metadata configured (EHP, EHB, Timezone, etc.)"
+                : "Click to add missing metadata (EHP, EHB, Timezone, Combat Level, etc.)"}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>
-      <div className="flex space-x-1">
+      <div className="flex space-x-1 flex-shrink-0">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={onToggleLeader}>
+              <Button variant="ghost" size="icon" onClick={onToggleLeader} className="h-8 w-8">
                 {member.isLeader ? <ShieldOff className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
               </Button>
             </TooltipTrigger>
@@ -131,7 +155,7 @@ function DraggableMember({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={onRemove}>
+              <Button variant="ghost" size="icon" onClick={onRemove} className="h-8 w-8">
                 <UserMinus className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -217,6 +241,8 @@ function TeamCard({
   eventAvgEHP?: number
   eventAvgEHB?: number
 }) {
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [showDetails, setShowDetails] = useState(false)
   const availableParticipants = participants.filter((p) => !team.teamMembers.some((m) => m.user.id === p.id))
 
   // Make the team card a drop target
@@ -228,9 +254,51 @@ function TeamCard({
     },
   })
 
+  // Calculate balance score
+  const getBalanceInfo = () => {
+    if (!eventAvgEHP || !eventAvgEHB || !teamStats?.averageEHP || !teamStats?.averageEHB) {
+      return { label: "Unknown", variant: "secondary" as const, score: 0 }
+    }
+
+    const ehpDeviation = Math.abs(teamStats.averageEHP - eventAvgEHP) / eventAvgEHP
+    const ehbDeviation = Math.abs(teamStats.averageEHB - eventAvgEHB) / eventAvgEHB
+
+    if (ehpDeviation < 0.1 && ehbDeviation < 0.1) {
+      return { label: "Excellent", variant: "default" as const, score: 95 }
+    } else if (ehpDeviation < 0.2 && ehbDeviation < 0.2) {
+      return { label: "Good", variant: "secondary" as const, score: 75 }
+    } else {
+      return { label: "Fair", variant: "destructive" as const, score: 50 }
+    }
+  }
+
+  const balanceInfo = getBalanceInfo()
+
+  // Avatar stack preview when collapsed
+  const renderAvatarStack = () => {
+    const displayMembers = team.teamMembers.slice(0, 4)
+    const remainingCount = Math.max(0, team.teamMembers.length - 4)
+
+    return (
+      <div className="flex items-center -space-x-2">
+        {displayMembers.map((member, idx) => (
+          <Avatar key={member.user.id} className="h-7 w-7 border-2 border-background" style={{ zIndex: displayMembers.length - idx }}>
+            <AvatarImage src={member.user.image ?? undefined} alt={member.user.name ?? ""} />
+            <AvatarFallback className="text-xs">{member.user.name?.[0] ?? "U"}</AvatarFallback>
+          </Avatar>
+        ))}
+        {remainingCount > 0 && (
+          <div className="h-7 w-7 rounded-full bg-secondary border-2 border-background flex items-center justify-center text-xs font-medium">
+            +{remainingCount}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
-    <Card className="overflow-hidden border-2 hover:shadow-md transition-shadow">
-      <CardHeader className="pb-2 bg-secondary/30">
+    <Card className="overflow-hidden border-2 hover:shadow-md transition-shadow flex flex-col">
+      <CardHeader className="pb-2 bg-secondary/30 flex-shrink-0">
         <CardTitle className="flex justify-between items-center text-base">
           {editingTeamId === team.id ? (
             <Input
@@ -253,37 +321,129 @@ function TeamCard({
           </Button>
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0">
-        <div
-          ref={setNodeRef}
-          className={`min-h-[100px] rounded-md p-2 mb-3 transition-colors ${isOver ? "bg-primary/10 border-2 border-dashed border-primary" : "bg-secondary/20"
-            }`}
-        >
-          {team.teamMembers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm">
-              <Users className="h-8 w-8 mb-2 opacity-50" />
-              <span className="italic">Drag members here</span>
-            </div>
-          ) : (
-            <ul className="divide-y">
-              {team.teamMembers.map((member) => (
-                <DraggableMember
-                  key={member.user.id}
-                  member={member}
-                  teamId={team.id}
-                  onToggleLeader={() => onToggleLeader(team.id, member.user.id, member.isLeader)}
-                  onRemove={() => onRemoveUser(team.id, member.user.id)}
-                  onEditMetadata={() => onEditMetadata(member.user.id, member.user.name, member.user.runescapeName)}
-                />
-              ))}
-            </ul>
-          )}
-        </div>
 
-        {availableParticipants.length > 0 && (
-          <div className="mt-3 flex items-center gap-2">
+      {/* Prominent Statistics Header Banner */}
+      {teamStats && (
+        <div className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-b-2 border-border px-4 py-3 flex-shrink-0">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Team Size Badge */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1.5 bg-background/80 px-2.5 py-1 rounded-full border">
+                      <Users className="h-3.5 w-3.5 text-blue-600" />
+                      <span className="text-sm font-semibold">{team.teamMembers.length}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>Team members</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              {/* Timezone Variance */}
+              {teamStats.timezoneDistribution.length > 0 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge
+                        variant={
+                          teamStats.timezoneHourVariance === 0
+                            ? "default"
+                            : teamStats.timezoneHourVariance <= 3
+                            ? "secondary"
+                            : "destructive"
+                        }
+                        className="flex items-center gap-1.5"
+                      >
+                        <Globe className="h-3 w-3" />
+                        <span className="font-medium">
+                          {teamStats.timezoneHourVariance === 0 ? "Same TZ" : `±${teamStats.timezoneHourVariance.toFixed(1)}h`}
+                        </span>
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      {teamStats.timezoneHourVariance === 0
+                        ? "All members in same timezone - excellent for coordination!"
+                        : `Timezone spread: ±${teamStats.timezoneHourVariance.toFixed(1)} hours across ${teamStats.timezoneDistribution.length} timezone${teamStats.timezoneDistribution.length !== 1 ? "s" : ""}`}
+                      <br />
+                      {teamStats.timezoneDistribution.map((tz) => `${tz.timezone} (${tz.count})`).join(", ")}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
+              {/* Balance Score */}
+              {eventAvgEHP && eventAvgEHB && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant={balanceInfo.variant} className="flex items-center gap-1.5 font-semibold">
+                        <Scale className="h-3 w-3" />
+                        {balanceInfo.label}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>Team balance relative to event average</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+
+            {/* Collapse/Expand Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="h-7 px-2 flex-shrink-0"
+            >
+              {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+      )}
+      <CardContent className="pt-0 flex-1 flex flex-col">
+        {/* Collapsed View: Avatar Stack */}
+        {isCollapsed ? (
+          <div className="py-4 px-2 flex items-center justify-between">
+            {renderAvatarStack()}
+            <span className="text-sm text-muted-foreground">{team.teamMembers.length} members</span>
+          </div>
+        ) : (
+          <>
+            {/* Player List with Fixed Height and Scrolling */}
+            <div
+              ref={setNodeRef}
+              className={`min-h-[100px] max-h-[400px] overflow-y-auto rounded-md p-2 mb-3 mt-4 transition-colors scrollbar-thin scrollbar-thumb-secondary scrollbar-track-transparent ${
+                isOver ? "bg-primary/10 border-2 border-dashed border-primary" : "bg-secondary/20"
+              }`}
+            >
+              {team.teamMembers.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground text-sm">
+                  <Users className="h-10 w-10 mb-3 opacity-50" />
+                  <span className="italic font-medium">Drag members here</span>
+                  <span className="text-xs mt-1 opacity-75">or use the dropdown below</span>
+                </div>
+              ) : (
+                <ul>
+                  {team.teamMembers.map((member) => (
+                    <DraggableMember
+                      key={member.user.id}
+                      member={member}
+                      teamId={team.id}
+                      onToggleLeader={() => onToggleLeader(team.id, member.user.id, member.isLeader)}
+                      onRemove={() => onRemoveUser(team.id, member.user.id)}
+                      onEditMetadata={() => onEditMetadata(member.user.id, member.user.name, member.user.runescapeName)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </div>
+          </>
+        )}
+
+        {!isCollapsed && availableParticipants.length > 0 && (
+          <div className="mt-auto flex items-center gap-2">
             <Select onValueChange={(value) => onAddUser(team.id, value)}>
-              <SelectTrigger className="h-8 flex-1">
+              <SelectTrigger className="h-9 flex-1">
                 <SelectValue placeholder="Add participant" />
               </SelectTrigger>
               <SelectContent>
@@ -297,7 +457,7 @@ function TeamCard({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-8 w-8">
+                  <Button variant="outline" size="icon" className="h-9 w-9">
                     <UserPlus className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
@@ -307,71 +467,55 @@ function TeamCard({
           </div>
         )}
 
-        {/* Team Statistics Footer */}
-        <div className="mt-4 pt-4 border-t">
-          <div className="flex flex-wrap gap-2">
-            {/* Team Size - always show */}
-            <TeamStatBadge
-              icon={Users}
-              label="members"
-              value={String(team.teamMembers.length)}
-              variant="secondary"
-              tooltip="Number of team members"
-            />
+        {/* Collapsible Detailed Statistics Section */}
+        {!isCollapsed && teamStats && (
+          <div className="mt-4 pt-4 border-t">
+            <button
+              onClick={() => setShowDetails(!showDetails)}
+              className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-2 w-full"
+            >
+              <Info className="h-3.5 w-3.5" />
+              <span>Detailed Statistics</span>
+              {showDetails ? <ChevronUp className="h-3.5 w-3.5 ml-auto" /> : <ChevronDown className="h-3.5 w-3.5 ml-auto" />}
+            </button>
 
-            {/* Timezone Variance */}
-            {teamStats && teamStats.timezoneDistribution.length > 0 && (
-              <TeamStatBadge
-                icon={Globe}
-                label="TZ variance"
-                value={teamStats.timezoneHourVariance === 0 ? "0 hrs" : `±${teamStats.timezoneHourVariance.toFixed(1)} hrs`}
-                variant={
-                  teamStats.timezoneHourVariance === 0
-                    ? "default"
-                    : teamStats.timezoneHourVariance <= 3
-                    ? "secondary"
-                    : "destructive"
-                }
-                tooltip={`Timezone spread: ${teamStats.timezoneHourVariance === 0 ? 'All members in same timezone - excellent for coordination!' : `±${teamStats.timezoneHourVariance.toFixed(1)} hours variance across ${teamStats.timezoneDistribution.length} timezone${teamStats.timezoneDistribution.length !== 1 ? 's' : ''}`}. ${teamStats.timezoneDistribution.map(tz => `${tz.timezone} (${tz.count})`).join(', ')}`}
-              />
-            )}
+            {showDetails && (
+              <div className="flex flex-wrap gap-2 pt-2">
+                {/* Average EHP */}
+                {teamStats?.averageEHP !== null && teamStats?.averageEHP !== undefined && (
+                  <TeamStatBadge
+                    icon={TrendingUp}
+                    label="EHP"
+                    value={teamStats.averageEHP.toFixed(0)}
+                    variant={
+                      eventAvgEHP && teamStats.averageEHP >= eventAvgEHP * 1.1
+                        ? "default"
+                        : eventAvgEHP && teamStats.averageEHP <= eventAvgEHP * 0.9
+                        ? "destructive"
+                        : "secondary"
+                    }
+                    tooltip={`Average Efficient Hours Played: ${teamStats.averageEHP.toFixed(0)}${eventAvgEHP ? ` (Event avg: ${eventAvgEHP.toFixed(0)})` : ""}`}
+                  />
+                )}
 
-            {/* Average EHP */}
-            {teamStats?.averageEHP !== null && teamStats?.averageEHP !== undefined && (
-                <TeamStatBadge
-                  icon={TrendingUp}
-                  label="EHP"
-                  value={teamStats.averageEHP.toFixed(0)}
-                  variant={
-                    eventAvgEHP && teamStats.averageEHP >= eventAvgEHP * 1.1
-                      ? "default"
-                      : eventAvgEHP && teamStats.averageEHP <= eventAvgEHP * 0.9
-                      ? "destructive"
-                      : "secondary"
-                  }
-                  tooltip={`Average Efficient Hours Played: ${teamStats.averageEHP.toFixed(0)}${eventAvgEHP ? ` (Event avg: ${eventAvgEHP.toFixed(0)})` : ''}`}
-                />
-              )}
+                {/* Average EHB */}
+                {teamStats?.averageEHB !== null && teamStats?.averageEHB !== undefined && (
+                  <TeamStatBadge
+                    icon={Target}
+                    label="EHB"
+                    value={teamStats.averageEHB.toFixed(0)}
+                    variant={
+                      eventAvgEHB && teamStats.averageEHB >= eventAvgEHB * 1.1
+                        ? "default"
+                        : eventAvgEHB && teamStats.averageEHB <= eventAvgEHB * 0.9
+                        ? "destructive"
+                        : "secondary"
+                    }
+                    tooltip={`Average Efficient Hours Bossed: ${teamStats.averageEHB.toFixed(0)}${eventAvgEHB ? ` (Event avg: ${eventAvgEHB.toFixed(0)})` : ""}`}
+                  />
+                )}
 
-              {/* Average EHB */}
-              {teamStats?.averageEHB !== null && teamStats?.averageEHB !== undefined && (
-                <TeamStatBadge
-                  icon={Target}
-                  label="EHB"
-                  value={teamStats.averageEHB.toFixed(0)}
-                  variant={
-                    eventAvgEHB && teamStats.averageEHB >= eventAvgEHB * 1.1
-                      ? "default"
-                      : eventAvgEHB && teamStats.averageEHB <= eventAvgEHB * 0.9
-                      ? "destructive"
-                      : "secondary"
-                  }
-                  tooltip={`Average Efficient Hours Bossed: ${teamStats.averageEHB.toFixed(0)}${eventAvgEHB ? ` (Event avg: ${eventAvgEHB.toFixed(0)})` : ''}`}
-                />
-              )}
-
-              {/* Metadata Coverage */}
-              {teamStats && (
+                {/* Metadata Coverage */}
                 <TeamStatBadge
                   icon={CheckCircle2}
                   label="coverage"
@@ -385,33 +529,10 @@ function TeamCard({
                   }
                   tooltip={`${teamStats.membersWithMetadata} of ${teamStats.memberCount} members have complete metadata`}
                 />
-              )}
-
-              {/* Balance Indicator */}
-              {eventAvgEHP && eventAvgEHB && teamStats?.averageEHP !== null && teamStats?.averageEHP !== undefined && teamStats?.averageEHB !== null && teamStats?.averageEHB !== undefined && (
-                <TeamStatBadge
-                  icon={Scale}
-                  label="balance"
-                  value={
-                    Math.abs(teamStats.averageEHP - eventAvgEHP) / eventAvgEHP < 0.1 &&
-                    Math.abs(teamStats.averageEHB - eventAvgEHB) / eventAvgEHB < 0.1
-                      ? "excellent"
-                      : Math.abs(teamStats.averageEHP - eventAvgEHP) / eventAvgEHP < 0.2 &&
-                        Math.abs(teamStats.averageEHB - eventAvgEHB) / eventAvgEHB < 0.2
-                      ? "good"
-                      : "fair"
-                  }
-                  variant={
-                    Math.abs(teamStats.averageEHP - eventAvgEHP) / eventAvgEHP < 0.1 &&
-                    Math.abs(teamStats.averageEHB - eventAvgEHB) / eventAvgEHB < 0.1
-                      ? "default"
-                      : "secondary"
-                  }
-                  tooltip="Team balance relative to event average for EHP and EHB"
-                />
-              )}
-            </div>
+              </div>
+            )}
           </div>
+        )}
       </CardContent>
     </Card>
   )
@@ -500,12 +621,24 @@ function DraggableUnassignedParticipant({
     },
   })
 
+  // Determine avatar ring color based on metadata status
+  const avatarRingClass = participant.hasMetadata
+    ? "ring-2 ring-green-500 ring-offset-2 ring-offset-background"
+    : "ring-2 ring-orange-400 ring-offset-2 ring-offset-background"
+
   return (
     <li
-      className={`flex items-center space-x-2 p-2 border rounded-md hover:bg-secondary/30 ${isDragging ? "opacity-50" : "opacity-100"}`}
+      className={`flex items-center space-x-2 p-2 border rounded-md hover:bg-secondary/30 transition-all ${
+        isDragging ? "opacity-50 scale-105" : "opacity-100"
+      }`}
     >
       {/* Drag handle */}
-      <div ref={setNodeRef} {...attributes} {...listeners} className="cursor-grab p-1 hover:bg-secondary rounded-sm flex-shrink-0">
+      <div
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        className="cursor-grab p-1 hover:bg-secondary rounded-sm flex-shrink-0 active:cursor-grabbing"
+      >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
 
@@ -515,26 +648,34 @@ function DraggableUnassignedParticipant({
         className="flex items-center space-x-2 hover:bg-secondary/50 rounded-sm p-1 -ml-1 transition-colors group flex-1 min-w-0"
         title="Click to edit player metadata"
       >
-        <Avatar className="h-6 w-6 flex-shrink-0">
+        <Avatar className={`h-7 w-7 flex-shrink-0 ${avatarRingClass}`}>
           <AvatarImage src={participant.image ?? undefined} alt={participant.name ?? ""} />
-          <AvatarFallback>{participant.name?.[0] ?? "U"}</AvatarFallback>
+          <AvatarFallback className="text-xs">{participant.name?.[0] ?? "U"}</AvatarFallback>
         </Avatar>
-        <span className="text-sm truncate group-hover:text-primary">{participant.runescapeName ?? participant.name}</span>
+        <span className="text-sm truncate group-hover:text-primary font-medium">{participant.runescapeName ?? participant.name}</span>
         <User className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
       </button>
+
+      {/* Enhanced metadata indicator */}
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex-shrink-0">
+            <button onClick={onEditMetadata} className="flex-shrink-0 hover:scale-110 transition-transform">
               {participant.hasMetadata ? (
-                <CheckCircle2 className="h-4 w-4 text-green-600" aria-label="Metadata configured" />
+                <Badge variant="default" className="text-xs px-1.5 py-0 h-5 bg-green-600 hover:bg-green-700">
+                  <CheckCircle2 className="h-3 w-3" aria-label="Metadata complete" />
+                </Badge>
               ) : (
-                <AlertCircle className="h-4 w-4 text-orange-500" aria-label="Metadata missing" />
+                <Badge variant="destructive" className="text-xs px-1.5 py-0 h-5 bg-orange-500 hover:bg-orange-600">
+                  <AlertCircle className="h-3 w-3" aria-label="Metadata incomplete" />
+                </Badge>
               )}
-            </div>
+            </button>
           </TooltipTrigger>
-          <TooltipContent>
-            {participant.hasMetadata ? "Player metadata configured" : "Player metadata not configured"}
+          <TooltipContent className="max-w-xs">
+            {participant.hasMetadata
+              ? "All metadata configured (EHP, EHB, Timezone, etc.)"
+              : "Click to add missing metadata (EHP, EHB, Timezone, Combat Level, etc.)"}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -797,29 +938,43 @@ export function TeamManagement({ eventId }: { eventId: string }) {
 
     if (activeDragData.type === "member") {
       const member = activeDragData.member
+      const avatarRingClass = member.user.hasMetadata
+        ? "ring-2 ring-green-500 ring-offset-2 ring-offset-background"
+        : "ring-2 ring-orange-400 ring-offset-2 ring-offset-background"
+
       return (
-        <div className="flex items-center space-x-2 p-2 bg-background border rounded-md shadow-md">
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={member.user.image ?? undefined} alt={member.user.name ?? ""} />
-            <AvatarFallback>{member.user.name?.[0] ?? "U"}</AvatarFallback>
-          </Avatar>
-          <span>{member.user.runescapeName ?? member.user.name}</span>
-          {member.isLeader && <Shield className="h-4 w-4 text-yellow-500" />}
+        <div className="flex items-center space-x-2 p-3 bg-background border-2 border-primary rounded-lg shadow-2xl scale-105 animate-pulse">
+          <GripVertical className="h-4 w-4 text-primary" />
+          <div className="relative">
+            <Avatar className={`h-8 w-8 ${avatarRingClass}`}>
+              <AvatarImage src={member.user.image ?? undefined} alt={member.user.name ?? ""} />
+              <AvatarFallback>{member.user.name?.[0] ?? "U"}</AvatarFallback>
+            </Avatar>
+            {member.isLeader && (
+              <div className="absolute -top-1 -right-1 bg-yellow-500 rounded-full p-0.5">
+                <Crown className="h-3 w-3 text-white" />
+              </div>
+            )}
+          </div>
+          <span className="font-medium">{member.user.runescapeName ?? member.user.name}</span>
         </div>
       )
     }
 
     if (activeDragData.type === "unassigned") {
       const participant = activeDragData.participant
+      const avatarRingClass = participant.hasMetadata
+        ? "ring-2 ring-green-500 ring-offset-2 ring-offset-background"
+        : "ring-2 ring-orange-400 ring-offset-2 ring-offset-background"
+
       return (
-        <div className="flex items-center space-x-2 p-2 bg-background border rounded-md shadow-md">
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
-          <Avatar className="h-6 w-6">
+        <div className="flex items-center space-x-2 p-3 bg-background border-2 border-primary rounded-lg shadow-2xl scale-105 animate-pulse">
+          <GripVertical className="h-4 w-4 text-primary" />
+          <Avatar className={`h-7 w-7 ${avatarRingClass}`}>
             <AvatarImage src={participant.image ?? undefined} alt={participant.name ?? ""} />
-            <AvatarFallback>{participant.name?.[0] ?? "U"}</AvatarFallback>
+            <AvatarFallback className="text-xs">{participant.name?.[0] ?? "U"}</AvatarFallback>
           </Avatar>
-          <span>{participant.runescapeName ?? participant.name}</span>
+          <span className="font-medium">{participant.runescapeName ?? participant.name}</span>
         </div>
       )
     }
@@ -876,6 +1031,19 @@ export function TeamManagement({ eventId }: { eventId: string }) {
     )
   }
 
+  // Calculate event averages
+  const eventAvgEHP = statistics
+    ? statistics.teams.reduce((sum, t) => sum + (t.averageEHP ?? 0), 0) /
+      statistics.teams.filter((t) => t.averageEHP !== null).length
+    : undefined
+  const eventAvgEHB = statistics
+    ? statistics.teams.reduce((sum, t) => sum + (t.averageEHB ?? 0), 0) /
+      statistics.teams.filter((t) => t.averageEHB !== null).length
+    : undefined
+
+  // Create teamStats lookup
+  const teamStatsMap = Object.fromEntries((statistics?.teams ?? []).map((s) => [s.teamId, s]))
+
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="space-y-6">
@@ -902,40 +1070,68 @@ export function TeamManagement({ eventId }: { eventId: string }) {
         {/* Unassigned participants pool */}
         <UnassignedParticipantsPool participants={unassignedParticipants} onEditMetadata={handleEditMetadata} />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {teams.map((team) => {
-            const teamStats = statistics?.teams.find(s => s.teamId === team.id)
-            const eventAvgEHP = statistics ? statistics.teams.reduce((sum, t) => sum + (t.averageEHP ?? 0), 0) / statistics.teams.filter(t => t.averageEHP !== null).length : undefined
-            const eventAvgEHB = statistics ? statistics.teams.reduce((sum, t) => sum + (t.averageEHB ?? 0), 0) / statistics.teams.filter(t => t.averageEHB !== null).length : undefined
+        {/* View Toggle: Grid vs Comparison */}
+        {teams.length > 0 && (
+          <Tabs defaultValue="grid" className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="grid" className="flex items-center gap-2">
+                <LayoutGrid className="h-4 w-4" />
+                Team Cards
+              </TabsTrigger>
+              <TabsTrigger value="comparison" className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Comparison View
+              </TabsTrigger>
+            </TabsList>
 
-            // Debug logging
-            if (team.teamMembers.length > 0 && !teamStats) {
-              console.log('Team has members but no stats:', team.id, team.name)
-              console.log('Available statistics:', statistics?.teams.map(t => t.teamId))
-            }
+            <TabsContent value="grid" className="mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {teams.map((team) => {
+                  const teamStats = statistics?.teams.find((s) => s.teamId === team.id)
 
-            return (
-              <TeamCard
-                key={team.id}
-                team={team}
-                participants={participants}
-                onEditName={handleEditTeamName}
-                onSaveName={handleSaveTeamName}
-                onDelete={handleDeleteTeam}
-                onAddUser={handleAddUserToTeam}
-                onRemoveUser={handleRemoveUserFromTeam}
-                onToggleLeader={handleToggleTeamLeader}
-                onEditMetadata={handleEditMetadata}
-                editingTeamId={editingTeamId}
-                editedTeamName={editedTeamName}
-                setEditedTeamName={setEditedTeamName}
-                teamStats={teamStats}
+                  // Debug logging
+                  if (team.teamMembers.length > 0 && !teamStats) {
+                    console.log("Team has members but no stats:", team.id, team.name)
+                    console.log(
+                      "Available statistics:",
+                      statistics?.teams.map((t) => t.teamId)
+                    )
+                  }
+
+                  return (
+                    <TeamCard
+                      key={team.id}
+                      team={team}
+                      participants={participants}
+                      onEditName={handleEditTeamName}
+                      onSaveName={handleSaveTeamName}
+                      onDelete={handleDeleteTeam}
+                      onAddUser={handleAddUserToTeam}
+                      onRemoveUser={handleRemoveUserFromTeam}
+                      onToggleLeader={handleToggleTeamLeader}
+                      onEditMetadata={handleEditMetadata}
+                      editingTeamId={editingTeamId}
+                      editedTeamName={editedTeamName}
+                      setEditedTeamName={setEditedTeamName}
+                      teamStats={teamStats}
+                      eventAvgEHP={eventAvgEHP}
+                      eventAvgEHB={eventAvgEHB}
+                    />
+                  )
+                })}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="comparison" className="mt-6">
+              <TeamComparisonView
+                teams={teams}
+                teamStats={teamStatsMap}
                 eventAvgEHP={eventAvgEHP}
                 eventAvgEHB={eventAvgEHB}
               />
-            )
-          })}
-        </div>
+            </TabsContent>
+          </Tabs>
+        )}
 
         <DragOverlay modifiers={[restrictToWindowEdges]}>{renderDragOverlay()}</DragOverlay>
       </div>
