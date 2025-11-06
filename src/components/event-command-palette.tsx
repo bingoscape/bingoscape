@@ -106,7 +106,7 @@ export function EventCommandPalette({
 
     // Detect OS for keyboard shortcut display
     useEffect(() => {
-        setIsMac(navigator.platform.toUpperCase().indexOf('MAC') >= 0)
+        setIsMac(navigator.platform.toUpperCase().includes('MAC'))
     }, [])
 
     // Build actions list with reorganized categories
