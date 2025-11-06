@@ -3,6 +3,7 @@
 import { db } from "@/server/db"
 import { teams, playerMetadata } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
+import { getTimezoneOffset } from "@/lib/timezones"
 
 /**
  * Individual team statistics including composition and availability metrics
@@ -18,6 +19,7 @@ export interface TeamStatistics {
   totalDailyHours: number | null
   timezoneDistribution: Array<{ timezone: string; count: number }>
   timezoneDiversityScore: number
+  timezoneHourVariance: number // Hour spread across timezones (range/2)
   metadataCoverage: number // percentage of members with metadata
   membersWithMetadata: number
 }
@@ -158,6 +160,9 @@ export async function getEventTeamStatistics(
           )
         : 0
 
+    // Calculate timezone hour variance (spread across UTC offsets)
+    const timezoneHourVariance = calculateTimezoneHourVariance(timezoneDistribution)
+
     // Metadata coverage for this team
     const metadataCoverage =
       memberCount > 0
@@ -182,6 +187,7 @@ export async function getEventTeamStatistics(
         totalDailyHours && !isNaN(totalDailyHours) ? totalDailyHours : null,
       timezoneDistribution,
       timezoneDiversityScore,
+      timezoneHourVariance,
       metadataCoverage,
       membersWithMetadata: membersWithMetadata.length,
     }
@@ -220,6 +226,30 @@ function calculateDiversityScore(counts: number[], total: number): number {
   // Normalize by maximum possible entropy (log2 of number of categories)
   const maxEntropy = Math.log2(counts.length)
   return maxEntropy > 0 ? entropy / maxEntropy : 0
+}
+
+/**
+ * Calculate timezone hour variance (spread across UTC offsets)
+ * Returns the range/2 to represent "±X hours" variance
+ */
+function calculateTimezoneHourVariance(
+  timezoneDistribution: Array<{ timezone: string; count: number }>
+): number {
+  if (timezoneDistribution.length === 0) return 0
+  if (timezoneDistribution.length === 1) return 0 // Single timezone = no variance
+
+  // Get UTC offsets for all unique timezones
+  const offsets = timezoneDistribution.map((tz) =>
+    Math.abs(getTimezoneOffset(tz.timezone))
+  )
+
+  // Calculate range (max - min)
+  const minOffset = Math.min(...offsets)
+  const maxOffset = Math.max(...offsets)
+  const range = maxOffset - minOffset
+
+  // Return half the range for "±X hours" representation
+  return range / 2
 }
 
 /**

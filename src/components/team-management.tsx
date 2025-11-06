@@ -319,20 +319,20 @@ function TeamCard({
               tooltip="Number of team members"
             />
 
-            {/* Timezone Diversity */}
+            {/* Timezone Variance */}
             {teamStats && teamStats.timezoneDistribution.length > 0 && (
               <TeamStatBadge
                 icon={Globe}
-                label="timezones"
-                value={String(teamStats.timezoneDistribution.length)}
+                label="TZ variance"
+                value={teamStats.timezoneHourVariance === 0 ? "0 hrs" : `±${teamStats.timezoneHourVariance.toFixed(1)} hrs`}
                 variant={
-                  teamStats.timezoneDistribution.length === 1
+                  teamStats.timezoneHourVariance === 0
                     ? "default"
-                    : teamStats.timezoneDistribution.length <= 3
+                    : teamStats.timezoneHourVariance <= 3
                     ? "secondary"
                     : "destructive"
                 }
-                tooltip={`${teamStats.timezoneDistribution.length} unique timezone${teamStats.timezoneDistribution.length !== 1 ? 's' : ''} (Diversity score: ${teamStats.timezoneDiversityScore.toFixed(2)}). ${teamStats.timezoneDistribution.length === 1 ? 'All members in same timezone - great for coordination!' : teamStats.timezoneDistribution.length <= 3 ? 'Moderate timezone spread' : 'Wide timezone spread - coordination may be challenging'}`}
+                tooltip={`Timezone spread: ${teamStats.timezoneHourVariance === 0 ? 'All members in same timezone - excellent for coordination!' : `±${teamStats.timezoneHourVariance.toFixed(1)} hours variance across ${teamStats.timezoneDistribution.length} timezone${teamStats.timezoneDistribution.length !== 1 ? 's' : ''}`}. ${teamStats.timezoneDistribution.map(tz => `${tz.timezone} (${tz.count})`).join(', ')}`}
               />
             )}
 

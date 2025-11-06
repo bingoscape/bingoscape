@@ -1,6 +1,6 @@
 import { relations, sql } from "drizzle-orm"
 import {
-    AnyPgColumn,
+  AnyPgColumn,
   bigint,
   boolean,
   index,
@@ -132,6 +132,7 @@ export const registrationStatusEnum = pgEnum("registration_status", ["pending", 
 export const bingoTypeEnum = pgEnum("bingo_type", ["standard", "progression"])
 export const logicalOperatorEnum = pgEnum("logical_operator", ["AND", "OR"])
 export const goalTypeEnum = pgEnum("goal_type", ["generic", "item"])
+export const skillLevelEnum = pgEnum("skill_level", ["beginner", "intermediate", "advanced", "expert", "pvmgod"])
 
 export const playerMetadata = createTable(
   "player_metadata",
