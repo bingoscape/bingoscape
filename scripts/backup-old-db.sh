@@ -40,12 +40,16 @@ echo ""
 # --if-exists: Use IF EXISTS with DROP statements
 # --no-owner: Don't output commands to set ownership
 # --no-privileges: Don't output commands to set privileges
+# -h localhost: Connect via TCP instead of Unix socket (fixes peer authentication)
+export PGPASSWORD="$DB_PASSWORD"
 if pg_dump -U "$DB_USER" \
+    -h localhost \
     --clean \
     --if-exists \
     --no-owner \
     --no-privileges \
     "$DB_NAME" | gzip > "$BACKUP_FILE"; then
+    unset PGPASSWORD
 
     echo "✅ Backup created successfully!"
     echo ""
