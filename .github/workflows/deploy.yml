@@ -38,7 +38,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose.yml,nginx/nginx.conf,nginx/conf.d/default-ssl.conf.example"
+          source: "docker-compose.yml,nginx/nginx.conf,nginx/conf.d/default-ssl.conf.example,nginx/conf.d/default-dev.conf.example,scripts/"
           target: "/tmp/bingoscape-deploy/"
           overwrite: true
 
@@ -109,9 +109,26 @@ jobs:
                 echo "✅ SSL configuration activated (default-ssl.conf.example → default.conf)"
               fi
 
+              # Copy HTTP-only dev config for SSL setup script
+              if [ -f "/tmp/bingoscape-deploy/nginx/conf.d/default-dev.conf.example" ]; then
+                cp /tmp/bingoscape-deploy/nginx/conf.d/default-dev.conf.example "$APP_DIR/nginx/conf.d/"
+                echo "✅ HTTP-only dev config copied (for SSL setup)"
+              fi
+
               echo "✅ nginx configuration completed"
             else
               echo "⚠️  Warning: nginx configuration not found, skipping..."
+            fi
+
+            # Copy scripts directory
+            if [ -d "/tmp/bingoscape-deploy/scripts" ]; then
+              echo "📋 Copying scripts..."
+              mkdir -p "$APP_DIR/scripts"
+              cp -r /tmp/bingoscape-deploy/scripts/* "$APP_DIR/scripts/"
+              chmod +x "$APP_DIR/scripts/"*.sh 2>/dev/null || true
+              echo "✅ Scripts copied and made executable"
+            else
+              echo "⚠️  Warning: scripts directory not found, skipping..."
             fi
 
             # Backup existing .env file
