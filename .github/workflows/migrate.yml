@@ -63,7 +63,7 @@ jobs:
             echo "🚀 Starting database migration for ${{ github.event.inputs.environment }}..."
 
             # Navigate to application directory
-            cd /var/www/bingoscape-next || exit 1
+            cd ~/bingoscape || exit 1
 
             # Check if docker-compose.yml exists
             if [ ! -f "docker-compose.yml" ]; then
@@ -83,7 +83,7 @@ jobs:
 
             # Run migrations
             echo "🔄 Running database migrations..."
-            docker compose run --rm migrate
+            docker compose --env-file ./.env run --rm migrate
 
             # Check exit code
             if [ $? -eq 0 ]; then
