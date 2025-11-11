@@ -1,0 +1,21 @@
+# Docker Compose override for Let's Encrypt certificate generation
+# Usage: docker compose -f docker-compose.yml -f docker-compose.certbot.yml up -d
+
+services:
+  # Certbot for SSL certificate management
+  certbot:
+    image: certbot/certbot:latest
+    container_name: bingoscape-certbot
+    volumes:
+      - ./nginx/ssl:/etc/letsencrypt
+      - ./certbot:/var/www/certbot
+    command: certonly --webroot --webroot-path=/var/www/certbot --email ${CERTBOT_EMAIL} --agree-tos --no-eff-email -d bingoscape.org -d www.bingoscape.org -d next.bingoscape.org
+    networks:
+      - bingoscape-network
+    profiles:
+      - certbot
+
+  # Add certbot webroot to nginx
+  nginx:
+    volumes:
+      - ./certbot:/var/www/certbot:ro

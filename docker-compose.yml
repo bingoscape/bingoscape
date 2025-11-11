@@ -1,7 +1,33 @@
 services:
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: bingoscape-nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Nginx configuration
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # SSL certificates (update paths for production)
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      # Uploads directory (shared with app)
+      - ./uploads:/var/www/uploads:ro
+    networks:
+      - bingoscape-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # PostgreSQL Database
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     container_name: bingoscape-postgres
     hostname: ${DB_HOST:-bingoscapedb}
     restart: unless-stopped
@@ -60,11 +86,13 @@ services:
 
       # Skip environment validation in container
       SKIP_ENV_VALIDATION: "1"
-    ports:
-      - "3000:3000"
+    # Port 3000 is only exposed to Docker network (nginx proxies to it)
+    expose:
+      - "3000"
     volumes:
-      # Persist uploaded files
-      - uploads_data:/app/public/uploads
+      # Mount uploads directory from host system
+      # Update the path on the left side to your desired host directory
+      - ./uploads:/app/public/uploads
     networks:
       - bingoscape-network
     # Uncomment to run migrations on startup
@@ -99,8 +127,6 @@ services:
 
 volumes:
   postgres_data:
-    driver: local
-  uploads_data:
     driver: local
 
 networks:
