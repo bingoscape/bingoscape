@@ -119,7 +119,7 @@ services:
     volumes:
       - ./certificates:/etc/letsencrypt
       - ./certbot-webroot:/var/www/certbot
-    command: certonly --webroot --webroot-path=/var/www/certbot --email sschubert932@gmail.com --agree-tos --no-eff-email -d staging.bingoscape.org
+    command: certonly --webroot --webroot-path=/var/www/certbot --email sschubert932@gmail.com --agree-tos --no-eff-email -d bingoscape.org -d next.bingoscape.org -d www.bingoscape.org
     networks:
       - bingoscape-network
     profiles:

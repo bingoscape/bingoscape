@@ -8,7 +8,7 @@ set -e
 # Usage: ./scripts/setup-ssl.sh
 # =============================================================================
 
-DOMAIN="${1:-staging.bingoscape.org}"
+DOMAIN="${1:-bingoscape.org}"
 EMAIL="${2:-sschubert932@gmail.com}"
 
 echo "🔐 SSL Certificate Setup"
