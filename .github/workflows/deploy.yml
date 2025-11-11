@@ -69,9 +69,10 @@ jobs:
             echo "📁 Ensuring uploads directory exists with correct permissions..."
             mkdir -p "$APP_DIR/uploads"
             # Set proper permissions for uploads (UID 1001 = nextjs user in container)
+            # Use 775 to allow owner and group write access
             sudo chown -R 1001:1001 "$APP_DIR/uploads" 2>/dev/null || chown -R 1001:1001 "$APP_DIR/uploads" || true
-            sudo chmod -R 755 "$APP_DIR/uploads" 2>/dev/null || chmod -R 755 "$APP_DIR/uploads" || true
-            echo "✅ Uploads directory permissions set (owner: 1001:1001, mode: 755)"
+            sudo chmod -R 775 "$APP_DIR/uploads" 2>/dev/null || chmod -R 775 "$APP_DIR/uploads" || true
+            echo "✅ Uploads directory permissions set (owner: 1001:1001, mode: 775)"
 
             # Ensure SSL and certbot directories exist (outside nginx/ to prevent accidental deletion)
             echo "📁 Ensuring certificate directories exist..."
