@@ -66,8 +66,7 @@ devops/
 public/uploads/
 
 # Database
-drizzle/
-*.sql
+# Note: drizzle/ is included for migrations
 *.db
 *.sqlite
 
