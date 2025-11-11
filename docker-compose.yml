@@ -50,12 +50,7 @@ services:
 
   # Next.js Application
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        # Pass build-time environment variables if needed
-        SKIP_ENV_VALIDATION: "1"
+    image: ghcr.io/bingoscape/bingoscape:main
     container_name: bingoscape-app
     restart: unless-stopped
     depends_on:
@@ -101,10 +96,7 @@ services:
 
   # Optional: Database migrations service (run once)
   migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: builder
+    image: ghcr.io/bingoscape/bingoscape:main
     container_name: bingoscape-migrate
     depends_on:
       postgres:
