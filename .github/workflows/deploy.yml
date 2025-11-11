@@ -73,6 +73,15 @@ jobs:
             sudo chmod -R 755 "$APP_DIR/uploads" 2>/dev/null || chmod -R 755 "$APP_DIR/uploads" || true
             echo "✅ Uploads directory permissions set (owner: 1001:1001, mode: 755)"
 
+            # Ensure SSL and certbot directories exist (outside nginx/ to prevent accidental deletion)
+            echo "📁 Ensuring certificate directories exist..."
+            mkdir -p "$APP_DIR/certificates"
+            mkdir -p "$APP_DIR/certbot-webroot"
+            echo "✅ Certificate directories ready at:"
+            echo "   - $APP_DIR/certificates (SSL certificates from Let's Encrypt)"
+            echo "   - $APP_DIR/certbot-webroot (ACME challenge files)"
+            echo "   ⚠️  IMPORTANT: Never delete these directories - they contain SSL certificates!"
+
             # Copy configuration files from temp location
             if [ -f "/tmp/bingoscape-deploy/docker-compose.yml" ]; then
               echo "📋 Copying docker-compose.yml to application directory..."
