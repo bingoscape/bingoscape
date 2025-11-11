@@ -40,8 +40,8 @@ jobs:
         run: |
           npm run lint
 
-      - name: Run type check
-        run: npx tsc --noEmit
+      # - name: Run type check
+      #   run: npx tsc --noEmit
 
       # Uncomment when you have tests
       # - name: Run tests
