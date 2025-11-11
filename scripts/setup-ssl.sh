@@ -64,10 +64,8 @@ if [ -f "certificates/live/$DOMAIN/fullchain.pem" ]; then
     echo "Certificate expires: $(openssl x509 -in certificates/live/$DOMAIN/fullchain.pem -noout -enddate | cut -d= -f2)"
     echo ""
     echo "Visit: https://$DOMAIN"
-else
-    echo "❌ Certificate generation failed!"
-    echo "Restoring SSL config anyway..."
-    cp nginx/conf.d/default.conf.ssl-backup nginx/conf.d/default.conf
-    docker compose restart nginx
-    exit 1
 fi
+
+echo "Restoring SSL config..."
+cp nginx/conf.d/default.conf.ssl-backup nginx/conf.d/default.conf
+docker compose restart nginx
