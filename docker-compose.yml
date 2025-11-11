@@ -98,19 +98,14 @@ services:
   migrate:
     image: ghcr.io/bingoscape/bingoscape:main
     container_name: bingoscape-migrate
+    user: root  # Run as root to have permission to execute drizzle-kit
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@${DB_HOST:-bingoscapedb}:5432/${DB_NAME:-bingoscape}
       SKIP_ENV_VALIDATION: "1"
-    volumes:
-      # Mount all necessary files for drizzle-kit
-      - ./drizzle.config.ts:/app/drizzle.config.ts:ro
-      - ./drizzle:/app/drizzle:ro
-      - ./src:/app/src:ro
-      - ./tsconfig.json:/app/tsconfig.json:ro
-      - ./package.json:/app/package.json:ro
+      NODE_ENV: production
     working_dir: /app
     command: npm run db:migrate
     networks:

@@ -54,11 +54,15 @@ jobs:
 
       - name: Run migrations via SSH
         uses: appleboy/ssh-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GITHUB_TOKEN,GITHUB_ACTOR
           script: |
             echo "🚀 Starting database migration for ${{ github.event.inputs.environment }}..."
 
@@ -77,9 +81,17 @@ jobs:
               exit 1
             fi
 
-            # Pull latest image if needed
+            # Login to GitHub Container Registry
+            echo "🔐 Logging in to GitHub Container Registry..."
+            echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+            # Pull latest image
             echo "📥 Pulling latest Docker image..."
             docker compose pull migrate
+
+            # Logout from registry
+            echo "🔓 Logging out from GitHub Container Registry..."
+            docker logout ghcr.io
 
             # Run migrations
             echo "🔄 Running database migrations..."
