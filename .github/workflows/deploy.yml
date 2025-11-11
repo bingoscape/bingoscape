@@ -31,6 +31,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Copy configuration files to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "docker-compose.yml,nginx/"
+          target: "/tmp/bingoscape-deploy/"
+          overwrite: true
+
       - name: Deploy to server via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -42,8 +53,47 @@ jobs:
             set -e
             echo "🚀 Starting deployment to ${{ github.event.inputs.environment }}..."
 
+            # Define application directory
+            APP_DIR=~/bingoscape
+
+            # Create application directory if it doesn't exist
+            if [ ! -d "$APP_DIR" ]; then
+              echo "📁 Creating application directory: $APP_DIR"
+              mkdir -p "$APP_DIR"
+            fi
+
             # Navigate to application directory
-            cd /var/www/bingoscape-next || exit 1
+            cd "$APP_DIR"
+
+            # Create uploads directory if it doesn't exist
+            if [ ! -d "$APP_DIR/uploads" ]; then
+              echo "📁 Creating uploads directory..."
+              mkdir -p "$APP_DIR/uploads"
+              # Set proper permissions for uploads (UID 1001 = nextjs user in container)
+              sudo chown -R 1001:1001 "$APP_DIR/uploads" 2>/dev/null || chown -R 1001:1001 "$APP_DIR/uploads" || true
+              chmod 755 "$APP_DIR/uploads"
+              echo "✅ Uploads directory created"
+            fi
+
+            # Copy configuration files from temp location
+            if [ -f "/tmp/bingoscape-deploy/docker-compose.yml" ]; then
+              echo "📋 Copying docker-compose.yml to application directory..."
+              cp /tmp/bingoscape-deploy/docker-compose.yml "$APP_DIR/"
+              echo "✅ docker-compose.yml copied successfully"
+            else
+              echo "❌ Error: docker-compose.yml not found in /tmp/bingoscape-deploy/"
+              exit 1
+            fi
+
+            # Copy nginx configuration if it exists
+            if [ -d "/tmp/bingoscape-deploy/nginx" ]; then
+              echo "📋 Copying nginx configuration..."
+              mkdir -p "$APP_DIR/nginx"
+              cp -r /tmp/bingoscape-deploy/nginx/* "$APP_DIR/nginx/"
+              echo "✅ nginx configuration copied successfully"
+            else
+              echo "⚠️  Warning: nginx configuration not found, skipping..."
+            fi
 
             # Backup existing .env file
             if [ -f ".env" ]; then
@@ -119,7 +169,7 @@ jobs:
 
             # Start containers with new image
             echo "▶️  Starting containers..."
-            docker compose up -d
+            docker compose --env-file ./env up -d
 
             # Wait for containers to be healthy
             echo "⏳ Waiting for containers to be healthy..."
@@ -134,7 +184,7 @@ jobs:
             MAX_RETRIES=30
             RETRY_COUNT=0
 
-            until curl -f http://localhost:3000/api/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+            until curl -f http://localhost/api/health || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
               echo "Waiting for application to respond... ($RETRY_COUNT/$MAX_RETRIES)"
               RETRY_COUNT=$((RETRY_COUNT + 1))
               sleep 2
@@ -151,6 +201,11 @@ jobs:
             # Show recent logs
             echo "📋 Recent application logs:"
             docker compose logs --tail=20 app
+
+            # Clean up temporary files
+            echo "🧹 Cleaning up temporary files..."
+            rm -rf /tmp/bingoscape-deploy
+            echo "✅ Cleanup completed"
 
             echo "🎉 Deployment completed successfully!"
 
