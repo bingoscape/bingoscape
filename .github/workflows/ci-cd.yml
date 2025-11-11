@@ -21,6 +21,8 @@ jobs:
   lint-and-test:
     name: Lint and Test
     runs-on: ubuntu-latest
+    env:
+      SKIP_ENV_VALIDATION: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -35,7 +37,8 @@ jobs:
         run: npm ci
 
       - name: Run linter
-        run: npm run lint
+        run: |
+          npm run lint
 
       - name: Run type check
         run: npx tsc --noEmit
