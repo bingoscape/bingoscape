@@ -38,7 +38,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose.yml,nginx/"
+          source: "docker-compose.yml,nginx/nginx.conf,nginx/conf.d/default-ssl.conf.example"
           target: "/tmp/bingoscape-deploy/"
           overwrite: true
 
@@ -88,9 +88,21 @@ jobs:
             # Copy nginx configuration if it exists
             if [ -d "/tmp/bingoscape-deploy/nginx" ]; then
               echo "📋 Copying nginx configuration..."
-              mkdir -p "$APP_DIR/nginx"
-              cp -r /tmp/bingoscape-deploy/nginx/* "$APP_DIR/nginx/"
-              echo "✅ nginx configuration copied successfully"
+              mkdir -p "$APP_DIR/nginx/conf.d"
+
+              # Copy main nginx.conf
+              if [ -f "/tmp/bingoscape-deploy/nginx/nginx.conf" ]; then
+                cp /tmp/bingoscape-deploy/nginx/nginx.conf "$APP_DIR/nginx/"
+                echo "✅ nginx.conf copied"
+              fi
+
+              # Copy SSL config and rename to default.conf for production
+              if [ -f "/tmp/bingoscape-deploy/nginx/conf.d/default-ssl.conf.example" ]; then
+                cp /tmp/bingoscape-deploy/nginx/conf.d/default-ssl.conf.example "$APP_DIR/nginx/conf.d/default.conf"
+                echo "✅ SSL configuration activated (default-ssl.conf.example → default.conf)"
+              fi
+
+              echo "✅ nginx configuration completed"
             else
               echo "⚠️  Warning: nginx configuration not found, skipping..."
             fi
@@ -169,7 +181,7 @@ jobs:
 
             # Start containers with new image
             echo "▶️  Starting containers..."
-            docker compose --env-file ./env up -d
+            docker compose --env-file ./.env up -d
 
             # Wait for containers to be healthy
             echo "⏳ Waiting for containers to be healthy..."

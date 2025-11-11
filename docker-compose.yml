@@ -17,6 +17,7 @@ services:
       - ./nginx/ssl:/etc/nginx/ssl:ro
       # Uploads directory (shared with app)
       - ./uploads:/var/www/uploads:ro
+      - ./certbot:/var/www/certbot:ro  # Add this line
     networks:
       - bingoscape-network
     healthcheck:

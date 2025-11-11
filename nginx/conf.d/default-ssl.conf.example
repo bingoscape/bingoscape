@@ -8,7 +8,7 @@ upstream nextjs_app {
 server {
     listen 80;
     listen [::]:80;
-    server_name bingoscape.org www.bingoscape.org next.bingoscape.org;
+    server_name staging.bingoscape.org;
 
     # Allow Let's Encrypt verification
     location /.well-known/acme-challenge/ {
@@ -38,7 +38,7 @@ server {
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 10m;
 
-    return 301 https://bingoscape.org$request_uri;
+    return 301 https://staging.bingoscape.org$request_uri;
 }
 
 # Redirect www.bingoscape.org to bingoscape.org
@@ -58,14 +58,14 @@ server {
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 10m;
 
-    return 301 https://bingoscape.org$request_uri;
+    return 301 https://staging.bingoscape.org$request_uri;
 }
 
 # Main application server
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name bingoscape.org;
+    server_name staging.bingoscape.org;
 
     # SSL Configuration
     ssl_certificate /etc/nginx/ssl/fullchain.pem;
