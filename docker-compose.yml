@@ -75,7 +75,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: deps
+      target: builder
     container_name: bingoscape-migrate
     depends_on:
       postgres:
@@ -83,6 +83,14 @@ services:
     environment:
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@${DB_HOST:-bingoscapedb}:5432/${DB_NAME:-bingoscape}
       SKIP_ENV_VALIDATION: "1"
+    volumes:
+      # Mount all necessary files for drizzle-kit
+      - ./drizzle.config.ts:/app/drizzle.config.ts:ro
+      - ./drizzle:/app/drizzle:ro
+      - ./src:/app/src:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      - ./package.json:/app/package.json:ro
+    working_dir: /app
     command: npm run db:migrate
     networks:
       - bingoscape-network
