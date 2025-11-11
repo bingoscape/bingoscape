@@ -6,6 +6,9 @@ await import("./src/env.js");
 
 /** @type {import("next").NextConfig} */
 const config = {
+  // Enable standalone output for optimized Docker builds
+  output: "standalone",
+
   // TODO: Remove this once it's fixed by Sentry
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",

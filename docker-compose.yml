@@ -1,0 +1,100 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: bingoscape-postgres
+    hostname: ${DB_HOST:-bingoscapedb}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-bingoscape}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bingoscape-network
+
+  # Next.js Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Pass build-time environment variables if needed
+        SKIP_ENV_VALIDATION: "1"
+    container_name: bingoscape-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Database Configuration
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@${DB_HOST:-bingoscapedb}:5432/${DB_NAME:-bingoscape}
+
+      # NextAuth Configuration
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+
+      # OAuth Providers
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+
+      # Application Configuration
+      SUPER_ADMIN_EMAILS: ${SUPER_ADMIN_EMAILS:-admin@example.com}
+      NODE_ENV: production
+
+      # Sentry Configuration (optional)
+      SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+
+      # Skip environment validation in container
+      SKIP_ENV_VALIDATION: "1"
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persist uploaded files
+      - uploads_data:/app/public/uploads
+    networks:
+      - bingoscape-network
+    # Uncomment to run migrations on startup
+    # command: sh -c "npm run db:migrate && node server.js"
+
+  # Optional: Database migrations service (run once)
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: deps
+    container_name: bingoscape-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@${DB_HOST:-bingoscapedb}:5432/${DB_NAME:-bingoscape}
+      SKIP_ENV_VALIDATION: "1"
+    command: npm run db:migrate
+    networks:
+      - bingoscape-network
+    profiles:
+      - tools  # Only run when explicitly specified
+
+volumes:
+  postgres_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+networks:
+  bingoscape-network:
+    driver: bridge
