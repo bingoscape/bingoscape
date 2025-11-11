@@ -65,15 +65,13 @@ jobs:
             # Navigate to application directory
             cd "$APP_DIR"
 
-            # Create uploads directory if it doesn't exist
-            if [ ! -d "$APP_DIR/uploads" ]; then
-              echo "📁 Creating uploads directory..."
-              mkdir -p "$APP_DIR/uploads"
-              # Set proper permissions for uploads (UID 1001 = nextjs user in container)
-              sudo chown -R 1001:1001 "$APP_DIR/uploads" 2>/dev/null || chown -R 1001:1001 "$APP_DIR/uploads" || true
-              chmod 755 "$APP_DIR/uploads"
-              echo "✅ Uploads directory created"
-            fi
+            # Create uploads directory if it doesn't exist and set proper permissions
+            echo "📁 Ensuring uploads directory exists with correct permissions..."
+            mkdir -p "$APP_DIR/uploads"
+            # Set proper permissions for uploads (UID 1001 = nextjs user in container)
+            sudo chown -R 1001:1001 "$APP_DIR/uploads" 2>/dev/null || chown -R 1001:1001 "$APP_DIR/uploads" || true
+            sudo chmod -R 755 "$APP_DIR/uploads" 2>/dev/null || chmod -R 755 "$APP_DIR/uploads" || true
+            echo "✅ Uploads directory permissions set (owner: 1001:1001, mode: 755)"
 
             # Copy configuration files from temp location
             if [ -f "/tmp/bingoscape-deploy/docker-compose.yml" ]; then
