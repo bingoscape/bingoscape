@@ -2,14 +2,8 @@ name: CI/CD - Build and Push to GHCR
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*.*.*'
-  pull_request:
-    branches:
-      - main
-      - develop
   workflow_dispatch:
 
 env:
