@@ -70,6 +70,7 @@ export default function BingoGrid({
   const [newGoal, setNewGoal] = useState<Partial<Goal>>({})
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [pastedImage, setPastedImage] = useState<File | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [fullSizeImage, setFullSizeImage] = useState<{ src: string; alt: string } | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const sortableRef = useRef<Sortable | null>(null)
@@ -396,6 +397,11 @@ export default function BingoGrid({
   }
 
   const handleImageSubmit = async () => {
+    // Prevent concurrent uploads
+    if (isUploadingImage) {
+      return
+    }
+
     if (bingo.locked) {
       toast({
         title: "Submissions locked",
@@ -414,33 +420,43 @@ export default function BingoGrid({
       return
     }
 
-    const formData = new FormData()
-    formData.append("image", selectedImage ?? pastedImage!)
-    formData.append("tileId", selectedTile.id)
-    formData.append("teamId", currentTeamId)
+    // Set uploading state
+    setIsUploadingImage(true)
 
-    const result = await submitImage(formData)
+    try {
+      const formData = new FormData()
+      formData.append("image", selectedImage ?? pastedImage!)
+      formData.append("tileId", selectedTile.id)
+      formData.append("teamId", currentTeamId)
 
-    if (result.success) {
-      setSelectedImage(null)
-      setPastedImage(null)
-      toast({
-        title: "Image submitted",
-        description: "Your image has been successfully submitted for review.",
-      })
-      await refreshSubmissions(selectedTile.id)
-    } else {
-      toast({
-        title: "Error",
-        description: result.error ?? "Failed to submit image",
-        variant: "destructive",
-      })
+      const result = await submitImage(formData)
+
+      if (result.success) {
+        setSelectedImage(null)
+        setPastedImage(null)
+        toast({
+          title: "Image submitted",
+          description: "Your image has been successfully submitted for review.",
+        })
+        await refreshSubmissions(selectedTile.id)
+      } else {
+        toast({
+          title: "Error",
+          description: result.error ?? "Failed to submit image",
+          variant: "destructive",
+        })
+      }
+    } finally {
+      // Always reset uploading state
+      setIsUploadingImage(false)
     }
   }
 
   const handlePaste = useCallback(
     (event: ClipboardEvent) => {
       if (bingo.locked) return
+      // Prevent pasting during upload
+      if (isUploadingImage) return
 
       event.preventDefault()
       const items = event.clipboardData?.items
@@ -462,7 +478,7 @@ export default function BingoGrid({
         }
       }
     },
-    [bingo],
+    [bingo, isUploadingImage],
   )
 
   useEffect(() => {
@@ -869,6 +885,7 @@ export default function BingoGrid({
                 selectedImage={selectedImage}
                 pastedImage={pastedImage}
                 isSubmissionsLocked={bingo.locked}
+                isUploadingImage={isUploadingImage}
                 onImageChange={handleImageChange}
                 onImageSubmit={handleImageSubmit}
                 onFullSizeImageView={(src, alt) => setFullSizeImage({ src, alt })}
