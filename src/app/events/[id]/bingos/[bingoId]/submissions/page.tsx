@@ -39,6 +39,8 @@ import {
   X,
   CheckCircle2,
   Hash,
+  Zap,
+  User,
 } from "lucide-react"
 import { FullSizeImageDialog } from "@/components/full-size-image-dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -837,6 +839,38 @@ export default function BingoSubmissionsPage({ params }: { params: { id: string;
                                   <div className="text-xs text-muted-foreground">
                                     {new Date(submission.createdAt).toLocaleString()}
                                   </div>
+
+                                  {/* Auto-submission metadata */}
+                                  {submission.isAutoSubmission && (
+                                    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-md p-2 space-y-1">
+                                      <div className="flex items-center gap-1 text-xs font-medium text-blue-700 dark:text-blue-300">
+                                        <Zap className="h-3 w-3" />
+                                        Auto-Submitted
+                                      </div>
+                                      {submission.sourceName && (
+                                        <div className="text-xs text-muted-foreground">
+                                          <span className="font-medium">Source:</span> {submission.sourceName}
+                                          {submission.sourceNpcId && ` (NPC #${submission.sourceNpcId})`}
+                                        </div>
+                                      )}
+                                      {submission.sourceItemId && (
+                                        <div className="text-xs text-muted-foreground">
+                                          <span className="font-medium">Item:</span> #{submission.sourceItemId}
+                                        </div>
+                                      )}
+                                      {submission.pluginAccountName && (
+                                        <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                          <User className="h-3 w-3" />
+                                          {submission.pluginAccountName}
+                                        </div>
+                                      )}
+                                      {submission.sourceType && (
+                                        <div className="text-xs text-muted-foreground">
+                                          <span className="font-medium">Type:</span> {submission.sourceType}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
 
                                   {/* Inline Goal Assignment */}
                                   <InlineGoalAssignment

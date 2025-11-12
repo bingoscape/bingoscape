@@ -63,6 +63,13 @@ export interface Submission {
   goal?: Goal | null
   submissionValue: number | null
   comments?: SubmissionComment[]
+  // Auto-submission metadata
+  isAutoSubmission?: boolean
+  sourceNpcId?: number | null
+  sourceName?: string | null
+  sourceItemId?: number | null
+  pluginAccountName?: string | null
+  sourceType?: string | null
 }
 
 export interface TeamTileSubmission {
