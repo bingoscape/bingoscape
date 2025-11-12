@@ -92,7 +92,7 @@ services:
     volumes:
       # Mount uploads directory from host system
       # Update the path on the left side to your desired host directory
-      - ./uploads:/app/public/uploads
+      - ./uploads:/app/public/uploads:rw
     networks:
       - bingoscape-network
     # Uncomment to run migrations on startup
