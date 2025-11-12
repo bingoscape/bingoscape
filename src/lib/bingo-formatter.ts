@@ -1,8 +1,9 @@
 import { db } from "@/server/db"
-import { tiles, teamTileSubmissions } from "@/server/db/schema"
-import { eq, asc } from "drizzle-orm"
+import { tiles, teamTileSubmissions, goalGroups, goals, teamGoalProgress } from "@/server/db/schema"
+import { eq, asc, and, inArray } from "drizzle-orm"
 import { mapStatus } from "@/lib/statusMapping"
 import { getProgressionBingoTiles, getTeamTierProgress, getTierXpRequirements } from "@/app/actions/bingo"
+import type { GoalTreeNode, GoalNode, GroupNode, GroupProgressData } from "@/types/runelite-api"
 
 export interface FormattedBingo {
   id: string
@@ -50,6 +51,7 @@ export interface FormattedBingo {
         isCompleted: boolean
       }
     }>
+    goalTree: GoalTreeNode[]
   }>
   progression?: {
     tierXpRequirements: Array<{
@@ -174,6 +176,19 @@ export async function formatBingoData(
     }
   })
 
+  // Build goal trees for all tiles
+  const tileGoalTrees = await Promise.all(
+    bingoTiles.map((tile) =>
+      buildGoalTreeForAPI(tile.id, userTeam?.id ?? null)
+    )
+  )
+
+  // Create a map of tile IDs to goal trees
+  const goalTreeMap: Record<string, GoalTreeNode[]> = {}
+  bingoTiles.forEach((tile, index) => {
+    goalTreeMap[tile.id] = tileGoalTrees[index]!
+  })
+
   // Format the bingo data
   const formattedBingo: FormattedBingo = {
     id: bingo.id,
@@ -200,7 +215,7 @@ export async function formatBingoData(
           // Calculate progress for current team if available
           const currentTeamSubmission = teamSubmissions.find((sub) => sub.tileId === tile.id)
           const teamSubmissionsForGoal = currentTeamSubmission?.submissions.filter(sub => sub.goalId === goal.id) ?? []
-          
+
           const approvedProgress = teamSubmissionsForGoal
             .filter(sub => sub.status === "approved")
             .reduce((sum, sub) => sum + (sub.submissionValue ?? 0), 0)
@@ -222,6 +237,7 @@ export async function formatBingoData(
             } : undefined,
           }
         }) ?? [],
+      goalTree: goalTreeMap[tile.id] ?? [],
     })),
     // Include progression bingo metadata when applicable
     ...(bingo.bingoType === "progression" && userTeam && {
@@ -241,4 +257,223 @@ export async function formatBingoData(
   }
 
   return formattedBingo
+}
+
+/**
+ * Build hierarchical goal tree for API response
+ * @param tileId - The tile ID to get goals for
+ * @param teamId - The team ID to calculate progress for (optional)
+ * @returns Promise<GoalTreeNode[]> - Hierarchical goal tree with progress
+ */
+export async function buildGoalTreeForAPI(
+  tileId: string,
+  teamId: string | null
+): Promise<GoalTreeNode[]> {
+  try {
+    // Fetch all groups for this tile
+    const allGroups = await db.query.goalGroups.findMany({
+      where: eq(goalGroups.tileId, tileId),
+    })
+
+    // Fetch all goals for this tile with their related data
+    const allGoals = await db.query.goals.findMany({
+      where: eq(goals.tileId, tileId),
+      with: {
+        goalValues: true,
+        itemGoal: true,
+      },
+    })
+
+    // Fetch team progress if teamId provided
+    const teamProgressMap = new Map<string, number>()
+    if (teamId && allGoals.length > 0) {
+      const goalIds = allGoals.map((g) => g.id)
+      const progressData = await db.query.teamGoalProgress.findMany({
+        where: and(
+          eq(teamGoalProgress.teamId, teamId),
+          inArray(teamGoalProgress.goalId, goalIds)
+        ),
+      })
+
+      progressData.forEach((progress) => {
+        teamProgressMap.set(progress.goalId, progress.currentValue)
+      })
+    }
+
+    // Build tree structure recursively
+    const buildTree = (parentId: string | null): GoalTreeNode[] => {
+      const nodes: GoalTreeNode[] = []
+
+      // Add groups at this level
+      const childGroups = allGroups
+        .filter((g) => g.parentGroupId === parentId)
+        .sort((a, b) => a.orderIndex - b.orderIndex)
+
+      for (const group of childGroups) {
+        const children = buildTree(group.id)
+        const groupNode: GroupNode = {
+          type: "group",
+          id: group.id,
+          orderIndex: group.orderIndex,
+          name: group.name,
+          logicalOperator: group.logicalOperator,
+          minRequiredGoals: group.minRequiredGoals,
+          children,
+        }
+
+        // Calculate group progress if team provided
+        if (teamId) {
+          groupNode.progress = calculateGroupProgress(groupNode, allGoals, teamProgressMap)
+        }
+
+        nodes.push(groupNode)
+      }
+
+      // Add goals at this level
+      const childGoals = allGoals
+        .filter((g) => g.parentGroupId === parentId)
+        .sort((a, b) => a.orderIndex - b.orderIndex)
+
+      for (const goal of childGoals) {
+        const goalNode: GoalNode = formatGoalNode(goal, teamProgressMap, teamId !== null)
+        nodes.push(goalNode)
+      }
+
+      return nodes
+    }
+
+    return buildTree(null)
+  } catch (error) {
+    console.error("Error building goal tree for API:", error)
+    return []
+  }
+}
+
+/**
+ * Format a single goal node with all metadata
+ */
+function formatGoalNode(
+  goal: {
+    id: string
+    description: string
+    targetValue: number
+    goalType: "generic" | "item"
+    orderIndex: number
+    itemGoal?: {
+      itemId: number
+      baseName: string
+      exactVariant: string | null
+      imageUrl: string
+    } | null
+    goalValues?: Array<{
+      id: string
+      value: number
+      description: string
+    }>
+  },
+  teamProgressMap: Map<string, number>,
+  includeProgress: boolean
+): GoalNode {
+  const goalNode: GoalNode = {
+    type: "goal",
+    id: goal.id,
+    orderIndex: goal.orderIndex,
+    description: goal.description,
+    targetValue: goal.targetValue,
+    goalType: goal.goalType,
+  }
+
+  // Add item goal metadata if present
+  if (goal.itemGoal) {
+    goalNode.itemGoal = {
+      itemId: goal.itemGoal.itemId,
+      baseName: goal.itemGoal.baseName,
+      exactVariant: goal.itemGoal.exactVariant,
+      imageUrl: goal.itemGoal.imageUrl,
+    }
+  }
+
+  // Add goal values if present
+  if (goal.goalValues && goal.goalValues.length > 0) {
+    goalNode.goalValues = goal.goalValues.map((gv) => ({
+      id: gv.id,
+      value: gv.value,
+      description: gv.description,
+    }))
+  }
+
+  // Add progress if team context provided
+  if (includeProgress) {
+    const currentValue = teamProgressMap.get(goal.id) ?? 0
+    const isCompleted = currentValue >= goal.targetValue
+    const percentage = goal.targetValue > 0
+      ? Math.min(100, (currentValue / goal.targetValue) * 100)
+      : 0
+
+    goalNode.progress = {
+      approvedProgress: currentValue,
+      totalProgress: currentValue,
+      approvedPercentage: percentage,
+      isCompleted,
+    }
+  }
+
+  return goalNode
+}
+
+/**
+ * Calculate aggregated progress for a goal group
+ */
+function calculateGroupProgress(
+  groupNode: GroupNode,
+  allGoals: Array<{ id: string; targetValue: number }>,
+  teamProgressMap: Map<string, number>
+): GroupProgressData {
+  let completedCount = 0
+  let totalCount = 0
+
+  // Recursively count completed children
+  function countCompletedChildren(node: GoalTreeNode): boolean {
+    if (node.type === "goal") {
+      totalCount++
+      const currentValue = teamProgressMap.get(node.id) ?? 0
+      const isComplete = currentValue >= node.targetValue!
+      if (isComplete) {
+        completedCount++
+      }
+      return isComplete
+    } else {
+      // For groups, evaluate based on their logical operator
+      const childResults = node.children.map(countCompletedChildren)
+
+      if (node.logicalOperator === "AND") {
+        // AND: all children must be complete
+        return childResults.every((result) => result)
+      } else {
+        // OR: at least minRequiredGoals children must be complete
+        const completedChildren = childResults.filter((result) => result).length
+        return completedChildren >= node.minRequiredGoals
+      }
+    }
+  }
+
+  // Evaluate the group
+  const isComplete = groupNode.children.length > 0
+    ? (() => {
+        const childResults = groupNode.children.map(countCompletedChildren)
+
+        if (groupNode.logicalOperator === "AND") {
+          return childResults.every((result) => result)
+        } else {
+          const completedChildren = childResults.filter((result) => result).length
+          return completedChildren >= groupNode.minRequiredGoals
+        }
+      })()
+    : false
+
+  return {
+    completedCount,
+    totalCount,
+    isComplete,
+  }
 }
