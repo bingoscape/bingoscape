@@ -504,6 +504,13 @@ export const submissions = createTable("submissions", {
   status: submissionStatusEnum("status").default("pending").notNull(),
   reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
   reviewedAt: timestamp("reviewed_at"),
+  // Auto-submission metadata fields
+  isAutoSubmission: boolean("is_auto_submission").default(false).notNull(),
+  sourceNpcId: integer("source_npc_id"), // NPC ID that dropped the item (nullable)
+  sourceName: varchar("source_name", { length: 255 }), // Name of source (NPC name, activity, etc.)
+  sourceItemId: integer("source_item_id"), // Item ID that triggered the submission
+  pluginAccountName: varchar("plugin_account_name", { length: 255 }), // Account name from plugin at time of submission
+  sourceType: varchar("source_type", { length: 100 }), // Type of source: "NPC loot", "Pickpocket", "Event reward", etc.
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
