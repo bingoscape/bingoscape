@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/server/db"
-import { tiles, eventParticipants, teamTileSubmissions, submissions, images, teamMembers, discordWebhooks } from "@/server/db/schema"
+import { tiles, eventParticipants, teamTileSubmissions, submissions, images, teamMembers, discordWebhooks, goals, teamGoalProgress } from "@/server/db/schema"
 import { eq, and, sql } from "drizzle-orm"
 import { validateApiKey } from "@/lib/api-auth"
 import { nanoid } from "nanoid"
@@ -8,6 +8,7 @@ import fs from "fs/promises"
 import path from "path"
 import { createSubmissionEmbed, sendDiscordWebhook } from "@/lib/discord-webhook"
 import { formatBingoData } from "@/lib/bingo-formatter"
+import { checkAndAutoCompleteTile } from "@/app/actions/tile-completion"
 
 // Type definition for auto-submission metadata
 interface AutoSubmissionMetadata {
@@ -219,11 +220,58 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
           pluginAccountName: metadata.accountName ?? null,
           sourceType: metadata.sourceType ?? null,
           reviewedAt: shouldAutoApprove ? new Date() : null,
+          submissionValue: 1.0, // Default value for auto-submissions
         })
         .returning({
           id: submissions.id,
           createdAt: submissions.createdAt,
         })
+
+      // If submission has a goal and is auto-approved, update goal progress
+      if (matchedGoalId && shouldAutoApprove) {
+        // Recalculate progress from ALL approved submissions for this goal and team
+        const approvedSubmissions = await tx
+          .select({
+            submissionValue: submissions.submissionValue,
+          })
+          .from(submissions)
+          .innerJoin(teamTileSubmissions, eq(submissions.teamTileSubmissionId, teamTileSubmissions.id))
+          .where(
+            and(
+              eq(submissions.goalId, matchedGoalId),
+              eq(submissions.status, "approved"),
+              eq(teamTileSubmissions.teamId, userTeam.id)
+            )
+          )
+
+        const totalValue = approvedSubmissions.reduce((sum, s) => sum + (s.submissionValue || 0), 0)
+
+        // Get current goal progress for this team
+        const currentProgress = await tx.query.teamGoalProgress.findFirst({
+          where: and(
+            eq(teamGoalProgress.goalId, matchedGoalId),
+            eq(teamGoalProgress.teamId, userTeam.id)
+          ),
+        })
+
+        if (currentProgress) {
+          // Update existing progress
+          await tx
+            .update(teamGoalProgress)
+            .set({
+              currentValue: totalValue,
+              updatedAt: new Date(),
+            })
+            .where(eq(teamGoalProgress.id, currentProgress.id))
+        } else if (totalValue > 0) {
+          // Create new progress entry only if there's actual progress
+          await tx.insert(teamGoalProgress).values({
+            goalId: matchedGoalId,
+            teamId: userTeam.id,
+            currentValue: totalValue,
+          })
+        }
+      }
 
       return {
         submission: insertedSubmission,
@@ -231,6 +279,16 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
         autoApproved: shouldAutoApprove,
       }
     })
+
+    // Check if tile should auto-complete after goal progress update
+    if (matchedGoalId && shouldAutoApprove) {
+      try {
+        await checkAndAutoCompleteTile(tileId, userTeam.id)
+      } catch (error) {
+        console.error("Error checking tile auto-completion:", error)
+        // Don't fail the submission if auto-completion check fails
+      }
+    }
 
     // Send Discord webhook notifications
     try {
