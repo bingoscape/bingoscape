@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Check, AlertTriangle, X, Upload, Clock, CheckCircle2, Link, Users, Hash, Search, Star, ChevronsUpDown } from "lucide-react"
+import { Check, AlertTriangle, X, Upload, Clock, CheckCircle2, Link, Users, Hash, Search, Star, ChevronsUpDown, Loader2 } from "lucide-react"
 import type { Tile, Team, SubmissionComment } from "@/app/actions/events"
 import { CommentForm } from "@/components/comment-form"
 import { SubmissionCommentDisplay } from "@/components/submission-comment"
@@ -40,6 +40,7 @@ interface SubmissionsTabProps {
   selectedImage: File | null
   pastedImage: File | null
   isSubmissionsLocked: boolean
+  isUploadingImage: boolean
   onImageChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   onImageSubmit: () => void
   onFullSizeImageView: (src: string, alt: string) => void
@@ -64,6 +65,7 @@ export function SubmissionsTab({
   selectedImage,
   pastedImage,
   isSubmissionsLocked,
+  isUploadingImage,
   onImageChange,
   onImageSubmit,
   onFullSizeImageView,
@@ -384,33 +386,48 @@ export function SubmissionsTab({
                         type="file"
                         accept="image/*"
                         onChange={onImageChange}
-                        className={`absolute inset-0 w-full h-full opacity-0 cursor-pointer ${(selectedImage || pastedImage) ? 'pointer-events-none' : ''}`}
+                        disabled={isUploadingImage}
+                        className={`absolute inset-0 w-full h-full opacity-0 cursor-pointer ${(selectedImage || pastedImage || isUploadingImage) ? 'pointer-events-none' : ''}`}
                       />
                     </div>
                   </div>
 
                   {/* Image preview */}
                   {(selectedImage || pastedImage) && (
-                    <div className="mt-4 p-4 bg-green-500/20 border border-green-500 rounded-lg">
+                    <div className={`mt-4 p-4 rounded-lg border ${isUploadingImage ? 'bg-blue-500/20 border-blue-500' : 'bg-green-500/20 border-green-500'}`}>
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-green-500/30 rounded-full">
-                          <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        <div className={`p-2 rounded-full ${isUploadingImage ? 'bg-blue-500/30' : 'bg-green-500/30'}`}>
+                          {isUploadingImage ? (
+                            <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          )}
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-green-500">
-                            Image ready to submit
+                          <p className={`text-sm font-medium ${isUploadingImage ? 'text-blue-500' : 'text-green-500'}`}>
+                            {isUploadingImage ? "Uploading image..." : "Image ready to submit"}
                           </p>
-                          <p className="text-xs text-green-500/80">
+                          <p className={`text-xs ${isUploadingImage ? 'text-blue-500/80' : 'text-green-500/80'}`}>
                             {selectedImage ? selectedImage.name : "Pasted image"}
                           </p>
                         </div>
                         <Button
                           onClick={onImageSubmit}
-                          className="bg-green-500 hover:bg-green-600 text-foreground"
+                          disabled={isUploadingImage}
+                          className="bg-green-500 hover:bg-green-600 text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                           size="sm"
                         >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Submit
+                          {isUploadingImage ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="h-4 w-4 mr-2" />
+                              Submit
+                            </>
+                          )}
                         </Button>
                       </div>
                     </div>
