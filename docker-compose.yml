@@ -16,7 +16,7 @@ services:
       # SSL certificates (stored in dedicated certificates directory)
       - ./certificates:/etc/nginx/ssl:ro
       # Uploads directory (shared with app)
-      - ./uploads:/var/www/uploads:rw
+      - ./uploads:/var/www/uploads:ro
       - ./certbot-webroot:/var/www/certbot:ro
     networks:
       - bingoscape-network
