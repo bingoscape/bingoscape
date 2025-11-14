@@ -23,23 +23,19 @@ export interface GoalValueData {
 }
 
 /**
- * Progress information for a goal or group
+ * Unified progress information for goals and groups
+ * Matches the Java GoalTreeProgress model in the RuneLite plugin
  */
 export interface GoalProgressData {
-  approvedProgress: number
-  totalProgress: number
-  approvedPercentage: number
-  isCompleted: boolean
-}
-
-/**
- * Aggregated progress for a goal group
- */
-export interface GroupProgressData {
   completedCount: number
   totalCount: number
   isComplete: boolean
 }
+
+/**
+ * Type alias for group progress (same structure as goal progress)
+ */
+export type GroupProgressData = GoalProgressData
 
 /**
  * Base properties shared by all goal tree nodes

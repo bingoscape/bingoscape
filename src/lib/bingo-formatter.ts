@@ -403,18 +403,15 @@ function formatGoalNode(
   }
 
   // Add progress if team context provided
+  // Use completedCount/totalCount/isComplete to match Java model
   if (includeProgress) {
     const currentValue = teamProgressMap.get(goal.id) ?? 0
-    const isCompleted = currentValue >= goal.targetValue
-    const percentage = goal.targetValue > 0
-      ? Math.min(100, (currentValue / goal.targetValue) * 100)
-      : 0
+    const isComplete = currentValue >= goal.targetValue
 
     goalNode.progress = {
-      approvedProgress: currentValue,
-      totalProgress: currentValue,
-      approvedPercentage: percentage,
-      isCompleted,
+      completedCount: currentValue,
+      totalCount: goal.targetValue,
+      isComplete,
     }
   }
 
@@ -423,28 +420,24 @@ function formatGoalNode(
 
 /**
  * Calculate aggregated progress for a goal group
+ * For display purposes:
+ * - completedCount: number of immediate children that are complete
+ * - totalCount: for OR groups, use minRequiredGoals; for AND groups, use total children
+ * - isComplete: whether the group requirements are met
  */
 function calculateGroupProgress(
   groupNode: GroupNode,
   allGoals: Array<{ id: string; targetValue: number }>,
   teamProgressMap: Map<string, number>
 ): GroupProgressData {
-  let completedCount = 0
-  let totalCount = 0
-
-  // Recursively count completed children
-  function countCompletedChildren(node: GoalTreeNode): boolean {
+  // Check if each immediate child is complete
+  function isChildComplete(node: GoalTreeNode): boolean {
     if (node.type === "goal") {
-      totalCount++
       const currentValue = teamProgressMap.get(node.id) ?? 0
-      const isComplete = currentValue >= node.targetValue!
-      if (isComplete) {
-        completedCount++
-      }
-      return isComplete
+      return currentValue >= node.targetValue!
     } else {
-      // For groups, evaluate based on their logical operator
-      const childResults = node.children.map(countCompletedChildren)
+      // For nested groups, recursively evaluate based on their logical operator
+      const childResults = node.children.map(isChildComplete)
 
       if (node.logicalOperator === "AND") {
         // AND: all children must be complete
@@ -457,19 +450,24 @@ function calculateGroupProgress(
     }
   }
 
-  // Evaluate the group
-  const isComplete = groupNode.children.length > 0
-    ? (() => {
-        const childResults = groupNode.children.map(countCompletedChildren)
+  // Count completed immediate children
+  const childCompletionResults = groupNode.children.map(isChildComplete)
+  const completedCount = childCompletionResults.filter((result) => result).length
 
-        if (groupNode.logicalOperator === "AND") {
-          return childResults.every((result) => result)
-        } else {
-          const completedChildren = childResults.filter((result) => result).length
-          return completedChildren >= groupNode.minRequiredGoals
-        }
-      })()
-    : false
+  // Determine totalCount based on logical operator
+  let totalCount: number
+  if (groupNode.logicalOperator === "AND") {
+    // AND: all children must be complete
+    totalCount = groupNode.children.length
+  } else {
+    // OR: only minRequiredGoals need to be complete
+    totalCount = Math.min(groupNode.minRequiredGoals, groupNode.children.length)
+  }
+
+  // Determine if the group is complete
+  const isComplete = groupNode.logicalOperator === "AND"
+    ? completedCount === groupNode.children.length
+    : completedCount >= groupNode.minRequiredGoals
 
   return {
     completedCount,
