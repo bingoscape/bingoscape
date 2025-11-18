@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -43,6 +43,17 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
     locked: bingo.locked,
     codephrase: bingo.codephrase,
   })
+
+  // Sync formData with bingo prop changes when switching boards
+  useEffect(() => {
+    setFormData({
+      title: bingo.title,
+      description: bingo.description ?? "",
+      visible: bingo.visible,
+      locked: bingo.locked,
+      codephrase: bingo.codephrase,
+    })
+  }, [bingo])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
