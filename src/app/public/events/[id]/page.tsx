@@ -9,10 +9,8 @@ import type { Metadata, ResolvingMetadata } from "next"
 import { PublicBingoGrid } from "@/components/public-bingo-grid"
 
 // Generate metadata for SEO
-export async function generateMetadata(
-  { params }: { params: { id: string } },
-  _parent: ResolvingMetadata,
-): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ id: string }> }, _parent: ResolvingMetadata): Promise<Metadata> {
+  const params = await props.params;
   const event = await getPublicEvent(params.id)
 
   if (!event) {
@@ -24,7 +22,7 @@ export async function generateMetadata(
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://next.bingoscape.org"
   const eventUrl = `${baseUrl}/public/events/${params.id}`
-  
+
   // Format dates for description
   const startDate = new Date(event.startDate).toLocaleDateString("en-US", {
     month: "long",
@@ -71,7 +69,8 @@ export async function generateMetadata(
   }
 }
 
-export default async function PublicEventPage({ params }: { params: { id: string } }) {
+export default async function PublicEventPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const event = await getPublicEvent(params.id)
 
   if (!event) {

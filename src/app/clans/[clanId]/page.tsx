@@ -13,7 +13,7 @@ import Link from "next/link";
 import { UserIcon, CalendarIcon, Users, Search, Filter, Activity, Crown, Shield, UserPlus, MessageSquare, MoreHorizontal } from "lucide-react";
 import { GenerateClanInviteLink } from "@/components/generate-clan-invite-link";
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { toast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Breadcrumbs } from "@/components/breadcrumbs";
@@ -51,7 +51,8 @@ type ClanDetails = {
 
 type Role = 'admin' | 'management' | 'member' | 'guest';
 
-export default function ClanDetailPage({ params }: { params: { clanId: string } }) {
+export default function ClanDetailPage(props: { params: Promise<{ clanId: string }> }) {
+  const params = use(props.params);
   const [members, setMembers] = useState<ClanMember[]>([]);
   const [clanDetails, setClanDetails] = useState<ClanDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);

@@ -16,6 +16,7 @@ import {
 import {
     Dialog,
     DialogContent,
+    DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -301,6 +302,7 @@ export function EventCommandPalette({
 
             <Dialog open={open} onOpenChange={setOpen}>
                 <DialogContent className="sm:max-w-[600px] p-0 gap-0">
+                    <DialogTitle className="sr-only">Event Command Palette</DialogTitle>
                     <div className="relative flex items-center border-b bg-background">
                         <Search className="absolute left-4 h-4 w-4 text-muted-foreground pointer-events-none" />
                         <Input

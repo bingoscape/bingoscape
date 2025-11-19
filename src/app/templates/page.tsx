@@ -6,11 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { getServerAuthSession } from "@/server/auth"
 import { CreateTemplateButton } from "@/components/create-template-button"
 
-export default async function TemplatesPage({
-  searchParams,
-}: {
-  searchParams: { search?: string; category?: string; size?: string; page?: string }
-}) {
+export default async function TemplatesPage(
+  props: {
+    searchParams: Promise<{ search?: string; category?: string; size?: string; page?: string }>
+  }
+) {
+  const searchParams = await props.searchParams;
   const session = await getServerAuthSession()
   const isAuthenticated = !!session?.user
 

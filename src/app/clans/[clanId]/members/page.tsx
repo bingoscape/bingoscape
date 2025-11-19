@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useSession } from "next-auth/react";
 import { createArray } from "@/lib/createArray";
@@ -46,14 +46,15 @@ type ClanDetails = {
 
 type Role = 'admin' | 'management' | 'member' | 'guest';
 
-export default function ClanMembersPage({ params }: { params: { clanId: string } }) {
-	const [members, setMembers] = useState<ClanMember[]>([]);
-	const [clanDetails, setClanDetails] = useState<ClanDetails | null>(null);
-	const [isLoading, setIsLoading] = useState(true);
-	const { data: session, status } = useSession();
-	const router = useRouter();
+export default function ClanMembersPage(props: { params: Promise<{ clanId: string }> }) {
+    const params = use(props.params);
+    const [members, setMembers] = useState<ClanMember[]>([]);
+    const [clanDetails, setClanDetails] = useState<ClanDetails | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const { data: session, status } = useSession();
+    const router = useRouter();
 
-	useEffect(() => {
+    useEffect(() => {
 		const fetchData = async () => {
 			if (status === 'loading') return;
 
@@ -89,11 +90,11 @@ export default function ClanMembersPage({ params }: { params: { clanId: string }
 		fetchData().then(() => console.log("done")).catch(err => console.error(err));
 	}, [params.clanId, status, router]);
 
-	if (!clanDetails) {
+    if (!clanDetails) {
 		return <div>Clan not found</div>;
 	}
 
-	const handleRoleUpdate = async (memberId: string, newRole: Role) => {
+    const handleRoleUpdate = async (memberId: string, newRole: Role) => {
 		try {
 			await updateMemberRole(params.clanId, memberId, newRole);
 			const updatedMembers = await getClanMembers(params.clanId);
@@ -111,14 +112,14 @@ export default function ClanMembersPage({ params }: { params: { clanId: string }
 		}
 	};
 
-	const canChangeRole = (userRole: Role, memberRole: Role) => {
+    const canChangeRole = (userRole: Role, memberRole: Role) => {
 		const roles: Role[] = ['guest', 'member', 'management', 'admin'];
 		const userRoleIndex = roles.indexOf(userRole);
 		const memberRoleIndex = roles.indexOf(memberRole);
 		return userRoleIndex > memberRoleIndex;
 	};
 
-	const getAdjacentRoles = (currentRole: Role): { promote: Role | null, demote: Role | null } => {
+    const getAdjacentRoles = (currentRole: Role): { promote: Role | null, demote: Role | null } => {
 		const roles: Role[] = ['guest', 'member', 'management', 'admin'];
 		const currentIndex = roles.indexOf(currentRole);
 		return {
@@ -127,7 +128,7 @@ export default function ClanMembersPage({ params }: { params: { clanId: string }
 		};
 	};
 
-	if (status === 'loading' || isLoading) {
+    if (status === 'loading' || isLoading) {
 		return (
 			<div className="container mx-auto py-10">
 				<Card>
@@ -158,18 +159,18 @@ export default function ClanMembersPage({ params }: { params: { clanId: string }
 		);
 	}
 
-	if (status === 'unauthenticated') {
+    if (status === 'unauthenticated') {
 		return null; // The useEffect will handle the redirect
 	}
 
-	const breadcrumbItems = [
+    const breadcrumbItems = [
 		{ label: 'Home', href: '/' },
 		{ label: 'Clans', href: '/' },
 		{ label: clanDetails.name, href: `/clans/${clanDetails.id}` },
 		{ label: 'Members', href: `/clans/${clanDetails.id}/members` },
 	]
 
-	return (
+    return (
 		<div className="container mx-auto py-10">
 			<Breadcrumbs items={breadcrumbItems} />
 			<Card>

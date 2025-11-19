@@ -1,7 +1,7 @@
 /* eslint-disable */
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, use } from "react";
 import { notFound, useRouter } from "next/navigation"
 import BingoGridWrapper from "@/components/bingo-grid-wrapper"
 import { getEventById, getUserRole } from "@/app/actions/events"
@@ -16,7 +16,8 @@ import { ArrowLeft, RefreshCw, FileJson } from "lucide-react"
 import type { Bingo } from "@/app/actions/events"
 import { cn } from "@/lib/utils"
 
-export default function BingoDetailPage({ params }: { params: { id: UUID; bingoId: string } }) {
+export default function BingoDetailPage(props: { params: Promise<{ id: UUID; bingoId: string }> }) {
+  const params = use(props.params);
   const { id: eventId, bingoId } = params
   const router = useRouter()
   const [loading, setLoading] = useState(true)

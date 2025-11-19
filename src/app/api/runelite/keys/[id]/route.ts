@@ -5,7 +5,8 @@ import { apiKeys } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
 
 // Delete an API key
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerAuthSession()
 
   if (!session?.user) {

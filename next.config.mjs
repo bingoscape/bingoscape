@@ -6,8 +6,9 @@ await import("./src/env.js");
 
 /** @type {import("next").NextConfig} */
 const config = {
-  // Enable standalone output for optimized Docker builds
-  output: "standalone",
+  // Enable standalone output for production builds only (set BUILD_STANDALONE=true)
+  // This avoids Windows path issues during development
+  ...(process.env.BUILD_STANDALONE === "true" && { output: "standalone" }),
 
   // TODO: Remove this once it's fixed by Sentry
   compiler: {

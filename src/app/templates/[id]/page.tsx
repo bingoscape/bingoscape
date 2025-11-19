@@ -13,7 +13,8 @@ import { getServerAuthSession } from "@/server/auth"
 import type { ExportedBingo } from "@/app/actions/bingo-import-export"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
-export default async function TemplatePage({ params }: { params: { id: string } }) {
+export default async function TemplatePage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const template = await getTemplateById(params.id)
   const session = await getServerAuthSession()
 

@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import ClanEventsClient from "@/components/clan-events";
 
-export default async function ClanEventsPage({ params }: { params: { clanId: string } }) {
-	try {
+export default async function ClanEventsPage(props: { params: Promise<{ clanId: string }> }) {
+    const params = await props.params;
+    try {
 		const [events, clanDetails] = await Promise.all([
 			getClanEvents(params.clanId),
 			getClanDetails(params.clanId)

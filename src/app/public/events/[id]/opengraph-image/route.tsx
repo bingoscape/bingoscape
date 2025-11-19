@@ -3,10 +3,8 @@ import type { NextRequest } from "next/server"
 
 export const runtime = "nodejs"
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { getPublicEvent, getPublicBingos, getPublicBingoDetails } = await import("@/app/actions/public-events")
     const event = await getPublicEvent(params.id)

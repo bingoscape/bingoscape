@@ -5,7 +5,8 @@ import { getEventStats } from "@/app/actions/stats"
 import { EventStatsDisplay } from "@/components/event-stats-display"
 import type { UUID } from "crypto"
 
-export default async function EventStatsPage({ params }: { params: { id: UUID } }) {
+export default async function EventStatsPage(props: { params: Promise<{ id: UUID }> }) {
+  const params = await props.params;
   const session = await getServerAuthSession()
   if (!session || !session.user) {
     notFound()

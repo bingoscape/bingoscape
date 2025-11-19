@@ -21,7 +21,8 @@ async function ensureUploadDir() {
 }
 
 // Submit an image for a specific tile
-export async function POST(req: Request, { params }: { params: { tileId: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ tileId: string }> }) {
+  const params = await props.params;
   // Validate API key from Authorization header
   const userId = await validateApiKey(req)
   if (!userId) {

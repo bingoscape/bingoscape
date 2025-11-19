@@ -61,7 +61,7 @@ export function CreateBingoModal({ eventId, isOpen, onClose }: CreateBingoModalP
           </div>
           <div>
             <Label htmlFor="codephrase">Codephrase</Label>
-            <Input id="codephrase" name="codephrase" value={generateOSRSCodePhrase()} required />
+            <Input id="codephrase" name="codephrase" defaultValue={generateOSRSCodePhrase()} required />
           </div>
           <div>
             <Label htmlFor="description">Description</Label>

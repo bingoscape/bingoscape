@@ -24,7 +24,8 @@ import { RegistrationStatus } from "@/components/registration-status"
 import { EventBingosClient } from "@/components/event-bingos-client"
 import { EventHeaderActions } from "@/components/event-header-actions"
 
-export default async function EventBingosPage({ params }: { params: { id: UUID } }) {
+export default async function EventBingosPage(props: { params: Promise<{ id: UUID }> }) {
+    const params = await props.params;
     const session = await getServerAuthSession()
     if (!session || !session.user) {
         notFound()

@@ -8,9 +8,10 @@ import { PublicBingoGrid } from "@/components/public-bingo-grid"
 
 // Generate metadata for SEO
 export async function generateMetadata(
-  { params }: { params: { id: string; bingoId: string } },
-  parent: ResolvingMetadata,
+  props: { params: Promise<{ id: string; bingoId: string }> },
+  parent: ResolvingMetadata
 ): Promise<Metadata> {
+  const params = await props.params;
   const event = await getPublicEvent(params.id)
 
   if (!event) {
@@ -40,7 +41,8 @@ export async function generateMetadata(
   }
 }
 
-export default async function PublicBingoPage({ params }: { params: { id: string; bingoId: string } }) {
+export default async function PublicBingoPage(props: { params: Promise<{ id: string; bingoId: string }> }) {
+  const params = await props.params;
   const event = await getPublicEvent(params.id)
 
   if (!event) {
