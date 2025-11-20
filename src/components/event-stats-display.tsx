@@ -7,17 +7,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Trophy, Target, BarChart3, Users } from "lucide-react"
 import type { EventStatsData } from "@/app/actions/stats"
 import type { EventRole } from "@/app/actions/events"
+import type { ItemStatistics } from "@/app/actions/item-statistics"
 import { EventTeamChart } from "@/components/event-team-chart"
 import { BingoBreakdownChart } from "@/components/bingo-breakdown-chart"
+import { ItemStatisticsDisplay } from "@/components/item-statistics-display"
 
 interface EventStatsDisplayProps {
   eventStats: EventStatsData
   eventTitle: string
   userRole: EventRole
+  itemStatistics?: ItemStatistics
 }
 
-export function EventStatsDisplay({ eventStats, eventTitle, userRole }: EventStatsDisplayProps) {
+export function EventStatsDisplay({ eventStats, eventTitle, userRole, itemStatistics }: EventStatsDisplayProps) {
   const { eventTeamPoints, bingoSummary, totalEventXP, totalPossibleEventXP } = eventStats
+
+  // Check if we have item statistics with data
+  const hasItemStats = itemStatistics && itemStatistics.totalSubmissions > 0
 
   const overallCompletionRate =
     totalPossibleEventXP > 0 && eventTeamPoints.length > 0
@@ -61,11 +67,12 @@ export function EventStatsDisplay({ eventStats, eventTitle, userRole }: EventSta
       </div>
 
       <Tabs defaultValue="leaderboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className={`grid w-full ${hasItemStats ? "grid-cols-5" : "grid-cols-4"}`}>
           <TabsTrigger value="leaderboard">Team Leaderboard</TabsTrigger>
           <TabsTrigger value="breakdown">Bingo Breakdown</TabsTrigger>
           <TabsTrigger value="charts">Charts</TabsTrigger>
           <TabsTrigger value="boards">Board Summary</TabsTrigger>
+          {hasItemStats && <TabsTrigger value="item-values">Item Values</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="leaderboard" className="space-y-4">
@@ -171,6 +178,13 @@ export function EventStatsDisplay({ eventStats, eventTitle, userRole }: EventSta
             )}
           </div>
         </TabsContent>
+
+        {/* Item Values Tab */}
+        {hasItemStats && itemStatistics && (
+          <TabsContent value="item-values" className="space-y-4">
+            <ItemStatisticsDisplay statistics={itemStatistics} title={eventTitle} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )

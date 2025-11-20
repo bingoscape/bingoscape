@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 import { getServerAuthSession } from "@/server/auth"
 import { getEventById } from "@/app/actions/events"
 import { getEventStats } from "@/app/actions/stats"
+import { getEventItemStatistics } from "@/app/actions/item-statistics"
 import { EventStatsDisplay } from "@/components/event-stats-display"
 import type { UUID } from "crypto"
 
@@ -26,6 +27,9 @@ export default async function EventStatsPage({ params }: { params: { id: UUID } 
   // Get event statistics
   const eventStats = await getEventStats(params.id)
 
+  // Get item statistics
+  const itemStatistics = await getEventItemStatistics(params.id)
+
   return (
     <div className="container mx-auto py-10">
       <div className="mb-6">
@@ -33,7 +37,12 @@ export default async function EventStatsPage({ params }: { params: { id: UUID } 
         <p className="text-muted-foreground mt-2">Accumulated points across all bingo boards</p>
       </div>
 
-      <EventStatsDisplay eventStats={eventStats} eventTitle={event.title} userRole={userRole} />
+      <EventStatsDisplay
+        eventStats={eventStats}
+        eventTitle={event.title}
+        userRole={userRole}
+        itemStatistics={itemStatistics}
+      />
     </div>
   )
 }
