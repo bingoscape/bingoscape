@@ -93,6 +93,50 @@ export interface MostValuableItemStats {
   }>
 }
 
+// Time-series and analytics type definitions
+export interface DailyValueData {
+  date: string // ISO date string "2025-08-13"
+  cumulativeValue: number
+  dailyValue: number
+  submissionCount: number
+  activeUsers: number
+}
+
+export interface TeamDailyProgress {
+  date: string
+  teamId: string
+  teamName: string
+  dailyValue: number
+  cumulativeValue: number
+}
+
+export interface ItemDiversityStats {
+  teamId: string
+  teamName: string
+  uniqueItemsCount: number
+  totalSubmissions: number
+  diversityScore: number // 0-1, higher = more diverse
+  topItems: Array<{ itemName: string; count: number }>
+}
+
+export interface EfficiencyTrend {
+  date: string
+  averageValuePerSubmission: number
+  totalSubmissions: number
+  totalValue: number
+}
+
+export interface UserStreakStats {
+  userId: string
+  userName: string
+  runescapeName: string | null
+  teamName: string
+  currentStreak: number // Consecutive days ending at event end
+  longestStreak: number
+  totalActiveDays: number
+  averageValuePerDay: number
+}
+
 export interface ItemStatistics {
   totalValue: number
   uniqueItemsCount: number
@@ -103,6 +147,12 @@ export interface ItemStatistics {
   mostValuableItem: MostValuableItemStats | null
   profitPerHour: number | null
   allSubmissions: ItemValueSubmission[]
+  // Time-series analytics
+  dailyValueTimeline: DailyValueData[]
+  teamTimelineComparison: TeamDailyProgress[]
+  itemDiversityByTeam: ItemDiversityStats[]
+  efficiencyTrends: EfficiencyTrend[]
+  userStreaks: UserStreakStats[]
 }
 
 /**
@@ -155,6 +205,11 @@ export async function getBingoItemStatistics(bingoId: string): Promise<ItemStati
       mostValuableItem: null,
       profitPerHour: null,
       allSubmissions: [],
+      dailyValueTimeline: [],
+      teamTimelineComparison: [],
+      itemDiversityByTeam: [],
+      efficiencyTrends: [],
+      userStreaks: [],
     }
   }
 
@@ -391,6 +446,27 @@ export async function getBingoItemStatistics(bingoId: string): Promise<ItemStati
   // Calculate profit per hour
   const profitPerHour = await calculateBingoProfitPerHour(bingoId, valuedSubmissions)
 
+  // Get event dates for time-series calculations
+  const bingoData = await db
+    .select({
+      eventStartDate: events.startDate,
+      eventEndDate: events.endDate,
+    })
+    .from(bingos)
+    .innerJoin(events, eq(bingos.eventId, events.id))
+    .where(eq(bingos.id, bingoId))
+    .limit(1)
+
+  const eventStartDate = bingoData[0]?.eventStartDate ?? null
+  const eventEndDate = bingoData[0]?.eventEndDate ?? null
+
+  // Calculate time-series and advanced analytics
+  const dailyValueTimeline = calculateDailyValueTimeline(valuedSubmissions, eventStartDate, eventEndDate)
+  const teamTimelineComparison = calculateTeamTimelineComparison(valuedSubmissions)
+  const itemDiversityByTeam = calculateItemDiversity(valuedSubmissions)
+  const efficiencyTrends = calculateEfficiencyTrends(valuedSubmissions)
+  const userStreaks = calculateUserStreaks(valuedSubmissions, eventEndDate)
+
   // Calculate total statistics
   const totalValue = valuedSubmissions.reduce((sum, s) => sum + s.totalValue, 0)
   const uniqueItemsCount = uniqueItemIds.length
@@ -405,6 +481,12 @@ export async function getBingoItemStatistics(bingoId: string): Promise<ItemStati
     mostValuableItem,
     profitPerHour,
     allSubmissions: valuedSubmissions,
+    // Time-series analytics
+    dailyValueTimeline,
+    teamTimelineComparison,
+    itemDiversityByTeam,
+    efficiencyTrends,
+    userStreaks,
   }
 }
 
@@ -429,6 +511,11 @@ export async function getEventItemStatistics(eventId: string): Promise<ItemStati
       mostValuableItem: null,
       profitPerHour: null,
       allSubmissions: [],
+      dailyValueTimeline: [],
+      teamTimelineComparison: [],
+      itemDiversityByTeam: [],
+      efficiencyTrends: [],
+      userStreaks: [],
     }
   }
 
@@ -480,6 +567,11 @@ export async function getEventItemStatistics(eventId: string): Promise<ItemStati
       mostValuableItem: null,
       profitPerHour: null,
       allSubmissions: [],
+      dailyValueTimeline: [],
+      teamTimelineComparison: [],
+      itemDiversityByTeam: [],
+      efficiencyTrends: [],
+      userStreaks: [],
     }
   }
 
@@ -708,6 +800,26 @@ export async function getEventItemStatistics(eventId: string): Promise<ItemStati
   // Calculate profit per hour for event
   const profitPerHour = await calculateEventProfitPerHour(eventId, valuedSubmissions)
 
+  // Get event dates for time-series calculations
+  const eventData = await db
+    .select({
+      startDate: events.startDate,
+      endDate: events.endDate,
+    })
+    .from(events)
+    .where(eq(events.id, eventId))
+    .limit(1)
+
+  const eventStartDate = eventData[0]?.startDate ?? null
+  const eventEndDate = eventData[0]?.endDate ?? null
+
+  // Calculate time-series and advanced analytics
+  const dailyValueTimeline = calculateDailyValueTimeline(valuedSubmissions, eventStartDate, eventEndDate)
+  const teamTimelineComparison = calculateTeamTimelineComparison(valuedSubmissions)
+  const itemDiversityByTeam = calculateItemDiversity(valuedSubmissions)
+  const efficiencyTrends = calculateEfficiencyTrends(valuedSubmissions)
+  const userStreaks = calculateUserStreaks(valuedSubmissions, eventEndDate)
+
   const totalValue = valuedSubmissions.reduce((sum, s) => sum + s.totalValue, 0)
   const uniqueItemsCount = uniqueItemIds.length
 
@@ -721,7 +833,286 @@ export async function getEventItemStatistics(eventId: string): Promise<ItemStati
     mostValuableItem,
     profitPerHour,
     allSubmissions: valuedSubmissions,
+    // Time-series analytics
+    dailyValueTimeline,
+    teamTimelineComparison,
+    itemDiversityByTeam,
+    efficiencyTrends,
+    userStreaks,
   }
+}
+
+/**
+ * Calculate daily value timeline from submissions
+ */
+function calculateDailyValueTimeline(
+  submissions: ItemValueSubmission[],
+  eventStartDate: Date | null,
+  eventEndDate: Date | null,
+): DailyValueData[] {
+  if (submissions.length === 0) return []
+
+  // Group submissions by date
+  const submissionsByDate = new Map<string, ItemValueSubmission[]>()
+
+  for (const submission of submissions) {
+    const dateKey = submission.submittedAt.toISOString().split("T")[0]!
+    const existing = submissionsByDate.get(dateKey) ?? []
+    existing.push(submission)
+    submissionsByDate.set(dateKey, existing)
+  }
+
+  // Create timeline data
+  const timelineData: DailyValueData[] = []
+  let cumulativeValue = 0
+
+  // Sort dates chronologically
+  const sortedDates = Array.from(submissionsByDate.keys()).sort()
+
+  for (const date of sortedDates) {
+    const daySubmissions = submissionsByDate.get(date)!
+    const dailyValue = daySubmissions.reduce((sum, s) => sum + s.totalValue, 0)
+    const activeUsers = new Set(daySubmissions.map((s) => s.userId)).size
+
+    cumulativeValue += dailyValue
+
+    timelineData.push({
+      date,
+      cumulativeValue,
+      dailyValue,
+      submissionCount: daySubmissions.length,
+      activeUsers,
+    })
+  }
+
+  return timelineData
+}
+
+/**
+ * Calculate team timeline comparison
+ */
+function calculateTeamTimelineComparison(submissions: ItemValueSubmission[]): TeamDailyProgress[] {
+  if (submissions.length === 0) return []
+
+  // Group by team and date
+  const teamDateMap = new Map<string, Map<string, ItemValueSubmission[]>>()
+
+  for (const submission of submissions) {
+    const dateKey = submission.submittedAt.toISOString().split("T")[0]!
+    const teamKey = submission.teamId
+
+    if (!teamDateMap.has(teamKey)) {
+      teamDateMap.set(teamKey, new Map())
+    }
+    const teamDates = teamDateMap.get(teamKey)!
+
+    const existing = teamDates.get(dateKey) ?? []
+    existing.push(submission)
+    teamDates.set(dateKey, existing)
+  }
+
+  // Create timeline for each team
+  const timelineData: TeamDailyProgress[] = []
+
+  for (const [teamId, dates] of teamDateMap.entries()) {
+    const teamName = submissions.find((s) => s.teamId === teamId)?.teamName ?? "Unknown"
+    let cumulativeValue = 0
+
+    // Sort dates chronologically
+    const sortedDates = Array.from(dates.keys()).sort()
+
+    for (const date of sortedDates) {
+      const daySubmissions = dates.get(date)!
+      const dailyValue = daySubmissions.reduce((sum, s) => sum + s.totalValue, 0)
+      cumulativeValue += dailyValue
+
+      timelineData.push({
+        date,
+        teamId,
+        teamName,
+        dailyValue,
+        cumulativeValue,
+      })
+    }
+  }
+
+  return timelineData
+}
+
+/**
+ * Calculate item diversity by team
+ */
+function calculateItemDiversity(submissions: ItemValueSubmission[]): ItemDiversityStats[] {
+  if (submissions.length === 0) return []
+
+  // Group by team
+  const teamMap = new Map<string, ItemValueSubmission[]>()
+
+  for (const submission of submissions) {
+    const existing = teamMap.get(submission.teamId) ?? []
+    existing.push(submission)
+    teamMap.set(submission.teamId, existing)
+  }
+
+  const diversityStats: ItemDiversityStats[] = []
+
+  for (const [teamId, teamSubmissions] of teamMap.entries()) {
+    const teamName = teamSubmissions[0]!.teamName
+    const uniqueItems = new Set(teamSubmissions.map((s) => s.itemId))
+    const uniqueItemsCount = uniqueItems.size
+    const totalSubmissions = teamSubmissions.length
+
+    // Calculate diversity score (0-1)
+    const diversityScore = uniqueItemsCount / totalSubmissions
+
+    // Get top 5 most obtained items
+    const itemCounts = new Map<string, number>()
+    for (const submission of teamSubmissions) {
+      const count = itemCounts.get(submission.itemName) ?? 0
+      itemCounts.set(submission.itemName, count + 1)
+    }
+
+    const topItems = Array.from(itemCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([itemName, count]) => ({ itemName, count }))
+
+    diversityStats.push({
+      teamId,
+      teamName,
+      uniqueItemsCount,
+      totalSubmissions,
+      diversityScore,
+      topItems,
+    })
+  }
+
+  return diversityStats.sort((a, b) => b.diversityScore - a.diversityScore)
+}
+
+/**
+ * Calculate efficiency trends over time
+ */
+function calculateEfficiencyTrends(submissions: ItemValueSubmission[]): EfficiencyTrend[] {
+  if (submissions.length === 0) return []
+
+  // Group by date
+  const submissionsByDate = new Map<string, ItemValueSubmission[]>()
+
+  for (const submission of submissions) {
+    const dateKey = submission.submittedAt.toISOString().split("T")[0]!
+    const existing = submissionsByDate.get(dateKey) ?? []
+    existing.push(submission)
+    submissionsByDate.set(dateKey, existing)
+  }
+
+  const trends: EfficiencyTrend[] = []
+  const sortedDates = Array.from(submissionsByDate.keys()).sort()
+
+  for (const date of sortedDates) {
+    const daySubmissions = submissionsByDate.get(date)!
+    const totalValue = daySubmissions.reduce((sum, s) => sum + s.totalValue, 0)
+    const totalSubmissions = daySubmissions.length
+    const averageValuePerSubmission = Math.floor(totalValue / totalSubmissions)
+
+    trends.push({
+      date,
+      averageValuePerSubmission,
+      totalSubmissions,
+      totalValue,
+    })
+  }
+
+  return trends
+}
+
+/**
+ * Calculate user activity streaks
+ */
+function calculateUserStreaks(
+  submissions: ItemValueSubmission[],
+  eventEndDate: Date | null,
+): UserStreakStats[] {
+  if (submissions.length === 0) return []
+
+  // Group by user
+  const userMap = new Map<string, ItemValueSubmission[]>()
+
+  for (const submission of submissions) {
+    const existing = userMap.get(submission.userId) ?? []
+    existing.push(submission)
+    userMap.set(submission.userId, existing)
+  }
+
+  const streakStats: UserStreakStats[] = []
+
+  for (const [userId, userSubmissions] of userMap.entries()) {
+    const userName = userSubmissions[0]!.userName
+    const runescapeName = userSubmissions[0]!.runescapeName
+    const teamName = userSubmissions[0]!.teamName
+
+    // Get unique dates
+    const dates = Array.from(new Set(userSubmissions.map((s) => s.submittedAt.toISOString().split("T")[0]))).sort()
+
+    const totalActiveDays = dates.length
+
+    // Calculate streaks
+    let currentStreak = 0
+    let longestStreak = 0
+    let tempStreak = 1
+
+    for (let i = 1; i < dates.length; i++) {
+      const prevDate = new Date(dates[i - 1]!)
+      const currDate = new Date(dates[i]!)
+      const dayDiff = Math.floor((currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24))
+
+      if (dayDiff === 1) {
+        tempStreak++
+      } else {
+        longestStreak = Math.max(longestStreak, tempStreak)
+        tempStreak = 1
+      }
+    }
+    longestStreak = Math.max(longestStreak, tempStreak)
+
+    // Calculate current streak (ending at event end or last submission)
+    if (eventEndDate && dates.length > 0) {
+      const lastDate = new Date(dates[dates.length - 1]!)
+      const daysSinceLastSubmission = Math.floor((eventEndDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
+
+      if (daysSinceLastSubmission <= 1) {
+        // Find streak ending at last submission
+        currentStreak = 1
+        for (let i = dates.length - 2; i >= 0; i--) {
+          const prevDate = new Date(dates[i]!)
+          const nextDate = new Date(dates[i + 1]!)
+          const dayDiff = Math.floor((nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24))
+
+          if (dayDiff === 1) {
+            currentStreak++
+          } else {
+            break
+          }
+        }
+      }
+    }
+
+    const totalValue = userSubmissions.reduce((sum, s) => sum + s.totalValue, 0)
+    const averageValuePerDay = Math.floor(totalValue / totalActiveDays)
+
+    streakStats.push({
+      userId,
+      userName,
+      runescapeName,
+      teamName,
+      currentStreak,
+      longestStreak,
+      totalActiveDays,
+      averageValuePerDay,
+    })
+  }
+
+  return streakStats.sort((a, b) => b.longestStreak - a.longestStreak)
 }
 
 /**

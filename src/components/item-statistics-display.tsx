@@ -7,6 +7,7 @@ import { Trophy, Coins, TrendingUp, Package, Clock, Award } from "lucide-react"
 import type { ItemStatistics } from "@/app/actions/item-statistics"
 import { formatGPValue } from "@/lib/format-gp"
 import { ItemValueCharts } from "@/components/item-value-charts"
+import { ItemTimelineCharts } from "@/components/item-timeline-charts"
 import Image from "next/image"
 
 interface ItemStatisticsDisplayProps {
@@ -181,10 +182,11 @@ export function ItemStatisticsDisplay({ statistics, title: _title }: ItemStatist
 
       {/* Tabs for detailed statistics */}
       <Tabs defaultValue="teams" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="teams">Team Rankings</TabsTrigger>
           <TabsTrigger value="users">User Rankings</TabsTrigger>
           <TabsTrigger value="charts">Visualizations</TabsTrigger>
+          <TabsTrigger value="timeline">Timeline & Trends</TabsTrigger>
         </TabsList>
 
         {/* Team Rankings Tab */}
@@ -300,6 +302,17 @@ export function ItemStatisticsDisplay({ statistics, title: _title }: ItemStatist
         {/* Charts Tab */}
         <TabsContent value="charts" className="space-y-4">
           <ItemValueCharts teamStats={teamStats} userStats={topUsers} />
+        </TabsContent>
+
+        {/* Timeline & Trends Tab */}
+        <TabsContent value="timeline" className="space-y-4">
+          <ItemTimelineCharts
+            dailyValueTimeline={statistics.dailyValueTimeline}
+            teamTimelineComparison={statistics.teamTimelineComparison}
+            itemDiversityByTeam={statistics.itemDiversityByTeam}
+            efficiencyTrends={statistics.efficiencyTrends}
+            userStreaks={statistics.userStreaks}
+          />
         </TabsContent>
       </Tabs>
     </div>
