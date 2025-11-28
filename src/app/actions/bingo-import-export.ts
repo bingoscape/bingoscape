@@ -6,7 +6,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
 import { db } from "@/server/db"
-import { bingos, tiles, goals, tierXpRequirements } from "@/server/db/schema"
+import { bingos, tiles, goals, tierXpRequirements, rowBonuses, columnBonuses } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getServerAuthSession } from "@/server/auth"
@@ -23,6 +23,9 @@ export interface ExportedBingo {
     codephrase: string
     bingoType: "standard" | "progression"
     tiersUnlockRequirement?: number // For progression boards
+    mainDiagonalBonusXP?: number // Pattern bonus for main diagonal (standard boards only)
+    antiDiagonalBonusXP?: number // Pattern bonus for anti-diagonal (standard boards only)
+    completeBoardBonusXP?: number // Pattern bonus for completing all tiles (standard boards only)
   }
   tiles: Array<{
     title: string
@@ -41,6 +44,14 @@ export interface ExportedBingo {
     tier: number
     xpRequired: number
   }> // Only for progression boards
+  rowBonuses?: Array<{
+    rowIndex: number
+    bonusXP: number
+  }> // Pattern bonuses for rows (standard boards only)
+  columnBonuses?: Array<{
+    columnIndex: number
+    bonusXP: number
+  }> // Pattern bonuses for columns (standard boards only)
 }
 
 /**
@@ -53,7 +64,7 @@ export async function exportBingoBoard(bingoId: string): Promise<ExportedBingo |
   }
 
   try {
-    // Fetch the bingo with all its tiles, goals, and tier requirements
+    // Fetch the bingo with all its tiles, goals, tier requirements, and pattern bonuses
     const bingo = await db.query.bingos.findFirst({
       where: eq(bingos.id, bingoId),
       with: {
@@ -63,6 +74,8 @@ export async function exportBingoBoard(bingoId: string): Promise<ExportedBingo |
           },
         },
         tierXpRequirements: true,
+        rowBonuses: true,
+        columnBonuses: true,
       },
     })
 
@@ -72,7 +85,7 @@ export async function exportBingoBoard(bingoId: string): Promise<ExportedBingo |
 
     // Transform the data into our export format
     const exportData: ExportedBingo = {
-      version: "1.1", // Updated version to support progression boards
+      version: "1.3", // Updated version to support complete board bonus
       metadata: {
         title: bingo.title,
         description: bingo.description,
@@ -82,6 +95,11 @@ export async function exportBingoBoard(bingoId: string): Promise<ExportedBingo |
         bingoType: bingo.bingoType,
         ...(bingo.bingoType === "progression" && {
           tiersUnlockRequirement: bingo.tiersUnlockRequirement,
+        }),
+        ...(bingo.bingoType === "standard" && {
+          mainDiagonalBonusXP: bingo.mainDiagonalBonusXP,
+          antiDiagonalBonusXP: bingo.antiDiagonalBonusXP,
+          completeBoardBonusXP: bingo.completeBoardBonusXP,
         }),
       },
       tiles: bingo.tiles.map((tile) => ({
@@ -101,6 +119,18 @@ export async function exportBingoBoard(bingoId: string): Promise<ExportedBingo |
         tierXpRequirements: bingo.tierXpRequirements.map((req) => ({
           tier: req.tier,
           xpRequired: req.xpRequired,
+        })),
+      }),
+      ...(bingo.bingoType === "standard" && bingo.rowBonuses && bingo.rowBonuses.length > 0 && {
+        rowBonuses: bingo.rowBonuses.map((bonus) => ({
+          rowIndex: bonus.rowIndex,
+          bonusXP: bonus.bonusXP,
+        })),
+      }),
+      ...(bingo.bingoType === "standard" && bingo.columnBonuses && bingo.columnBonuses.length > 0 && {
+        columnBonuses: bingo.columnBonuses.map((bonus) => ({
+          columnIndex: bonus.columnIndex,
+          bonusXP: bonus.bonusXP,
         })),
       }),
     }
@@ -132,6 +162,9 @@ export async function importBingoBoard(
   // Set default values for backwards compatibility
   const bingoType = importData.metadata.bingoType ?? "standard"
   const tiersUnlockRequirement = importData.metadata.tiersUnlockRequirement ?? 5
+  const mainDiagonalBonusXP = importData.metadata.mainDiagonalBonusXP ?? 0
+  const antiDiagonalBonusXP = importData.metadata.antiDiagonalBonusXP ?? 0
+  const completeBoardBonusXP = importData.metadata.completeBoardBonusXP ?? 0
 
   try {
     return await db.transaction(async (tx) => {
@@ -147,6 +180,9 @@ export async function importBingoBoard(
           codephrase: importData.metadata.codephrase,
           bingoType: bingoType,
           tiersUnlockRequirement: tiersUnlockRequirement,
+          mainDiagonalBonusXP: mainDiagonalBonusXP,
+          antiDiagonalBonusXP: antiDiagonalBonusXP,
+          completeBoardBonusXP: completeBoardBonusXP,
           visible: false, // Default to not visible
           locked: true, // Default to locked
         })
@@ -197,6 +233,28 @@ export async function importBingoBoard(
         }))
 
         await tx.insert(tierXpRequirements).values(tierXpReqsToInsert)
+      }
+
+      // Create row bonuses for standard boards
+      if (bingoType === "standard" && importData.rowBonuses && importData.rowBonuses.length > 0) {
+        const rowBonusesToInsert = importData.rowBonuses.map((bonus) => ({
+          bingoId: newBingo.id,
+          rowIndex: bonus.rowIndex,
+          bonusXP: bonus.bonusXP,
+        }))
+
+        await tx.insert(rowBonuses).values(rowBonusesToInsert)
+      }
+
+      // Create column bonuses for standard boards
+      if (bingoType === "standard" && importData.columnBonuses && importData.columnBonuses.length > 0) {
+        const columnBonusesToInsert = importData.columnBonuses.map((bonus) => ({
+          bingoId: newBingo.id,
+          columnIndex: bonus.columnIndex,
+          bonusXP: bonus.bonusXP,
+        }))
+
+        await tx.insert(columnBonuses).values(columnBonusesToInsert)
       }
 
       // Revalidate the event page to show the new bingo

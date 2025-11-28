@@ -1,0 +1,1 @@
+ALTER TABLE "bingoscape-next_bingos" ADD COLUMN "complete_board_bonus_xp" integer DEFAULT 0 NOT NULL;

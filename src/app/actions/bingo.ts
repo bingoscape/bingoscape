@@ -15,6 +15,8 @@ import {
   teamTileSubmissions,
   teamTierProgress,
   tierXpRequirements,
+  rowBonuses,
+  columnBonuses,
 } from "@/server/db/schema"
 import type { UUID } from "crypto"
 import { asc, eq, inArray, and, gt } from "drizzle-orm"
@@ -102,6 +104,11 @@ export async function createBingo(formData: FormData) {
     throw new Error("Invalid rows or columns")
   }
 
+  // Parse pattern bonuses
+  const mainDiagonalBonus = parseInt(formData.get("mainDiagonalBonus") as string || "0") || 0
+  const antiDiagonalBonus = parseInt(formData.get("antiDiagonalBonus") as string || "0") || 0
+  const completeBoardBonus = parseInt(formData.get("completeBoardBonus") as string || "0") || 0
+
   const newBingo = await db
     .insert(bingos)
     .values({
@@ -113,6 +120,9 @@ export async function createBingo(formData: FormData) {
       columns,
       bingoType,
       tiersUnlockRequirement,
+      mainDiagonalBonusXP: rows === columns ? mainDiagonalBonus : 0,
+      antiDiagonalBonusXP: rows === columns ? antiDiagonalBonus : 0,
+      completeBoardBonusXP: bingoType === "standard" ? completeBoardBonus : 0,
     })
     .returning({ id: bingos.id })
 
@@ -133,6 +143,41 @@ export async function createBingo(formData: FormData) {
   }
 
   await db.insert(tiles).values(tilesToInsert)
+
+  // Initialize pattern bonuses for standard bingos
+  if (bingoType === "standard") {
+    // Insert row bonuses
+    const rowBonusValues = []
+    for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+      const bonusXP = parseInt(formData.get(`rowBonus-${rowIndex}`) as string || "0") || 0
+      if (bonusXP > 0) {
+        rowBonusValues.push({
+          bingoId,
+          rowIndex,
+          bonusXP,
+        })
+      }
+    }
+    if (rowBonusValues.length > 0) {
+      await db.insert(rowBonuses).values(rowBonusValues)
+    }
+
+    // Insert column bonuses
+    const columnBonusValues = []
+    for (let columnIndex = 0; columnIndex < columns; columnIndex++) {
+      const bonusXP = parseInt(formData.get(`columnBonus-${columnIndex}`) as string || "0") || 0
+      if (bonusXP > 0) {
+        columnBonusValues.push({
+          bingoId,
+          columnIndex,
+          bonusXP,
+        })
+      }
+    }
+    if (columnBonusValues.length > 0) {
+      await db.insert(columnBonuses).values(columnBonusValues)
+    }
+  }
 
   // Initialize tier XP requirements for progression bingos
   if (bingoType === "progression") {
@@ -1255,26 +1300,123 @@ interface UpdateBingoData {
   tiersUnlockRequirement?: number
 }
 
-export async function updateBingo(bingoId: string, data: UpdateBingoData) {
+interface PatternBonusData {
+  rowBonuses?: Record<number, number>
+  columnBonuses?: Record<number, number>
+  mainDiagonalBonus?: number
+  antiDiagonalBonus?: number
+  completeBoardBonus?: number
+}
+
+interface UpdateBingoDataWithBonuses extends UpdateBingoData {
+  patternBonuses?: PatternBonusData
+}
+
+export async function updateBingo(bingoId: string, data: UpdateBingoDataWithBonuses) {
   try {
-    const updateData: any = {
-      title: data.title,
-      description: data.description,
-      visible: data.visible,
-      locked: data.locked,
-      codephrase: data.codephrase,
-      updatedAt: new Date(),
-    }
+    await db.transaction(async (tx) => {
+      const updateData: any = {
+        title: data.title,
+        description: data.description,
+        visible: data.visible,
+        locked: data.locked,
+        codephrase: data.codephrase,
+        updatedAt: new Date(),
+      }
 
-    if (data.bingoType !== undefined) {
-      updateData.bingoType = data.bingoType
-    }
+      if (data.bingoType !== undefined) {
+        updateData.bingoType = data.bingoType
+      }
 
-    if (data.tiersUnlockRequirement !== undefined) {
-      updateData.tiersUnlockRequirement = data.tiersUnlockRequirement
-    }
+      if (data.tiersUnlockRequirement !== undefined) {
+        updateData.tiersUnlockRequirement = data.tiersUnlockRequirement
+      }
 
-    await db.update(bingos).set(updateData).where(eq(bingos.id, bingoId))
+      // Update pattern bonuses if provided
+      if (data.patternBonuses?.mainDiagonalBonus !== undefined) {
+        updateData.mainDiagonalBonusXP = data.patternBonuses.mainDiagonalBonus
+      }
+
+      if (data.patternBonuses?.antiDiagonalBonus !== undefined) {
+        updateData.antiDiagonalBonusXP = data.patternBonuses.antiDiagonalBonus
+      }
+
+      if (data.patternBonuses?.completeBoardBonus !== undefined) {
+        updateData.completeBoardBonusXP = data.patternBonuses.completeBoardBonus
+      }
+
+      await tx.update(bingos).set(updateData).where(eq(bingos.id, bingoId))
+
+      // Update row bonuses if provided
+      if (data.patternBonuses?.rowBonuses) {
+        for (const [rowIndexStr, bonusXP] of Object.entries(data.patternBonuses.rowBonuses)) {
+          const rowIndex = parseInt(rowIndexStr)
+
+          // Check if row bonus exists
+          const existingBonus = await tx.query.rowBonuses.findFirst({
+            where: and(
+              eq(rowBonuses.bingoId, bingoId),
+              eq(rowBonuses.rowIndex, rowIndex)
+            ),
+          })
+
+          if (bonusXP > 0) {
+            if (existingBonus) {
+              // Update existing bonus
+              await tx
+                .update(rowBonuses)
+                .set({ bonusXP, updatedAt: new Date() })
+                .where(eq(rowBonuses.id, existingBonus.id))
+            } else {
+              // Insert new bonus
+              await tx.insert(rowBonuses).values({
+                bingoId,
+                rowIndex,
+                bonusXP,
+              })
+            }
+          } else if (existingBonus) {
+            // Delete bonus if set to 0
+            await tx.delete(rowBonuses).where(eq(rowBonuses.id, existingBonus.id))
+          }
+        }
+      }
+
+      // Update column bonuses if provided
+      if (data.patternBonuses?.columnBonuses) {
+        for (const [columnIndexStr, bonusXP] of Object.entries(data.patternBonuses.columnBonuses)) {
+          const columnIndex = parseInt(columnIndexStr)
+
+          // Check if column bonus exists
+          const existingBonus = await tx.query.columnBonuses.findFirst({
+            where: and(
+              eq(columnBonuses.bingoId, bingoId),
+              eq(columnBonuses.columnIndex, columnIndex)
+            ),
+          })
+
+          if (bonusXP > 0) {
+            if (existingBonus) {
+              // Update existing bonus
+              await tx
+                .update(columnBonuses)
+                .set({ bonusXP, updatedAt: new Date() })
+                .where(eq(columnBonuses.id, existingBonus.id))
+            } else {
+              // Insert new bonus
+              await tx.insert(columnBonuses).values({
+                bingoId,
+                columnIndex,
+                bonusXP,
+              })
+            }
+          } else if (existingBonus) {
+            // Delete bonus if set to 0
+            await tx.delete(columnBonuses).where(eq(columnBonuses.id, existingBonus.id))
+          }
+        }
+      }
+    })
 
     // Revalidate the bingo page
     revalidatePath(`/events/[id]/bingos/${bingoId}`)
@@ -1284,6 +1426,45 @@ export async function updateBingo(bingoId: string, data: UpdateBingoData) {
   } catch (error) {
     console.error("Error updating bingo:", error)
     return { success: false, error: "Failed to update bingo" }
+  }
+}
+
+export async function getBingoWithPatternBonuses(bingoId: string) {
+  try {
+    const bingo = await db.query.bingos.findFirst({
+      where: eq(bingos.id, bingoId),
+      with: {
+        rowBonuses: true,
+        columnBonuses: true,
+      },
+    })
+
+    if (!bingo) {
+      return { success: false, error: "Bingo not found" }
+    }
+
+    return {
+      success: true,
+      data: {
+        id: bingo.id,
+        title: bingo.title,
+        description: bingo.description,
+        visible: bingo.visible,
+        locked: bingo.locked,
+        codephrase: bingo.codephrase,
+        bingoType: bingo.bingoType,
+        rows: bingo.rows,
+        columns: bingo.columns,
+        mainDiagonalBonusXP: bingo.mainDiagonalBonusXP,
+        antiDiagonalBonusXP: bingo.antiDiagonalBonusXP,
+        completeBoardBonusXP: bingo.completeBoardBonusXP,
+        rowBonuses: bingo.rowBonuses,
+        columnBonuses: bingo.columnBonuses,
+      },
+    }
+  } catch (error) {
+    console.error("Error fetching bingo with pattern bonuses:", error)
+    return { success: false, error: "Failed to fetch bingo data" }
   }
 }
 

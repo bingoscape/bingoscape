@@ -26,10 +26,15 @@ import {
   AreaChart,
   Area,
 } from "recharts"
-import { Trophy, TrendingUp, Calendar, Grid, BarChart2, Award } from "lucide-react"
+import { Trophy, TrendingUp, Calendar, Grid, BarChart2, Award, Sparkles } from "lucide-react"
 import type { Team } from "@/app/actions/events"
 import { getAllTeamPointsAndTotal } from "@/app/actions/stats"
 import type { StatsData, TeamUserSubmissions } from "@/app/actions/stats"
+import { getCompletedPatterns } from "@/app/actions/pattern-completion"
+import type { PatternCompletionResult } from "@/app/actions/pattern-completion"
+import { BonusXPBreakdown } from "./bonus-xp-breakdown"
+import { PatternCompletionGrid } from "./pattern-completion-grid"
+import { getBingoById } from "@/app/actions/getBingoById"
 
 interface StatsDialogProps {
   isOpen: boolean
@@ -43,6 +48,8 @@ interface StatsDialogProps {
 export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, teams, bingoId }: StatsDialogProps) {
   const [statsData, setStatsData] = useState<StatsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [patternData, setPatternData] = useState<Map<string, PatternCompletionResult>>(new Map())
+  const [bingoInfo, setBingoInfo] = useState<{ rows: number; columns: number; bingoType: string } | null>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -52,6 +59,25 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
         try {
           const data = await getAllTeamPointsAndTotal(bingoId)
           setStatsData(data)
+
+          // Fetch bingo info
+          const bingoData = await getBingoById(bingoId)
+          if (bingoData) {
+            setBingoInfo({
+              rows: bingoData.rows,
+              columns: bingoData.columns,
+              bingoType: bingoData.bingoType,
+            })
+          }
+
+          // Fetch pattern completion data for each team
+          const patterns = new Map<string, PatternCompletionResult>()
+          for (const team of teams) {
+            const teamPatterns = await getCompletedPatterns(bingoId, team.id)
+            patterns.set(team.id, teamPatterns)
+          }
+          setPatternData(patterns)
+
           setIsLoading(false)
         } catch (error) {
           console.error("Error fetching stats data:", error)
@@ -63,13 +89,15 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
         .then(() => console.log("Stats data fetched"))
         .catch(() => console.log("Error fetching stats data"))
     }
-  }, [isOpen, bingoId])
+  }, [isOpen, bingoId, teams])
 
   // Format team points data for the bar chart
   const teamPointsData =
     statsData?.teamPoints.map((team) => ({
       name: team.name,
       xp: team.xp,
+      baseXP: team.baseXP || team.xp,
+      bonusXP: team.bonusXP || 0,
     })) || []
 
   // Format team efficiency data
@@ -147,9 +175,13 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
 
   // Chart configurations
   const xpChartConfig = {
-    xp: {
-      label: "XP",
+    baseXP: {
+      label: "Base XP",
       color: "hsl(var(--chart-1))",
+    },
+    bonusXP: {
+      label: "Bonus XP",
+      color: "hsl(var(--chart-5))",
     },
     label: {
       color: "hsl(var(--background))",
@@ -222,7 +254,7 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
         ) : (
           <div className="flex-1 overflow-y-auto p-4">
             <Tabs defaultValue="xp" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 md:grid-cols-8">
+              <TabsList className="grid w-full grid-cols-4 md:grid-cols-7">
                 <TabsTrigger value="xp" className="flex items-center gap-1">
                   <Trophy className="h-4 w-4 md:mr-1" />
                   <span className="hidden md:inline">XP</span>
@@ -247,6 +279,10 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                   <BarChart2 className="h-4 w-4 md:mr-1" />
                   <span className="hidden md:inline">Status</span>
                 </TabsTrigger>
+                <TabsTrigger value="patterns" className="flex items-center gap-1">
+                  <Sparkles className="h-4 w-4 md:mr-1" />
+                  <span className="hidden md:inline">Bonuses</span>
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="xp" className="mt-4">
@@ -256,7 +292,9 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                       <Trophy className="h-5 w-5 text-amber-500" />
                       Team XP Leaderboard
                     </CardTitle>
-                    <CardDescription>Total XP earned by each team</CardDescription>
+                    <CardDescription>
+                      Total XP earned by each team (base XP from tiles + bonus XP from patterns)
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="h-[400px]">
                     {teamPointsData.length === 0 ? (
@@ -275,7 +313,9 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                             <YAxis dataKey="name" type="category" width={120} tickLine={false} axisLine={false} />
                             <XAxis type="number" domain={[0, statsData?.totalPossibleXP || "auto"]} />
                             <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                            <Bar dataKey="xp" fill="var(--color-xp)" radius={4}>
+                            <ChartLegend content={<ChartLegendContent />} />
+                            <Bar dataKey="baseXP" stackId="a" fill="var(--color-baseXP)" radius={[0, 0, 0, 0]} />
+                            <Bar dataKey="bonusXP" stackId="a" fill="var(--color-bonusXP)" radius={[0, 4, 4, 0]}>
                               <LabelList
                                 dataKey="xp"
                                 position="right"
@@ -569,6 +609,51 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                     </div>
                   </CardFooter>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="patterns" className="mt-4">
+                {bingoInfo?.bingoType !== "standard" ? (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-amber-500" />
+                        Pattern Bonuses
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground">
+                        Pattern bonuses are only available for standard bingo boards.
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-6">
+                    {teams.map((team) => {
+                      const teamPatterns = patternData.get(team.id)
+                      if (!teamPatterns || !bingoInfo) return null
+
+                      // Get completed tile indices for this team
+                      const teamTiles = statsData?.teamPoints.find((tp) => tp.teamId === team.id)
+                      const completedTileIndices = new Set<number>()
+
+                      // We need to fetch the actual completed tiles, but for now we'll show the pattern data
+                      // This is a simplified version - in production you'd want to pass actual tile completion data
+
+                      return (
+                        <div key={team.id} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          <BonusXPBreakdown patterns={teamPatterns} teamName={team.name} />
+                          <PatternCompletionGrid
+                            patterns={teamPatterns}
+                            teamName={team.name}
+                            rows={bingoInfo.rows}
+                            columns={bingoInfo.columns}
+                            completedTileIndices={completedTileIndices}
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </div>

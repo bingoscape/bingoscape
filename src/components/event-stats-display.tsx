@@ -90,7 +90,14 @@ export function EventStatsDisplay({ eventStats, eventTitle, userRole, itemStatis
                       </div>
                       <div>
                         <h3 className="font-semibold">{team.name}</h3>
-                        <p className="text-sm text-muted-foreground">{team.totalXP.toLocaleString()} XP</p>
+                        <p className="text-sm text-muted-foreground">
+                          {team.totalXP.toLocaleString()} XP
+                          {team.bonusXP !== undefined && team.bonusXP > 0 && (
+                            <span className="text-amber-600 ml-2">
+                              (+{team.bonusXP.toLocaleString()} bonus)
+                            </span>
+                          )}
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -100,6 +107,11 @@ export function EventStatsDisplay({ eventStats, eventTitle, userRole, itemStatis
                           ? `${((team.totalXP / totalPossibleEventXP) * 100).toFixed(1)}%`
                           : "0%"}
                       </div>
+                      {team.baseXP !== undefined && team.bonusXP !== undefined && team.bonusXP > 0 && (
+                        <div className="text-xs text-amber-600 mt-1">
+                          Base: {team.baseXP.toLocaleString()} + Bonus: {team.bonusXP.toLocaleString()}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -126,9 +138,16 @@ export function EventStatsDisplay({ eventStats, eventTitle, userRole, itemStatis
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {team.bingoBreakdown.map((bingo) => (
-                        <div key={bingo.bingoId} className="flex justify-between items-center p-3 bg-muted rounded">
-                          <span className="font-medium">{bingo.bingoTitle}</span>
-                          <span className="text-sm font-mono">{bingo.xp.toLocaleString()} XP</span>
+                        <div key={bingo.bingoId} className="p-3 bg-muted rounded">
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">{bingo.bingoTitle}</span>
+                            <span className="text-sm font-mono">{bingo.xp.toLocaleString()} XP</span>
+                          </div>
+                          {bingo.bonusXP !== undefined && bingo.bonusXP > 0 && (
+                            <div className="text-xs text-amber-600 mt-1">
+                              Base: {bingo.baseXP?.toLocaleString() ?? 0} + Bonus: {bingo.bonusXP.toLocaleString()}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

@@ -255,6 +255,9 @@ export const bingos = createTable("bingos", {
   codephrase: varchar("codephrase", { length: 255 }).notNull(),
   bingoType: bingoTypeEnum("bingo_type").default("standard").notNull(),
   tiersUnlockRequirement: integer("tiers_unlock_requirement").default(5).notNull(), // XP required to unlock next tier
+  mainDiagonalBonusXP: integer("main_diagonal_bonus_xp").default(0).notNull(),
+  antiDiagonalBonusXP: integer("anti_diagonal_bonus_xp").default(0).notNull(),
+  completeBoardBonusXP: integer("complete_board_bonus_xp").default(0).notNull(), // Bonus XP for completing all tiles
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   locked: boolean("locked").default(false).notNull(),
@@ -269,6 +272,8 @@ export const bingosRelations = relations(bingos, ({ one, many }) => ({
   tiles: many(tiles),
   tierProgress: many(teamTierProgress),
   tierXpRequirements: many(tierXpRequirements),
+  rowBonuses: many(rowBonuses),
+  columnBonuses: many(columnBonuses),
 }))
 
 export const teams = createTable("teams", {
@@ -767,6 +772,58 @@ export const tierXpRequirements = createTable(
 export const tierXpRequirementsRelations = relations(tierXpRequirements, ({ one }) => ({
   bingo: one(bingos, {
     fields: [tierXpRequirements.bingoId],
+    references: [bingos.id],
+  }),
+}))
+
+export const rowBonuses = createTable(
+  "row_bonuses",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    bingoId: uuid("bingo_id")
+      .notNull()
+      .references(() => bingos.id, { onDelete: "cascade" }),
+    rowIndex: integer("row_index").notNull(), // 0-based row number
+    bonusXP: integer("bonus_xp").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      bingoRowUnique: uniqueIndex("bingo_row_unique").on(table.bingoId, table.rowIndex),
+    }
+  },
+)
+
+export const rowBonusesRelations = relations(rowBonuses, ({ one }) => ({
+  bingo: one(bingos, {
+    fields: [rowBonuses.bingoId],
+    references: [bingos.id],
+  }),
+}))
+
+export const columnBonuses = createTable(
+  "column_bonuses",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    bingoId: uuid("bingo_id")
+      .notNull()
+      .references(() => bingos.id, { onDelete: "cascade" }),
+    columnIndex: integer("column_index").notNull(), // 0-based column number
+    bonusXP: integer("bonus_xp").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      bingoColumnUnique: uniqueIndex("bingo_column_unique").on(table.bingoId, table.columnIndex),
+    }
+  },
+)
+
+export const columnBonusesRelations = relations(columnBonuses, ({ one }) => ({
+  bingo: one(bingos, {
+    fields: [columnBonuses.bingoId],
     references: [bingos.id],
   }),
 }))

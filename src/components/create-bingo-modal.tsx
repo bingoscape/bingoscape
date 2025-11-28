@@ -20,6 +20,8 @@ interface CreateBingoModalProps {
 export function CreateBingoModal({ eventId, isOpen, onClose }: CreateBingoModalProps) {
   const [error, setError] = useState<string | null>(null)
   const [bingoType, setBingoType] = useState<"standard" | "progression">("standard")
+  const [rows, setRows] = useState(5)
+  const [columns, setColumns] = useState(5)
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -108,16 +110,147 @@ export function CreateBingoModal({ eventId, isOpen, onClose }: CreateBingoModalP
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="rows">Number of Rows</Label>
-              <Input id="rows" name="rows" type="number" min="1" max="10" defaultValue={5} required />
+              <Input
+                id="rows"
+                name="rows"
+                type="number"
+                min="1"
+                max="10"
+                value={rows}
+                onChange={(e) => setRows(parseInt(e.target.value) || 1)}
+                required
+              />
               {bingoType === "progression" && (
                 <p className="text-sm text-muted-foreground mt-1">Each row becomes a progression tier</p>
               )}
             </div>
             <div>
               <Label htmlFor="columns">Number of Columns</Label>
-              <Input id="columns" name="columns" type="number" min="1" max="10" defaultValue={5} required />
+              <Input
+                id="columns"
+                name="columns"
+                type="number"
+                min="1"
+                max="10"
+                value={columns}
+                onChange={(e) => setColumns(parseInt(e.target.value) || 1)}
+                required
+              />
             </div>
           </div>
+
+          {bingoType === "standard" && (
+            <div className="border rounded-lg p-4 space-y-4">
+              <div>
+                <h3 className="text-sm font-medium mb-2">Pattern Bonuses (Optional)</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Award extra XP when teams complete full rows, columns, or diagonals
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Row Bonuses</Label>
+                  {Array.from({ length: rows }).map((_, rowIndex) => (
+                    <div key={`row-${rowIndex}`} className="flex items-center gap-2 mb-2">
+                      <Label htmlFor={`rowBonus-${rowIndex}`} className="min-w-[80px] text-sm">
+                        Row {rowIndex + 1}:
+                      </Label>
+                      <Input
+                        id={`rowBonus-${rowIndex}`}
+                        name={`rowBonus-${rowIndex}`}
+                        type="number"
+                        min="0"
+                        defaultValue={0}
+                        placeholder="Bonus XP"
+                        className="w-32"
+                      />
+                      <span className="text-sm text-muted-foreground">XP</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Column Bonuses</Label>
+                  {Array.from({ length: columns }).map((_, colIndex) => (
+                    <div key={`col-${colIndex}`} className="flex items-center gap-2 mb-2">
+                      <Label htmlFor={`columnBonus-${colIndex}`} className="min-w-[80px] text-sm">
+                        Column {colIndex + 1}:
+                      </Label>
+                      <Input
+                        id={`columnBonus-${colIndex}`}
+                        name={`columnBonus-${colIndex}`}
+                        type="number"
+                        min="0"
+                        defaultValue={0}
+                        placeholder="Bonus XP"
+                        className="w-32"
+                      />
+                      <span className="text-sm text-muted-foreground">XP</span>
+                    </div>
+                  ))}
+                </div>
+
+                {rows === columns && (
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Diagonal Bonuses (Square Board Only)</Label>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Label htmlFor="mainDiagonalBonus" className="min-w-[120px] text-sm">
+                        Main Diagonal:
+                      </Label>
+                      <Input
+                        id="mainDiagonalBonus"
+                        name="mainDiagonalBonus"
+                        type="number"
+                        min="0"
+                        defaultValue={0}
+                        placeholder="Bonus XP"
+                        className="w-32"
+                      />
+                      <span className="text-sm text-muted-foreground">XP</span>
+                    </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Label htmlFor="antiDiagonalBonus" className="min-w-[120px] text-sm">
+                        Anti-Diagonal:
+                      </Label>
+                      <Input
+                        id="antiDiagonalBonus"
+                        name="antiDiagonalBonus"
+                        type="number"
+                        min="0"
+                        defaultValue={0}
+                        placeholder="Bonus XP"
+                        className="w-32"
+                      />
+                      <span className="text-sm text-muted-foreground">XP</span>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Complete Board Bonus</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="completeBoardBonus" className="min-w-[120px] text-sm">
+                      Full Board:
+                    </Label>
+                    <Input
+                      id="completeBoardBonus"
+                      name="completeBoardBonus"
+                      type="number"
+                      min="0"
+                      defaultValue={0}
+                      placeholder="Bonus XP"
+                      className="w-32"
+                    />
+                    <span className="text-sm text-muted-foreground">XP</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 ml-[136px]">
+                    Awarded when all tiles are completed
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <Button type="submit">Create Bingo</Button>
         </form>

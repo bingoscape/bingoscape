@@ -3,6 +3,7 @@
 import { db } from "@/server/db"
 import { teams, teamTileSubmissions, tiles, teamMembers, users, submissions, bingos } from "@/server/db/schema"
 import { eq, and, sql, count, inArray, desc, asc, gte, lte } from "drizzle-orm"
+import { calculateBonusXP } from "./pattern-completion"
 
 export interface TeamPointsOverTime {
   date: string
@@ -13,6 +14,8 @@ export interface TeamPoints {
   teamId: string
   name: string
   xp: number
+  baseXP?: number
+  bonusXP?: number
 }
 
 export interface TeamSubmissions {
@@ -127,12 +130,16 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
         ),
       )
 
-    const totalXP = Math.round(submissionPoints[0]?.totalXP ?? 0)
+    const baseXP = Math.round(submissionPoints[0]?.totalXP ?? 0)
+    const bonusXP = await calculateBonusXP(bingoId, team.id)
+    const totalXP = baseXP + bonusXP
 
     teamPoints.push({
       teamId: team.id,
       name: team.name,
       xp: totalXP,
+      baseXP,
+      bonusXP,
     })
 
     // Get submission statistics
@@ -484,10 +491,14 @@ export interface EventTeamPoints {
   teamId: string
   name: string
   totalXP: number
+  baseXP?: number
+  bonusXP?: number
   bingoBreakdown: {
     bingoId: string
     bingoTitle: string
     xp: number
+    baseXP?: number
+    bonusXP?: number
   }[]
 }
 
@@ -582,8 +593,10 @@ export async function getEventStats(eventId: string): Promise<EventStatsData> {
 
   // For each participating team, calculate their total XP and breakdown by bingo
   for (const team of participatingTeams) {
-    const bingoBreakdown: { bingoId: string; bingoTitle: string; xp: number }[] = []
+    const bingoBreakdown: { bingoId: string; bingoTitle: string; xp: number; baseXP?: number; bonusXP?: number }[] = []
     let totalTeamXP = 0
+    let totalBaseXP = 0
+    let totalBonusXP = 0
 
     // Calculate XP for each bingo
     for (const bingo of eventBingos) {
@@ -601,13 +614,19 @@ export async function getEventStats(eventId: string): Promise<EventStatsData> {
           ),
         )
 
-      const xp = Math.round(bingoXP[0]?.totalXP ?? 0)
+      const baseXP = Math.round(bingoXP[0]?.totalXP ?? 0)
+      const bonusXP = await calculateBonusXP(bingo.id, team.id)
+      const xp = baseXP + bonusXP
       totalTeamXP += xp
+      totalBaseXP += baseXP
+      totalBonusXP += bonusXP
 
       bingoBreakdown.push({
         bingoId: bingo.id,
         bingoTitle: bingo.title,
         xp: xp,
+        baseXP: baseXP,
+        bonusXP: bonusXP,
       })
     }
 
@@ -615,6 +634,8 @@ export async function getEventStats(eventId: string): Promise<EventStatsData> {
       teamId: team.id,
       name: team.name,
       totalXP: totalTeamXP,
+      baseXP: totalBaseXP,
+      bonusXP: totalBonusXP,
       bingoBreakdown: bingoBreakdown,
     })
   }
