@@ -9,7 +9,9 @@ import { Label } from "@/components/ui/label"
 import { createBingo } from '@/app/actions/bingo'
 import { Textarea } from './ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import generateOSRSCodePhrase from '@/lib/codephraseGenerator'
+import { PatternBonusSchematicEditor } from './pattern-bonus-schematic-editor'
 
 interface CreateBingoModalProps {
   eventId: string
@@ -22,6 +24,11 @@ export function CreateBingoModal({ eventId, isOpen, onClose }: CreateBingoModalP
   const [bingoType, setBingoType] = useState<"standard" | "progression">("standard")
   const [rows, setRows] = useState(5)
   const [columns, setColumns] = useState(5)
+  const [rowBonuses, setRowBonuses] = useState<Record<number, number>>({})
+  const [columnBonuses, setColumnBonuses] = useState<Record<number, number>>({})
+  const [mainDiagonalBonus, setMainDiagonalBonus] = useState(0)
+  const [antiDiagonalBonus, setAntiDiagonalBonus] = useState(0)
+  const [completeBoardBonus, setCompleteBoardBonus] = useState(0)
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -29,6 +36,26 @@ export function CreateBingoModal({ eventId, isOpen, onClose }: CreateBingoModalP
     const formData = new FormData(e.currentTarget)
     formData.append('eventId', eventId)
     formData.append('bingoType', bingoType)
+
+    // Add pattern bonuses from state (for standard boards only)
+    if (bingoType === "standard") {
+      // Add row bonuses
+      for (let i = 0; i < rows; i++) {
+        formData.append(`rowBonus-${i}`, String(rowBonuses[i] ?? 0))
+      }
+
+      // Add column bonuses
+      for (let i = 0; i < columns; i++) {
+        formData.append(`columnBonus-${i}`, String(columnBonuses[i] ?? 0))
+      }
+
+      // Add diagonal bonuses
+      formData.append('mainDiagonalBonus', String(mainDiagonalBonus))
+      formData.append('antiDiagonalBonus', String(antiDiagonalBonus))
+
+      // Add complete board bonus
+      formData.append('completeBoardBonus', String(completeBoardBonus))
+    }
 
     try {
       await createBingo(formData)
@@ -45,11 +72,12 @@ export function CreateBingoModal({ eventId, isOpen, onClose }: CreateBingoModalP
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px]">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Create New Board</DialogTitle>
           <DialogDescription>Set up the basic structure for your new bingo game. Tiles will be automatically created.</DialogDescription>
         </DialogHeader>
+        <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
             <strong className="font-bold">Error: </strong>
@@ -140,120 +168,34 @@ export function CreateBingoModal({ eventId, isOpen, onClose }: CreateBingoModalP
           </div>
 
           {bingoType === "standard" && (
-            <div className="border rounded-lg p-4 space-y-4">
+            <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
               <div>
                 <h3 className="text-sm font-medium mb-2">Pattern Bonuses (Optional)</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Award extra XP when teams complete full rows, columns, or diagonals
+                  Award extra XP when teams complete full rows, columns, or diagonals. Hover over inputs to see affected tiles.
                 </p>
               </div>
 
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Row Bonuses</Label>
-                  {Array.from({ length: rows }).map((_, rowIndex) => (
-                    <div key={`row-${rowIndex}`} className="flex items-center gap-2 mb-2">
-                      <Label htmlFor={`rowBonus-${rowIndex}`} className="min-w-[80px] text-sm">
-                        Row {rowIndex + 1}:
-                      </Label>
-                      <Input
-                        id={`rowBonus-${rowIndex}`}
-                        name={`rowBonus-${rowIndex}`}
-                        type="number"
-                        min="0"
-                        defaultValue={0}
-                        placeholder="Bonus XP"
-                        className="w-32"
-                      />
-                      <span className="text-sm text-muted-foreground">XP</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Column Bonuses</Label>
-                  {Array.from({ length: columns }).map((_, colIndex) => (
-                    <div key={`col-${colIndex}`} className="flex items-center gap-2 mb-2">
-                      <Label htmlFor={`columnBonus-${colIndex}`} className="min-w-[80px] text-sm">
-                        Column {colIndex + 1}:
-                      </Label>
-                      <Input
-                        id={`columnBonus-${colIndex}`}
-                        name={`columnBonus-${colIndex}`}
-                        type="number"
-                        min="0"
-                        defaultValue={0}
-                        placeholder="Bonus XP"
-                        className="w-32"
-                      />
-                      <span className="text-sm text-muted-foreground">XP</span>
-                    </div>
-                  ))}
-                </div>
-
-                {rows === columns && (
-                  <div>
-                    <Label className="text-sm font-medium mb-2 block">Diagonal Bonuses (Square Board Only)</Label>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Label htmlFor="mainDiagonalBonus" className="min-w-[120px] text-sm">
-                        Main Diagonal:
-                      </Label>
-                      <Input
-                        id="mainDiagonalBonus"
-                        name="mainDiagonalBonus"
-                        type="number"
-                        min="0"
-                        defaultValue={0}
-                        placeholder="Bonus XP"
-                        className="w-32"
-                      />
-                      <span className="text-sm text-muted-foreground">XP</span>
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Label htmlFor="antiDiagonalBonus" className="min-w-[120px] text-sm">
-                        Anti-Diagonal:
-                      </Label>
-                      <Input
-                        id="antiDiagonalBonus"
-                        name="antiDiagonalBonus"
-                        type="number"
-                        min="0"
-                        defaultValue={0}
-                        placeholder="Bonus XP"
-                        className="w-32"
-                      />
-                      <span className="text-sm text-muted-foreground">XP</span>
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Complete Board Bonus</Label>
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="completeBoardBonus" className="min-w-[120px] text-sm">
-                      Full Board:
-                    </Label>
-                    <Input
-                      id="completeBoardBonus"
-                      name="completeBoardBonus"
-                      type="number"
-                      min="0"
-                      defaultValue={0}
-                      placeholder="Bonus XP"
-                      className="w-32"
-                    />
-                    <span className="text-sm text-muted-foreground">XP</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 ml-[136px]">
-                    Awarded when all tiles are completed
-                  </p>
-                </div>
-              </div>
+              <PatternBonusSchematicEditor
+                rows={rows}
+                columns={columns}
+                rowBonuses={rowBonuses}
+                columnBonuses={columnBonuses}
+                mainDiagonalBonus={mainDiagonalBonus}
+                antiDiagonalBonus={antiDiagonalBonus}
+                completeBoardBonus={completeBoardBonus}
+                onRowBonusChange={(index, value) => setRowBonuses(prev => ({ ...prev, [index]: value }))}
+                onColumnBonusChange={(index, value) => setColumnBonuses(prev => ({ ...prev, [index]: value }))}
+                onMainDiagonalChange={setMainDiagonalBonus}
+                onAntiDiagonalChange={setAntiDiagonalBonus}
+                onCompleteBoardChange={setCompleteBoardBonus}
+              />
             </div>
           )}
 
           <Button type="submit">Create Bingo</Button>
         </form>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   )

@@ -20,6 +20,7 @@ import { Edit, Loader2 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { PatternBonusSchematicEditor } from "./pattern-bonus-schematic-editor"
 
 interface Bingo {
   id: string
@@ -126,16 +127,6 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
     setFormData((prev) => ({ ...prev, [name]: checked }))
   }
 
-  const handleRowBonusChange = (rowIndex: number, value: string) => {
-    const numValue = parseInt(value) || 0
-    setRowBonuses((prev) => ({ ...prev, [rowIndex]: numValue }))
-  }
-
-  const handleColumnBonusChange = (columnIndex: number, value: string) => {
-    const numValue = parseInt(value) || 0
-    setColumnBonuses((prev) => ({ ...prev, [columnIndex]: numValue }))
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
@@ -175,7 +166,7 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Edit Bingo</DialogTitle>
           <DialogDescription>Make changes to your bingo here. Click save when you are done.</DialogDescription>
@@ -239,114 +230,24 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
                     {patternData.rows}x{patternData.columns} Board
                   </span>
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  Hover over inputs to see affected tiles.
+                </p>
 
-                {/* Row Bonuses */}
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Row Bonuses</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {Array.from({ length: patternData.rows }).map((_, rowIndex) => (
-                      <div key={`row-${rowIndex}`} className="flex items-center gap-2">
-                        <Label htmlFor={`rowBonus-${rowIndex}`} className="text-xs min-w-[60px]">
-                          Row {rowIndex + 1}:
-                        </Label>
-                        <Input
-                          id={`rowBonus-${rowIndex}`}
-                          type="number"
-                          min="0"
-                          value={rowBonuses[rowIndex] ?? 0}
-                          onChange={(e) => handleRowBonusChange(rowIndex, e.target.value)}
-                          placeholder="0"
-                          className="h-8 text-sm"
-                        />
-                        <span className="text-xs text-muted-foreground">XP</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Column Bonuses */}
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Column Bonuses</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {Array.from({ length: patternData.columns }).map((_, columnIndex) => (
-                      <div key={`column-${columnIndex}`} className="flex items-center gap-2">
-                        <Label htmlFor={`columnBonus-${columnIndex}`} className="text-xs min-w-[60px]">
-                          Col {columnIndex + 1}:
-                        </Label>
-                        <Input
-                          id={`columnBonus-${columnIndex}`}
-                          type="number"
-                          min="0"
-                          value={columnBonuses[columnIndex] ?? 0}
-                          onChange={(e) => handleColumnBonusChange(columnIndex, e.target.value)}
-                          placeholder="0"
-                          className="h-8 text-sm"
-                        />
-                        <span className="text-xs text-muted-foreground">XP</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Diagonal Bonuses - Only for Square Boards */}
-                {patternData.rows === patternData.columns && (
-                  <div>
-                    <Label className="text-sm font-medium mb-2 block">Diagonal Bonuses</Label>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="mainDiagonalBonus" className="text-xs min-w-[120px]">
-                          Main Diagonal:
-                        </Label>
-                        <Input
-                          id="mainDiagonalBonus"
-                          type="number"
-                          min="0"
-                          value={mainDiagonalBonus}
-                          onChange={(e) => setMainDiagonalBonus(parseInt(e.target.value) || 0)}
-                          placeholder="0"
-                          className="h-8 text-sm w-32"
-                        />
-                        <span className="text-xs text-muted-foreground">XP</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="antiDiagonalBonus" className="text-xs min-w-[120px]">
-                          Anti-Diagonal:
-                        </Label>
-                        <Input
-                          id="antiDiagonalBonus"
-                          type="number"
-                          min="0"
-                          value={antiDiagonalBonus}
-                          onChange={(e) => setAntiDiagonalBonus(parseInt(e.target.value) || 0)}
-                          placeholder="0"
-                          className="h-8 text-sm w-32"
-                        />
-                        <span className="text-xs text-muted-foreground">XP</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Complete Board Bonus */}
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Complete Board Bonus</Label>
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="completeBoardBonus" className="text-xs min-w-[120px]">
-                      Full Board:
-                    </Label>
-                    <Input
-                      id="completeBoardBonus"
-                      type="number"
-                      min="0"
-                      value={completeBoardBonus}
-                      onChange={(e) => setCompleteBoardBonus(parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                      className="h-8 text-sm w-32"
-                    />
-                    <span className="text-xs text-muted-foreground">XP</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">Awarded when all tiles are completed</p>
-                </div>
+                <PatternBonusSchematicEditor
+                  rows={patternData.rows}
+                  columns={patternData.columns}
+                  rowBonuses={rowBonuses}
+                  columnBonuses={columnBonuses}
+                  mainDiagonalBonus={mainDiagonalBonus}
+                  antiDiagonalBonus={antiDiagonalBonus}
+                  completeBoardBonus={completeBoardBonus}
+                  onRowBonusChange={(index, value) => setRowBonuses(prev => ({ ...prev, [index]: value }))}
+                  onColumnBonusChange={(index, value) => setColumnBonuses(prev => ({ ...prev, [index]: value }))}
+                  onMainDiagonalChange={setMainDiagonalBonus}
+                  onAntiDiagonalChange={setAntiDiagonalBonus}
+                  onCompleteBoardChange={setCompleteBoardBonus}
+                />
               </div>
             )}
 

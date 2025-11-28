@@ -133,6 +133,7 @@ export async function getCompletedPatterns(
       completedColumns: [],
       mainDiagonal: null,
       antiDiagonal: null,
+      completeBoard: null,
       totalBonusXP: 0,
     }
   }
