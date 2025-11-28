@@ -11,19 +11,25 @@ import type { ItemStatistics } from "@/app/actions/item-statistics"
 import { EventTeamChart } from "@/components/event-team-chart"
 import { BingoBreakdownChart } from "@/components/bingo-breakdown-chart"
 import { ItemStatisticsDisplay } from "@/components/item-statistics-display"
+import { PatternCompletionTab } from "@/components/pattern-completion-tab"
+import type { EventPatternCompletionData } from "@/app/actions/event-pattern-completion"
 
 interface EventStatsDisplayProps {
   eventStats: EventStatsData
   eventTitle: string
   userRole: EventRole
   itemStatistics?: ItemStatistics
+  patternCompletionData?: EventPatternCompletionData
 }
 
-export function EventStatsDisplay({ eventStats, eventTitle, userRole, itemStatistics }: EventStatsDisplayProps) {
+export function EventStatsDisplay({ eventStats, eventTitle, userRole, itemStatistics, patternCompletionData }: EventStatsDisplayProps) {
   const { eventTeamPoints, bingoSummary, totalEventXP, totalPossibleEventXP } = eventStats
 
   // Check if we have item statistics with data
   const hasItemStats = itemStatistics && itemStatistics.totalSubmissions > 0
+
+  // Check if we have pattern completion data
+  const hasPatternData = patternCompletionData && patternCompletionData.boards.length > 0
 
   const overallCompletionRate =
     totalPossibleEventXP > 0 && eventTeamPoints.length > 0
@@ -67,12 +73,17 @@ export function EventStatsDisplay({ eventStats, eventTitle, userRole, itemStatis
       </div>
 
       <Tabs defaultValue="leaderboard" className="w-full">
-        <TabsList className={`grid w-full ${hasItemStats ? "grid-cols-5" : "grid-cols-4"}`}>
+        <TabsList className={`grid w-full ${
+          hasItemStats && hasPatternData ? "grid-cols-6" :
+          hasItemStats || hasPatternData ? "grid-cols-5" :
+          "grid-cols-4"
+        }`}>
           <TabsTrigger value="leaderboard">Team Leaderboard</TabsTrigger>
           <TabsTrigger value="breakdown">Bingo Breakdown</TabsTrigger>
           <TabsTrigger value="charts">Charts</TabsTrigger>
           <TabsTrigger value="boards">Board Summary</TabsTrigger>
           {hasItemStats && <TabsTrigger value="item-values">Item Values</TabsTrigger>}
+          {hasPatternData && <TabsTrigger value="patterns">Pattern Completion</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="leaderboard" className="space-y-4">
@@ -202,6 +213,13 @@ export function EventStatsDisplay({ eventStats, eventTitle, userRole, itemStatis
         {hasItemStats && itemStatistics && (
           <TabsContent value="item-values" className="space-y-4">
             <ItemStatisticsDisplay statistics={itemStatistics} title={eventTitle} />
+          </TabsContent>
+        )}
+
+        {/* Pattern Completion Tab */}
+        {hasPatternData && patternCompletionData && (
+          <TabsContent value="patterns" className="space-y-4">
+            <PatternCompletionTab data={patternCompletionData} />
           </TabsContent>
         )}
       </Tabs>
