@@ -131,10 +131,11 @@ export function PatternBonusSchematicEditor({
   const cellSize = getCellSize()
   const cellSizePx = getCellSizeInPixels()
 
-  // Desktop schematic layout
-  const DesktopSchematicView = () => (
-    <div className="hidden md:block">
-      <div className="flex flex-col items-center gap-4">
+  return (
+    <div>
+      {/* Desktop schematic layout */}
+      <div className="hidden md:block">
+        <div className="flex flex-col items-center gap-4">
         {/* Complete Board Bonus - Top Center */}
         <div className="w-full flex justify-center mb-2">
           <div
@@ -384,12 +385,10 @@ export function PatternBonusSchematicEditor({
           </div>
         </div>
       </div>
-    </div>
-  )
+      </div>
 
-  // Mobile accordion layout
-  const MobileAccordionView = () => (
-    <div className="md:hidden">
+      {/* Mobile accordion layout */}
+      <div className="md:hidden">
       {/* Small Grid Preview */}
       <div className="mb-4 flex justify-center">
         <div className="inline-block p-3 border rounded-lg bg-muted/30">
@@ -578,13 +577,7 @@ export function PatternBonusSchematicEditor({
           </AccordionContent>
         </AccordionItem>
       </Accordion>
-    </div>
-  )
-
-  return (
-    <div>
-      <DesktopSchematicView />
-      <MobileAccordionView />
+      </div>
     </div>
   )
 }
