@@ -74,14 +74,6 @@ jobs:
             sudo chmod -R 775 "$APP_DIR/uploads" 2>/dev/null || chmod -R 775 "$APP_DIR/uploads" || true
             echo "✅ Uploads directory permissions set (owner: 1001:1001, mode: 775)"
 
-            # Ensure SSL and certbot directories exist (outside nginx/ to prevent accidental deletion)
-            echo "📁 Ensuring certificate directories exist..."
-            mkdir -p "$APP_DIR/certificates"
-            mkdir -p "$APP_DIR/certbot-webroot"
-            echo "✅ Certificate directories ready at:"
-            echo "   - $APP_DIR/certificates (SSL certificates from Let's Encrypt)"
-            echo "   - $APP_DIR/certbot-webroot (ACME challenge files)"
-            echo "   ⚠️  IMPORTANT: Never delete these directories - they contain SSL certificates!"
 
             # Copy configuration files from temp location
             if [ -f "/tmp/bingoscape-deploy/docker-compose.yml" ]; then
@@ -91,34 +83,6 @@ jobs:
             else
               echo "❌ Error: docker-compose.yml not found in /tmp/bingoscape-deploy/"
               exit 1
-            fi
-
-            # Copy nginx configuration if it exists
-            if [ -d "/tmp/bingoscape-deploy/nginx" ]; then
-              echo "📋 Copying nginx configuration..."
-              mkdir -p "$APP_DIR/nginx/conf.d"
-
-              # Copy main nginx.conf
-              if [ -f "/tmp/bingoscape-deploy/nginx/nginx.conf" ]; then
-                cp /tmp/bingoscape-deploy/nginx/nginx.conf "$APP_DIR/nginx/"
-                echo "✅ nginx.conf copied"
-              fi
-
-              # Copy SSL config and rename to default.conf for production
-              if [ -f "/tmp/bingoscape-deploy/nginx/conf.d/default-ssl.conf.example" ]; then
-                cp /tmp/bingoscape-deploy/nginx/conf.d/default-ssl.conf.example "$APP_DIR/nginx/conf.d/default.conf"
-                echo "✅ SSL configuration activated (default-ssl.conf.example → default.conf)"
-              fi
-
-              # Copy HTTP-only dev config for SSL setup script
-              if [ -f "/tmp/bingoscape-deploy/nginx/conf.d/default-dev.conf.example" ]; then
-                cp /tmp/bingoscape-deploy/nginx/conf.d/default-dev.conf.example "$APP_DIR/nginx/conf.d/"
-                echo "✅ HTTP-only dev config copied (for SSL setup)"
-              fi
-
-              echo "✅ nginx configuration completed"
-            else
-              echo "⚠️  Warning: nginx configuration not found, skipping..."
             fi
 
             # Copy scripts directory
@@ -184,10 +148,6 @@ jobs:
             SENTRY_AUTH_TOKEN="${{ secrets.SENTRY_AUTH_TOKEN }}"
             SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
 
-            # ==============================================
-            # SSL CERTIFICATE (for containerized nginx)
-            # ==============================================
-            CERTBOT_EMAIL="${{ secrets.CERTBOT_EMAIL }}"
             ENV_EOF
 
             echo "✅ .env file generated successfully"
