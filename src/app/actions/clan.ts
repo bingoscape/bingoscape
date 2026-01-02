@@ -2,9 +2,10 @@
 
 import { getServerAuthSession } from "@/server/auth";
 import { db } from "@/server/db";
-import { clans, clanMembers, users, events } from "@/server/db/schema";
+import { clans, clanMembers, users, events, clanInvites } from "@/server/db/schema";
 import { eq, and, count, sql } from "drizzle-orm";
 import { EventData, getTotalBuyInsForEvent } from "./events";
+import { nanoid } from "nanoid";
 
 export async function createClan(name: string, description: string) {
   const session = await getServerAuthSession();
@@ -239,4 +240,210 @@ export async function updateMemberRole(clanId: string, memberId: string, newRole
         eq(clanMembers.userId, memberId)
       )
     );
+}
+
+// Clan Invite Management Functions
+
+export interface CreateClanInviteParams {
+  clanId: string
+  label?: string
+  expiresInDays?: number | null // null = permanent
+  maxUses?: number | null // null = unlimited
+}
+
+export async function createClanInvite(params: CreateClanInviteParams) {
+  const session = await getServerAuthSession()
+  if (!session?.user) {
+    throw new Error("Not authenticated")
+  }
+
+  // Authorization: Check user is admin/management
+  const membership = await db.query.clanMembers.findFirst({
+    where: and(
+      eq(clanMembers.clanId, params.clanId),
+      eq(clanMembers.userId, session.user.id)
+    )
+  })
+
+  if (!membership || !['admin', 'management'].includes(membership.role)) {
+    throw new Error("Not authorized to create invites")
+  }
+
+  // Validation: Prevent abuse with limits
+  const activeInviteCount = await db
+    .select({ count: count() })
+    .from(clanInvites)
+    .where(and(
+      eq(clanInvites.clanId, params.clanId),
+      eq(clanInvites.isActive, true)
+    ))
+
+  if (activeInviteCount[0]!.count >= 50) {
+    throw new Error("Maximum active invite limit reached (50)")
+  }
+
+  // Generate unique invite code
+  const inviteCode = nanoid(10)
+
+  // Calculate expiration
+  const expiresAt = params.expiresInDays
+    ? new Date(Date.now() + params.expiresInDays * 24 * 60 * 60 * 1000)
+    : null
+
+  const [invite] = await db.insert(clanInvites).values({
+    clanId: params.clanId,
+    inviteCode,
+    expiresAt,
+    createdBy: session.user.id,
+    label: params.label ?? null,
+    maxUses: params.maxUses ?? null,
+    currentUses: 0,
+    isActive: true,
+  }).returning()
+
+  return invite
+}
+
+export async function getClanInvites(clanId: string) {
+  const session = await getServerAuthSession()
+  if (!session?.user) {
+    throw new Error("Not authenticated")
+  }
+
+  // Verify membership
+  const membership = await db.query.clanMembers.findFirst({
+    where: and(
+      eq(clanMembers.clanId, clanId),
+      eq(clanMembers.userId, session.user.id)
+    )
+  })
+
+  if (!membership || !['admin', 'management'].includes(membership.role)) {
+    throw new Error("Not authorized to view invites")
+  }
+
+  // Fetch all invites with creator info
+  const invites = await db.query.clanInvites.findMany({
+    where: eq(clanInvites.clanId, clanId),
+    with: {
+      creator: {
+        columns: {
+          id: true,
+          name: true,
+          runescapeName: true,
+          image: true,
+        }
+      }
+    },
+    orderBy: (invites, { desc }) => [desc(invites.createdAt)]
+  })
+
+  return invites
+}
+
+export async function revokeClanInvite(inviteId: string) {
+  const session = await getServerAuthSession()
+  if (!session?.user) {
+    throw new Error("Not authenticated")
+  }
+
+  const invite = await db.query.clanInvites.findFirst({
+    where: eq(clanInvites.id, inviteId),
+    with: { clan: true }
+  })
+
+  if (!invite) {
+    throw new Error("Invite not found")
+  }
+
+  // Authorization check
+  const membership = await db.query.clanMembers.findFirst({
+    where: and(
+      eq(clanMembers.clanId, invite.clanId),
+      eq(clanMembers.userId, session.user.id)
+    )
+  })
+
+  if (!membership || !['admin', 'management'].includes(membership.role)) {
+    throw new Error("Not authorized to revoke invites")
+  }
+
+  await db.update(clanInvites)
+    .set({
+      isActive: false,
+      updatedAt: new Date()
+    })
+    .where(eq(clanInvites.id, inviteId))
+
+  return { success: true }
+}
+
+export async function deleteClanInvite(inviteId: string) {
+  const session = await getServerAuthSession()
+  if (!session?.user) {
+    throw new Error("Not authenticated")
+  }
+
+  const invite = await db.query.clanInvites.findFirst({
+    where: eq(clanInvites.id, inviteId),
+    with: { clan: true }
+  })
+
+  if (!invite) {
+    throw new Error("Invite not found")
+  }
+
+  // Authorization check
+  const membership = await db.query.clanMembers.findFirst({
+    where: and(
+      eq(clanMembers.clanId, invite.clanId),
+      eq(clanMembers.userId, session.user.id)
+    )
+  })
+
+  if (!membership || !['admin', 'management'].includes(membership.role)) {
+    throw new Error("Not authorized to delete invites")
+  }
+
+  await db.delete(clanInvites)
+    .where(eq(clanInvites.id, inviteId))
+
+  return { success: true }
+}
+
+export async function updateClanInviteLabel(inviteId: string, label: string) {
+  const session = await getServerAuthSession()
+  if (!session?.user) {
+    throw new Error("Not authenticated")
+  }
+
+  const invite = await db.query.clanInvites.findFirst({
+    where: eq(clanInvites.id, inviteId),
+    with: { clan: true }
+  })
+
+  if (!invite) {
+    throw new Error("Invite not found")
+  }
+
+  // Authorization check
+  const membership = await db.query.clanMembers.findFirst({
+    where: and(
+      eq(clanMembers.clanId, invite.clanId),
+      eq(clanMembers.userId, session.user.id)
+    )
+  })
+
+  if (!membership || !['admin', 'management'].includes(membership.role)) {
+    throw new Error("Not authorized to update invites")
+  }
+
+  await db.update(clanInvites)
+    .set({
+      label,
+      updatedAt: new Date()
+    })
+    .where(eq(clanInvites.id, inviteId))
+
+  return { success: true }
 }

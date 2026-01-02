@@ -653,12 +653,21 @@ export const clanInvites = createTable("clan_invites", {
     .notNull()
     .references(() => clans.id, { onDelete: "cascade" }),
   inviteCode: varchar("invite_code", { length: 10 }).notNull().unique(),
-  expiresAt: timestamp("expires_at"),
+  expiresAt: timestamp("expires_at"), // NULL = permanent invite
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "set null" }),
+  label: varchar("label", { length: 100 }), // Optional friendly name
+  maxUses: integer("max_uses"), // NULL = unlimited uses
+  currentUses: integer("current_uses").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(), // Soft delete flag
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
 export const clanInvitesRelations = relations(clanInvites, ({ one }) => ({
   clan: one(clans, { fields: [clanInvites.clanId], references: [clans.id] }),
+  creator: one(users, { fields: [clanInvites.createdBy], references: [users.id] }),
 }))
 
 export const eventInvites = createTable("event_invites", {

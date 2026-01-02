@@ -10,8 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
-import { UserIcon, CalendarIcon, Users, Search, Filter, Activity, Crown, Shield, UserPlus, MessageSquare, MoreHorizontal } from "lucide-react";
+import { UserIcon, CalendarIcon, Users, Search, Filter, Activity, Crown, Shield, UserPlus, MessageSquare, MoreHorizontal, Link as LinkIcon } from "lucide-react";
 import { GenerateClanInviteLink } from "@/components/generate-clan-invite-link";
+import { ClanInvitesManagement } from "@/components/clan-invites-management";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
@@ -216,7 +218,49 @@ export default function ClanDetailPage({ params }: { params: { clanId: string } 
             </div>
             <div className="flex space-x-2">
               {isOwnerOrAdmin && (
-                <GenerateClanInviteLink clanId={params.clanId} />
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="outline">
+                      <LinkIcon className="mr-2 h-4 w-4" />
+                      Manage Invites
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent className="w-full sm:max-w-4xl overflow-y-auto">
+                    <SheetHeader>
+                      <SheetTitle>Clan Invite Links</SheetTitle>
+                      <SheetDescription>
+                        Create and manage invite links for {clanDetails.name}
+                      </SheetDescription>
+                    </SheetHeader>
+                    <div className="space-y-6 py-6">
+                      {/* Invite Creation Section */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Create New Invite</CardTitle>
+                          <CardDescription>
+                            Generate a customizable invite link with optional expiration and usage limits
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <GenerateClanInviteLink clanId={params.clanId} />
+                        </CardContent>
+                      </Card>
+
+                      {/* Invite Management Section */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Active Invites</CardTitle>
+                          <CardDescription>
+                            View and manage all invite links for this clan
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <ClanInvitesManagement clanId={params.clanId} />
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </SheetContent>
+                </Sheet>
               )}
               <Link href={`/clans/${params.clanId}/events`} passHref>
                 <Button variant="outline">

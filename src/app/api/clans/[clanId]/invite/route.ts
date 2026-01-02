@@ -1,17 +1,24 @@
 import { NextResponse } from 'next/server'
-import { db } from "@/server/db"
-import { clanMembers, clanInvites } from "@/server/db/schema"
-import { eq, and } from "drizzle-orm"
-import { nanoid } from 'nanoid'
 import { getServerAuthSession } from '@/server/auth'
+import { createClanInvite } from '@/app/actions/clan'
+
+export interface GenerateInviteRequest {
+    label?: string
+    expiresInDays?: number | null // null = permanent, 0 = same as null
+    maxUses?: number | null // null = unlimited
+}
 
 export interface GenerateInviteResponse {
     inviteCode: string
+    id: string
+    expiresAt: Date | null
+    maxUses: number | null
+    label: string | null
 }
 
 
 export async function POST(
-    _: Request,
+    req: Request,
     { params }: { params: { clanId: string } }
 ) {
     const session = await getServerAuthSession()
@@ -22,32 +29,44 @@ export async function POST(
 
     const { clanId } = params
 
-
-    // Check if the user is the clan owner or an admin
-    const userMembership = await db.query.clanMembers.findFirst({
-        where: and(
-            eq(clanMembers.clanId, clanId),
-            eq(clanMembers.userId, session.user.id)
-        ),
-    })
-
-    if (!userMembership || (userMembership.role != 'admin' && userMembership.role != 'management')) {
-        return NextResponse.json({ error: "Not authorized" }, { status: 403 })
+    // Parse request body
+    let body: GenerateInviteRequest = {}
+    try {
+        body = await req.json() as GenerateInviteRequest
+    } catch {
+        // If no body provided, use defaults (7 days expiration for backward compatibility)
+        body = { expiresInDays: 7 }
     }
 
-    // Generate a unique invite code
-    const inviteCode = nanoid(10)
+    try {
+        const invite = await createClanInvite({
+            clanId,
+            label: body.label,
+            expiresInDays: body.expiresInDays === 0 ? null : body.expiresInDays ?? 7, // Default to 7 days for backward compatibility
+            maxUses: body.maxUses,
+        })
 
-    // Set expiration to 7 days from now
-    const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 7)
+        if (!invite) {
+            throw new Error("Failed to create invite")
+        }
 
-    // Create the invite
-    const [invite] = await db.insert(clanInvites).values({
-        clanId,
-        inviteCode,
-        expiresAt,
-    }).returning()
-
-    return NextResponse.json({ inviteCode: invite!.inviteCode })
+        return NextResponse.json({
+            inviteCode: invite.inviteCode,
+            id: invite.id,
+            expiresAt: invite.expiresAt,
+            maxUses: invite.maxUses,
+            label: invite.label,
+        })
+    } catch (error) {
+        if (error instanceof Error) {
+            return NextResponse.json(
+                { error: error.message },
+                { status: error.message.includes("authorized") ? 403 : 400 }
+            )
+        }
+        return NextResponse.json(
+            { error: "Failed to generate invite" },
+            { status: 500 }
+        )
+    }
 }
