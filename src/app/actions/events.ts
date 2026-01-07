@@ -19,6 +19,21 @@ import {
   users,
   bingos,
   eventRegistrationRequests,
+  submissions,
+  submissionComments,
+  teamTileSubmissions,
+  teamGoalProgress,
+  teamTierProgress,
+  goalValues,
+  itemGoals,
+  goals,
+  goalGroups,
+  tierXpRequirements,
+  rowBonuses,
+  columnBonuses,
+  playerMetadata,
+  discordWebhooks,
+  notifications,
 } from "@/server/db/schema"
 import { eq, and, asc, sum, sql, desc } from "drizzle-orm"
 import { nanoid } from "nanoid"
@@ -1534,6 +1549,272 @@ export async function calculateEventPrizePool(eventId: string) {
       totalBuyIns: 0,
       totalDonations: 0,
       totalPrizePool: 0,
+    }
+  }
+}
+
+/**
+ * Delete an event and all associated data (admin only)
+ *
+ * This function performs a complete cascade deletion of an event and all related records.
+ * Only event administrators (creators or users with admin role) can delete events.
+ *
+ * Note: Pre-deletion notifications are not implemented because the notifications table
+ * schema requires tileId and teamId (both notNull), making it impossible to create
+ * event-level notifications without schema changes.
+ *
+ * @param eventId - The ID of the event to delete
+ * @returns Promise with success status and optional error message
+ */
+export async function deleteEventByAdmin(
+  eventId: string
+): Promise<{ success: boolean; error?: string }> {
+  const session = await getServerAuthSession()
+  if (!session?.user) {
+    return { success: false, error: "You must be logged in to delete an event" }
+  }
+
+  try {
+    // Check if user is event admin
+    const userRole = await getUserRole(eventId)
+    if (userRole !== "admin") {
+      return {
+        success: false,
+        error: "Only event administrators can delete events",
+      }
+    }
+
+    // Get event details for validation
+    const event = await db.query.events.findFirst({
+      where: eq(events.id, eventId),
+      with: {
+        bingos: true,
+      },
+    })
+
+    if (!event) {
+      return { success: false, error: "Event not found" }
+    }
+
+    // Perform deletion in transaction for atomicity
+    await db.transaction(async (tx) => {
+      // Level 6 (deepest dependencies) - Delete submission comments
+      await tx.delete(submissionComments).where(
+        sql`${submissionComments.submissionId} IN (
+          SELECT ${submissions.id} FROM ${submissions}
+          WHERE ${submissions.teamTileSubmissionId} IN (
+            SELECT ${teamTileSubmissions.id} FROM ${teamTileSubmissions}
+            WHERE ${teamTileSubmissions.tileId} IN (
+              SELECT ${tiles.id} FROM ${tiles}
+              WHERE ${tiles.bingoId} IN (
+                SELECT ${bingos.id} FROM ${bingos}
+                WHERE ${bingos.eventId} = ${eventId}
+              )
+            )
+          )
+        )`
+      )
+
+      // Delete notifications related to this event
+      // Note: This will cascade delete via foreign key constraints
+      await tx.delete(notifications).where(eq(notifications.eventId, eventId))
+
+      // Level 5 - Delete submissions
+      await tx.delete(submissions).where(
+        sql`${submissions.teamTileSubmissionId} IN (
+          SELECT ${teamTileSubmissions.id} FROM ${teamTileSubmissions}
+          WHERE ${teamTileSubmissions.tileId} IN (
+            SELECT ${tiles.id} FROM ${tiles}
+            WHERE ${tiles.bingoId} IN (
+              SELECT ${bingos.id} FROM ${bingos}
+              WHERE ${bingos.eventId} = ${eventId}
+            )
+          )
+        )`
+      )
+
+      // Delete team goal progress
+      await tx.delete(teamGoalProgress).where(
+        sql`${teamGoalProgress.goalId} IN (
+          SELECT ${goals.id} FROM ${goals}
+          WHERE ${goals.tileId} IN (
+            SELECT ${tiles.id} FROM ${tiles}
+            WHERE ${tiles.bingoId} IN (
+              SELECT ${bingos.id} FROM ${bingos}
+              WHERE ${bingos.eventId} = ${eventId}
+            )
+          )
+        )`
+      )
+
+      // Delete team tier progress
+      await tx.delete(teamTierProgress).where(
+        sql`${teamTierProgress.bingoId} IN (
+          SELECT ${bingos.id} FROM ${bingos}
+          WHERE ${bingos.eventId} = ${eventId}
+        )`
+      )
+
+      // Level 4 - Delete team tile submissions
+      await tx.delete(teamTileSubmissions).where(
+        sql`${teamTileSubmissions.tileId} IN (
+          SELECT ${tiles.id} FROM ${tiles}
+          WHERE ${tiles.bingoId} IN (
+            SELECT ${bingos.id} FROM ${bingos}
+            WHERE ${bingos.eventId} = ${eventId}
+          )
+        )`
+      )
+
+      // Delete event buy-ins (through eventParticipants)
+      await tx.delete(eventBuyIns).where(
+        sql`${eventBuyIns.eventParticipantId} IN (
+          SELECT ${eventParticipants.id} FROM ${eventParticipants}
+          WHERE ${eventParticipants.eventId} = ${eventId}
+        )`
+      )
+
+      // Delete event donations (through eventParticipants)
+      await tx.delete(eventDonations).where(
+        sql`${eventDonations.eventParticipantId} IN (
+          SELECT ${eventParticipants.id} FROM ${eventParticipants}
+          WHERE ${eventParticipants.eventId} = ${eventId}
+        )`
+      )
+
+      // Level 3 - Delete goal values
+      await tx.delete(goalValues).where(
+        sql`${goalValues.goalId} IN (
+          SELECT ${goals.id} FROM ${goals}
+          WHERE ${goals.tileId} IN (
+            SELECT ${tiles.id} FROM ${tiles}
+            WHERE ${tiles.bingoId} IN (
+              SELECT ${bingos.id} FROM ${bingos}
+              WHERE ${bingos.eventId} = ${eventId}
+            )
+          )
+        )`
+      )
+
+      // Delete item goals
+      await tx.delete(itemGoals).where(
+        sql`${itemGoals.goalId} IN (
+          SELECT ${goals.id} FROM ${goals}
+          WHERE ${goals.tileId} IN (
+            SELECT ${tiles.id} FROM ${tiles}
+            WHERE ${tiles.bingoId} IN (
+              SELECT ${bingos.id} FROM ${bingos}
+              WHERE ${bingos.eventId} = ${eventId}
+            )
+          )
+        )`
+      )
+
+      // Delete goals (must be after goalValues and itemGoals)
+      await tx.delete(goals).where(
+        sql`${goals.tileId} IN (
+          SELECT ${tiles.id} FROM ${tiles}
+          WHERE ${tiles.bingoId} IN (
+            SELECT ${bingos.id} FROM ${bingos}
+            WHERE ${bingos.eventId} = ${eventId}
+          )
+        )`
+      )
+
+      // Delete goal groups
+      await tx.delete(goalGroups).where(
+        sql`${goalGroups.tileId} IN (
+          SELECT ${tiles.id} FROM ${tiles}
+          WHERE ${tiles.bingoId} IN (
+            SELECT ${bingos.id} FROM ${bingos}
+            WHERE ${bingos.eventId} = ${eventId}
+          )
+        )`
+      )
+
+      // Delete team members
+      await tx.delete(teamMembers).where(
+        sql`${teamMembers.teamId} IN (
+          SELECT ${teams.id} FROM ${teams}
+          WHERE ${teams.eventId} = ${eventId}
+        )`
+      )
+
+      // Level 2 - Delete tiles
+      await tx.delete(tiles).where(
+        sql`${tiles.bingoId} IN (
+          SELECT ${bingos.id} FROM ${bingos}
+          WHERE ${bingos.eventId} = ${eventId}
+        )`
+      )
+
+      // Delete tier XP requirements
+      await tx.delete(tierXpRequirements).where(
+        sql`${tierXpRequirements.bingoId} IN (
+          SELECT ${bingos.id} FROM ${bingos}
+          WHERE ${bingos.eventId} = ${eventId}
+        )`
+      )
+
+      // Delete row bonuses
+      await tx.delete(rowBonuses).where(
+        sql`${rowBonuses.bingoId} IN (
+          SELECT ${bingos.id} FROM ${bingos}
+          WHERE ${bingos.eventId} = ${eventId}
+        )`
+      )
+
+      // Delete column bonuses
+      await tx.delete(columnBonuses).where(
+        sql`${columnBonuses.bingoId} IN (
+          SELECT ${bingos.id} FROM ${bingos}
+          WHERE ${bingos.eventId} = ${eventId}
+        )`
+      )
+
+      // Delete teams
+      await tx.delete(teams).where(eq(teams.eventId, eventId))
+
+      // Delete event participants
+      await tx.delete(eventParticipants).where(
+        eq(eventParticipants.eventId, eventId)
+      )
+
+      // Delete registration requests
+      await tx.delete(eventRegistrationRequests).where(
+        eq(eventRegistrationRequests.eventId, eventId)
+      )
+
+      // Delete event invites
+      await tx.delete(eventInvites).where(eq(eventInvites.eventId, eventId))
+
+      // Delete player metadata
+      await tx.delete(playerMetadata).where(
+        eq(playerMetadata.eventId, eventId)
+      )
+
+      // Delete Discord webhooks
+      await tx.delete(discordWebhooks).where(
+        eq(discordWebhooks.eventId, eventId)
+      )
+
+      // Level 1 - Delete bingos
+      await tx.delete(bingos).where(eq(bingos.eventId, eventId))
+
+      // Level 0 - Finally delete the event itself
+      await tx.delete(events).where(eq(events.id, eventId))
+    })
+
+    // Revalidate cache paths
+    revalidatePath("/")
+    revalidatePath("/events")
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error deleting event:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete event",
     }
   }
 }

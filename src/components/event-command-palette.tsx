@@ -11,7 +11,8 @@ import {
     Share2,
     Settings,
     Search,
-    Command
+    Command,
+    Trash2
 } from "lucide-react"
 import {
     Dialog,
@@ -83,6 +84,7 @@ interface EventCommandPaletteProps {
     editEventModal?: React.ReactNode
     assignClanModal?: React.ReactNode
     discordWebhooks: React.ReactNode
+    deleteEventModal?: React.ReactNode
 }
 
 export function EventCommandPalette({
@@ -98,6 +100,7 @@ export function EventCommandPalette({
     editEventModal,
     assignClanModal,
     discordWebhooks,
+    deleteEventModal,
 }: EventCommandPaletteProps) {
     const [open, setOpen] = useState(false)
     const [search, setSearch] = useState("")
@@ -219,6 +222,17 @@ export function EventCommandPalette({
                 category: "configuration",
                 keywords: ["clan", "assign", "associate"],
                 component: assignClanModal
+            })
+        }
+        if (deleteEventModal) {
+            actions.push({
+                id: "delete-event",
+                icon: Trash2,
+                label: "Delete Event",
+                description: "Permanently delete this event and all data",
+                category: "configuration",
+                keywords: ["delete", "remove", "destroy", "permanent"],
+                component: deleteEventModal
             })
         }
     }

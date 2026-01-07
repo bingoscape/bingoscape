@@ -6,7 +6,7 @@ import {
     ButtonGroup,
     ButtonGroupSeparator,
 } from "@/components/ui/button-group"
-import { ClipboardList, Link2, Settings, FileJson } from "lucide-react"
+import { ClipboardList, Link2, Settings, FileJson, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { UUID } from "crypto"
 import { GenerateEventInviteLink } from "./generate-event-invite-link"
@@ -17,6 +17,7 @@ import { BingoImportExportModal } from "./bingo-import-export-modal"
 import { ShareEventButton } from "./share-event-button"
 import AssignEventToClanModal from "./assign-event-to-clan-modal"
 import { DiscordWebhookManagement } from "./discord-webhook-management"
+import { EventDeleteModal } from "./event-delete-modal"
 import type { Event } from "@/app/actions/events"
 
 interface EventHeaderActionsProps {
@@ -40,6 +41,7 @@ export function EventHeaderActions({
     const [editModalOpen, setEditModalOpen] = useState(false)
     const [createBingoModalOpen, setCreateBingoModalOpen] = useState(false)
     const [importExportModalOpen, setImportExportModalOpen] = useState(false)
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false)
 
     return (
         <>
@@ -163,6 +165,18 @@ export function EventHeaderActions({
                     discordWebhooks={
                         <DiscordWebhookManagement eventId={event.id} />
                     }
+                    deleteEventModal={
+                        isAdmin ? (
+                            <Button
+                                variant="ghost"
+                                className="w-full justify-start text-destructive hover:text-destructive"
+                                onClick={() => setDeleteModalOpen(true)}
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete Event
+                            </Button>
+                        ) : undefined
+                    }
                 />
             </div>
 
@@ -198,6 +212,21 @@ export function EventHeaderActions({
                 isOpen={importExportModalOpen}
                 onClose={() => setImportExportModalOpen(false)}
             />
+
+            {/* Delete Event Modal */}
+            {isAdmin && (
+                <EventDeleteModal
+                    event={{
+                        id: event.id,
+                        title: event.title,
+                        participantsCount: event.eventParticipants?.length,
+                        teamsCount: event.teams?.length,
+                        bingosCount: event.bingos?.length,
+                    }}
+                    isOpen={deleteModalOpen}
+                    onClose={() => setDeleteModalOpen(false)}
+                />
+            )}
         </>
     )
 }
