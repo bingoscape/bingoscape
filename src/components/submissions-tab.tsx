@@ -659,6 +659,28 @@ export function SubmissionsTab({
                                         <span className="font-medium">Type:</span> {submission.sourceType}
                                       </div>
                                     )}
+                                    {/* Location information */}
+                                    {(submission.locationWorldX !== null ||
+                                      submission.locationWorldY !== null ||
+                                      submission.locationWorldNumber !== null) && (
+                                      <div className="text-xs text-muted-foreground border-t border-blue-200 dark:border-blue-800 pt-1 mt-1">
+                                        <div className="font-medium mb-0.5">Location:</div>
+                                        {submission.locationWorldNumber && (
+                                          <div>World {submission.locationWorldNumber}</div>
+                                        )}
+                                        {submission.locationWorldX !== null && submission.locationWorldY !== null && (
+                                          <div>
+                                            Coords: ({submission.locationWorldX}, {submission.locationWorldY}
+                                            {submission.locationPlane != null && submission.locationPlane > 0
+                                              ? `, Plane ${submission.locationPlane}`
+                                              : ''})
+                                          </div>
+                                        )}
+                                        {submission.locationRegionId && (
+                                          <div className="text-xs opacity-75">Region ID: {submission.locationRegionId}</div>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
                                 )}
 

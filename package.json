@@ -7,7 +7,7 @@
     "build": "next build",
     "db:generate": "npx drizzle-kit generate",
     "db:migrate": "npx drizzle-kit migrate",
-    "db:push": "npx drizzle-kit push",
+    "db:push": "npx drizzle-kit push --force",
     "db:studio": "npx drizzle-kit studio",
     "dev": "next dev",
     "dbg": "NODE_OPTIONS='--inspect' next dev",

@@ -85,6 +85,11 @@ export interface Submission {
   sourceItemId?: number | null
   pluginAccountName?: string | null
   sourceType?: string | null
+  locationWorldX?: number | null
+  locationWorldY?: number | null
+  locationPlane?: number | null
+  locationWorldNumber?: number | null
+  locationRegionId?: number | null
 }
 
 export interface TeamTileSubmission {

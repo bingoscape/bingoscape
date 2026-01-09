@@ -516,6 +516,11 @@ export const submissions = createTable("submissions", {
   sourceItemId: integer("source_item_id"), // Item ID that triggered the submission
   pluginAccountName: varchar("plugin_account_name", { length: 255 }), // Account name from plugin at time of submission
   sourceType: varchar("source_type", { length: 100 }), // Type of source: "NPC loot", "Pickpocket", "Event reward", etc.
+  locationWorldX: integer("location_world_x"),
+  locationWorldY: integer("location_world_y"),
+  locationPlane: integer("location_plane"),
+  locationWorldNumber: integer("location_world_number"),
+  locationRegionId: integer("location_region_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })

@@ -17,6 +17,11 @@ interface AutoSubmissionMetadata {
   itemId?: number
   accountName?: string
   sourceType?: string
+  worldX?: number
+  worldY?: number
+  plane?: number
+  worldNumber?: number
+  regionId?: number
 }
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
@@ -225,6 +230,11 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
           sourceItemId: metadata.itemId ?? null,
           pluginAccountName: metadata.accountName ?? null,
           sourceType: metadata.sourceType ?? null,
+          locationWorldX: metadata.worldX ?? null,
+          locationWorldY: metadata.worldY ?? null,
+          locationPlane: metadata.plane ?? null,
+          locationWorldNumber: metadata.worldNumber ?? null,
+          locationRegionId: metadata.regionId ?? null,
           reviewedAt: shouldAutoApprove ? new Date() : null,
           submissionValue: 1.0, // Default value for auto-submissions
         })
