@@ -174,8 +174,12 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
     }
 
     // Determine submission status
+    // Individual submission can be auto-approved when item matches
     const submissionStatus = shouldAutoApprove ? "approved" : "pending"
-    const teamTileStatus = shouldAutoApprove ? "approved" : "pending"
+
+    // CRITICAL: Tile always starts pending - let goal tree validation decide approval
+    // Only checkAndAutoCompleteTile() should change tile status to "approved"
+    const teamTileStatus = "pending"
 
     // Create or update the submission in the database
     const result = await db.transaction(async (tx) => {
@@ -191,7 +195,9 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
           target: [teamTileSubmissions.tileId, teamTileSubmissions.teamId],
           set: {
             updatedAt: new Date(),
-            status: teamTileStatus,
+            // CRITICAL: Do NOT update status on conflict
+            // Preserve existing approval state (don't reset approved tiles to pending)
+            // Only checkAndAutoCompleteTile() should change status
           },
         })
         .returning()
@@ -280,10 +286,13 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
       }
     })
 
-    // Check if tile should auto-complete after goal progress update
-    if (matchedGoalId && shouldAutoApprove) {
+    // ALWAYS check tile completion after updating goal progress
+    // This evaluates the complete goal tree and updates tile status to "approved"
+    // ONLY if all root-level goals/groups are complete
+    if (matchedGoalId) {
       try {
-        await checkAndAutoCompleteTile(tileId, userTeam.id)
+        const completionResult = await checkAndAutoCompleteTile(tileId, userTeam.id)
+        console.log(`Tile ${tileId} completion check: ${completionResult.autoCompleted ? 'Complete' : 'Incomplete'}`)
       } catch (error) {
         console.error("Error checking tile auto-completion:", error)
         // Don't fail the submission if auto-completion check fails
