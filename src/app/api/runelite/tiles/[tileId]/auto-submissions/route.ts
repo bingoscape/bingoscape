@@ -15,6 +15,7 @@ interface AutoSubmissionMetadata {
   npcId?: number
   sourceName?: string
   itemId?: number
+  quantity?: number
   accountName?: string
   sourceType?: string
   worldX?: number
@@ -236,7 +237,7 @@ export async function POST(req: Request, { params }: { params: { tileId: string 
           locationWorldNumber: metadata.worldNumber ?? null,
           locationRegionId: metadata.regionId ?? null,
           reviewedAt: shouldAutoApprove ? new Date() : null,
-          submissionValue: 1.0, // Default value for auto-submissions
+          submissionValue: (metadata.quantity && metadata.quantity > 0) ? metadata.quantity : 1.0,
         })
         .returning({
           id: submissions.id,
