@@ -13,6 +13,8 @@ import {
   teamMembers,
   tiles,
   teamTileSubmissions,
+  submissions,
+  sessions,
 } from "@/server/db/schema"
 import { and, eq, desc, count, sql, SQL } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
@@ -278,6 +280,25 @@ export async function getClanDetails(clanId: string) {
   }
 
   return clan
+}
+
+export async function getClanMemberActivity(clanId: string) {
+  await requireSuperAdmin()
+
+  const activity = await db
+    .select({
+      userId: users.id,
+      submissionCount: sql<number>`COUNT(DISTINCT ${submissions.id})`.as('submissionCount'),
+      lastSeen: sql<Date | null>`MAX(${sessions.expires})`.as('lastSeen'),
+    })
+    .from(clanMembers)
+    .innerJoin(users, eq(clanMembers.userId, users.id))
+    .leftJoin(submissions, eq(users.id, submissions.submittedBy))
+    .leftJoin(sessions, eq(users.id, sessions.userId))
+    .where(eq(clanMembers.clanId, clanId))
+    .groupBy(users.id)
+
+  return activity
 }
 
 export async function getEventDetails(eventId: string) {
