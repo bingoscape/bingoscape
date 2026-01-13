@@ -6,13 +6,13 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
 import { Check, AlertTriangle, X, Upload, Clock, CheckCircle2, Link, Users, Hash, Search, Star, ChevronsUpDown, Loader2, Zap, User } from "lucide-react"
 import type { Tile, Team, SubmissionComment } from "@/app/actions/events"
 import { CommentForm } from "@/components/comment-form"
 import { SubmissionCommentDisplay } from "@/components/submission-comment"
+import { SubmissionUploadForm } from "@/components/submission-upload-form"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
@@ -350,100 +350,15 @@ export function SubmissionsTab({
         {/* Current team submission form */}
         {currentTeamId && !isSubmissionsLocked && (
           <div className="border border-border rounded-lg p-6 space-y-4 bg-card shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <div
-                className="h-3 w-3 rounded-full"
-                style={{
-                  backgroundColor: `hsl(${(currentTeam?.name?.charCodeAt(0) || 0) * 10 % 360}, 70%, 50%)`,
-                }}
-              />
-              <h3 className="font-semibold text-lg text-foreground">Submit for {currentTeam?.name}</h3>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="image" className="block text-sm font-medium text-muted-foreground mb-2">
-                  Upload Image
-                </Label>
-
-                {/* Enhanced drag-and-drop upload area */}
-                <div className="relative">
-                  <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-muted-foreground transition-colors bg-muted/20 upload-area">
-                    <div className="flex flex-col items-center space-y-4">
-                      <div className="p-4 bg-blue-500/20 rounded-full">
-                        <Upload className="h-8 w-8 text-blue-500" />
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-foreground">
-                          Drag and drop your image here, or click to browse
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          PNG, JPG, GIF up to 10MB
-                        </p>
-                      </div>
-                      <Input
-                        id="image"
-                        type="file"
-                        accept="image/*"
-                        onChange={onImageChange}
-                        disabled={isUploadingImage}
-                        className={`absolute inset-0 w-full h-full opacity-0 cursor-pointer ${(selectedImage || pastedImage || isUploadingImage) ? 'pointer-events-none' : ''}`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Image preview */}
-                  {(selectedImage || pastedImage) && (
-                    <div className={`mt-4 p-4 rounded-lg border ${isUploadingImage ? 'bg-blue-500/20 border-blue-500' : 'bg-green-500/20 border-green-500'}`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-full ${isUploadingImage ? 'bg-blue-500/30' : 'bg-green-500/30'}`}>
-                          {isUploadingImage ? (
-                            <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
-                          ) : (
-                            <CheckCircle2 className="h-5 w-5 text-green-500" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <p className={`text-sm font-medium ${isUploadingImage ? 'text-blue-500' : 'text-green-500'}`}>
-                            {isUploadingImage ? "Uploading image..." : "Image ready to submit"}
-                          </p>
-                          <p className={`text-xs ${isUploadingImage ? 'text-blue-500/80' : 'text-green-500/80'}`}>
-                            {selectedImage ? selectedImage.name : "Pasted image"}
-                          </p>
-                        </div>
-                        <Button
-                          onClick={onImageSubmit}
-                          disabled={isUploadingImage}
-                          className="bg-green-500 hover:bg-green-600 text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                          size="sm"
-                        >
-                          {isUploadingImage ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Uploading...
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="h-4 w-4 mr-2" />
-                              Submit
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <kbd className="px-2 py-1 bg-muted rounded text-xs text-foreground">Ctrl</kbd>
-                    <span>+</span>
-                    <kbd className="px-2 py-1 bg-muted rounded text-xs text-foreground">V</kbd>
-                  </div>
-                  <span>to paste an image directly</span>
-                </div>
-              </div>
-            </div>
+            <SubmissionUploadForm
+              teamName={currentTeam?.name || "Your Team"}
+              selectedImage={selectedImage}
+              pastedImage={pastedImage}
+              isUploading={isUploadingImage}
+              onImageChange={onImageChange}
+              onSubmit={onImageSubmit}
+              showTeamHeader={true}
+            />
           </div>
         )}
 

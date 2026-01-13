@@ -9,9 +9,12 @@ import { DeleteBingoButton } from "@/components/delete-bingo-button"
 import { BingoInfoModal } from "@/components/bingo-info-modal"
 import { EditBingoModal } from "@/components/edit-bingo-modal"
 import { TeamSelector } from "@/components/team-selector"
+import { QuickSubmissionButton } from "@/components/quick-submission-button"
+import { QuickSubmissionModal } from "@/components/quick-submission-modal"
 import Link from "next/link"
 import { ListFilter, ChevronLeft, ChevronRight, Edit } from "lucide-react"
 import type { UUID } from "crypto"
+import { useRouter } from "next/navigation"
 
 interface EventBingosClientProps {
   event: any
@@ -21,12 +24,15 @@ interface EventBingosClientProps {
 }
 
 export function EventBingosClient({ event, userRole, currentTeam, isAdminOrManagement }: EventBingosClientProps) {
+  const router = useRouter()
+
   // State for team selection (only for admins/management)
   const [selectedTeamId, setSelectedTeamId] = useState<string | undefined>(currentTeam?.id)
   // State for current bingo index
   const [currentBingoIndex, setCurrentBingoIndex] = useState(0)
   // State for modals
   const [editBingoModalOpen, setEditBingoModalOpen] = useState(false)
+  const [quickSubmissionModalOpen, setQuickSubmissionModalOpen] = useState(false)
 
   // Determine which team's data to show
   const effectiveTeamId = isAdminOrManagement ? selectedTeamId : currentTeam?.id
@@ -72,7 +78,7 @@ export function EventBingosClient({ event, userRole, currentTeam, isAdminOrManag
   return (
     <>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-6 mb-6 gap-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <div>
             <h2 className="text-2xl font-bold">Boards</h2>
             <p className="text-muted-foreground text-sm mt-1">
@@ -93,8 +99,9 @@ export function EventBingosClient({ event, userRole, currentTeam, isAdminOrManag
             </div>
           )}
         </div>
-        {isAdminOrManagement && event.teams && event.teams.length > 0 && (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Team selector for admins/management */}
+          {isAdminOrManagement && event.teams && event.teams.length > 0 && (
             <TeamSelector
               teams={event.teams}
               currentTeamId={currentTeam?.id}
@@ -102,8 +109,8 @@ export function EventBingosClient({ event, userRole, currentTeam, isAdminOrManag
               selectedTeamId={selectedTeamId}
               onTeamChange={setSelectedTeamId}
             />
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {visibleBingos.length === 0 ? (
@@ -182,20 +189,27 @@ export function EventBingosClient({ event, userRole, currentTeam, isAdminOrManag
                   </div>
                 )}
               </div>
-              <div className="flex space-x-1 ml-4">
-                <BingoInfoModal bingo={currentBingo} />
-                {isAdminOrManagement && (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setEditBingoModalOpen(true)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <DeleteBingoButton bingoId={currentBingo.id as UUID} />
-                  </>
-                )}
+              <div className="flex flex-col items-end gap-2 ml-4">
+                <div className="flex space-x-1">
+                  <BingoInfoModal bingo={currentBingo} />
+                  {isAdminOrManagement && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setEditBingoModalOpen(true)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <DeleteBingoButton bingoId={currentBingo.id as UUID} />
+                    </>
+                  )}
+                </div>
+                <QuickSubmissionButton
+                  currentTeamId={currentTeam?.id}
+                  isSubmissionsLocked={currentBingo.locked || false}
+                  onClick={() => setQuickSubmissionModalOpen(true)}
+                />
               </div>
             </div>
           </CardHeader>
@@ -236,6 +250,21 @@ export function EventBingosClient({ event, userRole, currentTeam, isAdminOrManag
           bingo={currentBingo}
           isOpen={editBingoModalOpen}
           onClose={() => setEditBingoModalOpen(false)}
+        />
+      )}
+
+      {/* Quick Submission Modal */}
+      {currentBingo && currentTeam && (
+        <QuickSubmissionModal
+          isOpen={quickSubmissionModalOpen}
+          onClose={() => setQuickSubmissionModalOpen(false)}
+          bingo={currentBingo}
+          currentTeamId={currentTeam.id}
+          currentTeam={currentTeam}
+          onSubmissionComplete={() => {
+            // Refresh the page to show updated submissions
+            router.refresh()
+          }}
         />
       )}
     </>
