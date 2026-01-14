@@ -31,7 +31,7 @@ export async function sendDiscordWebhook(webhookUrl: string, payload: DiscordWeb
     // Add files as attachments if they exist
     if (payload.files && payload.files.length > 0) {
       payload.files.forEach((file, index) => {
-        const blob = new Blob([file.attachment])
+        const blob = new Blob([new Uint8Array(file.attachment)])
         formData.append(`files[${index}]`, blob, file.name)
       })
 
