@@ -18,6 +18,8 @@ import {
   deleteSubmission,
   updateSubmissionStatus,
   getTierXpRequirements,
+  getSelectableUsersForSubmission,
+  type SelectableUser,
 } from "@/app/actions/bingo"
 import { getSubmissions } from "@/app/actions/getSubmissions"
 import "@mdxeditor/editor/style.css"
@@ -76,6 +78,10 @@ export default function BingoGrid({
   const sortableRef = useRef<Sortable | null>(null)
   const [isStatsDialogOpen, setIsStatsDialogOpen] = useState(false)
   const session = useSession()
+
+  // State for submitting on behalf of another user
+  const [selectableUsers, setSelectableUsers] = useState<SelectableUser[]>([])
+  const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined)
   
   // Progression bingo state
   const [tierProgress, setTierProgress] = useState<Array<{
@@ -167,6 +173,29 @@ export default function BingoGrid({
       }
     }
   }, [tiles, isLayoutLocked, onReorderTiles])
+
+  // Fetch selectable users when dialog opens
+  useEffect(() => {
+    if (isDialogOpen && currentTeamId && bingo.eventId) {
+      const fetchUsers = async () => {
+        try {
+          const users = await getSelectableUsersForSubmission(bingo.eventId, currentTeamId)
+          setSelectableUsers(users)
+          // Default to first user (which is the current user)
+          if (users.length > 0) {
+            setSelectedUserId(users[0]!.id)
+          }
+        } catch (error) {
+          console.error("Failed to fetch selectable users:", error)
+        }
+      }
+      void fetchUsers()
+    } else if (!isDialogOpen) {
+      // Reset when dialog closes
+      setSelectableUsers([])
+      setSelectedUserId(undefined)
+    }
+  }, [isDialogOpen, currentTeamId, bingo.eventId])
 
   const handleTileClick = async (tile: Tile) => {
     // Check if tile is locked due to progression (but allow if user has management rights)
@@ -396,7 +425,7 @@ export default function BingoGrid({
     }
   }
 
-  const handleImageSubmit = async () => {
+  const handleImageSubmit = async (onBehalfOfUserId?: string) => {
     // Prevent concurrent uploads
     if (isUploadingImage) {
       return
@@ -428,6 +457,11 @@ export default function BingoGrid({
       formData.append("image", selectedImage ?? pastedImage!)
       formData.append("tileId", selectedTile.id)
       formData.append("teamId", currentTeamId)
+
+      // Include onBehalfOfUserId if provided
+      if (onBehalfOfUserId) {
+        formData.append("onBehalfOfUserId", onBehalfOfUserId)
+      }
 
       const result = await submitImage(formData)
 
@@ -892,6 +926,9 @@ export default function BingoGrid({
                 onTeamTileSubmissionStatusUpdate={handleTeamTileSubmissionStatusUpdate}
                 onSubmissionStatusUpdate={handleSubmissionStatusUpdate}
                 onDeleteSubmission={handleDeleteSubmission}
+                selectableUsers={selectableUsers}
+                selectedUserId={selectedUserId}
+                onUserSelect={setSelectedUserId}
               />
             </TabsContent>
           </Tabs>

@@ -261,6 +261,7 @@ export function EventBingosClient({ event, userRole, currentTeam, isAdminOrManag
           bingo={currentBingo}
           currentTeamId={currentTeam.id}
           currentTeam={currentTeam}
+          eventId={event.id}
           onSubmissionComplete={() => {
             // Refresh the page to show updated submissions
             router.refresh()
