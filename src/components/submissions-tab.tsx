@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Check, AlertTriangle, X, Upload, Clock, CheckCircle2, Link, Users, Hash, Search, Star, ChevronsUpDown, Loader2, Zap, User } from "lucide-react"
 import type { Tile, Team, SubmissionComment } from "@/app/actions/events"
+import type { SelectableUser } from "@/app/actions/bingo"
 import { CommentForm } from "@/components/comment-form"
 import { SubmissionCommentDisplay } from "@/components/submission-comment"
 import { SubmissionUploadForm } from "@/components/submission-upload-form"
@@ -42,7 +43,7 @@ interface SubmissionsTabProps {
   isSubmissionsLocked: boolean
   isUploadingImage: boolean
   onImageChange: (event: React.ChangeEvent<HTMLInputElement>) => void
-  onImageSubmit: () => void
+  onImageSubmit: (onBehalfOfUserId?: string) => void
   onFullSizeImageView: (src: string, alt: string) => void
   onTeamTileSubmissionStatusUpdate: (
     teamTileSubmissionId: string | undefined,
@@ -55,6 +56,10 @@ interface SubmissionsTabProps {
     submissionValue?: number | null,
   ) => void
   onDeleteSubmission: (submissionId: string) => void
+  // New props for submitting on behalf of another user
+  selectableUsers?: SelectableUser[]
+  selectedUserId?: string
+  onUserSelect?: (userId: string) => void
 }
 
 export function SubmissionsTab({
@@ -72,6 +77,9 @@ export function SubmissionsTab({
   onTeamTileSubmissionStatusUpdate,
   onSubmissionStatusUpdate,
   onDeleteSubmission,
+  selectableUsers,
+  selectedUserId,
+  onUserSelect,
 }: SubmissionsTabProps) {
   const [expandedGoalForms, setExpandedGoalForms] = useState<Set<string>>(new Set())
   const [goalValuesCache, setGoalValuesCache] = useState<Record<string, any[]>>({})
@@ -356,8 +364,11 @@ export function SubmissionsTab({
               pastedImage={pastedImage}
               isUploading={isUploadingImage}
               onImageChange={onImageChange}
-              onSubmit={onImageSubmit}
+              onSubmit={() => onImageSubmit(selectedUserId)}
               showTeamHeader={true}
+              selectableUsers={selectableUsers}
+              selectedUserId={selectedUserId}
+              onUserSelect={onUserSelect}
             />
           </div>
         )}
