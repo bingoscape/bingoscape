@@ -16,7 +16,7 @@ import {
   submissions,
   sessions,
 } from "@/server/db/schema"
-import { and, eq, desc, count, sql, SQL } from "drizzle-orm"
+import { and, eq, desc, count, sql, type SQL } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 
 export async function getSuperAdminStats() {

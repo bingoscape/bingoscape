@@ -4,7 +4,7 @@ import { getServerAuthSession } from "@/server/auth";
 import { db } from "@/server/db";
 import { clans, clanMembers, users, events, clanInvites } from "@/server/db/schema";
 import { eq, and, count, sql } from "drizzle-orm";
-import { EventData, getTotalBuyInsForEvent } from "./events";
+import { type EventData, getTotalBuyInsForEvent } from "./events";
 import { nanoid } from "nanoid";
 
 export async function createClan(name: string, description: string) {

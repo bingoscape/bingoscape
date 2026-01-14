@@ -43,24 +43,30 @@ export function SubmissionUploadForm({
   selectedUserId,
   onUserSelect,
 }: SubmissionUploadFormProps) {
-  // Group users by team for management users (when there are multiple teams)
-  const groupedUsers = selectableUsers?.reduce(
-    (groups, user) => {
-      const teamKey = user.teamName ?? "Unassigned";
-      if (!groups[teamKey]) {
-        groups[teamKey] = [];
-      }
-      groups[teamKey].push(user);
-      return groups;
-    },
-    {} as Record<string, SelectableUser[]>,
-  );
+  // Filter out unassigned users before processing
+  const assignedUsers =
+    selectableUsers?.filter(
+      (user) => user.teamName !== undefined && user.teamName !== null,
+    ) ?? [];
 
-  const hasMultipleTeams = groupedUsers
-    ? Object.keys(groupedUsers).length > 1
-    : false;
-  const showUserSelection =
-    selectableUsers && selectableUsers.length > 1 && onUserSelect;
+  // Group users by team for management users (when there are multiple teams)
+  const groupedUsers =
+    assignedUsers.length > 0
+      ? assignedUsers.reduce(
+          (groups, user) => {
+            const teamKey = user.teamName!;
+            if (!groups[teamKey]) {
+              groups[teamKey] = [];
+            }
+            groups[teamKey].push(user);
+            return groups;
+          },
+          {} as Record<string, SelectableUser[]>,
+        )
+      : {};
+
+  const hasMultipleTeams = Object.keys(groupedUsers).length > 1;
+  const showUserSelection = assignedUsers.length > 1 && onUserSelect;
 
   return (
     <div className="space-y-4">
@@ -88,7 +94,7 @@ export function SubmissionUploadForm({
               <SelectValue placeholder="Select user..." />
             </SelectTrigger>
             <SelectContent>
-              {hasMultipleTeams && groupedUsers
+              {hasMultipleTeams
                 ? // Group by team when there are multiple teams (management view)
                   Object.entries(groupedUsers).map(
                     ([teamNameGroup, usersInTeam]) => (
@@ -97,10 +103,7 @@ export function SubmissionUploadForm({
                           <div
                             className="h-2 w-2 rounded-full"
                             style={{
-                              backgroundColor:
-                                teamNameGroup !== "Unassigned"
-                                  ? `hsl(${(teamNameGroup.charCodeAt(0) * 10) % 360}, 70%, 50%)`
-                                  : "#888",
+                              backgroundColor: `hsl(${(teamNameGroup.charCodeAt(0) * 10) % 360}, 70%, 50%)`,
                             }}
                           />
                           {teamNameGroup}
@@ -114,7 +117,7 @@ export function SubmissionUploadForm({
                     ),
                   )
                 : // Flat list for team members only (participant view)
-                  selectableUsers.map((user) => (
+                  assignedUsers.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.runescapeName ?? user.name ?? "Unknown User"}
                     </SelectItem>
