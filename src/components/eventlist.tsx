@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { CreateEventModal } from "./create-event-modal"
-import { getEvents } from "@/app/actions/events"
+import { type getEvents } from "@/app/actions/events"
 import { EventDisplay } from "./events-display"
 import { Button } from "@/components/ui/button"
 import { Plus, TrendingUp, Users, Trophy } from "lucide-react"

@@ -2,7 +2,7 @@
 import { db } from "@/server/db";
 import { goalGroups } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
-import { GoalGroup } from "./goal-groups";
+import { type GoalGroup } from "./goal-groups";
 
 /**
  * Check if moving a group would create a circular reference
