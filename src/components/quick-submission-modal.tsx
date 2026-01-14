@@ -200,7 +200,12 @@ export function QuickSubmissionModal({
     return () => document.removeEventListener("paste", handlePaste);
   }, [isOpen, selectedTile]);
 
-  const showUserSelection = selectableUsers && selectableUsers.length > 1;
+  const showUserSelection = (() => {
+    const assignedUsers = selectableUsers.filter(
+      (user) => user.teamName !== undefined && user.teamName !== null,
+    );
+    return assignedUsers.length > 1;
+  })();
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -222,16 +227,22 @@ export function QuickSubmissionModal({
                 </SelectTrigger>
                 <SelectContent>
                   {(() => {
-                    const groupedUsers = selectableUsers.reduce(
+                    // Filter out unassigned users
+                    const assignedUsers = selectableUsers.filter(
+                      (user) =>
+                        user.teamName !== undefined && user.teamName !== null,
+                    );
+
+                    const groupedUsers = assignedUsers.reduce(
                       (groups, user) => {
-                        const teamKey = user.teamName ?? "Unassigned";
+                        const teamKey = user.teamName!;
                         if (!groups[teamKey]) {
                           groups[teamKey] = [];
                         }
                         groups[teamKey].push(user);
                         return groups;
                       },
-                      {} as Record<string, typeof selectableUsers>,
+                      {} as Record<string, typeof assignedUsers>,
                     );
 
                     const hasMultipleTeams =
@@ -252,7 +263,7 @@ export function QuickSubmissionModal({
                             </SelectGroup>
                           ),
                         )
-                      : selectableUsers.map((user) => (
+                      : assignedUsers.map((user) => (
                           <SelectItem key={user.id} value={user.id}>
                             {user.runescapeName ?? user.name ?? "Unknown User"}
                           </SelectItem>
