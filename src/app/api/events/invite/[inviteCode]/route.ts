@@ -3,7 +3,8 @@ import { eventInvites } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
 
 // Improve error handling in the invite code API
-export async function GET(request: Request, { params }: { params: { inviteCode: string } }) {
+export async function GET(request: Request, props: { params: Promise<{ inviteCode: string }> }) {
+  const params = await props.params;
   try {
     const { inviteCode } = params
 

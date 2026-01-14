@@ -5,7 +5,8 @@ import { bingos, teamMembers } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
 import { formatBingoData } from "@/lib/bingo-formatter"
 
-export async function GET(request: NextRequest, { params }: { params: { bingoId: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ bingoId: string }> }) {
+  const params = await props.params;
   try {
     // Validate API key
     const userId = await validateApiKey(request)

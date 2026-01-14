@@ -53,7 +53,8 @@ async function createBingo(formData: FormData) {
     return redirect(`/events/${eventId}/bingos/${newBingo[0]!.id}`)
 }
 
-export default async function Page({ params }: { params: { id: UUID } }) {
+export default async function Page(props: { params: Promise<{ id: UUID }> }) {
+    const params = await props.params;
     const session = await getServerAuthSession()
     if (!session || !session.user) {
         notFound()

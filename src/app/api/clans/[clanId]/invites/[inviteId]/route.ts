@@ -4,8 +4,9 @@ import { updateClanInviteLabel, deleteClanInvite, revokeClanInvite } from '@/app
 // PATCH - Update invite label
 export async function PATCH(
     req: Request,
-    { params }: { params: { clanId: string, inviteId: string } }
+    props: { params: Promise<{ clanId: string, inviteId: string }> }
 ) {
+    const params = await props.params;
     try {
         const { label } = await req.json() as { label: string }
         await updateClanInviteLabel(params.inviteId, label)
@@ -21,8 +22,9 @@ export async function PATCH(
 // DELETE - Delete invite permanently
 export async function DELETE(
     _: Request,
-    { params }: { params: { clanId: string, inviteId: string } }
+    props: { params: Promise<{ clanId: string, inviteId: string }> }
 ) {
+    const params = await props.params;
     try {
         await deleteClanInvite(params.inviteId)
         return NextResponse.json({ success: true })
@@ -37,8 +39,9 @@ export async function DELETE(
 // POST - Revoke invite (soft delete)
 export async function POST(
     req: Request,
-    { params }: { params: { clanId: string, inviteId: string } }
+    props: { params: Promise<{ clanId: string, inviteId: string }> }
 ) {
+    const params = await props.params;
     const { searchParams } = new URL(req.url)
     const action = searchParams.get('action')
 

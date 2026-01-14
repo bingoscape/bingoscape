@@ -10,12 +10,13 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 
 interface PageProps {
-  params: {
+  params: Promise<{
     clanId: string
-  }
+  }>
 }
 
-export default async function SuperAdminClanDetailPage({ params }: PageProps) {
+export default async function SuperAdminClanDetailPage(props: PageProps) {
+  const params = await props.params;
   let clan
   let memberActivity
 
