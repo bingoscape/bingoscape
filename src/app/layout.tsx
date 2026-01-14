@@ -21,7 +21,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={noto.className}>
+    <html lang="en" className={noto.className} suppressHydrationWarning>
       <AuthProvider>
         <body>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
