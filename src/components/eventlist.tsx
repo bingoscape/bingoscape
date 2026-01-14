@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { CreateEventModal } from "./create-event-modal"
 import { type getEvents } from "@/app/actions/events"
 import { EventDisplay } from "./events-display"
@@ -57,10 +58,10 @@ export default function EventList({ userId, initialEvents }: EventListProps) {
                 Create Event
               </Button>
               <Button variant="outline" size="lg" asChild>
-                <a href="/templates">
+                <Link href="/templates">
                   <Users className="h-4 w-4 mr-2" />
                   Browse Templates
-                </a>
+                </Link>
               </Button>
             </div>
           </div>

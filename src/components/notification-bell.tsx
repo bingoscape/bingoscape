@@ -26,6 +26,12 @@ export function NotificationBell({ userId }: { userId: string }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
 
+  async function fetchNotifications() {
+    const fetchedNotifications = await getNotifications(userId)
+    setNotifications(fetchedNotifications)
+    setUnreadCount(fetchedNotifications.filter((n) => !n.isRead).length)
+  }
+
   useEffect(() => {
     // Fetch notifications immediately when component mounts
     fetchNotifications()
@@ -41,13 +47,8 @@ export function NotificationBell({ userId }: { userId: string }) {
 
     // Clean up interval when component unmounts
     return () => clearInterval(intervalId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  async function fetchNotifications() {
-    const fetchedNotifications = await getNotifications(userId)
-    setNotifications(fetchedNotifications)
-    setUnreadCount(fetchedNotifications.filter((n) => !n.isRead).length)
-  }
 
   async function handleNotificationClick(notificationId: string) {
     await markNotificationAsRead(notificationId)

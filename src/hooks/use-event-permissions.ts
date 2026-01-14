@@ -1,16 +1,13 @@
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import type { Participant } from "@/app/events/[id]/participants/types"
 
 export function useEventPermissions(eventId: string, eventCreatorId?: string) {
   const { data: session } = useSession()
   const [currentUserRole, setCurrentUserRole] = useState<"admin" | "management" | "participant">("participant")
-  const [isEventCreator, setIsEventCreator] = useState(false)
 
-  useEffect(() => {
-    if (eventCreatorId && session?.user.id) {
-      setIsEventCreator(eventCreatorId === session.user.id)
-    }
+  const isEventCreator = useMemo(() => {
+    return !!(eventCreatorId && session?.user.id && eventCreatorId === session.user.id)
   }, [eventCreatorId, session?.user.id])
 
   // Check if current user can manage a specific participant
