@@ -28,10 +28,13 @@ export function TemplatePreviewGrid({
     if (templateData) {
       try {
         const parsed = JSON.parse(templateData) as ExportedBingo
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional state update from prop parsing
         setParsedData(parsed)
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional state update from prop parsing
         setError(null)
       } catch (err) {
         console.error("Error parsing template data:", err)
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional error state update
         setError("Invalid template data")
       }
     }

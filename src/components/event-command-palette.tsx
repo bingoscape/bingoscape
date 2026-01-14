@@ -109,6 +109,7 @@ export function EventCommandPalette({
 
     // Detect OS for keyboard shortcut display
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydration pattern for SSR
         setIsMac(navigator.platform.toUpperCase().includes('MAC'))
     }, [])
 
@@ -264,6 +265,7 @@ export function EventCommandPalette({
 
     // Reset selected index when search changes
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional reset on search change
         setSelectedIndex(0)
     }, [search])
 
@@ -281,6 +283,7 @@ export function EventCommandPalette({
     }, [])
 
     // Handle keyboard navigation
+    /* eslint-disable react-hooks/preserve-manual-memoization -- Complex callback with dynamic dependencies */
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === "ArrowDown") {
             e.preventDefault()
@@ -297,6 +300,7 @@ export function EventCommandPalette({
             setOpen(false)
         }
     }, [filteredActions, selectedIndex])
+    /* eslint-enable react-hooks/preserve-manual-memoization */
 
     return (
         <>

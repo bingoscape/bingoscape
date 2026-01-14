@@ -513,6 +513,7 @@ export function ParticipantsTab({
     }
   }
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- Complex filtering with multiple dependencies
   const filteredAndSortedParticipants = useMemo(() => {
     const filtered = participants.filter((p) => {
       const matchesSearch = p.runescapeName.toLowerCase().includes(searchTerm.toLowerCase())

@@ -22,17 +22,18 @@ export function FullSizeImageDialog({ isOpen, onClose, imageSrc, imageAlt }: Ful
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Reset zoom and position when dialog opens
-  useEffect(() => {
-    if (isOpen) {
-      resetZoom()
-    }
-  }, [isOpen])
-
   const resetZoom = () => {
     setScale(1)
     setPosition({ x: 0, y: 0 })
   }
+
+  // Reset zoom and position when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional reset on dialog open
+      resetZoom()
+    }
+  }, [isOpen])
 
   const zoomIn = () => {
     setScale((prev) => Math.min(prev + 0.25, 5))

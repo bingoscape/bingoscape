@@ -54,7 +54,7 @@ export async function getGoalValues(goalId: string): Promise<GoalValue[]> {
       orderBy: (goalValues, { asc }) => [asc(goalValues.value)],
     })
 
-    return values
+    return values as GoalValue[]
   } catch (error) {
     console.error("Error fetching goal values:", error)
     return []

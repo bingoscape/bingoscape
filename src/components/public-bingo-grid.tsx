@@ -57,6 +57,7 @@ export function PublicBingoGrid({ bingo, teams, prevBingoId, nextBingoId, eventI
   useEffect(() => {
     const index = teams.findIndex((team) => team.id === selectedTeamId)
     if (index !== -1) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional sync of derived state
       setTeamIndex(index)
     }
   }, [selectedTeamId, teams])

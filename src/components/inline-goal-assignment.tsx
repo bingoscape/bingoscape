@@ -67,12 +67,15 @@ export function InlineGoalAssignment({
 
   // Sync with current goal when it changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional sync with prop changes
     setSelectedGoalId(currentGoalId ?? null)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional sync with prop changes
     setSubmissionValue(currentValue?.toString() ?? "1")
   }, [currentGoalId, currentValue])
 
   // Reset predefined value when goal changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional reset on goal change
     setPredefinedValue("")
   }, [selectedGoalId])
 

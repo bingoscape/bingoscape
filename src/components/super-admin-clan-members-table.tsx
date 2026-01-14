@@ -1,5 +1,6 @@
 "use client"
 
+import type React from "react"
 import { useState, useMemo } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
@@ -37,19 +38,38 @@ interface SuperAdminClanMembersTableProps {
 type SortKey = "username" | "role" | "joinedAt" | "lastSeen" | "submissions"
 type SortDirection = "asc" | "desc"
 
+const roleOrder = {
+  admin: 4,
+  management: 3,
+  member: 2,
+  guest: 1,
+} as const
+
+function SortableHeader({
+  column,
+  children,
+  onSort
+}: {
+  column: SortKey
+  children: React.ReactNode
+  onSort: (key: SortKey) => void
+}) {
+  return (
+    <TableHead>
+      <Button variant="ghost" onClick={() => onSort(column)} className="h-8 px-2 hover:bg-muted">
+        {children}
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    </TableHead>
+  )
+}
+
 export function SuperAdminClanMembersTable({ members, clanId, ownerId }: SuperAdminClanMembersTableProps) {
   const [search, setSearch] = useState("")
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({
     key: "joinedAt",
     direction: "desc",
   })
-
-  const roleOrder = {
-    admin: 4,
-    management: 3,
-    member: 2,
-    guest: 1,
-  }
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -114,7 +134,7 @@ export function SuperAdminClanMembersTable({ members, clanId, ownerId }: SuperAd
     })
 
     return sorted
-  }, [members, search, sortConfig, roleOrder])
+  }, [members, search, sortConfig])
 
   const handleSort = (key: SortKey) => {
     setSortConfig((prev) => ({
@@ -122,15 +142,6 @@ export function SuperAdminClanMembersTable({ members, clanId, ownerId }: SuperAd
       direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
     }))
   }
-
-  const SortableHeader = ({ column, children }: { column: SortKey; children: React.ReactNode }) => (
-    <TableHead>
-      <Button variant="ghost" onClick={() => handleSort(column)} className="h-8 px-2 hover:bg-muted">
-        {children}
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    </TableHead>
-  )
 
   return (
     <div className="space-y-4">
@@ -150,11 +161,11 @@ export function SuperAdminClanMembersTable({ members, clanId, ownerId }: SuperAd
         <Table>
           <TableHeader>
             <TableRow>
-              <SortableHeader column="username">User</SortableHeader>
-              <SortableHeader column="role">Role</SortableHeader>
-              <SortableHeader column="joinedAt">Joined</SortableHeader>
-              <SortableHeader column="lastSeen">Last Seen</SortableHeader>
-              <SortableHeader column="submissions">Submissions</SortableHeader>
+              <SortableHeader column="username" onSort={handleSort}>User</SortableHeader>
+              <SortableHeader column="role" onSort={handleSort}>Role</SortableHeader>
+              <SortableHeader column="joinedAt" onSort={handleSort}>Joined</SortableHeader>
+              <SortableHeader column="lastSeen" onSort={handleSort}>Last Seen</SortableHeader>
+              <SortableHeader column="submissions" onSort={handleSort}>Submissions</SortableHeader>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
