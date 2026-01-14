@@ -1,3 +1,5 @@
+@import './comments.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -114,7 +116,4 @@
   transform: translateY(10px);
   transition: opacity 150ms, transform 150ms;
 }
-
-/* Import comment system styles */
-@import './comments.css';
 
