@@ -4,13 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar, Clock, CheckCircle, XCircle, TrendingUp } from "lucide-react"
 
 interface PageProps {
-  searchParams: {
+  searchParams: Promise<{
     page?: string
     search?: string
-  }
+  }>
 }
 
-export default async function SuperAdminEventsPage({ searchParams }: PageProps) {
+export default async function SuperAdminEventsPage(props: PageProps) {
+  const searchParams = await props.searchParams;
   const page = Number.parseInt(searchParams.page ?? "1")
   const search = searchParams.search ?? ""
 

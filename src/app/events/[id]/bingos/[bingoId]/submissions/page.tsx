@@ -1,7 +1,7 @@
 /* eslint-disable */
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation"
 import { getEventById, getUserRole } from "@/app/actions/events"
 import { getTeamsByEventId } from "@/app/actions/team"
@@ -60,7 +60,8 @@ import {
 import { InlineGoalAssignment } from "@/components/inline-goal-assignment"
 import { getGoalValues } from "@/app/actions/goals"
 
-export default function BingoSubmissionsPage({ params }: { params: { id: string; bingoId: string } }) {
+export default function BingoSubmissionsPage(props: { params: Promise<{ id: string; bingoId: string }> }) {
+  const params = use(props.params);
   const { id: eventId, bingoId } = params
   const router = useRouter()
   const [loading, setLoading] = useState(true)

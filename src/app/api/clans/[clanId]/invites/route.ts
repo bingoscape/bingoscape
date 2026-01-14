@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getClanInvites } from '@/app/actions/clan'
 
-export async function GET(
-    _: Request,
-    { params }: { params: { clanId: string } }
-) {
+export async function GET(_: Request, props: { params: Promise<{ clanId: string }> }) {
+    const params = await props.params;
     try {
         const invites = await getClanInvites(params.clanId)
         return NextResponse.json(invites)

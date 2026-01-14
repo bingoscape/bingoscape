@@ -37,7 +37,8 @@ async function ensureUploadDir() {
 }
 
 // Auto-submission endpoint - accepts metadata and automatically assigns goals
-export async function POST(req: Request, { params }: { params: { tileId: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ tileId: string }> }) {
+  const params = await props.params;
   // Validate API key from Authorization header
   const userId = await validateApiKey(req)
   if (!userId) {

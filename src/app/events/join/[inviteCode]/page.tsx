@@ -1,7 +1,7 @@
 /* eslint-disable */
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
@@ -13,7 +13,8 @@ import { RegistrationStatus } from "@/components/registration-status"
 import Link from "next/link"
 
 // Modify the JoinEventPage component to handle previously removed participants
-export default function JoinEventPage({ params }: { params: { inviteCode: string } }) {
+export default function JoinEventPage(props: { params: Promise<{ inviteCode: string }> }) {
+    const params = use(props.params);
     const [isJoining, setIsJoining] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
     const [event, setEvent] = useState<any>(null)

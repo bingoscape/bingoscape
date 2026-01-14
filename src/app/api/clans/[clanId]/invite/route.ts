@@ -17,10 +17,8 @@ export interface GenerateInviteResponse {
 }
 
 
-export async function POST(
-    req: Request,
-    { params }: { params: { clanId: string } }
-) {
+export async function POST(req: Request, props: { params: Promise<{ clanId: string }> }) {
+    const params = await props.params;
     const session = await getServerAuthSession()
 
     if (!session || !session.user) {

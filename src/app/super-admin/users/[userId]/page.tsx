@@ -9,12 +9,13 @@ import { SuperAdminUserEditModal } from "@/components/super-admin-user-edit-moda
 import { SuperAdminUserDeleteModal } from "@/components/super-admin-user-delete-modal"
 
 interface PageProps {
-  params: {
+  params: Promise<{
     userId: string
-  }
+  }>
 }
 
-export default async function UserDetailsPage({ params }: PageProps) {
+export default async function UserDetailsPage(props: PageProps) {
+  const params = await props.params;
   const userDetails = await getUserDetails(params.userId)
   const { user, clans, participatingEvents, createdEvents } = userDetails
 

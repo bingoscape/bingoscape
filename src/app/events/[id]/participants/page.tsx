@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react";
 import { useSearchParams, useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -20,7 +20,8 @@ import { RegistrationsTab } from "@/components/registrations-tab"
 import type { Participant, Team } from "./types"
 import type { RegistrationRequest } from "@/app/actions/events"
 
-export default function EventParticipantsPage({ params }: { params: { id: UUID } }) {
+export default function EventParticipantsPage(props: { params: Promise<{ id: UUID }> }) {
+  const params = use(props.params);
   const [participants, setParticipants] = useState<Participant[]>([])
   const [registrationRequests, setRegistrationRequests] = useState<RegistrationRequest[]>([])
   const [teams, setTeams] = useState<Team[]>([])

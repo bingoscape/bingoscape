@@ -10,7 +10,8 @@ import { ArrowLeft, BarChart3 } from "lucide-react"
 import Link from "next/link"
 import type { UUID } from "crypto"
 
-export default async function BingoStatsPage({ params }: { params: { id: UUID; bingoId: string } }) {
+export default async function BingoStatsPage(props: { params: Promise<{ id: UUID; bingoId: string }> }) {
+  const params = await props.params;
   const session = await getServerAuthSession()
   if (!session || !session.user) {
     notFound()
