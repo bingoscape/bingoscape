@@ -13,7 +13,11 @@ const config = {
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },
-
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb"
+    }
+  },
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.ignoreWarnings = [
