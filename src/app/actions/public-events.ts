@@ -2,7 +2,7 @@
 
 import { db } from "@/server/db"
 import { events, bingos, teams, teamTileSubmissions, tiles, clans } from "@/server/db/schema"
-import { eq, and, count, inArray } from "drizzle-orm"
+import { eq, and, count, inArray, asc } from "drizzle-orm"
 import type { UUID } from "crypto"
 
 export interface PublicEventData {
@@ -193,6 +193,7 @@ export async function getPublicBingoDetails(bingoId: string) {
     // Get visible tiles with their goals
     const bingoTiles = await db.query.tiles.findMany({
       where: and(eq(tiles.bingoId, bingoId as UUID), eq(tiles.isHidden, false)),
+      orderBy: [asc(tiles.index)],
       with: {
         goals: true,
       },
