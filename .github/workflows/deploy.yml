@@ -170,6 +170,10 @@ jobs:
             PROMETHEUS_ENDPOINT="http://prometheus:9090"
             LOKI_ENDPOINT="http://loki:3100"
 
+            NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}"
+
+
+
             ENV_EOF
 
             echo "✅ .env file generated successfully"
