@@ -565,7 +565,7 @@
       "type": "logs",
       "targets": [
         {
-          "expr": "{container_name=\"bingoscape-app\"} | json | duration > 50",
+          "expr": "{job=~\"$service\"} | json | duration > 50",
           "refId": "A"
         }
       ]
@@ -575,7 +575,34 @@
   "schemaVersion": 38,
   "style": "dark",
   "tags": ["bingoscape", "database", "postgres"],
-  "templating": { "list": [] },
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "app",
+          "value": "app"
+        },
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "definition": "label_values(job)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Service",
+        "multi": false,
+        "name": "service",
+        "options": [],
+        "query": "label_values(job)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
   "time": { "from": "now-1h", "to": "now" },
   "timepicker": {},
   "timezone": "browser",

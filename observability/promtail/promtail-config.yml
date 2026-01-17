@@ -20,7 +20,6 @@ scrape_configs:
       - targets:
           - localhost
         labels:
-          job: containerlogs
           __path__: /var/lib/docker/containers/*/*log
 
     pipeline_stages:
@@ -38,8 +37,14 @@ scrape_configs:
             container_name: com.docker.compose.service
           source: attrs
 
+      # Set job label dynamically based on container_name
+      - template:
+          source: job
+          template: "{{ .container_name }}"
+
       # Set labels
       - labels:
+          job:
           stream:
           container_name:
 
