@@ -5,6 +5,7 @@ datasources:
   # Prometheus for metrics
   - name: Prometheus
     type: prometheus
+    uid: prometheus
     access: proxy
     url: http://prometheus:9090
     isDefault: true
@@ -19,6 +20,7 @@ datasources:
   # Loki for logs
   - name: Loki
     type: loki
+    uid: loki
     access: proxy
     url: http://loki:3100
     editable: false
@@ -34,6 +36,7 @@ datasources:
   # Alertmanager
   - name: Alertmanager
     type: alertmanager
+    uid: alertmanager
     access: proxy
     url: http://alertmanager:9093
     editable: false
