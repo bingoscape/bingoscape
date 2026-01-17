@@ -1,4 +1,5 @@
 import { db } from "@/server/db"
+import { logger } from "@/lib/logger";
 import { eventInvites } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
 
@@ -33,7 +34,7 @@ export async function GET(request: Request, props: { params: Promise<{ inviteCod
       requiresApproval: invite.event.requiresApproval,
     })
   } catch (error) {
-    console.error("Error fetching invite:", error)
+    logger.error({ error }, "Error fetching invite")
     return Response.json({ error: "An error occurred while processing your request" }, { status: 500 })
   }
 }

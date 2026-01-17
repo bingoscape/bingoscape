@@ -1,12 +1,31 @@
 "use client";
 
-import * as Sentry from "@sentry/nextjs";
 import NextError from "next/error";
 import { useEffect } from "react";
 
-export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
+export default function GlobalError({
+  error,
+}: {
+  error: Error & { digest?: string };
+}) {
   useEffect(() => {
-    Sentry.captureException(error);
+    // Log error to our custom error API endpoint
+    fetch("/api/errors", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: error.message,
+        stack: error.stack,
+        digest: error.digest,
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        timestamp: Date.now(),
+      }),
+    }).catch((err) => {
+      console.error("Failed to log error:", err);
+    });
   }, [error]);
 
   return (

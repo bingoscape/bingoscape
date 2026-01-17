@@ -6,6 +6,7 @@
 /* eslint-disable @typescript-eslint/prefer-nullish-coalescing */
 
 import { db } from "@/server/db"
+import { logger } from "@/lib/logger";
 import { goals, goalGroups, teamGoalProgress, teamTileSubmissions } from "@/server/db/schema"
 import { eq, and, isNull } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
@@ -135,7 +136,7 @@ export async function evaluateTileCompletion(tileId: string, teamId: string): Pr
     // All root-level items must be complete (implicit AND at root level)
     return evaluationNodes.every((node) => node.isComplete)
   } catch (error) {
-    console.error("Error evaluating tile completion:", error)
+    logger.error({ error }, "Error evaluating tile completion:", error)
     return false
   }
 }
@@ -204,7 +205,7 @@ export async function checkAndAutoCompleteTile(tileId: string, teamId: string) {
       submission: newSubmission,
     }
   } catch (error) {
-    console.error("Error checking tile auto-completion:", error)
+    logger.error({ error }, "Error checking tile auto-completion:", error)
     return { success: false, error: "Failed to check tile completion" }
   }
 }
@@ -240,7 +241,7 @@ export async function getDetailedEvaluation(tileId: string, teamId: string): Pro
 
     return evaluationNodes
   } catch (error) {
-    console.error("Error getting detailed evaluation:", error)
+    logger.error({ error }, "Error getting detailed evaluation:", error)
     return []
   }
 }

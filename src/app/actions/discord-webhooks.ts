@@ -1,6 +1,7 @@
 "use server"
 
 import { getServerAuthSession } from "@/server/auth"
+import { logger } from "@/lib/logger";
 import { db } from "@/server/db"
 import { discordWebhooks, eventParticipants, events } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
@@ -113,7 +114,7 @@ export async function createDiscordWebhook(
 
     return { success: true, webhook: webhook! }
   } catch (error) {
-    console.error("Error creating Discord webhook:", error)
+    logger.error({ error }, "Error creating Discord webhook:", error)
     return { success: false, error: "Failed to create webhook" }
   }
 }
@@ -179,7 +180,7 @@ export async function updateDiscordWebhook(
 
     return { success: true }
   } catch (error) {
-    console.error("Error updating Discord webhook:", error)
+    logger.error({ error }, "Error updating Discord webhook:", error)
     return { success: false, error: "Failed to update webhook" }
   }
 }
@@ -225,7 +226,7 @@ export async function deleteDiscordWebhook(webhookId: string): Promise<{ success
 
     return { success: true }
   } catch (error) {
-    console.error("Error deleting Discord webhook:", error)
+    logger.error({ error }, "Error deleting Discord webhook:", error)
     return { success: false, error: "Failed to delete webhook" }
   }
 }
@@ -247,7 +248,7 @@ export async function testWebhook(webhookId: string): Promise<{ success: boolean
 
     return { success: await testDiscordWebhook(webhook.webhookUrl), error: "Failed to test webhook" }
   } catch (error) {
-    console.error("Error testing webhook:", error)
+    logger.error({ error }, "Error testing webhook:", error)
     return { success: false, error: "Failed to test webhook" }
   }
 }

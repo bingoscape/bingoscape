@@ -6,6 +6,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
 import { db } from "@/server/db"
+import { logger } from "@/lib/logger";
 import { bingos, tiles, goals, tierXpRequirements, rowBonuses, columnBonuses } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
@@ -137,7 +138,7 @@ export async function exportBingoBoard(bingoId: string): Promise<ExportedBingo |
 
     return exportData
   } catch (error) {
-    console.error("Error exporting bingo board:", error)
+    logger.error({ error }, "Error exporting bingo board:", error)
     return { error: "Failed to export bingo board" }
   }
 }
@@ -263,7 +264,7 @@ export async function importBingoBoard(
       return { success: true, bingoId: newBingo.id }
     })
   } catch (error) {
-    console.error("Error importing bingo board:", error)
+    logger.error({ error }, "Error importing bingo board:", error)
     return { success: false, error: error instanceof Error ? error.message : "Failed to import bingo board" }
   }
 }

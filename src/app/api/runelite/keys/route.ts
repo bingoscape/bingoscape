@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { logger } from "@/lib/logger";
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
 import { apiKeys } from "@/server/db/schema"
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(apiKey)
   } catch (error) {
-    console.error("Error generating API key:", error)
+    logger.error({ error }, "Error generating API key:", error)
 
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid request data", details: error.errors }, { status: 400 })
@@ -84,7 +85,7 @@ export async function GET() {
 
     return NextResponse.json(keys)
   } catch (error) {
-    console.error("Error fetching API keys:", error)
+    logger.error({ error }, "Error fetching API keys:", error)
     return NextResponse.json({ error: "Failed to fetch API keys" }, { status: 500 })
   }
 }

@@ -1,0 +1,89 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: warn
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+    tenant_id: bingoscape
+    batchwait: 1s
+    batchsize: 1048576
+    timeout: 10s
+
+scrape_configs:
+  # Scrape Docker container logs
+  - job_name: containers
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: containerlogs
+          __path__: /var/lib/docker/containers/*/*log
+
+    pipeline_stages:
+      # Parse Docker JSON logs
+      - json:
+          expressions:
+            output: log
+            stream: stream
+            timestamp: time
+            attrs: attrs
+
+      # Extract container name from attrs
+      - json:
+          expressions:
+            container_name: com.docker.compose.service
+          source: attrs
+
+      # Set labels
+      - labels:
+          stream:
+          container_name:
+
+      # Parse application JSON logs (from Pino)
+      - match:
+          selector: '{container_name="bingoscape-app"}'
+          stages:
+            - json:
+                expressions:
+                  level: level
+                  msg: msg
+                  time: time
+                  err: err
+                  userId: userId
+                  requestId: requestId
+                  duration: duration
+                  method: method
+                  url: url
+                  statusCode: statusCode
+                source: output
+
+            # Map Pino numeric levels to text
+            - template:
+                source: level
+                template: '{{ if eq .Value "10" }}trace{{ else if eq .Value "20" }}debug{{ else if eq .Value "30" }}info{{ else if eq .Value "40" }}warn{{ else if eq .Value "50" }}error{{ else if eq .Value "60" }}fatal{{ else }}{{ .Value }}{{ end }}'
+
+            - labels:
+                level:
+                method:
+                statusCode:
+
+            # Use parsed message as log line
+            - output:
+                source: msg
+
+      # Use raw output for other containers
+      - output:
+          source: output
+
+  # Direct file scraping (for local development without Docker)
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: varlogs
+          __path__: /var/log/*log

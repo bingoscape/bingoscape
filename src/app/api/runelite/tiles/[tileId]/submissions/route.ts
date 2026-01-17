@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { logger } from "@/lib/logger";
 import { db } from "@/server/db"
 import { tiles, eventParticipants, teamTileSubmissions, submissions, images, teamMembers, discordWebhooks } from "@/server/db/schema"
 import { eq, and, sql } from "drizzle-orm"
@@ -226,7 +227,7 @@ export async function POST(req: Request, props: { params: Promise<{ tileId: stri
       }
     } catch (discordError) {
       // Log Discord errors but don't fail the submission
-      console.error("Discord webhook error:", discordError)
+      logger.error({ error: discordError }, "Discord webhook error")
     }
 
 
@@ -236,7 +237,7 @@ export async function POST(req: Request, props: { params: Promise<{ tileId: stri
 
     return NextResponse.json(formattedBingo)
   } catch (error) {
-    console.error("Error submitting image:", error)
+    logger.error({ error }, "Error submitting image")
     return NextResponse.json({ error: "Failed to submit image" }, { status: 500 })
   }
 }

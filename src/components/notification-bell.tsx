@@ -35,13 +35,13 @@ export function NotificationBell({ userId }: { userId: string }) {
   useEffect(() => {
     // Fetch notifications immediately when component mounts
     fetchNotifications()
-      .then(() => console.log("Notifications fetched"))
+      
       .catch((e) => console.error(e))
 
     // Set up interval to fetch notifications every 10 seconds
     const intervalId = setInterval(() => {
       fetchNotifications()
-        .then(() => console.log("Notifications refreshed"))
+        
         .catch((e) => console.error("Error refreshing notifications:", e))
     }, 10000)
 
@@ -53,7 +53,7 @@ export function NotificationBell({ userId }: { userId: string }) {
   async function handleNotificationClick(notificationId: string) {
     await markNotificationAsRead(notificationId)
     fetchNotifications()
-      .then(() => console.log("Notifications fetched"))
+      
       .catch((e) => console.error(e))
   }
 
@@ -128,7 +128,7 @@ export function NotificationBell({ userId }: { userId: string }) {
                         onClick={(e) => {
                           e.stopPropagation()
                           handleNotificationClick(notification.id)
-                            .then(() => console.log("Handled notification click"))
+                            
                             .catch((e) => console.error(e))
 
                         }}

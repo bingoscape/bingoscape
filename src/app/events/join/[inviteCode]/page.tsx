@@ -34,7 +34,7 @@ export default function JoinEventPage(props: { params: Promise<{ inviteCode: str
             // Use the current URL as the callback URL
             const callbackUrl = `/events/join/${inviteCode}`
             signIn(undefined, { callbackUrl })
-                .then(() => console.log("Signed in"))
+                
                 .catch((err) => console.error("Sign in failed", err))
         }
     }, [inviteCode, status])
@@ -79,7 +79,7 @@ export default function JoinEventPage(props: { params: Promise<{ inviteCode: str
         }
 
         checkEventAndRegistration()
-            .then(() => console.log("Checked event and registration"))
+            
             .catch((err) => console.error("Failed to check event and registration", err))
     }, [inviteCode, status, router])
 

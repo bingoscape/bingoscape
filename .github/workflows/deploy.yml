@@ -4,17 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to deploy to'
+        description: "Environment to deploy to"
         required: true
         type: choice
         options:
           - production
           - staging
-        default: 'production'
+        default: "production"
       image_tag:
-        description: 'Docker image tag to deploy (e.g., main, v1.2.3)'
+        description: "Docker image tag to deploy (e.g., main, v1.2.3)"
         required: true
-        default: 'main'
+        default: "main"
         type: string
 
 env:
@@ -38,7 +38,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose.yml,nginx/nginx.conf,nginx/conf.d/default-ssl.conf.example,nginx/conf.d/default-dev.conf.example,scripts/"
+          source: "docker-compose.yml,nginx/nginx.conf,nginx/conf.d/default-ssl.conf.example,nginx/conf.d/default-dev.conf.example,scripts/,observability/"
           target: "/tmp/bingoscape-deploy/"
           overwrite: true
 
@@ -96,6 +96,16 @@ jobs:
               echo "⚠️  Warning: scripts directory not found, skipping..."
             fi
 
+            # Copy observability configuration
+            if [ -d "/tmp/bingoscape-deploy/observability" ]; then
+              echo "📋 Copying observability configuration..."
+              mkdir -p "$APP_DIR/observability"
+              cp -r /tmp/bingoscape-deploy/observability/* "$APP_DIR/observability/"
+              echo "✅ Observability configuration copied successfully"
+            else
+              echo "⚠️  Warning: observability directory not found, skipping..."
+            fi
+
             # Backup existing .env file
             if [ -f ".env" ]; then
               echo "📦 Backing up existing .env file..."
@@ -143,10 +153,22 @@ jobs:
             NODE_ENV=production
 
             # ==============================================
-            # MONITORING & ERROR TRACKING
+            # OBSERVABILITY & MONITORING
             # ==============================================
-            SENTRY_AUTH_TOKEN="${{ secrets.SENTRY_AUTH_TOKEN }}"
-            SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
+            GRAFANA_ADMIN_USER="${{ secrets.GRAFANA_ADMIN_USER }}"
+            GRAFANA_ADMIN_PASSWORD="${{ secrets.GRAFANA_ADMIN_PASSWORD }}"
+            GRAFANA_ROOT_URL="${{ secrets.GRAFANA_ROOT_URL }}"
+            ALERT_EMAIL="${{ secrets.ALERT_EMAIL }}"
+            ALERT_EMAIL_FROM="${{ secrets.ALERT_EMAIL_FROM }}"
+            ALERT_DISCORD_WEBHOOK_URL="${{ secrets.ALERT_DISCORD_WEBHOOK_URL }}"
+            SMTP_HOST="${{ secrets.SMTP_HOST }}"
+            SMTP_PORT="${{ secrets.SMTP_PORT }}"
+            SMTP_USER="${{ secrets.SMTP_USER }}"
+            SMTP_PASSWORD="${{ secrets.SMTP_PASSWORD }}"
+            METRICS_ENABLED="true"
+            LOG_LEVEL="${{ secrets.LOG_LEVEL }}"
+            PROMETHEUS_ENDPOINT="http://prometheus:9090"
+            LOKI_ENDPOINT="http://loki:3100"
 
             ENV_EOF
 

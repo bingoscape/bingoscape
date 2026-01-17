@@ -72,7 +72,7 @@ export default function BingoDetailPage(props: { params: Promise<{ id: UUID; bin
     }
 
     fetchData()
-      .then(() => console.log("Bingo data fetched"))
+      
       .catch((error) => console.error("Error fetching bingo data:", error))
   }, [eventId, bingoId, refreshKey])
 

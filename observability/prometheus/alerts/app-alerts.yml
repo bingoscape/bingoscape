@@ -1,0 +1,141 @@
+groups:
+  - name: bingoscape_critical
+    interval: 30s
+    rules:
+      # High error rate - more than 5% of requests failing
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status_code=~"5.."}[5m])) /
+            sum(rate(http_requests_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+          runbook_url: "https://docs.bingoscape.com/runbooks/high-error-rate"
+
+      # API response time p95 > 500ms
+      - alert: HighAPILatency
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API response time p95 > 500ms"
+          description: "95th percentile latency is {{ $value | humanizeDuration }}"
+          runbook_url: "https://docs.bingoscape.com/runbooks/high-latency"
+
+      # Database connection pool exhausted
+      - alert: DatabaseConnectionPoolHigh
+        expr: |
+          (pg_stat_activity_count{state="active"} / pg_settings_max_connections) > 0.9
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection pool > 90% utilized"
+          description: "{{ $value | humanizePercentage }} of database connections are in use"
+
+      # Application down
+      - alert: ApplicationDown
+        expr: up{job="bingoscape-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Bingoscape application is down"
+          description: "The application has been unreachable for more than 1 minute"
+
+  - name: bingoscape_warning
+    interval: 1m
+    rules:
+      # Elevated error rate - more than 1% of requests failing
+      - alert: ElevatedErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status_code=~"5.."}[10m])) /
+            sum(rate(http_requests_total[10m]))
+          ) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elevated error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 10 minutes"
+
+      # Slow database queries p99 > 200ms
+      - alert: SlowDatabaseQueries
+        expr: |
+          histogram_quantile(0.99, 
+            sum(rate(db_query_duration_seconds_bucket[5m])) by (le, operation)
+          ) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow database queries detected"
+          description: "99th percentile query time for {{ $labels.operation }} is {{ $value | humanizeDuration }}"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: |
+          (process_resident_memory_bytes / 1024 / 1024 / 1024) > 1.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Application is using {{ $value | humanize }}GB of memory"
+
+      # API response time p95 approaching threshold
+      - alert: APILatencyApproachingThreshold
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 0.3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API response time p95 approaching threshold"
+          description: "95th percentile latency is {{ $value | humanizeDuration }}"
+
+      # Disk usage high
+      - alert: DiskUsageHigh
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk usage > 90%"
+          description: "Only {{ $value | humanizePercentage }} disk space remaining"
+
+  - name: bingoscape_info
+    interval: 5m
+    rules:
+      # High request rate (possible traffic spike or attack)
+      - alert: HighRequestRate
+        expr: sum(rate(http_requests_total[5m])) > 100
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "Unusually high request rate"
+          description: "Receiving {{ $value | humanize }} requests per second"
+
+      # No requests (possible misconfiguration)
+      - alert: NoTraffic
+        expr: sum(rate(http_requests_total[15m])) == 0
+        for: 15m
+        labels:
+          severity: info
+        annotations:
+          summary: "No traffic detected"
+          description: "No HTTP requests received in the last 15 minutes"

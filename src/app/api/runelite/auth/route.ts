@@ -1,4 +1,5 @@
 /* eslint-disable */
+import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server"
 import { db } from "@/server/db"
 import { apiKeys, users } from "@/server/db/schema"
@@ -60,7 +61,7 @@ export async function POST(req: Request) {
       },
     })
   } catch (error) {
-    console.error("Error verifying API key:", error)
+    logger.error({ error }, "Error verifying API key:", error)
 
     if (error instanceof z.ZodError) {
       return NextResponse.json({ valid: false, error: "Invalid request data" }, { status: 400 })

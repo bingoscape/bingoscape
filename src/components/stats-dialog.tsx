@@ -86,8 +86,8 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
       }
 
       fetchData()
-        .then(() => console.log("Stats data fetched"))
-        .catch(() => console.log("Error fetching stats data"))
+        
+        .catch((error) => console.error("Error fetching stats data:", error))
     }
   }, [isOpen, bingoId, teams])
 

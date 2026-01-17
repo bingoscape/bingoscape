@@ -1,6 +1,7 @@
 'use server'
 
 import { db } from "@/server/db"
+import { logger } from "@/lib/logger";
 import { users } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
 
@@ -21,7 +22,7 @@ export async function updateProfile(formData: FormData) {
 
     return { success: true }
   } catch (error) {
-    console.error("Error updating profile:", error)
+    logger.error({ error }, "Error updating profile:", error)
     return { success: false, error: "Failed to update profile" }
   }
 }

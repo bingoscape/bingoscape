@@ -96,7 +96,7 @@ export default function ClanDetailPage(props: { params: Promise<{ clanId: string
       }
     };
 
-    fetchData().then(() => console.log("done")).catch(err => console.error(err));
+    fetchData().catch(err => console.error(err));
   }, [params.clanId, status, router]);
 
   const handleRoleUpdate = async (memberId: string, newRole: Role) => {

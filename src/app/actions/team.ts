@@ -1,5 +1,6 @@
 "use server"
 import { getServerAuthSession } from "@/server/auth"
+import { logger } from "@/lib/logger";
 import { db } from "@/server/db"
 import { teams, teamMembers, eventParticipants, users, playerMetadata } from "@/server/db/schema"
 import { eq, and, not, exists } from "drizzle-orm"
@@ -134,7 +135,7 @@ export async function updateTeamName(teamId: string, newName: string) {
       throw new Error("Team not found")
     }
   } catch (error) {
-    console.error("Error updating team name:", error)
+    logger.error({ error }, "Error updating team name:", error)
     throw new Error("Failed to update team name")
   }
 }
@@ -181,7 +182,7 @@ export async function getCurrentTeamForUser(eventId: string) {
       name: result[0]!.teamName,
     }
   } catch (error) {
-    console.error("Error fetching current team for user:", error)
+    logger.error({ error }, "Error fetching current team for user:", error)
     throw new Error("Failed to fetch current team for user")
   }
 }
@@ -224,7 +225,7 @@ export async function assignParticipantToTeam(eventId: string, userId: string, t
     // Also revalidate the event page
     revalidatePath(`/events/${eventId}`)
   } catch (error) {
-    console.error("Error assigning participant to team:", error)
+    logger.error({ error }, "Error assigning participant to team:", error)
     throw new Error("Failed to assign participant to team")
   }
 }

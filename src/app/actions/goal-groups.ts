@@ -6,6 +6,7 @@
 /* eslint-disable @typescript-eslint/prefer-nullish-coalescing */
 
 import { db } from "@/server/db"
+import { logger } from "@/lib/logger";
 import { goalGroups, goals, teamGoalProgress } from "@/server/db/schema"
 import { eq, and, isNull, inArray } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
@@ -81,7 +82,7 @@ export async function createGoalGroup(
 
     return { success: true, group: newGroup }
   } catch (error) {
-    console.error("Error creating goal group:", error)
+    logger.error({ error }, "Error creating goal group:", error)
     return { success: false, error: "Failed to create goal group" }
   }
 }
@@ -130,7 +131,7 @@ export async function updateGoalGroup(
 
     return { success: true, group: updatedGroup }
   } catch (error) {
-    console.error("Error updating goal group:", error)
+    logger.error({ error }, "Error updating goal group:", error)
     return { success: false, error: "Failed to update goal group" }
   }
 }
@@ -176,7 +177,7 @@ export async function deleteGoalGroup(groupId: string) {
 
     return { success: true }
   } catch (error) {
-    console.error("Error deleting goal group:", error)
+    logger.error({ error }, "Error deleting goal group:", error)
     return { success: false, error: "Failed to delete goal group" }
   }
 }
@@ -205,7 +206,7 @@ export async function moveGoalToGroup(goalId: string, targetGroupId: string | nu
 
     return { success: true }
   } catch (error) {
-    console.error("Error moving goal:", error)
+    logger.error({ error }, "Error moving goal:", error)
     return { success: false, error: "Failed to move goal" }
   }
 }
@@ -242,7 +243,7 @@ export async function moveGroupToGroup(groupId: string, targetGroupId: string | 
 
     return { success: true }
   } catch (error) {
-    console.error("Error moving group:", error)
+    logger.error({ error }, "Error moving group:", error)
     return { success: false, error: "Failed to move group" }
   }
 }
@@ -289,7 +290,7 @@ export async function reorderItems(
 
     return { success: true }
   } catch (error) {
-    console.error("Error reordering items:", error)
+    logger.error({ error }, "Error reordering items:", error)
     return { success: false, error: "Failed to reorder items" }
   }
 }
@@ -340,7 +341,7 @@ export async function moveMultipleItems(
             successCount++
           }
         } catch (error) {
-          console.error(`Error moving item ${item.id}:`, error)
+          logger.error({ error }, `Error moving item ${item.id}:`, error)
           failCount++
           errors.push(`Failed to move ${item.type} ${item.id}`)
         }
@@ -365,7 +366,7 @@ export async function moveMultipleItems(
       }
     }
   } catch (error) {
-    console.error("Error moving multiple items:", error)
+    logger.error({ error }, "Error moving multiple items:", error)
     return { success: false, error: "Failed to move items" }
   }
 }
@@ -425,7 +426,7 @@ export async function getGoalTree(tileId: string): Promise<GoalTreeNode[]> {
 
     return buildTree(null)
   } catch (error) {
-    console.error("Error getting goal tree:", error)
+    logger.error({ error }, "Error getting goal tree:", error)
     return []
   }
 }
@@ -464,7 +465,7 @@ export async function getGoalTreeWithProgress(tileId: string, teamId: string) {
       teamProgress: Array.from(progressMap.values()),
     }
   } catch (error) {
-    console.error("Error getting goal tree with progress:", error)
+    logger.error({ error }, "Error getting goal tree with progress:", error)
     return {
       tree: [],
       teamProgress: [],

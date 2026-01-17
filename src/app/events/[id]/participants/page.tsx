@@ -93,7 +93,7 @@ export default function EventParticipantsPage(props: { params: Promise<{ id: UUI
 
     setLoading(true)
     fetchData()
-      .then(() => console.log("Done fetching data"))
+      
       .catch((err) => console.error(err))
   }, [params.id, data?.user.id])
 
