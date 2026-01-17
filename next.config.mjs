@@ -14,6 +14,9 @@ const config = {
       bodySizeLimit: "10mb",
     },
   },
+  // Empty turbopack config to indicate we're aware of the Turbopack default
+  // The webpack config below is kept for backwards compatibility
+  turbopack: {},
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.ignoreWarnings = [
