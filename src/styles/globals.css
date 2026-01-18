@@ -1,4 +1,4 @@
-@import './comments.css';
+@import "./comments.css";
 
 @tailwind base;
 @tailwind components;
@@ -120,7 +120,9 @@
 .hover-card-enter-active {
   opacity: 1;
   transform: translateY(0);
-  transition: opacity 200ms, transform 200ms;
+  transition:
+    opacity 200ms,
+    transform 200ms;
 }
 
 .hover-card-exit {
@@ -130,6 +132,7 @@
 .hover-card-exit-active {
   opacity: 0;
   transform: translateY(10px);
-  transition: opacity 150ms, transform 150ms;
+  transition:
+    opacity 150ms,
+    transform 150ms;
 }
-

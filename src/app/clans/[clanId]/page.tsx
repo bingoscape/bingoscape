@@ -1,139 +1,172 @@
-'use client'
+"use client"
 
-import { notFound, useRouter } from "next/navigation";
-import { getClanDetails, getClanMembers, updateMemberRole } from "@/app/actions/clan";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import Link from "next/link";
-import { UserIcon, CalendarIcon, Users, Search, Filter, Activity, Crown, Shield, UserPlus, MessageSquare, MoreHorizontal, Link as LinkIcon } from "lucide-react";
-import { GenerateClanInviteLink } from "@/components/generate-clan-invite-link";
-import { ClanInvitesManagement } from "@/components/clan-invites-management";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { useSession } from "next-auth/react";
-import { useState, useEffect, use } from "react";
-import { toast } from "@/hooks/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Breadcrumbs } from "@/components/breadcrumbs";
+import { notFound, useRouter } from "next/navigation"
+import {
+  getClanDetails,
+  getClanMembers,
+  updateMemberRole,
+} from "@/app/actions/clan"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
+import {
+  UserIcon,
+  CalendarIcon,
+  Users,
+  Crown,
+  Shield,
+  UserPlus,
+  Link as LinkIcon,
+  BowArrow,
+} from "lucide-react"
+import { GenerateClanInviteLink } from "@/components/generate-clan-invite-link"
+import { ClanInvitesManagement } from "@/components/clan-invites-management"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
+import { useSession } from "next-auth/react"
+import { useState, useEffect, use } from "react"
+import { toast } from "@/hooks/use-toast"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 
 type ClanMember = {
-  id: string;
-  name: string | null;
-  runescapeName: string | null;
-  image: string | null;
-  role: 'admin' | 'management' | 'member' | 'guest';
-};
+  id: string
+  name: string | null
+  runescapeName: string | null
+  image: string | null
+  role: "admin" | "management" | "member" | "guest"
+}
 
 type ClanDetails = {
-  id: string;
-  name: string;
-  description: string;
-  ownerId: string;
-  memberCount: number;
-  eventCount: number;
+  id: string
+  name: string
+  description: string
+  ownerId: string
+  memberCount: number
+  eventCount: number
   userMembership: {
-    id: string;
-    userId: string;
-    clanId: string;
-    role: 'admin' | 'management' | 'member' | 'guest';
-    isMain: boolean;
-    joinedAt: Date;
-  };
+    id: string
+    userId: string
+    clanId: string
+    role: "admin" | "management" | "member" | "guest"
+    isMain: boolean
+    joinedAt: Date
+  }
   owner: {
-    id: string;
-    name: string | null;
-    image: string | null;
-    runescapeName: string | null;
-  };
-};
+    id: string
+    name: string | null
+    image: string | null
+    runescapeName: string | null
+  }
+}
 
-type Role = 'admin' | 'management' | 'member' | 'guest';
+type Role = "admin" | "management" | "member" | "guest"
 
-export default function ClanDetailPage(props: { params: Promise<{ clanId: string }> }) {
-  const params = use(props.params);
-  const [members, setMembers] = useState<ClanMember[]>([]);
-  const [clanDetails, setClanDetails] = useState<ClanDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string>("all");
-  const { status } = useSession();
-  const router = useRouter();
+export default function ClanDetailPage(props: {
+  params: Promise<{ clanId: string }>
+}) {
+  const params = use(props.params)
+  const [members, setMembers] = useState<ClanMember[]>([])
+  const [clanDetails, setClanDetails] = useState<ClanDetails | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [roleFilter, setRoleFilter] = useState<string>("all")
+  const { status } = useSession()
+  const router = useRouter()
 
   useEffect(() => {
     const fetchData = async () => {
-      if (status === 'loading') return;
+      if (status === "loading") return
 
-      if (status === 'unauthenticated') {
-        router.push('/login');
-        return;
+      if (status === "unauthenticated") {
+        router.push("/login")
+        return
       }
 
       try {
-        const details = await getClanDetails(params.clanId);
+        const details = await getClanDetails(params.clanId)
         if (details?.id) {
-          setClanDetails(details as ClanDetails);
+          setClanDetails(details as ClanDetails)
         } else {
-          throw new Error("Invalid clan details");
+          throw new Error("Invalid clan details")
         }
 
-        const membersList = await getClanMembers(params.clanId);
-        setMembers(membersList);
+        const membersList = await getClanMembers(params.clanId)
+        setMembers(membersList)
       } catch (error) {
-        if (error instanceof Error && error.message === "You are not a member of this clan") {
-          notFound();
+        if (
+          error instanceof Error &&
+          error.message === "You are not a member of this clan"
+        ) {
+          notFound()
         }
         toast({
           title: "Error",
           description: "Failed to load clan details and members.",
           variant: "destructive",
-        });
+        })
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    fetchData().then(() => console.log("done")).catch(err => console.error(err));
-  }, [params.clanId, status, router]);
+    fetchData()
+      .then(() => console.log("done"))
+      .catch((err) => console.error(err))
+  }, [params.clanId, status, router])
 
   const handleRoleUpdate = async (memberId: string, newRole: Role) => {
     try {
-      await updateMemberRole(params.clanId, memberId, newRole);
-      const updatedMembers = await getClanMembers(params.clanId);
-      setMembers(updatedMembers);
+      await updateMemberRole(params.clanId, memberId, newRole)
+      const updatedMembers = await getClanMembers(params.clanId)
+      setMembers(updatedMembers)
       toast({
         title: "Role Updated",
         description: `The member's role has been successfully updated to ${newRole}.`,
-      });
+      })
     } catch (_) {
       toast({
         title: "Error",
         description: "Failed to update member's role. Please try again.",
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   const canChangeRole = (userRole: Role, memberRole: Role) => {
-    const roles: Role[] = ['guest', 'member', 'management', 'admin'];
-    const userRoleIndex = roles.indexOf(userRole);
-    const memberRoleIndex = roles.indexOf(memberRole);
-    return userRoleIndex > memberRoleIndex;
-  };
+    const roles: Role[] = ["guest", "member", "management", "admin"]
+    const userRoleIndex = roles.indexOf(userRole)
+    const memberRoleIndex = roles.indexOf(memberRole)
+    return userRoleIndex > memberRoleIndex
+  }
 
-  const getAdjacentRoles = (currentRole: Role): { promote: Role | null, demote: Role | null } => {
-    const roles: Role[] = ['guest', 'member', 'management', 'admin'];
-    const currentIndex = roles.indexOf(currentRole);
+  const getAdjacentRoles = (
+    currentRole: Role
+  ): { promote: Role | null; demote: Role | null } => {
+    const roles: Role[] = ["guest", "member", "management", "admin"]
+    const currentIndex = roles.indexOf(currentRole)
     return {
-      promote: currentIndex < roles.length - 1 ? roles[currentIndex + 1]! : null,
+      promote:
+        currentIndex < roles.length - 1 ? roles[currentIndex + 1]! : null,
       demote: currentIndex > 0 ? roles[currentIndex - 1]! : null,
-    };
-  };
+    }
+  }
 
-  if (status === 'loading' || isLoading) {
+  if (status === "loading" || isLoading) {
     return (
       <div className="container mx-auto py-10">
         <Card>
@@ -141,8 +174,8 @@ export default function ClanDetailPage(props: { params: Promise<{ clanId: string
             <Skeleton className="h-8 w-1/3" />
           </CardHeader>
           <CardContent>
-            <Skeleton className="h-4 w-full mb-2" />
-            <Skeleton className="h-4 w-2/3 mb-4" />
+            <Skeleton className="mb-2 h-4 w-full" />
+            <Skeleton className="mb-4 h-4 w-2/3" />
             <div className="space-y-2">
               <Skeleton className="h-4 w-1/4" />
               <Skeleton className="h-4 w-1/4" />
@@ -151,68 +184,81 @@ export default function ClanDetailPage(props: { params: Promise<{ clanId: string
           </CardContent>
         </Card>
       </div>
-    );
+    )
   }
 
-  if (status === 'unauthenticated') {
-    return null; // The useEffect will handle the redirect
+  if (status === "unauthenticated") {
+    return null // The useEffect will handle the redirect
   }
 
   if (!clanDetails) {
-    return <div>Clan not found</div>;
+    return <div>Clan not found</div>
   }
 
-  const isOwnerOrAdmin = clanDetails.userMembership.role === 'admin' || clanDetails.userMembership.role === 'management';
+  const isOwnerOrAdmin =
+    clanDetails.userMembership.role === "admin" ||
+    clanDetails.userMembership.role === "management"
 
   const breadcrumbItems = [
-    { label: 'Home', href: '/' },
-    { label: 'Clans', href: '/clans' },
+    { label: "Home", href: "/" },
+    { label: "Clans", href: "/clans" },
     { label: clanDetails.name, href: `/clans/${clanDetails.id}` },
-  ];
+  ]
 
-  const filteredMembers = members.filter(member => {
-    const matchesSearch = member.name?.toLowerCase().includes(searchTerm.toLowerCase()) ??
-      member.runescapeName?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === "all" || member.role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
+  const filteredMembers = members.filter((member) => {
+    const matchesSearch =
+      member.name?.toLowerCase().includes(searchTerm.toLowerCase()) ??
+      member.runescapeName?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesRole = roleFilter === "all" || member.role === roleFilter
+    return matchesSearch && matchesRole
+  })
 
   const getRoleIcon = (role: Role) => {
     switch (role) {
-      case 'admin': return Crown;
-      case 'management': return Shield;
-      case 'member': return UserIcon;
-      case 'guest': return UserPlus;
-      default: return UserIcon;
+      case "admin":
+        return Crown
+      case "management":
+        return Shield
+      case "member":
+        return UserIcon
+      case "guest":
+        return UserPlus
+      default:
+        return UserIcon
     }
-  };
+  }
 
   const getRoleColor = (role: Role) => {
     switch (role) {
-      case 'admin': return 'text-red-500';
-      case 'management': return 'text-blue-500';
-      case 'member': return 'text-green-500';
-      case 'guest': return 'text-gray-500';
-      default: return 'text-gray-500';
+      case "admin":
+        return "text-red-500"
+      case "management":
+        return "text-blue-500"
+      case "member":
+        return "text-green-500"
+      case "guest":
+        return "text-gray-500"
+      default:
+        return "text-gray-500"
     }
-  };
+  }
 
   return (
-    <div className="container mx-auto py-10 space-y-6">
+    <div className="container mx-auto space-y-6 py-10">
       <Breadcrumbs items={breadcrumbItems} />
 
       {/* Clan Header */}
-      <Card className="overflow-hidden bg-gradient-to-br from-card to-card/50 border-2">
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-accent" />
+      <Card className="relative overflow-hidden border-2 bg-gradient-to-br from-card to-card/50">
+        <div className="absolute left-0 top-0 h-2 w-full bg-gradient-to-r from-primary to-accent" />
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-4">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                <Activity className="h-10 w-10 text-primary" />
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-accent/20">
+                <BowArrow className="h-10 w-10 text-primary" />
               </div>
               <div>
                 <CardTitle className="text-2xl">{clanDetails.name}</CardTitle>
-                <CardDescription className="text-base mt-1">
+                <CardDescription className="mt-1 text-base">
                   {clanDetails.description || "No description available"}
                 </CardDescription>
               </div>
@@ -226,7 +272,7 @@ export default function ClanDetailPage(props: { params: Promise<{ clanId: string
                       Manage Invites
                     </Button>
                   </SheetTrigger>
-                  <SheetContent className="w-full sm:max-w-4xl overflow-y-auto">
+                  <SheetContent className="w-full overflow-y-auto sm:max-w-4xl">
                     <SheetHeader>
                       <SheetTitle>Clan Invite Links</SheetTitle>
                       <SheetDescription>
@@ -239,7 +285,8 @@ export default function ClanDetailPage(props: { params: Promise<{ clanId: string
                         <CardHeader>
                           <CardTitle>Create New Invite</CardTitle>
                           <CardDescription>
-                            Generate a customizable invite link with optional expiration and usage limits
+                            Generate a customizable invite link with optional
+                            expiration and usage limits
                           </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -274,9 +321,9 @@ export default function ClanDetailPage(props: { params: Promise<{ clanId: string
         </CardHeader>
 
         <CardContent className="pt-0">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex items-center space-x-3 p-4 rounded-lg bg-secondary/30">
-              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            <div className="flex items-center space-x-3 rounded-lg bg-secondary/30 p-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20">
                 <Users className="h-5 w-5 text-blue-500" />
               </div>
               <div>
@@ -285,8 +332,8 @@ export default function ClanDetailPage(props: { params: Promise<{ clanId: string
               </div>
             </div>
 
-            <div className="flex items-center space-x-3 p-4 rounded-lg bg-secondary/30">
-              <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+            <div className="flex items-center space-x-3 rounded-lg bg-secondary/30 p-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-500/20">
                 <CalendarIcon className="h-5 w-5 text-purple-500" />
               </div>
               <div>
@@ -295,19 +342,25 @@ export default function ClanDetailPage(props: { params: Promise<{ clanId: string
               </div>
             </div>
 
-            <div className="flex items-center space-x-3 p-4 rounded-lg bg-secondary/30">
-              <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
+            <div className="flex items-center space-x-3 rounded-lg bg-secondary/30 p-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-500/20">
                 <Crown className="h-5 w-5 text-yellow-500" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Owner</p>
                 <div className="flex items-center space-x-2">
                   <Avatar className="h-6 w-6">
-                    <AvatarImage src={clanDetails.owner.image ?? undefined} alt={clanDetails.owner.runescapeName ?? ''} />
-                    <AvatarFallback className="text-xs">{clanDetails.owner?.runescapeName?.[0] ?? 'O'}</AvatarFallback>
+                    <AvatarImage
+                      src={clanDetails.owner.image ?? undefined}
+                      alt={clanDetails.owner.runescapeName ?? ""}
+                    />
+                    <AvatarFallback className="text-xs">
+                      {clanDetails.owner?.runescapeName?.[0] ?? "O"}
+                    </AvatarFallback>
                   </Avatar>
-                  <span className="font-semibold text-sm">
-                    {clanDetails.owner?.runescapeName ?? clanDetails.owner?.name}
+                  <span className="text-sm font-semibold">
+                    {clanDetails.owner?.runescapeName ??
+                      clanDetails.owner?.name}
                   </span>
                 </div>
               </div>
@@ -316,31 +369,49 @@ export default function ClanDetailPage(props: { params: Promise<{ clanId: string
         </CardContent>
       </Card>
 
-      <h3 className="text-lg font-semibold mb-4">Members</h3>
+      <h3 className="mb-4 text-lg font-semibold">Members</h3>
       <ul className="space-y-4">
         {members.map((member) => (
-          <li key={member.id} className="flex items-center justify-between p-4 bg-secondary rounded-lg">
+          <li
+            key={member.id}
+            className="flex items-center justify-between rounded-lg bg-secondary p-4"
+          >
             <div className="flex items-center space-x-4">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={member.image ?? undefined} alt={member.name ?? ''} />
-                <AvatarFallback>{member.name?.[0] ?? 'U'}</AvatarFallback>
+                <AvatarImage
+                  src={member.image ?? undefined}
+                  alt={member.name ?? ""}
+                />
+                <AvatarFallback>{member.name?.[0] ?? "U"}</AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-medium">{member.runescapeName ?? member.name}</p>
-                {member.runescapeName && member.name !== member.runescapeName && (
-                  <p className="text-sm text-muted-foreground">{member.name}</p>
-                )}
+                <p className="font-medium">
+                  {member.runescapeName ?? member.name}
+                </p>
+                {member.runescapeName &&
+                  member.name !== member.runescapeName && (
+                    <p className="text-sm text-muted-foreground">
+                      {member.name}
+                    </p>
+                  )}
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Badge variant={getRoleBadgeVariant(member.role)}>{member.role}</Badge>
+              <Badge variant={getRoleBadgeVariant(member.role)}>
+                {member.role}
+              </Badge>
               {canChangeRole(clanDetails.userMembership.role, member.role) && (
                 <div className="flex space-x-2">
                   {getAdjacentRoles(member.role).promote && (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleRoleUpdate(member.id, getAdjacentRoles(member.role).promote!)}
+                      onClick={() =>
+                        handleRoleUpdate(
+                          member.id,
+                          getAdjacentRoles(member.role).promote!
+                        )
+                      }
                     >
                       Promote to {getAdjacentRoles(member.role).promote}
                     </Button>
@@ -349,7 +420,12 @@ export default function ClanDetailPage(props: { params: Promise<{ clanId: string
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleRoleUpdate(member.id, getAdjacentRoles(member.role).demote!)}
+                      onClick={() =>
+                        handleRoleUpdate(
+                          member.id,
+                          getAdjacentRoles(member.role).demote!
+                        )
+                      }
                     >
                       Demote to {getAdjacentRoles(member.role).demote}
                     </Button>
@@ -360,23 +436,23 @@ export default function ClanDetailPage(props: { params: Promise<{ clanId: string
           </li>
         ))}
       </ul>
-
     </div>
-  );
+  )
 }
 
-function getRoleBadgeVariant(role: Role): "default" | "secondary" | "destructive" | "outline" {
+function getRoleBadgeVariant(
+  role: Role
+): "default" | "secondary" | "destructive" | "outline" {
   switch (role) {
-    case 'admin':
-      return "destructive";
-    case 'management':
-      return "default";
-    case 'member':
-      return "secondary";
-    case 'guest':
-      return "outline";
+    case "admin":
+      return "destructive"
+    case "management":
+      return "default"
+    case "member":
+      return "secondary"
+    case "guest":
+      return "outline"
     default:
-      return "secondary";
+      return "secondary"
   }
 }
-
