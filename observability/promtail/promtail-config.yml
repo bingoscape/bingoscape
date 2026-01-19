@@ -1,7 +1,7 @@
 server:
   http_listen_port: 9080
   grpc_listen_port: 0
-  log_level: warn
+  log_level: info
 
 positions:
   filename: /tmp/positions.yaml
@@ -15,11 +15,12 @@ clients:
 
 scrape_configs:
   # Scrape Docker container logs
-  - job_name: containers
+  - job_name: docker
     static_configs:
       - targets:
           - localhost
         labels:
+          job: docker
           __path__: /var/lib/docker/containers/*/*log
 
     pipeline_stages:
@@ -31,26 +32,29 @@ scrape_configs:
             timestamp: time
             attrs: attrs
 
-      # Extract container name from attrs
+      # Extract Docker Compose service name and container info
       - json:
           expressions:
-            container_name: com.docker.compose.service
+            compose_service: com.docker.compose.service
+            compose_project: com.docker.compose.project
+            container_name: name
           source: attrs
 
-      # Set job label dynamically based on container_name
+      # Set service_name from compose service name
       - template:
-          source: job
-          template: "{{ .container_name }}"
+          source: service_name
+          template: "{{ .compose_service }}"
 
-      # Set labels
+      # Set labels - service_name is the primary identifier
       - labels:
-          job:
+          service_name:
           stream:
+          compose_project:
           container_name:
 
-      # Parse application JSON logs (from Pino)
+      # Parse application JSON logs (from Pino - Next.js app)
       - match:
-          selector: '{container_name="bingoscape-app"}'
+          selector: '{service_name="app"}'
           stages:
             - json:
                 expressions:
@@ -68,11 +72,11 @@ scrape_configs:
 
             # Map Pino numeric levels to text
             - template:
-                source: level
-                template: '{{ if eq .Value "10" }}trace{{ else if eq .Value "20" }}debug{{ else if eq .Value "30" }}info{{ else if eq .Value "40" }}warn{{ else if eq .Value "50" }}error{{ else if eq .Value "60" }}fatal{{ else }}{{ .Value }}{{ end }}'
+                source: level_name
+                template: '{{ if eq .level "10" }}trace{{ else if eq .level "20" }}debug{{ else if eq .level "30" }}info{{ else if eq .level "40" }}warn{{ else if eq .level "50" }}error{{ else if eq .level "60" }}fatal{{ else }}{{ .level }}{{ end }}'
 
             - labels:
-                level:
+                level_name:
                 method:
                 statusCode:
 
@@ -80,7 +84,53 @@ scrape_configs:
             - output:
                 source: msg
 
-      # Use raw output for other containers
+      # Parse Grafana logs
+      - match:
+          selector: '{service_name="grafana"}'
+          stages:
+            - regex:
+                expression: 'logger=(?P<logger>[^ ]+).*level=(?P<level>[^ ]+).*msg="(?P<msg>[^"]+)"'
+            - labels:
+                logger:
+                level:
+            - output:
+                source: msg
+
+      # Parse Loki logs
+      - match:
+          selector: '{service_name="loki"}'
+          stages:
+            - regex:
+                expression: 'level=(?P<level>[^ ]+).*msg="(?P<msg>[^"]+)"'
+            - labels:
+                level:
+            - output:
+                source: msg
+
+      # Parse Prometheus logs
+      - match:
+          selector: '{service_name="prometheus"}'
+          stages:
+            - regex:
+                expression: 'level=(?P<level>[^ ]+).*msg="(?P<msg>[^"]+)"'
+            - labels:
+                level:
+            - output:
+                source: msg
+
+      # Parse Postgres logs
+      - match:
+          selector: '{service_name="postgres"}'
+          stages:
+            - regex:
+                expression: '(?P<timestamp>[\d-]+ [\d:.]+) (?P<timezone>[A-Z]+) \[(?P<pid>\d+)\] (?P<level>[A-Z]+):\s+(?P<msg>.*)'
+            - labels:
+                level:
+                pid:
+            - output:
+                source: msg
+
+      # Use raw output for other containers (default)
       - output:
           source: output
 
