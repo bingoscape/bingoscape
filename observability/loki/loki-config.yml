@@ -3,7 +3,7 @@ auth_enabled: false
 server:
   http_listen_port: 3100
   grpc_listen_port: 9096
-  log_level: warn
+  log_level: info
 
 common:
   path_prefix: /loki
@@ -33,12 +33,19 @@ storage_config:
   tsdb_shipper:
     active_index_directory: /loki/tsdb-index
     cache_location: /loki/tsdb-cache
+    shared_store: filesystem
 
-# Query settings
+# Query settings - optimized
 query_range:
   align_queries_with_step: true
   max_retries: 5
   cache_results: true
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 100
+        ttl: 24h
 
 # Limits and retention
 limits_config:
@@ -50,29 +57,37 @@ limits_config:
   max_query_series: 500
   max_query_parallelism: 32
   max_entries_limit_per_query: 5000
+  max_streams_per_user: 10000
+  max_global_streams_per_user: 10000
 
 # Compactor for retention enforcement
 compactor:
   working_directory: /loki/compactor
+  shared_store: filesystem
   retention_enabled: true
   retention_delete_delay: 2h
   retention_delete_worker_count: 150
   delete_request_store: filesystem
   compaction_interval: 10m
 
-# Ingester configuration
+# Ingester configuration - optimized
 ingester:
   lifecycler:
     ring:
       kvstore:
         store: inmemory
       replication_factor: 1
+    final_sleep: 0s
   chunk_idle_period: 1h
   max_chunk_age: 1h
   chunk_target_size: 1048576
   chunk_retain_period: 30s
+  max_transfer_retries: 0
+  wal:
+    enabled: true
+    dir: /loki/wal
 
-# Ruler for alerting (optional)
+# Ruler for alerting
 ruler:
   storage:
     type: local
@@ -84,3 +99,9 @@ ruler:
     kvstore:
       store: inmemory
   enable_api: true
+  enable_alertmanager_v2: true
+
+# Table manager (for cleanup)
+table_manager:
+  retention_deletes_enabled: true
+  retention_period: 720h
