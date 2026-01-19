@@ -14,43 +14,53 @@ clients:
     timeout: 10s
 
 scrape_configs:
-  # Scrape Docker container logs
+  # Scrape Docker container logs using service discovery
   - job_name: docker
-    static_configs:
-      - targets:
-          - localhost
-        labels:
-          job: docker
-          __path__: /var/lib/docker/containers/*/*log
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: label
+            values: ["com.docker.compose.project=bingoscape"]
+
+    # Extract labels from Docker metadata
+    relabel_configs:
+      # Extract service name from Docker Compose label
+      - source_labels:
+          ["__meta_docker_container_label_com_docker_compose_service"]
+        target_label: "service_name"
+
+      # Extract container name (remove leading /)
+      - source_labels: ["__meta_docker_container_name"]
+        regex: "/(.*)"
+        target_label: "container_name"
+
+      # Extract compose project name
+      - source_labels:
+          ["__meta_docker_container_label_com_docker_compose_project"]
+        target_label: "compose_project"
+
+      # Set log path to container's log file
+      - source_labels: ["__meta_docker_container_id"]
+        target_label: "__path__"
+        replacement: "/var/lib/docker/containers/$1/*-json.log"
 
     pipeline_stages:
-      # Parse Docker JSON logs
+      # Parse Docker JSON log format
       - json:
           expressions:
             output: log
             stream: stream
             timestamp: time
-            attrs: attrs
 
-      # Extract Docker Compose service name and container info
-      - json:
-          expressions:
-            compose_service: com.docker.compose.service
-            compose_project: com.docker.compose.project
-            container_name: name
-          source: attrs
+      # Set timestamp from Docker log
+      - timestamp:
+          source: timestamp
+          format: RFC3339
 
-      # Set service_name from compose service name
-      - template:
-          source: service_name
-          template: "{{ .compose_service }}"
-
-      # Set labels - service_name is the primary identifier
+      # Extract stream label (stdout/stderr)
       - labels:
-          service_name:
           stream:
-          compose_project:
-          container_name:
 
       # Parse application JSON logs (from Pino - Next.js app)
       - match:
