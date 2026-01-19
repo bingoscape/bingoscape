@@ -67,11 +67,15 @@ jobs:
 
             # Create uploads directory if it doesn't exist and set proper permissions
             echo "📁 Ensuring uploads directory exists with correct permissions..."
-            mkdir -p "$APP_DIR/uploads"
-            # Set proper permissions for uploads (UID 1001 = nextjs user in container)
-            # Use 775 to allow owner and group write access
-            sudo chown -R 1001:1001 "$APP_DIR/uploads" 2>/dev/null || chown -R 1001:1001 "$APP_DIR/uploads" || true
-            sudo chmod -R 775 "$APP_DIR/uploads" 2>/dev/null || chmod -R 775 "$APP_DIR/uploads" || true
+            if [ ! -d "$APP_DIR/uploads" ]; then
+              mkdir -p "$APP_DIR/uploads"
+              echo "Created new uploads directory"
+            fi
+            # Set proper permissions for uploads directory (UID 1001 = nextjs user in container)
+            # Only set on directory itself, not recursively, to avoid permission errors on existing files
+            # Files are managed by container and will inherit directory permissions
+            sudo chown 1001:1001 "$APP_DIR/uploads" 2>/dev/null || chown 1001:1001 "$APP_DIR/uploads" || true
+            sudo chmod 775 "$APP_DIR/uploads" 2>/dev/null || chmod 775 "$APP_DIR/uploads" || true
             echo "✅ Uploads directory permissions set (owner: 1001:1001, mode: 775)"
 
 
@@ -99,7 +103,10 @@ jobs:
             # Copy observability configuration
             if [ -d "/tmp/bingoscape-deploy/observability" ]; then
               echo "📋 Copying observability configuration..."
+              # Ensure directory exists with correct ownership before copying
               mkdir -p "$APP_DIR/observability"
+              sudo chown -R $(whoami):$(whoami) "$APP_DIR/observability" 2>/dev/null || chown -R $(whoami):$(whoami) "$APP_DIR/observability" || true
+              # Now copy files - will succeed since we own the directory
               cp -r /tmp/bingoscape-deploy/observability/* "$APP_DIR/observability/"
               echo "✅ Observability configuration copied successfully"
             else
