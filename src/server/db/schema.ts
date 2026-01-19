@@ -44,10 +44,16 @@ export const usersRelations = relations(users, ({ many }) => ({
   createdEvents: many(events),
   clanMemberships: many(clanMembers),
   // Add relation to submissions
-  submissions: many(submissions),
+  submissions: many(submissions, { relationName: "submitter" }),
+  reviewedSubmissions: many(submissions, { relationName: "reviewer" }),
   bingoTemplates: many(bingoTemplates), // Add this line
   apiKeys: many(apiKeys),
-  registrationRequests: many(eventRegistrationRequests), // Add relation to registration requests
+  registrationRequests: many(eventRegistrationRequests, {
+    relationName: "requester",
+  }), // Add relation to registration requests
+  reviewedRegistrationRequests: many(eventRegistrationRequests, {
+    relationName: "reviewer",
+  }),
   playerMetadata: many(playerMetadata),
 }))
 
@@ -57,7 +63,9 @@ export const accounts = createTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    type: varchar("type", { length: 255 }).$type<AdapterAccount["type"]>().notNull(),
+    type: varchar("type", { length: 255 })
+      .$type<AdapterAccount["type"]>()
+      .notNull(),
     provider: varchar("provider", { length: 255 }).notNull(),
     providerAccountId: varchar("provider_account_id", {
       length: 255,
@@ -75,7 +83,7 @@ export const accounts = createTable(
       columns: [account.provider, account.providerAccountId],
     }),
     userIdIdx: index("account_user_id_idx").on(account.userId),
-  }),
+  })
 )
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -85,7 +93,9 @@ export const accountsRelations = relations(accounts, ({ one }) => ({
 export const sessions = createTable(
   "session",
   {
-    sessionToken: varchar("session_token", { length: 255 }).notNull().primaryKey(),
+    sessionToken: varchar("session_token", { length: 255 })
+      .notNull()
+      .primaryKey(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -96,7 +106,7 @@ export const sessions = createTable(
   },
   (session) => ({
     userIdIdx: index("session_user_id_idx").on(session.userId),
-  }),
+  })
 )
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -115,7 +125,7 @@ export const verificationTokens = createTable(
   },
   (vt) => ({
     compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
-  }),
+  })
 )
 
 // Enums
@@ -126,13 +136,32 @@ export const submissionStatusEnum = pgEnum("submission_status", [
   "approved", // renamed from "accepted"
   "needs_review", // renamed from "requires_interaction"
 ])
-export const clanRoleEnum = pgEnum("clan_role", ["admin", "management", "member", "guest"])
-export const eventRoleEnum = pgEnum("event_role", ["admin", "management", "participant"])
-export const registrationStatusEnum = pgEnum("registration_status", ["pending", "approved", "rejected"])
+export const clanRoleEnum = pgEnum("clan_role", [
+  "admin",
+  "management",
+  "member",
+  "guest",
+])
+export const eventRoleEnum = pgEnum("event_role", [
+  "admin",
+  "management",
+  "participant",
+])
+export const registrationStatusEnum = pgEnum("registration_status", [
+  "pending",
+  "approved",
+  "rejected",
+])
 export const bingoTypeEnum = pgEnum("bingo_type", ["standard", "progression"])
 export const logicalOperatorEnum = pgEnum("logical_operator", ["AND", "OR"])
 export const goalTypeEnum = pgEnum("goal_type", ["generic", "item"])
-export const skillLevelEnum = pgEnum("skill_level", ["beginner", "intermediate", "advanced", "expert", "pvmgod"])
+export const skillLevelEnum = pgEnum("skill_level", [
+  "beginner",
+  "intermediate",
+  "advanced",
+  "expert",
+  "pvmgod",
+])
 
 export const playerMetadata = createTable(
   "player_metadata",
@@ -160,9 +189,9 @@ export const playerMetadata = createTable(
     // Unique constraint: one metadata record per user per event
     userEventUnique: uniqueIndex("player_metadata_user_event_unique").on(
       table.userId,
-      table.eventId,
+      table.eventId
     ),
-  }),
+  })
 )
 
 export const playerMetadataRelations = relations(playerMetadata, ({ one }) => ({
@@ -183,13 +212,17 @@ export const events = createTable("events", {
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   registrationDeadline: timestamp("registration_deadline"),
-  creatorId: uuid("creator_id").references(() => users.id, { onDelete: "set null" }),
+  creatorId: uuid("creator_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
   clanId: uuid("clan_id").references(() => clans.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   locked: boolean("locked").default(false).notNull(),
   public: boolean("public").default(false).notNull(), // Renamed from 'visible' to 'public'
-  basePrizePool: bigint("basePrizePool", { mode: "number" }).default(0).notNull(),
+  basePrizePool: bigint("basePrizePool", { mode: "number" })
+    .default(0)
+    .notNull(),
   minimumBuyIn: bigint("minimumBuyIn", { mode: "number" }).default(0).notNull(),
   requiresApproval: boolean("requires_approval").default(false).notNull(), // New field for registration approval
 })
@@ -210,38 +243,48 @@ export const eventsRelations = relations(events, ({ many, one }) => ({
 }))
 
 // New table for event registration requests
-export const eventRegistrationRequests = createTable("event_registration_requests", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  eventId: uuid("event_id")
-    .notNull()
-    .references(() => events.id, { onDelete: "cascade" }),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  status: registrationStatusEnum("status").default("pending").notNull(),
-  message: text("message"), // Optional message from the user
-  adminNotes: text("admin_notes"), // Optional notes from admin
-  responseMessage: text("response_message"), // Optional response message to the user
-  reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
-  reviewedAt: timestamp("reviewed_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-})
+export const eventRegistrationRequests = createTable(
+  "event_registration_requests",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: registrationStatusEnum("status").default("pending").notNull(),
+    message: text("message"), // Optional message from the user
+    adminNotes: text("admin_notes"), // Optional notes from admin
+    responseMessage: text("response_message"), // Optional response message to the user
+    reviewedBy: uuid("reviewed_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    reviewedAt: timestamp("reviewed_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  }
+)
 
-export const eventRegistrationRequestsRelations = relations(eventRegistrationRequests, ({ one }) => ({
-  event: one(events, {
-    fields: [eventRegistrationRequests.eventId],
-    references: [events.id],
-  }),
-  user: one(users, {
-    fields: [eventRegistrationRequests.userId],
-    references: [users.id],
-  }),
-  reviewer: one(users, {
-    fields: [eventRegistrationRequests.reviewedBy],
-    references: [users.id],
-  }),
-}))
+export const eventRegistrationRequestsRelatixons = relations(
+  eventRegistrationRequests,
+  ({ one }) => ({
+    event: one(events, {
+      fields: [eventRegistrationRequests.eventId],
+      references: [events.id],
+    }),
+    user: one(users, {
+      fields: [eventRegistrationRequests.userId],
+      references: [users.id],
+      relationName: "requester",
+    }),
+    reviewer: one(users, {
+      fields: [eventRegistrationRequests.reviewedBy],
+      references: [users.id],
+      relationName: "reviewer",
+    }),
+  })
+)
 
 export const bingos = createTable("bingos", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -254,7 +297,9 @@ export const bingos = createTable("bingos", {
   columns: integer("columns").notNull(),
   codephrase: varchar("codephrase", { length: 255 }).notNull(),
   bingoType: bingoTypeEnum("bingo_type").default("standard").notNull(),
-  tiersUnlockRequirement: integer("tiers_unlock_requirement").default(5).notNull(), // XP required to unlock next tier
+  tiersUnlockRequirement: integer("tiers_unlock_requirement")
+    .default(5)
+    .notNull(), // XP required to unlock next tier
   mainDiagonalBonusXP: integer("main_diagonal_bonus_xp").default(0).notNull(),
   antiDiagonalBonusXP: integer("anti_diagonal_bonus_xp").default(0).notNull(),
   completeBoardBonusXP: integer("complete_board_bonus_xp").default(0).notNull(), // Bonus XP for completing all tiles
@@ -352,7 +397,10 @@ export const goalGroups = createTable("goal_groups", {
     .notNull()
     .references(() => tiles.id, { onDelete: "cascade" }),
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
-  parentGroupId: uuid("parent_group_id").references((): AnyPgColumn => goalGroups.id, { onDelete: "cascade" }),
+  parentGroupId: uuid("parent_group_id").references(
+    (): AnyPgColumn => goalGroups.id,
+    { onDelete: "cascade" }
+  ),
   name: text("name"), // Optional custom name for the group
   logicalOperator: logicalOperatorEnum("logical_operator").notNull(),
   minRequiredGoals: integer("min_required_goals").notNull().default(1), // For OR groups: minimum number of goals that must be completed
@@ -384,7 +432,9 @@ export const goals = createTable("goals", {
   tileId: uuid("tile_id")
     .notNull()
     .references(() => tiles.id, { onDelete: "cascade" }),
-  parentGroupId: uuid("parent_group_id").references(() => goalGroups.id, { onDelete: "cascade" }),
+  parentGroupId: uuid("parent_group_id").references(() => goalGroups.id, {
+    onDelete: "cascade",
+  }),
   description: text("description").notNull(),
   targetValue: integer("target_value").notNull(),
   goalType: goalTypeEnum("goal_type").notNull().default("generic"),
@@ -462,32 +512,40 @@ export const teamTileSubmissions = createTable(
       .notNull()
       .references(() => teams.id, { onDelete: "cascade" }),
     status: submissionStatusEnum("status").default("pending").notNull(),
-    reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+    reviewedBy: uuid("reviewed_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => {
     return {
-      tileTeamUnique: uniqueIndex("tile_team_unique").on(table.tileId, table.teamId),
+      tileTeamUnique: uniqueIndex("tile_team_unique").on(
+        table.tileId,
+        table.teamId
+      ),
     }
-  },
+  }
 )
 
-export const teamTileSubmissionsRelations = relations(teamTileSubmissions, ({ one, many }) => ({
-  tile: one(tiles, {
-    fields: [teamTileSubmissions.tileId],
-    references: [tiles.id],
-  }),
-  team: one(teams, {
-    fields: [teamTileSubmissions.teamId],
-    references: [teams.id],
-  }),
-  reviewer: one(users, {
-    fields: [teamTileSubmissions.reviewedBy],
-    references: [users.id],
-  }),
-  submissions: many(submissions),
-}))
+export const teamTileSubmissionsRelations = relations(
+  teamTileSubmissions,
+  ({ one, many }) => ({
+    tile: one(tiles, {
+      fields: [teamTileSubmissions.tileId],
+      references: [tiles.id],
+    }),
+    team: one(teams, {
+      fields: [teamTileSubmissions.teamId],
+      references: [teams.id],
+    }),
+    reviewer: one(users, {
+      fields: [teamTileSubmissions.reviewedBy],
+      references: [users.id],
+    }),
+    submissions: many(submissions),
+  })
+)
 
 export const submissions = createTable("submissions", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -507,7 +565,9 @@ export const submissions = createTable("submissions", {
   submissionValue: real("submission_value").default(1.0).notNull(), // The actual value assigned to this submission
   // Add individual submission status
   status: submissionStatusEnum("status").default("pending").notNull(),
-  reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+  reviewedBy: uuid("reviewed_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
   reviewedAt: timestamp("reviewed_at"),
   // Auto-submission metadata fields
   isAutoSubmission: boolean("is_auto_submission").default(false).notNull(),
@@ -538,16 +598,19 @@ export const submissionComments = createTable("submission_comments", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
-export const submissionCommentsRelations = relations(submissionComments, ({ one }) => ({
-  submission: one(submissions, {
-    fields: [submissionComments.submissionId],
-    references: [submissions.id],
-  }),
-  author: one(users, {
-    fields: [submissionComments.authorId],
-    references: [users.id],
-  }),
-}))
+export const submissionCommentsRelations = relations(
+  submissionComments,
+  ({ one }) => ({
+    submission: one(submissions, {
+      fields: [submissionComments.submissionId],
+      references: [submissions.id],
+    }),
+    author: one(users, {
+      fields: [submissionComments.authorId],
+      references: [users.id],
+    }),
+  })
+)
 
 export const submissionsRelations = relations(submissions, ({ one, many }) => ({
   image: one(images, {
@@ -567,11 +630,13 @@ export const submissionsRelations = relations(submissions, ({ one, many }) => ({
   user: one(users, {
     fields: [submissions.submittedBy],
     references: [users.id],
+    relationName: "submitter",
   }),
   // Add relation to reviewer
   reviewer: one(users, {
     fields: [submissions.reviewedBy],
     references: [users.id],
+    relationName: "reviewer",
   }),
   // Add relation to comments
   comments: many(submissionComments),
@@ -590,18 +655,21 @@ export const eventParticipants = createTable("event_participants", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
-export const eventParticipantsRelations = relations(eventParticipants, ({ one, many }) => ({
-  event: one(events, {
-    fields: [eventParticipants.eventId],
-    references: [events.id],
-  }),
-  user: one(users, {
-    fields: [eventParticipants.userId],
-    references: [users.id],
-  }),
-  buyIns: many(eventBuyIns),
-  donations: many(eventDonations),
-}))
+export const eventParticipantsRelations = relations(
+  eventParticipants,
+  ({ one, many }) => ({
+    event: one(events, {
+      fields: [eventParticipants.eventId],
+      references: [events.id],
+    }),
+    user: one(users, {
+      fields: [eventParticipants.userId],
+      references: [users.id],
+    }),
+    buyIns: many(eventBuyIns),
+    donations: many(eventDonations),
+  })
+)
 
 export const clans = createTable("clans", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -638,7 +706,7 @@ export const clanMembers = createTable(
     return {
       uniqUserMainClan: uniqueIndex("uniq_user_main_clan").on(table.userId),
     }
-  },
+  }
 )
 
 export const clanMembersRelations = relations(clanMembers, ({ one }) => ({
@@ -672,7 +740,10 @@ export const clanInvites = createTable("clan_invites", {
 
 export const clanInvitesRelations = relations(clanInvites, ({ one }) => ({
   clan: one(clans, { fields: [clanInvites.clanId], references: [clans.id] }),
-  creator: one(users, { fields: [clanInvites.createdBy], references: [users.id] }),
+  creator: one(users, {
+    fields: [clanInvites.createdBy],
+    references: [users.id],
+  }),
 }))
 
 export const eventInvites = createTable("event_invites", {
@@ -686,7 +757,10 @@ export const eventInvites = createTable("event_invites", {
 })
 
 export const eventInvitesRelations = relations(eventInvites, ({ one }) => ({
-  event: one(events, { fields: [eventInvites.eventId], references: [events.id] }),
+  event: one(events, {
+    fields: [eventInvites.eventId],
+    references: [events.id],
+  }),
 }))
 
 export const images = createTable("images", {
@@ -715,21 +789,27 @@ export const teamGoalProgress = createTable(
   },
   (table) => {
     return {
-      goalTeamUnique: uniqueIndex("goal_team_unique").on(table.goalId, table.teamId),
+      goalTeamUnique: uniqueIndex("goal_team_unique").on(
+        table.goalId,
+        table.teamId
+      ),
     }
-  },
+  }
 )
 
-export const teamGoalProgressRelations = relations(teamGoalProgress, ({ one }) => ({
-  team: one(teams, {
-    fields: [teamGoalProgress.teamId],
-    references: [teams.id],
-  }),
-  goal: one(goals, {
-    fields: [teamGoalProgress.goalId],
-    references: [goals.id],
-  }),
-}))
+export const teamGoalProgressRelations = relations(
+  teamGoalProgress,
+  ({ one }) => ({
+    team: one(teams, {
+      fields: [teamGoalProgress.teamId],
+      references: [teams.id],
+    }),
+    goal: one(goals, {
+      fields: [teamGoalProgress.goalId],
+      references: [goals.id],
+    }),
+  })
+)
 
 export const teamTierProgress = createTable(
   "team_tier_progress",
@@ -748,21 +828,28 @@ export const teamTierProgress = createTable(
   },
   (table) => {
     return {
-      teamBingoTierUnique: uniqueIndex("team_bingo_tier_unique").on(table.teamId, table.bingoId, table.tier),
+      teamBingoTierUnique: uniqueIndex("team_bingo_tier_unique").on(
+        table.teamId,
+        table.bingoId,
+        table.tier
+      ),
     }
-  },
+  }
 )
 
-export const teamTierProgressRelations = relations(teamTierProgress, ({ one }) => ({
-  team: one(teams, {
-    fields: [teamTierProgress.teamId],
-    references: [teams.id],
-  }),
-  bingo: one(bingos, {
-    fields: [teamTierProgress.bingoId],
-    references: [bingos.id],
-  }),
-}))
+export const teamTierProgressRelations = relations(
+  teamTierProgress,
+  ({ one }) => ({
+    team: one(teams, {
+      fields: [teamTierProgress.teamId],
+      references: [teams.id],
+    }),
+    bingo: one(bingos, {
+      fields: [teamTierProgress.bingoId],
+      references: [bingos.id],
+    }),
+  })
+)
 
 export const tierXpRequirements = createTable(
   "tier_xp_requirements",
@@ -778,17 +865,23 @@ export const tierXpRequirements = createTable(
   },
   (table) => {
     return {
-      bingoTierUnique: uniqueIndex("bingo_tier_unique").on(table.bingoId, table.tier),
+      bingoTierUnique: uniqueIndex("bingo_tier_unique").on(
+        table.bingoId,
+        table.tier
+      ),
     }
-  },
+  }
 )
 
-export const tierXpRequirementsRelations = relations(tierXpRequirements, ({ one }) => ({
-  bingo: one(bingos, {
-    fields: [tierXpRequirements.bingoId],
-    references: [bingos.id],
-  }),
-}))
+export const tierXpRequirementsRelations = relations(
+  tierXpRequirements,
+  ({ one }) => ({
+    bingo: one(bingos, {
+      fields: [tierXpRequirements.bingoId],
+      references: [bingos.id],
+    }),
+  })
+)
 
 export const rowBonuses = createTable(
   "row_bonuses",
@@ -804,9 +897,12 @@ export const rowBonuses = createTable(
   },
   (table) => {
     return {
-      bingoRowUnique: uniqueIndex("bingo_row_unique").on(table.bingoId, table.rowIndex),
+      bingoRowUnique: uniqueIndex("bingo_row_unique").on(
+        table.bingoId,
+        table.rowIndex
+      ),
     }
-  },
+  }
 )
 
 export const rowBonusesRelations = relations(rowBonuses, ({ one }) => ({
@@ -830,9 +926,12 @@ export const columnBonuses = createTable(
   },
   (table) => {
     return {
-      bingoColumnUnique: uniqueIndex("bingo_column_unique").on(table.bingoId, table.columnIndex),
+      bingoColumnUnique: uniqueIndex("bingo_column_unique").on(
+        table.bingoId,
+        table.columnIndex
+      ),
     }
-  },
+  }
 )
 
 export const columnBonusesRelations = relations(columnBonuses, ({ one }) => ({
@@ -926,7 +1025,9 @@ export const bingoTemplates = createTable("bingo_templates", {
   creatorId: uuid("creator_id")
     // .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  originalBingoId: uuid("original_bingo_id").references(() => bingos.id, { onDelete: "set null" }),
+  originalBingoId: uuid("original_bingo_id").references(() => bingos.id, {
+    onDelete: "set null",
+  }),
   category: varchar("category", { length: 100 }),
   tags: varchar("tags", { length: 255 }),
   isPublic: boolean("is_public").default(true).notNull(),
@@ -984,13 +1085,16 @@ export const discordWebhooks = createTable("discord_webhooks", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
-export const discordWebhooksRelations = relations(discordWebhooks, ({ one }) => ({
-  event: one(events, {
-    fields: [discordWebhooks.eventId],
-    references: [events.id],
-  }),
-  creator: one(users, {
-    fields: [discordWebhooks.createdBy],
-    references: [users.id],
-  }),
-}))
+export const discordWebhooksRelations = relations(
+  discordWebhooks,
+  ({ one }) => ({
+    event: one(events, {
+      fields: [discordWebhooks.eventId],
+      references: [events.id],
+    }),
+    creator: one(users, {
+      fields: [discordWebhooks.createdBy],
+      references: [users.id],
+    }),
+  })
+)

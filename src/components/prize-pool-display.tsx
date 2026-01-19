@@ -22,17 +22,17 @@ export function PrizePoolDisplay({
   // Determine text size based on prize pool amount
   const getTextSize = () => {
     if (variant === "compact") return "text-sm"
-    if (prizePool >= 1000000000) return "text-lg font-bold" // 1B+
-    if (prizePool >= 100000000) return "text-base font-semibold" // 100M+
+    if (prizePool >= 1_000_000_000) return "text-lg font-bold" // 1B+
+    if (prizePool >= 100_000_000) return "text-base font-semibold" // 100M+
     return "text-sm"
   }
 
   // Determine color based on prize pool amount
   const getTextColor = () => {
-    if (prizePool >= 1000000000) return "text-amber-500 dark:text-amber-400" // 1B+
-    if (prizePool >= 100000000) return "text-amber-500 dark:text-amber-400" // 100M+
-    if (prizePool >= 10000000) return "text-amber-500 dark:text-amber-400" // 10M+
-    if (prizePool >= 1000000) return "text-amber-500 dark:text-amber-400" // 1M+
+    if (prizePool >= 1_000_000_000) return "text-amber-500 dark:text-amber-400" // 1B+
+    if (prizePool >= 100_000_000) return "text-amber-500 dark:text-amber-400" // 100M+
+    if (prizePool >= 10_000_000) return "text-amber-500 dark:text-amber-400" // 10M+
+    if (prizePool >= 1_000_000) return "text-amber-500 dark:text-amber-400" // 1M+
     return "text-muted-foreground"
   }
 
@@ -40,22 +40,35 @@ export function PrizePoolDisplay({
     return (
       <div
         className={cn(
-          "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30",
+          "inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium dark:bg-amber-900/30",
           getTextColor(),
-          className,
+          className
         )}
       >
-        {showIcon && <Coins className="h-3 w-3 mr-1" />}
+        {showIcon && <Coins className="mr-1 h-3 w-3" />}
         {formattedPrizePool}
       </div>
     )
   }
 
   return (
-    <div className={cn("flex items-center gap-1", getTextColor(), getTextSize(), className)}>
-      {showIcon && <Coins className={cn("flex-shrink-0", variant === "compact" ? "h-3.5 w-3.5" : "h-4 w-4")} />}
+    <div
+      className={cn(
+        "flex items-center gap-1",
+        getTextColor(),
+        getTextSize(),
+        className
+      )}
+    >
+      {showIcon && (
+        <Coins
+          className={cn(
+            "flex-shrink-0",
+            variant === "compact" ? "h-3.5 w-3.5" : "h-4 w-4"
+          )}
+        />
+      )}
       <span>{formattedPrizePool}</span>
     </div>
   )
 }
-

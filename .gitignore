@@ -57,3 +57,7 @@ docker-compose.override.yml
 #playwright
 playwright-report
 test-results
+
+# Editors
+.vscode
+.zed

@@ -1,17 +1,17 @@
 /* eslint-disable */
-"use client";
+"use client"
 
-import type React from "react";
+import type React from "react"
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog";
-import { toast } from "@/hooks/use-toast";
+} from "@/components/ui/dialog"
+import { toast } from "@/hooks/use-toast"
 import {
   updateTile,
   addGoal,
@@ -26,11 +26,11 @@ import {
   getTierXpRequirements,
   getSelectableUsersForSubmission,
   type SelectableUser,
-} from "@/app/actions/bingo";
-import { getSubmissions } from "@/app/actions/getSubmissions";
-import "@mdxeditor/editor/style.css";
-import "@/styles/modal-animations.css";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from "@/app/actions/bingo"
+import { getSubmissions } from "@/app/actions/getSubmissions"
+import "@mdxeditor/editor/style.css"
+import "@/styles/modal-animations.css"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type {
   Bingo,
   Tile,
@@ -38,37 +38,37 @@ import type {
   EventRole,
   Goal,
   Submission,
-} from "@/app/actions/events";
-import Sortable, { type SortableEvent } from "sortablejs";
-import { BingoGridLayout } from "./bingo-grid-layout";
-import { ProgressionBingoGrid } from "./progression-bingo-grid";
-import { TileDetailsTab } from "./tile-details-tab";
-import { GoalsTab } from "./goals-tab";
-import { SubmissionsTab } from "./submissions-tab";
-import { FullSizeImageDialog } from "./full-size-image-dialog";
-import { StatsDialog } from "./stats-dialog";
-import { BarChart, Zap } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useSession } from "next-auth/react";
+} from "@/app/actions/events"
+import Sortable, { type SortableEvent } from "sortablejs"
+import { BingoGridLayout } from "./bingo-grid-layout"
+import { ProgressionBingoGrid } from "./progression-bingo-grid"
+import { TileDetailsTab } from "./tile-details-tab"
+import { GoalsTab } from "./goals-tab"
+import { SubmissionsTab } from "./submissions-tab"
+import { FullSizeImageDialog } from "./full-size-image-dialog"
+import { StatsDialog } from "./stats-dialog"
+import { BarChart, Zap } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { useSession } from "next-auth/react"
 import {
   getTeamTierProgress,
   initializeTeamTierProgress,
-} from "@/app/actions/bingo";
+} from "@/app/actions/bingo"
 
 // Define an extended submission type that includes goalId, submissionValue, and weight
 interface ExtendedSubmission extends Submission {
-  goalId?: string | null;
+  goalId?: string | null
 }
 
 interface BingoGridProps {
-  bingo: Bingo;
-  userRole: EventRole;
-  teams: Team[];
-  currentTeamId: string | undefined;
-  isLayoutLocked: boolean; // Controls whether the board layout can be modified
-  onReorderTiles?: (reorderedTiles: Tile[]) => void;
-  highlightedTiles: number[];
-  onTileUpdated?: () => void;
+  bingo: Bingo
+  userRole: EventRole
+  teams: Team[]
+  currentTeamId: string | undefined
+  isLayoutLocked: boolean // Controls whether the board layout can be modified
+  onReorderTiles?: (reorderedTiles: Tile[]) => void
+  highlightedTiles: number[]
+  onTileUpdated?: () => void
 }
 
 export default function BingoGrid({
@@ -81,44 +81,44 @@ export default function BingoGrid({
   highlightedTiles,
   onTileUpdated,
 }: BingoGridProps) {
-  const [tiles, setTiles] = useState<Tile[]>(bingo.tiles ?? []);
-  const [selectedTile, setSelectedTile] = useState<Tile | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editedTile, setEditedTile] = useState<Partial<Tile>>({});
-  const [newGoal, setNewGoal] = useState<Partial<Goal>>({});
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [pastedImage, setPastedImage] = useState<File | null>(null);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [tiles, setTiles] = useState<Tile[]>(bingo.tiles ?? [])
+  const [selectedTile, setSelectedTile] = useState<Tile | null>(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editedTile, setEditedTile] = useState<Partial<Tile>>({})
+  const [newGoal, setNewGoal] = useState<Partial<Goal>>({})
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [pastedImage, setPastedImage] = useState<File | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [fullSizeImage, setFullSizeImage] = useState<{
-    src: string;
-    alt: string;
-  } | null>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
-  const sortableRef = useRef<Sortable | null>(null);
-  const [isStatsDialogOpen, setIsStatsDialogOpen] = useState(false);
-  const session = useSession();
+    src: string
+    alt: string
+  } | null>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
+  const sortableRef = useRef<Sortable | null>(null)
+  const [isStatsDialogOpen, setIsStatsDialogOpen] = useState(false)
+  const session = useSession()
 
   // State for submitting on behalf of another user
-  const [selectableUsers, setSelectableUsers] = useState<SelectableUser[]>([]);
+  const [selectableUsers, setSelectableUsers] = useState<SelectableUser[]>([])
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>(
-    undefined,
-  );
+    undefined
+  )
 
   // Progression bingo state
   const [tierProgress, setTierProgress] = useState<
     Array<{
-      tier: number;
-      isUnlocked: boolean;
-      unlockedAt: Date | null;
+      tier: number
+      isUnlocked: boolean
+      unlockedAt: Date | null
     }>
-  >([]);
+  >([])
   const [tierXpRequirements, setTierXpRequirements] = useState<
     Array<{
-      tier: number;
-      xpRequired: number;
+      tier: number
+      xpRequired: number
     }>
-  >([]);
-  const [unlockedTiers, setUnlockedTiers] = useState<Set<number>>(new Set([0]));
+  >([])
+  const [unlockedTiers, setUnlockedTiers] = useState<Set<number>>(new Set([0]))
 
   // Load tier progress for progression bingo
   useEffect(() => {
@@ -126,41 +126,41 @@ export default function BingoGrid({
       if (bingo.bingoType === "progression") {
         try {
           // Load tier XP requirements
-          const xpRequirements = await getTierXpRequirements(bingo.id);
+          const xpRequirements = await getTierXpRequirements(bingo.id)
           setTierXpRequirements(
             xpRequirements.map((req) => ({
               tier: req.tier,
               xpRequired: req.xpRequired,
-            })),
-          );
+            }))
+          )
 
           if (currentTeamId) {
             // Initialize tier progress if needed
-            await initializeTeamTierProgress(currentTeamId, bingo.id);
+            await initializeTeamTierProgress(currentTeamId, bingo.id)
 
             // Load tier progress
-            const progress = await getTeamTierProgress(currentTeamId, bingo.id);
+            const progress = await getTeamTierProgress(currentTeamId, bingo.id)
             setTierProgress(
               progress.map((p) => ({
                 tier: p.tier,
                 isUnlocked: p.isUnlocked,
                 unlockedAt: p.unlockedAt,
-              })),
-            );
+              }))
+            )
 
             const unlockedTierSet = new Set(
-              progress.filter((p) => p.isUnlocked).map((p) => p.tier),
-            );
-            setUnlockedTiers(unlockedTierSet);
+              progress.filter((p) => p.isUnlocked).map((p) => p.tier)
+            )
+            setUnlockedTiers(unlockedTierSet)
           }
         } catch (error) {
-          console.error("Error loading tier progress:", error);
+          console.error("Error loading tier progress:", error)
         }
       }
-    };
+    }
 
-    loadTierProgress();
-  }, [bingo.id, bingo.bingoType, currentTeamId]);
+    loadTierProgress()
+  }, [bingo.id, bingo.bingoType, currentTeamId])
 
   useEffect(() => {
     if (gridRef.current && hasSufficientRights() && !isLayoutLocked) {
@@ -170,38 +170,38 @@ export default function BingoGrid({
         swapClass: "bh-yellow-100",
         ghostClass: "bg-blue-100",
         onEnd: (event: SortableEvent) => {
-          const { oldIndex, newIndex } = event;
+          const { oldIndex, newIndex } = event
           if (oldIndex !== newIndex) {
-            const updatedTiles = [...tiles];
-            const [movedTile] = updatedTiles.splice(oldIndex!, 1);
-            updatedTiles.splice(newIndex!, 0, movedTile!);
+            const updatedTiles = [...tiles]
+            const [movedTile] = updatedTiles.splice(oldIndex!, 1)
+            updatedTiles.splice(newIndex!, 0, movedTile!)
 
             // Update the indices of the swapped tiles
-            const minIndex = Math.min(oldIndex!, newIndex!);
-            const maxIndex = Math.max(oldIndex!, newIndex!);
+            const minIndex = Math.min(oldIndex!, newIndex!)
+            const maxIndex = Math.max(oldIndex!, newIndex!)
             for (let i = minIndex; i <= maxIndex; i++) {
-              updatedTiles[i] = { ...updatedTiles[i], index: i } as Tile;
+              updatedTiles[i] = { ...updatedTiles[i], index: i } as Tile
             }
 
-            setTiles(updatedTiles);
-            if (onReorderTiles) onReorderTiles(updatedTiles);
+            setTiles(updatedTiles)
+            if (onReorderTiles) onReorderTiles(updatedTiles)
 
             toast({
               title: "Tiles swapped",
               description: "The tiles have been successfully swapped.",
-            });
+            })
           }
         },
-      });
+      })
 
       return () => {
         if (sortableRef.current) {
-          sortableRef.current.destroy();
-          sortableRef.current = null;
+          sortableRef.current.destroy()
+          sortableRef.current = null
         }
-      };
+      }
     }
-  }, [tiles, isLayoutLocked, onReorderTiles]);
+  }, [tiles, isLayoutLocked, onReorderTiles])
 
   // Fetch selectable users when dialog opens
   useEffect(() => {
@@ -210,24 +210,24 @@ export default function BingoGrid({
         try {
           const users = await getSelectableUsersForSubmission(
             bingo.eventId,
-            currentTeamId,
-          );
-          setSelectableUsers(users);
+            currentTeamId
+          )
+          setSelectableUsers(users)
           // Default to first user (which is the current user)
           if (users.length > 0) {
-            setSelectedUserId(users[0]!.id);
+            setSelectedUserId(users[0]!.id)
           }
         } catch (error) {
-          console.error("Failed to fetch selectable users:", error);
+          console.error("Failed to fetch selectable users:", error)
         }
-      };
-      void fetchUsers();
+      }
+      void fetchUsers()
     } else if (!isDialogOpen) {
       // Reset when dialog closes
-      setSelectableUsers([]);
-      setSelectedUserId(undefined);
+      setSelectableUsers([])
+      setSelectedUserId(undefined)
     }
-  }, [isDialogOpen, currentTeamId, bingo.eventId]);
+  }, [isDialogOpen, currentTeamId, bingo.eventId])
 
   const handleTileClick = async (tile: Tile) => {
     // Check if tile is locked due to progression (but allow if user has management rights)
@@ -241,31 +241,31 @@ export default function BingoGrid({
         title: "Tier locked",
         description: `Complete more tiles in tier ${tile.tier} to unlock this tier`,
         variant: "destructive",
-      });
-      return;
+      })
+      return
     }
 
     if (tile.isHidden && !isLayoutLocked && hasSufficientRights()) {
-      await handleTogglePlaceholder(tile);
-      return;
+      await handleTogglePlaceholder(tile)
+      return
     }
 
     try {
-      const goals = await getTileGoalsAndProgress(tile.id);
-      const teamTileSubmissions = await getSubmissions(tile.id);
-      const updatedTile: Tile = { ...tile, goals, teamTileSubmissions };
-      setSelectedTile(updatedTile);
-      setEditedTile(updatedTile);
-      setIsDialogOpen(true);
+      const goals = await getTileGoalsAndProgress(tile.id)
+      const teamTileSubmissions = await getSubmissions(tile.id)
+      const updatedTile: Tile = { ...tile, goals, teamTileSubmissions }
+      setSelectedTile(updatedTile)
+      setEditedTile(updatedTile)
+      setIsDialogOpen(true)
     } catch (error) {
-      console.error("Error fetching tile data:", error);
+      console.error("Error fetching tile data:", error)
       toast({
         title: "Error",
         description: "Failed to fetch tile data",
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   const handleTogglePlaceholder = async (tile: Tile) => {
     if (isLayoutLocked) {
@@ -273,66 +273,66 @@ export default function BingoGrid({
         title: "Layout locked",
         description: "The bingo board layout is currently locked for editing.",
         variant: "destructive",
-      });
-      return;
+      })
+      return
     }
 
-    const updatedTile = { ...tile, isHidden: !tile.isHidden };
-    const result = await updateTile(tile.id, updatedTile);
+    const updatedTile = { ...tile, isHidden: !tile.isHidden }
+    const result = await updateTile(tile.id, updatedTile)
     if (result.success) {
       setTiles((prevTiles) =>
-        prevTiles.map((t) => (t.id === tile.id ? updatedTile : t)),
-      );
+        prevTiles.map((t) => (t.id === tile.id ? updatedTile : t))
+      )
       if (onTileUpdated) {
-        onTileUpdated();
+        onTileUpdated()
       }
       toast({
         title: "Tile updated",
         description: `The tile is now ${updatedTile.isHidden ? "a placeholder" : "no longer a placeholder"}.`,
-      });
+      })
     } else {
       toast({
         title: "Error",
         description: "Failed to update tile",
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   const handleTileUpdate = async () => {
     if (selectedTile && editedTile) {
-      const result = await updateTile(selectedTile.id, editedTile);
+      const result = await updateTile(selectedTile.id, editedTile)
       if (result.success) {
         setTiles((prevTiles) =>
           prevTiles.map((tile) =>
-            tile.id === selectedTile.id ? { ...tile, ...editedTile } : tile,
-          ),
-        );
+            tile.id === selectedTile.id ? { ...tile, ...editedTile } : tile
+          )
+        )
         if (onTileUpdated) {
-          onTileUpdated();
+          onTileUpdated()
         }
-        setIsDialogOpen(false);
+        setIsDialogOpen(false)
         toast({
           title: "Tile updated",
           description: "The tile has been successfully updated.",
-        });
+        })
       } else {
         toast({
           title: "Error",
           description: result.error ?? "Failed to update tile",
           variant: "destructive",
-        });
+        })
       }
     }
-  };
+  }
 
   const handleEditorChange = (content: string) => {
-    setEditedTile((prev) => ({ ...prev, description: content }));
-  };
+    setEditedTile((prev) => ({ ...prev, description: content }))
+  }
 
   const handleAddGoal = async () => {
     if (selectedTile && newGoal.description && newGoal.targetValue) {
-      const result = await addGoal(selectedTile.id, newGoal as Goal);
+      const result = await addGoal(selectedTile.id, newGoal as Goal)
       if (result.success && result.goal) {
         const updatedGoal: Goal = {
           id: result.goal.id,
@@ -345,74 +345,74 @@ export default function BingoGrid({
             goalId: result.goal!.id,
             currentValue: 0,
           })),
-        };
+        }
         setSelectedTile((prev) => {
           if (prev) {
             return {
               ...prev,
               goals: [...(prev.goals ?? []), updatedGoal],
-            };
+            }
           }
-          return null;
-        });
+          return null
+        })
         setTiles((prevTiles) =>
           prevTiles.map((tile) =>
             tile.id === selectedTile.id
               ? { ...tile, goals: [...(tile.goals ?? []), updatedGoal] }
-              : tile,
-          ),
-        );
-        setNewGoal({});
+              : tile
+          )
+        )
+        setNewGoal({})
         toast({
           title: "Goal added",
           description: "The goal has been successfully added to the tile.",
-        });
+        })
       } else {
         toast({
           title: "Error",
           description: result.error ?? "Failed to add goal",
           variant: "destructive",
-        });
+        })
       }
     }
-  };
+  }
 
   const handleDeleteGoal = async (goalId: string) => {
     if (selectedTile) {
-      const result = await deleteGoal(goalId);
+      const result = await deleteGoal(goalId)
       if (result.success) {
         setSelectedTile((prev) =>
           prev
             ? { ...prev, goals: prev.goals?.filter((g) => g.id !== goalId) }
-            : null,
-        );
+            : null
+        )
         setTiles((prevTiles) =>
           prevTiles.map((tile) =>
             tile.id === selectedTile.id
               ? { ...tile, goals: tile.goals?.filter((g) => g.id !== goalId) }
-              : tile,
-          ),
-        );
+              : tile
+          )
+        )
         toast({
           title: "Goal deleted",
           description: "The goal has been successfully deleted from the tile.",
-        });
+        })
       } else {
         toast({
           title: "Error",
           description: result.error ?? "Failed to delete goal",
           variant: "destructive",
-        });
+        })
       }
     }
-  };
+  }
 
   const handleProgressUpdate = async (
     goalId: string,
     teamId: string,
-    newValue: number,
+    newValue: number
   ) => {
-    const result = await updateGoalProgress(goalId, teamId, newValue);
+    const result = await updateGoalProgress(goalId, teamId, newValue)
     if (result.success) {
       setSelectedTile((prev) => {
         if (prev?.goals) {
@@ -426,77 +426,77 @@ export default function BingoGrid({
                       goal.teamProgress?.map((progress) =>
                         progress.teamId === teamId
                           ? { ...progress, currentValue: newValue }
-                          : progress,
+                          : progress
                       ) || [],
                   }
-                : goal,
+                : goal
             ),
-          };
+          }
         }
-        return prev;
-      });
+        return prev
+      })
       toast({
         title: "Progress updated",
         description: "The goal progress has been successfully updated.",
-      });
+      })
     } else {
       toast({
         title: "Error",
         description: result.error ?? "Failed to update goal progress",
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const file = event.target.files?.[0]
     if (file) {
-      setSelectedImage(file);
+      setSelectedImage(file)
     }
-  };
+  }
 
   const refreshSubmissions = async (tileId: string) => {
     try {
-      const submissions = await getSubmissions(tileId);
+      const submissions = await getSubmissions(tileId)
       setSelectedTile((prev) => {
         if (prev && prev.id === tileId) {
           return {
             ...prev,
             teamTileSubmissions: submissions,
-          };
+          }
         }
-        return prev;
-      });
+        return prev
+      })
       setTiles((prevTiles) =>
         prevTiles.map((tile) =>
           tile.id === tileId
             ? { ...tile, teamTileSubmissions: submissions }
-            : tile,
-        ),
-      );
+            : tile
+        )
+      )
     } catch (error) {
-      console.error("Error refreshing submissions:", error);
+      console.error("Error refreshing submissions:", error)
       toast({
         title: "Error",
         description: "Failed to refresh submissions",
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   const handleImageSubmit = async (onBehalfOfUserId?: string) => {
     // Prevent concurrent uploads
     if (isUploadingImage) {
-      return;
+      return
     }
 
     if (bingo.locked) {
       toast({
         title: "Submissions locked",
-        description: "This bingo board is currently locked for submissions.",
+        description: "Submissions are currently locked for this bingo board",
         variant: "destructive",
-      });
-      return;
+      })
+      return
     }
 
     if (!selectedTile || !(selectedImage || pastedImage) || !currentTeamId) {
@@ -504,210 +504,210 @@ export default function BingoGrid({
         title: "Error",
         description: "Missing required information for submission",
         variant: "destructive",
-      });
-      return;
+      })
+      return
     }
 
     // Set uploading state
-    setIsUploadingImage(true);
+    setIsUploadingImage(true)
 
     try {
-      const formData = new FormData();
-      formData.append("image", selectedImage ?? pastedImage!);
-      formData.append("tileId", selectedTile.id);
-      formData.append("teamId", currentTeamId);
+      const formData = new FormData()
+      formData.append("image", selectedImage ?? pastedImage!)
+      formData.append("tileId", selectedTile.id)
+      formData.append("teamId", currentTeamId)
 
       // Include onBehalfOfUserId if provided
       if (onBehalfOfUserId) {
-        formData.append("onBehalfOfUserId", onBehalfOfUserId);
+        formData.append("onBehalfOfUserId", onBehalfOfUserId)
       }
 
-      const result = await submitImage(formData);
+      const result = await submitImage(formData)
 
       if (result.success) {
-        setSelectedImage(null);
-        setPastedImage(null);
+        setSelectedImage(null)
+        setPastedImage(null)
         toast({
           title: "Image submitted",
-          description: "Your image has been successfully submitted for review.",
-        });
-        await refreshSubmissions(selectedTile.id);
+          description: "Your image has been successfully submitted for review",
+        })
+        await refreshSubmissions(selectedTile.id)
       } else {
         toast({
           title: "Error",
           description: result.error ?? "Failed to submit image",
           variant: "destructive",
-        });
+        })
       }
     } finally {
       // Always reset uploading state
-      setIsUploadingImage(false);
+      setIsUploadingImage(false)
     }
-  };
+  }
 
   const handlePaste = useCallback(
     (event: ClipboardEvent) => {
-      if (bingo.locked) return;
+      if (bingo.locked) return
       // Prevent pasting during upload
-      if (isUploadingImage) return;
+      if (isUploadingImage) return
 
-      event.preventDefault();
-      const items = event.clipboardData?.items;
+      event.preventDefault()
+      const items = event.clipboardData?.items
       if (items) {
         for (const item of items) {
           if (item.type.startsWith("image/")) {
-            const blob = item.getAsFile();
+            const blob = item.getAsFile()
             if (blob) {
               const file = new File([blob], "pasted-image.png", {
                 type: blob.type,
-              });
-              setPastedImage(file);
-              setSelectedImage(file);
+              })
+              setPastedImage(file)
+              setSelectedImage(file)
               toast({
                 title: "Image pasted",
                 description: "Your pasted image is ready to be submitted.",
-              });
-              break;
+              })
+              break
             }
           }
         }
       }
     },
-    [bingo, isUploadingImage],
-  );
+    [bingo, isUploadingImage]
+  )
 
   useEffect(() => {
-    document.addEventListener("paste", handlePaste);
+    document.addEventListener("paste", handlePaste)
     return () => {
-      document.removeEventListener("paste", handlePaste);
-    };
-  }, [handlePaste]);
+      document.removeEventListener("paste", handlePaste)
+    }
+  }, [handlePaste])
 
   // Add keyboard navigation support
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Only handle keyboard shortcuts when modal is open
-      if (!isDialogOpen) return;
+      if (!isDialogOpen) return
 
       // Handle tab switching with Ctrl+1,2,3
       if (event.ctrlKey && ["1", "2", "3"].includes(event.key)) {
-        event.preventDefault();
-        const tabValues = ["details", "goals", "submissions"];
-        const tabIndex = parseInt(event.key) - 1;
-        const tabValue = tabValues[tabIndex];
+        event.preventDefault()
+        const tabValues = ["details", "goals", "submissions"]
+        const tabIndex = parseInt(event.key) - 1
+        const tabValue = tabValues[tabIndex]
         if (tabValue) {
           const tabTrigger = document.querySelector(
-            `[data-state]:not([data-state="active"])[value="${tabValue}"]`,
-          ) as HTMLElement;
+            `[data-state]:not([data-state="active"])[value="${tabValue}"]`
+          ) as HTMLElement
           if (tabTrigger) {
-            tabTrigger.click();
+            tabTrigger.click()
           }
         }
       }
 
       // Handle Escape key to close modal
       if (event.key === "Escape" && isDialogOpen) {
-        setIsDialogOpen(false);
+        setIsDialogOpen(false)
       }
-    };
+    }
 
-    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown)
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isDialogOpen]);
+      document.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [isDialogOpen])
 
   const handleTeamTileSubmissionStatusUpdate = async (
     teamTileSubmissionId: string | undefined,
-    newStatus: "approved" | "needs_review",
+    newStatus: "approved" | "needs_review"
   ) => {
     if (!teamTileSubmissionId || !selectedTile) {
       toast({
         title: "Error",
         description: "No submission found for this team",
         variant: "destructive",
-      });
-      return;
+      })
+      return
     }
 
     try {
       const result = await updateTeamTileSubmissionStatus(
         teamTileSubmissionId,
-        newStatus,
-      );
+        newStatus
+      )
       if (result.success) {
         // Update local state with the new status
         const updateSubmissions = (submissions: any[] | undefined) =>
           submissions?.map((tts) =>
             tts.id === teamTileSubmissionId
               ? { ...tts, status: newStatus }
-              : tts,
-          );
+              : tts
+          )
 
         setSelectedTile((prev) =>
           prev
             ? {
                 ...prev,
                 teamTileSubmissions: updateSubmissions(
-                  prev.teamTileSubmissions,
+                  prev.teamTileSubmissions
                 ),
               }
-            : null,
-        );
+            : null
+        )
         setTiles((prevTiles) =>
           prevTiles.map((tile) =>
             tile.id === selectedTile.id
               ? {
                   ...tile,
                   teamTileSubmissions: updateSubmissions(
-                    tile.teamTileSubmissions,
+                    tile.teamTileSubmissions
                   ),
                 }
-              : tile,
-          ),
-        );
+              : tile
+          )
+        )
 
         toast({
           title: "Status updated",
           description: `Submission marked as ${newStatus.replace("_", " ")}`,
-        });
+        })
       } else {
-        throw new Error(result.error);
+        throw new Error(result.error)
       }
     } catch (error) {
-      console.error("Error updating submission status:", error);
+      console.error("Error updating submission status:", error)
       toast({
         title: "Error",
         description: "Failed to update submission status",
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   const handleDeleteSubmission = async (submissionId: string) => {
-    if (!selectedTile) return;
+    if (!selectedTile) return
 
     try {
-      const result = await deleteSubmission(submissionId);
+      const result = await deleteSubmission(submissionId)
       if (result.success) {
         // Update the local state to remove the deleted submission
         setSelectedTile((prev) => {
-          if (!prev) return null;
+          if (!prev) return null
 
           const updatedTeamTileSubmissions = prev.teamTileSubmissions?.map(
             (tts) => ({
               ...tts,
               submissions: tts.submissions.filter(
-                (sub) => sub.id !== submissionId,
+                (sub) => sub.id !== submissionId
               ),
-            }),
-          );
+            })
+          )
 
           return {
             ...prev,
             teamTileSubmissions: updatedTeamTileSubmissions,
-          };
-        });
+          }
+        })
 
         // Update the tiles state as well
         setTiles((prevTiles) =>
@@ -717,100 +717,100 @@ export default function BingoGrid({
                 (tts) => ({
                   ...tts,
                   submissions: tts.submissions.filter(
-                    (sub) => sub.id !== submissionId,
+                    (sub) => sub.id !== submissionId
                   ),
-                }),
-              );
+                })
+              )
 
               return {
                 ...tile,
                 teamTileSubmissions: updatedTeamTileSubmissions,
-              };
+              }
             }
-            return tile;
-          }),
-        );
+            return tile
+          })
+        )
 
         toast({
           title: "Submission deleted",
           description: "The submission has been successfully deleted.",
-        });
+        })
       } else {
-        throw new Error("Failed to delete submission");
+        throw new Error("Failed to delete submission")
       }
     } catch (error) {
-      console.error("Error deleting submission:", error);
+      console.error("Error deleting submission:", error)
       toast({
         title: "Error",
         description: "Failed to delete submission",
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   const handleDeleteTile = async (tileId: string) => {
     if (isLayoutLocked) {
       toast({
         title: "Layout locked",
         description: "The bingo board layout is currently locked for editing.",
-      });
-      return;
+      })
+      return
     }
 
     const confirmDelete = window.confirm(
-      "Are you sure you want to delete this tile?",
-    );
-    if (!confirmDelete) return;
+      "Are you sure you want to delete this tile?"
+    )
+    if (!confirmDelete) return
 
     try {
-      const result = await deleteTile(tileId, bingo.id);
+      const result = await deleteTile(tileId, bingo.id)
       if (result.success) {
-        setTiles((prevTiles) => prevTiles.filter((tile) => tile.id !== tileId));
+        setTiles((prevTiles) => prevTiles.filter((tile) => tile.id !== tileId))
         toast({
           title: "Tile deleted",
           description: "The tile has been successfully deleted.",
-        });
+        })
       } else {
-        throw new Error(result.error);
+        throw new Error(result.error)
       }
     } catch (error) {
-      console.error("Error deleting tile:", error);
+      console.error("Error deleting tile:", error)
       toast({
         title: "Error",
         description: "Failed to delete tile",
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   // Updated to handle goal assignment with proper typing including value and weight
   const handleSubmissionStatusUpdate = async (
     submissionId: string,
     newStatus: "pending" | "approved" | "needs_review",
     goalId?: string | null,
-    submissionValue?: number | null,
+    submissionValue?: number | null
   ) => {
     try {
-      // console.log(
-      //   `Updating submission ${submissionId} with status ${newStatus}, goalId ${goalId}, value ${submissionValue}`,
-      // )
+      console.log(
+        `Updating submission ${submissionId} with status ${newStatus}, goalId ${goalId}, value ${submissionValue}`
+      )
 
       // Only allow approved or needs_review to be passed to the server action
-      const validStatus = newStatus === "pending" ? "needs_review" : newStatus;
+      const validStatus = newStatus === "pending" ? "needs_review" : newStatus
 
       const result = await updateSubmissionStatus(
         submissionId,
         validStatus,
         goalId,
-        submissionValue,
-      );
+        submissionValue
+      )
       if (result.success) {
         // Update local state for both individual submission and potentially team status
         setSelectedTile((prev) => {
-          if (!prev) return null;
+          if (!prev) return null
 
           // Create a deep copy of the tile with updated submissions
-          const updatedTile = { ...prev };
+          const updatedTile = { ...prev }
 
           if (updatedTile.teamTileSubmissions) {
             updatedTile.teamTileSubmissions =
@@ -821,35 +821,35 @@ export default function BingoGrid({
                     if (sub.id === submissionId) {
                       // Create a new submission object with updated fields
                       // Use type assertion to handle the goalId property
-                      const updatedSub = { ...sub } as ExtendedSubmission;
-                      updatedSub.status = newStatus;
-                      updatedSub.reviewedBy = session.data?.user?.id || null;
-                      updatedSub.reviewedAt = new Date();
+                      const updatedSub = { ...sub } as ExtendedSubmission
+                      updatedSub.status = newStatus
+                      updatedSub.reviewedBy = session.data?.user?.id || null
+                      updatedSub.reviewedAt = new Date()
 
                       // Update goalId, submissionValue, and weight if provided
                       if (goalId !== undefined) {
-                        updatedSub.goalId = goalId;
+                        updatedSub.goalId = goalId
                       }
                       if (submissionValue !== undefined) {
-                        updatedSub.submissionValue = submissionValue;
+                        updatedSub.submissionValue = submissionValue
                       }
 
-                      return updatedSub;
+                      return updatedSub
                     }
-                    return sub;
+                    return sub
                   }),
-                };
-              });
+                }
+              })
           }
 
-          return updatedTile;
-        });
+          return updatedTile
+        })
 
         // Also update the tiles state
         setTiles((prevTiles) =>
           prevTiles.map((tile) => {
             if (tile.id === selectedTile?.id) {
-              const updatedTile = { ...tile };
+              const updatedTile = { ...tile }
 
               if (updatedTile.teamTileSubmissions) {
                 updatedTile.teamTileSubmissions =
@@ -860,55 +860,54 @@ export default function BingoGrid({
                         if (sub.id === submissionId) {
                           // Create a new submission object with updated fields
                           // Use type assertion to handle the goalId property
-                          const updatedSub = { ...sub } as ExtendedSubmission;
-                          updatedSub.status = newStatus;
-                          updatedSub.reviewedBy =
-                            session.data?.user?.id || null;
-                          updatedSub.reviewedAt = new Date();
+                          const updatedSub = { ...sub } as ExtendedSubmission
+                          updatedSub.status = newStatus
+                          updatedSub.reviewedBy = session.data?.user?.id || null
+                          updatedSub.reviewedAt = new Date()
 
                           // Update goalId, submissionValue, and weight if provided
                           if (goalId !== undefined) {
-                            updatedSub.goalId = goalId;
+                            updatedSub.goalId = goalId
                           }
                           if (submissionValue !== undefined) {
-                            updatedSub.submissionValue = submissionValue;
+                            updatedSub.submissionValue = submissionValue
                           }
 
-                          return updatedSub;
+                          return updatedSub
                         }
-                        return sub;
+                        return sub
                       }),
-                    };
-                  });
+                    }
+                  })
               }
 
-              return updatedTile;
+              return updatedTile
             }
-            return tile;
-          }),
-        );
+            return tile
+          })
+        )
 
         const message =
           goalId !== undefined
             ? `Submission ${newStatus.replace("_", " ")}, goal ${goalId ? "assigned" : "removed"}${submissionValue ? ` with value ${submissionValue}` : ""}`
-            : `Submission marked as ${newStatus.replace("_", " ")}`;
+            : `Submission marked as ${newStatus.replace("_", " ")}`
 
         toast({
           title: "Submission updated",
           description: message,
-        });
+        })
       } else {
-        throw new Error(result.error || "Failed to update submission status");
+        throw new Error(result.error || "Failed to update submission status")
       }
     } catch (error) {
-      console.error("Error updating submission status:", error);
+      console.error("Error updating submission status:", error)
       toast({
         title: "Error",
         description: "Failed to update submission status",
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   return (
     <div className="space-y-4">
@@ -1080,9 +1079,9 @@ export default function BingoGrid({
         bingoId={bingo.id}
       />
     </div>
-  );
+  )
 
   function hasSufficientRights(): boolean {
-    return userRole === "admin" || userRole === "management";
+    return userRole === "admin" || userRole === "management"
   }
 }

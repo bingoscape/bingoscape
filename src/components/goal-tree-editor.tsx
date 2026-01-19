@@ -46,6 +46,8 @@ import {
   Save,
   X,
   CheckSquare,
+  Component,
+  Goal,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import type { GoalTreeNode } from "@/app/actions/goal-groups"
@@ -79,6 +81,7 @@ import { createItemGoal, updateGoal, updateItemGoal } from "@/app/actions/bingo"
 import { parseItemName } from "osrs-item-data"
 import type { OsrsItem } from "@/types/osrs-items"
 import { cn } from "@/lib/utils"
+import Image from "next/image"
 
 interface GoalTreeEditorProps {
   tileId: string
@@ -184,7 +187,9 @@ export function GoalTreeEditor({
 
     // Create goals for each selected item
     for (const selectedItem of selectedItems) {
-      const itemId = Array.isArray(selectedItem.id) ? selectedItem.id[0]! : selectedItem.id
+      const itemId = Array.isArray(selectedItem.id)
+        ? selectedItem.id[0]!
+        : selectedItem.id
       const parsed = parseItemName(selectedItem.name)
 
       const result = await createItemGoal(
@@ -211,7 +216,7 @@ export function GoalTreeEditor({
     if (failCount === 0) {
       toast({
         title: "Item goals created",
-        description: `Successfully created ${successCount} item goal${successCount !== 1 ? 's' : ''}.`,
+        description: `Successfully created ${successCount} item goal${successCount !== 1 ? "s" : ""}.`,
       })
     } else if (successCount === 0) {
       toast({
@@ -222,7 +227,7 @@ export function GoalTreeEditor({
     } else {
       toast({
         title: "Partially completed",
-        description: `Created ${successCount} goal${successCount !== 1 ? 's' : ''}, ${failCount} failed.`,
+        description: `Created ${successCount} goal${successCount !== 1 ? "s" : ""}, ${failCount} failed.`,
         variant: "default",
       })
     }
@@ -241,29 +246,35 @@ export function GoalTreeEditor({
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    })
   )
 
   // Flatten tree for drag and drop
-  const flattenTree = (nodes: GoalTreeNode[], parentId: string | null = null, depth = 0): FlatNode[] => {
-    const result: FlatNode[] = []
-
-    nodes.forEach((node, index) => {
-      result.push({
+  const flattenTree = (
+    nodes: GoalTreeNode[],
+    parentId: string | null = null,
+    depth = 0
+  ): FlatNode[] => {
+    return nodes.flatMap((node, index) => {
+      const flatNode = {
         id: node.id,
         type: node.type,
         data: node.data,
         parentId,
         depth,
         orderIndex: index,
-      })
-
-      if (node.type === "group" && node.children && expandedGroups.has(node.id)) {
-        result.push(...flattenTree(node.children, node.id, depth + 1))
       }
-    })
 
-    return result
+      if (
+        node.type === "group" &&
+        node.children &&
+        expandedGroups.has(node.id)
+      ) {
+        return [flatNode, ...flattenTree(node.children, node.id, depth + 1)]
+      }
+
+      return flatNode
+    })
   }
 
   const flatTree = flattenTree(tree)
@@ -304,10 +315,12 @@ export function GoalTreeEditor({
     // Determine the target parent:
     // If dropping on a group, make that group the parent
     // If dropping on a goal, use that goal's parent
-    const targetParentId = overNode.type === "group" ? overNode.id : overNode.parentId
+    const targetParentId =
+      overNode.type === "group" ? overNode.id : overNode.parentId
 
     // Check if we're moving multiple items
-    const isMultiMove = selectedNodes.size > 0 && selectedNodes.has(active.id as string)
+    const isMultiMove =
+      selectedNodes.size > 0 && selectedNodes.has(active.id as string)
 
     if (isMultiMove) {
       // Moving multiple selected items
@@ -322,16 +335,20 @@ export function GoalTreeEditor({
       const result = await moveMultipleItems(itemsToMove, targetParentId)
 
       if (result.success) {
-        if ("failedCount" in result && result.failedCount && result.failedCount > 0) {
+        if (
+          "failedCount" in result &&
+          result.failedCount &&
+          result.failedCount > 0
+        ) {
           toast({
             title: "Partially completed",
-            description: `Moved ${result.movedCount} item${result.movedCount !== 1 ? 's' : ''}, ${result.failedCount} failed.`,
+            description: `Moved ${result.movedCount} item${result.movedCount !== 1 ? "s" : ""}, ${result.failedCount} failed.`,
             variant: "default",
           })
         } else {
           toast({
             title: "Items moved",
-            description: `Successfully moved ${result.movedCount} item${result.movedCount !== 1 ? 's' : ''}.`,
+            description: `Successfully moved ${result.movedCount} item${result.movedCount !== 1 ? "s" : ""}.`,
           })
         }
         setSelectedNodes(new Set()) // Clear selection after move
@@ -398,7 +415,12 @@ export function GoalTreeEditor({
   }
 
   const handleCreateGroup = async () => {
-    const result = await createGoalGroup(tileId, newGroupOperator, newGroupParentId, newGroupMinRequired)
+    const result = await createGoalGroup(
+      tileId,
+      newGroupOperator,
+      newGroupParentId,
+      newGroupMinRequired
+    )
     if (result.success) {
       toast({
         title: "Group created",
@@ -418,7 +440,10 @@ export function GoalTreeEditor({
     }
   }
 
-  const handleUpdateGroupOperator = async (groupId: string, operator: "AND" | "OR") => {
+  const handleUpdateGroupOperator = async (
+    groupId: string,
+    operator: "AND" | "OR"
+  ) => {
     const result = await updateGoalGroup(groupId, { logicalOperator: operator })
     if (result.success) {
       toast({
@@ -455,19 +480,23 @@ export function GoalTreeEditor({
   return (
     <div className="space-y-4">
       {hasSufficientRights && (flatTree.length > 0 || tree.length > 0) && (
-        <div className="bg-muted/50 border border-border rounded-lg p-3 text-sm text-muted-foreground">
-          <strong>Tip:</strong> Drag goals onto groups to nest them. Drag onto other goals to reorder. Groups with AND require all goals, OR requires at least one. <strong>Ctrl/Cmd+Click</strong> to select multiple items.
+        <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+          <strong>Tip:</strong> Drag goals onto groups to nest them. Drag onto
+          other goals to reorder. Groups with AND require all goals, OR requires
+          at least one. <strong>Ctrl/Cmd+Click</strong> to select multiple
+          items.
         </div>
       )}
 
       {/* Selection Action Toolbar */}
       {selectedNodes.size > 0 && (
-        <div className="border-2 border-blue-500 rounded-lg p-3 bg-background animate-in slide-in-from-top-2 fade-in">
+        <div className="rounded-lg border-2 border-blue-500 bg-background p-3 animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <CheckSquare className="h-5 w-5 text-blue-600" />
               <span className="font-medium text-blue-900">
-                {selectedNodes.size} item{selectedNodes.size !== 1 ? 's' : ''} selected
+                {selectedNodes.size} item{selectedNodes.size !== 1 ? "s" : ""}{" "}
+                selected
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -477,7 +506,7 @@ export function GoalTreeEditor({
                 onClick={handleClearSelection}
                 className="h-8"
               >
-                <X className="h-4 w-4 mr-1" />
+                <X className="mr-1 h-4 w-4" />
                 Clear Selection
               </Button>
             </div>
@@ -491,7 +520,10 @@ export function GoalTreeEditor({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext items={flatTree.map((n) => n.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext
+          items={flatTree.map((n) => n.id)}
+          strategy={verticalListSortingStrategy}
+        >
           <div className="space-y-2">
             {flatTree.map((node) => (
               <TreeNode
@@ -513,12 +545,22 @@ export function GoalTreeEditor({
 
         <DragOverlay>
           {activeId ? (
-            <div className="bg-card border border-border rounded-lg p-3 shadow-lg opacity-90 relative">
-              <div className="text-sm font-medium">
-                {flatTree.find((n) => n.id === activeId)?.type === "group" ? "Group" : "Goal"}
+            <div className="5xl:-left-[12vw] relative -top-16 max-w-32 rounded-lg border border-border bg-card p-3 opacity-90 shadow-lg">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                {flatTree.find((n) => n.id === activeId)?.type === "group" ? (
+                  <>
+                    <Component className="mr-2 h-6 w-6" />
+                    Group
+                  </>
+                ) : (
+                  <>
+                    <Goal className="mr-2 h-6 w-6" />
+                    Goal
+                  </>
+                )}
               </div>
               {selectedNodes.size > 1 && selectedNodes.has(activeId) && (
-                <div className="absolute -top-2 -right-2 bg-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold shadow-md">
+                <div className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white shadow-md">
                   {selectedNodes.size}
                 </div>
               )}
@@ -535,7 +577,7 @@ export function GoalTreeEditor({
             className="w-full"
             size="sm"
           >
-            <Layers className="h-4 w-4 mr-2" />
+            <Layers className="mr-2 h-4 w-4" />
             Create Group
           </Button>
 
@@ -549,21 +591,31 @@ export function GoalTreeEditor({
             <CardContent className="space-y-4">
               {/* Goal Type Selector */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-muted-foreground">Goal Type</Label>
+                <Label className="text-sm font-medium text-muted-foreground">
+                  Goal Type
+                </Label>
                 <RadioGroup
                   value={goalType}
-                  onValueChange={(value) => setGoalType(value as "generic" | "item")}
+                  onValueChange={(value) =>
+                    setGoalType(value as "generic" | "item")
+                  }
                   className="flex gap-4"
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="generic" id="tree-generic" />
-                    <Label htmlFor="tree-generic" className="cursor-pointer font-normal">
+                    <Label
+                      htmlFor="tree-generic"
+                      className="cursor-pointer font-normal"
+                    >
                       Generic Goal
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="item" id="tree-item" />
-                    <Label htmlFor="tree-item" className="cursor-pointer font-normal flex items-center gap-1">
+                    <Label
+                      htmlFor="tree-item"
+                      className="flex cursor-pointer items-center gap-1 font-normal"
+                    >
                       <Package className="h-4 w-4" />
                       OSRS Item Goal
                     </Label>
@@ -574,7 +626,7 @@ export function GoalTreeEditor({
               {/* Generic Goal Form */}
               {goalType === "generic" && (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                       <Label htmlFor="goalDescription" className="text-sm">
                         Description
@@ -582,7 +634,9 @@ export function GoalTreeEditor({
                       <Input
                         id="goalDescription"
                         value={newGoal.description || ""}
-                        onChange={(e) => onNewGoalChange("description", e.target.value)}
+                        onChange={(e) =>
+                          onNewGoalChange("description", e.target.value)
+                        }
                         placeholder="Complete the task..."
                         className="mt-1"
                       />
@@ -594,15 +648,19 @@ export function GoalTreeEditor({
                       <Input
                         id="targetValue"
                         type="number"
-                        value={newGoal.targetValue?.toString() || ""}
-                        onChange={(e) => onNewGoalChange("targetValue", Number.parseInt(e.target.value))}
-                        placeholder="1"
+                        defaultValue={newGoal.targetValue?.toString() || "1"}
+                        onChange={(e) =>
+                          onNewGoalChange(
+                            "targetValue",
+                            Number.parseInt(e.target.value)
+                          )
+                        }
                         className="mt-1"
                       />
                     </div>
                   </div>
                   <Button onClick={onAddGoal} className="w-full">
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="mr-2 h-4 w-4" />
                     Add Goal
                   </Button>
                 </>
@@ -613,7 +671,9 @@ export function GoalTreeEditor({
                 <>
                   <div className="space-y-4">
                     <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Select OSRS Items</Label>
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        Select OSRS Items
+                      </Label>
                       <div className="mt-1">
                         <OsrsItemSearch
                           onItemSelect={(items) => {
@@ -629,25 +689,34 @@ export function GoalTreeEditor({
                         />
                       </div>
                       {selectedItems.length > 0 && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected - a separate goal will be created for each item
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {selectedItems.length} item
+                          {selectedItems.length !== 1 ? "s" : ""} selected - a
+                          separate goal will be created for each item
                         </p>
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="tree-itemTargetValue" className="text-sm font-medium text-muted-foreground">
+                      <Label
+                        htmlFor="tree-itemTargetValue"
+                        className="text-sm font-medium text-muted-foreground"
+                      >
                         Quantity Required
                       </Label>
                       <Input
                         id="tree-itemTargetValue"
                         type="number"
                         value={itemGoalTargetValue}
-                        onChange={(e) => setItemGoalTargetValue(Number.parseInt(e.target.value) || 1)}
+                        onChange={(e) =>
+                          setItemGoalTargetValue(
+                            Number.parseInt(e.target.value) || 1
+                          )
+                        }
                         placeholder="1"
                         min="1"
                         className="mt-1"
                       />
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         Number of times this item must be obtained
                       </p>
                     </div>
@@ -659,13 +728,14 @@ export function GoalTreeEditor({
                   >
                     {isCreatingBulk ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Creating {selectedItems.length} Goal{selectedItems.length !== 1 ? 's' : ''}...
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating {selectedItems.length} Goal
+                        {selectedItems.length !== 1 ? "s" : ""}...
                       </>
                     ) : (
                       <>
-                        <Package className="h-4 w-4 mr-2" />
-                        Add Item Goal{selectedItems.length > 1 ? 's' : ''}
+                        <Package className="mr-2 h-4 w-4" />
+                        Add Item Goal{selectedItems.length > 1 ? "s" : ""}
                       </>
                     )}
                   </Button>
@@ -681,18 +751,22 @@ export function GoalTreeEditor({
           <DialogHeader>
             <DialogTitle>Create Goal Group</DialogTitle>
             <DialogDescription>
-              Group goals together with logical operators (AND/OR) to control tile completion.
+              Group goals together with logical operators (AND/OR) to control
+              tile completion.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
               <Label htmlFor="operator">Logical Operator</Label>
-              <Select value={newGroupOperator} onValueChange={(v) => {
-                setNewGroupOperator(v as "AND" | "OR")
-                if (v === "AND") {
-                  setNewGroupMinRequired(1) // Reset to 1 when switching to AND
-                }
-              }}>
+              <Select
+                value={newGroupOperator}
+                onValueChange={(v) => {
+                  setNewGroupOperator(v as "AND" | "OR")
+                  if (v === "AND") {
+                    setNewGroupMinRequired(1) // Reset to 1 when switching to AND
+                  }
+                }}
+              >
                 <SelectTrigger id="operator">
                   <SelectValue />
                 </SelectTrigger>
@@ -701,10 +775,10 @@ export function GoalTreeEditor({
                   <SelectItem value="OR">OR (configurable required)</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {newGroupOperator === "AND"
                   ? "All goals in this group must be completed"
-                  : `At least ${newGroupMinRequired} goal${newGroupMinRequired !== 1 ? 's' : ''} in this group must be completed`}
+                  : `At least ${newGroupMinRequired} goal${newGroupMinRequired !== 1 ? "s" : ""} in this group must be completed`}
               </p>
             </div>
             {newGroupOperator === "OR" && (
@@ -715,17 +789,25 @@ export function GoalTreeEditor({
                   type="number"
                   min="1"
                   value={newGroupMinRequired}
-                  onChange={(e) => setNewGroupMinRequired(Math.max(1, Number.parseInt(e.target.value) || 1))}
+                  onChange={(e) =>
+                    setNewGroupMinRequired(
+                      Math.max(1, Number.parseInt(e.target.value) || 1)
+                    )
+                  }
                   className="mt-1"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  How many goals must be completed for this OR group to be satisfied
+                <p className="mt-1 text-xs text-muted-foreground">
+                  How many goals must be completed for this OR group to be
+                  satisfied
                 </p>
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewGroupDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowNewGroupDialog(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleCreateGroup}>Create Group</Button>
@@ -764,7 +846,9 @@ function TreeNode({
   const [isEditing, setIsEditing] = useState(false)
   const [editDescription, setEditDescription] = useState("")
   const [editTargetValue, setEditTargetValue] = useState<number>(1)
-  const [editSelectedItem, setEditSelectedItem] = useState<OsrsItem | null>(null)
+  const [editSelectedItem, setEditSelectedItem] = useState<OsrsItem | null>(
+    null
+  )
   const [isSaving, setIsSaving] = useState(false)
 
   // Group name editing state
@@ -775,9 +859,21 @@ function TreeNode({
   const [isEditingMinRequired, setIsEditingMinRequired] = useState(false)
   const [editMinRequired, setEditMinRequired] = useState<number>(1)
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+    isOver,
+  } = useSortable({
     id: node.id,
-    disabled: !hasSufficientRights || isEditing || isEditingGroupName || isEditingMinRequired,
+    disabled:
+      !hasSufficientRights ||
+      isEditing ||
+      isEditingGroupName ||
+      isEditingMinRequired,
   })
 
   const style = {
@@ -823,7 +919,9 @@ function TreeNode({
     try {
       if (goalData.goalType === "item" && editSelectedItem) {
         // Update item goal
-        const itemId = Array.isArray(editSelectedItem.id) ? editSelectedItem.id[0]! : editSelectedItem.id
+        const itemId = Array.isArray(editSelectedItem.id)
+          ? editSelectedItem.id[0]!
+          : editSelectedItem.id
         const parsed = parseItemName(editSelectedItem.name)
 
         const result = await updateItemGoal(
@@ -948,7 +1046,8 @@ function TreeNode({
       } else {
         toast({
           title: "Error",
-          description: result.error ?? "Failed to update minimum required goals",
+          description:
+            result.error ?? "Failed to update minimum required goals",
           variant: "destructive",
         })
       }
@@ -962,22 +1061,26 @@ function TreeNode({
     return (
       <div ref={setNodeRef} style={style} className="flex items-center gap-2">
         {hasSufficientRights && (
-          <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing"
+          >
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
         )}
         <Card
           className={cn(
-            "flex-1 bg-blue-500/10 border-blue-500/30 transition-all cursor-pointer",
-            isOver && "border-blue-500 border-2 bg-blue-500/20",
-            isSelected && "border-blue-600 border-2 shadow-md"
+            "flex-1 cursor-pointer border-blue-500/30 bg-blue-500/10 transition-all",
+            isOver && "border-2 border-blue-500 bg-blue-500/20",
+            isSelected && "border-2 border-blue-600 shadow-md"
           )}
           onClick={(e) => onNodeClick(node.id, e)}
         >
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               {isEditingGroupName ? (
-                <div className="flex items-center gap-2 flex-1">
+                <div className="flex flex-1 items-center gap-2">
                   <Layers className="h-4 w-4 text-blue-500" />
                   <Input
                     value={editGroupName}
@@ -993,21 +1096,46 @@ function TreeNode({
                       }
                     }}
                   />
-                  <Button size="sm" onClick={handleSaveGroupName} disabled={isSaving} className="h-7">
-                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  <Button
+                    size="sm"
+                    onClick={handleSaveGroupName}
+                    disabled={isSaving}
+                    className="h-7"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={handleCancelGroupEdit} className="h-7">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleCancelGroupEdit}
+                    className="h-7"
+                  >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center gap-2 flex-1">
-                    <Button variant="ghost" size="sm" onClick={onToggle} className="h-6 w-6 p-0">
-                      {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  <div className="flex flex-1 items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onToggle}
+                      className="h-6 w-6 p-0"
+                    >
+                      {expanded ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
                     </Button>
                     <Layers className="h-4 w-4 text-blue-500" />
-                    <span className="font-medium">{(groupData.name as string | null) || "Group"}</span>
+                    <span className="font-medium">
+                      {(groupData.name as string | null) || "Group"}
+                    </span>
                     {hasSufficientRights && (
                       <Button
                         variant="ghost"
@@ -1024,9 +1152,11 @@ function TreeNode({
                     {hasSufficientRights ? (
                       <Select
                         value={groupData.logicalOperator}
-                        onValueChange={(v) => onUpdateOperator(node.id, v as "AND" | "OR")}
+                        onValueChange={(v) =>
+                          onUpdateOperator(node.id, v as "AND" | "OR")
+                        }
                       >
-                        <SelectTrigger className="w-24 h-7">
+                        <SelectTrigger className="h-7 w-24">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1035,7 +1165,13 @@ function TreeNode({
                         </SelectContent>
                       </Select>
                     ) : (
-                      <Badge variant={groupData.logicalOperator === "AND" ? "default" : "secondary"}>
+                      <Badge
+                        variant={
+                          groupData.logicalOperator === "AND"
+                            ? "default"
+                            : "secondary"
+                        }
+                      >
                         {groupData.logicalOperator}
                       </Badge>
                     )}
@@ -1047,7 +1183,14 @@ function TreeNode({
                               type="number"
                               min="1"
                               value={editMinRequired}
-                              onChange={(e) => setEditMinRequired(Math.max(1, Number.parseInt(e.target.value) || 1))}
+                              onChange={(e) =>
+                                setEditMinRequired(
+                                  Math.max(
+                                    1,
+                                    Number.parseInt(e.target.value) || 1
+                                  )
+                                )
+                              }
                               className="h-7 w-16 text-xs"
                               autoFocus
                               onClick={(e) => e.stopPropagation()}
@@ -1069,7 +1212,11 @@ function TreeNode({
                               disabled={isSaving}
                               className="h-7 w-7 p-0"
                             >
-                              {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                              {isSaving ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Save className="h-3 w-3" />
+                              )}
                             </Button>
                             <Button
                               size="sm"
@@ -1111,7 +1258,7 @@ function TreeNode({
                       variant="ghost"
                       size="sm"
                       onClick={() => onDeleteGroup(node.id)}
-                      className="text-red-600 hover:text-red-700 h-7"
+                      className="h-7 text-red-600 hover:text-red-700"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -1131,15 +1278,19 @@ function TreeNode({
   return (
     <div ref={setNodeRef} style={style} className="flex items-center gap-2">
       {hasSufficientRights && (
-        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing"
+        >
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </div>
       )}
       <Card
         className={cn(
-          "flex-1 transition-all cursor-pointer",
-          isOver && "border-primary border-2",
-          isSelected && "border-blue-600 border-2 shadow-md"
+          "flex-1 cursor-pointer transition-all",
+          isOver && "border-2 border-primary",
+          isSelected && "border-2 border-blue-600 shadow-md"
         )}
         onClick={(e) => !isEditing && onNodeClick(node.id, e)}
       >
@@ -1181,7 +1332,9 @@ function TreeNode({
                 <Input
                   type="number"
                   value={editTargetValue}
-                  onChange={(e) => setEditTargetValue(Number.parseInt(e.target.value) || 1)}
+                  onChange={(e) =>
+                    setEditTargetValue(Number.parseInt(e.target.value) || 1)
+                  }
                   min="1"
                   className="mt-1 h-8 text-sm"
                 />
@@ -1190,17 +1343,21 @@ function TreeNode({
                 <Button
                   size="sm"
                   onClick={handleSaveEdit}
-                  disabled={isSaving || (isItemGoal && !editSelectedItem) || (!isItemGoal && !editDescription.trim())}
-                  className="flex-1 h-7 text-xs"
+                  disabled={
+                    isSaving ||
+                    (isItemGoal && !editSelectedItem) ||
+                    (!isItemGoal && !editDescription.trim())
+                  }
+                  className="h-7 flex-1 text-xs"
                 >
                   {isSaving ? (
                     <>
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                       Saving...
                     </>
                   ) : (
                     <>
-                      <Save className="h-3 w-3 mr-1" />
+                      <Save className="mr-1 h-3 w-3" />
                       Save
                     </>
                   )}
@@ -1218,24 +1375,29 @@ function TreeNode({
             </div>
           ) : (
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 flex-1">
+              <div className="flex flex-1 items-center gap-2">
                 {isItemGoal ? (
                   <>
-                    <img
+                    <Image
                       src={goalData.itemGoal.imageUrl}
                       alt={goalData.itemGoal.baseName}
-                      className="h-6 w-6 object-contain flex-shrink-0"
+                      width={24}
+                      height={24}
+                      className="h-6 w-6 flex-shrink-0 object-contain"
                     />
-                    <Badge variant="secondary" className="text-xs flex-shrink-0">
-                      <Package className="h-3 w-3 mr-1" />
+                    <Badge
+                      variant="secondary"
+                      className="flex-shrink-0 text-xs"
+                    >
+                      <Package className="mr-1 h-3 w-3" />
                       Item
                     </Badge>
                   </>
                 ) : (
-                  <Target className="h-4 w-4 text-green-500 flex-shrink-0" />
+                  <Target className="h-4 w-4 flex-shrink-0 text-green-500" />
                 )}
                 <span className="text-sm">{goalData.description}</span>
-                <Badge variant="outline" className="text-xs flex-shrink-0">
+                <Badge variant="outline" className="flex-shrink-0 text-xs">
                   Target: {goalData.targetValue}
                 </Badge>
               </div>
@@ -1253,7 +1415,7 @@ function TreeNode({
                     variant="ghost"
                     size="sm"
                     onClick={() => onDeleteGoal(node.id)}
-                    className="text-red-600 hover:text-red-700 h-7 w-7 p-0"
+                    className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
