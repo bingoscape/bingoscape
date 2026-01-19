@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/server/db"
+import { logger } from "@/lib/logger";
 import { bingoTemplates } from "@/server/db/schema"
 import { eq, desc, like, and, or, sql } from "drizzle-orm"
 import { getServerAuthSession } from "@/server/auth"
@@ -73,7 +74,7 @@ export async function saveBingoAsTemplate(
     revalidatePath("/templates")
     return { success: true, templateId: template?.id }
   } catch (error) {
-    console.error("Error saving template:", error)
+    logger.error({ error }, "Error saving template:", error)
     return { success: false, error: error instanceof Error ? error.message : "Failed to save template" }
   }
 }
@@ -158,7 +159,7 @@ export async function getPublicTemplates(
       total: Number(count),
     }
   } catch (error) {
-    console.error("Error fetching templates:", error)
+    logger.error({ error }, "Error fetching templates:", error)
     return { templates: [], total: 0 }
   }
 }
@@ -191,7 +192,7 @@ export async function getTemplateById(templateId: string): Promise<BingoTemplate
       creatorImage: template.creator?.image ?? getRandomFrog(),
     }
   } catch (error) {
-    console.error("Error fetching template:", error)
+    logger.error({ error }, "Error fetching template:", error)
     return null
   }
 }
@@ -226,7 +227,7 @@ export async function getUserTemplates(): Promise<BingoTemplate[]> {
       creatorImage: template.creator?.image ?? getRandomFrog(),
     }))
   } catch (error) {
-    console.error("Error fetching user templates:", error)
+    logger.error({ error }, "Error fetching user templates:", error)
     return []
   }
 }
@@ -261,7 +262,7 @@ export async function deleteTemplate(templateId: string) {
     revalidatePath("/templates")
     return { success: true }
   } catch (error) {
-    console.error("Error deleting template:", error)
+    logger.error({ error }, "Error deleting template:", error)
     return { success: false, error: "Failed to delete template" }
   }
 }
@@ -281,7 +282,7 @@ export async function incrementTemplateDownloadCount(templateId: string) {
 
     return { success: true }
   } catch (error) {
-    console.error("Error incrementing download count:", error)
+    logger.error({ error }, "Error incrementing download count:", error)
     return { success: false }
   }
 }
@@ -308,7 +309,7 @@ export async function getTemplateData(templateId: string): Promise<ExportedBingo
     // Parse the template data
     return JSON.parse(template.templateData) as ExportedBingo
   } catch (error) {
-    console.error("Error getting template data:", error)
+    logger.error({ error }, "Error getting template data:", error)
     return { error: "Failed to get template data" }
   }
 }
@@ -328,7 +329,7 @@ export async function getTemplateCategories(): Promise<string[]> {
 
     return categories.map((c) => c.category).filter((c): c is string => c !== null)
   } catch (error) {
-    console.error("Error fetching categories:", error)
+    logger.error({ error }, "Error fetching categories:", error)
     return []
   }
 }
@@ -356,7 +357,7 @@ export async function getTemplateSizes(): Promise<string[]> {
 
     return sizes.map((s) => `${s.rows}x${s.columns}`).filter((size) => size.includes("x")) // Filter out any invalid sizes
   } catch (error) {
-    console.error("Error fetching sizes:", error)
+    logger.error({ error }, "Error fetching sizes:", error)
     return []
   }
 }

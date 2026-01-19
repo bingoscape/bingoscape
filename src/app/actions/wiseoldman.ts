@@ -1,6 +1,7 @@
 "use server"
 
 import { WOMClient } from "@wise-old-man/utils"
+import { logger } from "@/lib/logger";
 
 // Initialize WiseOldMan client with optional API key for higher rate limits
 const womClient = new WOMClient({
@@ -90,7 +91,7 @@ export async function fetchPlayerDataFromWOM(
       },
     }
   } catch (error) {
-    console.error("Error fetching WiseOldMan data:", error)
+    logger.error({ error }, "Error fetching WiseOldMan data:", error)
 
     // Handle specific error cases
     if (error instanceof Error) {
@@ -138,7 +139,7 @@ export async function updatePlayerOnWOM(runescapeName: string): Promise<FetchWOM
     // Fetch the updated data
     return await fetchPlayerDataFromWOM(runescapeName)
   } catch (error) {
-    console.error("Error updating WiseOldMan data:", error)
+    logger.error({ error }, "Error updating WiseOldMan data:", error)
 
     return {
       success: false,

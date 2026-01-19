@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { logger } from "@/lib/logger";
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
 import { apiKeys } from "@/server/db/schema"
@@ -28,7 +29,7 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error deleting API key:", error)
+    logger.error({ error }, "Error deleting API key")
     return NextResponse.json({ error: "Failed to delete API key" }, { status: 500 })
   }
 }

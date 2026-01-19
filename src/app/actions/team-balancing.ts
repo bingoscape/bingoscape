@@ -1,6 +1,7 @@
 "use server"
 
 import { getServerAuthSession } from "@/server/auth"
+import { logger } from "@/lib/logger";
 import { db } from "@/server/db"
 import { teams, eventParticipants } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"

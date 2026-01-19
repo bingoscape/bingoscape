@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { logger } from "@/lib/logger";
 import { db } from "@/server/db"
 import { eventParticipants, events, teamMembers, bingos } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
@@ -102,7 +103,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(eventsWithTeams.filter((event) => event.bingos.length > 0))
   } catch (error) {
-    console.error("Error fetching events:", error)
+    logger.error({ error }, "Error fetching events:", error)
     return NextResponse.json({ error: "Failed to fetch events" }, { status: 500 })
   }
 }

@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import { logger } from "@/lib/logger";
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
 import { NextResponse } from "next/server"
@@ -291,7 +292,7 @@ export async function POST(req: Request) {
       matchedGoals: matchedGoals.length,
     })
   } catch (error) {
-    console.error("Error checking items:", error)
+    logger.error({ error }, "Error checking items:", error)
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

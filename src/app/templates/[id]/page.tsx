@@ -1,4 +1,5 @@
 /* eslint-disable */
+import { logger } from "@/lib/logger";
 import { getTemplateById } from "@/app/actions/templates"
 import { notFound } from "next/navigation"
 import { Breadcrumbs } from "@/components/breadcrumbs"
@@ -43,7 +44,7 @@ export default async function TemplatePage(props: { params: Promise<{ id: string
       totalXP = parsedData.tiles.reduce((sum, tile) => sum + tile.weight, 0)
     }
   } catch (error) {
-    console.error("Error parsing template data:", error)
+    logger.error({ error }, "Error parsing template data")
   }
 
   return (

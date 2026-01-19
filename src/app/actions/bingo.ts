@@ -38,6 +38,8 @@ import {
 } from "@/lib/discord-webhook";
 import { discordWebhooks } from "@/server/db/schema";
 import { sql } from "drizzle-orm";
+import { logger } from "@/lib/logger";
+import { trackError, trackDbQuery } from "@/lib/metrics";
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
 
@@ -209,7 +211,7 @@ export async function updateTile(
     await db.update(tiles).set(updatedTile).where(eq(tiles.id, tileId));
     return { success: true };
   } catch (error) {
-    console.error("Error updating tile:", error);
+    logger.error({ error }, "Error updating tile");
     return { success: false, error: "Failed to update tile" };
   }
 }
@@ -228,7 +230,7 @@ export async function reorderTiles(
     });
     return { success: true };
   } catch (error) {
-    console.error("Error reordering tiles:", error);
+    logger.error({ error }, "Error reordering tiles");
     return { success: false, error: "Failed to reorder tiles" };
   }
 }
@@ -246,7 +248,7 @@ export async function createBingo(formData: FormData) {
     "tiersUnlockRequirement",
   ) as string;
 
-  console.log(formData);
+  logger.debug({ formData }, "Create bingo form data");
 
   if (!eventId || !title || !rowsStr || !columnsStr) {
     throw new Error("Missing required fields");
@@ -369,7 +371,7 @@ export async function deleteBingo(bingoId: string) {
 
     return { success: true };
   } catch (error) {
-    console.error("Error deleting bingo:", error);
+    logger.error({ error }, "Error deleting bingo");
     return { success: false, error: "Failed to delete bingo" };
   }
 }
@@ -390,7 +392,7 @@ export async function addGoal(
 
     return { success: true, goal: newGoal };
   } catch (error) {
-    console.error("Error adding goal:", error);
+    logger.error({ error }, "Error adding goal");
     return { success: false, error: "Failed to add goal" };
   }
 }
@@ -400,7 +402,7 @@ export async function deleteGoal(goalId: string) {
     await db.delete(goals).where(eq(goals.id, goalId));
     return { success: true };
   } catch (error) {
-    console.error("Error deleting goal:", error);
+    logger.error({ error }, "Error deleting goal");
     return { success: false, error: "Failed to delete goal" };
   }
 }
@@ -451,7 +453,7 @@ export async function updateGoal(
 
     return { success: true, goal: updatedGoal };
   } catch (error) {
-    console.error("Error updating goal:", error);
+    logger.error({ error }, "Error updating goal");
     return { success: false, error: "Failed to update goal" };
   }
 }
@@ -498,7 +500,7 @@ export async function createItemGoal(
 
     return { success: true, goal: newGoal, itemGoal: itemGoalData };
   } catch (error) {
-    console.error("Error creating item goal:", error);
+    logger.error({ error }, "Error creating item goal");
     return { success: false, error: "Failed to create item goal" };
   }
 }
@@ -521,7 +523,7 @@ export async function getGoalWithItemData(goalId: string) {
 
     return { success: true, goal };
   } catch (error) {
-    console.error("Error getting goal with item data:", error);
+    logger.error({ error }, "Error getting goal with item data");
     return { success: false, error: "Failed to get goal" };
   }
 }
@@ -568,7 +570,7 @@ export async function updateItemGoal(
 
     return { success: true, itemGoal: updatedItemGoal };
   } catch (error) {
-    console.error("Error updating item goal:", error);
+    logger.error({ error }, "Error updating item goal");
     return { success: false, error: "Failed to update item goal" };
   }
 }
@@ -587,7 +589,7 @@ export async function getItemGoalsForTile(tileId: string) {
 
     return { success: true, goals: itemGoalsList };
   } catch (error) {
-    console.error("Error getting item goals for tile:", error);
+    logger.error({ error }, "Error getting item goals for tile");
     return { success: false, error: "Failed to get item goals" };
   }
 }
@@ -625,7 +627,7 @@ export async function updateGoalProgress(
 
     return { success: true, progress: updatedProgress };
   } catch (error) {
-    console.error("Error updating goal progress:", error);
+    logger.error({ error }, "Error updating goal progress");
     return { success: false, error: "Failed to update goal progress" };
   }
 }
@@ -738,7 +740,7 @@ export async function getAllSubmissionsForTeam(
 
     return submissionsByTile;
   } catch (error) {
-    console.error("Error fetching team submissions:", error);
+    logger.error({ error }, "Error fetching team submissions");
     throw new Error("Failed to fetch team submissions");
   }
 }
@@ -1000,7 +1002,7 @@ export async function submitImage(formData: FormData) {
       }
     } catch (discordError) {
       // Log Discord errors but don't fail the submission
-      console.error("Discord webhook error:", discordError);
+      logger.error({ error: discordError }, "Discord webhook error");
     }
 
     // Revalidate the bingo page
@@ -1008,7 +1010,7 @@ export async function submitImage(formData: FormData) {
 
     return { success: true, submission: newSubmission.submission };
   } catch (error) {
-    console.error("Error submitting image:", error);
+    logger.error({ error }, "Error submitting image");
     return { success: false, error: (error as Error).message };
   }
 }
@@ -1026,8 +1028,9 @@ export async function updateSubmissionStatus(
       throw new Error("Not authenticated");
     }
 
-    console.log(
-      `Server action: Updating submission ${submissionId} to status ${newStatus} with goal ${goalId}, value ${submissionValue}`,
+    logger.info(
+      { submissionId, newStatus, goalId, submissionValue },
+      "Updating submission status",
     );
 
     // Create the update data object
@@ -1137,9 +1140,8 @@ export async function updateSubmissionStatus(
           where: eq(goals.id, updatedSubmission.goalId),
         });
         if (goal) {
-          const { checkAndAutoCompleteTile } = await import(
-            "./tile-completion"
-          );
+          const { checkAndAutoCompleteTile } =
+            await import("./tile-completion");
           await checkAndAutoCompleteTile(goal.tileId, teamSubmission.teamId);
         }
       }
@@ -1150,7 +1152,7 @@ export async function updateSubmissionStatus(
 
     return { success: true, submission: updatedSubmission };
   } catch (error) {
-    console.error("Error updating submission status:", error);
+    logger.error({ error }, "Error updating submission status");
     return { success: false, error: "Failed to update submission status" };
   }
 }
@@ -1211,7 +1213,7 @@ export async function updateTeamTileSubmissionStatus(
 
     return { success: true, teamTileSubmission: updatedTeamTileSubmission };
   } catch (error) {
-    console.error("Error updating team tile submission status:", error);
+    logger.error({ error }, "Error updating team tile submission status");
     return {
       success: false,
       error: "Failed to update team tile submission status",
@@ -1233,8 +1235,9 @@ export async function updateSubmissionStatusWithComment(
       throw new Error("Not authenticated");
     }
 
-    console.log(
-      `Server action: Updating submission ${submissionId} to status ${newStatus} with comment: ${comment}`,
+    logger.info(
+      { submissionId, newStatus, comment },
+      "Updating submission status with comment",
     );
 
     return await db.transaction(async (tx) => {
@@ -1353,9 +1356,8 @@ export async function updateSubmissionStatusWithComment(
             where: eq(goals.id, updatedSubmission.goalId),
           });
           if (goal) {
-            const { checkAndAutoCompleteTile } = await import(
-              "./tile-completion"
-            );
+            const { checkAndAutoCompleteTile } =
+              await import("./tile-completion");
             await checkAndAutoCompleteTile(goal.tileId, teamSubmission.teamId);
           }
         }
@@ -1367,7 +1369,7 @@ export async function updateSubmissionStatusWithComment(
       return { success: true, submission: updatedSubmission };
     });
   } catch (error) {
-    console.error("Error updating submission status with comment:", error);
+    logger.error({ error }, "Error updating submission status with comment");
     return { success: false, error: "Failed to update submission status" };
   }
 }
@@ -1403,7 +1405,10 @@ export async function deleteSubmission(submissionId: string) {
           await fs.unlink(filePath);
         } catch (fileError) {
           // If file doesn't exist, just log and continue
-          console.warn(`Could not delete file at ${filePath}:`, fileError);
+          logger.warn(
+            { error: fileError, filePath },
+            `Could not delete file at ${filePath}`,
+          );
         }
       }
 
@@ -1421,7 +1426,7 @@ export async function deleteSubmission(submissionId: string) {
       return { success: true };
     });
   } catch (error) {
-    console.error("Error deleting submission:", error);
+    logger.error({ error }, "Error deleting submission");
     return { success: false, error: (error as Error).message };
   }
 }
@@ -1485,7 +1490,7 @@ export async function addRowOrColumn(
       return { success: true, tiles: updatedTiles, bingo: updated! };
     });
   } catch (error) {
-    console.error("Error adding row or column:", error);
+    logger.error({ error }, "Error adding row or column");
     return { success: false, error: "Failed to add row or column" };
   }
 }
@@ -1529,7 +1534,7 @@ export async function deleteTile(tileId: string, bingoId: string) {
 
     return { success: true };
   } catch (error) {
-    console.error("Error deleting tile:", error);
+    logger.error({ error }, "Error deleting tile");
     return { success: false, error: "Failed to delete tile" };
   }
 }
@@ -1579,7 +1584,7 @@ export async function addTile(bingoId: string): Promise<AddRowOrColumnResult> {
       return { success: true, tiles: updatedTiles, bingo };
     });
   } catch (error) {
-    console.error("Error adding tile:", error);
+    logger.error({ error }, "Error adding tile");
     return { success: false, error: "Failed to add tile" };
   }
 }
@@ -1658,7 +1663,7 @@ export async function deleteRowOrColumn(
       return { success: true, tiles: updatedTiles, bingo: updatedBingo! };
     });
   } catch (error) {
-    console.error(`Error deleting ${type}:`, error);
+    logger.error({ error, type }, `Error deleting ${type}`);
     return { success: false, error: `Failed to delete ${type}` };
   }
 }
@@ -1809,7 +1814,7 @@ export async function updateBingo(
 
     return { success: true };
   } catch (error) {
-    console.error("Error updating bingo:", error);
+    logger.error({ error }, "Error updating bingo");
     return { success: false, error: "Failed to update bingo" };
   }
 }
@@ -1848,7 +1853,7 @@ export async function getBingoWithPatternBonuses(bingoId: string) {
       },
     };
   } catch (error) {
-    console.error("Error fetching bingo with pattern bonuses:", error);
+    logger.error({ error }, "Error fetching bingo with pattern bonuses");
     return { success: false, error: "Failed to fetch bingo data" };
   }
 }
@@ -1867,7 +1872,7 @@ export async function getTeamTierProgress(teamId: string, bingoId: string) {
 
     return tierProgress;
   } catch (error) {
-    console.error("Error fetching team tier progress:", error);
+    logger.error({ error }, "Error fetching team tier progress");
     throw new Error("Failed to fetch team tier progress");
   }
 }
@@ -1913,7 +1918,7 @@ export async function initializeTeamTierProgress(
 
     return { success: true };
   } catch (error) {
-    console.error("Error initializing team tier progress:", error);
+    logger.error({ error }, "Error initializing team tier progress");
     return { success: false, error: "Failed to initialize team tier progress" };
   }
 }
@@ -2001,7 +2006,7 @@ export async function checkAndUnlockNextTier(teamId: string, bingoId: string) {
 
     return { success: true, unlockedTier: null };
   } catch (error) {
-    console.error("Error checking tier unlock:", error);
+    logger.error({ error }, "Error checking tier unlock");
     return { success: false, error: "Failed to check tier unlock" };
   }
 }
@@ -2053,7 +2058,7 @@ export async function getProgressionBingoTiles(
 
     return accessibleTiles;
   } catch (error) {
-    console.error("Error fetching progression bingo tiles:", error);
+    logger.error({ error }, "Error fetching progression bingo tiles");
     throw new Error("Failed to fetch progression bingo tiles");
   }
 }
@@ -2067,7 +2072,7 @@ export async function updateTileTier(tileId: string, newTier: number) {
 
     return { success: true };
   } catch (error) {
-    console.error("Error updating tile tier:", error);
+    logger.error({ error }, "Error updating tile tier");
     return { success: false, error: "Failed to update tile tier" };
   }
 }
@@ -2080,7 +2085,7 @@ export async function getTierXpRequirements(bingoId: string) {
     });
     return requirements;
   } catch (error) {
-    console.error("Error fetching tier XP requirements:", error);
+    logger.error({ error }, "Error fetching tier XP requirements");
     throw new Error("Failed to fetch tier XP requirements");
   }
 }
@@ -2114,7 +2119,7 @@ export async function setTierXpRequirement(
 
     return { success: true };
   } catch (error) {
-    console.error("Error setting tier XP requirement:", error);
+    logger.error({ error }, "Error setting tier XP requirement");
     return { success: false, error: "Failed to set tier XP requirement" };
   }
 }
@@ -2141,7 +2146,7 @@ export async function initializeTierXpRequirements(
 
     return { success: true };
   } catch (error) {
-    console.error("Error initializing tier XP requirements:", error);
+    logger.error({ error }, "Error initializing tier XP requirements");
     return {
       success: false,
       error: "Failed to initialize tier XP requirements",
@@ -2209,7 +2214,7 @@ export async function createNewTier(bingoId: string) {
       return { success: true, newTier, createdTile };
     });
   } catch (error) {
-    console.error("Error creating new tier:", error);
+    logger.error({ error }, "Error creating new tier");
     return { success: false, error: "Failed to create new tier" };
   }
 }
@@ -2285,7 +2290,7 @@ export async function deleteTier(bingoId: string, tierToDelete: number) {
       };
     });
   } catch (error) {
-    console.error("Error deleting tier:", error);
+    logger.error({ error }, "Error deleting tier");
     return { success: false, error: "Failed to delete tier" };
   } finally {
     // Revalidate the page to refresh cached data

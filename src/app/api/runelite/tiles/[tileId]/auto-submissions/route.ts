@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { logger } from "@/lib/logger";
 import { db } from "@/server/db"
 import { tiles, eventParticipants, teamTileSubmissions, submissions, images, teamMembers, discordWebhooks, goals, teamGoalProgress } from "@/server/db/schema"
 import { eq, and, sql } from "drizzle-orm"
@@ -304,9 +305,9 @@ export async function POST(req: Request, props: { params: Promise<{ tileId: stri
     if (matchedGoalId) {
       try {
         const completionResult = await checkAndAutoCompleteTile(tileId, userTeam.id)
-        console.log(`Tile ${tileId} completion check: ${completionResult.autoCompleted ? 'Complete' : 'Incomplete'}`)
+        logger.info({ tileId, autoCompleted: completionResult.autoCompleted }, "Tile completion check")
       } catch (error) {
-        console.error("Error checking tile auto-completion:", error)
+        logger.error({ error }, "Error checking tile auto-completion")
         // Don't fail the submission if auto-completion check fails
       }
     }
@@ -381,7 +382,7 @@ export async function POST(req: Request, props: { params: Promise<{ tileId: stri
       }
     } catch (discordError) {
       // Log Discord errors but don't fail the submission
-      console.error("Discord webhook error:", discordError)
+      logger.error({ error: discordError }, "Discord webhook error")
     }
 
     // Format the response using shared utility
@@ -393,7 +394,7 @@ export async function POST(req: Request, props: { params: Promise<{ tileId: stri
       matchedGoalId: matchedGoalId,
     })
   } catch (error) {
-    console.error("Error submitting auto-submission:", error)
+    logger.error({ error }, "Error submitting auto-submission")
     return NextResponse.json({ error: "Failed to submit image" }, { status: 500 })
   }
 }

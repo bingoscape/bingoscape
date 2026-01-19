@@ -1,0 +1,101 @@
+global:
+  resolve_timeout: 5m
+  # SMTP configuration for email alerts
+  smtp_smarthost: "${SMTP_HOST}:${SMTP_PORT}"
+  smtp_from: "${ALERT_EMAIL_FROM}"
+  smtp_auth_username: "${SMTP_USER}"
+  smtp_auth_password: "${SMTP_PASSWORD}"
+  smtp_require_tls: true
+
+# Templates for alert formatting
+templates:
+  - "/etc/alertmanager/templates/*.tmpl"
+
+# Routing tree
+route:
+  # Default receiver
+  receiver: "discord-and-email"
+
+  # Group alerts by alertname and severity
+  group_by: ["alertname", "severity"]
+
+  # Wait before sending first notification
+  group_wait: 30s
+
+  # Wait before sending updated notifications
+  group_interval: 5m
+
+  # Repeat notifications after this interval
+  repeat_interval: 4h
+
+  # Child routes for severity-based routing
+  routes:
+    # Critical alerts - immediate notification
+    - match:
+        severity: critical
+      receiver: "discord-and-email"
+      group_wait: 10s
+      repeat_interval: 1h
+
+    # Warning alerts - less urgent
+    - match:
+        severity: warning
+      receiver: "discord-and-email"
+      group_wait: 1m
+      repeat_interval: 4h
+
+    # Info alerts - daily digest only
+    - match:
+        severity: info
+      receiver: "discord-only"
+      group_wait: 5m
+      repeat_interval: 24h
+
+# Inhibition rules
+inhibit_rules:
+  # If critical alert is firing, suppress warning alerts for same alertname
+  - source_match:
+      severity: "critical"
+    target_match:
+      severity: "warning"
+    equal: ["alertname"]
+
+  # If application is down, suppress all other alerts
+  - source_match:
+      alertname: "ApplicationDown"
+    target_match_re:
+      alertname: ".*"
+    equal: ["job"]
+
+receivers:
+  # Discord webhook + Email
+  - name: "discord-and-email"
+    webhook_configs:
+      # Custom webhook endpoint that formats alerts for Discord
+      - url: "http://app:3000/api/alerts/webhook"
+        send_resolved: true
+        max_alerts: 10
+    email_configs:
+      - to: "${ALERT_EMAIL}"
+        send_resolved: true
+        headers:
+          Subject: "[Bingoscape {{ .Status | toUpper }}] {{ .GroupLabels.alertname }}"
+        html: |
+          <h2>{{ .Status | toUpper }}: {{ .GroupLabels.alertname }}</h2>
+          <p><strong>Severity:</strong> {{ .CommonLabels.severity }}</p>
+          {{ range .Alerts }}
+          <hr>
+          <p><strong>Summary:</strong> {{ .Annotations.summary }}</p>
+          <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+          <p><strong>Started:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}</p>
+          {{ if .EndsAt }}
+          <p><strong>Ended:</strong> {{ .EndsAt.Format "2006-01-02 15:04:05 MST" }}</p>
+          {{ end }}
+          {{ end }}
+
+  # Discord only (for info alerts)
+  - name: "discord-only"
+    webhook_configs:
+      - url: "http://app:3000/api/alerts/webhook"
+        send_resolved: true
+        max_alerts: 5

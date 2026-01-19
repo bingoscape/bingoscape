@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { logger } from "@/lib/logger";
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/server/auth"
 import { db } from "@/server/db"
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
 
     return NextResponse.json(comments)
   } catch (error) {
-    console.error("Error fetching submission comments:", error)
+    logger.error({ error }, "Error fetching submission comments")
     return NextResponse.json(
       { error: "Failed to fetch comments" },
       { status: 500 }
@@ -129,7 +130,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       )
     }
 
-    console.error("Error creating submission comment:", error)
+    logger.error({ error }, "Error creating submission comment")
     return NextResponse.json(
       { error: "Failed to create comment" },
       { status: 500 }

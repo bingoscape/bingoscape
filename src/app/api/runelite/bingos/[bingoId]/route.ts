@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { logger } from "@/lib/logger";
 import { validateApiKey } from "@/lib/api-auth"
 import { db } from "@/server/db"
 import { bingos, teamMembers } from "@/server/db/schema"
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ bingo
 
     const bingoId = params.bingoId
 
-    console.log("bingoId", bingoId)
+    logger.debug({ bingoId }, "Fetching bingo data")
     // Get the bingo data
     const bingo = await db.query.bingos.findFirst({
       where: eq(bingos.id, bingoId),
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ bingo
 
     return NextResponse.json(formattedBingo)
   } catch (error) {
-    console.error("Error fetching bingo data:", error)
+    logger.error({ error }, "Error fetching bingo data")
     return NextResponse.json({ error: "An error occurred while fetching bingo data" }, { status: 500 })
   }
 }

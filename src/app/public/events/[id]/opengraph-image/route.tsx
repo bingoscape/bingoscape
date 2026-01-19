@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og"
+import { logger } from "@/lib/logger";
 import type { NextRequest } from "next/server"
 
 export const runtime = "nodejs"
@@ -297,7 +298,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       }
     )
   } catch (error) {
-    console.error('Error generating OpenGraph image:', error)
+    logger.error({ error }, 'Error generating OpenGraph image')
 
     return new ImageResponse(
       (

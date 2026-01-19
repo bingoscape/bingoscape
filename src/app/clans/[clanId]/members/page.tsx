@@ -87,7 +87,7 @@ export default function ClanMembersPage(props: { params: Promise<{ clanId: strin
 			}
 		};
 
-		fetchData().then(() => console.log("done")).catch(err => console.error(err));
+		fetchData().catch(err => console.error(err));
 	}, [params.clanId, status, router]);
 
     if (!clanDetails) {

@@ -1,0 +1,45 @@
+apiVersion: 1
+
+# IMPORTANT: These datasources are provisioned before dashboards
+# Ensure UIDs match dashboard references exactly
+
+datasources:
+  # Prometheus - Default datasource for metrics
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    orgId: 1
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: "15s"
+      httpMethod: POST
+      manageAlerts: true
+      prometheusType: Prometheus
+      prometheusVersion: "2.47.0"
+
+  # Loki - Log aggregation
+  - name: Loki
+    type: loki
+    uid: loki
+    orgId: 1
+    access: proxy
+    url: http://loki:3100
+    editable: false
+    jsonData:
+      maxLines: 1000
+      timeout: 60
+
+  # Alertmanager - Alert routing
+  - name: Alertmanager
+    type: alertmanager
+    uid: alertmanager
+    orgId: 1
+    access: proxy
+    url: http://alertmanager:9093
+    editable: false
+    jsonData:
+      implementation: prometheus
+      handleGrafanaManagedAlerts: true

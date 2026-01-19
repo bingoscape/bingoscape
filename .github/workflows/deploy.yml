@@ -4,17 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to deploy to'
+        description: "Environment to deploy to"
         required: true
         type: choice
         options:
           - production
           - staging
-        default: 'production'
+        default: "production"
       image_tag:
-        description: 'Docker image tag to deploy (e.g., main, v1.2.3)'
+        description: "Docker image tag to deploy (e.g., main, v1.2.3)"
         required: true
-        default: 'main'
+        default: "main"
         type: string
 
 env:
@@ -38,7 +38,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose.yml,nginx/nginx.conf,nginx/conf.d/default-ssl.conf.example,nginx/conf.d/default-dev.conf.example,scripts/"
+          source: "docker-compose.yml,nginx/nginx.conf,nginx/conf.d/default-ssl.conf.example,nginx/conf.d/default-dev.conf.example,scripts/,observability/"
           target: "/tmp/bingoscape-deploy/"
           overwrite: true
 
@@ -67,11 +67,15 @@ jobs:
 
             # Create uploads directory if it doesn't exist and set proper permissions
             echo "📁 Ensuring uploads directory exists with correct permissions..."
-            mkdir -p "$APP_DIR/uploads"
-            # Set proper permissions for uploads (UID 1001 = nextjs user in container)
-            # Use 775 to allow owner and group write access
-            sudo chown -R 1001:1001 "$APP_DIR/uploads" 2>/dev/null || chown -R 1001:1001 "$APP_DIR/uploads" || true
-            sudo chmod -R 775 "$APP_DIR/uploads" 2>/dev/null || chmod -R 775 "$APP_DIR/uploads" || true
+            if [ ! -d "$APP_DIR/uploads" ]; then
+              mkdir -p "$APP_DIR/uploads"
+              echo "Created new uploads directory"
+            fi
+            # Set proper permissions for uploads directory (UID 1001 = nextjs user in container)
+            # Only set on directory itself, not recursively, to avoid permission errors on existing files
+            # Files are managed by container and will inherit directory permissions
+            sudo chown 1001:1001 "$APP_DIR/uploads" 2>/dev/null || chown 1001:1001 "$APP_DIR/uploads" || true
+            sudo chmod 775 "$APP_DIR/uploads" 2>/dev/null || chmod 775 "$APP_DIR/uploads" || true
             echo "✅ Uploads directory permissions set (owner: 1001:1001, mode: 775)"
 
 
@@ -94,6 +98,19 @@ jobs:
               echo "✅ Scripts copied and made executable"
             else
               echo "⚠️  Warning: scripts directory not found, skipping..."
+            fi
+
+            # Copy observability configuration
+            if [ -d "/tmp/bingoscape-deploy/observability" ]; then
+              echo "📋 Copying observability configuration..."
+              # Ensure directory exists with correct ownership before copying
+              mkdir -p "$APP_DIR/observability"
+              sudo chown -R $(whoami):$(whoami) "$APP_DIR/observability" 2>/dev/null || chown -R $(whoami):$(whoami) "$APP_DIR/observability" || true
+              # Now copy files - will succeed since we own the directory
+              cp -r /tmp/bingoscape-deploy/observability/* "$APP_DIR/observability/"
+              echo "✅ Observability configuration copied successfully"
+            else
+              echo "⚠️  Warning: observability directory not found, skipping..."
             fi
 
             # Backup existing .env file
@@ -143,10 +160,26 @@ jobs:
             NODE_ENV=production
 
             # ==============================================
-            # MONITORING & ERROR TRACKING
+            # OBSERVABILITY & MONITORING
             # ==============================================
-            SENTRY_AUTH_TOKEN="${{ secrets.SENTRY_AUTH_TOKEN }}"
-            SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
+            GRAFANA_ADMIN_USER="${{ secrets.GRAFANA_ADMIN_USER }}"
+            GRAFANA_ADMIN_PASSWORD="${{ secrets.GRAFANA_ADMIN_PASSWORD }}"
+            GRAFANA_ROOT_URL="${{ secrets.GRAFANA_ROOT_URL }}"
+            ALERT_EMAIL="${{ secrets.ALERT_EMAIL }}"
+            ALERT_EMAIL_FROM="${{ secrets.ALERT_EMAIL_FROM }}"
+            ALERT_DISCORD_WEBHOOK_URL="${{ secrets.ALERT_DISCORD_WEBHOOK_URL }}"
+            SMTP_HOST="${{ secrets.SMTP_HOST }}"
+            SMTP_PORT="${{ secrets.SMTP_PORT }}"
+            SMTP_USER="${{ secrets.SMTP_USER }}"
+            SMTP_PASSWORD="${{ secrets.SMTP_PASSWORD }}"
+            METRICS_ENABLED="true"
+            LOG_LEVEL="${{ secrets.LOG_LEVEL }}"
+            PROMETHEUS_ENDPOINT="http://prometheus:9090"
+            LOKI_ENDPOINT="http://loki:3100"
+
+            NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}"
+
+
 
             ENV_EOF
 

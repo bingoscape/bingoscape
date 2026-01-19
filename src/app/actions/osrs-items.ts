@@ -1,4 +1,4 @@
-"use server"
+"use server";
 
 import {
   searchItemsByName,
@@ -8,8 +8,9 @@ import {
   getItemVariants,
   parseItemName,
   getItemImageUrl,
-} from "osrs-item-data"
-import type { OsrsItem } from "@/types/osrs-items"
+} from "osrs-item-data";
+import type { OsrsItem } from "@/types/osrs-items";
+import { logger } from "@/lib/logger";
 
 /**
  * Search for OSRS items by name (autocomplete)
@@ -17,19 +18,19 @@ import type { OsrsItem } from "@/types/osrs-items"
  */
 export async function searchOsrsItems(
   query: string,
-  limit = 20
+  limit = 20,
 ): Promise<{ success: boolean; items?: OsrsItem[]; error?: string }> {
   try {
     if (!query || query.length < 2) {
-      return { success: false, error: "Query must be at least 2 characters" }
+      return { success: false, error: "Query must be at least 2 characters" };
     }
 
-    const results = searchItemsByName(query, limit)
+    const results = searchItemsByName(query, limit);
 
-    return { success: true, items: results }
+    return { success: true, items: results };
   } catch (error) {
-    console.error("Error searching OSRS items:", error)
-    return { success: false, error: "Failed to search items" }
+    logger.error({ error }, "Error searching OSRS items:", error);
+    return { success: false, error: "Failed to search items" };
   }
 }
 
@@ -37,19 +38,19 @@ export async function searchOsrsItems(
  * Get a single OSRS item by ID
  */
 export async function getOsrsItemById(
-  itemId: number
+  itemId: number,
 ): Promise<{ success: boolean; item?: OsrsItem; error?: string }> {
   try {
-    const item = getItemById(itemId)
+    const item = getItemById(itemId);
 
     if (!item) {
-      return { success: false, error: "Item not found" }
+      return { success: false, error: "Item not found" };
     }
 
-    return { success: true, item }
+    return { success: true, item };
   } catch (error) {
-    console.error("Error getting OSRS item:", error)
-    return { success: false, error: "Failed to get item" }
+    logger.error({ error }, "Error getting OSRS item:", error);
+    return { success: false, error: "Failed to get item" };
   }
 }
 
@@ -57,15 +58,15 @@ export async function getOsrsItemById(
  * Get all variants of an item by ID
  */
 export async function getOsrsItemVariantsById(
-  itemId: number
+  itemId: number,
 ): Promise<{ success: boolean; items?: OsrsItem[]; error?: string }> {
   try {
-    const items = getItemsById(itemId)
+    const items = getItemsById(itemId);
 
-    return { success: true, items }
+    return { success: true, items };
   } catch (error) {
-    console.error("Error getting OSRS item variants:", error)
-    return { success: false, error: "Failed to get item variants" }
+    logger.error({ error }, "Error getting OSRS item variants:", error);
+    return { success: false, error: "Failed to get item variants" };
   }
 }
 
@@ -73,19 +74,19 @@ export async function getOsrsItemVariantsById(
  * Get an OSRS item by exact name
  */
 export async function getOsrsItemByName(
-  name: string
+  name: string,
 ): Promise<{ success: boolean; item?: OsrsItem; error?: string }> {
   try {
-    const item = getItemByName(name)
+    const item = getItemByName(name);
 
     if (!item) {
-      return { success: false, error: "Item not found" }
+      return { success: false, error: "Item not found" };
     }
 
-    return { success: true, item }
+    return { success: true, item };
   } catch (error) {
-    console.error("Error getting OSRS item by name:", error)
-    return { success: false, error: "Failed to get item" }
+    logger.error({ error }, "Error getting OSRS item by name:", error);
+    return { success: false, error: "Failed to get item" };
   }
 }
 
@@ -93,15 +94,15 @@ export async function getOsrsItemByName(
  * Get all variants of an item by base name
  */
 export async function getOsrsItemVariantsByBaseName(
-  baseName: string
+  baseName: string,
 ): Promise<{ success: boolean; items?: OsrsItem[]; error?: string }> {
   try {
-    const items = getItemVariants(baseName)
+    const items = getItemVariants(baseName);
 
-    return { success: true, items }
+    return { success: true, items };
   } catch (error) {
-    console.error("Error getting OSRS item variants:", error)
-    return { success: false, error: "Failed to get item variants" }
+    logger.error({ error }, "Error getting OSRS item variants:", error);
+    return { success: false, error: "Failed to get item variants" };
   }
 }
 
@@ -109,15 +110,19 @@ export async function getOsrsItemVariantsByBaseName(
  * Parse an item name to extract base name and variant
  */
 export async function parseOsrsItemName(
-  itemName: string
-): Promise<{ success: boolean; result?: { baseName: string; variant?: string }; error?: string }> {
+  itemName: string,
+): Promise<{
+  success: boolean;
+  result?: { baseName: string; variant?: string };
+  error?: string;
+}> {
   try {
-    const result = parseItemName(itemName)
+    const result = parseItemName(itemName);
 
-    return { success: true, result }
+    return { success: true, result };
   } catch (error) {
-    console.error("Error parsing OSRS item name:", error)
-    return { success: false, error: "Failed to parse item name" }
+    logger.error({ error }, "Error parsing OSRS item name:", error);
+    return { success: false, error: "Failed to parse item name" };
   }
 }
 
@@ -126,15 +131,15 @@ export async function parseOsrsItemName(
  */
 export async function getOsrsItemImageUrl(
   itemName: string,
-  options?: { width?: number; useThumb?: boolean; includeVariant?: boolean }
+  options?: { width?: number; useThumb?: boolean; includeVariant?: boolean },
 ): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
   try {
-    const imageUrl = getItemImageUrl(itemName, options)
+    const imageUrl = getItemImageUrl(itemName, options);
 
-    return { success: true, imageUrl }
+    return { success: true, imageUrl };
   } catch (error) {
-    console.error("Error getting OSRS item image URL:", error)
-    return { success: false, error: "Failed to get image URL" }
+    logger.error({ error }, "Error getting OSRS item image URL:", error);
+    return { success: false, error: "Failed to get image URL" };
   }
 }
 
@@ -144,15 +149,15 @@ export async function getOsrsItemImageUrl(
  */
 export async function doesItemMatchBaseName(
   itemName: string,
-  baseName: string
+  baseName: string,
 ): Promise<{ success: boolean; matches?: boolean; error?: string }> {
   try {
-    const parsed = parseItemName(itemName)
-    const matches = parsed.baseName.toLowerCase() === baseName.toLowerCase()
+    const parsed = parseItemName(itemName);
+    const matches = parsed.baseName.toLowerCase() === baseName.toLowerCase();
 
-    return { success: true, matches }
+    return { success: true, matches };
   } catch (error) {
-    console.error("Error matching item name:", error)
-    return { success: false, error: "Failed to match item" }
+    logger.error({ error }, "Error matching item name:", error);
+    return { success: false, error: "Failed to match item" };
   }
 }

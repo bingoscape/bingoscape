@@ -122,7 +122,7 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
     }
 
     fetchData()
-      .then(() => console.log("Data fetched"))
+      
       .catch((error) => console.error("Error fetching data:", error))
   }, [eventId, bingoId, router, refreshKey])
 
@@ -166,7 +166,7 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
     }
 
     fetchSubmissions()
-      .then(() => console.log("Submissions fetched"))
+      
       .catch((error) => console.error("Error fetching submissions:", error))
   }, [bingoId, selectedTeamIds, refreshKey])
 
