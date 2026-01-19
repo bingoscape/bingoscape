@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "env-cmd next build",
+    "build:ci": "next build",
     "db:generate": "env-cmd npx drizzle-kit generate",
     "db:migrate": "env-cmd npx drizzle-kit migrate",
     "db:push": "env-cmd npx drizzle-kit push --force",
