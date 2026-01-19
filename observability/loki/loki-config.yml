@@ -33,7 +33,6 @@ storage_config:
   tsdb_shipper:
     active_index_directory: /loki/tsdb-index
     cache_location: /loki/tsdb-cache
-    shared_store: filesystem
 
 # Query settings - optimized
 query_range:
@@ -64,7 +63,6 @@ limits_config:
 # Compactor for retention enforcement
 compactor:
   working_directory: /loki/compactor
-  shared_store: filesystem
   retention_enabled: true
   retention_delete_delay: 2h
   retention_delete_worker_count: 150
@@ -83,7 +81,6 @@ ingester:
   max_chunk_age: 1h
   chunk_target_size: 1048576
   chunk_retain_period: 30s
-  max_transfer_retries: 0
   wal:
     enabled: true
     dir: /loki/wal
