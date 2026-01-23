@@ -3,6 +3,7 @@
 
 server:
   http_listen_port: 3200
+  grpc_listen_port: 9095
   log_level: info
 
 # Distributor receives traces from OTLP exporters
@@ -40,7 +41,10 @@ query_frontend:
 # Querier configuration
 querier:
   frontend_worker:
-    frontend_address: localhost:3200
+    frontend_address: localhost:9095
+    grpc_client_config:
+      max_recv_msg_size: 16777216
+      max_send_msg_size: 16777216
 
 # Metrics generator for service graphs and span metrics
 metrics_generator:
