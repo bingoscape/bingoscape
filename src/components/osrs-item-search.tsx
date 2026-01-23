@@ -3,8 +3,19 @@
 import * as React from "react"
 import { useState, useEffect } from "react"
 import { Search, Loader2, CheckSquare, Square, X } from "lucide-react"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { searchOsrsItems } from "@/app/actions/osrs-items"
 import type { OsrsItem } from "@/types/osrs-items"
@@ -33,7 +44,8 @@ export function OsrsItemSearch({
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<OsrsItem[]>([])
   const [loading, setLoading] = useState(false)
-  const [internalSelectedItems, setInternalSelectedItems] = useState<OsrsItem[]>(selectedItems)
+  const [internalSelectedItems, setInternalSelectedItems] =
+    useState<OsrsItem[]>(selectedItems)
 
   // Debounced search
   useEffect(() => {
@@ -69,16 +81,18 @@ export function OsrsItemSearch({
     if (multiSelect) {
       // Toggle item in multi-select mode
       const itemId = Array.isArray(item.id) ? item.id[0] : item.id
-      const isSelected = internalSelectedItems.some(
-        (selectedItem) => {
-          const selectedId = Array.isArray(selectedItem.id) ? selectedItem.id[0] : selectedItem.id
-          return selectedId === itemId
-        }
-      )
+      const isSelected = internalSelectedItems.some((selectedItem) => {
+        const selectedId = Array.isArray(selectedItem.id)
+          ? selectedItem.id[0]
+          : selectedItem.id
+        return selectedId === itemId
+      })
 
       const newSelection = isSelected
         ? internalSelectedItems.filter((selectedItem) => {
-            const selectedId = Array.isArray(selectedItem.id) ? selectedItem.id[0] : selectedItem.id
+            const selectedId = Array.isArray(selectedItem.id)
+              ? selectedItem.id[0]
+              : selectedItem.id
             return selectedId !== itemId
           })
         : [...internalSelectedItems, item]
@@ -98,7 +112,9 @@ export function OsrsItemSearch({
     if (!multiSelect) return false
     const itemId = Array.isArray(item.id) ? item.id[0] : item.id
     return internalSelectedItems.some((selectedItem) => {
-      const selectedId = Array.isArray(selectedItem.id) ? selectedItem.id[0] : selectedItem.id
+      const selectedId = Array.isArray(selectedItem.id)
+        ? selectedItem.id[0]
+        : selectedItem.id
       return selectedId === itemId
     })
   }
@@ -127,10 +143,14 @@ export function OsrsItemSearch({
           {multiSelect && internalSelectedItems.length > 0 ? (
             <div className="flex items-center gap-2">
               <CheckSquare className="h-4 w-4 text-blue-500" />
-              <span className="truncate">{internalSelectedItems.length} item{internalSelectedItems.length !== 1 ? 's' : ''} selected</span>
+              <span className="truncate">
+                {internalSelectedItems.length} item
+                {internalSelectedItems.length !== 1 ? "s" : ""} selected
+              </span>
             </div>
           ) : selectedItem && !multiSelect ? (
             <div className="flex items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={selectedItem.imageUrl}
                 alt={selectedItem.name}
@@ -145,7 +165,10 @@ export function OsrsItemSearch({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-0" align="start">
-        <Command shouldFilter={false} className="[&_input]:focus:ring-0 [&_input]:focus-visible:ring-0">
+        <Command
+          shouldFilter={false}
+          className="[&_input]:focus:ring-0 [&_input]:focus-visible:ring-0"
+        >
           <CommandInput
             placeholder="Search OSRS items..."
             value={query}
@@ -156,7 +179,9 @@ export function OsrsItemSearch({
             {loading && (
               <div className="flex items-center justify-center p-4">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="ml-2 text-sm text-muted-foreground">Searching...</span>
+                <span className="ml-2 text-sm text-muted-foreground">
+                  Searching...
+                </span>
               </div>
             )}
             {!loading && query.length > 0 && query.length < 2 && (
@@ -180,28 +205,30 @@ export function OsrsItemSearch({
                       onSelect={() => handleSelect(item)}
                       className="cursor-pointer"
                     >
-                      <div className="flex items-center gap-3 w-full">
-                        {multiSelect && (
-                          selected ? (
-                            <CheckSquare className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                      <div className="flex w-full items-center gap-3">
+                        {multiSelect &&
+                          (selected ? (
+                            <CheckSquare className="h-5 w-5 flex-shrink-0 text-blue-500" />
                           ) : (
-                            <Square className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                          )
-                        )}
+                            <Square className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                          ))}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={item.imageUrl}
                           alt={item.name}
-                          className="h-8 w-8 object-contain flex-shrink-0"
+                          className="h-8 w-8 flex-shrink-0 object-contain"
                         />
-                        <div className="flex flex-col flex-1 min-w-0">
-                          <span className="font-medium truncate">{item.name}</span>
+                        <div className="flex min-w-0 flex-1 flex-col">
+                          <span className="truncate font-medium">
+                            {item.name}
+                          </span>
                           {item.variant && (
                             <span className="text-xs text-muted-foreground">
                               {item.baseName} ({item.variant})
                             </span>
                           )}
                         </div>
-                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                        <span className="flex-shrink-0 text-xs text-muted-foreground">
                           ID: {itemId}
                         </span>
                       </div>
@@ -212,20 +239,20 @@ export function OsrsItemSearch({
             )}
           </CommandList>
           {multiSelect && internalSelectedItems.length > 0 && (
-            <div className="flex items-center gap-2 p-2 border-t bg-muted/30">
+            <div className="flex items-center gap-2 border-t bg-muted/30 p-2">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleClearAll}
-                className="flex-1 text-xs h-8"
+                className="h-8 flex-1 text-xs"
               >
-                <X className="h-3 w-3 mr-1" />
+                <X className="mr-1 h-3 w-3" />
                 Clear All
               </Button>
               <Button
                 size="sm"
                 onClick={handleDone}
-                className="flex-1 text-xs h-8"
+                className="h-8 flex-1 text-xs"
               >
                 Done
               </Button>
@@ -286,14 +313,17 @@ export function OsrsItemSearchCompact({
   }
 
   return (
-    <div className={cn("flex items-center gap-2 p-2 border rounded-md", className)}>
+    <div
+      className={cn("flex items-center gap-2 rounded-md border p-2", className)}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={selectedItem.imageUrl}
         alt={selectedItem.name}
         className="h-8 w-8 object-contain"
       />
-      <div className="flex-1 min-w-0">
-        <div className="font-medium truncate">{selectedItem.name}</div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-medium">{selectedItem.name}</div>
         {selectedItem.variant && (
           <div className="text-xs text-muted-foreground">
             {selectedItem.baseName} ({selectedItem.variant})
@@ -301,19 +331,11 @@ export function OsrsItemSearchCompact({
         )}
       </div>
       <div className="flex gap-1">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowSearch(true)}
-        >
+        <Button variant="outline" size="sm" onClick={() => setShowSearch(true)}>
           Change
         </Button>
         {onClear && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onClear}
-          >
+          <Button variant="outline" size="sm" onClick={onClear}>
             Clear
           </Button>
         )}

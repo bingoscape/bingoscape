@@ -1,10 +1,10 @@
 "use server"
 
 import { getServerAuthSession } from "@/server/auth"
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger"
 import { db } from "@/server/db"
 import { discordWebhooks, eventParticipants, events } from "@/server/db/schema"
-import { eq, and } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { testDiscordWebhook } from "@/lib/discord-webhook"
 
@@ -19,7 +19,9 @@ export interface DiscordWebhook {
   updatedAt: Date
 }
 
-export async function getDiscordWebhooks(eventId: string): Promise<DiscordWebhook[]> {
+export async function getDiscordWebhooks(
+  eventId: string
+): Promise<DiscordWebhook[]> {
   const session = await getServerAuthSession()
   if (!session?.user) {
     throw new Error("Not authenticated")
@@ -30,9 +32,9 @@ export async function getDiscordWebhooks(eventId: string): Promise<DiscordWebhoo
     where: eq(events.id, eventId),
     with: {
       eventParticipants: {
-        where: eq(eventParticipants.userId, session.user.id)
-      }
-    }
+        where: eq(eventParticipants.userId, session.user.id),
+      },
+    },
   })
 
   if (!event) {
@@ -40,7 +42,8 @@ export async function getDiscordWebhooks(eventId: string): Promise<DiscordWebhoo
   }
 
   const userParticipant = event.eventParticipants[0]
-  const hasPermission = event.creatorId === session.user.id ||
+  const hasPermission =
+    event.creatorId === session.user.id ||
     userParticipant?.role === "admin" ||
     userParticipant?.role === "management"
 
@@ -50,7 +53,7 @@ export async function getDiscordWebhooks(eventId: string): Promise<DiscordWebhoo
 
   const webhooks = await db.query.discordWebhooks.findMany({
     where: eq(discordWebhooks.eventId, eventId),
-    orderBy: [discordWebhooks.createdAt]
+    orderBy: [discordWebhooks.createdAt],
   })
 
   return webhooks
@@ -68,7 +71,7 @@ export async function createDiscordWebhook(
 
   try {
     // Validate webhook URL format
-    if (!webhookUrl.includes('discord.com/api/webhooks/')) {
+    if (!webhookUrl.includes("discord.com/api/webhooks/")) {
       return { success: false, error: "Invalid Discord webhook URL" }
     }
 
@@ -83,9 +86,9 @@ export async function createDiscordWebhook(
       where: eq(events.id, eventId),
       with: {
         eventParticipants: {
-          where: eq(eventParticipants.userId, session.user.id)
-        }
-      }
+          where: eq(eventParticipants.userId, session.user.id),
+        },
+      },
     })
 
     if (!event) {
@@ -93,7 +96,8 @@ export async function createDiscordWebhook(
     }
 
     const userParticipant = event.eventParticipants[0]
-    const hasPermission = event.creatorId === session.user.id ||
+    const hasPermission =
+      event.creatorId === session.user.id ||
       userParticipant?.role === "admin" ||
       userParticipant?.role === "management"
 
@@ -102,13 +106,16 @@ export async function createDiscordWebhook(
     }
 
     // Create the webhook
-    const [webhook] = await db.insert(discordWebhooks).values({
-      eventId,
-      name,
-      webhookUrl,
-      createdBy: session.user.id,
-      isActive: true
-    }).returning()
+    const [webhook] = await db
+      .insert(discordWebhooks)
+      .values({
+        eventId,
+        name,
+        webhookUrl,
+        createdBy: session.user.id,
+        isActive: true,
+      })
+      .returning()
 
     revalidatePath(`/events/${eventId}`)
 
@@ -136,11 +143,11 @@ export async function updateDiscordWebhook(
         event: {
           with: {
             eventParticipants: {
-              where: eq(eventParticipants.userId, session.user.id)
-            }
-          }
-        }
-      }
+              where: eq(eventParticipants.userId, session.user.id),
+            },
+          },
+        },
+      },
     })
 
     if (!webhook) {
@@ -148,7 +155,8 @@ export async function updateDiscordWebhook(
     }
 
     const userParticipant = webhook.event.eventParticipants[0]
-    const hasPermission = webhook.event.creatorId === session.user.id ||
+    const hasPermission =
+      webhook.event.creatorId === session.user.id ||
       userParticipant?.role === "admin" ||
       userParticipant?.role === "management"
 
@@ -158,7 +166,7 @@ export async function updateDiscordWebhook(
 
     // If updating webhook URL, test it first
     if (updates.webhookUrl && updates.webhookUrl !== webhook.webhookUrl) {
-      if (!updates.webhookUrl.includes('discord.com/api/webhooks/')) {
+      if (!updates.webhookUrl.includes("discord.com/api/webhooks/")) {
         return { success: false, error: "Invalid Discord webhook URL" }
       }
 
@@ -169,10 +177,11 @@ export async function updateDiscordWebhook(
     }
 
     // Update the webhook
-    await db.update(discordWebhooks)
+    await db
+      .update(discordWebhooks)
       .set({
         ...updates,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       })
       .where(eq(discordWebhooks.id, webhookId))
 
@@ -185,7 +194,9 @@ export async function updateDiscordWebhook(
   }
 }
 
-export async function deleteDiscordWebhook(webhookId: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteDiscordWebhook(
+  webhookId: string
+): Promise<{ success: boolean; error?: string }> {
   const session = await getServerAuthSession()
   if (!session?.user) {
     return { success: false, error: "Not authenticated" }
@@ -199,11 +210,11 @@ export async function deleteDiscordWebhook(webhookId: string): Promise<{ success
         event: {
           with: {
             eventParticipants: {
-              where: eq(eventParticipants.userId, session.user.id)
-            }
-          }
-        }
-      }
+              where: eq(eventParticipants.userId, session.user.id),
+            },
+          },
+        },
+      },
     })
 
     if (!webhook) {
@@ -211,7 +222,8 @@ export async function deleteDiscordWebhook(webhookId: string): Promise<{ success
     }
 
     const userParticipant = webhook.event.eventParticipants[0]
-    const hasPermission = webhook.event.creatorId === session.user.id ||
+    const hasPermission =
+      webhook.event.creatorId === session.user.id ||
       userParticipant?.role === "admin" ||
       userParticipant?.role === "management"
 
@@ -231,7 +243,9 @@ export async function deleteDiscordWebhook(webhookId: string): Promise<{ success
   }
 }
 
-export async function testWebhook(webhookId: string): Promise<{ success: boolean; error?: string }> {
+export async function testWebhook(
+  webhookId: string
+): Promise<{ success: boolean; error?: string }> {
   const session = await getServerAuthSession()
   if (!session?.user) {
     return { success: false, error: "Not authenticated" }
@@ -239,14 +253,17 @@ export async function testWebhook(webhookId: string): Promise<{ success: boolean
 
   try {
     const webhook = await db.query.discordWebhooks.findFirst({
-      where: eq(discordWebhooks.id, webhookId)
+      where: eq(discordWebhooks.id, webhookId),
     })
 
     if (!webhook) {
       return { success: false, error: "Webhook not found" }
     }
 
-    return { success: await testDiscordWebhook(webhook.webhookUrl), error: "Failed to test webhook" }
+    return {
+      success: await testDiscordWebhook(webhook.webhookUrl),
+      error: "Failed to test webhook",
+    }
   } catch (error) {
     logger.error({ error }, "Error testing webhook:", error)
     return { success: false, error: "Failed to test webhook" }

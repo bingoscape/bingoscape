@@ -158,7 +158,9 @@ export interface ItemStatistics {
 /**
  * Get comprehensive item statistics for a bingo board
  */
-export async function getBingoItemStatistics(bingoId: string): Promise<ItemStatistics> {
+export async function getBingoItemStatistics(
+  bingoId: string
+): Promise<ItemStatistics> {
   // Get all approved submissions with item goals for this bingo
   const itemSubmissions = await db
     .select({
@@ -180,7 +182,10 @@ export async function getBingoItemStatistics(bingoId: string): Promise<ItemStati
       submissionStatus: submissions.status,
     })
     .from(submissions)
-    .innerJoin(teamTileSubmissions, eq(submissions.teamTileSubmissionId, teamTileSubmissions.id))
+    .innerJoin(
+      teamTileSubmissions,
+      eq(submissions.teamTileSubmissionId, teamTileSubmissions.id)
+    )
     .innerJoin(tiles, eq(teamTileSubmissions.tileId, tiles.id))
     .innerJoin(teams, eq(teamTileSubmissions.teamId, teams.id))
     .innerJoin(users, eq(submissions.submittedBy, users.id))
@@ -190,8 +195,8 @@ export async function getBingoItemStatistics(bingoId: string): Promise<ItemStati
       and(
         eq(tiles.bingoId, bingoId),
         eq(submissions.status, "approved"),
-        isNotNull(submissions.goalId),
-      ),
+        isNotNull(submissions.goalId)
+      )
     )
 
   if (itemSubmissions.length === 0) {
@@ -218,29 +223,31 @@ export async function getBingoItemStatistics(bingoId: string): Promise<ItemStati
   const itemPrices = await getItemAveragePrices(uniqueItemIds)
 
   // Calculate item values for each submission
-  const valuedSubmissions: ItemValueSubmission[] = itemSubmissions.map((submission) => {
-    const quantity = submission.submissionValue ?? submission.targetValue
-    const pricePerItem = itemPrices.get(submission.itemId) ?? 0
-    const totalValue = Math.floor(quantity * pricePerItem)
+  const valuedSubmissions: ItemValueSubmission[] = itemSubmissions.map(
+    (submission) => {
+      const quantity = submission.submissionValue ?? submission.targetValue
+      const pricePerItem = itemPrices.get(submission.itemId) ?? 0
+      const totalValue = Math.floor(quantity * pricePerItem)
 
-    return {
-      submissionId: submission.submissionId,
-      userId: submission.submittedBy,
-      userName: submission.userName ?? "Unknown",
-      runescapeName: submission.runescapeName,
-      teamId: submission.teamId,
-      teamName: submission.teamName,
-      itemId: submission.itemId,
-      itemName: submission.itemBaseName,
-      itemImageUrl: submission.itemImageUrl,
-      quantity,
-      pricePerItem,
-      totalValue,
-      submittedAt: submission.createdAt ?? new Date(),
-      tileId: submission.tileId,
-      tileTitle: submission.tileTitle,
+      return {
+        submissionId: submission.submissionId,
+        userId: submission.submittedBy,
+        userName: submission.userName ?? "Unknown",
+        runescapeName: submission.runescapeName,
+        teamId: submission.teamId,
+        teamName: submission.teamName,
+        itemId: submission.itemId,
+        itemName: submission.itemBaseName,
+        itemImageUrl: submission.itemImageUrl,
+        quantity,
+        pricePerItem,
+        totalValue,
+        submittedAt: submission.createdAt ?? new Date(),
+        tileId: submission.tileId,
+        tileTitle: submission.tileTitle,
+      }
     }
-  })
+  )
 
   // Calculate user statistics
   const userStatsMap = new Map<string, UserItemStats>()
@@ -260,7 +267,10 @@ export async function getBingoItemStatistics(bingoId: string): Promise<ItemStati
     existing.submissionCount += 1
 
     // Track most valuable single submission for this user
-    if (!existing.mostValuableItem || submission.totalValue > existing.mostValuableItem.totalValue) {
+    if (
+      !existing.mostValuableItem ||
+      submission.totalValue > existing.mostValuableItem.totalValue
+    ) {
       existing.mostValuableItem = {
         itemName: submission.itemName,
         itemImageUrl: submission.itemImageUrl,
@@ -292,7 +302,10 @@ export async function getBingoItemStatistics(bingoId: string): Promise<ItemStati
     existing.submissionCount += 1
 
     // Track most valuable single submission for this team
-    if (!existing.mostValuableItem || submission.totalValue > existing.mostValuableItem.totalValue) {
+    if (
+      !existing.mostValuableItem ||
+      submission.totalValue > existing.mostValuableItem.totalValue
+    ) {
       existing.mostValuableItem = {
         itemName: submission.itemName,
         itemImageUrl: submission.itemImageUrl,
@@ -315,7 +328,8 @@ export async function getBingoItemStatistics(bingoId: string): Promise<ItemStati
     teamStats.push({
       ...stats,
       userCount,
-      averageValuePerUser: userCount > 0 ? Math.floor(stats.totalValue / userCount) : 0,
+      averageValuePerUser:
+        userCount > 0 ? Math.floor(stats.totalValue / userCount) : 0,
     })
   }
 
@@ -323,13 +337,17 @@ export async function getBingoItemStatistics(bingoId: string): Promise<ItemStati
   teamStats.sort((a, b) => b.totalValue - a.totalValue)
 
   // Get top users sorted by total value
-  const topUsers = Array.from(userStatsMap.values()).sort((a, b) => b.totalValue - a.totalValue)
+  const topUsers = Array.from(userStatsMap.values()).sort(
+    (a, b) => b.totalValue - a.totalValue
+  )
 
   // Calculate MVP (user with highest total value)
   let mvp: MVPStats | null = null
   if (topUsers.length > 0) {
     const topUser = topUsers[0]!
-    const userSubmission = valuedSubmissions.find((s) => s.userId === topUser.userId)!
+    const userSubmission = valuedSubmissions.find(
+      (s) => s.userId === topUser.userId
+    )!
 
     mvp = {
       userId: topUser.userId,
@@ -340,7 +358,9 @@ export async function getBingoItemStatistics(bingoId: string): Promise<ItemStati
       totalValue: topUser.totalValue,
       itemCount: topUser.itemCount,
       submissionCount: topUser.submissionCount,
-      valuePerSubmission: Math.floor(topUser.totalValue / topUser.submissionCount),
+      valuePerSubmission: Math.floor(
+        topUser.totalValue / topUser.submissionCount
+      ),
     }
   }
 
@@ -438,13 +458,18 @@ export async function getBingoItemStatistics(bingoId: string): Promise<ItemStati
         totalQuantity: itemData.totalQuantity,
         totalValue: itemData.totalValue,
         obtainedByCount: itemData.obtainedBy.size,
-        obtainedBy: Array.from(itemData.obtainedBy.values()).sort((a, b) => b.value - a.value),
+        obtainedBy: Array.from(itemData.obtainedBy.values()).sort(
+          (a, b) => b.value - a.value
+        ),
       }
     }
   }
 
   // Calculate profit per hour
-  const profitPerHour = await calculateBingoProfitPerHour(bingoId, valuedSubmissions)
+  const profitPerHour = await calculateBingoProfitPerHour(
+    bingoId,
+    valuedSubmissions
+  )
 
   // Get event dates for time-series calculations
   const bingoData = await db
@@ -461,8 +486,13 @@ export async function getBingoItemStatistics(bingoId: string): Promise<ItemStati
   const eventEndDate = bingoData[0]?.eventEndDate ?? null
 
   // Calculate time-series and advanced analytics
-  const dailyValueTimeline = calculateDailyValueTimeline(valuedSubmissions, eventStartDate, eventEndDate)
-  const teamTimelineComparison = calculateTeamTimelineComparison(valuedSubmissions)
+  const dailyValueTimeline = calculateDailyValueTimeline(
+    valuedSubmissions,
+    eventStartDate,
+    eventEndDate
+  )
+  const teamTimelineComparison =
+    calculateTeamTimelineComparison(valuedSubmissions)
   const itemDiversityByTeam = calculateItemDiversity(valuedSubmissions)
   const efficiencyTrends = calculateEfficiencyTrends(valuedSubmissions)
   const userStreaks = calculateUserStreaks(valuedSubmissions, eventEndDate)
@@ -493,7 +523,9 @@ export async function getBingoItemStatistics(bingoId: string): Promise<ItemStati
 /**
  * Get comprehensive item statistics for an entire event (all bingos)
  */
-export async function getEventItemStatistics(eventId: string): Promise<ItemStatistics> {
+export async function getEventItemStatistics(
+  eventId: string
+): Promise<ItemStatistics> {
   // Get all bingo IDs for this event
   const eventBingos = await db
     .select({ id: bingos.id })
@@ -542,7 +574,10 @@ export async function getEventItemStatistics(eventId: string): Promise<ItemStati
       submissionStatus: submissions.status,
     })
     .from(submissions)
-    .innerJoin(teamTileSubmissions, eq(submissions.teamTileSubmissionId, teamTileSubmissions.id))
+    .innerJoin(
+      teamTileSubmissions,
+      eq(submissions.teamTileSubmissionId, teamTileSubmissions.id)
+    )
     .innerJoin(tiles, eq(teamTileSubmissions.tileId, tiles.id))
     .innerJoin(teams, eq(teamTileSubmissions.teamId, teams.id))
     .innerJoin(users, eq(submissions.submittedBy, users.id))
@@ -552,8 +587,8 @@ export async function getEventItemStatistics(eventId: string): Promise<ItemStati
       and(
         inArray(tiles.bingoId, bingoIds),
         eq(submissions.status, "approved"),
-        isNotNull(submissions.goalId),
-      ),
+        isNotNull(submissions.goalId)
+      )
     )
 
   if (itemSubmissions.length === 0) {
@@ -580,29 +615,31 @@ export async function getEventItemStatistics(eventId: string): Promise<ItemStati
   const itemPrices = await getItemAveragePrices(uniqueItemIds)
 
   // Calculate item values for each submission
-  const valuedSubmissions: ItemValueSubmission[] = itemSubmissions.map((submission) => {
-    const quantity = submission.submissionValue ?? submission.targetValue
-    const pricePerItem = itemPrices.get(submission.itemId) ?? 0
-    const totalValue = Math.floor(quantity * pricePerItem)
+  const valuedSubmissions: ItemValueSubmission[] = itemSubmissions.map(
+    (submission) => {
+      const quantity = submission.submissionValue ?? submission.targetValue
+      const pricePerItem = itemPrices.get(submission.itemId) ?? 0
+      const totalValue = Math.floor(quantity * pricePerItem)
 
-    return {
-      submissionId: submission.submissionId,
-      userId: submission.submittedBy,
-      userName: submission.userName ?? "Unknown",
-      runescapeName: submission.runescapeName,
-      teamId: submission.teamId,
-      teamName: submission.teamName,
-      itemId: submission.itemId,
-      itemName: submission.itemBaseName,
-      itemImageUrl: submission.itemImageUrl,
-      quantity,
-      pricePerItem,
-      totalValue,
-      submittedAt: submission.createdAt ?? new Date(),
-      tileId: submission.tileId,
-      tileTitle: submission.tileTitle,
+      return {
+        submissionId: submission.submissionId,
+        userId: submission.submittedBy,
+        userName: submission.userName ?? "Unknown",
+        runescapeName: submission.runescapeName,
+        teamId: submission.teamId,
+        teamName: submission.teamName,
+        itemId: submission.itemId,
+        itemName: submission.itemBaseName,
+        itemImageUrl: submission.itemImageUrl,
+        quantity,
+        pricePerItem,
+        totalValue,
+        submittedAt: submission.createdAt ?? new Date(),
+        tileId: submission.tileId,
+        tileTitle: submission.tileTitle,
+      }
     }
-  })
+  )
 
   // Calculate user statistics (same logic as bingo-level)
   const userStatsMap = new Map<string, UserItemStats>()
@@ -621,7 +658,10 @@ export async function getEventItemStatistics(eventId: string): Promise<ItemStati
     existing.itemCount += submission.quantity
     existing.submissionCount += 1
 
-    if (!existing.mostValuableItem || submission.totalValue > existing.mostValuableItem.totalValue) {
+    if (
+      !existing.mostValuableItem ||
+      submission.totalValue > existing.mostValuableItem.totalValue
+    ) {
       existing.mostValuableItem = {
         itemName: submission.itemName,
         itemImageUrl: submission.itemImageUrl,
@@ -652,7 +692,10 @@ export async function getEventItemStatistics(eventId: string): Promise<ItemStati
     existing.itemCount += submission.quantity
     existing.submissionCount += 1
 
-    if (!existing.mostValuableItem || submission.totalValue > existing.mostValuableItem.totalValue) {
+    if (
+      !existing.mostValuableItem ||
+      submission.totalValue > existing.mostValuableItem.totalValue
+    ) {
       existing.mostValuableItem = {
         itemName: submission.itemName,
         itemImageUrl: submission.itemImageUrl,
@@ -673,18 +716,23 @@ export async function getEventItemStatistics(eventId: string): Promise<ItemStati
     teamStats.push({
       ...stats,
       userCount,
-      averageValuePerUser: userCount > 0 ? Math.floor(stats.totalValue / userCount) : 0,
+      averageValuePerUser:
+        userCount > 0 ? Math.floor(stats.totalValue / userCount) : 0,
     })
   }
 
   teamStats.sort((a, b) => b.totalValue - a.totalValue)
 
-  const topUsers = Array.from(userStatsMap.values()).sort((a, b) => b.totalValue - a.totalValue)
+  const topUsers = Array.from(userStatsMap.values()).sort(
+    (a, b) => b.totalValue - a.totalValue
+  )
 
   let mvp: MVPStats | null = null
   if (topUsers.length > 0) {
     const topUser = topUsers[0]!
-    const userSubmission = valuedSubmissions.find((s) => s.userId === topUser.userId)!
+    const userSubmission = valuedSubmissions.find(
+      (s) => s.userId === topUser.userId
+    )!
 
     mvp = {
       userId: topUser.userId,
@@ -695,7 +743,9 @@ export async function getEventItemStatistics(eventId: string): Promise<ItemStati
       totalValue: topUser.totalValue,
       itemCount: topUser.itemCount,
       submissionCount: topUser.submissionCount,
-      valuePerSubmission: Math.floor(topUser.totalValue / topUser.submissionCount),
+      valuePerSubmission: Math.floor(
+        topUser.totalValue / topUser.submissionCount
+      ),
     }
   }
 
@@ -792,13 +842,18 @@ export async function getEventItemStatistics(eventId: string): Promise<ItemStati
         totalQuantity: itemData.totalQuantity,
         totalValue: itemData.totalValue,
         obtainedByCount: itemData.obtainedBy.size,
-        obtainedBy: Array.from(itemData.obtainedBy.values()).sort((a, b) => b.value - a.value),
+        obtainedBy: Array.from(itemData.obtainedBy.values()).sort(
+          (a, b) => b.value - a.value
+        ),
       }
     }
   }
 
   // Calculate profit per hour for event
-  const profitPerHour = await calculateEventProfitPerHour(eventId, valuedSubmissions)
+  const profitPerHour = await calculateEventProfitPerHour(
+    eventId,
+    valuedSubmissions
+  )
 
   // Get event dates for time-series calculations
   const eventData = await db
@@ -814,8 +869,13 @@ export async function getEventItemStatistics(eventId: string): Promise<ItemStati
   const eventEndDate = eventData[0]?.endDate ?? null
 
   // Calculate time-series and advanced analytics
-  const dailyValueTimeline = calculateDailyValueTimeline(valuedSubmissions, eventStartDate, eventEndDate)
-  const teamTimelineComparison = calculateTeamTimelineComparison(valuedSubmissions)
+  const dailyValueTimeline = calculateDailyValueTimeline(
+    valuedSubmissions,
+    eventStartDate,
+    eventEndDate
+  )
+  const teamTimelineComparison =
+    calculateTeamTimelineComparison(valuedSubmissions)
   const itemDiversityByTeam = calculateItemDiversity(valuedSubmissions)
   const efficiencyTrends = calculateEfficiencyTrends(valuedSubmissions)
   const userStreaks = calculateUserStreaks(valuedSubmissions, eventEndDate)
@@ -847,8 +907,10 @@ export async function getEventItemStatistics(eventId: string): Promise<ItemStati
  */
 function calculateDailyValueTimeline(
   submissions: ItemValueSubmission[],
-  eventStartDate: Date | null,
-  eventEndDate: Date | null,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _eventStartDate: Date | null,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _eventEndDate: Date | null
 ): DailyValueData[] {
   if (submissions.length === 0) return []
 
@@ -891,7 +953,9 @@ function calculateDailyValueTimeline(
 /**
  * Calculate team timeline comparison
  */
-function calculateTeamTimelineComparison(submissions: ItemValueSubmission[]): TeamDailyProgress[] {
+function calculateTeamTimelineComparison(
+  submissions: ItemValueSubmission[]
+): TeamDailyProgress[] {
   if (submissions.length === 0) return []
 
   // Group by team and date
@@ -915,7 +979,8 @@ function calculateTeamTimelineComparison(submissions: ItemValueSubmission[]): Te
   const timelineData: TeamDailyProgress[] = []
 
   for (const [teamId, dates] of teamDateMap.entries()) {
-    const teamName = submissions.find((s) => s.teamId === teamId)?.teamName ?? "Unknown"
+    const teamName =
+      submissions.find((s) => s.teamId === teamId)?.teamName ?? "Unknown"
     let cumulativeValue = 0
 
     // Sort dates chronologically
@@ -923,7 +988,10 @@ function calculateTeamTimelineComparison(submissions: ItemValueSubmission[]): Te
 
     for (const date of sortedDates) {
       const daySubmissions = dates.get(date)!
-      const dailyValue = daySubmissions.reduce((sum, s) => sum + s.totalValue, 0)
+      const dailyValue = daySubmissions.reduce(
+        (sum, s) => sum + s.totalValue,
+        0
+      )
       cumulativeValue += dailyValue
 
       timelineData.push({
@@ -942,7 +1010,9 @@ function calculateTeamTimelineComparison(submissions: ItemValueSubmission[]): Te
 /**
  * Calculate item diversity by team
  */
-function calculateItemDiversity(submissions: ItemValueSubmission[]): ItemDiversityStats[] {
+function calculateItemDiversity(
+  submissions: ItemValueSubmission[]
+): ItemDiversityStats[] {
   if (submissions.length === 0) return []
 
   // Group by team
@@ -993,7 +1063,9 @@ function calculateItemDiversity(submissions: ItemValueSubmission[]): ItemDiversi
 /**
  * Calculate efficiency trends over time
  */
-function calculateEfficiencyTrends(submissions: ItemValueSubmission[]): EfficiencyTrend[] {
+function calculateEfficiencyTrends(
+  submissions: ItemValueSubmission[]
+): EfficiencyTrend[] {
   if (submissions.length === 0) return []
 
   // Group by date
@@ -1031,7 +1103,7 @@ function calculateEfficiencyTrends(submissions: ItemValueSubmission[]): Efficien
  */
 function calculateUserStreaks(
   submissions: ItemValueSubmission[],
-  eventEndDate: Date | null,
+  eventEndDate: Date | null
 ): UserStreakStats[] {
   if (submissions.length === 0) return []
 
@@ -1052,7 +1124,11 @@ function calculateUserStreaks(
     const teamName = userSubmissions[0]!.teamName
 
     // Get unique dates
-    const dates = Array.from(new Set(userSubmissions.map((s) => s.submittedAt.toISOString().split("T")[0]))).sort()
+    const dates = Array.from(
+      new Set(
+        userSubmissions.map((s) => s.submittedAt.toISOString().split("T")[0])
+      )
+    ).sort()
 
     const totalActiveDays = dates.length
 
@@ -1064,7 +1140,9 @@ function calculateUserStreaks(
     for (let i = 1; i < dates.length; i++) {
       const prevDate = new Date(dates[i - 1]!)
       const currDate = new Date(dates[i]!)
-      const dayDiff = Math.floor((currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24))
+      const dayDiff = Math.floor(
+        (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
+      )
 
       if (dayDiff === 1) {
         tempStreak++
@@ -1078,7 +1156,9 @@ function calculateUserStreaks(
     // Calculate current streak (ending at event end or last submission)
     if (eventEndDate && dates.length > 0) {
       const lastDate = new Date(dates[dates.length - 1]!)
-      const daysSinceLastSubmission = Math.floor((eventEndDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
+      const daysSinceLastSubmission = Math.floor(
+        (eventEndDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)
+      )
 
       if (daysSinceLastSubmission <= 1) {
         // Find streak ending at last submission
@@ -1086,7 +1166,9 @@ function calculateUserStreaks(
         for (let i = dates.length - 2; i >= 0; i--) {
           const prevDate = new Date(dates[i]!)
           const nextDate = new Date(dates[i + 1]!)
-          const dayDiff = Math.floor((nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24))
+          const dayDiff = Math.floor(
+            (nextDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
+          )
 
           if (dayDiff === 1) {
             currentStreak++
@@ -1120,7 +1202,7 @@ function calculateUserStreaks(
  */
 async function calculateBingoProfitPerHour(
   bingoId: string,
-  submissions: ItemValueSubmission[],
+  submissions: ItemValueSubmission[]
 ): Promise<number | null> {
   if (submissions.length === 0) return null
 
@@ -1157,12 +1239,16 @@ async function calculateBingoProfitPerHour(
  */
 async function calculateEventProfitPerHour(
   eventId: string,
-  submissions: ItemValueSubmission[],
+  submissions: ItemValueSubmission[]
 ): Promise<number | null> {
   if (submissions.length === 0) return null
 
   // Get event dates
-  const eventData = await db.select().from(events).where(eq(events.id, eventId)).limit(1)
+  const eventData = await db
+    .select()
+    .from(events)
+    .where(eq(events.id, eventId))
+    .limit(1)
 
   if (eventData.length === 0 || !eventData[0]) return null
 
@@ -1180,4 +1266,3 @@ async function calculateEventProfitPerHour(
 
   return Math.floor(totalValue / durationHours)
 }
-

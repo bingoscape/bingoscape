@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger"
 import { db } from "@/server/db"
-import { eventParticipants, events, teamMembers, bingos } from "@/server/db/schema"
-import { eq, and } from "drizzle-orm"
+import { eventParticipants, events, teamMembers } from "@/server/db/schema"
+import { eq } from "drizzle-orm"
 import { validateApiKey } from "@/lib/api-auth"
 import { formatBingoData } from "@/lib/bingo-formatter"
 
@@ -24,8 +24,13 @@ export async function GET(req: Request) {
             db
               .select()
               .from(eventParticipants)
-              .where(and(eq(eventParticipants.eventId, events.id), eq(eventParticipants.userId, userId))),
-          ),
+              .where(
+                and(
+                  eq(eventParticipants.eventId, events.id),
+                  eq(eventParticipants.userId, userId)
+                )
+              )
+          )
         ),
       with: {
         eventParticipants: {
@@ -34,7 +39,8 @@ export async function GET(req: Request) {
         clan: true,
         bingos: {
           //where: (bingos, { eq, and }) => eq(bingos.visible, true),
-          where: (bingos, { eq, and }) => and(eq(bingos.visible, true), eq(bingos.bingoType, "standard")),
+          where: (bingos, { eq, and }) =>
+            and(eq(bingos.visible, true), eq(bingos.bingoType, "standard")),
         },
       },
       orderBy: events.createdAt,
@@ -52,7 +58,12 @@ export async function GET(req: Request) {
                 db
                   .select()
                   .from(teamMembers)
-                  .where(and(eq(teamMembers.teamId, teams.id), eq(teamMembers.userId, userId)))
+                  .where(
+                    and(
+                      eq(teamMembers.teamId, teams.id),
+                      eq(teamMembers.userId, userId)
+                    )
+                  )
               )
             ),
           with: {
@@ -61,9 +72,9 @@ export async function GET(req: Request) {
                 user: {
                   columns: {
                     runescapeName: true,
-                  }
-                }
-              }
+                  },
+                },
+              },
             },
           },
         })
@@ -88,23 +99,32 @@ export async function GET(req: Request) {
           basePrizePool: eventData.basePrizePool,
           minimumBuyIn: eventData.minimumBuyIn,
           clan: eventData.clan,
-          role: eventData.creatorId === userId ? "admin" : (eventData.eventParticipants[0]?.role ?? "participant"),
-          userTeam: !!userTeam ? {
-            name: userTeam.name,
-            members: userTeam.teamMembers.map((member) => ({
-              isLeader: member.isLeader,
-              runescapeName: member.user.runescapeName,
-            }))
-          } : null,
+          role:
+            eventData.creatorId === userId
+              ? "admin"
+              : (eventData.eventParticipants[0]?.role ?? "participant"),
+          userTeam: !!userTeam
+            ? {
+                name: userTeam.name,
+                members: userTeam.teamMembers.map((member) => ({
+                  isLeader: member.isLeader,
+                  runescapeName: member.user.runescapeName,
+                })),
+              }
+            : null,
           bingos: processedBingos,
         }
-      }),
+      })
     )
 
-    return NextResponse.json(eventsWithTeams.filter((event) => event.bingos.length > 0))
+    return NextResponse.json(
+      eventsWithTeams.filter((event) => event.bingos.length > 0)
+    )
   } catch (error) {
     logger.error({ error }, "Error fetching events:", error)
-    return NextResponse.json({ error: "Failed to fetch events" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Failed to fetch events" },
+      { status: 500 }
+    )
   }
 }
-

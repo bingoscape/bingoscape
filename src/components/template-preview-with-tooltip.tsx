@@ -4,13 +4,16 @@ import { useState, useEffect } from "react"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import type { ExportedBingo } from "@/app/actions/bingo-import-export"
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card"
 import { Zap } from "lucide-react"
 import getRandomFrog from "@/lib/getRandomFrog"
 
 interface TemplatePreviewWithTooltipProps {
   templateData: string | null
-  title: string
   className?: string
   isDetailView?: boolean
   fixedTooltipIndex?: number
@@ -18,14 +21,14 @@ interface TemplatePreviewWithTooltipProps {
 
 export default function TemplatePreviewWithTooltip({
   templateData,
-  title,
   className,
   isDetailView = false,
   fixedTooltipIndex = 9,
 }: TemplatePreviewWithTooltipProps) {
   const [parsedData, setParsedData] = useState<ExportedBingo | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [openTooltipIndex, setOpenTooltipIndex] = useState<number>(fixedTooltipIndex)
+  const [openTooltipIndex, setOpenTooltipIndex] =
+    useState<number>(fixedTooltipIndex)
 
   useEffect(() => {
     if (templateData) {
@@ -33,11 +36,11 @@ export default function TemplatePreviewWithTooltip({
         const parsed = JSON.parse(templateData) as ExportedBingo
         // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional state update from prop parsing
         setParsedData(parsed)
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional state update from prop parsing
+
         setError(null)
       } catch (err) {
         console.error("Error parsing template data:", err)
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional error state update
+
         setError("Invalid template data")
       }
     }
@@ -45,7 +48,12 @@ export default function TemplatePreviewWithTooltip({
 
   if (error) {
     return (
-      <div className={cn("relative rounded-md overflow-hidden bg-muted flex items-center justify-center", className)}>
+      <div
+        className={cn(
+          "relative flex items-center justify-center overflow-hidden rounded-md bg-muted",
+          className
+        )}
+      >
         <p className="text-muted-foreground">Error loading template preview</p>
       </div>
     )
@@ -53,10 +61,15 @@ export default function TemplatePreviewWithTooltip({
 
   if (!parsedData) {
     return (
-      <div className={cn("relative rounded-md overflow-hidden flex items-center justify-center", className)}>
-        <div className="grid grid-cols-3 grid-rows-3 gap-1 w-3/4 h-3/4 opacity-50">
+      <div
+        className={cn(
+          "relative flex items-center justify-center overflow-hidden rounded-md",
+          className
+        )}
+      >
+        <div className="grid h-3/4 w-3/4 grid-cols-3 grid-rows-3 gap-1 opacity-50">
           {Array.from({ length: 9 }).map((_, i) => (
-            <div key={i} className="bg-muted-foreground/20 rounded-sm" />
+            <div key={i} className="rounded-sm bg-muted-foreground/20" />
           ))}
         </div>
       </div>
@@ -71,18 +84,22 @@ export default function TemplatePreviewWithTooltip({
   const displayColumns = isDetailView ? columns : Math.min(columns, 5)
 
   // If we're limiting the display, only show a subset of tiles
-  const displayTiles = isDetailView ? tiles : tiles.slice(0, displayRows * displayColumns)
+  const displayTiles = isDetailView
+    ? tiles
+    : tiles.slice(0, displayRows * displayColumns)
 
   return (
     <div
       className={cn(
-        "relative rounded-md overflow-hidden p-2",
+        "relative overflow-hidden rounded-md p-2",
         className,
-        isDetailView ? "aspect-square w-full max-w-[80vh] mx-auto" : "aspect-square",
+        isDetailView
+          ? "mx-auto aspect-square w-full max-w-[80vh]"
+          : "aspect-square"
       )}
     >
       <div
-        className="grid gap-1 h-full w-full"
+        className="grid h-full w-full gap-1"
         style={{
           gridTemplateColumns: `repeat(${displayColumns}, minmax(0, 1fr))`,
           gridTemplateRows: `repeat(${displayRows}, minmax(0, 1fr))`,
@@ -90,10 +107,15 @@ export default function TemplatePreviewWithTooltip({
       >
         {displayTiles.map((tile, index) => (
           <div key={index} className="relative">
-            <HoverCard key={index} openDelay={200} closeDelay={100} open={index === openTooltipIndex}>
+            <HoverCard
+              key={index}
+              openDelay={200}
+              closeDelay={100}
+              open={index === openTooltipIndex}
+            >
               <HoverCardTrigger asChild>
                 <div
-                  className="border border-primary rounded overflow-hidden aspect-square relative p-4 cursor-pointer transition-all hover:scale-105 hover:shadow-md"
+                  className="relative aspect-square cursor-pointer overflow-hidden rounded border border-primary p-4 transition-all hover:scale-105 hover:shadow-md"
                   onClick={() => setOpenTooltipIndex(index)}
                 >
                   {tile.headerImage ? (
@@ -104,34 +126,47 @@ export default function TemplatePreviewWithTooltip({
                       className="object-scale-down"
                     />
                   ) : (
-                    <div className="w-full h-full bg-primary flex items-center justify-center">
-                      <span className="text-primary-foreground text-[8px] md:text-xs font-semibold truncate px-1">
+                    <div className="flex h-full w-full items-center justify-center bg-primary">
+                      <span className="truncate px-1 text-[8px] font-semibold text-primary-foreground md:text-xs">
                         {tile.title}
                       </span>
                     </div>
                   )}
                 </div>
               </HoverCardTrigger>
-              <HoverCardContent className="w-80 p-4 bg-[#1e293b] border-[#677da2]" side="left">
+              <HoverCardContent
+                className="w-80 border-[#677da2] bg-[#1e293b] p-4"
+                side="left"
+              >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold">{tile.title}</h4>
-                    <div className="flex items-center gap-1 px-2 py-1 bg-amber-900/30 rounded-full">
+                    <div className="flex items-center gap-1 rounded-full bg-amber-900/30 px-2 py-1">
                       <Zap className="h-3.5 w-3.5 text-amber-500" />
-                      <span className="text-xs font-medium">{tile.weight} XP</span>
+                      <span className="text-xs font-medium">
+                        {tile.weight} XP
+                      </span>
                     </div>
                   </div>
 
-                  {tile.description && <p className="text-sm text-[#677da2] line-clamp-3">{tile.description}</p>}
+                  {tile.description && (
+                    <p className="line-clamp-3 text-sm text-[#677da2]">
+                      {tile.description}
+                    </p>
+                  )}
 
                   {tile.goals && tile.goals.length > 0 && (
                     <div className="pt-2">
-                      <h5 className="text-xs font-semibold mb-1">Goals:</h5>
-                      <ul className="text-xs space-y-1">
+                      <h5 className="mb-1 text-xs font-semibold">Goals:</h5>
+                      <ul className="space-y-1 text-xs">
                         {tile.goals.map((goal, idx) => (
                           <li key={idx} className="flex justify-between">
-                            <span className="text-[#677da2]">{goal.description}</span>
-                            <span className="font-medium">Target: {goal.targetValue}</span>
+                            <span className="text-[#677da2]">
+                              {goal.description}
+                            </span>
+                            <span className="font-medium">
+                              Target: {goal.targetValue}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -139,8 +174,9 @@ export default function TemplatePreviewWithTooltip({
                   )}
 
                   {tile.isHidden && (
-                    <div className="mt-2 text-xs bg-[#101828] p-1.5 rounded">
-                      <span className="font-medium">Hidden tile</span> - Not visible on the board until revealed
+                    <div className="mt-2 rounded bg-[#101828] p-1.5 text-xs">
+                      <span className="font-medium">Hidden tile</span> - Not
+                      visible on the board until revealed
                     </div>
                   )}
                 </div>
@@ -152,11 +188,10 @@ export default function TemplatePreviewWithTooltip({
 
       {/* Show a message if we're not showing the full grid */}
       {!isDetailView && (rows > displayRows || columns > displayColumns) && (
-        <div className="absolute bottom-0 right-0 bg-background/80 text-xs p-1 rounded-tl">
+        <div className="absolute bottom-0 right-0 rounded-tl bg-background/80 p-1 text-xs">
           {rows}×{columns} grid
         </div>
       )}
     </div>
   )
 }
-

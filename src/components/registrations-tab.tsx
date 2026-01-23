@@ -1,10 +1,23 @@
 "use client"
 
 import { useState } from "react"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -16,9 +29,20 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { CheckCircle, XCircle, Search, Clock, MessageSquare, User } from "lucide-react"
+import {
+  CheckCircle,
+  XCircle,
+  Search,
+  Clock,
+  MessageSquare,
+  User,
+} from "lucide-react"
 import { toast } from "@/hooks/use-toast"
-import { approveRegistrationRequest, rejectRegistrationRequest, type RegistrationRequest } from "@/app/actions/events"
+import {
+  approveRegistrationRequest,
+  rejectRegistrationRequest,
+  type RegistrationRequest,
+} from "@/app/actions/events"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface RegistrationsTabProps {
@@ -27,13 +51,24 @@ interface RegistrationsTabProps {
   onRequestsChange?: (requests: RegistrationRequest[]) => void
 }
 
-export function RegistrationsTab({ requests: initialRequests, eventId, onRequestsChange }: RegistrationsTabProps) {
-  const [requests, setRequests] = useState<RegistrationRequest[]>(initialRequests)
-  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all")
+export function RegistrationsTab({
+  requests: initialRequests,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  eventId,
+  onRequestsChange,
+}: RegistrationsTabProps) {
+  const [requests, setRequests] =
+    useState<RegistrationRequest[]>(initialRequests)
+  const [filter, setFilter] = useState<
+    "all" | "pending" | "approved" | "rejected"
+  >("all")
   const [search, setSearch] = useState("")
-  const [selectedRequest, setSelectedRequest] = useState<RegistrationRequest | null>(null)
+  const [selectedRequest, setSelectedRequest] =
+    useState<RegistrationRequest | null>(null)
   const [responseMessage, setResponseMessage] = useState("")
-  const [actionType, setActionType] = useState<"approve" | "reject" | null>(null)
+  const [actionType, setActionType] = useState<"approve" | "reject" | null>(
+    null
+  )
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Filter requests based on status and search term
@@ -62,13 +97,13 @@ export function RegistrationsTab({ requests: initialRequests, eventId, onRequest
       // Update local state
       const updatedRequests = requests.map((req) =>
         req.id === selectedRequest.id
-          ? {
-            ...req,
-            status: "approved",
-            responseMessage: responseMessage || null,
-            reviewedAt: new Date(),
-          } as RegistrationRequest
-          : req,
+          ? ({
+              ...req,
+              status: "approved",
+              responseMessage: responseMessage || null,
+              reviewedAt: new Date(),
+            } as RegistrationRequest)
+          : req
       )
       setRequests(updatedRequests)
       if (onRequestsChange) {
@@ -86,7 +121,8 @@ export function RegistrationsTab({ requests: initialRequests, eventId, onRequest
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to approve request",
+        description:
+          error instanceof Error ? error.message : "Failed to approve request",
         variant: "destructive",
       })
     } finally {
@@ -104,13 +140,13 @@ export function RegistrationsTab({ requests: initialRequests, eventId, onRequest
       // Update local state
       const updatedRequests = requests.map((req) =>
         req.id === selectedRequest.id
-          ? {
-            ...req,
-            status: "rejected",
-            responseMessage: responseMessage || null,
-            reviewedAt: new Date(),
-          } as RegistrationRequest
-          : req,
+          ? ({
+              ...req,
+              status: "rejected",
+              responseMessage: responseMessage || null,
+              reviewedAt: new Date(),
+            } as RegistrationRequest)
+          : req
       )
       setRequests(updatedRequests)
       if (onRequestsChange) {
@@ -128,7 +164,8 @@ export function RegistrationsTab({ requests: initialRequests, eventId, onRequest
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to reject request",
+        description:
+          error instanceof Error ? error.message : "Failed to reject request",
         variant: "destructive",
       })
     } finally {
@@ -139,11 +176,23 @@ export function RegistrationsTab({ requests: initialRequests, eventId, onRequest
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">Pending</Badge>
+        return (
+          <Badge className="bg-yellow-500 text-white hover:bg-yellow-600">
+            Pending
+          </Badge>
+        )
       case "approved":
-        return <Badge className="bg-green-500 hover:bg-green-600 text-white">Approved</Badge>
+        return (
+          <Badge className="bg-green-500 text-white hover:bg-green-600">
+            Approved
+          </Badge>
+        )
       case "rejected":
-        return <Badge className="bg-red-500 hover:bg-red-600 text-white">Rejected</Badge>
+        return (
+          <Badge className="bg-red-500 text-white hover:bg-red-600">
+            Rejected
+          </Badge>
+        )
       default:
         return null
     }
@@ -154,9 +203,9 @@ export function RegistrationsTab({ requests: initialRequests, eventId, onRequest
       {/* Filters and Search */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
               <Input
                 placeholder="Search requests..."
                 className="pl-10"
@@ -166,7 +215,9 @@ export function RegistrationsTab({ requests: initialRequests, eventId, onRequest
             </div>
             <Select
               value={filter}
-              onValueChange={(value: "all" | "pending" | "approved" | "rejected") => setFilter(value)}
+              onValueChange={(
+                value: "all" | "pending" | "approved" | "rejected"
+              ) => setFilter(value)}
             >
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by status" />
@@ -213,15 +264,22 @@ export function RegistrationsTab({ requests: initialRequests, eventId, onRequest
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={request.user.image ?? undefined} alt={request.user.name ?? "User"} />
+                            <AvatarImage
+                              src={request.user.image ?? undefined}
+                              alt={request.user.name ?? "User"}
+                            />
                             <AvatarFallback>
                               <User className="h-4 w-4" />
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-medium">{request.user.name ?? "Anonymous"}</div>
+                            <div className="font-medium">
+                              {request.user.name ?? "Anonymous"}
+                            </div>
                             <div className="text-xs text-muted-foreground">
-                              {request.user.runescapeName ?? request.user.email ?? "No contact info"}
+                              {request.user.runescapeName ??
+                                request.user.email ??
+                                "No contact info"}
                             </div>
                           </div>
                         </div>
@@ -231,16 +289,22 @@ export function RegistrationsTab({ requests: initialRequests, eventId, onRequest
                         {request.message ? (
                           <div className="flex items-center gap-1 text-sm">
                             <MessageSquare className="h-3 w-3" />
-                            <span className="truncate max-w-[200px]">{request.message}</span>
+                            <span className="max-w-[200px] truncate">
+                              {request.message}
+                            </span>
                           </div>
                         ) : (
-                          <span className="text-muted-foreground text-sm">No message</span>
+                          <span className="text-sm text-muted-foreground">
+                            No message
+                          </span>
                         )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 text-sm">
                           <Clock className="h-3 w-3" />
-                          <span>{new Date(request.createdAt).toLocaleDateString()}</span>
+                          <span>
+                            {new Date(request.createdAt).toLocaleDateString()}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
@@ -255,7 +319,7 @@ export function RegistrationsTab({ requests: initialRequests, eventId, onRequest
                                 setActionType("approve")
                               }}
                             >
-                              <CheckCircle className="h-4 w-4 mr-1" />
+                              <CheckCircle className="mr-1 h-4 w-4" />
                               Approve
                             </Button>
                             <Button
@@ -267,7 +331,7 @@ export function RegistrationsTab({ requests: initialRequests, eventId, onRequest
                                 setActionType("reject")
                               }}
                             >
-                              <XCircle className="h-4 w-4 mr-1" />
+                              <XCircle className="mr-1 h-4 w-4" />
                               Reject
                             </Button>
                           </div>
@@ -304,19 +368,23 @@ export function RegistrationsTab({ requests: initialRequests, eventId, onRequest
             <DialogTitle>Approve Registration Request</DialogTitle>
             <DialogDescription>
               Are you sure you want to approve this registration request from{" "}
-              {selectedRequest?.user.name ?? "this user"}? They will be added as a participant to the event.
+              {selectedRequest?.user.name ?? "this user"}? They will be added as
+              a participant to the event.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Response Message (Optional)</label>
+              <label className="text-sm font-medium">
+                Response Message (Optional)
+              </label>
               <Textarea
                 placeholder="Add a message to the user about their approval..."
                 value={responseMessage}
                 onChange={(e) => setResponseMessage(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                This message will be visible to the user when they view their registration status.
+                This message will be visible to the user when they view their
+                registration status.
               </p>
             </div>
           </div>
@@ -334,7 +402,7 @@ export function RegistrationsTab({ requests: initialRequests, eventId, onRequest
             <Button
               onClick={handleApprove}
               disabled={isSubmitting}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-green-600 text-white hover:bg-green-700"
             >
               {isSubmitting ? "Approving..." : "Approve Request"}
             </Button>
@@ -357,20 +425,23 @@ export function RegistrationsTab({ requests: initialRequests, eventId, onRequest
           <DialogHeader>
             <DialogTitle>Reject Registration Request</DialogTitle>
             <DialogDescription>
-              Are you sure you want to reject this registration request from {selectedRequest?.user.name ?? "this user"}
-              ?
+              Are you sure you want to reject this registration request from{" "}
+              {selectedRequest?.user.name ?? "this user"}?
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Reason for Rejection (Recommended)</label>
+              <label className="text-sm font-medium">
+                Reason for Rejection (Recommended)
+              </label>
               <Textarea
                 placeholder="Explain why this request is being rejected..."
                 value={responseMessage}
                 onChange={(e) => setResponseMessage(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                This message will be visible to the user when they view their registration status.
+                This message will be visible to the user when they view their
+                registration status.
               </p>
             </div>
           </div>
@@ -385,7 +456,11 @@ export function RegistrationsTab({ requests: initialRequests, eventId, onRequest
             >
               Cancel
             </Button>
-            <Button onClick={handleReject} disabled={isSubmitting} variant="destructive">
+            <Button
+              onClick={handleReject}
+              disabled={isSubmitting}
+              variant="destructive"
+            >
               {isSubmitting ? "Rejecting..." : "Reject Request"}
             </Button>
           </DialogFooter>

@@ -16,15 +16,12 @@ import {
   CalendarIcon,
   Users,
   Trophy,
-  ArrowRight,
   Clock,
   CheckCircle2,
   XCircle,
   Clock3,
   Check,
   AlertTriangle,
-  Star,
-  MapPin,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useState } from "react"

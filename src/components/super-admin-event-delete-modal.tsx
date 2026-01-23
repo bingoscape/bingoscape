@@ -1,7 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { deleteEvent } from "@/app/actions/super-admin"
 import { useToast } from "@/hooks/use-toast"
@@ -18,7 +24,9 @@ interface SuperAdminEventDeleteModalProps {
   event: Event
 }
 
-export function SuperAdminEventDeleteModal({ event }: SuperAdminEventDeleteModalProps) {
+export function SuperAdminEventDeleteModal({
+  event,
+}: SuperAdminEventDeleteModalProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
@@ -32,12 +40,14 @@ export function SuperAdminEventDeleteModal({ event }: SuperAdminEventDeleteModal
 
       toast({
         title: "Event deleted",
-        description: "Event and all associated data has been permanently deleted.",
+        description:
+          "Event and all associated data has been permanently deleted.",
       })
 
       setOpen(false)
       router.push("/super-admin/events")
     } catch (error) {
+      console.error("Failed to delete event:", error)
       toast({
         title: "Error",
         description: "Failed to delete event. Please try again.",
@@ -52,7 +62,7 @@ export function SuperAdminEventDeleteModal({ event }: SuperAdminEventDeleteModal
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="destructive" size="sm">
-          <Trash2 className="h-4 w-4 mr-2" />
+          <Trash2 className="mr-2 h-4 w-4" />
           Delete Event
         </Button>
       </DialogTrigger>
@@ -67,11 +77,12 @@ export function SuperAdminEventDeleteModal({ event }: SuperAdminEventDeleteModal
           <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              This action cannot be undone. This will permanently delete the event and all associated data including:
+              This action cannot be undone. This will permanently delete the
+              event and all associated data including:
             </AlertDescription>
           </Alert>
 
-          <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+          <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
             <li>All event participants</li>
             <li>All teams and team members</li>
             <li>All bingo boards and tiles</li>
@@ -79,7 +90,7 @@ export function SuperAdminEventDeleteModal({ event }: SuperAdminEventDeleteModal
             <li>All event-related data</li>
           </ul>
 
-          <div className="p-3 bg-muted rounded-lg">
+          <div className="rounded-lg bg-muted p-3">
             <p className="font-medium">Event to delete:</p>
             <p className="text-sm">{event.title}</p>
           </div>
@@ -88,7 +99,11 @@ export function SuperAdminEventDeleteModal({ event }: SuperAdminEventDeleteModal
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={loading}>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={loading}
+            >
               {loading ? "Deleting..." : "Delete Event"}
             </Button>
           </div>

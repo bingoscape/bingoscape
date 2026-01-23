@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/table"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface EventDisplayProps {
   initialEvents: EventData[]
@@ -182,7 +181,6 @@ const EventGrid = ({
             eventData={ed}
             isParticipant={true}
             status={status}
-            // eslint-disable-next-line @typescript-eslint/no-empty-function
             onJoin={() => {}}
           />
         )
@@ -221,9 +219,12 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
 
   const { active, upcoming, past } = categorizeEvents(events)
 
-  // Calculate stats
+  // Calculate stats (unused for now but may be used in future UI enhancements)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const totalEvents = events.length
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const activeEvents = active.length
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const totalPrizePool = events.reduce(
     (sum, event) => sum + event.totalPrizePool,
     0

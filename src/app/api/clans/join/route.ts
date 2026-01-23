@@ -18,7 +18,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 })
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+     
     const { inviteCode } = await req.json()
 
     if (!inviteCode) {

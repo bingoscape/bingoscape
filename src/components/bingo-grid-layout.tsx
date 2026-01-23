@@ -1,6 +1,6 @@
-import React from 'react'
-import { BingoTile } from './bingo-tile'
-import type { Tile, EventRole } from '@/app/actions/events'
+import React from "react"
+import { BingoTile } from "./bingo-tile"
+import type { Tile, EventRole } from "@/app/actions/events"
 
 interface BingoGridLayoutProps {
   tiles: Tile[]
@@ -15,12 +15,29 @@ interface BingoGridLayoutProps {
   loadingTileId?: string
 }
 
-export const BingoGridLayout = React.forwardRef<HTMLDivElement, BingoGridLayoutProps>(
-  ({ tiles, columns, rows, userRole, currentTeamId, onTileClick, onTogglePlaceholder, isLocked, highlightedTiles, loadingTileId }, ref) => {
+export const BingoGridLayout = React.forwardRef<
+  HTMLDivElement,
+  BingoGridLayoutProps
+>(
+  (
+    {
+      tiles,
+      columns,
+      rows,
+      userRole,
+      currentTeamId,
+      onTileClick,
+      onTogglePlaceholder,
+      isLocked,
+      highlightedTiles,
+      loadingTileId,
+    },
+    ref
+  ) => {
     return (
       <div
         ref={ref}
-        className="grid gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 md:p-4 w-full max-w-full"
+        className="grid w-full max-w-full gap-2 p-2 sm:gap-3 sm:p-3 md:gap-4 md:p-4"
         style={{
           gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
           gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
@@ -31,10 +48,9 @@ export const BingoGridLayout = React.forwardRef<HTMLDivElement, BingoGridLayoutP
         {tiles.map((tile, index) => (
           <div
             key={tile.id}
-            className={`relative ${highlightedTiles.includes(tile.index) ? 'ring-2 ring-red-500' : ''}`}
+            className={`relative ${highlightedTiles.includes(tile.index) ? "ring-2 ring-red-500" : ""}`}
             role="gridcell"
-            aria-posinset={index + 1}
-            aria-setsize={tiles.length}
+            aria-label={`Tile ${index + 1} of ${tiles.length}`}
           >
             <BingoTile
               tile={tile}
@@ -52,4 +68,4 @@ export const BingoGridLayout = React.forwardRef<HTMLDivElement, BingoGridLayoutP
   }
 )
 
-BingoGridLayout.displayName = 'BingoGridLayout'
+BingoGridLayout.displayName = "BingoGridLayout"

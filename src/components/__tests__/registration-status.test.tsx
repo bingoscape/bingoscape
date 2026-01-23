@@ -1,4 +1,4 @@
-/* eslint-disable */
+ 
 import { render, screen } from "@testing-library/react"
 import { RegistrationStatus } from "../registration-status"
 

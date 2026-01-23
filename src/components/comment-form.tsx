@@ -12,7 +12,11 @@ interface CommentFormProps {
   isLoading?: boolean
 }
 
-export function CommentForm({ submissionId, onSubmit, onCancel, isLoading = false }: CommentFormProps) {
+export function CommentForm({
+  onSubmit,
+  onCancel,
+  isLoading = false,
+}: CommentFormProps) {
   const [comment, setComment] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -46,8 +50,8 @@ export function CommentForm({ submissionId, onSubmit, onCancel, isLoading = fals
 
   return (
     <div className="comment-section expanded">
-      <div className="flex items-center gap-2 mb-3">
-        <MessageCircle className="w-4 h-4 text-gray-600" />
+      <div className="mb-3 flex items-center gap-2">
+        <MessageCircle className="h-4 w-4 text-gray-600" />
         <span className="text-sm font-medium text-gray-700">
           Add review comment (required)
         </span>
@@ -81,7 +85,7 @@ export function CommentForm({ submissionId, onSubmit, onCancel, isLoading = fals
           Minimum {minLength} characters. Use Ctrl+Enter to submit quickly.
         </div>
 
-        <div className="comment-actions flex gap-2 justify-end">
+        <div className="comment-actions flex justify-end gap-2">
           <Button
             type="button"
             variant="outline"
@@ -94,7 +98,7 @@ export function CommentForm({ submissionId, onSubmit, onCancel, isLoading = fals
           <Button
             type="submit"
             disabled={!isValid || isSubmitting || isLoading}
-            className={`btn btn-primary ${isSubmitting ? 'comment-submitting' : ''}`}
+            className={`btn btn-primary ${isSubmitting ? "comment-submitting" : ""}`}
           >
             {isSubmitting ? "Submitting..." : "Mark as Needs Review"}
           </Button>

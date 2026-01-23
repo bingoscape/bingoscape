@@ -1,4 +1,4 @@
-/* eslint-disable */
+ 
 import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server"
 import { db } from "@/server/db"

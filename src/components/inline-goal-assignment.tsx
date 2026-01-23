@@ -5,8 +5,22 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle2, Link, Pencil, X, Hash, Save, Package } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  CheckCircle2,
+  Link,
+  Pencil,
+  X,
+  Hash,
+  Save,
+  Package,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface Goal {
@@ -46,6 +60,7 @@ interface InlineGoalAssignmentProps {
 }
 
 export function InlineGoalAssignment({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   submissionId: _submissionId,
   currentGoalId,
   currentValue,
@@ -58,8 +73,12 @@ export function InlineGoalAssignment({
   className,
 }: InlineGoalAssignmentProps) {
   const [isInternalExpanded, setIsInternalExpanded] = useState(false)
-  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(currentGoalId ?? null)
-  const [submissionValue, setSubmissionValue] = useState<string>(currentValue?.toString() ?? "1")
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(
+    currentGoalId ?? null
+  )
+  const [submissionValue, setSubmissionValue] = useState<string>(
+    currentValue?.toString() ?? "1"
+  )
   const [predefinedValue, setPredefinedValue] = useState<string>("")
 
   // Use external control if provided, otherwise use internal state
@@ -69,7 +88,7 @@ export function InlineGoalAssignment({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional sync with prop changes
     setSelectedGoalId(currentGoalId ?? null)
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional sync with prop changes
+
     setSubmissionValue(currentValue?.toString() ?? "1")
   }, [currentGoalId, currentValue])
 
@@ -95,9 +114,14 @@ export function InlineGoalAssignment({
   }
 
   const handleSave = () => {
-    const valueToUse = predefinedValue ? parseFloat(predefinedValue) : parseFloat(submissionValue)
+    const valueToUse = predefinedValue
+      ? parseFloat(predefinedValue)
+      : parseFloat(submissionValue)
 
-    if (selectedGoalId && (!valueToUse || isNaN(valueToUse) || valueToUse <= 0)) {
+    if (
+      selectedGoalId &&
+      (!valueToUse || isNaN(valueToUse) || valueToUse <= 0)
+    ) {
       // Don't save if invalid value for a selected goal
       return
     }
@@ -140,10 +164,10 @@ export function InlineGoalAssignment({
         <Button
           variant="outline"
           size="sm"
-          className="h-7 text-xs bg-transparent hover:bg-muted/50"
+          className="h-7 bg-transparent text-xs hover:bg-muted/50"
           onClick={toggleExpanded}
         >
-          <Link className="h-3.5 w-3.5 mr-1" />
+          <Link className="mr-1 h-3.5 w-3.5" />
           Assign Goal
         </Button>
       </div>
@@ -155,9 +179,9 @@ export function InlineGoalAssignment({
     return (
       <div
         className={cn(
-          "space-y-3 p-3 bg-muted/30 rounded-lg border border-border transition-all duration-200 ease-out",
-          "animate-in slide-in-from-top-2 fade-in",
-          className,
+          "space-y-3 rounded-lg border border-border bg-muted/30 p-3 transition-all duration-200 ease-out",
+          "animate-in fade-in slide-in-from-top-2",
+          className
         )}
         onKeyDown={handleKeyDown}
       >
@@ -166,9 +190,11 @@ export function InlineGoalAssignment({
           <Label className="text-xs font-medium">Goal</Label>
           <Select
             value={selectedGoalId ?? "none"}
-            onValueChange={(value) => setSelectedGoalId(value === "none" ? null : value)}
+            onValueChange={(value) =>
+              setSelectedGoalId(value === "none" ? null : value)
+            }
           >
-            <SelectTrigger className="h-9 text-xs bg-background">
+            <SelectTrigger className="h-9 bg-background text-xs">
               <SelectValue placeholder="Select a goal" />
             </SelectTrigger>
             <SelectContent>
@@ -183,23 +209,31 @@ export function InlineGoalAssignment({
                 const itemGoal = goal.itemGoal
                 return (
                   <SelectItem key={goal.id} value={goal.id} className="text-xs">
-                    <div className="flex items-center justify-between w-full gap-2">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="flex w-full items-center justify-between gap-2">
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
                         {isItemGoal && itemGoal && (
-                          <img
-                            src={itemGoal.imageUrl}
-                            alt={itemGoal.baseName}
-                            className="h-5 w-5 object-contain flex-shrink-0"
-                          />
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={itemGoal.imageUrl}
+                              alt={itemGoal.baseName}
+                              className="h-5 w-5 flex-shrink-0 object-contain"
+                            />
+                          </>
                         )}
-                        <span className="font-medium truncate">{goal.description}</span>
+                        <span className="truncate font-medium">
+                          {goal.description}
+                        </span>
                         {isItemGoal && (
-                          <Badge variant="secondary" className="text-xs h-4 px-1 flex-shrink-0">
+                          <Badge
+                            variant="secondary"
+                            className="h-4 flex-shrink-0 px-1 text-xs"
+                          >
                             <Package className="h-3 w-3" />
                           </Badge>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      <span className="whitespace-nowrap text-xs text-muted-foreground">
                         Target: {goal.targetValue}
                       </span>
                     </div>
@@ -217,18 +251,28 @@ export function InlineGoalAssignment({
             {goalValues.length > 0 && (
               <div className="space-y-2">
                 <Label className="text-xs font-medium">Predefined Values</Label>
-                <Select value={predefinedValue} onValueChange={(value) => {
-                  setPredefinedValue(value)
-                  setSubmissionValue("") // Clear custom value
-                }}>
-                  <SelectTrigger className="h-9 text-xs bg-background">
+                <Select
+                  value={predefinedValue}
+                  onValueChange={(value) => {
+                    setPredefinedValue(value)
+                    setSubmissionValue("") // Clear custom value
+                  }}
+                >
+                  <SelectTrigger className="h-9 bg-background text-xs">
                     <SelectValue placeholder="Select a predefined value..." />
                   </SelectTrigger>
                   <SelectContent className="max-h-[200px]">
                     {goalValues.map((gv) => (
-                      <SelectItem key={gv.id} value={gv.value.toString()} className="text-xs">
+                      <SelectItem
+                        key={gv.id}
+                        value={gv.value.toString()}
+                        className="text-xs"
+                      >
                         <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs font-mono">
+                          <Badge
+                            variant="secondary"
+                            className="font-mono text-xs"
+                          >
                             {gv.value}
                           </Badge>
                           <span className="truncate">{gv.description}</span>
@@ -280,7 +324,7 @@ export function InlineGoalAssignment({
 
             {/* Value Preview */}
             {(submissionValue || predefinedValue) && (
-              <div className="p-2 bg-green-500/10 border border-green-500/30 rounded-md">
+              <div className="rounded-md border border-green-500/30 bg-green-500/10 p-2">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
                   <span className="text-xs font-medium text-green-500">
@@ -297,10 +341,17 @@ export function InlineGoalAssignment({
           <Button
             size="sm"
             onClick={handleSave}
-            disabled={!!(selectedGoalId && selectedGoalId !== "none" && !submissionValue && !predefinedValue)}
-            className="h-8 text-xs flex-1"
+            disabled={
+              !!(
+                selectedGoalId &&
+                selectedGoalId !== "none" &&
+                !submissionValue &&
+                !predefinedValue
+              )
+            }
+            className="h-8 flex-1 text-xs"
           >
-            <Save className="h-3 w-3 mr-1" />
+            <Save className="mr-1 h-3 w-3" />
             Save
           </Button>
           <Button
@@ -323,26 +374,29 @@ export function InlineGoalAssignment({
 
     return (
       <div className={cn("flex items-center gap-2", className)}>
-        <div className="flex items-center gap-1 bg-blue-500/20 p-1.5 rounded text-xs group cursor-pointer hover:bg-blue-500/30 transition-colors">
-          <CheckCircle2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+        <div className="group flex cursor-pointer items-center gap-1 rounded bg-blue-500/20 p-1.5 text-xs transition-colors hover:bg-blue-500/30">
+          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-blue-500" />
           {isItemGoal && itemGoal && (
-            <img
-              src={itemGoal.imageUrl}
-              alt={itemGoal.baseName}
-              className="h-5 w-5 object-contain shrink-0"
-            />
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={itemGoal.imageUrl}
+                alt={itemGoal.baseName}
+                className="h-5 w-5 shrink-0 object-contain"
+              />
+            </>
           )}
-          <span className="text-blue-500 font-medium truncate">
+          <span className="truncate font-medium text-blue-500">
             {currentGoal?.description ?? "Goal"}
           </span>
           {isItemGoal && (
-            <Badge variant="secondary" className="text-xs h-4 px-1">
+            <Badge variant="secondary" className="h-4 px-1 text-xs">
               <Package className="h-3 w-3" />
             </Badge>
           )}
           {currentValue !== null && currentValue !== undefined && (
-            <Badge variant="secondary" className="text-xs ml-1">
-              <Hash className="h-3 w-3 mr-0.5" />
+            <Badge variant="secondary" className="ml-1 text-xs">
+              <Hash className="mr-0.5 h-3 w-3" />
               {currentValue}
             </Badge>
           )}
@@ -361,7 +415,7 @@ export function InlineGoalAssignment({
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 opacity-70 hover:opacity-100 text-red-500 hover:text-red-600"
+          className="h-6 w-6 text-red-500 opacity-70 hover:text-red-600 hover:opacity-100"
           onClick={handleRemoveGoal}
           title="Remove goal assignment"
         >
@@ -378,26 +432,29 @@ export function InlineGoalAssignment({
 
     return (
       <div className={cn("flex items-center gap-2", className)}>
-        <div className="flex items-center gap-1 bg-blue-500/20 p-1.5 rounded text-xs">
-          <CheckCircle2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+        <div className="flex items-center gap-1 rounded bg-blue-500/20 p-1.5 text-xs">
+          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-blue-500" />
           {isItemGoal && itemGoal && (
-            <img
-              src={itemGoal.imageUrl}
-              alt={itemGoal.baseName}
-              className="h-5 w-5 object-contain shrink-0"
-            />
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={itemGoal.imageUrl}
+                alt={itemGoal.baseName}
+                className="h-5 w-5 shrink-0 object-contain"
+              />
+            </>
           )}
-          <span className="text-blue-500 font-medium truncate">
+          <span className="truncate font-medium text-blue-500">
             {currentGoal?.description ?? "Goal"}
           </span>
           {isItemGoal && (
-            <Badge variant="secondary" className="text-xs h-4 px-1">
+            <Badge variant="secondary" className="h-4 px-1 text-xs">
               <Package className="h-3 w-3" />
             </Badge>
           )}
           {currentValue !== null && currentValue !== undefined && (
-            <Badge variant="secondary" className="text-xs ml-1">
-              <Hash className="h-3 w-3 mr-0.5" />
+            <Badge variant="secondary" className="ml-1 text-xs">
+              <Hash className="mr-0.5 h-3 w-3" />
               {currentValue}
             </Badge>
           )}

@@ -12,7 +12,12 @@ interface SubmissionCommentProps {
   canViewComments?: boolean
 }
 
-export function SubmissionCommentDisplay({ comments, submissionId, canViewComments = true }: SubmissionCommentProps) {
+export function SubmissionCommentDisplay({
+  comments,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  submissionId,
+  canViewComments = true,
+}: SubmissionCommentProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   if (!canViewComments || comments.length === 0) {
@@ -32,28 +37,28 @@ export function SubmissionCommentDisplay({ comments, submissionId, canViewCommen
         onClick={handleToggle}
         className="comment-indicator h-6 px-2 py-1 text-xs"
         aria-expanded={isExpanded}
-        aria-label={`${comments.length} comment${comments.length === 1 ? '' : 's'}`}
+        aria-label={`${comments.length} comment${comments.length === 1 ? "" : "s"}`}
       >
-        <MessageCircle className="w-3 h-3" />
+        <MessageCircle className="h-3 w-3" />
         <span>{comments.length}</span>
         {isExpanded ? (
-          <ChevronUp className="w-3 h-3" />
+          <ChevronUp className="h-3 w-3" />
         ) : (
-          <ChevronDown className="w-3 h-3" />
+          <ChevronDown className="h-3 w-3" />
         )}
       </Button>
 
       {/* Expanded comments */}
       {isExpanded && (
         <div
-          className={`comment-section ${isExpanded ? 'expanded' : 'collapsed'}`}
+          className={`comment-section ${isExpanded ? "expanded" : "collapsed"}`}
           role="region"
           aria-label="Review comments"
         >
-          <div className="flex items-center gap-2 mb-3">
-            <MessageCircle className="w-4 h-4 text-gray-600" />
+          <div className="mb-3 flex items-center gap-2">
+            <MessageCircle className="h-4 w-4 text-gray-600" />
             <span className="text-sm font-medium text-gray-700">
-              Review Comment{comments.length > 1 ? 's' : ''}
+              Review Comment{comments.length > 1 ? "s" : ""}
             </span>
           </div>
 
@@ -66,15 +71,20 @@ export function SubmissionCommentDisplay({ comments, submissionId, canViewCommen
                 <div className="comment-metadata">
                   <div className="reviewer-avatar flex items-center justify-center text-xs font-medium text-white">
                     {comment.author.runescapeName?.charAt(0).toUpperCase() ??
-                      comment.author.name?.charAt(0).toUpperCase() ??
-                      <User className="w-3 h-3" />}
+                      comment.author.name?.charAt(0).toUpperCase() ?? (
+                        <User className="h-3 w-3" />
+                      )}
                   </div>
-                  <span className="text-xs text-gray-500 font-medium">
-                    {comment.author.runescapeName ?? comment.author.name ?? 'Unknown User'}
+                  <span className="text-xs font-medium text-gray-500">
+                    {comment.author.runescapeName ??
+                      comment.author.name ??
+                      "Unknown User"}
                   </span>
                   <span className="text-xs text-gray-400">•</span>
                   <span className="text-xs text-gray-500">
-                    {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(comment.createdAt), {
+                      addSuffix: true,
+                    })}
                   </span>
                 </div>
               </div>

@@ -1,9 +1,19 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { deleteBingo } from "@/app/actions/bingo"
 import { toast } from "@/hooks/use-toast"
 import { Trash2 } from "lucide-react"
@@ -25,6 +35,7 @@ export function DeleteBingoButton({ bingoId }: DeleteBingoButtonProps) {
         description: "The bingo has been successfully deleted.",
       })
       router.refresh()
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (_) {
       toast({
         title: "Error",
@@ -45,14 +56,19 @@ export function DeleteBingoButton({ bingoId }: DeleteBingoButtonProps) {
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure you want to delete this bingo?</AlertDialogTitle>
+          <AlertDialogTitle>
+            Are you sure you want to delete this bingo?
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete the bingo and all its tiles.
+            This action cannot be undone. This will permanently delete the bingo
+            and all its tiles.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDeleteBingo}>Delete</AlertDialogAction>
+          <AlertDialogAction onClick={handleDeleteBingo}>
+            Delete
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

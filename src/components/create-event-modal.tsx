@@ -19,7 +19,11 @@ import { createEvent } from "@/app/actions/events"
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -36,7 +40,9 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
   const [description, setDescription] = useState("")
   const [startDate, setStartDate] = useState<Date | undefined>(undefined)
   const [endDate, setEndDate] = useState<Date | undefined>(undefined)
-  const [registrationDeadline, setRegistrationDeadline] = useState<Date | undefined>(undefined)
+  const [registrationDeadline, setRegistrationDeadline] = useState<
+    Date | undefined
+  >(undefined)
   const [minimumBuyIn, setMinimumBuyIn] = useState(0)
   const [basePrizePool, setBasePrizePool] = useState(0)
   const [requiresApproval, setRequiresApproval] = useState(false)
@@ -60,7 +66,10 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
     formData.append("startDate", startDate.toISOString())
     formData.append("endDate", endDate.toISOString())
     if (registrationDeadline) {
-      formData.append("registrationDeadline", registrationDeadline.toISOString())
+      formData.append(
+        "registrationDeadline",
+        registrationDeadline.toISOString()
+      )
     }
     formData.append("minimumBuyIn", minimumBuyIn.toString())
     formData.append("basePrizePool", basePrizePool.toString())
@@ -78,11 +87,13 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
       } else {
         toast({
           title: "Error",
-          description: result.error ?? "Failed to create event. Please try again.",
+          description:
+            result.error ?? "Failed to create event. Please try again.",
           variant: "destructive",
         })
       }
     } catch (error) {
+      console.error("Failed to create event:", error)
       toast({
         title: "Error",
         description: "Failed to create event. Please try again.",
@@ -99,7 +110,9 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Create New Event</DialogTitle>
-            <DialogDescription>Fill in the details for your new event.</DialogDescription>
+            <DialogDescription>
+              Fill in the details for your new event.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
@@ -136,15 +149,23 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
                       variant={"outline"}
                       className={cn(
                         "w-full justify-start text-left font-normal",
-                        !startDate && "text-muted-foreground",
+                        !startDate && "text-muted-foreground"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                      {startDate ? (
+                        format(startDate, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={startDate} onSelect={setStartDate} />
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={setStartDate}
+                    />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -158,14 +179,25 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
-                      className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !endDate && "text-muted-foreground"
+                      )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                      {endDate ? (
+                        format(endDate, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={endDate} onSelect={setEndDate} />
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={setEndDate}
+                    />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -181,11 +213,15 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
                       variant={"outline"}
                       className={cn(
                         "w-full justify-start text-left font-normal",
-                        !registrationDeadline && "text-muted-foreground",
+                        !registrationDeadline && "text-muted-foreground"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {registrationDeadline ? format(registrationDeadline, "PPP") : <span>Optional</span>}
+                      {registrationDeadline ? (
+                        format(registrationDeadline, "PPP")
+                      ) : (
+                        <span>Optional</span>
+                      )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -251,4 +287,3 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
     </Dialog>
   )
 }
-

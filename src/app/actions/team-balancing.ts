@@ -1,14 +1,19 @@
 "use server"
 
 import { getServerAuthSession } from "@/server/auth"
-import { logger } from "@/lib/logger";
 import { db } from "@/server/db"
 import { teams, eventParticipants } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
-import { getEventParticipantMetadata, calculateMetadataCoverage } from "./player-metadata"
+import {
+  getEventParticipantMetadata,
+  calculateMetadataCoverage,
+} from "./player-metadata"
 import { createTeam, addUserToTeam } from "./team"
-import { SA_STANDARD_CONFIG, SA_FORMULAS } from "@/lib/simulated-annealing-config"
+import {
+  SA_STANDARD_CONFIG,
+  SA_FORMULAS,
+} from "@/lib/simulated-annealing-config"
 import * as timezoneUtils from "@/lib/timezones"
 
 /**
@@ -91,14 +96,19 @@ interface ScoredParticipant {
 /**
  * Normalize a value using percentile ranking
  */
-function percentileNormalize(value: number | null | undefined, allValues: (number | null | undefined)[]): number {
+function percentileNormalize(
+  value: number | null | undefined,
+  allValues: (number | null | undefined)[]
+): number {
   if (value === null || value === undefined) return 0.5 // Neutral score for missing data
 
-  const validValues = allValues.filter((v): v is number => v !== null && v !== undefined)
+  const validValues = allValues.filter(
+    (v): v is number => v !== null && v !== undefined
+  )
   if (validValues.length === 0) return 0.5
 
   const sortedValues = [...validValues].sort((a, b) => a - b)
-  const rank = sortedValues.filter(v => v <= value).length
+  const rank = sortedValues.filter((v) => v <= value).length
   return rank / sortedValues.length
 }
 
@@ -114,7 +124,6 @@ function getTimezoneOffset(timezone: string | null | undefined): number {
   return timezoneUtils.getTimezoneOffset(timezone)
 }
 
-
 /**
  * Calculate composite player score based on metadata and weights
  */
@@ -127,21 +136,21 @@ function calculatePlayerScore(
   },
   allMetadata: Array<typeof metadata>,
   weights: BalancingWeights
-): { score: number; breakdown: ScoredParticipant['breakdown'] } {
+): { score: number; breakdown: ScoredParticipant["breakdown"] } {
   // Normalize each attribute
   const ehpScore = percentileNormalize(
     metadata.ehp,
-    allMetadata.map(m => m.ehp)
+    allMetadata.map((m) => m.ehp)
   )
 
   const ehbScore = percentileNormalize(
     metadata.ehb,
-    allMetadata.map(m => m.ehb)
+    allMetadata.map((m) => m.ehb)
   )
 
   const dailyHoursScore = percentileNormalize(
     metadata.dailyHoursAvailable,
-    allMetadata.map(m => m.dailyHoursAvailable)
+    allMetadata.map((m) => m.dailyHoursAvailable)
   )
 
   // Apply weights and calculate composite score
@@ -153,9 +162,10 @@ function calculatePlayerScore(
 
   // Calculate total (normalize by sum of weights)
   const totalWeight = weights.ehp + weights.ehb + weights.dailyHours
-  const score = totalWeight > 0
-    ? (breakdown.ehp + breakdown.ehb + breakdown.dailyHours) / totalWeight
-    : 0.5
+  const score =
+    totalWeight > 0
+      ? (breakdown.ehp + breakdown.ehb + breakdown.dailyHours) / totalWeight
+      : 0.5
 
   return { score, breakdown }
 }
@@ -164,7 +174,9 @@ function calculatePlayerScore(
  * Calculate mean of numeric values, filtering out nulls/undefined
  */
 function calculateMean(values: (number | null | undefined)[]): number {
-  const validValues = values.filter((v): v is number => v !== null && v !== undefined)
+  const validValues = values.filter(
+    (v): v is number => v !== null && v !== undefined
+  )
   if (validValues.length === 0) return 0
   return validValues.reduce((sum, v) => sum + v, 0) / validValues.length
 }
@@ -175,7 +187,9 @@ function calculateMean(values: (number | null | undefined)[]): number {
 function calculateVariance(values: number[]): number {
   if (values.length === 0) return 0
   const mean = values.reduce((sum, v) => sum + v, 0) / values.length
-  return values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length
+  return (
+    values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length
+  )
 }
 
 /**
@@ -245,9 +259,9 @@ interface GlobalStats {
  * @returns Global mean and standard deviation for each metric
  */
 function calculateGlobalStats(players: PlayerFeatures[]): GlobalStats {
-  const ehpValues = players.map(p => p.ehp)
-  const ehbValues = players.map(p => p.ehb)
-  const dailyHoursValues = players.map(p => p.dailyHours)
+  const ehpValues = players.map((p) => p.ehp)
+  const ehbValues = players.map((p) => p.ehb)
+  const dailyHoursValues = players.map((p) => p.dailyHours)
 
   return {
     ehp: {
@@ -289,21 +303,26 @@ function timezoneOffsetToAngle(offset: number): number {
  */
 function preparePlayerFeatures(
   participants: Array<{ userId: string }>,
-  metadataMap: Map<string, {
-    timezone: string | null
-    ehp: number | null
-    ehb: number | null
-    dailyHoursAvailable: number | null
-  }>
+  metadataMap: Map<
+    string,
+    {
+      timezone: string | null
+      ehp: number | null
+      ehb: number | null
+      dailyHoursAvailable: number | null
+    }
+  >
 ): PlayerFeatures[] {
   const allMetadata = Array.from(metadataMap.values())
 
   // Calculate means for imputation
-  const meanEhp = calculateMean(allMetadata.map(m => m.ehp))
-  const meanEhb = calculateMean(allMetadata.map(m => m.ehb))
-  const meanDailyHours = calculateMean(allMetadata.map(m => m.dailyHoursAvailable))
+  const meanEhp = calculateMean(allMetadata.map((m) => m.ehp))
+  const meanEhb = calculateMean(allMetadata.map((m) => m.ehb))
+  const meanDailyHours = calculateMean(
+    allMetadata.map((m) => m.dailyHoursAvailable)
+  )
 
-  return participants.map(p => {
+  return participants.map((p) => {
     const metadata = metadataMap.get(p.userId)
     const timezoneOffset = getTimezoneOffset(metadata?.timezone)
 
@@ -338,8 +357,10 @@ function calculateObjective(
   globalStats: GlobalStats
 ): number {
   // Calculate team-level statistics
-  const teamStats = assignment.map(team => {
-    const players = team.map(userId => playerMap.get(userId)!).filter(p => p !== undefined)
+  const teamStats = assignment.map((team) => {
+    const players = team
+      .map((userId) => playerMap.get(userId)!)
+      .filter((p) => p !== undefined)
     if (players.length === 0) {
       return {
         avgEhp: 0,
@@ -352,20 +373,25 @@ function calculateObjective(
     return {
       avgEhp: players.reduce((sum, p) => sum + p.ehp, 0) / players.length,
       avgEhb: players.reduce((sum, p) => sum + p.ehb, 0) / players.length,
-      avgDailyHours: players.reduce((sum, p) => sum + p.dailyHours, 0) / players.length,
-      timezoneAngles: players.map(p => p.timezoneAngle),
+      avgDailyHours:
+        players.reduce((sum, p) => sum + p.dailyHours, 0) / players.length,
+      timezoneAngles: players.map((p) => p.timezoneAngle),
     }
   })
 
   // Convert team averages to z-scores
-  const ehpZScores = teamStats.map(s =>
+  const ehpZScores = teamStats.map((s) =>
     calculateZScore(s.avgEhp, globalStats.ehp.mean, globalStats.ehp.stdDev)
   )
-  const ehbZScores = teamStats.map(s =>
+  const ehbZScores = teamStats.map((s) =>
     calculateZScore(s.avgEhb, globalStats.ehb.mean, globalStats.ehb.stdDev)
   )
-  const dailyHoursZScores = teamStats.map(s =>
-    calculateZScore(s.avgDailyHours, globalStats.dailyHours.mean, globalStats.dailyHours.stdDev)
+  const dailyHoursZScores = teamStats.map((s) =>
+    calculateZScore(
+      s.avgDailyHours,
+      globalStats.dailyHours.mean,
+      globalStats.dailyHours.stdDev
+    )
   )
 
   // Calculate variance of z-scores across teams (lower = more balanced)
@@ -385,13 +411,13 @@ function calculateObjective(
   //   Team A (Europe): UTC+0, UTC+1, UTC+2 → CircVar ≈ 0.05 (cohesive)
   //   Team B (Global): UTC-8, UTC+0, UTC+9 → CircVar ≈ 0.85 (dispersed)
   //   Algorithm minimizes variance between 0.05 and 0.85 for fairness
-  const timezoneCircularVariances = teamStats.map(s =>
+  const timezoneCircularVariances = teamStats.map((s) =>
     calculateCircularVariance(s.timezoneAngles)
   )
   const timezoneVariance = calculateVariance(timezoneCircularVariances)
 
   // Calculate team size variance (promotes equal-sized teams)
-  const teamSizes = assignment.map(team => team.length)
+  const teamSizes = assignment.map((team) => team.length)
   const teamSizeVariance = calculateVariance(teamSizes)
 
   // Pre-constraint validation: Reject solutions with excessive team size imbalance
@@ -404,12 +430,11 @@ function calculateObjective(
   }
 
   // Weighted sum of variances (weights should sum to 1.0, excluding teamSize)
-  const baseObjective = (
+  const baseObjective =
     config.varianceWeights.timezone * timezoneVariance +
     config.varianceWeights.ehp * ehpVariance +
     config.varianceWeights.ehb * ehbVariance +
     config.varianceWeights.dailyHours * dailyHoursVariance
-  )
 
   // Add small fixed penalty for team size variance as tiebreaker (not user-configurable)
   const teamSizePenalty = teamSizeVariance * 0.1
@@ -421,8 +446,11 @@ function calculateObjective(
  * Generate a neighbor configuration by swapping or moving players
  * Uses configurable move operator probabilities
  */
-function generateNeighbor(assignment: string[][], config: SimulatedAnnealingConfig): string[][] {
-  const newAssignment = assignment.map(team => [...team])
+function generateNeighbor(
+  assignment: string[][],
+  config: SimulatedAnnealingConfig
+): string[][] {
+  const newAssignment = assignment.map((team) => [...team])
 
   // Get move probabilities (use defaults if not provided)
   const swapProb = config.moves?.swapProbability ?? 0.7
@@ -495,16 +523,24 @@ function simulatedAnnealing(
   const globalStats = calculateGlobalStats(players)
 
   // Create player map for quick lookup
-  const playerMap = new Map(players.map(p => [p.userId, p]))
+  const playerMap = new Map(players.map((p) => [p.userId, p]))
 
   // Initialize with random assignment (round-robin for consistency)
-  const currentAssignment: string[][] = Array.from({ length: numberOfTeams }, () => [])
+  const currentAssignment: string[][] = Array.from(
+    { length: numberOfTeams },
+    () => []
+  )
   players.forEach((player, idx) => {
     currentAssignment[idx % numberOfTeams]!.push(player.userId)
   })
 
-  let currentObjective = calculateObjective(currentAssignment, playerMap, config, globalStats)
-  let bestAssignment = currentAssignment.map(team => [...team])
+  let currentObjective = calculateObjective(
+    currentAssignment,
+    playerMap,
+    config,
+    globalStats
+  )
+  let bestAssignment = currentAssignment.map((team) => [...team])
   let bestObjective = currentObjective
 
   // Stagnation detection variables
@@ -529,23 +565,35 @@ function simulatedAnnealing(
 
     // Generate neighbor configuration
     const neighborAssignment = generateNeighbor(currentAssignment, config)
-    const neighborObjective = calculateObjective(neighborAssignment, playerMap, config, globalStats)
+    const neighborObjective = calculateObjective(
+      neighborAssignment,
+      playerMap,
+      config,
+      globalStats
+    )
 
     // Calculate delta
     const delta = neighborObjective - currentObjective
 
     // Decide whether to accept the neighbor using Metropolis criterion
-    const acceptanceProbability = SA_FORMULAS.metropolisAcceptance(delta, temperature)
+    const acceptanceProbability = SA_FORMULAS.metropolisAcceptance(
+      delta,
+      temperature
+    )
     const accept = Math.random() < acceptanceProbability
 
     if (accept) {
       // Update current assignment
-      currentAssignment.splice(0, currentAssignment.length, ...neighborAssignment)
+      currentAssignment.splice(
+        0,
+        currentAssignment.length,
+        ...neighborAssignment
+      )
       currentObjective = neighborObjective
 
       // Track best solution
       if (neighborObjective < bestObjective) {
-        bestAssignment = neighborAssignment.map(team => [...team])
+        bestAssignment = neighborAssignment.map((team) => [...team])
         bestObjective = neighborObjective
         noImprovementCount = 0 // Reset stagnation counter
       } else {
@@ -556,8 +604,13 @@ function simulatedAnnealing(
     }
 
     // Check for stagnation (early termination)
-    if (stagnationLimit !== undefined && noImprovementCount >= stagnationLimit) {
-      console.log(`Terminated early at iteration ${iteration} due to stagnation`)
+    if (
+      stagnationLimit !== undefined &&
+      noImprovementCount >= stagnationLimit
+    ) {
+      console.log(
+        `Terminated early at iteration ${iteration} due to stagnation`
+      )
       break
     }
   }
@@ -572,7 +625,9 @@ function simulatedAnnealing(
  * Check if balanced team generation is available for an event
  * Returns true if at least 50% of participants have metadata
  */
-export async function canUseBalancedGeneration(eventId: string): Promise<boolean> {
+export async function canUseBalancedGeneration(
+  eventId: string
+): Promise<boolean> {
   const coverage = await calculateMetadataCoverage(eventId)
   return coverage >= 50
 }
@@ -627,8 +682,13 @@ export async function generateBalancedTeams(
     ),
   })
 
-  if (!participant || (participant.role !== "management" && participant.role !== "admin")) {
-    throw new Error("Unauthorized: You must be a management user for this event")
+  if (
+    !participant ||
+    (participant.role !== "management" && participant.role !== "admin")
+  ) {
+    throw new Error(
+      "Unauthorized: You must be a management user for this event"
+    )
   }
 
   // Get all event participants
@@ -660,11 +720,13 @@ export async function generateBalancedTeams(
 
   // Filter out already assigned participants
   const assignedUserIds = new Set(
-    existingTeams.flatMap(team => team.teamMembers.map(member => member.user.id))
+    existingTeams.flatMap((team) =>
+      team.teamMembers.map((member) => member.user.id)
+    )
   )
 
   const unassignedParticipants = allParticipants.filter(
-    p => !assignedUserIds.has(p.user.id)
+    (p) => !assignedUserIds.has(p.user.id)
   )
 
   if (unassignedParticipants.length === 0) {
@@ -673,18 +735,17 @@ export async function generateBalancedTeams(
 
   // Get metadata for all participants
   const metadata = await getEventParticipantMetadata(eventId)
-  const metadataMap = new Map(
-    metadata.map(m => [m.userId, m])
-  )
+  const metadataMap = new Map(metadata.map((m) => [m.userId, m]))
 
   // Calculate number of teams
-  const numberOfTeams = config.generationMethod === "teamSize" && config.teamSize
-    ? Math.ceil(unassignedParticipants.length / config.teamSize)
-    : config.teamCount ?? 2
+  const numberOfTeams =
+    config.generationMethod === "teamSize" && config.teamSize
+      ? Math.ceil(unassignedParticipants.length / config.teamSize)
+      : (config.teamCount ?? 2)
 
   // Prepare player features for simulated annealing
   const playerFeatures = preparePlayerFeatures(
-    unassignedParticipants.map(p => ({ userId: p.user.id })),
+    unassignedParticipants.map((p) => ({ userId: p.user.id })),
     metadataMap
   )
 
@@ -692,35 +753,60 @@ export async function generateBalancedTeams(
   const defaults = SA_STANDARD_CONFIG
   const saConfig: SimulatedAnnealingConfig = {
     // Basic annealing parameters
-    iterations: config.simulatedAnnealing?.iterations ?? defaults.annealing.iterations,
-    initialTemperature: config.simulatedAnnealing?.initialTemperature ?? defaults.annealing.initialTemperature,
-    finalTemperature: config.simulatedAnnealing?.finalTemperature ?? defaults.annealing.finalTemperature,
+    iterations:
+      config.simulatedAnnealing?.iterations ?? defaults.annealing.iterations,
+    initialTemperature:
+      config.simulatedAnnealing?.initialTemperature ??
+      defaults.annealing.initialTemperature,
+    finalTemperature:
+      config.simulatedAnnealing?.finalTemperature ??
+      defaults.annealing.finalTemperature,
 
     // Variance weights (use provided or standard defaults)
     // Note: teamSize is now enforced as a hard constraint, not a weight
     varianceWeights: {
-      timezone: config.simulatedAnnealing?.varianceWeights?.timezone ?? defaults.weights.timezoneVariance,
-      ehp: config.simulatedAnnealing?.varianceWeights?.ehp ?? defaults.weights.averageEHP,
-      ehb: config.simulatedAnnealing?.varianceWeights?.ehb ?? defaults.weights.averageEHB,
-      dailyHours: config.simulatedAnnealing?.varianceWeights?.dailyHours ?? defaults.weights.averageDailyHours,
+      timezone:
+        config.simulatedAnnealing?.varianceWeights?.timezone ??
+        defaults.weights.timezoneVariance,
+      ehp:
+        config.simulatedAnnealing?.varianceWeights?.ehp ??
+        defaults.weights.averageEHP,
+      ehb:
+        config.simulatedAnnealing?.varianceWeights?.ehb ??
+        defaults.weights.averageEHB,
+      dailyHours:
+        config.simulatedAnnealing?.varianceWeights?.dailyHours ??
+        defaults.weights.averageDailyHours,
     },
 
     // New: Extended parameters
     randomSeed: config.simulatedAnnealing?.randomSeed,
-    stagnationLimit: config.simulatedAnnealing?.stagnationLimit ?? defaults.termination.stagnationLimit,
+    stagnationLimit:
+      config.simulatedAnnealing?.stagnationLimit ??
+      defaults.termination.stagnationLimit,
 
     // New: Move operators
-    moves: config.simulatedAnnealing?.moves ? {
-      swapProbability: config.simulatedAnnealing.moves.swapProbability ?? defaults.moves.swapProbability,
-      moveProbability: config.simulatedAnnealing.moves.moveProbability ?? defaults.moves.moveProbability,
-    } : {
-      swapProbability: defaults.moves.swapProbability,
-      moveProbability: defaults.moves.moveProbability,
-    },
+    moves: config.simulatedAnnealing?.moves
+      ? {
+          swapProbability:
+            config.simulatedAnnealing.moves.swapProbability ??
+            defaults.moves.swapProbability,
+          moveProbability:
+            config.simulatedAnnealing.moves.moveProbability ??
+            defaults.moves.moveProbability,
+        }
+      : {
+          swapProbability: defaults.moves.swapProbability,
+          moveProbability: defaults.moves.moveProbability,
+        },
   }
 
   // Run simulated annealing optimization
-  const optimizedAssignment = simulatedAnnealing(playerFeatures, numberOfTeams, saConfig)
+  const optimizedAssignment = simulatedAnnealing(
+    playerFeatures,
+    numberOfTeams,
+    saConfig
+  )
 
   // Create teams in database
   const createdTeams: string[] = []
@@ -773,7 +859,7 @@ export async function calculateTeamBalanceMetrics(eventId: string) {
 
   // Get metadata
   const metadata = await getEventParticipantMetadata(eventId)
-  const metadataMap = new Map(metadata.map(m => [m.userId, m]))
+  const metadataMap = new Map(metadata.map((m) => [m.userId, m]))
 
   // Calculate average score per team (using equal weights for display)
   const defaultWeights: BalancingWeights = {
@@ -783,11 +869,11 @@ export async function calculateTeamBalanceMetrics(eventId: string) {
   }
 
   const allMetadata = existingTeams
-    .flatMap(t => t.teamMembers.map(m => metadataMap.get(m.user.id)))
+    .flatMap((t) => t.teamMembers.map((m) => metadataMap.get(m.user.id)))
     .filter((m): m is NonNullable<typeof m> => m !== undefined)
 
-  const teamScores = existingTeams.map(team => {
-    const memberScores = team.teamMembers.map(member => {
+  const teamScores = existingTeams.map((team) => {
+    const memberScores = team.teamMembers.map((member) => {
       const userMetadata = metadataMap.get(member.user.id)
       const { score } = userMetadata
         ? calculatePlayerScore(userMetadata, allMetadata, defaultWeights)
@@ -795,9 +881,10 @@ export async function calculateTeamBalanceMetrics(eventId: string) {
       return score
     })
 
-    const averageScore = memberScores.length > 0
-      ? memberScores.reduce((sum, s) => sum + s, 0) / memberScores.length
-      : 0
+    const averageScore =
+      memberScores.length > 0
+        ? memberScores.reduce((sum, s) => sum + s, 0) / memberScores.length
+        : 0
 
     return {
       teamId: team.id,
@@ -808,11 +895,13 @@ export async function calculateTeamBalanceMetrics(eventId: string) {
   })
 
   // Calculate variance
-  const overallAverage = teamScores.reduce((sum, t) => sum + t.averageScore, 0) / teamScores.length
-  const variance = teamScores.reduce(
-    (sum, t) => sum + Math.pow(t.averageScore - overallAverage, 2),
-    0
-  ) / teamScores.length
+  const overallAverage =
+    teamScores.reduce((sum, t) => sum + t.averageScore, 0) / teamScores.length
+  const variance =
+    teamScores.reduce(
+      (sum, t) => sum + Math.pow(t.averageScore - overallAverage, 2),
+      0
+    ) / teamScores.length
 
   return {
     teams: teamScores,

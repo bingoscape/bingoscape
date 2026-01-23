@@ -59,11 +59,13 @@ export function EventDeleteModal({
       } else {
         toast({
           title: "Error",
-          description: result.error ?? "Failed to delete event. Please try again.",
+          description:
+            result.error ?? "Failed to delete event. Please try again.",
           variant: "destructive",
         })
       }
     } catch (error) {
+      console.error("Failed to delete event:", error)
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
@@ -99,7 +101,7 @@ export function EventDeleteModal({
             </AlertDescription>
           </Alert>
 
-          <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+          <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
             {event.participantsCount !== undefined &&
               event.participantsCount > 0 && (
                 <li>
@@ -124,15 +126,15 @@ export function EventDeleteModal({
             <li>All event webhooks and configurations</li>
           </ul>
 
-          <div className="p-3 bg-muted rounded-lg space-y-2">
+          <div className="space-y-2 rounded-lg bg-muted p-3">
             <div>
-              <p className="font-medium text-sm">Event to delete:</p>
-              <p className="text-sm mt-1">{event.title}</p>
+              <p className="text-sm font-medium">Event to delete:</p>
+              <p className="mt-1 text-sm">{event.title}</p>
             </div>
             {(event.participantsCount !== undefined ||
               event.teamsCount !== undefined ||
               event.bingosCount !== undefined) && (
-              <div className="flex gap-4 text-xs text-muted-foreground pt-2 border-t">
+              <div className="flex gap-4 border-t pt-2 text-xs text-muted-foreground">
                 {event.participantsCount !== undefined && (
                   <span>
                     {event.participantsCount} participant
@@ -146,7 +148,8 @@ export function EventDeleteModal({
                 )}
                 {event.bingosCount !== undefined && (
                   <span>
-                    {event.bingosCount} board{event.bingosCount !== 1 ? "s" : ""}
+                    {event.bingosCount} board
+                    {event.bingosCount !== 1 ? "s" : ""}
                   </span>
                 )}
               </div>
@@ -155,7 +158,9 @@ export function EventDeleteModal({
 
           <div className="space-y-2">
             <Label htmlFor="confirm-text" className="text-sm font-medium">
-              Type <span className="font-mono text-destructive">{event.title}</span> to confirm
+              Type{" "}
+              <span className="font-mono text-destructive">{event.title}</span>{" "}
+              to confirm
             </Label>
             <Input
               id="confirm-text"
@@ -168,11 +173,7 @@ export function EventDeleteModal({
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button
-              variant="outline"
-              onClick={handleClose}
-              disabled={loading}
-            >
+            <Button variant="outline" onClick={handleClose} disabled={loading}>
               Cancel
             </Button>
             <Button
@@ -182,12 +183,12 @@ export function EventDeleteModal({
             >
               {loading ? (
                 <>
-                  <Trash2 className="h-4 w-4 mr-2 animate-pulse" />
+                  <Trash2 className="mr-2 h-4 w-4 animate-pulse" />
                   Deleting...
                 </>
               ) : (
                 <>
-                  <Trash2 className="h-4 w-4 mr-2" />
+                  <Trash2 className="mr-2 h-4 w-4" />
                   Delete Event
                 </>
               )}

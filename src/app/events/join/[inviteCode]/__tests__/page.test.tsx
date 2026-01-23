@@ -1,4 +1,4 @@
-/* eslint-disable */
+ 
 
 import { render, screen, waitFor } from "@testing-library/react"
 import JoinEventPage from "../page"

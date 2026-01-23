@@ -36,6 +36,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
     clan = await getClanDetails(params.clanId)
     memberActivity = await getClanMemberActivity(params.clanId)
   } catch (error) {
+    console.error("Failed to load clan details:", error)
     notFound()
   }
 

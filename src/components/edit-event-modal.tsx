@@ -17,7 +17,11 @@ import { updateEvent } from "@/app/actions/events"
 import { toast } from "@/hooks/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -29,19 +33,29 @@ interface EditEventModalProps {
   onClose: () => void
 }
 
-export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) {
+export function EditEventModal({
+  event,
+  isOpen,
+  onClose,
+}: EditEventModalProps) {
   const [title, setTitle] = useState(event.title)
   const [description, setDescription] = useState(event.description ?? "")
   const [startDate, setStartDate] = useState<Date>(new Date(event.startDate))
   const [endDate, setEndDate] = useState<Date>(new Date(event.endDate))
-  const [registrationDeadline, setRegistrationDeadline] = useState<Date | undefined>(
-    event.registrationDeadline ? new Date(event.registrationDeadline) : undefined,
+  const [registrationDeadline, setRegistrationDeadline] = useState<
+    Date | undefined
+  >(
+    event.registrationDeadline
+      ? new Date(event.registrationDeadline)
+      : undefined
   )
   const [minimumBuyIn, setMinimumBuyIn] = useState(event.minimumBuyIn)
   const [basePrizePool, setBasePrizePool] = useState(event.basePrizePool)
   const [isLocked, setIsLocked] = useState(event.locked)
   const [isPublic, setIsPublic] = useState(event.public)
-  const [requiresApproval, setRequiresApproval] = useState(event.requiresApproval || false)
+  const [requiresApproval, setRequiresApproval] = useState(
+    event.requiresApproval || false
+  )
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async () => {
@@ -52,7 +66,9 @@ export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) 
         description,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        registrationDeadline: registrationDeadline ? registrationDeadline.toISOString() : null,
+        registrationDeadline: registrationDeadline
+          ? registrationDeadline.toISOString()
+          : null,
         minimumBuyIn,
         basePrizePool,
         locked: isLocked,
@@ -65,6 +81,7 @@ export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) 
       })
       onClose()
     } catch (error) {
+      console.error("Failed to update event:", error)
       toast({
         title: "Error",
         description: "Failed to update event. Please try again.",
@@ -80,7 +97,9 @@ export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) 
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
           <DialogTitle>Edit Event</DialogTitle>
-          <DialogDescription>Make changes to your event here. Click save when you&apos;re done.</DialogDescription>
+          <DialogDescription>
+            Make changes to your event here. Click save when you&apos;re done.
+          </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
@@ -115,10 +134,17 @@ export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) 
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
-                    className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                    {startDate ? (
+                      format(startDate, "PPP")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -141,10 +167,17 @@ export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) 
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
-                    className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                    {endDate ? (
+                      format(endDate, "PPP")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -169,11 +202,15 @@ export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) 
                     variant={"outline"}
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !registrationDeadline && "text-muted-foreground",
+                      !registrationDeadline && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {registrationDeadline ? format(registrationDeadline, "PPP") : <span>Optional</span>}
+                    {registrationDeadline ? (
+                      format(registrationDeadline, "PPP")
+                    ) : (
+                      <span>Optional</span>
+                    )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -216,7 +253,11 @@ export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) 
               Lock Registration
             </Label>
             <div className="flex items-center space-x-2">
-              <Checkbox id="isLocked" checked={isLocked} onCheckedChange={(checked) => setIsLocked(!!checked)} />
+              <Checkbox
+                id="isLocked"
+                checked={isLocked}
+                onCheckedChange={(checked) => setIsLocked(!!checked)}
+              />
               <label
                 htmlFor="isLocked"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -230,7 +271,11 @@ export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) 
               Public Event
             </Label>
             <div className="flex items-center space-x-2">
-              <Checkbox id="isPublic" checked={isPublic} onCheckedChange={(checked) => setIsPublic(!!checked)} />
+              <Checkbox
+                id="isPublic"
+                checked={isPublic}
+                onCheckedChange={(checked) => setIsPublic(!!checked)}
+              />
               <label
                 htmlFor="isPublic"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -267,4 +312,3 @@ export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) 
     </Dialog>
   )
 }
-

@@ -2,7 +2,13 @@
 
 import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { PatternCompletionGrid } from "./pattern-completion-grid"
 import type { EventPatternCompletionData } from "@/app/actions/event-pattern-completion"
 import { Progress } from "@/components/ui/progress"
@@ -28,8 +34,9 @@ export function PatternCompletionTab({ data }: PatternCompletionTabProps) {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Pattern bonuses can be configured when creating or editing a standard bingo board.
-            They allow teams to earn extra XP for completing rows, columns, diagonals, or the entire board.
+            Pattern bonuses can be configured when creating or editing a
+            standard bingo board. They allow teams to earn extra XP for
+            completing rows, columns, diagonals, or the entire board.
           </p>
         </CardContent>
       </Card>
@@ -52,6 +59,7 @@ export function PatternCompletionTab({ data }: PatternCompletionTabProps) {
     )
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const selectedTeam = selectedBoard.teams[selectedTeamIndex]
 
   return (
@@ -66,8 +74,13 @@ export function PatternCompletionTab({ data }: PatternCompletionTabProps) {
       >
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold mb-2">Select Bingo Board</h3>
-            <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${data.boards.length}, minmax(0, 1fr))` }}>
+            <h3 className="mb-2 text-lg font-semibold">Select Bingo Board</h3>
+            <TabsList
+              className="grid w-full"
+              style={{
+                gridTemplateColumns: `repeat(${data.boards.length}, minmax(0, 1fr))`,
+              }}
+            >
               {data.boards.map((board, index) => (
                 <TabsTrigger key={board.bingo.id} value={String(index)}>
                   {board.bingo.title}
@@ -88,13 +101,25 @@ export function PatternCompletionTab({ data }: PatternCompletionTabProps) {
               >
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">Select Team</h3>
-                    <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${board.teams.length}, minmax(0, 1fr))` }}>
+                    <h3 className="mb-2 text-lg font-semibold">Select Team</h3>
+                    <TabsList
+                      className="grid w-full"
+                      style={{
+                        gridTemplateColumns: `repeat(${board.teams.length}, minmax(0, 1fr))`,
+                      }}
+                    >
                       {board.teams.map((teamData, index) => (
-                        <TabsTrigger key={teamData.team.id} value={String(index)}>
+                        <TabsTrigger
+                          key={teamData.team.id}
+                          value={String(index)}
+                        >
                           {teamData.team.name}
                           <Badge
-                            variant={teamData.completionPercentage === 100 ? "default" : "secondary"}
+                            variant={
+                              teamData.completionPercentage === 100
+                                ? "default"
+                                : "secondary"
+                            }
                             className="ml-2 text-xs"
                           >
                             {teamData.completionPercentage}%
@@ -105,20 +130,32 @@ export function PatternCompletionTab({ data }: PatternCompletionTabProps) {
                   </div>
 
                   {board.teams.map((teamData, teamIndex) => (
-                    <TabsContent key={teamData.team.id} value={String(teamIndex)}>
+                    <TabsContent
+                      key={teamData.team.id}
+                      value={String(teamIndex)}
+                    >
                       {/* Pattern Completion Details */}
                       <div className="space-y-4">
                         {/* Completion Summary Card */}
                         <Card>
                           <CardHeader>
                             <CardTitle className="flex items-center justify-between">
-                              <span>{teamData.team.name} - Pattern Completion</span>
-                              <Badge variant={teamData.completionPercentage === 100 ? "default" : "secondary"}>
+                              <span>
+                                {teamData.team.name} - Pattern Completion
+                              </span>
+                              <Badge
+                                variant={
+                                  teamData.completionPercentage === 100
+                                    ? "default"
+                                    : "secondary"
+                                }
+                              >
                                 {teamData.completionPercentage}% Complete
                               </Badge>
                             </CardTitle>
                             <CardDescription>
-                              {board.bingo.title} ({board.bingo.rows}x{board.bingo.columns})
+                              {board.bingo.title} ({board.bingo.rows}x
+                              {board.bingo.columns})
                             </CardDescription>
                           </CardHeader>
                           <CardContent>
@@ -126,45 +163,70 @@ export function PatternCompletionTab({ data }: PatternCompletionTabProps) {
                               {/* Progress Bar */}
                               <div className="space-y-2">
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-muted-foreground">Pattern Bonus Progress</span>
+                                  <span className="text-muted-foreground">
+                                    Pattern Bonus Progress
+                                  </span>
                                   <span className="font-medium">
-                                    {teamData.patterns.totalBonusXP} / {board.totalPossibleBonusXP} XP
+                                    {teamData.patterns.totalBonusXP} /{" "}
+                                    {board.totalPossibleBonusXP} XP
                                   </span>
                                 </div>
-                                <Progress value={teamData.completionPercentage} className="h-2" />
+                                <Progress
+                                  value={teamData.completionPercentage}
+                                  className="h-2"
+                                />
                               </div>
 
                               {/* Pattern Summary */}
                               {teamData.patterns.totalBonusXP === 0 ? (
-                                <div className="text-sm text-muted-foreground text-center py-4">
-                                  No patterns completed yet. Complete rows, columns, or diagonals to earn bonus XP!
+                                <div className="py-4 text-center text-sm text-muted-foreground">
+                                  No patterns completed yet. Complete rows,
+                                  columns, or diagonals to earn bonus XP!
                                 </div>
                               ) : (
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                                <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
                                   <div className="space-y-1">
-                                    <div className="text-muted-foreground">Rows</div>
+                                    <div className="text-muted-foreground">
+                                      Rows
+                                    </div>
                                     <div className="text-lg font-semibold text-green-600">
                                       {teamData.patterns.completedRows.length}
                                     </div>
                                   </div>
                                   <div className="space-y-1">
-                                    <div className="text-muted-foreground">Columns</div>
+                                    <div className="text-muted-foreground">
+                                      Columns
+                                    </div>
                                     <div className="text-lg font-semibold text-blue-600">
-                                      {teamData.patterns.completedColumns.length}
+                                      {
+                                        teamData.patterns.completedColumns
+                                          .length
+                                      }
                                     </div>
                                   </div>
                                   {board.bingo.rows === board.bingo.columns && (
                                     <div className="space-y-1">
-                                      <div className="text-muted-foreground">Diagonals</div>
+                                      <div className="text-muted-foreground">
+                                        Diagonals
+                                      </div>
                                       <div className="text-lg font-semibold text-purple-600">
-                                        {(teamData.patterns.mainDiagonal ? 1 : 0) + (teamData.patterns.antiDiagonal ? 1 : 0)}
+                                        {(teamData.patterns.mainDiagonal
+                                          ? 1
+                                          : 0) +
+                                          (teamData.patterns.antiDiagonal
+                                            ? 1
+                                            : 0)}
                                       </div>
                                     </div>
                                   )}
                                   <div className="space-y-1">
-                                    <div className="text-muted-foreground">Full Board</div>
+                                    <div className="text-muted-foreground">
+                                      Full Board
+                                    </div>
                                     <div className="text-lg font-semibold text-amber-600">
-                                      {teamData.patterns.completeBoard ? "Yes" : "No"}
+                                      {teamData.patterns.completeBoard
+                                        ? "Yes"
+                                        : "No"}
                                     </div>
                                   </div>
                                 </div>
@@ -179,7 +241,9 @@ export function PatternCompletionTab({ data }: PatternCompletionTabProps) {
                           teamName={teamData.team.name}
                           rows={board.bingo.rows}
                           columns={board.bingo.columns}
-                          completedTileIndices={new Set(teamData.completedTileIndices)}
+                          completedTileIndices={
+                            new Set(teamData.completedTileIndices)
+                          }
                         />
                       </div>
                     </TabsContent>

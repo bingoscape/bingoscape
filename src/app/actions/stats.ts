@@ -1,7 +1,15 @@
 "use server"
 
 import { db } from "@/server/db"
-import { teams, teamTileSubmissions, tiles, teamMembers, users, submissions, bingos } from "@/server/db/schema"
+import {
+  teams,
+  teamTileSubmissions,
+  tiles,
+  teamMembers,
+  users,
+  submissions,
+  bingos,
+} from "@/server/db/schema"
 import { eq, and, sql, count, inArray, desc, asc, gte, lte } from "drizzle-orm"
 import { calculateBonusXP } from "./pattern-completion"
 
@@ -94,7 +102,9 @@ export interface StatsData {
 /**
  * Get comprehensive statistics for a bingo
  */
-export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsData> {
+export async function getAllTeamPointsAndTotal(
+  bingoId: string
+): Promise<StatsData> {
   // Get all teams that have submissions for this bingo
   const participatingTeams = await db
     .select({
@@ -126,8 +136,8 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
         and(
           eq(teamTileSubmissions.teamId, team.id),
           eq(tiles.bingoId, bingoId),
-          eq(teamTileSubmissions.status, "approved"),
-        ),
+          eq(teamTileSubmissions.status, "approved")
+        )
       )
 
     const baseXP = Math.round(submissionPoints[0]?.totalXP ?? 0)
@@ -150,7 +160,9 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
       })
       .from(teamTileSubmissions)
       .innerJoin(tiles, eq(teamTileSubmissions.tileId, tiles.id))
-      .where(and(eq(teamTileSubmissions.teamId, team.id), eq(tiles.bingoId, bingoId)))
+      .where(
+        and(eq(teamTileSubmissions.teamId, team.id), eq(tiles.bingoId, bingoId))
+      )
       .groupBy(teamTileSubmissions.status)
 
     // Initialize with zeros
@@ -164,9 +176,12 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
 
     // Fill in actual counts
     submissionStats.forEach((stat) => {
-      if (stat.status === "approved") submissionCounts.accepted = Number(stat.count)
-      else if (stat.status === "pending") submissionCounts.pending = Number(stat.count)
-      else if (stat.status === "needs_review") submissionCounts.requiresInteraction = Number(stat.count)
+      if (stat.status === "approved")
+        submissionCounts.accepted = Number(stat.count)
+      else if (stat.status === "pending")
+        submissionCounts.pending = Number(stat.count)
+      else if (stat.status === "needs_review")
+        submissionCounts.requiresInteraction = Number(stat.count)
     })
 
     submissionCounts.total =
@@ -188,7 +203,9 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
         name: team.name,
         xp: totalXP,
         submissions: submissionCounts.total,
-        efficiency: Number.parseFloat((totalXP / submissionCounts.total).toFixed(2)),
+        efficiency: Number.parseFloat(
+          (totalXP / submissionCounts.total).toFixed(2)
+        ),
       })
     }
 
@@ -212,7 +229,9 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
       })
       .from(teamTileSubmissions)
       .innerJoin(tiles, eq(tiles.id, teamTileSubmissions.tileId))
-      .where(and(eq(teamTileSubmissions.teamId, team.id), eq(tiles.bingoId, bingoId)))
+      .where(
+        and(eq(teamTileSubmissions.teamId, team.id), eq(tiles.bingoId, bingoId))
+      )
 
     if (teamSubmissionData.length === 0) {
       continue // Skip if no submissions
@@ -241,15 +260,18 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
         tileId: teamTileSubmissions.tileId,
       })
       .from(submissions)
-      .innerJoin(teamTileSubmissions, eq(submissions.teamTileSubmissionId, teamTileSubmissions.id))
+      .innerJoin(
+        teamTileSubmissions,
+        eq(submissions.teamTileSubmissionId, teamTileSubmissions.id)
+      )
       .where(
         and(
           eq(teamTileSubmissions.teamId, team.id),
           inArray(
             teamTileSubmissions.id,
-            teamSubmissionData.map((s) => s.id),
-          ),
-        ),
+            teamSubmissionData.map((s) => s.id)
+          )
+        )
       )
 
     // Group submissions by tile and submission ID to calculate total submissions per tile
@@ -262,7 +284,10 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
       const submissionId = submission.teamTileSubmissionId
 
       // Count total submissions per tile
-      tileSubmissionCounts.set(tileId, (tileSubmissionCounts.get(tileId) ?? 0) + 1)
+      tileSubmissionCounts.set(
+        tileId,
+        (tileSubmissionCounts.get(tileId) ?? 0) + 1
+      )
 
       // Group by tile and submission
       if (!tileSubmissionMap.has(tileId)) {
@@ -270,7 +295,10 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
       }
 
       const submissionMap = tileSubmissionMap.get(tileId)!
-      submissionMap.set(submissionId, (submissionMap.get(submissionId) ?? 0) + 1)
+      submissionMap.set(
+        submissionId,
+        (submissionMap.get(submissionId) ?? 0) + 1
+      )
     }
 
     // Process user submissions
@@ -300,7 +328,9 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
       const tileXP = tileWeights.get(tileId) ?? 0
 
       // Get the submission status
-      const submissionStatus = teamSubmissionData.find((s) => s.id === submissionId)?.status
+      const submissionStatus = teamSubmissionData.find(
+        (s) => s.id === submissionId
+      )?.status
 
       // Only count accepted submissions for the weighted average
       if (submissionStatus === "approved") {
@@ -329,7 +359,8 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
         // Calculate contribution score for this tile
         // Formula: (user's submissions / total submissions for tile) * tile XP
         const totalTileSubmissions = tileData.totalTileSubmissions
-        tileData.contributionScore = (tileData.images / totalTileSubmissions) * tileXP
+        tileData.contributionScore =
+          (tileData.images / totalTileSubmissions) * tileXP
 
         userMap.set(tileId, tileData)
       }
@@ -351,7 +382,8 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
       let totalContributionScore = 0
 
       // Calculate totals
-      for (const [tileId, tileData] of userMap.entries()) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for (const [_tileId, tileData] of userMap.entries()) {
         totalUserImages += tileData.images
         totalUserTiles += 1
         totalUserXP += tileData.xp
@@ -360,7 +392,10 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
       }
 
       // Calculate weighted average
-      const weightedAverage = totalUserXP > 0 ? Number.parseFloat((weightedSum / totalUserXP).toFixed(2)) : 0
+      const weightedAverage =
+        totalUserXP > 0
+          ? Number.parseFloat((weightedSum / totalUserXP).toFixed(2))
+          : 0
 
       // Add to user weighted submissions
       userWeightedSubmissions.push({
@@ -398,7 +433,9 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
     // Only add teams that have weighted submissions
     if (userWeightedSubmissions.length > 0) {
       // Sort by contribution score in descending order
-      userWeightedSubmissions.sort((a, b) => b.contributionScore - a.contributionScore)
+      userWeightedSubmissions.sort(
+        (a, b) => b.contributionScore - a.contributionScore
+      )
 
       teamUserWeightedSubmissions.push({
         teamId: team.id,
@@ -419,7 +456,10 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
     .from(tiles)
     .leftJoin(
       teamTileSubmissions,
-      and(eq(teamTileSubmissions.tileId, tiles.id), eq(teamTileSubmissions.status, "approved")),
+      and(
+        eq(teamTileSubmissions.tileId, tiles.id),
+        eq(teamTileSubmissions.status, "approved")
+      )
     )
     .where(eq(tiles.bingoId, bingoId))
     .groupBy(tiles.id, tiles.title, tiles.weight)
@@ -430,7 +470,7 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
         title: r.title,
         weight: r.weight,
         completionCount: Number(r.completionCount),
-      })),
+      }))
     )
 
   // Get activity timeline (submissions per day)
@@ -449,8 +489,8 @@ export async function getAllTeamPointsAndTotal(bingoId: string): Promise<StatsDa
       and(
         eq(tiles.bingoId, bingoId),
         gte(teamTileSubmissions.createdAt, thirtyDaysAgo),
-        lte(teamTileSubmissions.createdAt, now),
-      ),
+        lte(teamTileSubmissions.createdAt, now)
+      )
     )
     .groupBy(sql`DATE(${teamTileSubmissions.createdAt})`)
     .orderBy(asc(sql`DATE(${teamTileSubmissions.createdAt})`))
@@ -574,13 +614,21 @@ export async function getEventStats(eventId: string): Promise<EventStatsData> {
       })
       .from(teamTileSubmissions)
       .innerJoin(tiles, eq(teamTileSubmissions.tileId, tiles.id))
-      .where(and(eq(tiles.bingoId, bingo.id), eq(teamTileSubmissions.status, "approved")))
+      .where(
+        and(
+          eq(tiles.bingoId, bingo.id),
+          eq(teamTileSubmissions.status, "approved")
+        )
+      )
 
     const totalTeamsXP = Math.round(totalTeamsXPResult[0]?.totalXP ?? 0)
 
     // Calculate completion rate based on total possible XP across all teams
     const maxPossibleXPForAllTeams = bingoTotalXP * numberOfTeams
-    const completionRate = maxPossibleXPForAllTeams > 0 ? (totalTeamsXP / maxPossibleXPForAllTeams) * 100 : 0
+    const completionRate =
+      maxPossibleXPForAllTeams > 0
+        ? (totalTeamsXP / maxPossibleXPForAllTeams) * 100
+        : 0
 
     bingoSummary.push({
       bingoId: bingo.id,
@@ -593,7 +641,13 @@ export async function getEventStats(eventId: string): Promise<EventStatsData> {
 
   // For each participating team, calculate their total XP and breakdown by bingo
   for (const team of participatingTeams) {
-    const bingoBreakdown: { bingoId: string; bingoTitle: string; xp: number; baseXP?: number; bonusXP?: number }[] = []
+    const bingoBreakdown: {
+      bingoId: string
+      bingoTitle: string
+      xp: number
+      baseXP?: number
+      bonusXP?: number
+    }[] = []
     let totalTeamXP = 0
     let totalBaseXP = 0
     let totalBonusXP = 0
@@ -610,8 +664,8 @@ export async function getEventStats(eventId: string): Promise<EventStatsData> {
           and(
             eq(teamTileSubmissions.teamId, team.id),
             eq(tiles.bingoId, bingo.id),
-            eq(teamTileSubmissions.status, "approved"),
-          ),
+            eq(teamTileSubmissions.status, "approved")
+          )
         )
 
       const baseXP = Math.round(bingoXP[0]?.totalXP ?? 0)
@@ -643,7 +697,10 @@ export async function getEventStats(eventId: string): Promise<EventStatsData> {
   // Sort teams by total XP in descending order
   eventTeamPoints.sort((a, b) => b.totalXP - a.totalXP)
 
-  const totalEventXP = eventTeamPoints.reduce((sum, team) => sum + team.totalXP, 0)
+  const totalEventXP = eventTeamPoints.reduce(
+    (sum, team) => sum + team.totalXP,
+    0
+  )
 
   return {
     eventTeamPoints,

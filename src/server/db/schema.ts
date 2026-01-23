@@ -396,7 +396,7 @@ export const goalGroups = createTable("goal_groups", {
   tileId: uuid("tile_id")
     .notNull()
     .references(() => tiles.id, { onDelete: "cascade" }),
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
+   
   parentGroupId: uuid("parent_group_id").references(
     (): AnyPgColumn => goalGroups.id,
     { onDelete: "cascade" }
@@ -415,9 +415,9 @@ export const goalGroupsRelations = relations(goalGroups, ({ one, many }) => ({
     references: [tiles.id],
   }),
   parentGroup: one(goalGroups, {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     fields: [goalGroups.parentGroupId],
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+     
     references: [goalGroups.id],
     relationName: "groupHierarchy",
   }),
@@ -482,7 +482,7 @@ export const itemGoalsRelations = relations(itemGoals, ({ one }) => ({
   }),
 }))
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+ 
 export const goalsRelations = relations(goals, ({ one, many }) => ({
   tile: one(tiles, {
     fields: [goals.tileId],
@@ -490,7 +490,7 @@ export const goalsRelations = relations(goals, ({ one, many }) => ({
   }),
   parentGroup: one(goalGroups, {
     fields: [goals.parentGroupId],
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+     
     references: [goalGroups.id],
   }),
   teamProgress: many(teamGoalProgress),

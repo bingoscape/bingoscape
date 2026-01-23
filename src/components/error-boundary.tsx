@@ -1,16 +1,15 @@
-"use client";
+"use client"
 
-import React from "react";
-import { logger } from "@/lib/logger";
+import React from "react"
 
 interface ErrorBoundaryProps {
-  children: React.ReactNode;
-  fallback?: React.ReactNode;
+  children: React.ReactNode
+  fallback?: React.ReactNode
 }
 
 interface ErrorBoundaryState {
-  hasError: boolean;
-  error?: Error;
+  hasError: boolean
+  error?: Error
 }
 
 export class ErrorBoundary extends React.Component<
@@ -18,20 +17,20 @@ export class ErrorBoundary extends React.Component<
   ErrorBoundaryState
 > {
   constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false };
+    super(props)
+    this.state = { hasError: false }
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return {
       hasError: true,
       error,
-    };
+    }
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Log error to our API endpoint
-    this.logErrorToServer(error, errorInfo);
+    this.logErrorToServer(error, errorInfo)
   }
 
   async logErrorToServer(error: Error, errorInfo?: React.ErrorInfo) {
@@ -52,18 +51,18 @@ export class ErrorBoundary extends React.Component<
             errorInfo,
           },
         }),
-      });
+      })
     } catch (loggingError) {
       // Fallback to console if API fails
-      console.error("Failed to log error to server:", loggingError);
-      console.error("Original error:", error);
+      console.error("Failed to log error to server:", loggingError)
+      console.error("Original error:", error)
     }
   }
 
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
-        return this.props.fallback;
+        return this.props.fallback
       }
 
       return (
@@ -103,9 +102,9 @@ export class ErrorBoundary extends React.Component<
             )}
           </div>
         </div>
-      );
+      )
     }
 
-    return this.props.children;
+    return this.props.children
   }
 }

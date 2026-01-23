@@ -57,7 +57,7 @@ const TIMEZONE_DATA: Record<string, string[]> = {
     "America/Manaus",
     "America/Fortaleza",
   ],
-  "Caribbean": [
+  Caribbean: [
     "America/Havana",
     "America/Jamaica",
     "America/Puerto_Rico",
@@ -102,7 +102,7 @@ const TIMEZONE_DATA: Record<string, string[]> = {
     "Europe/Moscow",
     "Europe/Minsk",
   ],
-  "Africa": [
+  Africa: [
     "Africa/Cairo",
     "Africa/Johannesburg",
     "Africa/Lagos",
@@ -212,12 +212,19 @@ export const POPULAR_TIMEZONES = [
  * @param referenceDate - Date to calculate offset for (defaults to current date)
  * @returns UTC offset in hours (e.g., -5 for EST, -4 for EDT)
  */
-export function getTimezoneOffset(timezone: string, referenceDate: Date = new Date()): number {
+export function getTimezoneOffset(
+  timezone: string,
+  referenceDate: Date = new Date()
+): number {
   try {
     // Use Intl API to get DST-aware offset
     // This approach creates a date string in the target timezone and compares with UTC
-    const tzDate = new Date(referenceDate.toLocaleString('en-US', { timeZone: timezone }))
-    const utcDate = new Date(referenceDate.toLocaleString('en-US', { timeZone: 'UTC' }))
+    const tzDate = new Date(
+      referenceDate.toLocaleString("en-US", { timeZone: timezone })
+    )
+    const utcDate = new Date(
+      referenceDate.toLocaleString("en-US", { timeZone: "UTC" })
+    )
 
     // Calculate difference in hours
     const offsetMs = utcDate.getTime() - tzDate.getTime()
@@ -238,7 +245,10 @@ export function getTimezoneOffset(timezone: string, referenceDate: Date = new Da
  * @param referenceDate - Date to calculate offset for
  * @returns Formatted offset string
  */
-export function getFormattedOffset(timezone: string, referenceDate: Date = new Date()): string {
+export function getFormattedOffset(
+  timezone: string,
+  referenceDate: Date = new Date()
+): string {
   const offset = getTimezoneOffset(timezone, referenceDate)
 
   // Handle zero offset
@@ -254,7 +264,7 @@ export function getFormattedOffset(timezone: string, referenceDate: Date = new D
 
   // Format with minutes if not whole hour
   if (minutes > 0) {
-    return `UTC${sign}${hours}:${minutes.toString().padStart(2, '0')}`
+    return `UTC${sign}${hours}:${minutes.toString().padStart(2, "0")}`
   }
 
   return `UTC${sign}${hours}`
@@ -269,11 +279,11 @@ export function getFormattedOffset(timezone: string, referenceDate: Date = new D
  */
 export function getTimezoneLabel(timezone: string): string {
   // Extract city name from IANA identifier
-  const parts = timezone.split('/')
+  const parts = timezone.split("/")
   const city = parts[parts.length - 1] ?? timezone
 
   // Replace underscores with spaces
-  return city.replace(/_/g, ' ')
+  return city.replace(/_/g, " ")
 }
 
 /**
@@ -303,7 +313,9 @@ export function createTimezoneOption(
  * @param referenceDate - Date to calculate offsets for
  * @returns Array of all timezone options
  */
-export function getAllTimezones(referenceDate: Date = new Date()): TimezoneOption[] {
+export function getAllTimezones(
+  referenceDate: Date = new Date()
+): TimezoneOption[] {
   const allTimezones: TimezoneOption[] = []
 
   for (const [region, timezones] of Object.entries(TIMEZONE_DATA)) {
@@ -321,10 +333,14 @@ export function getAllTimezones(referenceDate: Date = new Date()): TimezoneOptio
  * @param referenceDate - Date to calculate offsets for
  * @returns Array of regions with their timezones
  */
-export function getTimezonesByRegion(referenceDate: Date = new Date()): TimezoneRegion[] {
+export function getTimezonesByRegion(
+  referenceDate: Date = new Date()
+): TimezoneRegion[] {
   return Object.entries(TIMEZONE_DATA).map(([region, timezones]) => ({
     name: region,
-    timezones: timezones.map(tz => createTimezoneOption(tz, region, referenceDate)),
+    timezones: timezones.map((tz) =>
+      createTimezoneOption(tz, region, referenceDate)
+    ),
   }))
 }
 
@@ -334,12 +350,16 @@ export function getTimezonesByRegion(referenceDate: Date = new Date()): Timezone
  * @param referenceDate - Date to calculate offsets for
  * @returns Array of popular timezone options
  */
-export function getPopularTimezones(referenceDate: Date = new Date()): TimezoneOption[] {
-  return POPULAR_TIMEZONES.map(timezone => {
+export function getPopularTimezones(
+  referenceDate: Date = new Date()
+): TimezoneOption[] {
+  return POPULAR_TIMEZONES.map((timezone) => {
     // Find region for this timezone
-    const region = Object.entries(TIMEZONE_DATA).find(([_, timezones]) =>
-      timezones.includes(timezone)
-    )?.[0] ?? "Other"
+    const region =
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      Object.entries(TIMEZONE_DATA).find(([_region, timezones]) =>
+        timezones.includes(timezone)
+      )?.[0] ?? "Other"
 
     return createTimezoneOption(timezone, region, referenceDate)
   })
@@ -352,16 +372,20 @@ export function getPopularTimezones(referenceDate: Date = new Date()): TimezoneO
  * @param referenceDate - Date to calculate offsets for
  * @returns Array of matching timezone options
  */
-export function searchTimezones(query: string, referenceDate: Date = new Date()): TimezoneOption[] {
+export function searchTimezones(
+  query: string,
+  referenceDate: Date = new Date()
+): TimezoneOption[] {
   if (!query) return getAllTimezones(referenceDate)
 
   const lowerQuery = query.toLowerCase()
   const allTimezones = getAllTimezones(referenceDate)
 
-  return allTimezones.filter(tz =>
-    tz.label.toLowerCase().includes(lowerQuery) ||
-    tz.value.toLowerCase().includes(lowerQuery) ||
-    tz.offset.toLowerCase().includes(lowerQuery)
+  return allTimezones.filter(
+    (tz) =>
+      tz.label.toLowerCase().includes(lowerQuery) ||
+      tz.value.toLowerCase().includes(lowerQuery) ||
+      tz.offset.toLowerCase().includes(lowerQuery)
   )
 }
 
@@ -374,7 +398,7 @@ export function searchTimezones(query: string, referenceDate: Date = new Date())
 export function isValidTimezone(timezone: string): boolean {
   try {
     // Attempt to format a date with this timezone
-    new Date().toLocaleString('en-US', { timeZone: timezone })
+    new Date().toLocaleString("en-US", { timeZone: timezone })
     return true
   } catch {
     return false

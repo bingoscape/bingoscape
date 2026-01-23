@@ -14,9 +14,8 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
-import { Edit, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -48,7 +47,11 @@ interface BingoPatternData {
   columnBonuses: Array<{ columnIndex: number; bonusXP: number }>
 }
 
-export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) {
+export function EditBingoModal({
+  bingo,
+  isOpen,
+  onClose,
+}: EditBingoModalProps) {
   const [formData, setFormData] = useState({
     title: bingo.title,
     description: bingo.description ?? "",
@@ -118,7 +121,9 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
     })
   }, [bingo])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
@@ -166,16 +171,24 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh]">
+      <DialogContent className="max-h-[90vh] sm:max-w-[900px]">
         <DialogHeader>
           <DialogTitle>Edit Bingo</DialogTitle>
-          <DialogDescription>Make changes to your bingo here. Click save when you are done.</DialogDescription>
+          <DialogDescription>
+            Make changes to your bingo here. Click save when you are done.
+          </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="title">Title</Label>
-              <Input id="title" name="title" value={formData.title} onChange={handleChange} placeholder="Bingo Title" />
+              <Input
+                id="title"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                placeholder="Bingo Title"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
@@ -202,7 +215,9 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
               <Switch
                 id="visible"
                 checked={formData.visible}
-                onCheckedChange={(checked) => handleSwitchChange("visible", checked)}
+                onCheckedChange={(checked) =>
+                  handleSwitchChange("visible", checked)
+                }
               />
             </div>
             <div className="flex items-center justify-between">
@@ -210,7 +225,9 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
               <Switch
                 id="locked"
                 checked={formData.locked}
-                onCheckedChange={(checked) => handleSwitchChange("locked", checked)}
+                onCheckedChange={(checked) =>
+                  handleSwitchChange("locked", checked)
+                }
               />
             </div>
 
@@ -218,38 +235,48 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
             {isLoadingPattern && (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="h-6 w-6 animate-spin" />
-                <span className="ml-2 text-sm text-muted-foreground">Loading pattern bonuses...</span>
+                <span className="ml-2 text-sm text-muted-foreground">
+                  Loading pattern bonuses...
+                </span>
               </div>
             )}
 
-            {!isLoadingPattern && patternData && patternData.bingoType === "standard" && (
-              <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold">Pattern Bonuses (Bonus XP)</h3>
-                  <span className="text-xs text-muted-foreground">
-                    {patternData.rows}x{patternData.columns} Board
-                  </span>
+            {!isLoadingPattern &&
+              patternData &&
+              patternData.bingoType === "standard" && (
+                <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold">
+                      Pattern Bonuses (Bonus XP)
+                    </h3>
+                    <span className="text-xs text-muted-foreground">
+                      {patternData.rows}x{patternData.columns} Board
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Hover over inputs to see affected tiles.
+                  </p>
+
+                  <PatternBonusSchematicEditor
+                    rows={patternData.rows}
+                    columns={patternData.columns}
+                    rowBonuses={rowBonuses}
+                    columnBonuses={columnBonuses}
+                    mainDiagonalBonus={mainDiagonalBonus}
+                    antiDiagonalBonus={antiDiagonalBonus}
+                    completeBoardBonus={completeBoardBonus}
+                    onRowBonusChange={(index, value) =>
+                      setRowBonuses((prev) => ({ ...prev, [index]: value }))
+                    }
+                    onColumnBonusChange={(index, value) =>
+                      setColumnBonuses((prev) => ({ ...prev, [index]: value }))
+                    }
+                    onMainDiagonalChange={setMainDiagonalBonus}
+                    onAntiDiagonalChange={setAntiDiagonalBonus}
+                    onCompleteBoardChange={setCompleteBoardBonus}
+                  />
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Hover over inputs to see affected tiles.
-                </p>
-
-                <PatternBonusSchematicEditor
-                  rows={patternData.rows}
-                  columns={patternData.columns}
-                  rowBonuses={rowBonuses}
-                  columnBonuses={columnBonuses}
-                  mainDiagonalBonus={mainDiagonalBonus}
-                  antiDiagonalBonus={antiDiagonalBonus}
-                  completeBoardBonus={completeBoardBonus}
-                  onRowBonusChange={(index, value) => setRowBonuses(prev => ({ ...prev, [index]: value }))}
-                  onColumnBonusChange={(index, value) => setColumnBonuses(prev => ({ ...prev, [index]: value }))}
-                  onMainDiagonalChange={setMainDiagonalBonus}
-                  onAntiDiagonalChange={setAntiDiagonalBonus}
-                  onCompleteBoardChange={setCompleteBoardBonus}
-                />
-              </div>
-            )}
+              )}
 
             <Button type="submit" className="w-full">
               Save Changes

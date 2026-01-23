@@ -1,13 +1,17 @@
 "use server"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
 import { db } from "@/server/db"
-import { logger } from "@/lib/logger";
-import { bingos, tiles, goals, tierXpRequirements, rowBonuses, columnBonuses } from "@/server/db/schema"
+import { logger } from "@/lib/logger"
+import {
+  bingos,
+  tiles,
+  goals,
+  tierXpRequirements,
+  rowBonuses,
+  columnBonuses,
+} from "@/server/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getServerAuthSession } from "@/server/auth"
@@ -58,7 +62,9 @@ export interface ExportedBingo {
 /**
  * Export a bingo board to a JSON format that can be imported later
  */
-export async function exportBingoBoard(bingoId: string): Promise<ExportedBingo | { error: string }> {
+export async function exportBingoBoard(
+  bingoId: string
+): Promise<ExportedBingo | { error: string }> {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
     return { error: "Unauthorized" }
@@ -116,24 +122,29 @@ export async function exportBingoBoard(bingoId: string): Promise<ExportedBingo |
           targetValue: goal.targetValue,
         })),
       })),
-      ...(bingo.bingoType === "progression" && bingo.tierXpRequirements && {
-        tierXpRequirements: bingo.tierXpRequirements.map((req) => ({
-          tier: req.tier,
-          xpRequired: req.xpRequired,
-        })),
-      }),
-      ...(bingo.bingoType === "standard" && bingo.rowBonuses && bingo.rowBonuses.length > 0 && {
-        rowBonuses: bingo.rowBonuses.map((bonus) => ({
-          rowIndex: bonus.rowIndex,
-          bonusXP: bonus.bonusXP,
-        })),
-      }),
-      ...(bingo.bingoType === "standard" && bingo.columnBonuses && bingo.columnBonuses.length > 0 && {
-        columnBonuses: bingo.columnBonuses.map((bonus) => ({
-          columnIndex: bonus.columnIndex,
-          bonusXP: bonus.bonusXP,
-        })),
-      }),
+      ...(bingo.bingoType === "progression" &&
+        bingo.tierXpRequirements && {
+          tierXpRequirements: bingo.tierXpRequirements.map((req) => ({
+            tier: req.tier,
+            xpRequired: req.xpRequired,
+          })),
+        }),
+      ...(bingo.bingoType === "standard" &&
+        bingo.rowBonuses &&
+        bingo.rowBonuses.length > 0 && {
+          rowBonuses: bingo.rowBonuses.map((bonus) => ({
+            rowIndex: bonus.rowIndex,
+            bonusXP: bonus.bonusXP,
+          })),
+        }),
+      ...(bingo.bingoType === "standard" &&
+        bingo.columnBonuses &&
+        bingo.columnBonuses.length > 0 && {
+          columnBonuses: bingo.columnBonuses.map((bonus) => ({
+            columnIndex: bonus.columnIndex,
+            bonusXP: bonus.bonusXP,
+          })),
+        }),
     }
 
     return exportData
@@ -148,7 +159,7 @@ export async function exportBingoBoard(bingoId: string): Promise<ExportedBingo |
  */
 export async function importBingoBoard(
   eventId: string,
-  importData: ExportedBingo,
+  importData: ExportedBingo
 ): Promise<{ success: boolean; bingoId?: string; error?: string }> {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
@@ -237,7 +248,11 @@ export async function importBingoBoard(
       }
 
       // Create row bonuses for standard boards
-      if (bingoType === "standard" && importData.rowBonuses && importData.rowBonuses.length > 0) {
+      if (
+        bingoType === "standard" &&
+        importData.rowBonuses &&
+        importData.rowBonuses.length > 0
+      ) {
         const rowBonusesToInsert = importData.rowBonuses.map((bonus) => ({
           bingoId: newBingo.id,
           rowIndex: bonus.rowIndex,
@@ -248,7 +263,11 @@ export async function importBingoBoard(
       }
 
       // Create column bonuses for standard boards
-      if (bingoType === "standard" && importData.columnBonuses && importData.columnBonuses.length > 0) {
+      if (
+        bingoType === "standard" &&
+        importData.columnBonuses &&
+        importData.columnBonuses.length > 0
+      ) {
         const columnBonusesToInsert = importData.columnBonuses.map((bonus) => ({
           bingoId: newBingo.id,
           columnIndex: bonus.columnIndex,
@@ -265,14 +284,20 @@ export async function importBingoBoard(
     })
   } catch (error) {
     logger.error({ error }, "Error importing bingo board:", error)
-    return { success: false, error: error instanceof Error ? error.message : "Failed to import bingo board" }
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to import bingo board",
+    }
   }
 }
 
 /**
  * Validate an imported bingo board
  */
-export async function validateImportData(data: unknown): Promise<{ valid: boolean; error?: string }> {
+export async function validateImportData(
+  data: unknown
+): Promise<{ valid: boolean; error?: string }> {
   try {
     // Basic structure check
     if (!data || typeof data !== "object") {
@@ -290,25 +315,39 @@ export async function validateImportData(data: unknown): Promise<{ valid: boolea
     }
 
     const metadata = importData.metadata as Partial<ExportedBingo["metadata"]>
-    if (!metadata.title || typeof metadata.rows !== "number" || typeof metadata.columns !== "number") {
+    if (
+      !metadata.title ||
+      typeof metadata.rows !== "number" ||
+      typeof metadata.columns !== "number"
+    ) {
       return { valid: false, error: "Invalid metadata" }
     }
 
     // Validate progression-specific fields if present
     if (metadata.bingoType === "progression") {
-      if (importData.tierXpRequirements && !Array.isArray(importData.tierXpRequirements)) {
+      if (
+        importData.tierXpRequirements &&
+        !Array.isArray(importData.tierXpRequirements)
+      ) {
         return { valid: false, error: "Invalid tierXpRequirements format" }
       }
       if (importData.tierXpRequirements) {
         for (const req of importData.tierXpRequirements) {
-          if (typeof req.tier !== "number" || typeof req.xpRequired !== "number") {
+          if (
+            typeof req.tier !== "number" ||
+            typeof req.xpRequired !== "number"
+          ) {
             return { valid: false, error: "Invalid tier XP requirement data" }
           }
         }
       }
     }
 
-    if (!importData.tiles || !Array.isArray(importData.tiles) || importData.tiles.length === 0) {
+    if (
+      !importData.tiles ||
+      !Array.isArray(importData.tiles) ||
+      importData.tiles.length === 0
+    ) {
       return { valid: false, error: "Missing or empty tiles array" }
     }
 
@@ -322,7 +361,11 @@ export async function validateImportData(data: unknown): Promise<{ valid: boolea
 
     // Validate each tile
     for (const tile of importData.tiles) {
-      if (!tile.title || typeof tile.weight !== "number" || typeof tile.index !== "number") {
+      if (
+        !tile.title ||
+        typeof tile.weight !== "number" ||
+        typeof tile.index !== "number"
+      ) {
         return { valid: false, error: "Invalid tile data" }
       }
 
@@ -343,7 +386,7 @@ export async function validateImportData(data: unknown): Promise<{ valid: boolea
 
     return { valid: true }
   } catch (error) {
+    console.error("Error validating import data:", error)
     return { valid: false, error: "Error validating import data" }
   }
 }
-

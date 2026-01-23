@@ -1,7 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { deleteUser } from "@/app/actions/super-admin"
 import { useToast } from "@/hooks/use-toast"
@@ -19,7 +25,9 @@ interface SuperAdminUserDeleteModalProps {
   user: User
 }
 
-export function SuperAdminUserDeleteModal({ user }: SuperAdminUserDeleteModalProps) {
+export function SuperAdminUserDeleteModal({
+  user,
+}: SuperAdminUserDeleteModalProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
@@ -33,12 +41,14 @@ export function SuperAdminUserDeleteModal({ user }: SuperAdminUserDeleteModalPro
 
       toast({
         title: "User deleted",
-        description: "User and all associated data has been permanently deleted.",
+        description:
+          "User and all associated data has been permanently deleted.",
       })
 
       setOpen(false)
       router.push("/super-admin/users")
     } catch (error) {
+      console.error("Failed to delete user:", error)
       toast({
         title: "Error",
         description: "Failed to delete user. Please try again.",
@@ -53,7 +63,7 @@ export function SuperAdminUserDeleteModal({ user }: SuperAdminUserDeleteModalPro
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="destructive" size="sm">
-          <Trash2 className="h-4 w-4 mr-2" />
+          <Trash2 className="mr-2 h-4 w-4" />
           Delete User
         </Button>
       </DialogTrigger>
@@ -68,12 +78,12 @@ export function SuperAdminUserDeleteModal({ user }: SuperAdminUserDeleteModalPro
           <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              This action cannot be undone. This will permanently delete the user account and remove all associated data
-              including:
+              This action cannot be undone. This will permanently delete the
+              user account and remove all associated data including:
             </AlertDescription>
           </Alert>
 
-          <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+          <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
             <li>User profile and authentication data</li>
             <li>Clan memberships</li>
             <li>Event participations</li>
@@ -83,7 +93,7 @@ export function SuperAdminUserDeleteModal({ user }: SuperAdminUserDeleteModalPro
             <li>Owned clans (ownership will be removed)</li>
           </ul>
 
-          <div className="p-3 bg-muted rounded-lg">
+          <div className="rounded-lg bg-muted p-3">
             <p className="font-medium">User to delete:</p>
             <p className="text-sm">
               {user.name ?? "No name"} ({user.email})
@@ -94,7 +104,11 @@ export function SuperAdminUserDeleteModal({ user }: SuperAdminUserDeleteModalPro
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={loading}>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={loading}
+            >
               {loading ? "Deleting..." : "Delete User"}
             </Button>
           </div>

@@ -1,0 +1,216 @@
+
+> bingoscape-next@0.1.0 lint
+> eslint .
+
+
+C:\Users\s.schubert\source\personal\bingoscape\src\app\actions\bingo-import-export.ts
+  388:12  warning  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\app\actions\item-statistics.ts
+  910:3  warning  '_eventStartDate' is defined but never used  @typescript-eslint/no-unused-vars
+  911:3  warning  '_eventEndDate' is defined but never used    @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\app\actions\pattern-completion.ts
+  30:10  warning  'getTilePosition' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\app\actions\stats.ts
+  385:19  warning  '_tileId' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\app\actions\team-statistics.ts
+  352:3  warning  '_eventId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\app\api\uploads\[...path]\route.ts
+  18:11  warning  '_' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\app\clans\[clanId]\members\page.tsx
+  115:14  warning  '_' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\app\clans\[clanId]\page.tsx
+   21:3   warning  'UserIcon' is defined but never used  @typescript-eslint/no-unused-vars
+   25:3   warning  'Shield' is defined but never used    @typescript-eslint/no-unused-vars
+   26:3   warning  'UserPlus' is defined but never used  @typescript-eslint/no-unused-vars
+  139:14  warning  '_' is defined but never used         @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\app\public\events\[id]\bingos\[bingoId]\page.tsx
+  17:3  warning  '_parent' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\app\public\events\[id]\opengraph-image\route.tsx
+  228:29  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\s.schubert\source\personal\bingoscape\src\app\public\events\[id]\page.tsx
+  12:84  warning  '_parent' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\app\super-admin\clans\[clanId]\page.tsx
+  38:12  warning  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\bingo-grid-layout.tsx
+  32:11  warning  The attribute aria-posinset is not supported by the role gridcell  jsx-a11y/role-supports-aria-props
+  32:11  warning  The attribute aria-setsize is not supported by the role gridcell   jsx-a11y/role-supports-aria-props
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\bingo-grid-wrapper.tsx
+  182:5  warning  React Hook useCallback has an unnecessary dependency: 'bingo.tiles'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\bingo-import-export-modal.tsx
+  83:16  warning  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+  93:14  warning  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\bingo-tile.tsx
+   55:9  warning  'submissionCounts' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  122:9  warning  'formatDescription' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\clan-events.tsx
+  15:59  warning  'clanId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\clan-invites-management.tsx
+  101:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  125:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  159:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\comment-form.tsx
+  15:31  warning  'submissionId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\compact-goal-tree.tsx
+   58:13  warning  'goalData' is assigned a value but never used                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+  221:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\create-event-modal.tsx
+  85:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\create-template-button.tsx
+  23:10  warning  'getBingoById' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\delete-bingo-button.tsx
+  28:14  warning  '_' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\discord-webhook-management.tsx
+   56:14  warning  'error' is defined but never used                                                                                @typescript-eslint/no-unused-vars
+   69:6   warning  React Hook useEffect has a missing dependency: 'loadWebhooks'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  103:14  warning  'error' is defined but never used                                                                                @typescript-eslint/no-unused-vars
+  130:14  warning  'error' is defined but never used                                                                                @typescript-eslint/no-unused-vars
+  157:14  warning  'error' is defined but never used                                                                                @typescript-eslint/no-unused-vars
+  181:14  warning  'error' is defined but never used                                                                                @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\edit-bingo-modal.tsx
+  17:3   warning  'DialogTrigger' is defined but never used  @typescript-eslint/no-unused-vars
+  19:10  warning  'Edit' is defined but never used           @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\edit-event-modal.tsx
+  67:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\error-boundary.tsx
+  4:10  warning  'logger' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\event-action-card.tsx
+  2:10  warning  'Button' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\event-card.tsx
+  19:3  warning  'ArrowRight' is defined but never used  @typescript-eslint/no-unused-vars
+  26:3  warning  'Star' is defined but never used        @typescript-eslint/no-unused-vars
+  27:3  warning  'MapPin' is defined but never used      @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\event-delete-modal.tsx
+  66:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\event-stats-display.tsx
+   7:10  warning  'Trophy' is defined but never used    @typescript-eslint/no-unused-vars
+  25:61  warning  'userRole' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\eventlist.tsx
+  13:3   warning  'CardDescription' is defined but never used  @typescript-eslint/no-unused-vars
+  23:37  warning  'userId' is defined but never used           @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\events-display.tsx
+   25:10  warning  'Card' is defined but never used                     @typescript-eslint/no-unused-vars
+   25:16  warning  'CardContent' is defined but never used              @typescript-eslint/no-unused-vars
+   25:29  warning  'CardHeader' is defined but never used               @typescript-eslint/no-unused-vars
+   25:41  warning  'CardTitle' is defined but never used                @typescript-eslint/no-unused-vars
+  225:9   warning  'totalEvents' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  226:9   warning  'activeEvents' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  227:9   warning  'totalPrizePool' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\goal-progress-tree.tsx
+   50:3   warning  'teamId' is defined but never used                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+   73:13  warning  'goalData' is assigned a value but never used                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+  291:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\inline-goal-assignment.tsx
+   49:17  warning  '_submissionId' is defined but never used                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+  189:27  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  329:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  384:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\item-statistics-display.tsx
+  18:60  warning  '_title' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\osrs-item-search.tsx
+  134:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  191:25  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  290:7   warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\participants-tab.tsx
+  38:15  warning  'UUID' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\pattern-completion-tab.tsx
+  55:9  warning  'selectedTeam' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\player-metadata-modal.tsx
+  85:6  warning  React Hook useEffect has a missing dependency: 'loadMetadata'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\registration-requests-table.tsx
+  28:72  warning  'eventId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\registrations-tab.tsx
+  30:63  warning  'eventId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\runescape-link-prompt.tsx
+  46:14  warning  '_' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\submission-comment.tsx
+  15:54  warning  'submissionId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\super-admin-clan-delete-modal.tsx
+  40:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\super-admin-clan-edit-modal.tsx
+  63:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\super-admin-event-delete-modal.tsx
+  40:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\super-admin-event-edit-modal.tsx
+  74:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\super-admin-user-delete-modal.tsx
+  41:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\super-admin-user-edit-modal.tsx
+  52:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\team-balance-preview.tsx
+  139:25  warning  'index' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\template-preview-grid.tsx
+  20:3  warning  'title' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\template-preview-with-tooltip.tsx
+  21:3  warning  'title' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\components\tier-management-modal.tsx
+   69:6   warning  React Hook useEffect has a missing dependency: 'loadTiles'. Either include it or remove the dependency array                                                                                                                                                                             react-hooks/exhaustive-deps
+  328:35  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  429:27  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\s.schubert\source\personal\bingoscape\src\hooks\use-toast.ts
+  18:7  warning  'actionTypes' is assigned a value but only used as a type  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\lib\password.ts
+  30:12  warning  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\lib\timezones.ts
+  359:44  warning  '_region' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\s.schubert\source\personal\bingoscape\src\middleware.ts
+  4:28  warning  '_request' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 93 problems (0 errors, 93 warnings)
+

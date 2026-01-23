@@ -2,8 +2,21 @@
 
 import { useState, useMemo } from "react"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -35,7 +48,6 @@ import {
   getEventParticipants,
 } from "@/app/actions/events"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
-import type { UUID } from "crypto"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,7 +75,12 @@ import {
 } from "@/components/ui/dialog"
 import { DonationManagementModal } from "@/components/donation-management-modal"
 import { CardHeader, CardTitle } from "@/components/ui/card"
-import type { Participant, Team, SortField, SortDirection } from "@/app/events/[id]/participants/types"
+import type {
+  Participant,
+  Team,
+  SortField,
+  SortDirection,
+} from "@/app/events/[id]/participants/types"
 
 interface RemoveParticipantDialogProps {
   isOpen: boolean
@@ -72,7 +89,12 @@ interface RemoveParticipantDialogProps {
   participantName: string
 }
 
-function RemoveParticipantDialog({ isOpen, onClose, onConfirm, participantName }: RemoveParticipantDialogProps) {
+function RemoveParticipantDialog({
+  isOpen,
+  onClose,
+  onConfirm,
+  participantName,
+}: RemoveParticipantDialogProps) {
   const [isRemoving, setIsRemoving] = useState(false)
 
   const handleConfirm = async () => {
@@ -93,7 +115,8 @@ function RemoveParticipantDialog({ isOpen, onClose, onConfirm, participantName }
         <AlertDialogHeader>
           <AlertDialogTitle>Remove Participant</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to remove {participantName} from this event? This action cannot be undone.
+            Are you sure you want to remove {participantName} from this event?
+            This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -106,7 +129,11 @@ function RemoveParticipantDialog({ isOpen, onClose, onConfirm, participantName }
             disabled={isRemoving}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isRemoving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserMinus className="h-4 w-4 mr-2" />}
+            {isRemoving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <UserMinus className="mr-2 h-4 w-4" />
+            )}
             Remove
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -123,7 +150,13 @@ interface EditRoleDialogProps {
   currentUserRole: "admin" | "management" | "participant"
 }
 
-function EditRoleDialog({ isOpen, onClose, participant, onRoleChange, currentUserRole }: EditRoleDialogProps) {
+function EditRoleDialog({
+  isOpen,
+  onClose,
+  participant,
+  onRoleChange,
+  currentUserRole,
+}: EditRoleDialogProps) {
   const [selectedRole, setSelectedRole] = useState<string>("")
   const [isUpdating, setIsUpdating] = useState(false)
 
@@ -171,7 +204,9 @@ function EditRoleDialog({ isOpen, onClose, participant, onRoleChange, currentUse
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Role</DialogTitle>
-          <DialogDescription>Change the role for {participant?.runescapeName}</DialogDescription>
+          <DialogDescription>
+            Change the role for {participant?.runescapeName}
+          </DialogDescription>
         </DialogHeader>
         <div className="py-4">
           <Select value={selectedRole} onValueChange={setSelectedRole}>
@@ -192,7 +227,9 @@ function EditRoleDialog({ isOpen, onClose, participant, onRoleChange, currentUse
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={isUpdating}>
-            {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            {isUpdating ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
             Save Changes
           </Button>
         </DialogFooter>
@@ -209,7 +246,13 @@ interface ChangeTeamDialogProps {
   onTeamChange: (participantId: string, teamId: string | null) => Promise<void>
 }
 
-function ChangeTeamDialog({ isOpen, onClose, participant, teams, onTeamChange }: ChangeTeamDialogProps) {
+function ChangeTeamDialog({
+  isOpen,
+  onClose,
+  participant,
+  teams,
+  onTeamChange,
+}: ChangeTeamDialogProps) {
   const [selectedTeam, setSelectedTeam] = useState<string>("")
   const [isUpdating, setIsUpdating] = useState(false)
 
@@ -247,7 +290,9 @@ function ChangeTeamDialog({ isOpen, onClose, participant, teams, onTeamChange }:
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Change Team</DialogTitle>
-          <DialogDescription>Change the team assignment for {participant?.runescapeName}</DialogDescription>
+          <DialogDescription>
+            Change the team assignment for {participant?.runescapeName}
+          </DialogDescription>
         </DialogHeader>
         <div className="py-4">
           <Select value={selectedTeam} onValueChange={setSelectedTeam}>
@@ -269,7 +314,9 @@ function ChangeTeamDialog({ isOpen, onClose, participant, teams, onTeamChange }:
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={isUpdating}>
-            {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            {isUpdating ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
             Save Changes
           </Button>
         </DialogFooter>
@@ -299,7 +346,8 @@ export function ParticipantsTab({
   isEventCreator,
   onParticipantsChange,
 }: ParticipantsTabProps) {
-  const [participants, setParticipants] = useState<Participant[]>(initialParticipants)
+  const [participants, setParticipants] =
+    useState<Participant[]>(initialParticipants)
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState<string>("all")
   const [teamFilter, setTeamFilter] = useState<string>("all")
@@ -307,14 +355,19 @@ export function ParticipantsTab({
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false)
   const [editRoleDialogOpen, setEditRoleDialogOpen] = useState(false)
   const [changeTeamDialogOpen, setChangeTeamDialogOpen] = useState(false)
-  const [participantToRemove, setParticipantToRemove] = useState<Participant | null>(null)
-  const [participantToEdit, setParticipantToEdit] = useState<Participant | null>(null)
-  const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(new Set())
+  const [participantToRemove, setParticipantToRemove] =
+    useState<Participant | null>(null)
+  const [participantToEdit, setParticipantToEdit] =
+    useState<Participant | null>(null)
+  const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(
+    new Set()
+  )
   const [sortField, setSortField] = useState<SortField>("name")
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
   const [currentPage, setCurrentPage] = useState(1)
   const [donationModalOpen, setDonationModalOpen] = useState(false)
-  const [participantForDonations, setParticipantForDonations] = useState<Participant | null>(null)
+  const [participantForDonations, setParticipantForDonations] =
+    useState<Participant | null>(null)
 
   // Sync with parent when participants change
   useState(() => {
@@ -326,7 +379,9 @@ export function ParticipantsTab({
 
     try {
       await removeParticipantFromEvent(eventId, participantToRemove.id)
-      const updatedParticipants = participants.filter((p) => p.id !== participantToRemove.id)
+      const updatedParticipants = participants.filter(
+        (p) => p.id !== participantToRemove.id
+      )
       setParticipants(updatedParticipants)
       onParticipantsChange(updatedParticipants)
       toast({
@@ -337,7 +392,10 @@ export function ParticipantsTab({
       console.error("Error removing participant:", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to remove participant",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to remove participant",
         variant: "destructive",
       })
     }
@@ -384,26 +442,48 @@ export function ParticipantsTab({
   }
 
   const canChangeRoles = () => {
-    return isEventCreator || currentUserRole === "admin" || currentUserRole === "management"
+    return (
+      isEventCreator ||
+      currentUserRole === "admin" ||
+      currentUserRole === "management"
+    )
   }
 
   const canChangeTeams = () => {
-    return isEventCreator || currentUserRole === "admin" || currentUserRole === "management"
+    return (
+      isEventCreator ||
+      currentUserRole === "admin" ||
+      currentUserRole === "management"
+    )
   }
 
   const canRemoveParticipants = () => {
-    return isEventCreator || currentUserRole === "admin" || currentUserRole === "management"
+    return (
+      isEventCreator ||
+      currentUserRole === "admin" ||
+      currentUserRole === "management"
+    )
   }
 
   const canEditBuyIns = () => {
-    return isEventCreator || currentUserRole === "admin" || currentUserRole === "management"
+    return (
+      isEventCreator ||
+      currentUserRole === "admin" ||
+      currentUserRole === "management"
+    )
   }
 
   const handleRoleChange = async (participantId: string, newRole: string) => {
     try {
-      await updateParticipantRole(eventId, participantId, newRole as "admin" | "management" | "participant")
+      await updateParticipantRole(
+        eventId,
+        participantId,
+        newRole as "admin" | "management" | "participant"
+      )
       const updatedParticipants = participants.map((p) =>
-        p.id === participantId ? { ...p, role: newRole as "admin" | "management" | "participant" } : p,
+        p.id === participantId
+          ? { ...p, role: newRole as "admin" | "management" | "participant" }
+          : p
       )
       setParticipants(updatedParticipants)
       onParticipantsChange(updatedParticipants)
@@ -423,27 +503,39 @@ export function ParticipantsTab({
 
   const handleBuyInChange = async (participantId: string, hasPaid: boolean) => {
     try {
-      const result = await updateParticipantBuyIn(eventId, participantId, hasPaid)
+      const result = await updateParticipantBuyIn(
+        eventId,
+        participantId,
+        hasPaid
+      )
       const updatedParticipants = participants.map((p) =>
-        p.id === participantId ? { ...p, buyIn: result.buyInAmount || 0 } : p,
+        p.id === participantId ? { ...p, buyIn: result.buyInAmount || 0 } : p
       )
       setParticipants(updatedParticipants)
       onParticipantsChange(updatedParticipants)
       toast({
         title: "Success",
-        description: hasPaid ? "Buy-in marked as paid" : "Buy-in marked as not paid",
+        description: hasPaid
+          ? "Buy-in marked as paid"
+          : "Buy-in marked as not paid",
       })
     } catch (error) {
       console.error("Error updating buy-in:", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update participant buy-in",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to update participant buy-in",
         variant: "destructive",
       })
     }
   }
 
-  const handleTeamAssignment = async (participantId: string, teamId: string | null) => {
+  const handleTeamAssignment = async (
+    participantId: string,
+    teamId: string | null
+  ) => {
     try {
       await assignParticipantToTeam(eventId, participantId, teamId!)
       const updatedParticipants = await getEventParticipants(eventId)
@@ -451,7 +543,9 @@ export function ParticipantsTab({
       onParticipantsChange(updatedParticipants)
       toast({
         title: "Success",
-        description: teamId ? "Participant assigned to team" : "Participant removed from team",
+        description: teamId
+          ? "Participant assigned to team"
+          : "Participant removed from team",
       })
     } catch (error) {
       console.error("Error assigning team:", error)
@@ -474,7 +568,8 @@ export function ParticipantsTab({
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const selectableParticipants = filteredAndSortedParticipants.filter(canManageParticipant)
+      const selectableParticipants =
+        filteredAndSortedParticipants.filter(canManageParticipant)
       setSelectedParticipants(new Set(selectableParticipants.map((p) => p.id)))
     } else {
       setSelectedParticipants(new Set())
@@ -495,8 +590,14 @@ export function ParticipantsTab({
     if (selectedParticipants.size === 0) return
 
     try {
-      await Promise.all(Array.from(selectedParticipants).map((id) => removeParticipantFromEvent(eventId, id)))
-      const updatedParticipants = participants.filter((p) => !selectedParticipants.has(p.id))
+      await Promise.all(
+        Array.from(selectedParticipants).map((id) =>
+          removeParticipantFromEvent(eventId, id)
+        )
+      )
+      const updatedParticipants = participants.filter(
+        (p) => !selectedParticipants.has(p.id)
+      )
       setParticipants(updatedParticipants)
       onParticipantsChange(updatedParticipants)
       setSelectedParticipants(new Set())
@@ -516,9 +617,14 @@ export function ParticipantsTab({
   // eslint-disable-next-line react-hooks/preserve-manual-memoization -- Complex filtering with multiple dependencies
   const filteredAndSortedParticipants = useMemo(() => {
     const filtered = participants.filter((p) => {
-      const matchesSearch = p.runescapeName.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesSearch = p.runescapeName
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
       const matchesRole = roleFilter === "all" || p.role === roleFilter
-      const matchesTeam = teamFilter === "all" || (teamFilter === "no-team" && !p.teamId) || p.teamId === teamFilter
+      const matchesTeam =
+        teamFilter === "all" ||
+        (teamFilter === "no-team" && !p.teamId) ||
+        p.teamId === teamFilter
       const matchesStatus =
         statusFilter === "all" ||
         (statusFilter === "verified" && p.buyIn >= minimumBuyIn) ||
@@ -569,14 +675,28 @@ export function ParticipantsTab({
     })
 
     return filtered
-  }, [participants, searchTerm, roleFilter, teamFilter, statusFilter, minimumBuyIn, sortField, sortDirection])
+  }, [
+    participants,
+    searchTerm,
+    roleFilter,
+    teamFilter,
+    statusFilter,
+    minimumBuyIn,
+    sortField,
+    sortDirection,
+  ])
 
   const paginatedParticipants = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-    return filteredAndSortedParticipants.slice(startIndex, startIndex + ITEMS_PER_PAGE)
+    return filteredAndSortedParticipants.slice(
+      startIndex,
+      startIndex + ITEMS_PER_PAGE
+    )
   }, [filteredAndSortedParticipants, currentPage])
 
-  const totalPages = Math.ceil(filteredAndSortedParticipants.length / ITEMS_PER_PAGE)
+  const totalPages = Math.ceil(
+    filteredAndSortedParticipants.length / ITEMS_PER_PAGE
+  )
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -602,10 +722,20 @@ export function ParticipantsTab({
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) return <ArrowUpDown className="h-4 w-4" />
-    return sortDirection === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+    return sortDirection === "asc" ? (
+      <ArrowUp className="h-4 w-4" />
+    ) : (
+      <ArrowDown className="h-4 w-4" />
+    )
   }
 
-  const ParticipantRow = ({ participant, index }: { participant: Participant; index: number }) => {
+  const ParticipantRow = ({
+    participant,
+    index,
+  }: {
+    participant: Participant
+    index: number
+  }) => {
     const canManage = canManageParticipant(participant)
 
     return (
@@ -617,7 +747,9 @@ export function ParticipantsTab({
           {canRemoveParticipants() && canManage && (
             <Checkbox
               checked={selectedParticipants.has(participant.id)}
-              onCheckedChange={(checked) => handleSelectParticipant(participant.id, checked as boolean)}
+              onCheckedChange={(checked) =>
+                handleSelectParticipant(participant.id, checked as boolean)
+              }
             />
           )}
         </TableCell>
@@ -627,41 +759,53 @@ export function ParticipantsTab({
           </div>
         </TableCell>
         <TableCell>
-          <Badge variant={getRoleBadgeVariant(participant.role)} className="flex items-center gap-1 w-fit">
+          <Badge
+            variant={getRoleBadgeVariant(participant.role)}
+            className="flex w-fit items-center gap-1"
+          >
             {getRoleIcon(participant.role)}
             {participant.role}
           </Badge>
         </TableCell>
         <TableCell>
           {participant.teamName ? (
-            <Badge variant="outline" className="flex items-center gap-1 w-fit">
+            <Badge variant="outline" className="flex w-fit items-center gap-1">
               <Users className="h-3 w-3" />
               {participant.teamName}
             </Badge>
           ) : (
-            <span className="text-muted-foreground text-sm">No Team</span>
+            <span className="text-sm text-muted-foreground">No Team</span>
           )}
         </TableCell>
         <TableCell>
           <div className="flex items-center gap-3">
             {canEditBuyIns() ? (
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+              <div className="flex items-center gap-2 rounded-lg bg-muted/30 p-2">
                 <Checkbox
                   checked={participant.buyIn >= minimumBuyIn}
-                  onCheckedChange={(checked) => handleBuyInChange(participant.id, checked as boolean)}
-                  className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500 h-5 w-5"
+                  onCheckedChange={(checked) =>
+                    handleBuyInChange(participant.id, checked as boolean)
+                  }
+                  className="h-5 w-5 data-[state=checked]:border-green-500 data-[state=checked]:bg-green-500"
                 />
-                <span className="text-sm font-medium">{participant.buyIn >= minimumBuyIn ? "Paid" : "Unpaid"}</span>
+                <span className="text-sm font-medium">
+                  {participant.buyIn >= minimumBuyIn ? "Paid" : "Unpaid"}
+                </span>
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="font-medium">{formatRunescapeGold(participant.buyIn)} GP</span>
+                <span className="font-medium">
+                  {formatRunescapeGold(participant.buyIn)} GP
+                </span>
                 {participant.buyIn >= minimumBuyIn ? (
                   <Badge variant="default" className="bg-green-500 text-white">
                     Paid
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="text-orange-600 border-orange-600">
+                  <Badge
+                    variant="outline"
+                    className="border-orange-600 text-orange-600"
+                  >
                     Unpaid
                   </Badge>
                 )}
@@ -689,106 +833,148 @@ export function ParticipantsTab({
         <TableCell>
           <div className="flex justify-center">
             {participant.buyIn >= minimumBuyIn ? (
-              <Badge variant="default" className="bg-green-500 text-white border-0">
-                <CheckCircle className="h-3 w-3 mr-1" />
+              <Badge
+                variant="default"
+                className="border-0 bg-green-500 text-white"
+              >
+                <CheckCircle className="mr-1 h-3 w-3" />
                 Verified
               </Badge>
             ) : (
-              <Badge variant="outline" className="text-orange-600 border-orange-600">
-                <CircleAlert className="h-3 w-3 mr-1" />
+              <Badge
+                variant="outline"
+                className="border-orange-600 text-orange-600"
+              >
+                <CircleAlert className="mr-1 h-3 w-3" />
                 Pending
               </Badge>
             )}
           </div>
         </TableCell>
         <TableCell>
-          {canManage && (canChangeRoles() || canChangeTeams() || canRemoveParticipants()) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {canChangeRoles() && (
-                  <DropdownMenuItem onClick={() => openEditRoleDialog(participant)}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit Role
-                  </DropdownMenuItem>
-                )}
-                {canChangeTeams() && (
-                  <DropdownMenuItem onClick={() => openChangeTeamDialog(participant)}>
-                    <Users className="h-4 w-4 mr-2" />
-                    Change Team
-                  </DropdownMenuItem>
-                )}
-                {(canChangeRoles() || canChangeTeams()) && canRemoveParticipants() && <DropdownMenuSeparator />}
-                {canRemoveParticipants() && (
-                  <DropdownMenuItem onClick={() => openRemoveDialog(participant)} className="text-destructive">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Remove
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          {canManage &&
+            (canChangeRoles() ||
+              canChangeTeams() ||
+              canRemoveParticipants()) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {canChangeRoles() && (
+                    <DropdownMenuItem
+                      onClick={() => openEditRoleDialog(participant)}
+                    >
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit Role
+                    </DropdownMenuItem>
+                  )}
+                  {canChangeTeams() && (
+                    <DropdownMenuItem
+                      onClick={() => openChangeTeamDialog(participant)}
+                    >
+                      <Users className="mr-2 h-4 w-4" />
+                      Change Team
+                    </DropdownMenuItem>
+                  )}
+                  {(canChangeRoles() || canChangeTeams()) &&
+                    canRemoveParticipants() && <DropdownMenuSeparator />}
+                  {canRemoveParticipants() && (
+                    <DropdownMenuItem
+                      onClick={() => openRemoveDialog(participant)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Remove
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
         </TableCell>
       </TableRow>
     )
   }
 
-  const MobileParticipantCard = ({ participant }: { participant: Participant }) => {
+  const MobileParticipantCard = ({
+    participant,
+  }: {
+    participant: Participant
+  }) => {
     const canManage = canManageParticipant(participant)
 
     return (
       <Card key={participant.id} className="mb-4">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">{participant.runescapeName}</CardTitle>
-            {canManage && (canChangeRoles() || canChangeTeams() || canRemoveParticipants()) && (
-              <div className="flex items-center gap-2">
-                {canRemoveParticipants() && (
-                  <Checkbox
-                    checked={selectedParticipants.has(participant.id)}
-                    onCheckedChange={(checked) => handleSelectParticipant(participant.id, checked as boolean)}
-                  />
-                )}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {canChangeRoles() && (
-                      <DropdownMenuItem onClick={() => openEditRoleDialog(participant)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit Role
-                      </DropdownMenuItem>
-                    )}
-                    {canChangeTeams() && (
-                      <DropdownMenuItem onClick={() => openChangeTeamDialog(participant)}>
-                        <Users className="h-4 w-4 mr-2" />
-                        Change Team
-                      </DropdownMenuItem>
-                    )}
-                    {(canChangeRoles() || canChangeTeams()) && canRemoveParticipants() && <DropdownMenuSeparator />}
-                    {canRemoveParticipants() && (
-                      <DropdownMenuItem onClick={() => openRemoveDialog(participant)} className="text-destructive">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Remove
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            )}
+            <CardTitle className="text-lg">
+              {participant.runescapeName}
+            </CardTitle>
+            {canManage &&
+              (canChangeRoles() ||
+                canChangeTeams() ||
+                canRemoveParticipants()) && (
+                <div className="flex items-center gap-2">
+                  {canRemoveParticipants() && (
+                    <Checkbox
+                      checked={selectedParticipants.has(participant.id)}
+                      onCheckedChange={(checked) =>
+                        handleSelectParticipant(
+                          participant.id,
+                          checked as boolean
+                        )
+                      }
+                    />
+                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {canChangeRoles() && (
+                        <DropdownMenuItem
+                          onClick={() => openEditRoleDialog(participant)}
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit Role
+                        </DropdownMenuItem>
+                      )}
+                      {canChangeTeams() && (
+                        <DropdownMenuItem
+                          onClick={() => openChangeTeamDialog(participant)}
+                        >
+                          <Users className="mr-2 h-4 w-4" />
+                          Change Team
+                        </DropdownMenuItem>
+                      )}
+                      {(canChangeRoles() || canChangeTeams()) &&
+                        canRemoveParticipants() && <DropdownMenuSeparator />}
+                      {canRemoveParticipants() && (
+                        <DropdownMenuItem
+                          onClick={() => openRemoveDialog(participant)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Remove
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Role:</span>
-            <Badge variant={getRoleBadgeVariant(participant.role)} className="flex items-center gap-1">
+            <Badge
+              variant={getRoleBadgeVariant(participant.role)}
+              className="flex items-center gap-1"
+            >
               {getRoleIcon(participant.role)}
               {participant.role}
             </Badge>
@@ -801,30 +987,42 @@ export function ParticipantsTab({
                 {participant.teamName}
               </Badge>
             ) : (
-              <span className="text-muted-foreground text-sm">No Team</span>
+              <span className="text-sm text-muted-foreground">No Team</span>
             )}
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Buy-in:</span>
             <div className="flex items-center gap-2">
               {canEditBuyIns() ? (
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                <div className="flex items-center gap-2 rounded-lg bg-muted/30 p-2">
                   <Checkbox
                     checked={participant.buyIn >= minimumBuyIn}
-                    onCheckedChange={(checked) => handleBuyInChange(participant.id, checked as boolean)}
-                    className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500 h-4 w-4"
+                    onCheckedChange={(checked) =>
+                      handleBuyInChange(participant.id, checked as boolean)
+                    }
+                    className="h-4 w-4 data-[state=checked]:border-green-500 data-[state=checked]:bg-green-500"
                   />
-                  <span className="text-sm font-medium">{participant.buyIn >= minimumBuyIn ? "Paid" : "Unpaid"}</span>
+                  <span className="text-sm font-medium">
+                    {participant.buyIn >= minimumBuyIn ? "Paid" : "Unpaid"}
+                  </span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{formatRunescapeGold(participant.buyIn)} GP</span>
+                  <span className="font-medium">
+                    {formatRunescapeGold(participant.buyIn)} GP
+                  </span>
                   {participant.buyIn >= minimumBuyIn ? (
-                    <Badge variant="default" className="bg-green-500 text-white text-xs">
+                    <Badge
+                      variant="default"
+                      className="bg-green-500 text-xs text-white"
+                    >
                       Paid
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-orange-600 border-orange-600 text-xs">
+                    <Badge
+                      variant="outline"
+                      className="border-orange-600 text-xs text-orange-600"
+                    >
                       Unpaid
                     </Badge>
                   )}
@@ -855,18 +1053,22 @@ export function ParticipantsTab({
     )
   }
 
-  const selectableParticipants = filteredAndSortedParticipants.filter(canManageParticipant)
+  const selectableParticipants =
+    filteredAndSortedParticipants.filter(canManageParticipant)
   const allSelectableSelected =
-    selectableParticipants.length > 0 && selectableParticipants.every((p) => selectedParticipants.has(p.id))
+    selectableParticipants.length > 0 &&
+    selectableParticipants.every((p) => selectedParticipants.has(p.id))
 
   return (
     <div className="flex flex-col gap-6">
       {/* Bulk actions bar */}
       {canRemoveParticipants() && selectedParticipants.size > 0 && (
         <div className="flex items-center justify-end gap-2">
-          <span className="text-sm text-muted-foreground">{selectedParticipants.size} selected</span>
+          <span className="text-sm text-muted-foreground">
+            {selectedParticipants.size} selected
+          </span>
           <Button variant="destructive" size="sm" onClick={handleBulkRemove}>
-            <Trash2 className="h-4 w-4 mr-2" />
+            <Trash2 className="mr-2 h-4 w-4" />
             Remove Selected
           </Button>
         </div>
@@ -875,9 +1077,9 @@ export function ParticipantsTab({
       {/* Filters and Search */}
       <Card>
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
               <Input
                 placeholder="Search participants..."
                 value={searchTerm}
@@ -935,15 +1137,19 @@ export function ParticipantsTab({
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">
-                    {canRemoveParticipants() && selectableParticipants.length > 0 && (
-                      <Checkbox checked={allSelectableSelected} onCheckedChange={handleSelectAll} />
-                    )}
+                    {canRemoveParticipants() &&
+                      selectableParticipants.length > 0 && (
+                        <Checkbox
+                          checked={allSelectableSelected}
+                          onCheckedChange={handleSelectAll}
+                        />
+                      )}
                   </TableHead>
                   <TableHead>
                     <Button
                       variant="ghost"
                       onClick={() => handleSort("name")}
-                      className="flex items-center gap-2 p-0 h-auto font-medium"
+                      className="flex h-auto items-center gap-2 p-0 font-medium"
                     >
                       Name
                       {getSortIcon("name")}
@@ -953,7 +1159,7 @@ export function ParticipantsTab({
                     <Button
                       variant="ghost"
                       onClick={() => handleSort("role")}
-                      className="flex items-center gap-2 p-0 h-auto font-medium"
+                      className="flex h-auto items-center gap-2 p-0 font-medium"
                     >
                       Role
                       {getSortIcon("role")}
@@ -963,7 +1169,7 @@ export function ParticipantsTab({
                     <Button
                       variant="ghost"
                       onClick={() => handleSort("team")}
-                      className="flex items-center gap-2 p-0 h-auto font-medium"
+                      className="flex h-auto items-center gap-2 p-0 font-medium"
                     >
                       Team
                       {getSortIcon("team")}
@@ -973,7 +1179,7 @@ export function ParticipantsTab({
                     <Button
                       variant="ghost"
                       onClick={() => handleSort("buyIn")}
-                      className="flex items-center gap-2 p-0 h-auto font-medium"
+                      className="flex h-auto items-center gap-2 p-0 font-medium"
                     >
                       Buy-In
                       {getSortIcon("buyIn")}
@@ -983,7 +1189,7 @@ export function ParticipantsTab({
                     <Button
                       variant="ghost"
                       onClick={() => handleSort("donations")}
-                      className="flex items-center gap-2 p-0 h-auto font-medium"
+                      className="flex h-auto items-center gap-2 p-0 font-medium"
                     >
                       Donations
                       {getSortIcon("donations")}
@@ -993,7 +1199,7 @@ export function ParticipantsTab({
                     <Button
                       variant="ghost"
                       onClick={() => handleSort("status")}
-                      className="flex items-center gap-2 p-0 h-auto font-medium"
+                      className="flex h-auto items-center gap-2 p-0 font-medium"
                     >
                       Status
                       {getSortIcon("status")}
@@ -1004,7 +1210,11 @@ export function ParticipantsTab({
               </TableHeader>
               <TableBody>
                 {paginatedParticipants.map((participant, index) => (
-                  <ParticipantRow key={participant.id} participant={participant} index={index} />
+                  <ParticipantRow
+                    key={participant.id}
+                    participant={participant}
+                    index={index}
+                  />
                 ))}
               </TableBody>
             </Table>
@@ -1015,7 +1225,10 @@ export function ParticipantsTab({
       {/* Mobile Card View */}
       <div className="md:hidden">
         {paginatedParticipants.map((participant) => (
-          <MobileParticipantCard key={participant.id} participant={participant} />
+          <MobileParticipantCard
+            key={participant.id}
+            participant={participant}
+          />
         ))}
       </div>
 
@@ -1024,8 +1237,11 @@ export function ParticipantsTab({
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
-            {Math.min(currentPage * ITEMS_PER_PAGE, filteredAndSortedParticipants.length)} of{" "}
-            {filteredAndSortedParticipants.length} participants
+            {Math.min(
+              currentPage * ITEMS_PER_PAGE,
+              filteredAndSortedParticipants.length
+            )}{" "}
+            of {filteredAndSortedParticipants.length} participants
           </p>
           <div className="flex items-center gap-2">
             <Button

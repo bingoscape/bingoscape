@@ -1,6 +1,12 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Trophy, Coins, TrendingUp, Package, Clock, Award } from "lucide-react"
@@ -15,22 +21,36 @@ interface ItemStatisticsDisplayProps {
   title: string
 }
 
-export function ItemStatisticsDisplay({ statistics, title: _title }: ItemStatisticsDisplayProps) {
-  const { totalValue, uniqueItemsCount, totalSubmissions, mvp, topUsers, teamStats, mostValuableItem, profitPerHour } =
-    statistics
+export function ItemStatisticsDisplay({
+  statistics,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  title: _title,
+}: ItemStatisticsDisplayProps) {
+  const {
+    totalValue,
+    uniqueItemsCount,
+    totalSubmissions,
+    mvp,
+    topUsers,
+    teamStats,
+    mostValuableItem,
+    profitPerHour,
+  } = statistics
 
   return (
     <div className="space-y-6">
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Value</CardTitle>
             <Coins className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatGPValue(totalValue)}</div>
-            <p className="text-xs text-muted-foreground mt-1">GP</p>
+            <div className="text-2xl font-bold">
+              {formatGPValue(totalValue)}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">GP</p>
           </CardContent>
         </Card>
 
@@ -41,49 +61,65 @@ export function ItemStatisticsDisplay({ statistics, title: _title }: ItemStatist
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{uniqueItemsCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Different items obtained</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Different items obtained
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Item Submissions</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Item Submissions
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalSubmissions}</div>
-            <p className="text-xs text-muted-foreground mt-1">Approved submissions</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Approved submissions
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Profit per Hour</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Profit per Hour
+            </CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{profitPerHour !== null ? formatGPValue(profitPerHour) : "N/A"}</div>
-            <p className="text-xs text-muted-foreground mt-1">GP/hour</p>
+            <div className="text-2xl font-bold">
+              {profitPerHour !== null ? formatGPValue(profitPerHour) : "N/A"}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">GP/hour</p>
           </CardContent>
         </Card>
       </div>
 
       {/* MVP Spotlight */}
       {mvp && (
-        <Card className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-950/20 dark:to-amber-950/20 border-yellow-200 dark:border-yellow-800">
+        <Card className="border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50 dark:border-yellow-800 dark:from-yellow-950/20 dark:to-amber-950/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-yellow-600" />
               MVP (Most Valuable Player)
             </CardTitle>
-            <CardDescription>Top contributor by total item value</CardDescription>
+            <CardDescription>
+              Top contributor by total item value
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-2xl font-bold">{mvp.runescapeName ?? mvp.userName}</p>
-                <p className="text-sm text-muted-foreground">Team: {mvp.teamName}</p>
-                <div className="flex gap-4 mt-2">
+                <p className="text-2xl font-bold">
+                  {mvp.runescapeName ?? mvp.userName}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Team: {mvp.teamName}
+                </p>
+                <div className="mt-2 flex gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground">Total Value</p>
                     <p className="text-lg font-semibold text-green-600 dark:text-green-400">
@@ -96,11 +132,15 @@ export function ItemStatisticsDisplay({ statistics, title: _title }: ItemStatist
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Submissions</p>
-                    <p className="text-lg font-semibold">{mvp.submissionCount}</p>
+                    <p className="text-lg font-semibold">
+                      {mvp.submissionCount}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Avg per Sub</p>
-                    <p className="text-lg font-semibold">{formatGPValue(mvp.valuePerSubmission)} GP</p>
+                    <p className="text-lg font-semibold">
+                      {formatGPValue(mvp.valuePerSubmission)} GP
+                    </p>
                   </div>
                 </div>
               </div>
@@ -112,7 +152,7 @@ export function ItemStatisticsDisplay({ statistics, title: _title }: ItemStatist
 
       {/* Most Valuable Item */}
       {mostValuableItem && (
-        <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-purple-200 dark:border-purple-800">
+        <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 dark:border-purple-800 dark:from-purple-950/20 dark:to-pink-950/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5 text-purple-600" />
@@ -132,25 +172,39 @@ export function ItemStatisticsDisplay({ statistics, title: _title }: ItemStatist
                   />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-2xl font-bold">{mostValuableItem.itemName}</p>
-                  <div className="flex gap-4 mt-2">
+                  <p className="text-2xl font-bold">
+                    {mostValuableItem.itemName}
+                  </p>
+                  <div className="mt-2 flex gap-4">
                     <div>
-                      <p className="text-xs text-muted-foreground">Total Value</p>
+                      <p className="text-xs text-muted-foreground">
+                        Total Value
+                      </p>
                       <p className="text-lg font-semibold text-purple-600 dark:text-purple-400">
                         {formatGPValue(mostValuableItem.totalValue)} GP
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Quantity</p>
-                      <p className="text-lg font-semibold">{mostValuableItem.totalQuantity.toLocaleString()}</p>
+                      <p className="text-lg font-semibold">
+                        {mostValuableItem.totalQuantity.toLocaleString()}
+                      </p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Price Each</p>
-                      <p className="text-lg font-semibold">{formatGPValue(mostValuableItem.pricePerItem)} GP</p>
+                      <p className="text-xs text-muted-foreground">
+                        Price Each
+                      </p>
+                      <p className="text-lg font-semibold">
+                        {formatGPValue(mostValuableItem.pricePerItem)} GP
+                      </p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Obtained By</p>
-                      <p className="text-lg font-semibold">{mostValuableItem.obtainedByCount} players</p>
+                      <p className="text-xs text-muted-foreground">
+                        Obtained By
+                      </p>
+                      <p className="text-lg font-semibold">
+                        {mostValuableItem.obtainedByCount} players
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -158,22 +212,35 @@ export function ItemStatisticsDisplay({ statistics, title: _title }: ItemStatist
             </div>
 
             {/* Top Obtainers */}
-            <div className="mt-4 pt-4 border-t">
-              <p className="text-sm font-medium mb-2">Top Obtainers:</p>
+            <div className="mt-4 border-t pt-4">
+              <p className="mb-2 text-sm font-medium">Top Obtainers:</p>
               <div className="space-y-2">
-                {mostValuableItem.obtainedBy.slice(0, 5).map((obtainer, index) => (
-                  <div key={obtainer.userId} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{index + 1}</Badge>
-                      <span className="font-medium">{obtainer.runescapeName ?? obtainer.userName}</span>
-                      <span className="text-muted-foreground">({obtainer.teamName})</span>
+                {mostValuableItem.obtainedBy
+                  .slice(0, 5)
+                  .map((obtainer, index) => (
+                    <div
+                      key={obtainer.userId}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">{index + 1}</Badge>
+                        <span className="font-medium">
+                          {obtainer.runescapeName ?? obtainer.userName}
+                        </span>
+                        <span className="text-muted-foreground">
+                          ({obtainer.teamName})
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold">
+                          {formatGPValue(obtainer.value)} GP
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {obtainer.quantity}x
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold">{formatGPValue(obtainer.value)} GP</p>
-                      <p className="text-xs text-muted-foreground">{obtainer.quantity}x</p>
-                    </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
           </CardContent>
@@ -194,15 +261,20 @@ export function ItemStatisticsDisplay({ statistics, title: _title }: ItemStatist
           <Card>
             <CardHeader>
               <CardTitle>Team Profit Rankings</CardTitle>
-              <CardDescription>Teams ranked by total item value obtained</CardDescription>
+              <CardDescription>
+                Teams ranked by total item value obtained
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {teamStats.map((team, index) => (
-                  <div key={team.teamId} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div
+                    key={team.teamId}
+                    className="flex items-center justify-between rounded-lg border p-4"
+                  >
                     <div className="flex items-center space-x-4">
                       <div
-                        className={`flex items-center justify-center w-10 h-10 rounded-full font-bold ${
+                        className={`flex h-10 w-10 items-center justify-center rounded-full font-bold ${
                           index === 0
                             ? "bg-yellow-500 text-white"
                             : index === 1
@@ -215,9 +287,12 @@ export function ItemStatisticsDisplay({ statistics, title: _title }: ItemStatist
                         {index + 1}
                       </div>
                       <div>
-                        <h3 className="font-semibold text-lg">{team.teamName}</h3>
+                        <h3 className="text-lg font-semibold">
+                          {team.teamName}
+                        </h3>
                         <p className="text-sm text-muted-foreground">
-                          {team.userCount} users · {team.submissionCount} submissions · {team.itemCount} items
+                          {team.userCount} users · {team.submissionCount}{" "}
+                          submissions · {team.itemCount} items
                         </p>
                       </div>
                     </div>
@@ -226,18 +301,22 @@ export function ItemStatisticsDisplay({ statistics, title: _title }: ItemStatist
                         {formatGPValue(team.totalValue)} GP
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        Avg per user: {formatGPValue(team.averageValuePerUser)} GP
+                        Avg per user: {formatGPValue(team.averageValuePerUser)}{" "}
+                        GP
                       </div>
                       {team.mostValuableItem && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Best: {team.mostValuableItem.itemName} ({formatGPValue(team.mostValuableItem.totalValue)} GP)
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          Best: {team.mostValuableItem.itemName} (
+                          {formatGPValue(team.mostValuableItem.totalValue)} GP)
                         </div>
                       )}
                     </div>
                   </div>
                 ))}
                 {teamStats.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">No team data available yet</div>
+                  <div className="py-8 text-center text-muted-foreground">
+                    No team data available yet
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -249,15 +328,20 @@ export function ItemStatisticsDisplay({ statistics, title: _title }: ItemStatist
           <Card>
             <CardHeader>
               <CardTitle>User Profit Rankings</CardTitle>
-              <CardDescription>Top contributors by total item value</CardDescription>
+              <CardDescription>
+                Top contributors by total item value
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {topUsers.map((user, index) => (
-                  <div key={user.userId} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div
+                    key={user.userId}
+                    className="flex items-center justify-between rounded-lg border p-4"
+                  >
                     <div className="flex items-center space-x-4">
                       <div
-                        className={`flex items-center justify-center w-10 h-10 rounded-full font-bold ${
+                        className={`flex h-10 w-10 items-center justify-center rounded-full font-bold ${
                           index === 0
                             ? "bg-yellow-500 text-white"
                             : index === 1
@@ -270,9 +354,12 @@ export function ItemStatisticsDisplay({ statistics, title: _title }: ItemStatist
                         {index + 1}
                       </div>
                       <div>
-                        <h3 className="font-semibold text-lg">{user.runescapeName ?? user.userName}</h3>
+                        <h3 className="text-lg font-semibold">
+                          {user.runescapeName ?? user.userName}
+                        </h3>
                         <p className="text-sm text-muted-foreground">
-                          {user.submissionCount} submissions · {user.itemCount} items
+                          {user.submissionCount} submissions · {user.itemCount}{" "}
+                          items
                         </p>
                       </div>
                     </div>
@@ -281,18 +368,25 @@ export function ItemStatisticsDisplay({ statistics, title: _title }: ItemStatist
                         {formatGPValue(user.totalValue)} GP
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        Avg per sub: {formatGPValue(Math.floor(user.totalValue / user.submissionCount))} GP
+                        Avg per sub:{" "}
+                        {formatGPValue(
+                          Math.floor(user.totalValue / user.submissionCount)
+                        )}{" "}
+                        GP
                       </div>
                       {user.mostValuableItem && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Best: {user.mostValuableItem.itemName} ({formatGPValue(user.mostValuableItem.totalValue)} GP)
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          Best: {user.mostValuableItem.itemName} (
+                          {formatGPValue(user.mostValuableItem.totalValue)} GP)
                         </div>
                       )}
                     </div>
                   </div>
                 ))}
                 {topUsers.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">No user data available yet</div>
+                  <div className="py-8 text-center text-muted-foreground">
+                    No user data available yet
+                  </div>
                 )}
               </div>
             </CardContent>

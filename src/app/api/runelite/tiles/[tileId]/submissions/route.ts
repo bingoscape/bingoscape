@@ -1,13 +1,24 @@
 import { NextResponse } from "next/server"
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger"
 import { db } from "@/server/db"
-import { tiles, eventParticipants, teamTileSubmissions, submissions, images, teamMembers, discordWebhooks } from "@/server/db/schema"
+import {
+  tiles,
+  eventParticipants,
+  teamTileSubmissions,
+  submissions,
+  images,
+  teamMembers,
+  discordWebhooks,
+} from "@/server/db/schema"
 import { eq, and, sql } from "drizzle-orm"
 import { validateApiKey } from "@/lib/api-auth"
 import { nanoid } from "nanoid"
 import fs from "fs/promises"
 import path from "path"
-import { createSubmissionEmbed, sendDiscordWebhook } from "@/lib/discord-webhook"
+import {
+  createSubmissionEmbed,
+  sendDiscordWebhook,
+} from "@/lib/discord-webhook"
 import { formatBingoData } from "@/lib/bingo-formatter"
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
@@ -22,8 +33,11 @@ async function ensureUploadDir() {
 }
 
 // Submit an image for a specific tile
-export async function POST(req: Request, props: { params: Promise<{ tileId: string }> }) {
-  const params = await props.params;
+export async function POST(
+  req: Request,
+  props: { params: Promise<{ tileId: string }> }
+) {
+  const params = await props.params
   // Validate API key from Authorization header
   const userId = await validateApiKey(req)
   if (!userId) {
@@ -47,7 +61,7 @@ export async function POST(req: Request, props: { params: Promise<{ tileId: stri
       with: {
         bingo: {
           with: {
-            event: true
+            event: true,
           },
         },
         teamTileSubmissions: true,
@@ -60,14 +74,20 @@ export async function POST(req: Request, props: { params: Promise<{ tileId: stri
 
     // Check if user is a participant in this event
     const participant = await db.query.eventParticipants.findFirst({
-      where: and(eq(eventParticipants.eventId, tile.bingo.eventId), eq(eventParticipants.userId, userId)),
+      where: and(
+        eq(eventParticipants.eventId, tile.bingo.eventId),
+        eq(eventParticipants.userId, userId)
+      ),
       with: {
-        user: true
-      }
+        user: true,
+      },
     })
 
     if (!participant) {
-      return NextResponse.json({ error: "Not a participant in this event" }, { status: 403 })
+      return NextResponse.json(
+        { error: "Not a participant in this event" },
+        { status: 403 }
+      )
     }
 
     // Get user's team for this event
@@ -79,8 +99,13 @@ export async function POST(req: Request, props: { params: Promise<{ tileId: stri
             db
               .select()
               .from(teamMembers)
-              .where(and(eq(teamMembers.teamId, teams.id), eq(teamMembers.userId, userId))),
-          ),
+              .where(
+                and(
+                  eq(teamMembers.teamId, teams.id),
+                  eq(teamMembers.userId, userId)
+                )
+              )
+          )
         ),
       with: {
         teamMembers: {
@@ -96,16 +121,30 @@ export async function POST(req: Request, props: { params: Promise<{ tileId: stri
     })
 
     if (!userTeam) {
-      return NextResponse.json({ error: "You are not assigned to a team in this event" }, { status: 403 })
+      return NextResponse.json(
+        { error: "You are not assigned to a team in this event" },
+        { status: 403 }
+      )
     }
 
     if (tile.bingo.locked) {
-      return NextResponse.json({ error: "This bingo is locked. No submission possible" }, { status: 403 })
+      return NextResponse.json(
+        { error: "This bingo is locked. No submission possible" },
+        { status: 403 }
+      )
     }
 
-    const teamSubmissionForTile = tile.teamTileSubmissions.find((submission) => submission.teamId === userTeam.id)
-    if (!!teamSubmissionForTile && teamSubmissionForTile.status === "approved") {
-      return NextResponse.json({ error: "Your submission has already been approved!" }, { status: 423 })
+    const teamSubmissionForTile = tile.teamTileSubmissions.find(
+      (submission) => submission.teamId === userTeam.id
+    )
+    if (
+      !!teamSubmissionForTile &&
+      teamSubmissionForTile.status === "approved"
+    ) {
+      return NextResponse.json(
+        { error: "Your submission has already been approved!" },
+        { status: 423 }
+      )
     }
 
     // Ensure the upload directory exists
@@ -123,7 +162,7 @@ export async function POST(req: Request, props: { params: Promise<{ tileId: stri
     const relativePath = path.join("/uploads", filename).replace(/\\/g, "/")
 
     // Create or update the submission in the database
-    const result = await db.transaction(async (tx) => {
+    await db.transaction(async (tx) => {
       // Get or create teamTileSubmission
       const [teamTileSubmission] = await tx
         .insert(teamTileSubmissions)
@@ -173,10 +212,12 @@ export async function POST(req: Request, props: { params: Promise<{ tileId: stri
 
     // Send Discord webhook notifications
     try {
-
       // Get active Discord webhooks for this event
       const activeWebhooks = await db.query.discordWebhooks.findMany({
-        where: and(eq(discordWebhooks.eventId, tile.bingo.eventId), eq(discordWebhooks.isActive, true)),
+        where: and(
+          eq(discordWebhooks.eventId, tile.bingo.eventId),
+          eq(discordWebhooks.isActive, true)
+        ),
       })
 
       if (activeWebhooks.length > 0 && participant) {
@@ -184,8 +225,16 @@ export async function POST(req: Request, props: { params: Promise<{ tileId: stri
         const submissionCount = await db
           .select({ count: sql<number>`count(*)` })
           .from(submissions)
-          .innerJoin(teamTileSubmissions, eq(submissions.teamTileSubmissionId, teamTileSubmissions.id))
-          .where(and(eq(teamTileSubmissions.tileId, tileId), eq(teamTileSubmissions.teamId, userTeam.id)))
+          .innerJoin(
+            teamTileSubmissions,
+            eq(submissions.teamTileSubmissionId, teamTileSubmissions.id)
+          )
+          .where(
+            and(
+              eq(teamTileSubmissions.tileId, tileId),
+              eq(teamTileSubmissions.teamId, userTeam.id)
+            )
+          )
 
         const count = submissionCount[0]?.count ?? 1
 
@@ -220,7 +269,7 @@ export async function POST(req: Request, props: { params: Promise<{ tileId: stri
                 name: discordFileName,
               },
             ],
-          }),
+          })
         )
 
         await Promise.allSettled(webhookPromises)
@@ -230,14 +279,15 @@ export async function POST(req: Request, props: { params: Promise<{ tileId: stri
       logger.error({ error: discordError }, "Discord webhook error")
     }
 
-
-
     // Format the response using shared utility
     const formattedBingo = await formatBingoData(tile.bingo, userTeam ?? null)
 
     return NextResponse.json(formattedBingo)
   } catch (error) {
     logger.error({ error }, "Error submitting image")
-    return NextResponse.json({ error: "Failed to submit image" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Failed to submit image" },
+      { status: 500 }
+    )
   }
 }

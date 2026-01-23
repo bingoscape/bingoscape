@@ -18,12 +18,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import {
-  UserIcon,
   CalendarIcon,
   Users,
   Crown,
-  Shield,
-  UserPlus,
   Link as LinkIcon,
   BowArrow,
 } from "lucide-react"
@@ -83,8 +80,6 @@ export default function ClanDetailPage(props: {
   const [members, setMembers] = useState<ClanMember[]>([])
   const [clanDetails, setClanDetails] = useState<ClanDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [roleFilter, setRoleFilter] = useState<string>("all")
   const { status } = useSession()
   const router = useRouter()
 
@@ -138,6 +133,7 @@ export default function ClanDetailPage(props: {
         title: "Role Updated",
         description: `The member's role has been successfully updated to ${newRole}.`,
       })
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (_) {
       toast({
         title: "Error",
@@ -204,44 +200,6 @@ export default function ClanDetailPage(props: {
     { label: "Clans", href: "/clans" },
     { label: clanDetails.name, href: `/clans/${clanDetails.id}` },
   ]
-
-  const filteredMembers = members.filter((member) => {
-    const matchesSearch =
-      member.name?.toLowerCase().includes(searchTerm.toLowerCase()) ??
-      member.runescapeName?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesRole = roleFilter === "all" || member.role === roleFilter
-    return matchesSearch && matchesRole
-  })
-
-  const getRoleIcon = (role: Role) => {
-    switch (role) {
-      case "admin":
-        return Crown
-      case "management":
-        return Shield
-      case "member":
-        return UserIcon
-      case "guest":
-        return UserPlus
-      default:
-        return UserIcon
-    }
-  }
-
-  const getRoleColor = (role: Role) => {
-    switch (role) {
-      case "admin":
-        return "text-red-500"
-      case "management":
-        return "text-blue-500"
-      case "member":
-        return "text-green-500"
-      case "guest":
-        return "text-gray-500"
-      default:
-        return "text-gray-500"
-    }
-  }
 
   return (
     <div className="container mx-auto space-y-6 py-10">

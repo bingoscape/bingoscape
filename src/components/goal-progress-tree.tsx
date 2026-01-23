@@ -1,14 +1,20 @@
 "use client"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/prefer-nullish-coalescing */
 
 import { Badge } from "@/components/ui/badge"
 import { AnimatedProgress } from "@/components/ui/animated-progress"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import {
   Layers,
   Target,
@@ -47,6 +53,7 @@ interface ProgressNode extends GoalTreeNode {
 
 export function GoalProgressTree({
   tree,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   teamId,
   teamProgress,
   teamName,
@@ -70,6 +77,7 @@ export function GoalProgressTree({
   // Recursively evaluate group completion
   const evaluateGroup = (node: GoalTreeNode): ProgressNode => {
     if (node.type === "goal") {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const goalData = node.data as any
       const progress = teamProgress.find((p) => p.goalId === node.id)
       return {
@@ -80,7 +88,9 @@ export function GoalProgressTree({
 
     // It's a group - evaluate children
     const groupData = node.data as any
-    const evaluatedChildren = (node.children || []).map((child) => evaluateGroup(child))
+    const evaluatedChildren = (node.children || []).map((child) =>
+      evaluateGroup(child)
+    )
 
     // Count completed children
     const completedChildren = evaluatedChildren.filter((child) => {
@@ -106,7 +116,8 @@ export function GoalProgressTree({
 
     // For OR groups, display as "X / minRequired" to show how many are needed
     // For AND groups, display as "X / total" since all are required
-    const displayTotal = groupData.logicalOperator === "OR" ? minRequired : totalChildren
+    const displayTotal =
+      groupData.logicalOperator === "OR" ? minRequired : totalChildren
     const displayCompleted = completedCount
 
     return {
@@ -116,7 +127,8 @@ export function GoalProgressTree({
       groupProgress: {
         completed: displayCompleted,
         total: displayTotal,
-        percentage: displayTotal > 0 ? (displayCompleted / displayTotal) * 100 : 0,
+        percentage:
+          displayTotal > 0 ? (displayCompleted / displayTotal) * 100 : 0,
       },
     }
   }
@@ -145,17 +157,22 @@ export function GoalProgressTree({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="border border-border rounded-lg p-4 shadow-sm transition-all hover:shadow-md bg-card">
-        <div className="flex items-center justify-between mb-3">
+      <div className="rounded-lg border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md">
+        <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-full shadow-sm" style={{ backgroundColor: teamColor }} />
-            <h4 className="font-semibold text-sm text-foreground">{teamName}</h4>
+            <div
+              className="h-3 w-3 rounded-full shadow-sm"
+              style={{ backgroundColor: teamColor }}
+            />
+            <h4 className="text-sm font-semibold text-foreground">
+              {teamName}
+            </h4>
           </div>
           <div className="flex items-center gap-2">
             <div className="text-[10px] text-muted-foreground">
               {overallProgress.completed} / {overallProgress.total}
             </div>
-            <div className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground">
+            <div className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
               {overallProgress.percentage.toFixed(0)}%
             </div>
           </div>
@@ -184,7 +201,12 @@ interface ProgressTreeNodeProps {
   toggleGroup: (groupId: string) => void
 }
 
-function ProgressTreeNode({ node, depth, collapsedGroups, toggleGroup }: ProgressTreeNodeProps) {
+function ProgressTreeNode({
+  node,
+  depth,
+  collapsedGroups,
+  toggleGroup,
+}: ProgressTreeNodeProps) {
   const marginLeft = depth * 8 // Compact 8px indentation per level
 
   if (node.type === "group") {
@@ -194,9 +216,12 @@ function ProgressTreeNode({ node, depth, collapsedGroups, toggleGroup }: Progres
 
     return (
       <div style={{ marginLeft: `${marginLeft}px` }}>
-        <Collapsible open={!isCollapsed} onOpenChange={() => toggleGroup(node.id)}>
+        <Collapsible
+          open={!isCollapsed}
+          onOpenChange={() => toggleGroup(node.id)}
+        >
           <CollapsibleTrigger asChild>
-            <div className="flex items-center gap-1 py-0.5 cursor-pointer hover:bg-muted/50 rounded transition-colors">
+            <div className="flex cursor-pointer items-center gap-1 rounded py-0.5 transition-colors hover:bg-muted/50">
               {/* Chevron Icon */}
               {isCollapsed ? (
                 <ChevronRight className="h-3 w-3 text-muted-foreground" />
@@ -208,16 +233,25 @@ function ProgressTreeNode({ node, depth, collapsedGroups, toggleGroup }: Progres
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="flex items-center gap-1">
-                    <Layers className={`h-3 w-3 ${node.isGroupComplete ? "text-green-500" : "text-blue-500"}`} />
-                    <Badge variant={groupData.logicalOperator === "AND" ? "default" : "secondary"} className="text-[10px] h-4 px-1">
+                    <Layers
+                      className={`h-3 w-3 ${node.isGroupComplete ? "text-green-500" : "text-blue-500"}`}
+                    />
+                    <Badge
+                      variant={
+                        groupData.logicalOperator === "AND"
+                          ? "default"
+                          : "secondary"
+                      }
+                      className="h-4 px-1 text-[10px]"
+                    >
                       {groupData.logicalOperator}
                     </Badge>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="max-w-xs">
                   <p className="text-xs">
-                    <strong>Group ({groupData.logicalOperator}):</strong>
-                    {" "}{groupData.logicalOperator === "AND"
+                    <strong>Group ({groupData.logicalOperator}):</strong>{" "}
+                    {groupData.logicalOperator === "AND"
                       ? "All goals required"
                       : `At least ${groupData.minRequiredGoals || 1} goal(s) required`}
                   </p>
@@ -226,16 +260,19 @@ function ProgressTreeNode({ node, depth, collapsedGroups, toggleGroup }: Progres
 
               {/* Group Name */}
               {groupData.name && (
-                <span className="text-[10px] text-foreground font-medium">
+                <span className="text-[10px] font-medium text-foreground">
                   {groupData.name}
                 </span>
               )}
 
               {/* Mini Progress */}
               {node.groupProgress && (
-                <div className="flex items-center gap-1 flex-1 min-w-0">
-                  <AnimatedProgress value={node.groupProgress.percentage} className="h-1 flex-1" />
-                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                <div className="flex min-w-0 flex-1 items-center gap-1">
+                  <AnimatedProgress
+                    value={node.groupProgress.percentage}
+                    className="h-1 flex-1"
+                  />
+                  <span className="whitespace-nowrap text-[10px] text-muted-foreground">
                     {node.groupProgress.completed}/{node.groupProgress.total}
                   </span>
                 </div>
@@ -243,7 +280,7 @@ function ProgressTreeNode({ node, depth, collapsedGroups, toggleGroup }: Progres
 
               {/* Completion Indicator */}
               {node.isGroupComplete && (
-                <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
+                <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />
               )}
             </div>
           </CollapsibleTrigger>
@@ -251,7 +288,7 @@ function ProgressTreeNode({ node, depth, collapsedGroups, toggleGroup }: Progres
           {/* Collapsible Children */}
           {hasChildren && (
             <CollapsibleContent>
-              <div className="space-y-1 mt-1">
+              <div className="mt-1 space-y-1">
                 {node.children!.map((child) => (
                   <ProgressTreeNode
                     key={child.id}
@@ -275,7 +312,8 @@ function ProgressTreeNode({ node, depth, collapsedGroups, toggleGroup }: Progres
   const isComplete = progress?.isComplete ?? false
   const currentValue = progress?.currentValue ?? 0
   const targetValue = goalData.targetValue
-  const percentage = targetValue > 0 ? Math.min(100, (currentValue / targetValue) * 100) : 0
+  const percentage =
+    targetValue > 0 ? Math.min(100, (currentValue / targetValue) * 100) : 0
   const isItemGoal = goalData.goalType === "item" && goalData.itemGoal
   const itemGoal = goalData.itemGoal
 
@@ -285,15 +323,16 @@ function ProgressTreeNode({ node, depth, collapsedGroups, toggleGroup }: Progres
         {/* Goal Icon with Tooltip */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex shrink-0 items-center gap-1">
               {isItemGoal && itemGoal ? (
                 <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={itemGoal.imageUrl}
                     alt={itemGoal.baseName}
                     className="h-4 w-4 object-contain"
                   />
-                  <Badge variant="secondary" className="text-[10px] h-3 px-0.5">
+                  <Badge variant="secondary" className="h-3 px-0.5 text-[10px]">
                     <Package className="h-2.5 w-2.5" />
                   </Badge>
                 </>
@@ -319,24 +358,24 @@ function ProgressTreeNode({ node, depth, collapsedGroups, toggleGroup }: Progres
         </Tooltip>
 
         {/* Mini Progress Bar */}
-        <div className="flex items-center gap-1 flex-1 min-w-0">
+        <div className="flex min-w-0 flex-1 items-center gap-1">
           <AnimatedProgress
             value={percentage}
             className="h-1 flex-1"
             indicatorClassName={isComplete ? "bg-green-500" : "bg-blue-500"}
           />
-          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+          <span className="whitespace-nowrap text-[10px] text-muted-foreground">
             {currentValue}/{targetValue}
           </span>
         </div>
 
         {/* Completion Indicator */}
         {isComplete ? (
-          <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
+          <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />
         ) : currentValue > 0 ? (
-          <Circle className="h-3 w-3 text-yellow-500 shrink-0" />
+          <Circle className="h-3 w-3 shrink-0 text-yellow-500" />
         ) : (
-          <Circle className="h-3 w-3 text-muted-foreground shrink-0" />
+          <Circle className="h-3 w-3 shrink-0 text-muted-foreground" />
         )}
       </div>
     </div>

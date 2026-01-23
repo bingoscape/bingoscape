@@ -1,12 +1,17 @@
 "use client"
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
 import { Loader2, Edit, UserPlus } from "lucide-react"
-import { getEventParticipants, getEventById, getRegistrationRequests, getPendingRegistrationCount } from "@/app/actions/events"
+import {
+  getEventParticipants,
+  getEventById,
+  getRegistrationRequests,
+  getPendingRegistrationCount,
+} from "@/app/actions/events"
 import { getTeamsByEventId } from "@/app/actions/team"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import type { UUID } from "crypto"
@@ -20,27 +25,36 @@ import { RegistrationsTab } from "@/components/registrations-tab"
 import type { Participant, Team } from "./types"
 import type { RegistrationRequest } from "@/app/actions/events"
 
-export default function EventParticipantsPage(props: { params: Promise<{ id: UUID }> }) {
-  const params = use(props.params);
+export default function EventParticipantsPage(props: {
+  params: Promise<{ id: UUID }>
+}) {
+  const params = use(props.params)
   const [participants, setParticipants] = useState<Participant[]>([])
-  const [registrationRequests, setRegistrationRequests] = useState<RegistrationRequest[]>([])
+  const [registrationRequests, setRegistrationRequests] = useState<
+    RegistrationRequest[]
+  >([])
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
   const [minimumBuyIn, setMinimumBuyIn] = useState(0)
   const [eventName, setEventName] = useState("")
-  const [eventCreatorId, setEventCreatorId] = useState<string>("")
   const { data } = useSession()
-  const [currentUserRole, setCurrentUserRole] = useState<"admin" | "management" | "participant">("participant")
+  const [currentUserRole, setCurrentUserRole] = useState<
+    "admin" | "management" | "participant"
+  >("participant")
   const [isEventCreator, setIsEventCreator] = useState(false)
   const [metadataModalOpen, setMetadataModalOpen] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentUserName, setCurrentUserName] = useState<string | null>(null)
-  const [currentUserRunescapeName, setCurrentUserRunescapeName] = useState<string | null>(null)
+  const [currentUserRunescapeName, setCurrentUserRunescapeName] = useState<
+    string | null
+  >(null)
   const [pendingCount, setPendingCount] = useState(0)
 
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [selectedTab, setSelectedTab] = useState<string>(searchParams.get("tab") ?? "participants")
+  const [selectedTab, setSelectedTab] = useState<string>(
+    searchParams.get("tab") ?? "participants"
+  )
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,13 +65,14 @@ export default function EventParticipantsPage(props: { params: Promise<{ id: UUI
           getEventById(params.id as string),
         ])
 
-        const userParticipant = participantsData.find((p) => p.id === data?.user.id)
+        const userParticipant = participantsData.find(
+          (p) => p.id === data?.user.id
+        )
         const userRole = userParticipant?.role ?? "participant"
         const isCreator = eventData?.event.creatorId === data?.user.id
 
         setCurrentUserRole(userRole)
         setIsEventCreator(isCreator)
-        setEventCreatorId(eventData?.event.creatorId ?? "")
         setParticipants(participantsData)
         setTeams(teamsData)
         setMinimumBuyIn(eventData?.event.minimumBuyIn ?? 0)
@@ -92,9 +107,7 @@ export default function EventParticipantsPage(props: { params: Promise<{ id: UUI
     }
 
     setLoading(true)
-    fetchData()
-      
-      .catch((err) => console.error(err))
+    fetchData().catch((err) => console.error(err))
   }, [params.id, data?.user.id])
 
   const handleTabChange = (value: string) => {
@@ -113,16 +126,20 @@ export default function EventParticipantsPage(props: { params: Promise<{ id: UUI
     setParticipants(updatedParticipants)
   }
 
-  const handleRegistrationRequestsChange = (updatedRequests: RegistrationRequest[]) => {
+  const handleRegistrationRequestsChange = (
+    updatedRequests: RegistrationRequest[]
+  ) => {
     setRegistrationRequests(updatedRequests)
     // Recalculate pending count
-    const pending = updatedRequests.filter((req) => req.status === "pending").length
+    const pending = updatedRequests.filter(
+      (req) => req.status === "pending"
+    ).length
     setPendingCount(pending)
   }
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     )
@@ -135,7 +152,10 @@ export default function EventParticipantsPage(props: { params: Promise<{ id: UUI
     { label: "Participants", href: `/events/${params.id}/participants` },
   ]
 
-  const canViewRegistrations = isEventCreator || currentUserRole === "admin" || currentUserRole === "management"
+  const canViewRegistrations =
+    isEventCreator ||
+    currentUserRole === "admin" ||
+    currentUserRole === "management"
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -144,9 +164,11 @@ export default function EventParticipantsPage(props: { params: Promise<{ id: UUI
       </div>
 
       <div className="flex flex-col gap-8">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold tracking-tight">Event Participants</h1>
+            <h1 className="text-4xl font-bold tracking-tight">
+              Event Participants
+            </h1>
             <div className="flex items-center gap-2 text-sm">
               <Badge variant="outline" className="font-medium">
                 Minimum Buy-In: {formatRunescapeGold(minimumBuyIn)} GP
@@ -157,8 +179,12 @@ export default function EventParticipantsPage(props: { params: Promise<{ id: UUI
           <div className="flex items-center gap-2">
             {/* Edit My Metadata button - visible to all participants */}
             {currentUserId && (
-              <Button variant="outline" size="sm" onClick={() => setMetadataModalOpen(true)}>
-                <Edit className="h-4 w-4 mr-2" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMetadataModalOpen(true)}
+              >
+                <Edit className="mr-2 h-4 w-4" />
                 Edit My Metadata
               </Button>
             )}
@@ -169,9 +195,16 @@ export default function EventParticipantsPage(props: { params: Promise<{ id: UUI
         <PrizePoolBreakdown eventId={params.id as string} />
 
         {/* Tab Navigation */}
-        <Tabs value={selectedTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="participants" className="flex items-center gap-2">
+        <Tabs
+          value={selectedTab}
+          onValueChange={handleTabChange}
+          className="w-full"
+        >
+          <TabsList className="mb-6 grid w-full grid-cols-2">
+            <TabsTrigger
+              value="participants"
+              className="flex items-center gap-2"
+            >
               <Edit className="h-4 w-4" />
               Participants
               <Badge variant="secondary" className="ml-1">
@@ -179,7 +212,10 @@ export default function EventParticipantsPage(props: { params: Promise<{ id: UUI
               </Badge>
             </TabsTrigger>
             {canViewRegistrations && (
-              <TabsTrigger value="registrations" className="flex items-center gap-2">
+              <TabsTrigger
+                value="registrations"
+                className="flex items-center gap-2"
+              >
                 <UserPlus className="h-4 w-4" />
                 Registration Requests
                 {pendingCount > 0 && (
@@ -228,7 +264,9 @@ export default function EventParticipantsPage(props: { params: Promise<{ id: UUI
           onMetadataUpdated={async () => {
             // Refresh participants data to show updated metadata indicators
             try {
-              const participantsData = await getEventParticipants(params.id as string)
+              const participantsData = await getEventParticipants(
+                params.id as string
+              )
               setParticipants(participantsData)
             } catch (error) {
               console.error("Error refreshing participants:", error)

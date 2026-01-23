@@ -3,12 +3,24 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { updateClan, getAllUsersForDropdown } from "@/app/actions/super-admin"
 import { useToast } from "@/hooks/use-toast"
 import { Edit } from "lucide-react"
@@ -24,11 +36,18 @@ interface SuperAdminClanEditModalProps {
   clan: Clan
 }
 
-export function SuperAdminClanEditModal({ clan }: SuperAdminClanEditModalProps) {
+export function SuperAdminClanEditModal({
+  clan,
+}: SuperAdminClanEditModalProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [users, setUsers] = useState<
-    Array<{ id: string; name: string | null; email: string | null; runescapeName: string | null }>
+    Array<{
+      id: string
+      name: string | null
+      email: string | null
+      runescapeName: string | null
+    }>
   >([])
   const [formData, setFormData] = useState({
     name: clan.name,
@@ -39,7 +58,11 @@ export function SuperAdminClanEditModal({ clan }: SuperAdminClanEditModalProps) 
 
   useEffect(() => {
     if (open) {
-      getAllUsersForDropdown().then(setUsers).catch((error) => { console.error("Failed to fetch users:", error) })
+      getAllUsersForDropdown()
+        .then(setUsers)
+        .catch((error) => {
+          console.error("Failed to fetch users:", error)
+        })
     }
   }, [open])
 
@@ -61,6 +84,7 @@ export function SuperAdminClanEditModal({ clan }: SuperAdminClanEditModalProps) 
 
       setOpen(false)
     } catch (error) {
+      console.error("Failed to update clan:", error)
       toast({
         title: "Error",
         description: "Failed to update clan. Please try again.",
@@ -75,7 +99,7 @@ export function SuperAdminClanEditModal({ clan }: SuperAdminClanEditModalProps) 
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          <Edit className="h-4 w-4 mr-2" />
+          <Edit className="mr-2 h-4 w-4" />
           Edit Clan
         </Button>
       </DialogTrigger>
@@ -89,7 +113,9 @@ export function SuperAdminClanEditModal({ clan }: SuperAdminClanEditModalProps) 
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               placeholder="Clan name"
               required
             />
@@ -99,14 +125,21 @@ export function SuperAdminClanEditModal({ clan }: SuperAdminClanEditModalProps) 
             <Textarea
               id="description"
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               placeholder="Clan description"
               rows={3}
             />
           </div>
           <div>
             <Label htmlFor="owner">Owner</Label>
-            <Select value={formData.ownerId} onValueChange={(value) => setFormData({ ...formData, ownerId: value })}>
+            <Select
+              value={formData.ownerId}
+              onValueChange={(value) =>
+                setFormData({ ...formData, ownerId: value })
+              }
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select owner" />
               </SelectTrigger>
@@ -114,14 +147,19 @@ export function SuperAdminClanEditModal({ clan }: SuperAdminClanEditModalProps) 
                 <SelectItem value="defaultOwnerId">No owner</SelectItem>
                 {users.map((user) => (
                   <SelectItem key={user.id} value={user.id}>
-                    {user.name ?? user.email} {user.runescapeName && `(${user.runescapeName})`}
+                    {user.name ?? user.email}{" "}
+                    {user.runescapeName && `(${user.runescapeName})`}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>

@@ -7,19 +7,14 @@ import { type getEvents } from "@/app/actions/events"
 import { EventDisplay } from "./events-display"
 import { Button } from "@/components/ui/button"
 import { Plus, TrendingUp, Users, Trophy } from "lucide-react"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface EventListProps {
   userId: string
   initialEvents: Awaited<ReturnType<typeof getEvents>>
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function EventList({ userId, initialEvents }: EventListProps) {
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const allEvents = initialEvents

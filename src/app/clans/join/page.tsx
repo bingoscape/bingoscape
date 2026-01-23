@@ -3,7 +3,14 @@
 import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { toast } from "@/hooks/use-toast"
 import type { JoinClanResponse } from "@/app/api/clans/join/route"
 import { Loader2 } from "lucide-react"
@@ -12,7 +19,7 @@ import { useSession, signIn } from "next-auth/react"
 function JoinClanContent({ inviteCode }: { inviteCode: string | null }) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const { data: session, status } = useSession()
+  const { status } = useSession()
 
   useEffect(() => {
     if (!inviteCode) {
@@ -58,7 +65,10 @@ function JoinClanContent({ inviteCode }: { inviteCode: string | null }) {
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to join clan. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to join clan. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -69,7 +79,7 @@ function JoinClanContent({ inviteCode }: { inviteCode: string | null }) {
   // Show loading state while checking authentication
   if (status === "loading") {
     return (
-      <div className="flex justify-center items-center h-[50vh]">
+      <div className="flex h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     )
@@ -78,7 +88,7 @@ function JoinClanContent({ inviteCode }: { inviteCode: string | null }) {
   // Don't render the join UI if not authenticated (will redirect to login)
   if (status === "unauthenticated") {
     return (
-      <div className="flex justify-center items-center h-[50vh]">
+      <div className="flex h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
         <p className="ml-2">Redirecting to login...</p>
       </div>
@@ -90,13 +100,17 @@ function JoinClanContent({ inviteCode }: { inviteCode: string | null }) {
   }
 
   return (
-    <Card className="max-w-md mx-auto">
+    <Card className="mx-auto max-w-md">
       <CardHeader>
         <CardTitle>Join Clan</CardTitle>
-        <CardDescription>You&apos;ve been invited to join a clan!</CardDescription>
+        <CardDescription>
+          You&apos;ve been invited to join a clan!
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <p>Click the button below to accept the invitation and join the clan.</p>
+        <p>
+          Click the button below to accept the invitation and join the clan.
+        </p>
       </CardContent>
       <CardFooter>
         <Button onClick={handleJoin} disabled={isLoading} className="w-full">
@@ -119,7 +133,7 @@ export default function JoinClanPage() {
     <div className="container mx-auto py-10">
       <Suspense
         fallback={
-          <div className="flex justify-center items-center h-[50vh]">
+          <div className="flex h-[50vh] items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         }
@@ -129,4 +143,3 @@ export default function JoinClanPage() {
     </div>
   )
 }
-

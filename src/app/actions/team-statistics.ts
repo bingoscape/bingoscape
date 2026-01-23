@@ -134,7 +134,9 @@ export async function getEventTeamStatistics(
     const totalDailyHours =
       metadataList.length > 0
         ? metadataList.reduce(
-            (sum, m) => sum + (m?.dailyHoursAvailable ? Number(m.dailyHoursAvailable) : 0),
+            (sum, m) =>
+              sum +
+              (m?.dailyHoursAvailable ? Number(m.dailyHoursAvailable) : 0),
             0
           )
         : null
@@ -161,13 +163,12 @@ export async function getEventTeamStatistics(
         : 0
 
     // Calculate timezone hour variance (spread across UTC offsets)
-    const timezoneHourVariance = calculateTimezoneHourVariance(timezoneDistribution)
+    const timezoneHourVariance =
+      calculateTimezoneHourVariance(timezoneDistribution)
 
     // Metadata coverage for this team
     const metadataCoverage =
-      memberCount > 0
-        ? (membersWithMetadata.length / memberCount) * 100
-        : 0
+      memberCount > 0 ? (membersWithMetadata.length / memberCount) * 100 : 0
 
     return {
       teamId: team.id,
@@ -291,14 +292,39 @@ function calculateBalanceMetrics(teams: TeamStatistics[]): BalanceMetrics {
   // Overall balance score (0-100)
   // Lower variance = higher score
   // Normalize variances and average them
-  const normalizedEHPVariance = teamsWithEHP.length > 1 ? normalizeVariance(ehpVariance, teamsWithEHP.map((t) => t.averageEHP!)) : 0
-  const normalizedEHBVariance = teamsWithEHB.length > 1 ? normalizeVariance(ehbVariance, teamsWithEHB.map((t) => t.averageEHB!)) : 0
-  const normalizedHoursVariance = teamsWithHours.length > 1 ? normalizeVariance(dailyHoursVariance, teamsWithHours.map((t) => t.totalDailyHours!)) : 0
+  const normalizedEHPVariance =
+    teamsWithEHP.length > 1
+      ? normalizeVariance(
+          ehpVariance,
+          teamsWithEHP.map((t) => t.averageEHP!)
+        )
+      : 0
+  const normalizedEHBVariance =
+    teamsWithEHB.length > 1
+      ? normalizeVariance(
+          ehbVariance,
+          teamsWithEHB.map((t) => t.averageEHB!)
+        )
+      : 0
+  const normalizedHoursVariance =
+    teamsWithHours.length > 1
+      ? normalizeVariance(
+          dailyHoursVariance,
+          teamsWithHours.map((t) => t.totalDailyHours!)
+        )
+      : 0
 
   const avgNormalizedVariance =
-    (normalizedEHPVariance + normalizedEHBVariance + normalizedHoursVariance + timezoneVariance) / 4
+    (normalizedEHPVariance +
+      normalizedEHBVariance +
+      normalizedHoursVariance +
+      timezoneVariance) /
+    4
 
-  const overallBalanceScore = Math.max(0, Math.min(100, (1 - avgNormalizedVariance) * 100))
+  const overallBalanceScore = Math.max(
+    0,
+    Math.min(100, (1 - avgNormalizedVariance) * 100)
+  )
 
   return {
     ehpVariance,
@@ -345,10 +371,10 @@ function normalizeVariance(variance: number, values: number[]): number {
  * Calculate metadata coverage statistics
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
 async function calculateCoverageMetrics(
   eventTeams: any[],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _eventId: string
 ): Promise<CoverageMetrics> {
   // Get all participants for the event
@@ -370,8 +396,6 @@ async function calculateCoverageMetrics(
     (m) => m.dailyHoursAvailable != null
   ).length
   /* eslint-enable @typescript-eslint/no-explicit-any */
-  /* eslint-enable @typescript-eslint/no-unsafe-return */
-  /* eslint-enable @typescript-eslint/no-unsafe-member-access */
 
   return {
     totalPlayers,
@@ -382,8 +406,7 @@ async function calculateCoverageMetrics(
       ehp: totalPlayers > 0 ? (withEHP / totalPlayers) * 100 : 0,
       ehb: totalPlayers > 0 ? (withEHB / totalPlayers) * 100 : 0,
       timezone: totalPlayers > 0 ? (withTimezone / totalPlayers) * 100 : 0,
-      dailyHours:
-        totalPlayers > 0 ? (withDailyHours / totalPlayers) * 100 : 0,
+      dailyHours: totalPlayers > 0 ? (withDailyHours / totalPlayers) * 100 : 0,
     },
   }
 }

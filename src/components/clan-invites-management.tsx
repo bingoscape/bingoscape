@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -53,14 +53,14 @@ export function ClanInvitesManagement({ clanId }: ClanInvitesManagementProps) {
   const [invites, setInvites] = useState<ClanInvite[]>([])
   const [loading, setLoading] = useState(false)
   const [editingInvite, setEditingInvite] = useState<string | null>(null)
-  const [editLabel, setEditLabel] = useState('')
+  const [editLabel, setEditLabel] = useState("")
 
   const fetchInvites = useCallback(async () => {
     setLoading(true)
     try {
       const response = await fetch(`/api/clans/${clanId}/invites`)
-      if (!response.ok) throw new Error('Failed to fetch invites')
-      const data = await response.json() as ClanInvite[]
+      if (!response.ok) throw new Error("Failed to fetch invites")
+      const data = (await response.json()) as ClanInvite[]
       setInvites(data)
     } catch (error) {
       console.error("Error fetching invites:", error)
@@ -89,16 +89,20 @@ export function ClanInvitesManagement({ clanId }: ClanInvitesManagementProps) {
 
   const handleRevoke = async (inviteId: string) => {
     try {
-      const response = await fetch(`/api/clans/${clanId}/invites/${inviteId}?action=revoke`, {
-        method: 'POST'
-      })
-      if (!response.ok) throw new Error('Failed to revoke invite')
+      const response = await fetch(
+        `/api/clans/${clanId}/invites/${inviteId}?action=revoke`,
+        {
+          method: "POST",
+        }
+      )
+      if (!response.ok) throw new Error("Failed to revoke invite")
       toast({
         title: "Success",
         description: "Invite has been revoked",
       })
       await fetchInvites()
     } catch (error) {
+      console.error("Failed to revoke invite:", error)
       toast({
         title: "Error",
         description: "Failed to revoke invite",
@@ -108,21 +112,26 @@ export function ClanInvitesManagement({ clanId }: ClanInvitesManagementProps) {
   }
 
   const handleDelete = async (inviteId: string) => {
-    if (!confirm('Are you sure you want to permanently delete this invite? This action cannot be undone.')) {
+    if (
+      !confirm(
+        "Are you sure you want to permanently delete this invite? This action cannot be undone."
+      )
+    ) {
       return
     }
 
     try {
       const response = await fetch(`/api/clans/${clanId}/invites/${inviteId}`, {
-        method: 'DELETE'
+        method: "DELETE",
       })
-      if (!response.ok) throw new Error('Failed to delete invite')
+      if (!response.ok) throw new Error("Failed to delete invite")
       toast({
         title: "Success",
         description: "Invite has been deleted",
       })
       await fetchInvites()
     } catch (error) {
+      console.error("Failed to delete invite:", error)
       toast({
         title: "Error",
         description: "Failed to delete invite",
@@ -133,30 +142,31 @@ export function ClanInvitesManagement({ clanId }: ClanInvitesManagementProps) {
 
   const startEditingLabel = (invite: ClanInvite) => {
     setEditingInvite(invite.id)
-    setEditLabel(invite.label ?? '')
+    setEditLabel(invite.label ?? "")
   }
 
   const cancelEditingLabel = () => {
     setEditingInvite(null)
-    setEditLabel('')
+    setEditLabel("")
   }
 
   const saveLabel = async (inviteId: string) => {
     try {
       const response = await fetch(`/api/clans/${clanId}/invites/${inviteId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ label: editLabel })
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: editLabel }),
       })
-      if (!response.ok) throw new Error('Failed to update label')
+      if (!response.ok) throw new Error("Failed to update label")
       toast({
         title: "Success",
         description: "Label updated successfully",
       })
       setEditingInvite(null)
-      setEditLabel('')
+      setEditLabel("")
       await fetchInvites()
     } catch (error) {
+      console.error("Failed to update label:", error)
       toast({
         title: "Error",
         description: "Failed to update label",
@@ -177,7 +187,8 @@ export function ClanInvitesManagement({ clanId }: ClanInvitesManagementProps) {
     }
     // Check if expiring soon (within 24 hours)
     if (invite.expiresAt) {
-      const hoursUntilExpiry = (new Date(invite.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60)
+      const hoursUntilExpiry =
+        (new Date(invite.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60)
       if (hoursUntilExpiry < 24 && hoursUntilExpiry > 0) {
         return <Badge variant="secondary">Expiring Soon</Badge>
       }
@@ -198,12 +209,12 @@ export function ClanInvitesManagement({ clanId }: ClanInvitesManagementProps) {
   }
 
   if (loading && invites.length === 0) {
-    return <div className="text-center py-8">Loading invites...</div>
+    return <div className="py-8 text-center">Loading invites...</div>
   }
 
   if (invites.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
+      <div className="py-8 text-center text-muted-foreground">
         No invites created yet. Use the form above to create your first invite.
       </div>
     )
@@ -237,16 +248,30 @@ export function ClanInvitesManagement({ clanId }: ClanInvitesManagementProps) {
                       className="h-8 w-32"
                       maxLength={100}
                     />
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => saveLabel(invite.id)}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={() => saveLabel(invite.id)}
+                    >
                       <Check className="h-4 w-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={cancelEditingLabel}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={cancelEditingLabel}
+                    >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">{invite.label ?? <span className="text-muted-foreground">No label</span>}</span>
+                    <span className="text-sm">
+                      {invite.label ?? (
+                        <span className="text-muted-foreground">No label</span>
+                      )}
+                    </span>
                     <Button
                       size="icon"
                       variant="ghost"
@@ -261,7 +286,9 @@ export function ClanInvitesManagement({ clanId }: ClanInvitesManagementProps) {
 
               {/* Code Cell */}
               <TableCell>
-                <code className="text-xs bg-muted px-2 py-1 rounded">{invite.inviteCode}</code>
+                <code className="rounded bg-muted px-2 py-1 text-xs">
+                  {invite.inviteCode}
+                </code>
               </TableCell>
 
               {/* Creator Cell */}
@@ -269,9 +296,15 @@ export function ClanInvitesManagement({ clanId }: ClanInvitesManagementProps) {
                 <div className="flex items-center gap-2">
                   <Avatar className="h-6 w-6">
                     <AvatarImage src={invite.creator.image ?? undefined} />
-                    <AvatarFallback>{invite.creator.name?.[0] ?? '?'}</AvatarFallback>
+                    <AvatarFallback>
+                      {invite.creator.name?.[0] ?? "?"}
+                    </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm">{invite.creator.runescapeName ?? invite.creator.name ?? 'Unknown'}</span>
+                  <span className="text-sm">
+                    {invite.creator.runescapeName ??
+                      invite.creator.name ??
+                      "Unknown"}
+                  </span>
                 </div>
               </TableCell>
 
@@ -286,14 +319,10 @@ export function ClanInvitesManagement({ clanId }: ClanInvitesManagementProps) {
               </TableCell>
 
               {/* Usage Cell */}
-              <TableCell className="text-sm">
-                {formatUsage(invite)}
-              </TableCell>
+              <TableCell className="text-sm">{formatUsage(invite)}</TableCell>
 
               {/* Status Cell */}
-              <TableCell>
-                {getStatusBadge(invite)}
-              </TableCell>
+              <TableCell>{getStatusBadge(invite)}</TableCell>
 
               {/* Actions Cell */}
               <TableCell className="text-right">
@@ -304,7 +333,9 @@ export function ClanInvitesManagement({ clanId }: ClanInvitesManagementProps) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => copyInviteLink(invite.inviteCode)}>
+                    <DropdownMenuItem
+                      onClick={() => copyInviteLink(invite.inviteCode)}
+                    >
                       <Copy className="mr-2 h-4 w-4" />
                       Copy Link
                     </DropdownMenuItem>

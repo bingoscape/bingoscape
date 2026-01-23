@@ -1,14 +1,8 @@
 "use server"
 
 import { db } from "@/server/db"
-import {
-  tiles,
-  teamTileSubmissions,
-  bingos,
-  rowBonuses,
-  columnBonuses
-} from "@/server/db/schema"
-import { eq, and, sql, inArray } from "drizzle-orm"
+import { tiles, teamTileSubmissions, bingos } from "@/server/db/schema"
+import { eq, and, inArray } from "drizzle-orm"
 
 export interface TilePosition {
   row: number
@@ -30,9 +24,8 @@ export interface PatternCompletionResult {
   totalBonusXP: number
 }
 
-/**
- * Convert a tile index to its row and column position
- */
+// This function is currently unused but may be needed for future features
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getTilePosition(index: number, columns: number): TilePosition {
   const row = Math.floor(index / columns)
   const col = index % columns
@@ -42,7 +35,11 @@ function getTilePosition(index: number, columns: number): TilePosition {
 /**
  * Get all tile indices for a specific row
  */
-function getRowIndices(row: number, columns: number, totalTiles: number): number[] {
+function getRowIndices(
+  row: number,
+  columns: number,
+  totalTiles: number
+): number[] {
   const startIndex = row * columns
   const endIndex = Math.min(startIndex + columns, totalTiles)
   return Array.from({ length: endIndex - startIndex }, (_, i) => startIndex + i)
@@ -51,7 +48,11 @@ function getRowIndices(row: number, columns: number, totalTiles: number): number
 /**
  * Get all tile indices for a specific column
  */
-function getColumnIndices(col: number, rows: number, columns: number): number[] {
+function getColumnIndices(
+  col: number,
+  rows: number,
+  columns: number
+): number[] {
   const indices: number[] = []
   for (let row = 0; row < rows; row++) {
     const index = row * columns + col
@@ -87,7 +88,7 @@ async function checkPatternCompletion(
 ): Promise<boolean> {
   // Get tile IDs for the given indices
   const tileIds = tileIndices
-    .map(index => allTiles.find(t => t.index === index)?.id)
+    .map((index) => allTiles.find((t) => t.index === index)?.id)
     .filter((id): id is string => id !== undefined)
 
   if (tileIds.length !== tileIndices.length) {
@@ -159,10 +160,15 @@ export async function getCompletedPatterns(
   // Check rows
   for (let row = 0; row < bingo.rows; row++) {
     const rowIndices = getRowIndices(row, bingo.columns, allTiles.length)
-    const isComplete = await checkPatternCompletion(rowIndices, bingoId, teamId, allTiles)
+    const isComplete = await checkPatternCompletion(
+      rowIndices,
+      bingoId,
+      teamId,
+      allTiles
+    )
 
     if (isComplete) {
-      const bonus = bingo.rowBonuses.find(rb => rb.rowIndex === row)
+      const bonus = bingo.rowBonuses.find((rb) => rb.rowIndex === row)
       const bonusXP = bonus?.bonusXP ?? 0
 
       if (bonusXP > 0) {
@@ -179,10 +185,15 @@ export async function getCompletedPatterns(
   // Check columns
   for (let col = 0; col < bingo.columns; col++) {
     const colIndices = getColumnIndices(col, bingo.rows, bingo.columns)
-    const isComplete = await checkPatternCompletion(colIndices, bingoId, teamId, allTiles)
+    const isComplete = await checkPatternCompletion(
+      colIndices,
+      bingoId,
+      teamId,
+      allTiles
+    )
 
     if (isComplete) {
-      const bonus = bingo.columnBonuses.find(cb => cb.columnIndex === col)
+      const bonus = bingo.columnBonuses.find((cb) => cb.columnIndex === col)
       const bonusXP = bonus?.bonusXP ?? 0
 
       if (bonusXP > 0) {
@@ -203,7 +214,12 @@ export async function getCompletedPatterns(
     // Main diagonal
     if (bingo.mainDiagonalBonusXP > 0) {
       const mainDiagIndices = getMainDiagonalIndices(size)
-      const isComplete = await checkPatternCompletion(mainDiagIndices, bingoId, teamId, allTiles)
+      const isComplete = await checkPatternCompletion(
+        mainDiagIndices,
+        bingoId,
+        teamId,
+        allTiles
+      )
 
       if (isComplete) {
         result.mainDiagonal = {
@@ -217,7 +233,12 @@ export async function getCompletedPatterns(
     // Anti-diagonal
     if (bingo.antiDiagonalBonusXP > 0) {
       const antiDiagIndices = getAntiDiagonalIndices(size)
-      const isComplete = await checkPatternCompletion(antiDiagIndices, bingoId, teamId, allTiles)
+      const isComplete = await checkPatternCompletion(
+        antiDiagIndices,
+        bingoId,
+        teamId,
+        allTiles
+      )
 
       if (isComplete) {
         result.antiDiagonal = {
@@ -232,7 +253,12 @@ export async function getCompletedPatterns(
   // Check complete board (all tiles completed)
   if (bingo.completeBoardBonusXP > 0) {
     const allTileIndices = Array.from({ length: allTiles.length }, (_, i) => i)
-    const isComplete = await checkPatternCompletion(allTileIndices, bingoId, teamId, allTiles)
+    const isComplete = await checkPatternCompletion(
+      allTileIndices,
+      bingoId,
+      teamId,
+      allTiles
+    )
 
     if (isComplete) {
       result.completeBoard = {

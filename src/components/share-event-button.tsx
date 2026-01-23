@@ -31,7 +31,7 @@ export function ShareEventButton({ eventId, eventTitle, isPublic }: ShareEventBu
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydration pattern for SSR
     setIsMounted(true)
     if (typeof window !== "undefined") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Browser-only URL generation
+       
       setPublicUrl(`${window.location.origin}/public/events/${eventId}`)
     }
   }, [eventId])

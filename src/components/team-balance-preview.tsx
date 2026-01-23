@@ -1,6 +1,12 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Users, TrendingUp, Activity } from "lucide-react"
@@ -22,7 +28,10 @@ interface TeamBalancePreviewProps {
   loading?: boolean
 }
 
-export function TeamBalancePreview({ metrics, loading }: TeamBalancePreviewProps) {
+export function TeamBalancePreview({
+  metrics,
+  loading,
+}: TeamBalancePreviewProps) {
   if (loading) {
     return (
       <Card>
@@ -66,9 +75,12 @@ export function TeamBalancePreview({ metrics, loading }: TeamBalancePreviewProps
 
   // Get balance status
   const getBalanceStatus = () => {
-    if (metrics.standardDeviation < 0.1) return { label: "Excellent", color: "bg-green-500" }
-    if (metrics.standardDeviation < 0.15) return { label: "Good", color: "bg-blue-500" }
-    if (metrics.standardDeviation < 0.2) return { label: "Fair", color: "bg-yellow-500" }
+    if (metrics.standardDeviation < 0.1)
+      return { label: "Excellent", color: "bg-green-500" }
+    if (metrics.standardDeviation < 0.15)
+      return { label: "Good", color: "bg-blue-500" }
+    if (metrics.standardDeviation < 0.2)
+      return { label: "Fair", color: "bg-yellow-500" }
     return { label: "Poor", color: "bg-red-500" }
   }
 
@@ -87,16 +99,16 @@ export function TeamBalancePreview({ metrics, loading }: TeamBalancePreviewProps
               Statistical balance across {metrics.teams.length} teams
             </CardDescription>
           </div>
-          <Badge className={balanceStatus.color}>
-            {balanceStatus.label}
-          </Badge>
+          <Badge className={balanceStatus.color}>{balanceStatus.label}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Overall Metrics */}
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">Overall Average</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Overall Average
+            </p>
             <p className="text-2xl font-bold">
               {(metrics.overallAverage * 100).toFixed(1)}
             </p>
@@ -104,7 +116,9 @@ export function TeamBalancePreview({ metrics, loading }: TeamBalancePreviewProps
           </div>
 
           <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">Variance</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Variance
+            </p>
             <p className="text-2xl font-bold">
               {(metrics.variance * 100).toFixed(2)}
             </p>
@@ -112,7 +126,9 @@ export function TeamBalancePreview({ metrics, loading }: TeamBalancePreviewProps
           </div>
 
           <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">Std. Deviation</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Std. Deviation
+            </p>
             <p className="text-2xl font-bold">
               {(metrics.standardDeviation * 100).toFixed(2)}
             </p>
@@ -136,16 +152,21 @@ export function TeamBalancePreview({ metrics, loading }: TeamBalancePreviewProps
           <p className="text-sm font-medium">Team Strength Distribution</p>
           {metrics.teams
             .sort((a, b) => b.averageScore - a.averageScore)
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             .map((team, index) => {
               const scorePercentage = team.averageScore * 100
               const deviation =
-                ((team.averageScore - metrics.overallAverage) / metrics.overallAverage) * 100
+                ((team.averageScore - metrics.overallAverage) /
+                  metrics.overallAverage) *
+                100
 
               return (
                 <div key={team.teamId} className="space-y-1">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{team.teamName}</span>
+                      <span className="text-sm font-medium">
+                        {team.teamName}
+                      </span>
                       <Badge variant="outline" className="h-5">
                         <Users className="mr-1 h-3 w-3" />
                         {team.memberCount}
@@ -185,8 +206,8 @@ export function TeamBalancePreview({ metrics, loading }: TeamBalancePreviewProps
               Balance Suggestion
             </p>
             <p className="text-xs text-yellow-700 dark:text-yellow-300">
-              Teams have significant strength differences. Consider adjusting weight sliders or
-              manually reassigning players to improve balance.
+              Teams have significant strength differences. Consider adjusting
+              weight sliders or manually reassigning players to improve balance.
             </p>
           </div>
         )}

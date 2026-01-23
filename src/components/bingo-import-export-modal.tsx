@@ -11,14 +11,23 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
-import { Download, Upload, FileJson, AlertCircle, CheckCircle } from "lucide-react"
-import { exportBingoBoard, importBingoBoard, validateImportData } from "@/app/actions/bingo-import-export"
+import {
+  Download,
+  Upload,
+  FileJson,
+  AlertCircle,
+  CheckCircle,
+} from "lucide-react"
+import {
+  exportBingoBoard,
+  importBingoBoard,
+  validateImportData,
+} from "@/app/actions/bingo-import-export"
 import type { ExportedBingo } from "@/app/actions/bingo-import-export"
 import { useRouter } from "next/navigation"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -32,11 +41,20 @@ interface BingoImportExportModalProps {
   onClose: () => void
 }
 
-export function BingoImportExportModal({ eventId, bingoId, bingoTitle, isOpen, onClose }: BingoImportExportModalProps) {
+export function BingoImportExportModal({
+  eventId,
+  bingoId,
+  bingoTitle,
+  isOpen,
+  onClose,
+}: BingoImportExportModalProps) {
   const [activeTab, setActiveTab] = useState<"import" | "export">("import")
   const [isLoading, setIsLoading] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
-  const [validationResult, setValidationResult] = useState<{ valid: boolean; error?: string } | null>(null)
+  const [validationResult, setValidationResult] = useState<{
+    valid: boolean
+    error?: string
+  } | null>(null)
   const [importProgress, setImportProgress] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
@@ -63,6 +81,7 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle, isOpen, o
         jsonData = JSON.parse(fileContent)
         setImportProgress(75)
       } catch (error) {
+        console.error("Invalid JSON format:", error)
         setValidationResult({ valid: false, error: "Invalid JSON format" })
         setImportProgress(0)
         return
@@ -73,6 +92,7 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle, isOpen, o
       setValidationResult(validation)
       setImportProgress(validation.valid ? 100 : 0)
     } catch (error) {
+      console.error("Error reading file:", error)
       setValidationResult({ valid: false, error: "Error reading file" })
       setImportProgress(0)
     }
@@ -111,7 +131,10 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle, isOpen, o
     } catch (error) {
       toast({
         title: "Import error",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
         variant: "destructive",
       })
     } finally {
@@ -139,8 +162,10 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle, isOpen, o
       }
 
       // Create a downloadable file
-      const fileName = `bingo-${bingoTitle?.toLowerCase().replace(/\s+/g, "-") ?? 'export'}-${new Date().toISOString().split("T")[0]}.json`
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" })
+      const fileName = `bingo-${bingoTitle?.toLowerCase().replace(/\s+/g, "-") ?? "export"}-${new Date().toISOString().split("T")[0]}.json`
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: "application/json",
+      })
       const url = URL.createObjectURL(blob)
 
       // Create a temporary link and trigger download
@@ -161,7 +186,10 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle, isOpen, o
     } catch (error) {
       toast({
         title: "Export error",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
         variant: "destructive",
       })
     } finally {
@@ -174,7 +202,9 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle, isOpen, o
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Bingo Board Import/Export</DialogTitle>
-          <DialogDescription>Import a bingo board from a file or export the current board.</DialogDescription>
+          <DialogDescription>
+            Import a bingo board from a file or export the current board.
+          </DialogDescription>
         </DialogHeader>
 
         <Tabs
@@ -187,7 +217,11 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle, isOpen, o
               <Upload className="h-4 w-4" />
               <span>Import</span>
             </TabsTrigger>
-            <TabsTrigger value="export" className="flex items-center gap-2" disabled={!bingoId}>
+            <TabsTrigger
+              value="export"
+              className="flex items-center gap-2"
+              disabled={!bingoId}
+            >
               <Download className="h-4 w-4" />
               <span>Export</span>
             </TabsTrigger>
@@ -205,22 +239,31 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle, isOpen, o
                 className="cursor-pointer"
               />
 
-              {importProgress > 0 && importProgress < 100 && <Progress value={importProgress} className="h-2 mt-2" />}
+              {importProgress > 0 && importProgress < 100 && (
+                <Progress value={importProgress} className="mt-2 h-2" />
+              )}
 
               {validationResult && (
-                <Alert variant={validationResult.valid ? "default" : "destructive"} className="mt-4">
+                <Alert
+                  variant={validationResult.valid ? "default" : "destructive"}
+                  className="mt-4"
+                >
                   {validationResult.valid ? (
                     <>
                       <CheckCircle className="h-4 w-4" />
                       <AlertTitle>Valid Bingo Board</AlertTitle>
-                      <AlertDescription>The file contains a valid bingo board that can be imported.</AlertDescription>
+                      <AlertDescription>
+                        The file contains a valid bingo board that can be
+                        imported.
+                      </AlertDescription>
                     </>
                   ) : (
                     <>
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>Invalid Bingo Board</AlertTitle>
                       <AlertDescription>
-                        {validationResult.error ?? "The file does not contain a valid bingo board."}
+                        {validationResult.error ??
+                          "The file does not contain a valid bingo board."}
                       </AlertDescription>
                     </>
                   )}
@@ -236,8 +279,9 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle, isOpen, o
                   <FileJson className="h-4 w-4" />
                   <AlertTitle>Ready to Export</AlertTitle>
                   <AlertDescription>
-                    You are about to export the bingo board &quot;{bingoTitle}&quot;. The export will include all tiles, goals,
-                    and board settings.
+                    You are about to export the bingo board &quot;{bingoTitle}
+                    &quot;. The export will include all tiles, goals, and board
+                    settings.
                   </AlertDescription>
                 </Alert>
               </div>
@@ -245,7 +289,9 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle, isOpen, o
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>No Bingo Board Selected</AlertTitle>
-                <AlertDescription>Please select a bingo board to export.</AlertDescription>
+                <AlertDescription>
+                  Please select a bingo board to export.
+                </AlertDescription>
               </Alert>
             )}
           </TabsContent>
@@ -256,7 +302,10 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle, isOpen, o
             Cancel
           </Button>
           {activeTab === "import" ? (
-            <Button onClick={handleImport} disabled={!importFile || !validationResult?.valid || isLoading}>
+            <Button
+              onClick={handleImport}
+              disabled={!importFile || !validationResult?.valid || isLoading}
+            >
               {isLoading ? "Importing..." : "Import Board"}
             </Button>
           ) : (
@@ -269,4 +318,3 @@ export function BingoImportExportModal({ eventId, bingoId, bingoTitle, isOpen, o
     </Dialog>
   )
 }
-

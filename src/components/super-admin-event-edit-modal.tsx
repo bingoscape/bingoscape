@@ -3,13 +3,25 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { updateEvent, getAllClansForDropdown } from "@/app/actions/super-admin"
 import { useToast } from "@/hooks/use-toast"
 import { Edit } from "lucide-react"
@@ -29,7 +41,9 @@ interface SuperAdminEventEditModalProps {
   event: Event
 }
 
-export function SuperAdminEventEditModal({ event }: SuperAdminEventEditModalProps) {
+export function SuperAdminEventEditModal({
+  event,
+}: SuperAdminEventEditModalProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [clans, setClans] = useState<Array<{ id: string; name: string }>>([])
@@ -46,7 +60,11 @@ export function SuperAdminEventEditModal({ event }: SuperAdminEventEditModalProp
 
   useEffect(() => {
     if (open) {
-      getAllClansForDropdown().then(setClans).catch((error) => { console.error("Failed to fetch clans:", error) })
+      getAllClansForDropdown()
+        .then(setClans)
+        .catch((error) => {
+          console.error("Failed to fetch clans:", error)
+        })
     }
   }, [open])
 
@@ -72,6 +90,7 @@ export function SuperAdminEventEditModal({ event }: SuperAdminEventEditModalProp
 
       setOpen(false)
     } catch (error) {
+      console.error("Failed to update event:", error)
       toast({
         title: "Error",
         description: "Failed to update event. Please try again.",
@@ -86,11 +105,11 @@ export function SuperAdminEventEditModal({ event }: SuperAdminEventEditModalProp
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          <Edit className="h-4 w-4 mr-2" />
+          <Edit className="mr-2 h-4 w-4" />
           Edit Event
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-h-[80vh] max-w-md overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Event</DialogTitle>
         </DialogHeader>
@@ -100,7 +119,9 @@ export function SuperAdminEventEditModal({ event }: SuperAdminEventEditModalProp
             <Input
               id="title"
               value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
               placeholder="Event title"
               required
             />
@@ -110,7 +131,9 @@ export function SuperAdminEventEditModal({ event }: SuperAdminEventEditModalProp
             <Textarea
               id="description"
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               placeholder="Event description"
               rows={3}
             />
@@ -121,7 +144,9 @@ export function SuperAdminEventEditModal({ event }: SuperAdminEventEditModalProp
               id="startDate"
               type="datetime-local"
               value={formData.startDate}
-              onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, startDate: e.target.value })
+              }
               required
             />
           </div>
@@ -131,13 +156,20 @@ export function SuperAdminEventEditModal({ event }: SuperAdminEventEditModalProp
               id="endDate"
               type="datetime-local"
               value={formData.endDate}
-              onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, endDate: e.target.value })
+              }
               required
             />
           </div>
           <div>
             <Label htmlFor="clan">Clan</Label>
-            <Select value={formData.clanId} onValueChange={(value) => setFormData({ ...formData, clanId: value })}>
+            <Select
+              value={formData.clanId}
+              onValueChange={(value) =>
+                setFormData({ ...formData, clanId: value })
+              }
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select clan" />
               </SelectTrigger>
@@ -155,7 +187,9 @@ export function SuperAdminEventEditModal({ event }: SuperAdminEventEditModalProp
             <Switch
               id="locked"
               checked={formData.locked}
-              onCheckedChange={(checked) => setFormData({ ...formData, locked: checked })}
+              onCheckedChange={(checked) =>
+                setFormData({ ...formData, locked: checked })
+              }
             />
             <Label htmlFor="locked">Event Locked</Label>
           </div>
@@ -163,12 +197,18 @@ export function SuperAdminEventEditModal({ event }: SuperAdminEventEditModalProp
             <Switch
               id="public"
               checked={formData.public}
-              onCheckedChange={(checked) => setFormData({ ...formData, public: checked })}
+              onCheckedChange={(checked) =>
+                setFormData({ ...formData, public: checked })
+              }
             />
             <Label htmlFor="public">Public Event</Label>
           </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>

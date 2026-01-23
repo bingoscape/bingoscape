@@ -2,10 +2,10 @@
 
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
-import { playerMetadata, eventParticipants, events } from "@/server/db/schema"
+import { playerMetadata, eventParticipants } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
-import { fetchPlayerDataFromWOM, type WOMPlayerData } from "./wiseoldman"
+import { fetchPlayerDataFromWOM } from "./wiseoldman"
 
 /**
  * Get player metadata for a specific user in a specific event
@@ -83,8 +83,13 @@ export async function updatePlayerMetadata(
     ),
   })
 
-  if (!participant || (participant.role !== "management" && participant.role !== "admin")) {
-    throw new Error("Unauthorized: You must be a management user for this event")
+  if (
+    !participant ||
+    (participant.role !== "management" && participant.role !== "admin")
+  ) {
+    throw new Error(
+      "Unauthorized: You must be a management user for this event"
+    )
   }
 
   // Check if metadata already exists
@@ -98,7 +103,7 @@ export async function updatePlayerMetadata(
   let result
   if (existing) {
     // Update existing metadata
-    [result] = await db
+    ;[result] = await db
       .update(playerMetadata)
       .set({
         ...data,
@@ -108,7 +113,7 @@ export async function updatePlayerMetadata(
       .returning()
   } else {
     // Create new metadata
-    [result] = await db
+    ;[result] = await db
       .insert(playerMetadata)
       .values({
         userId,
@@ -169,7 +174,7 @@ export async function updateOwnPlayerMetadata(
   let result
   if (existing) {
     // Update existing metadata
-    [result] = await db
+    ;[result] = await db
       .update(playerMetadata)
       .set({
         ...allowedData,
@@ -179,7 +184,7 @@ export async function updateOwnPlayerMetadata(
       .returning()
   } else {
     // Create new metadata
-    [result] = await db
+    ;[result] = await db
       .insert(playerMetadata)
       .values({
         userId: session.user.id,
@@ -211,8 +216,13 @@ export async function deletePlayerMetadata(userId: string, eventId: string) {
     ),
   })
 
-  if (!participant || (participant.role !== "management" && participant.role !== "admin")) {
-    throw new Error("Unauthorized: You must be a management user for this event")
+  if (
+    !participant ||
+    (participant.role !== "management" && participant.role !== "admin")
+  ) {
+    throw new Error(
+      "Unauthorized: You must be a management user for this event"
+    )
   }
 
   await db
@@ -272,8 +282,13 @@ export async function fetchWOMDataForPlayer(
     ),
   })
 
-  if (!participant || (participant.role !== "management" && participant.role !== "admin")) {
-    throw new Error("Unauthorized: You must be a management user for this event")
+  if (
+    !participant ||
+    (participant.role !== "management" && participant.role !== "admin")
+  ) {
+    throw new Error(
+      "Unauthorized: You must be a management user for this event"
+    )
   }
 
   // Fetch from WiseOldMan

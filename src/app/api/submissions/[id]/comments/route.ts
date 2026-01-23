@@ -1,18 +1,24 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/server/auth"
 import { db } from "@/server/db"
 import { submissionComments, submissions, users } from "@/server/db/schema"
-import { eq, and, desc } from "drizzle-orm"
+import { eq, desc } from "drizzle-orm"
 import { z } from "zod"
 
 const createCommentSchema = z.object({
-  comment: z.string().min(10, "Comment must be at least 10 characters").max(500, "Comment must be at most 500 characters"),
+  comment: z
+    .string()
+    .min(10, "Comment must be at least 10 characters")
+    .max(500, "Comment must be at most 500 characters"),
 })
 
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+export async function GET(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
+  const params = await props.params
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
@@ -50,8 +56,11 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
   }
 }
 
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+export async function POST(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
+  const params = await props.params
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
@@ -59,7 +68,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     }
 
     const submissionId = params.id
-    const body = await request.json() // eslint-disable-line
+    const body = await request.json()
 
     // Validate request body
     const validatedData = createCommentSchema.parse(body)
