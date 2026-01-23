@@ -1704,7 +1704,7 @@ export async function calculateEventPrizePool(eventId: string) {
       totalDonations,
       totalPrizePool,
     };
-    console.table(all);
+    // console.table(all);
     return all;
   } catch (error) {
     logger.error({ error }, "Error calculating event prize pool:", error);
