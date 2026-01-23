@@ -178,7 +178,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./observability/tempo/tempo-config.yml:/etc/tempo/tempo.yaml:ro
-      - tempo_data:/tmp/tempo
+      - tempo_data:/var/tempo
     command: -config.file=/etc/tempo/tempo.yaml
     ports:
       - "127.0.0.1:3200:3200" # Tempo HTTP

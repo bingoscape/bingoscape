@@ -15,14 +15,18 @@ distributor:
         http:
           endpoint: 0.0.0.0:4318
 
+# Ingester configuration
+ingester:
+  max_block_duration: 5m
+
 # Storage configuration
 storage:
   trace:
     backend: local
     wal:
-      path: /tmp/tempo/wal
+      path: /var/tempo/wal
     local:
-      path: /tmp/tempo/blocks
+      path: /var/tempo/blocks
     pool:
       max_workers: 100
       queue_depth: 10000
@@ -33,6 +37,11 @@ query_frontend:
     default_result_limit: 20
     max_result_limit: 100
 
+# Querier configuration
+querier:
+  frontend_worker:
+    frontend_address: localhost:3200
+
 # Metrics generator for service graphs and span metrics
 metrics_generator:
   registry:
@@ -40,12 +49,10 @@ metrics_generator:
       source: tempo
       cluster: bingoscape
   storage:
-    path: /tmp/tempo/generator/wal
+    path: /var/tempo/generator/wal
     remote_write:
       - url: http://prometheus:9090/api/v1/write
         send_exemplars: true
-
-  # Generate service graph metrics showing dependencies
   processor:
     service_graphs:
       dimensions:
@@ -54,8 +61,6 @@ metrics_generator:
         - http.status_code
       max_items: 10000
       wait: 10s
-
-    # Generate span metrics for RED metrics (Rate, Errors, Duration)
     span_metrics:
       dimensions:
         - http.method
@@ -63,11 +68,8 @@ metrics_generator:
         - http.status_code
         - service.name
       enable_target_info: true
-
-# Compactor merges blocks and removes expired data
-compactor:
-  compaction:
-    block_retention: 720h # 30 days (matches Prometheus/Loki)
+  traces_storage:
+    path: /var/tempo/generator/traces
 
 # Overrides for rate limiting and retention
 overrides:
