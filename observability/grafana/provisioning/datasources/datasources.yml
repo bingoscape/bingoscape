@@ -19,6 +19,10 @@ datasources:
       manageAlerts: true
       prometheusType: Prometheus
       prometheusVersion: "2.47.0"
+      exemplarTraceIdDestinations:
+        # Link exemplars to Tempo traces
+        - name: traceID
+          datasourceUid: tempo
 
   # Loki - Log aggregation
   - name: Loki
@@ -31,6 +35,60 @@ datasources:
     jsonData:
       maxLines: 1000
       timeout: 60
+      derivedFields:
+        # Link logs to traces via traceId field
+        - datasourceUid: tempo
+          matcherRegex: "traceId[\"=:]\\s*([0-9a-f]{32})"
+          name: TraceID
+          url: "$${__value.raw}"
+
+  # Tempo - Distributed tracing
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    orgId: 1
+    access: proxy
+    url: http://tempo:3200
+    editable: false
+    jsonData:
+      httpMethod: GET
+      tracesToLogs:
+        # Link traces to logs in Loki
+        datasourceUid: loki
+        tags:
+          - key: service.name
+            value: service
+        mappedTags:
+          - key: http.method
+            value: method
+          - key: http.status_code
+            value: status
+        mapTagNamesEnabled: true
+        spanStartTimeShift: "-1m"
+        spanEndTimeShift: "1m"
+        filterByTraceID: true
+        filterBySpanID: false
+      tracesToMetrics:
+        # Link traces to metrics in Prometheus
+        datasourceUid: prometheus
+        tags:
+          - key: service.name
+            value: service
+          - key: http.method
+            value: method
+        queries:
+          - name: Request Rate
+            query: "rate(http_requests_total{$$__tags}[5m])"
+          - name: Request Duration
+            query: "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{$$__tags}[5m]))"
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true
+      search:
+        hide: false
+      lokiSearch:
+        datasourceUid: loki
 
   # Alertmanager - Alert routing
   - name: Alertmanager

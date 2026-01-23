@@ -177,6 +177,14 @@ jobs:
             PROMETHEUS_ENDPOINT="http://prometheus:9090"
             LOKI_ENDPOINT="http://loki:3100"
 
+            # ==============================================
+            # OPENTELEMETRY TRACING
+            # ==============================================
+            OTEL_EXPORTER_OTLP_ENDPOINT="http://tempo:4317"
+            OTEL_SERVICE_NAME="bingoscape-next"
+            OTEL_TRACES_SAMPLER="parentbased_traceidratio"
+            OTEL_TRACES_SAMPLER_ARG="0.1"
+
             NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}"
 
 

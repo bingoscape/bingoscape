@@ -1,0 +1,78 @@
+# Grafana Tempo Configuration
+# Distributed tracing backend for OpenTelemetry traces
+
+server:
+  http_listen_port: 3200
+  log_level: info
+
+# Distributor receives traces from OTLP exporters
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+# Storage configuration
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /tmp/tempo/wal
+    local:
+      path: /tmp/tempo/blocks
+    pool:
+      max_workers: 100
+      queue_depth: 10000
+
+# Query frontend for trace search
+query_frontend:
+  search:
+    default_result_limit: 20
+    max_result_limit: 100
+
+# Metrics generator for service graphs and span metrics
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+      cluster: bingoscape
+  storage:
+    path: /tmp/tempo/generator/wal
+    remote_write:
+      - url: http://prometheus:9090/api/v1/write
+        send_exemplars: true
+
+  # Generate service graph metrics showing dependencies
+  processor:
+    service_graphs:
+      dimensions:
+        - http.method
+        - http.target
+        - http.status_code
+      max_items: 10000
+      wait: 10s
+
+    # Generate span metrics for RED metrics (Rate, Errors, Duration)
+    span_metrics:
+      dimensions:
+        - http.method
+        - http.target
+        - http.status_code
+        - service.name
+      enable_target_info: true
+
+# Compactor merges blocks and removes expired data
+compactor:
+  compaction:
+    block_retention: 720h # 30 days (matches Prometheus/Loki)
+
+# Overrides for rate limiting and retention
+overrides:
+  defaults:
+    metrics_generator:
+      processors:
+        - service-graphs
+        - span-metrics
