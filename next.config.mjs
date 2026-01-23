@@ -2,7 +2,7 @@
  * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially useful
  * for Docker builds.
  */
-await import("./src/env.js");
+await import("./src/env.js")
 
 /** @type {import("next").NextConfig} */
 const config = {
@@ -12,6 +12,7 @@ const config = {
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",
+      proxyBodySizeLimit: "10mb",
     },
   },
   // Empty turbopack config to indicate we're aware of the Turbopack default
@@ -21,9 +22,9 @@ const config = {
     if (isServer) {
       config.ignoreWarnings = [
         { message: /Package import-in-the-middle can't be external/ },
-      ];
+      ]
     }
-    return config;
+    return config
   },
   images: {
     dangerouslyAllowSVG: true,
@@ -42,8 +43,8 @@ const config = {
         source: "/uploads/:path",
         destination: "/api/uploads/:path",
       },
-    ];
+    ]
   },
-};
+}
 
-export default config;
+export default config
