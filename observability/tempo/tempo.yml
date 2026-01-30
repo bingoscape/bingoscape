@@ -1,5 +1,5 @@
 # Grafana Tempo Configuration
-# Simplified configuration compatible with latest Tempo versions
+# Simplified configuration compatible with Tempo v2.x
 
 server:
   http_listen_port: 3200
@@ -18,27 +18,6 @@ distributor:
 ingester:
   max_block_duration: 5m
 
-compactor:
-  working_directory: /data/retention
-  compaction_interval: 10m
-  retention_enabled: true
-  retention_delete_delay: 2h
-  retention_delete_worker_count: 150
-  delete_request_store: filesystem
-
-metrics_generator:
-  registry:
-    external_labels:
-      source: tempo
-      cluster: bingoscape
-  storage:
-    path: /tmp/tempo/generator/wal
-    remote_write:
-      - url: http://prometheus:9090/api/v1/write
-        send_exemplars: true
-  traces_storage:
-    path: /tmp/tempo/generator/traces
-
 storage:
   trace:
     backend: local
@@ -46,20 +25,10 @@ storage:
       path: /tmp/tempo/wal
     local:
       path: /tmp/tempo/blocks
-    pool:
-      max_workers: 100
-      queue_depth: 10000
 
 # Disable multi-tenancy for simplicity
 overrides:
-  metrics_generator_processors:
-    - service-graphs
-    - span-metrics
-
-# Query settings
-query_frontend:
-  search:
-    max_duration: 0
+  per_tenant_override_config: /etc/tempo/overrides.yml
 
 # Disable usage reporting
 usage_report:
