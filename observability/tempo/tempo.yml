@@ -1,5 +1,5 @@
 # Grafana Tempo Configuration
-# Tempo is a distributed tracing backend optimized for cost-effective storage
+# Simplified configuration compatible with latest Tempo versions
 
 server:
   http_listen_port: 3200
@@ -17,17 +17,10 @@ distributor:
 
 ingester:
   max_block_duration: 5m
-  max_block_bytes: 1_000_000
-  complete_block_timeout: 30m
 
 compactor:
   compaction:
     block_retention: 720h # 30 days retention
-    compacted_block_retention: 1h
-    compaction_window: 1h
-    max_compaction_objects: 1000000
-    max_block_bytes: 107_374_182_400 # 100GB
-    retention_concurrency: 10
 
 metrics_generator:
   registry:
@@ -39,79 +32,31 @@ metrics_generator:
     remote_write:
       - url: http://prometheus:9090/api/v1/write
         send_exemplars: true
-
-  # Generate service graphs from traces
-  processor:
-    service_graphs:
-      dimensions:
-        - http.method
-        - http.target
-        - http.status_code
-      histogram_buckets: [0.1, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 12.8]
-
-    # Generate span metrics
-    span_metrics:
-      dimensions:
-        - http.method
-        - http.target
-        - http.status_code
-        - service.name
-      histogram_buckets:
-        [
-          0.002,
-          0.004,
-          0.008,
-          0.016,
-          0.032,
-          0.064,
-          0.128,
-          0.256,
-          0.512,
-          1.024,
-          2.048,
-          4.096,
-          8.192,
-          16.384,
-        ]
+  traces_storage:
+    path: /tmp/tempo/generator/traces
 
 storage:
   trace:
     backend: local
     wal:
       path: /tmp/tempo/wal
-      encoding: snappy
     local:
       path: /tmp/tempo/blocks
     pool:
       max_workers: 100
       queue_depth: 10000
 
-# Enable multi-tenancy (single tenant for simplicity)
-multitenancy_enabled: false
+# Disable multi-tenancy for simplicity
+overrides:
+  metrics_generator_processors:
+    - service-graphs
+    - span-metrics
 
 # Query settings
 query_frontend:
   search:
     max_duration: 0
-    query_backend_after: 0
-    concurrent_jobs: 1000
-    target_bytes_per_job: 104857600 # 100MB
 
-overrides:
-  defaults:
-    metrics_generator:
-      processors: [service-graphs, span-metrics]
-
-    # Max search duration (0 = unlimited)
-    max_search_duration: 0
-
-    # Max bytes per trace (10MB)
-    max_bytes_per_trace: 10485760
-
-    # Ingestion rate limits (0 = unlimited)
-    ingestion_rate_limit_bytes: 0
-    ingestion_burst_size_bytes: 0
-
-# Enable complete block deletion
+# Disable usage reporting
 usage_report:
   reporting_enabled: false

@@ -28,12 +28,24 @@ export async function register() {
 
 // Custom request error handler
 export function onRequestError(error: Error, request: Request) {
+  // Safely extract headers - request.headers might not have .entries() in all contexts
+  let headers: Record<string, string> = {}
+
+  try {
+    if (request.headers && typeof request.headers.entries === "function") {
+      headers = Object.fromEntries(request.headers.entries())
+    }
+  } catch (e) {
+    // If header extraction fails, continue without headers
+    headers = { error: "Could not extract headers" }
+  }
+
   logger.error(
     {
       error,
       url: request.url,
       method: request.method,
-      headers: Object.fromEntries(request.headers.entries()),
+      headers,
     },
     "Request error occurred"
   )
