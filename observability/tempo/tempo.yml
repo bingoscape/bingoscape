@@ -26,10 +26,6 @@ storage:
     local:
       path: /tmp/tempo/blocks
 
-# Disable multi-tenancy for simplicity
-overrides:
-  per_tenant_override_config: /etc/tempo/overrides.yml
-
 # Disable usage reporting
 usage_report:
   reporting_enabled: false
