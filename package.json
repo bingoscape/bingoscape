@@ -9,6 +9,7 @@
     "db:generate": "env-cmd npx drizzle-kit generate",
     "db:migrate": "env-cmd npx drizzle-kit migrate",
     "db:push": "env-cmd npx drizzle-kit push --force",
+    "db:push:ci": "npx drizzle-kit push --force",
     "db:studio": "env-cmd npx drizzle-kit studio",
     "dev": "env-cmd next dev",
     "dbg": "NODE_OPTIONS='--inspect' env-cmd next dev",

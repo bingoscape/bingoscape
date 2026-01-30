@@ -105,7 +105,7 @@ services:
       SKIP_ENV_VALIDATION: "1"
       NODE_ENV: production
     working_dir: /app
-    command: npm run db:push
+    command: npm run db:push:ci
     networks:
       - bingoscape-network
     profiles:
