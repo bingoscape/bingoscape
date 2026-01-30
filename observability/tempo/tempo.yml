@@ -19,8 +19,12 @@ ingester:
   max_block_duration: 5m
 
 compactor:
-  compaction:
-    block_retention: 720h # 30 days retention
+  working_directory: /data/retention
+  compaction_interval: 10m
+  retention_enabled: true
+  retention_delete_delay: 2h
+  retention_delete_worker_count: 150
+  delete_request_store: filesystem
 
 metrics_generator:
   registry:
