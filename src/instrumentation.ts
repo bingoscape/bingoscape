@@ -1,17 +1,28 @@
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger"
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    logger.info("Initializing observability for Node.js runtime");
+    logger.info("Initializing observability for Node.js runtime")
+
+    // Initialize OpenTelemetry tracing first (before other imports)
+    if (process.env.OTEL_ENABLED === "true") {
+      logger.info("Initializing OpenTelemetry tracing")
+      await import("@/lib/tracing")
+      logger.info("OpenTelemetry tracing initialized")
+    }
 
     // Initialize metrics collection
-    await import("@/lib/metrics");
+    await import("@/lib/metrics")
 
-    logger.info("Observability initialized successfully");
+    logger.info("Observability initialized successfully")
   }
 
   if (process.env.NEXT_RUNTIME === "edge") {
-    logger.info("Initializing observability for Edge runtime");
+    logger.info("Initializing observability for Edge runtime")
+    // Edge runtime has limited OTel support, use lightweight instrumentation
+    if (process.env.OTEL_ENABLED === "true") {
+      logger.info("Edge runtime tracing enabled")
+    }
   }
 }
 
@@ -24,6 +35,6 @@ export function onRequestError(error: Error, request: Request) {
       method: request.method,
       headers: Object.fromEntries(request.headers.entries()),
     },
-    "Request error occurred",
-  );
+    "Request error occurred"
+  )
 }

@@ -9,7 +9,9 @@ const config = {
   // Enable standalone output for optimized Docker builds
   output: "standalone",
 
+  // Enable OpenTelemetry instrumentation
   experimental: {
+    instrumentationHook: true,
     serverActions: {
       bodySizeLimit: "10mb",
       proxyBodySizeLimit: "10mb",

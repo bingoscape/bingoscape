@@ -31,6 +31,15 @@ datasources:
     jsonData:
       maxLines: 1000
       timeout: 60
+      derivedFields:
+        - datasourceUid: tempo
+          matcherRegex: "trace_id[\"=:]\\s*([\\da-f]+)"
+          name: TraceID
+          url: "$${__value.raw}"
+        - datasourceUid: tempo
+          matcherRegex: "traceId[\"=:]\\s*([\\da-f]+)"
+          name: TraceID
+          url: "$${__value.raw}"
 
   # Alertmanager - Alert routing
   - name: Alertmanager
@@ -43,3 +52,42 @@ datasources:
     jsonData:
       implementation: prometheus
       handleGrafanaManagedAlerts: true
+
+  # Tempo - Distributed tracing
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    orgId: 1
+    access: proxy
+    url: http://tempo:3200
+    editable: false
+    jsonData:
+      httpMethod: GET
+      serviceMap:
+        datasourceUid: prometheus
+      tracesToLogs:
+        datasourceUid: loki
+        tags:
+          - trace_id
+          - traceId
+        mappedTags:
+          - key: service.name
+            value: service_name
+        mapTagNamesEnabled: true
+        spanStartTimeShift: -1m
+        spanEndTimeShift: 1m
+        filterByTraceID: true
+        filterBySpanID: true
+      tracesToMetrics:
+        datasourceUid: prometheus
+        tags:
+          - key: service.name
+            value: service_name
+        spanStartTimeShift: -1m
+        spanEndTimeShift: 1m
+      nodeGraph:
+        enabled: true
+      search:
+        hide: false
+      lokiSearch:
+        datasourceUid: loki

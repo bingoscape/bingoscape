@@ -1,0 +1,112 @@
+# OpenTelemetry Collector Configuration
+# This collector receives traces from the Next.js application,
+# applies tail sampling, and forwards to Grafana Tempo
+
+receivers:
+  # OTLP receiver for traces from Next.js app
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  # Batch processor: aggregate spans before export
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  # Memory limiter: prevent OOM by limiting memory usage
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  # Resource processor: add deployment metadata
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: ${DEPLOYMENT_ENVIRONMENT}
+        action: upsert
+      - key: service.namespace
+        value: bingoscape
+        action: upsert
+
+  # Tail sampling: intelligent trace sampling
+  # In production: keep 100% of errors/slow requests, 1% of normal
+  # In development: keep 100% of all traces
+  tail_sampling:
+    decision_wait: 10s
+    num_traces: 100000
+    expected_new_traces_per_sec: 100
+    policies:
+      # Policy 1: Always keep error traces
+      - name: errors
+        type: status_code
+        status_code:
+          status_codes:
+            - ERROR
+
+      # Policy 2: Keep slow requests (>500ms)
+      - name: slow_requests
+        type: latency
+        latency:
+          threshold_ms: 500
+
+      # Policy 3: Keep traces with specific attributes (high-value operations)
+      - name: critical_operations
+        type: string_attribute
+        string_attribute:
+          key: bingoscape.operation
+          values:
+            - bingo.complete
+            - buyin.transaction
+            - event.create
+          enabled_regex_matching: false
+
+      # Policy 4: Probabilistic sample (1% in prod, 100% in dev)
+      # Note: Set via environment variable TRACE_SAMPLE_RATE
+      - name: probabilistic_sample
+        type: probabilistic
+        probabilistic:
+          sampling_percentage: ${env:TRACE_SAMPLE_RATE}
+
+exporters:
+  # Export to Grafana Tempo
+  otlp:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  # Debug exporter (optional, for troubleshooting)
+  # Uncomment to see traces in collector logs
+  # debug:
+  #   verbosity: detailed
+  #   sampling_initial: 5
+  #   sampling_thereafter: 200
+
+extensions:
+  # Health check endpoint
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+  # pprof for profiling (optional)
+  pprof:
+    endpoint: 0.0.0.0:1777
+
+service:
+  extensions: [health_check, pprof]
+
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch, tail_sampling]
+      exporters: [otlp]
+
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      address: 0.0.0.0:8888

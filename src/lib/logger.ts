@@ -1,13 +1,28 @@
-import pino from "pino";
+import pino from "pino"
+import { trace } from "@opentelemetry/api"
 
 // Determine log level from environment
 const logLevel =
   process.env.LOG_LEVEL ||
-  (process.env.NODE_ENV === "production" ? "info" : "debug");
+  (process.env.NODE_ENV === "production" ? "info" : "debug")
 
 // Create the logger instance
 export const logger = pino({
   level: logLevel,
+
+  // Mixin: inject trace context into every log entry for correlation
+  mixin() {
+    const span = trace.getActiveSpan()
+    if (span) {
+      const spanContext = span.spanContext()
+      return {
+        trace_id: spanContext.traceId,
+        span_id: spanContext.spanId,
+        trace_flags: spanContext.traceFlags,
+      }
+    }
+    return {}
+  },
 
   // Production: JSON for structured logging (Loki)
   // Development: Pretty print for readability
@@ -15,7 +30,7 @@ export const logger = pino({
     ? {
         formatters: {
           level: (label) => {
-            return { level: label };
+            return { level: label }
           },
         },
         timestamp: pino.stdTimeFunctions.isoTime,
@@ -63,14 +78,14 @@ export const logger = pino({
     req: pino.stdSerializers.req,
     res: pino.stdSerializers.res,
   },
-});
+})
 
 /**
  * Create a child logger with additional context
  * @param context - Additional context to include in all logs from this logger
  */
 export function createLogger(context: Record<string, unknown>) {
-  return logger.child(context);
+  return logger.child(context)
 }
 
 /**
@@ -81,36 +96,36 @@ export function createLogger(context: Record<string, unknown>) {
 export async function withLogging<T>(
   fn: () => Promise<T>,
   context: {
-    operation: string;
-    userId?: string;
-    [key: string]: unknown;
-  },
+    operation: string
+    userId?: string
+    [key: string]: unknown
+  }
 ): Promise<T> {
-  const startTime = Date.now();
-  const childLogger = logger.child(context);
+  const startTime = Date.now()
+  const childLogger = logger.child(context)
 
   try {
-    childLogger.info({ event: "start" }, `Starting ${context.operation}`);
-    const result = await fn();
-    const duration = Date.now() - startTime;
+    childLogger.info({ event: "start" }, `Starting ${context.operation}`)
+    const result = await fn()
+    const duration = Date.now() - startTime
 
     childLogger.info(
       { event: "complete", duration },
-      `Completed ${context.operation} in ${duration}ms`,
-    );
+      `Completed ${context.operation} in ${duration}ms`
+    )
 
-    return result;
+    return result
   } catch (error) {
-    const duration = Date.now() - startTime;
+    const duration = Date.now() - startTime
 
     childLogger.error(
       { event: "error", error, duration },
-      `Failed ${context.operation} after ${duration}ms`,
-    );
+      `Failed ${context.operation} after ${duration}ms`
+    )
 
-    throw error;
+    throw error
   }
 }
 
 // Export default logger
-export default logger;
+export default logger
