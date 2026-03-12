@@ -1,14 +1,21 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "@/hooks/use-toast"
-import { updateProfile } from '@/app/actions/profile'
+import { updateProfile } from "@/app/actions/profile"
 
 interface User {
   id: string
@@ -21,6 +28,7 @@ interface User {
 export function UpdateRsnForm({ user }: { user: User }) {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const { update } = useSession()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -30,6 +38,8 @@ export function UpdateRsnForm({ user }: { user: User }) {
     try {
       const result = await updateProfile(formData)
       if (result.success) {
+        const runescapeName = formData.get("runescapeName") as string
+        await update({ runescapeName })
         toast({
           title: "Profile updated",
           description: "Your profile has been successfully updated.",
@@ -41,7 +51,8 @@ export function UpdateRsnForm({ user }: { user: User }) {
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       })
     } finally {
@@ -60,15 +71,22 @@ export function UpdateRsnForm({ user }: { user: User }) {
           <input type="hidden" name="id" value={user.id} />
 
           <div className="flex items-center space-x-4">
-            <Avatar className="w-20 h-20">
-              <AvatarImage src={user.image ?? undefined} alt={user.name ?? ''} />
-              <AvatarFallback>{user.name?.[0] ?? 'U'}</AvatarFallback>
+            <Avatar className="h-20 w-20">
+              <AvatarImage
+                src={user.image ?? undefined}
+                alt={user.name ?? ""}
+              />
+              <AvatarFallback>{user.name?.[0] ?? "U"}</AvatarFallback>
             </Avatar>
           </div>
 
           <div>
             <Label htmlFor="runescapeName">RuneScape Name</Label>
-            <Input id="runescapeName" name="runescapeName" defaultValue={user.runescapeName ?? ''} />
+            <Input
+              id="runescapeName"
+              name="runescapeName"
+              defaultValue={user.runescapeName ?? ""}
+            />
           </div>
 
           <Button type="submit" disabled={isLoading}>

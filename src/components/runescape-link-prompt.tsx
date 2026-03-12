@@ -1,8 +1,8 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import {
   Dialog,
   DialogContent,
@@ -15,12 +15,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
-import { linkRunescapeAccount } from '@/app/actions/user'
+import { linkRunescapeAccount } from "@/app/actions/user"
 
 export function RunescapeLinkPrompt() {
   const { data: session, update } = useSession()
   const [isOpen, setIsOpen] = useState(false)
-  const [runescapeName, setRunescapeName] = useState('')
+  const [runescapeName, setRunescapeName] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
 
@@ -36,7 +36,7 @@ export function RunescapeLinkPrompt() {
 
     try {
       await linkRunescapeAccount(runescapeName)
-      await update()
+      await update({ runescapeName })
       setIsOpen(false)
       toast({
         title: "Account Linked",
@@ -92,4 +92,3 @@ export function RunescapeLinkPrompt() {
     </Dialog>
   )
 }
-
