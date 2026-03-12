@@ -24,9 +24,62 @@
 ### Database
 
 - `npm run db:generate` - Generate Drizzle migrations
-- `npm run db:push` - Push schema to database (force)
-- `npm run db:migrate` - Run database migrations
+- `npm run db:push` - Push schema to database (force) - **⚠️ USE WITH CAUTION: Deletes data**
+- `npm run db:migrate` - Run database migrations - **✅ PREFERRED for production**
 - `npm run db:studio` - Open Drizzle Studio
+
+### Database Backups & Recovery
+
+**Backup Commands:**
+
+- `./scripts/backup-db.sh daily` - Create daily backup manually
+- `./scripts/backup-db.sh weekly` - Create weekly backup manually
+- `./scripts/backup-db.sh monthly` - Create monthly backup manually
+- `./scripts/backup-db.sh pre-deploy <git-sha>` - Create pre-deployment backup
+- `./scripts/setup-backup-cron.sh` - Setup automated backups (run once on server)
+
+**Restore Commands:**
+
+- `./scripts/restore-db.sh <backup-file>` - Restore database from backup
+  - Example: `./scripts/restore-db.sh backups/daily/daily-2026-03-12.sql.gz`
+  - Creates safety backup automatically before restore
+  - Interactive confirmation required
+
+**Verification:**
+
+- `./scripts/verify-backup.sh [backup-file]` - Verify backup is restorable
+  - Runs monthly via cron automatically
+  - Restores backup to temporary container and validates data
+
+**Backup Schedule (Automated via Cron):**
+
+- Daily: 3:00 AM (keep last 7)
+- Weekly: 2:00 AM Sunday (keep last 4)
+- Monthly: 1:00 AM on 1st (keep last 6)
+- Pre-deploy: Before each deployment (keep last 10)
+- Verification: 5:00 AM first Sunday of month
+
+**Backup Locations:**
+
+- Daily: `~/bingoscape/backups/daily/`
+- Weekly: `~/bingoscape/backups/weekly/`
+- Monthly: `~/bingoscape/backups/monthly/`
+- Pre-deploy: `~/bingoscape/backups/pre-deploy/`
+- Pre-restore: `~/bingoscape/backups/pre-restore/` (safety backups)
+
+**Logs:**
+
+- Backup logs: `~/bingoscape/backups/backup.log`
+- Verification logs: `~/bingoscape/backups/verification.log`
+
+**Important Notes:**
+
+- ⚠️ **ALWAYS use `db:migrate` for production** - Never use `db:push` which has `--force` flag
+- ✅ Pre-deployment backups are **automatic** via GitHub Actions
+- ✅ All backups are compressed SQL dumps (`.sql.gz` format)
+- ✅ Backups are validated automatically (file size and gzip integrity)
+- ✅ Restore creates safety backup before overwriting data
+- 📊 Monitor logs regularly to ensure backups complete successfully
 
 ## Code Style Guidelines
 

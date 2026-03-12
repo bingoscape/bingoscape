@@ -189,6 +189,21 @@ jobs:
             echo "🔐 Logging in to GitHub Container Registry..."
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
 
+            # Create pre-deployment backup
+            echo "💾 Creating pre-deployment backup..."
+            if [ -f "$APP_DIR/scripts/backup-db.sh" ]; then
+              # Create backup with git SHA for tracking
+              if $APP_DIR/scripts/backup-db.sh pre-deploy ${{ github.sha }}; then
+                echo "✅ Pre-deployment backup created successfully"
+              else
+                echo "❌ Pre-deployment backup failed!"
+                echo "⚠️  Aborting deployment for safety"
+                exit 1
+              fi
+            else
+              echo "⚠️  Warning: Backup script not found, skipping pre-deployment backup"
+            fi
+
             # Pull latest Docker image
             echo "📥 Pulling Docker image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.image_tag }}"
             docker compose pull
@@ -231,6 +246,21 @@ jobs:
             # Show recent logs
             echo "📋 Recent application logs:"
             docker compose logs --tail=20 app
+
+            # Clean up old pre-deploy backups (keep last 10)
+            echo "🧹 Cleaning up old pre-deploy backups..."
+            BACKUP_DIR="$APP_DIR/backups/pre-deploy"
+            BACKUP_COUNT=$(find "$BACKUP_DIR" -name "*.sql.gz" -type f 2>/dev/null | wc -l)
+            if [ "$BACKUP_COUNT" -gt 10 ]; then
+              TO_DELETE=$((BACKUP_COUNT - 10))
+              echo "Removing $TO_DELETE old backup(s) (keeping last 10)..."
+              find "$BACKUP_DIR" -name "*.sql.gz" -type f -printf '%T+ %p\n' 2>/dev/null | \
+                sort | head -n "$TO_DELETE" | cut -d' ' -f2- | \
+                xargs rm -f
+              echo "✅ Old backups cleaned up"
+            else
+              echo "Current pre-deploy backups: $BACKUP_COUNT (within limit)"
+            fi
 
             # Clean up temporary files
             echo "🧹 Cleaning up temporary files..."
