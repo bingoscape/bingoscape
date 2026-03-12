@@ -1,51 +1,68 @@
-'use server'
+"use server"
 
-import { getServerAuthSession } from "@/server/auth";
-import { db } from "@/server/db";
-import { clans, clanMembers, users, events, clanInvites } from "@/server/db/schema";
-import { eq, and, count, sql } from "drizzle-orm";
-import { type EventData, getTotalBuyInsForEvent } from "./events";
-import { nanoid } from "nanoid";
+import { getServerAuthSession } from "@/server/auth"
+import { db } from "@/server/db"
+import {
+  clans,
+  clanMembers,
+  users,
+  events,
+  clanInvites,
+  eventParticipants,
+} from "@/server/db/schema"
+import { eq, and, count, sql } from "drizzle-orm"
+import { type EventData, getTotalBuyInsForEvent, getUserRole } from "./events"
+import { nanoid } from "nanoid"
 
 export async function createClan(name: string, description: string) {
-  const session = await getServerAuthSession();
+  const session = await getServerAuthSession()
   if (!session || !session.user) {
-    throw new Error("You must be logged in to create a clan");
+    throw new Error("You must be logged in to create a clan")
   }
 
   const newClan = await db.transaction(async (tx) => {
-    const [clan] = await tx.insert(clans).values({
-      name,
-      description,
-      ownerId: session.user.id,
-    }).returning();
+    const [clan] = await tx
+      .insert(clans)
+      .values({
+        name,
+        description,
+        ownerId: session.user.id,
+      })
+      .returning()
 
     await tx.insert(clanMembers).values({
       clanId: clan!.id,
       userId: session.user.id,
       isMain: true,
-      role: 'admin'
-    });
+      role: "admin",
+    })
 
-    return clan;
-  });
+    return clan
+  })
 
-  return newClan;
+  return newClan
 }
 
 export async function joinClan(clanId: string, isMain = false) {
-  const session = await getServerAuthSession();
+  const session = await getServerAuthSession()
   if (!session || !session.user) {
-    throw new Error("You must be logged in to join a clan");
+    throw new Error("You must be logged in to join a clan")
   }
 
   if (isMain) {
-    const existingMainClan = await db.select().from(clanMembers)
-      .where(and(eq(clanMembers.userId, session.user.id), eq(clanMembers.isMain, true)))
-      .limit(1);
+    const existingMainClan = await db
+      .select()
+      .from(clanMembers)
+      .where(
+        and(
+          eq(clanMembers.userId, session.user.id),
+          eq(clanMembers.isMain, true)
+        )
+      )
+      .limit(1)
 
     if (existingMainClan.length > 0) {
-      throw new Error("You already have a main clan");
+      throw new Error("You already have a main clan")
     }
   }
 
@@ -53,32 +70,42 @@ export async function joinClan(clanId: string, isMain = false) {
     clanId,
     userId: session.user.id,
     isMain,
-  });
+  })
 
-  return { success: true };
+  return { success: true }
 }
 
 export async function leaveClan(clanId: string) {
-  const session = await getServerAuthSession();
+  const session = await getServerAuthSession()
   if (!session || !session.user) {
-    throw new Error("You must be logged in to leave a clan");
+    throw new Error("You must be logged in to leave a clan")
   }
 
-  const clan = await db.select().from(clans).where(eq(clans.id, clanId)).limit(1);
+  const clan = await db
+    .select()
+    .from(clans)
+    .where(eq(clans.id, clanId))
+    .limit(1)
   if (clan[0]!.ownerId === session.user.id) {
-    throw new Error("Clan owner cannot leave the clan");
+    throw new Error("Clan owner cannot leave the clan")
   }
 
-  await db.delete(clanMembers)
-    .where(and(eq(clanMembers.clanId, clanId), eq(clanMembers.userId, session.user.id)));
+  await db
+    .delete(clanMembers)
+    .where(
+      and(
+        eq(clanMembers.clanId, clanId),
+        eq(clanMembers.userId, session.user.id)
+      )
+    )
 
-  return { success: true };
+  return { success: true }
 }
 
 export async function getUserClans() {
-  const session = await getServerAuthSession();
+  const session = await getServerAuthSession()
   if (!session || !session.user) {
-    throw new Error("You must be logged in to view your clans");
+    throw new Error("You must be logged in to view your clans")
   }
 
   const userClans = await db
@@ -90,21 +117,21 @@ export async function getUserClans() {
         SELECT COUNT(*)
         FROM ${clanMembers} AS cm
         WHERE cm.clan_id = ${clans.id}
-      )`.as('memberCount'),
+      )`.as("memberCount"),
     })
     .from(clans)
     .innerJoin(clanMembers, eq(clans.id, clanMembers.clanId))
     .innerJoin(users, eq(users.id, clans.ownerId))
     .where(eq(clanMembers.userId, session.user.id))
-    .groupBy(clans.id, clanMembers.isMain, users.id);
+    .groupBy(clans.id, clanMembers.isMain, users.id)
 
-  return userClans;
+  return userClans
 }
 
 export async function getClanEvents(clanId: string): Promise<EventData[]> {
-  const session = await getServerAuthSession();
+  const session = await getServerAuthSession()
   if (!session || !session.user) {
-    throw new Error("You must be logged in to view clan events");
+    throw new Error("You must be logged in to view clan events")
   }
 
   // Check if the user is a member of the clan
@@ -113,10 +140,10 @@ export async function getClanEvents(clanId: string): Promise<EventData[]> {
       eq(clanMembers.clanId, clanId),
       eq(clanMembers.userId, session.user.id)
     ),
-  });
+  })
 
   if (!userMembership) {
-    throw new Error("You are not a member of this clan");
+    throw new Error("You are not a member of this clan")
   }
 
   const clanEvents = await db.query.events.findMany({
@@ -127,26 +154,26 @@ export async function getClanEvents(clanId: string): Promise<EventData[]> {
       clan: true,
     },
     orderBy: (events, { desc }) => [desc(events.startDate)],
-  });
+  })
 
   const eventDataPromises = clanEvents.map(async (event) => {
-    const totalPrizePool = await getTotalBuyInsForEvent(event.id);
+    const totalPrizePool = await getTotalBuyInsForEvent(event.id)
     return {
       event: {
         ...event,
-        role: event.creatorId === session.user.id ? 'admin' : 'participant',
+        role: event.creatorId === session.user.id ? "admin" : "participant",
       },
       totalPrizePool,
-    };
-  });
+    }
+  })
 
-  return Promise.all(eventDataPromises);
+  return Promise.all(eventDataPromises)
 }
 
 export async function getClanDetails(clanId: string) {
-  const session = await getServerAuthSession();
+  const session = await getServerAuthSession()
   if (!session || !session.user) {
-    throw new Error("You must be logged in to view clan details");
+    throw new Error("You must be logged in to view clan details")
   }
 
   const userMembership = await db.query.clanMembers.findFirst({
@@ -154,10 +181,10 @@ export async function getClanDetails(clanId: string) {
       eq(clanMembers.clanId, clanId),
       eq(clanMembers.userId, session.user.id)
     ),
-  });
+  })
 
   if (!userMembership) {
-    throw new Error("You are not a member of this clan");
+    throw new Error("You are not a member of this clan")
   }
 
   const clanDetailsQuery = await db
@@ -169,23 +196,23 @@ export async function getClanDetails(clanId: string) {
     })
     .from(clans)
     .where(eq(clans.id, clanId))
-    .limit(1);
+    .limit(1)
 
   if (clanDetailsQuery.length === 0) {
-    throw new Error("Clan not found");
+    throw new Error("Clan not found")
   }
 
-  const clanDetails = clanDetailsQuery[0]!;
+  const clanDetails = clanDetailsQuery[0]!
 
   const memberCountQuery = await db
     .select({ count: sql<number>`count(*)` })
     .from(clanMembers)
-    .where(eq(clanMembers.clanId, clanId));
+    .where(eq(clanMembers.clanId, clanId))
 
   const eventCountQuery = await db
     .select({ count: sql<number>`count(*)` })
     .from(events)
-    .where(eq(events.clanId, clanId));
+    .where(eq(events.clanId, clanId))
 
   const owner = await db.query.users.findFirst({
     where: eq(users.id, clanDetails.ownerId!),
@@ -193,9 +220,9 @@ export async function getClanDetails(clanId: string) {
       id: true,
       name: true,
       image: true,
-      runescapeName: true
+      runescapeName: true,
     },
-  });
+  })
 
   return {
     ...clanDetails,
@@ -203,7 +230,7 @@ export async function getClanDetails(clanId: string) {
     eventCount: eventCountQuery[0]?.count ?? 0,
     userMembership,
     owner,
-  };
+  }
 }
 
 export async function getClanMembers(clanId: string) {
@@ -226,20 +253,22 @@ export async function getClanMembers(clanId: string) {
         WHEN ${clanMembers.role} = 'guest' THEN 4
         ELSE 5
       END`
-    );
+    )
 
-  return members;
+  return members
 }
 
-export async function updateMemberRole(clanId: string, memberId: string, newRole: 'admin' | 'management' | 'member' | 'guest') {
-  await db.update(clanMembers)
+export async function updateMemberRole(
+  clanId: string,
+  memberId: string,
+  newRole: "admin" | "management" | "member" | "guest"
+) {
+  await db
+    .update(clanMembers)
     .set({ role: newRole })
     .where(
-      and(
-        eq(clanMembers.clanId, clanId),
-        eq(clanMembers.userId, memberId)
-      )
-    );
+      and(eq(clanMembers.clanId, clanId), eq(clanMembers.userId, memberId))
+    )
 }
 
 // Clan Invite Management Functions
@@ -262,10 +291,10 @@ export async function createClanInvite(params: CreateClanInviteParams) {
     where: and(
       eq(clanMembers.clanId, params.clanId),
       eq(clanMembers.userId, session.user.id)
-    )
+    ),
   })
 
-  if (!membership || !['admin', 'management'].includes(membership.role)) {
+  if (!membership || !["admin", "management"].includes(membership.role)) {
     throw new Error("Not authorized to create invites")
   }
 
@@ -273,10 +302,9 @@ export async function createClanInvite(params: CreateClanInviteParams) {
   const activeInviteCount = await db
     .select({ count: count() })
     .from(clanInvites)
-    .where(and(
-      eq(clanInvites.clanId, params.clanId),
-      eq(clanInvites.isActive, true)
-    ))
+    .where(
+      and(eq(clanInvites.clanId, params.clanId), eq(clanInvites.isActive, true))
+    )
 
   if (activeInviteCount[0]!.count >= 50) {
     throw new Error("Maximum active invite limit reached (50)")
@@ -290,16 +318,19 @@ export async function createClanInvite(params: CreateClanInviteParams) {
     ? new Date(Date.now() + params.expiresInDays * 24 * 60 * 60 * 1000)
     : null
 
-  const [invite] = await db.insert(clanInvites).values({
-    clanId: params.clanId,
-    inviteCode,
-    expiresAt,
-    createdBy: session.user.id,
-    label: params.label ?? null,
-    maxUses: params.maxUses ?? null,
-    currentUses: 0,
-    isActive: true,
-  }).returning()
+  const [invite] = await db
+    .insert(clanInvites)
+    .values({
+      clanId: params.clanId,
+      inviteCode,
+      expiresAt,
+      createdBy: session.user.id,
+      label: params.label ?? null,
+      maxUses: params.maxUses ?? null,
+      currentUses: 0,
+      isActive: true,
+    })
+    .returning()
 
   return invite
 }
@@ -315,10 +346,10 @@ export async function getClanInvites(clanId: string) {
     where: and(
       eq(clanMembers.clanId, clanId),
       eq(clanMembers.userId, session.user.id)
-    )
+    ),
   })
 
-  if (!membership || !['admin', 'management'].includes(membership.role)) {
+  if (!membership || !["admin", "management"].includes(membership.role)) {
     throw new Error("Not authorized to view invites")
   }
 
@@ -332,10 +363,10 @@ export async function getClanInvites(clanId: string) {
           name: true,
           runescapeName: true,
           image: true,
-        }
-      }
+        },
+      },
     },
-    orderBy: (invites, { desc }) => [desc(invites.createdAt)]
+    orderBy: (invites, { desc }) => [desc(invites.createdAt)],
   })
 
   return invites
@@ -349,7 +380,7 @@ export async function revokeClanInvite(inviteId: string) {
 
   const invite = await db.query.clanInvites.findFirst({
     where: eq(clanInvites.id, inviteId),
-    with: { clan: true }
+    with: { clan: true },
   })
 
   if (!invite) {
@@ -361,17 +392,18 @@ export async function revokeClanInvite(inviteId: string) {
     where: and(
       eq(clanMembers.clanId, invite.clanId),
       eq(clanMembers.userId, session.user.id)
-    )
+    ),
   })
 
-  if (!membership || !['admin', 'management'].includes(membership.role)) {
+  if (!membership || !["admin", "management"].includes(membership.role)) {
     throw new Error("Not authorized to revoke invites")
   }
 
-  await db.update(clanInvites)
+  await db
+    .update(clanInvites)
     .set({
       isActive: false,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     })
     .where(eq(clanInvites.id, inviteId))
 
@@ -386,7 +418,7 @@ export async function deleteClanInvite(inviteId: string) {
 
   const invite = await db.query.clanInvites.findFirst({
     where: eq(clanInvites.id, inviteId),
-    with: { clan: true }
+    with: { clan: true },
   })
 
   if (!invite) {
@@ -398,15 +430,14 @@ export async function deleteClanInvite(inviteId: string) {
     where: and(
       eq(clanMembers.clanId, invite.clanId),
       eq(clanMembers.userId, session.user.id)
-    )
+    ),
   })
 
-  if (!membership || !['admin', 'management'].includes(membership.role)) {
+  if (!membership || !["admin", "management"].includes(membership.role)) {
     throw new Error("Not authorized to delete invites")
   }
 
-  await db.delete(clanInvites)
-    .where(eq(clanInvites.id, inviteId))
+  await db.delete(clanInvites).where(eq(clanInvites.id, inviteId))
 
   return { success: true }
 }
@@ -419,7 +450,7 @@ export async function updateClanInviteLabel(inviteId: string, label: string) {
 
   const invite = await db.query.clanInvites.findFirst({
     where: eq(clanInvites.id, inviteId),
-    with: { clan: true }
+    with: { clan: true },
   })
 
   if (!invite) {
@@ -431,19 +462,87 @@ export async function updateClanInviteLabel(inviteId: string, label: string) {
     where: and(
       eq(clanMembers.clanId, invite.clanId),
       eq(clanMembers.userId, session.user.id)
-    )
+    ),
   })
 
-  if (!membership || !['admin', 'management'].includes(membership.role)) {
+  if (!membership || !["admin", "management"].includes(membership.role)) {
     throw new Error("Not authorized to update invites")
   }
 
-  await db.update(clanInvites)
+  await db
+    .update(clanInvites)
     .set({
       label,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     })
     .where(eq(clanInvites.id, inviteId))
 
   return { success: true }
+}
+
+/**
+ * Get clan members that can be added to an event
+ * Excludes members who are already event participants
+ */
+export async function getClanMembersForEvent(eventId: string) {
+  const session = await getServerAuthSession()
+  if (!session?.user) {
+    throw new Error("Not authenticated")
+  }
+
+  // Check user has admin/management role for the event
+  const userRole = await getUserRole(eventId)
+  if (!userRole || !["admin", "management"].includes(userRole)) {
+    throw new Error("Not authorized to manage event participants")
+  }
+
+  // Get the event and its clan
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+    columns: {
+      id: true,
+      clanId: true,
+    },
+  })
+
+  if (!event) {
+    throw new Error("Event not found")
+  }
+
+  if (!event.clanId) {
+    throw new Error("Event is not associated with a clan")
+  }
+
+  // Get clan members who are not already event participants
+  const availableMembers = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      runescapeName: users.runescapeName,
+      image: users.image,
+      role: clanMembers.role,
+    })
+    .from(clanMembers)
+    .innerJoin(users, eq(clanMembers.userId, users.id))
+    .where(
+      and(
+        eq(clanMembers.clanId, event.clanId),
+        sql`${users.id} NOT IN (
+          SELECT ${eventParticipants.userId}
+          FROM ${eventParticipants}
+          WHERE ${eventParticipants.eventId} = ${eventId}
+        )`
+      )
+    )
+    .orderBy(
+      sql`CASE
+        WHEN ${clanMembers.role} = 'admin' THEN 1
+        WHEN ${clanMembers.role} = 'management' THEN 2
+        WHEN ${clanMembers.role} = 'member' THEN 3
+        WHEN ${clanMembers.role} = 'guest' THEN 4
+        ELSE 5
+      END`
+    )
+
+  return availableMembers
 }
