@@ -21,7 +21,12 @@ export default function MyEventsPage() {
   }
 
   useEffect(() => {
-    void fetchEvents()
+    const loadEvents = async () => {
+      const events = await getUserCreatedEvents()
+      setUserEvents(events)
+      setLoading(false)
+    }
+    void loadEvents()
   }, [])
 
   const handleEventCreated = async () => {
