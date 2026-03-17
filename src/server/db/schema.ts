@@ -153,6 +153,7 @@ export const registrationStatusEnum = pgEnum("registration_status", [
   "rejected",
 ])
 export const bingoTypeEnum = pgEnum("bingo_type", ["standard", "progression"])
+export const gameTypeEnum = pgEnum("game_type", ["osrs", "rs3"])
 export const logicalOperatorEnum = pgEnum("logical_operator", ["AND", "OR"])
 export const goalTypeEnum = pgEnum("goal_type", ["generic", "item"])
 export const skillLevelEnum = pgEnum("skill_level", [
@@ -216,6 +217,7 @@ export const events = createTable("events", {
     onDelete: "set null",
   }),
   clanId: uuid("clan_id").references(() => clans.id, { onDelete: "set null" }),
+  gameType: gameTypeEnum("game_type").default("osrs").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   locked: boolean("locked").default(false).notNull(),
@@ -396,7 +398,7 @@ export const goalGroups = createTable("goal_groups", {
   tileId: uuid("tile_id")
     .notNull()
     .references(() => tiles.id, { onDelete: "cascade" }),
-   
+
   parentGroupId: uuid("parent_group_id").references(
     (): AnyPgColumn => goalGroups.id,
     { onDelete: "cascade" }
@@ -415,9 +417,8 @@ export const goalGroupsRelations = relations(goalGroups, ({ one, many }) => ({
     references: [tiles.id],
   }),
   parentGroup: one(goalGroups, {
-     
     fields: [goalGroups.parentGroupId],
-     
+
     references: [goalGroups.id],
     relationName: "groupHierarchy",
   }),
@@ -482,7 +483,6 @@ export const itemGoalsRelations = relations(itemGoals, ({ one }) => ({
   }),
 }))
 
- 
 export const goalsRelations = relations(goals, ({ one, many }) => ({
   tile: one(tiles, {
     fields: [goals.tileId],
@@ -490,7 +490,7 @@ export const goalsRelations = relations(goals, ({ one, many }) => ({
   }),
   parentGroup: one(goalGroups, {
     fields: [goals.parentGroupId],
-     
+
     references: [goalGroups.id],
   }),
   teamProgress: many(teamGoalProgress),

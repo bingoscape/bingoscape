@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { PrizePoolDisplay } from "./prize-pool-display"
+import { GameTypeBadge } from "./game-type-badge"
 import type { EventData } from "@/app/actions/events"
 import {
   CalendarIcon,
@@ -203,9 +204,12 @@ export function EventCard({
           <CardHeader className="pb-3 pt-6">
             <div className="flex flex-col space-y-2">
               <div className={`${eventData.totalPrizePool > 0 ? "mt-6" : ""}`}>
-                <CardTitle className="text-xl font-bold tracking-tight">
-                  {eventData.event.title}
-                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-xl font-bold tracking-tight">
+                    {eventData.event.title}
+                  </CardTitle>
+                  <GameTypeBadge gameType={eventData.event.gameType} />
+                </div>
                 <CardDescription className="mt-2 flex items-center text-sm">
                   <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">

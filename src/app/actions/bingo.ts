@@ -20,6 +20,7 @@ import {
   teamMembers,
   eventParticipants,
   users,
+  events,
 } from "@/server/db/schema"
 import type { UUID } from "crypto"
 import { asc, eq, inArray, and, gt } from "drizzle-orm"
@@ -264,6 +265,15 @@ export async function createBingo(formData: FormData) {
     throw new Error("Invalid rows or columns")
   }
 
+  // Fetch the event to get its gameType
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+  })
+
+  if (!event) {
+    throw new Error("Event not found")
+  }
+
   // Parse pattern bonuses
   const mainDiagonalBonus =
     parseInt((formData.get("mainDiagonalBonus") as string) || "0") || 0
@@ -296,7 +306,7 @@ export async function createBingo(formData: FormData) {
     tilesToInsert.push({
       bingoId,
       title: `Tile ${idx + 1}`,
-      headerImage: getRandomFrog(),
+      headerImage: getRandomFrog(event.gameType),
       description: `Tile ${idx + 1}`,
       weight: 1,
       isHidden: false,

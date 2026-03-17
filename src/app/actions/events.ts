@@ -1,9 +1,5 @@
 "use server"
 
- 
- 
- 
-
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
 import {
@@ -193,6 +189,7 @@ export interface Event {
   id: string
   title: string
   description: string | null
+  gameType: "osrs" | "rs3"
   startDate: Date
   endDate: Date
   creatorId: string | null
@@ -263,6 +260,7 @@ export async function createEvent(formData: FormData) {
 
   const title = formData.get("title") as string
   const description = formData.get("description") as string
+  const gameType = (formData.get("gameType") as "osrs" | "rs3") || "osrs"
   const startDateStr = formData.get("startDate") as string
   const endDateStr = formData.get("endDate") as string
   const registrationDeadlineStr = formData.get("registrationDeadline") as string
@@ -309,6 +307,7 @@ export async function createEvent(formData: FormData) {
         .values({
           title: title,
           description: description || "",
+          gameType,
           startDate,
           endDate,
           registrationDeadline,
@@ -328,6 +327,8 @@ export async function createEvent(formData: FormData) {
 
       return createdEvent
     })
+
+    revalidatePath("/")
 
     return { success: !!newEvent }
   } catch (error) {

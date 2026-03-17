@@ -65,6 +65,7 @@ interface BingoGridProps {
   userRole: EventRole
   teams: Team[]
   currentTeamId: string | undefined
+  gameType: "osrs" | "rs3"
   isLayoutLocked: boolean // Controls whether the board layout can be modified
   onReorderTiles?: (reorderedTiles: Tile[]) => void
   highlightedTiles: number[]
@@ -76,6 +77,7 @@ export default function BingoGrid({
   userRole,
   teams,
   currentTeamId,
+  gameType,
   isLayoutLocked,
   onReorderTiles,
   highlightedTiles,
@@ -1008,6 +1010,7 @@ export default function BingoGrid({
                 editedTile={editedTile}
                 userRole={userRole}
                 teams={teams}
+                gameType={gameType}
                 isProgressionBingo={bingo.bingoType === "progression"}
                 onEditTile={(field, value) =>
                   setEditedTile({ ...editedTile, [field]: value })
