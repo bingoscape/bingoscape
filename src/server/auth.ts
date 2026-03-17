@@ -71,7 +71,7 @@ export const authOptions: NextAuthOptions = {
       }
       // Update session
       if (trigger === "update" && updateSession) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+         
         token.runescapeName = updateSession.runescapeName
       }
       return token

@@ -345,8 +345,8 @@ function normalizeVariance(variance: number, values: number[]): number {
  * Calculate metadata coverage statistics
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+ 
+ 
 async function calculateCoverageMetrics(
   eventTeams: any[],
   _eventId: string
@@ -370,8 +370,8 @@ async function calculateCoverageMetrics(
     (m) => m.dailyHoursAvailable != null
   ).length
   /* eslint-enable @typescript-eslint/no-explicit-any */
-  /* eslint-enable @typescript-eslint/no-unsafe-return */
-  /* eslint-enable @typescript-eslint/no-unsafe-member-access */
+   
+   
 
   return {
     totalPlayers,

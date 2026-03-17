@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+ 
 import { logger } from "@/lib/logger";
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+ 
 
 import { NextResponse } from "next/server"
 import { db } from "@/server/db"

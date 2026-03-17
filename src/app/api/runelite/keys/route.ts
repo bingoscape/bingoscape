@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
   try {
     // Parse request body|
-    /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+     
     const body = await req.json()
 
     // Validate request body

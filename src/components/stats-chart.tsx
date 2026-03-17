@@ -28,8 +28,8 @@ export function StatsChart({ data, totalPossibleXP, title }: StatsChartProps) {
       tooltip: {
         callbacks: {
           /* eslint-disable  @typescript-eslint/no-explicit-any */
-          /* eslint-disable  @typescript-eslint/no-unsafe-argument */
-          /* eslint-disable  @typescript-eslint/no-unsafe-member-access */
+           
+           
           label: (context: any) => `XP: ${Math.round(context.parsed.y)}`,
         },
       },

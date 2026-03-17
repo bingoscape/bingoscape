@@ -141,6 +141,13 @@
       "when": 1767951544261,
       "tag": "0019_overconfident_stranger",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1773737066761,
+      "tag": "0020_parallel_killer_shrike",
+      "breakpoints": true
     }
   ]
 }

@@ -41,7 +41,7 @@ export async function sendDiscordWebhook(
       });
 
       // Update embed to reference the attachment
-      // eslint-disable-next-line
+       
       if (payload.embeds && payload.embeds[0] && payload.files[0]) {
         payload.embeds[0].image = {
           url: `attachment://${payload.files[0].name}`,

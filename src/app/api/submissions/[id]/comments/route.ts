@@ -59,7 +59,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     }
 
     const submissionId = params.id
-    const body = await request.json() // eslint-disable-line
+    const body = await request.json()  
 
     // Validate request body
     const validatedData = createCommentSchema.parse(body)

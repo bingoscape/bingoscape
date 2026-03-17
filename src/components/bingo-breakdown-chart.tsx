@@ -51,8 +51,8 @@ export function BingoBreakdownChart({ data, bingoSummary, title }: BingoBreakdow
       tooltip: {
         callbacks: {
           /* eslint-disable  @typescript-eslint/no-explicit-any */
-          /* eslint-disable  @typescript-eslint/no-unsafe-argument */
-          /* eslint-disable  @typescript-eslint/no-unsafe-member-access */
+           
+           
           label: (context: any) => `${context.dataset.label}: ${Math.round(context.parsed.y).toLocaleString()} XP`,
         },
       },
