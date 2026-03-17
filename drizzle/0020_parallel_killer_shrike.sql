@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS "uniq_user_main_clan";--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "uniq_user_main_clan" ON "bingoscape-next_clan_members" USING btree ("user_id") WHERE "bingoscape-next_clan_members"."is_main" = true;

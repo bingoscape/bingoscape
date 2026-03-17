@@ -182,7 +182,7 @@ const EventGrid = ({
             eventData={ed}
             isParticipant={true}
             status={status}
-            // eslint-disable-next-line @typescript-eslint/no-empty-function
+             
             onJoin={() => {}}
           />
         )

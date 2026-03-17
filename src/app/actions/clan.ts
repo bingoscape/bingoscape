@@ -13,6 +13,7 @@ import {
 import { eq, and, count, sql } from "drizzle-orm"
 import { type EventData, getTotalBuyInsForEvent, getUserRole } from "./events"
 import { nanoid } from "nanoid"
+import { revalidatePath } from "next/cache"
 
 export async function createClan(name: string, description: string) {
   const session = await getServerAuthSession()
@@ -21,6 +22,21 @@ export async function createClan(name: string, description: string) {
   }
 
   const newClan = await db.transaction(async (tx) => {
+    // Check if user already has a main clan
+    const existingMainClan = await tx
+      .select()
+      .from(clanMembers)
+      .where(
+        and(
+          eq(clanMembers.userId, session.user.id),
+          eq(clanMembers.isMain, true)
+        )
+      )
+      .limit(1)
+
+    // First clan created by user is automatically their main clan
+    const isFirstClan = existingMainClan.length === 0
+
     const [clan] = await tx
       .insert(clans)
       .values({
@@ -33,13 +49,14 @@ export async function createClan(name: string, description: string) {
     await tx.insert(clanMembers).values({
       clanId: clan!.id,
       userId: session.user.id,
-      isMain: true,
+      isMain: isFirstClan,
       role: "admin",
     })
 
     return clan
   })
 
+  revalidatePath("/clans")
   return newClan
 }
 
