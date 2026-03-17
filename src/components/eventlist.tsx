@@ -3,7 +3,10 @@
 import { useState } from "react"
 import Link from "next/link"
 import { CreateEventModal } from "./create-event-modal"
-import { type getEvents } from "@/app/actions/events"
+import {
+  getEvents,
+  type getEvents as getEventsType,
+} from "@/app/actions/events"
 import { EventDisplay } from "./events-display"
 import { Button } from "@/components/ui/button"
 import { Plus, TrendingUp, Users, Trophy } from "lucide-react"
@@ -17,12 +20,19 @@ import {
 
 interface EventListProps {
   userId: string
-  initialEvents: Awaited<ReturnType<typeof getEvents>>
+  initialEvents: Awaited<ReturnType<typeof getEventsType>>
 }
 
 export default function EventList({ userId, initialEvents }: EventListProps) {
   const [createModalOpen, setCreateModalOpen] = useState(false)
-  const allEvents = initialEvents
+  const [events, setEvents] = useState(initialEvents)
+  const allEvents = events
+
+  const handleEventCreated = async () => {
+    // Refetch events after creation
+    const updatedEvents = await getEvents(userId)
+    setEvents(updatedEvents)
+  }
 
   const hasEvents = allEvents.length > 0
 
@@ -180,6 +190,7 @@ export default function EventList({ userId, initialEvents }: EventListProps) {
       <CreateEventModal
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
+        onEventCreated={handleEventCreated}
       />
     </div>
   )

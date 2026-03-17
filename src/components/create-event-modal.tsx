@@ -19,24 +19,37 @@ import { createEvent } from "@/app/actions/events"
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 interface CreateEventModalProps {
   isOpen: boolean
   onClose: () => void
+  onEventCreated?: () => void | Promise<void>
 }
 
-export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
+export function CreateEventModal({
+  isOpen,
+  onClose,
+  onEventCreated,
+}: CreateEventModalProps) {
   const router = useRouter()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
+  const [gameType, setGameType] = useState<"osrs" | "rs3">("osrs")
   const [startDate, setStartDate] = useState<Date | undefined>(undefined)
   const [endDate, setEndDate] = useState<Date | undefined>(undefined)
-  const [registrationDeadline, setRegistrationDeadline] = useState<Date | undefined>(undefined)
+  const [registrationDeadline, setRegistrationDeadline] = useState<
+    Date | undefined
+  >(undefined)
   const [minimumBuyIn, setMinimumBuyIn] = useState(0)
   const [basePrizePool, setBasePrizePool] = useState(0)
   const [requiresApproval, setRequiresApproval] = useState(false)
@@ -57,10 +70,14 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
     const formData = new FormData()
     formData.append("title", title)
     formData.append("description", description)
+    formData.append("gameType", gameType)
     formData.append("startDate", startDate.toISOString())
     formData.append("endDate", endDate.toISOString())
     if (registrationDeadline) {
-      formData.append("registrationDeadline", registrationDeadline.toISOString())
+      formData.append(
+        "registrationDeadline",
+        registrationDeadline.toISOString()
+      )
     }
     formData.append("minimumBuyIn", minimumBuyIn.toString())
     formData.append("basePrizePool", basePrizePool.toString())
@@ -74,11 +91,15 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
           description: "Your event has been created successfully.",
         })
         onClose()
+        if (onEventCreated) {
+          await onEventCreated()
+        }
         router.refresh()
       } else {
         toast({
           title: "Error",
-          description: result.error ?? "Failed to create event. Please try again.",
+          description:
+            result.error ?? "Failed to create event. Please try again.",
           variant: "destructive",
         })
       }
@@ -99,7 +120,9 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Create New Event</DialogTitle>
-            <DialogDescription>Fill in the details for your new event.</DialogDescription>
+            <DialogDescription>
+              Fill in the details for your new event.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
@@ -126,6 +149,27 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Game Type *</Label>
+              <RadioGroup
+                value={gameType}
+                onValueChange={(value) => setGameType(value as "osrs" | "rs3")}
+                className="col-span-3"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="osrs" id="osrs" />
+                  <Label htmlFor="osrs" className="cursor-pointer font-normal">
+                    Old School RuneScape (OSRS)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="rs3" id="rs3" />
+                  <Label htmlFor="rs3" className="cursor-pointer font-normal">
+                    RuneScape 3 (RS3)
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="startDate" className="text-right">
                 Start Date *
               </Label>
@@ -136,15 +180,23 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
                       variant={"outline"}
                       className={cn(
                         "w-full justify-start text-left font-normal",
-                        !startDate && "text-muted-foreground",
+                        !startDate && "text-muted-foreground"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                      {startDate ? (
+                        format(startDate, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={startDate} onSelect={setStartDate} />
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={setStartDate}
+                    />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -158,14 +210,25 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
-                      className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !endDate && "text-muted-foreground"
+                      )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                      {endDate ? (
+                        format(endDate, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={endDate} onSelect={setEndDate} />
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={setEndDate}
+                    />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -181,11 +244,15 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
                       variant={"outline"}
                       className={cn(
                         "w-full justify-start text-left font-normal",
-                        !registrationDeadline && "text-muted-foreground",
+                        !registrationDeadline && "text-muted-foreground"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {registrationDeadline ? format(registrationDeadline, "PPP") : <span>Optional</span>}
+                      {registrationDeadline ? (
+                        format(registrationDeadline, "PPP")
+                      ) : (
+                        <span>Optional</span>
+                      )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -251,4 +318,3 @@ export function CreateEventModal({ isOpen, onClose }: CreateEventModalProps) {
     </Dialog>
   )
 }
-
