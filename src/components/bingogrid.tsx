@@ -87,7 +87,7 @@ export default function BingoGrid({
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editedTile, setEditedTile] = useState<Partial<Tile>>({})
-  const [newGoal, setNewGoal] = useState<Partial<Goal>>({})
+  const [newGoal, setNewGoal] = useState<Partial<Goal>>({ targetValue: 1 })
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [pastedImage, setPastedImage] = useState<File | null>(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
@@ -333,7 +333,7 @@ export default function BingoGrid({
   }
 
   const handleAddGoal = async () => {
-    if (selectedTile && newGoal.description && newGoal.targetValue) {
+    if (selectedTile && newGoal.description && newGoal.targetValue != null) {
       const result = await addGoal(selectedTile.id, newGoal as Goal)
       if (result.success && result.goal) {
         const updatedGoal: Goal = {

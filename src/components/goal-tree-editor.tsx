@@ -1,11 +1,6 @@
 "use client"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
- 
- 
- 
- 
- 
 
 import { useState, useEffect } from "react"
 import {
@@ -545,7 +540,7 @@ export function GoalTreeEditor({
 
         <DragOverlay>
           {activeId ? (
-            <div className="5xl:-left-[12vw] relative -top-16 max-w-32 rounded-lg border border-border bg-card p-3 opacity-90 shadow-lg">
+            <div className="relative -top-16 max-w-32 rounded-lg border border-border bg-card p-3 opacity-90 shadow-lg 5xl:-left-[12vw]">
               <div className="flex items-center gap-2 text-sm font-medium">
                 {flatTree.find((n) => n.id === activeId)?.type === "group" ? (
                   <>
@@ -648,7 +643,7 @@ export function GoalTreeEditor({
                       <Input
                         id="targetValue"
                         type="number"
-                        defaultValue={newGoal.targetValue?.toString() || "1"}
+                        value={newGoal.targetValue ?? 1}
                         onChange={(e) =>
                           onNewGoalChange(
                             "targetValue",
