@@ -30,6 +30,7 @@ import {
   playerMetadata,
   discordWebhooks,
   notifications,
+  eventRules,
 } from "@/server/db/schema"
 import { eq, and, asc, sum, sql, desc } from "drizzle-orm"
 import { nanoid } from "nanoid"
@@ -2094,5 +2095,148 @@ export async function deleteEventByAdmin(
       success: false,
       error: error instanceof Error ? error.message : "Failed to delete event",
     }
+  }
+}
+
+// ─── Event Rules ────────────────────────────────────────────────────────────
+
+export interface EventRule {
+  id: string
+  eventId: string
+  content: string
+  orderIndex: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export async function getEventRules(eventId: string): Promise<EventRule[]> {
+  const session = await getServerAuthSession()
+  if (!session?.user) return []
+
+  // Verify the caller is a participant
+  const participant = await db.query.eventParticipants.findFirst({
+    where: and(
+      eq(eventParticipants.eventId, eventId),
+      eq(eventParticipants.userId, session.user.id)
+    ),
+  })
+  if (!participant) return []
+
+  return db.query.eventRules.findMany({
+    where: eq(eventRules.eventId, eventId),
+    orderBy: asc(eventRules.orderIndex),
+  })
+}
+
+export async function createEventRule(
+  eventId: string,
+  content: string
+): Promise<{ success: boolean; error?: string; rule?: EventRule }> {
+  try {
+    const session = await getServerAuthSession()
+    if (!session?.user) return { success: false, error: "Unauthorized" }
+
+    const participant = await db.query.eventParticipants.findFirst({
+      where: and(
+        eq(eventParticipants.eventId, eventId),
+        eq(eventParticipants.userId, session.user.id)
+      ),
+    })
+    if (participant?.role !== "admin") {
+      return { success: false, error: "Only admins can manage rules" }
+    }
+
+    const trimmed = content.trim()
+    if (!trimmed)
+      return { success: false, error: "Rule content cannot be empty" }
+    if (trimmed.length > 500)
+      return { success: false, error: "Rule cannot exceed 500 characters" }
+
+    // Determine next orderIndex
+    const existing = await db.query.eventRules.findMany({
+      where: eq(eventRules.eventId, eventId),
+      orderBy: desc(eventRules.orderIndex),
+      limit: 1,
+    })
+    const nextIndex = existing.length > 0 ? existing[0]!.orderIndex + 1 : 0
+
+    const [rule] = await db
+      .insert(eventRules)
+      .values({ eventId, content: trimmed, orderIndex: nextIndex })
+      .returning()
+
+    revalidatePath(`/events/${eventId}`)
+    return { success: true, rule: rule! }
+  } catch (error) {
+    logger.error({ error }, "Error creating event rule")
+    return { success: false, error: "Failed to create rule" }
+  }
+}
+
+export async function updateEventRule(
+  ruleId: string,
+  eventId: string,
+  content: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getServerAuthSession()
+    if (!session?.user) return { success: false, error: "Unauthorized" }
+
+    const participant = await db.query.eventParticipants.findFirst({
+      where: and(
+        eq(eventParticipants.eventId, eventId),
+        eq(eventParticipants.userId, session.user.id)
+      ),
+    })
+    if (participant?.role !== "admin") {
+      return { success: false, error: "Only admins can manage rules" }
+    }
+
+    const trimmed = content.trim()
+    if (!trimmed)
+      return { success: false, error: "Rule content cannot be empty" }
+    if (trimmed.length > 500)
+      return { success: false, error: "Rule cannot exceed 500 characters" }
+
+    await db
+      .update(eventRules)
+      .set({ content: trimmed, updatedAt: new Date() })
+      .where(and(eq(eventRules.id, ruleId), eq(eventRules.eventId, eventId)))
+
+    revalidatePath(`/events/${eventId}`)
+    return { success: true }
+  } catch (error) {
+    logger.error({ error }, "Error updating event rule")
+    return { success: false, error: "Failed to update rule" }
+  }
+}
+
+export async function deleteEventRule(
+  ruleId: string,
+  eventId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getServerAuthSession()
+    if (!session?.user) return { success: false, error: "Unauthorized" }
+
+    const participant = await db.query.eventParticipants.findFirst({
+      where: and(
+        eq(eventParticipants.eventId, eventId),
+        eq(eventParticipants.userId, session.user.id)
+      ),
+    })
+    if (participant?.role !== "admin") {
+      return { success: false, error: "Only admins can manage rules" }
+    }
+
+    await db
+      .delete(eventRules)
+      .where(and(eq(eventRules.id, ruleId), eq(eventRules.eventId, eventId)))
+
+    revalidatePath(`/events/${eventId}`)
+    return { success: true }
+  } catch (error) {
+    logger.error({ error }, "Error deleting event rule")
+    return { success: false, error: "Failed to delete rule" }
   }
 }

@@ -15,6 +15,7 @@ import {
   isRegistrationOpen,
   getPendingRegistrationCount,
   getUserRegistrationStatus,
+  getEventRules,
 } from "@/app/actions/events"
 import type { UUID } from "crypto"
 import { getUserClans } from "@/app/actions/clan"
@@ -31,6 +32,7 @@ import { RegistrationStatus } from "@/components/registration-status"
 import { EventBingosClient } from "@/components/event-bingos-client"
 import { EventHeaderActions } from "@/components/event-header-actions"
 import AlertBanner from "@/components/ui/alert-banner"
+import { EventRulesSheet } from "@/components/event-rules-sheet"
 
 export default async function EventBingosPage(props: {
   params: Promise<{ id: UUID }>
@@ -102,6 +104,9 @@ export default async function EventBingosPage(props: {
   const pendingRegistrationsCount = await getPendingRegistrationCount(params.id)
 
   const isAdminOrManagement = userRole === "admin" || userRole === "management"
+  const isAdmin = userRole === "admin"
+
+  const rules = await getEventRules(params.id)
 
   // Calculate event status
   const now = new Date()
@@ -189,16 +194,23 @@ export default async function EventBingosPage(props: {
                 )}
               </div>
             </div>
-            {isAdminOrManagement && (
-              <EventHeaderActions
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <EventRulesSheet
                 eventId={event.id}
-                userRole={userRole}
-                requiresApproval={event.requiresApproval}
-                pendingRegistrationsCount={pendingRegistrationsCount}
-                event={event}
-                userClans={userClans}
+                initialRules={rules}
+                isAdmin={isAdmin}
               />
-            )}
+              {isAdminOrManagement && (
+                <EventHeaderActions
+                  eventId={event.id}
+                  userRole={userRole}
+                  requiresApproval={event.requiresApproval}
+                  pendingRegistrationsCount={pendingRegistrationsCount}
+                  event={event}
+                  userClans={userClans}
+                />
+              )}
+            </div>
           </div>
 
           {event.locked && (

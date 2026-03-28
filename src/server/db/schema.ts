@@ -242,6 +242,25 @@ export const eventsRelations = relations(events, ({ many, one }) => ({
   registrationRequests: many(eventRegistrationRequests), // Add relation to registration requests
   discordWebhooks: many(discordWebhooks),
   playerMetadata: many(playerMetadata),
+  rules: many(eventRules),
+}))
+
+export const eventRules = createTable("event_rules", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventId: uuid("event_id")
+    .notNull()
+    .references(() => events.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  orderIndex: integer("order_index").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const eventRulesRelations = relations(eventRules, ({ one }) => ({
+  event: one(events, {
+    fields: [eventRules.eventId],
+    references: [events.id],
+  }),
 }))
 
 // New table for event registration requests
