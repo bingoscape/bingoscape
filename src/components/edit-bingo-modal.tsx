@@ -38,7 +38,7 @@ interface EditBingoModalProps {
 }
 
 interface BingoPatternData {
-  bingoType: "standard" | "progression"
+  bingoType: "standard" | "progression" | "tile-race"
   rows: number
   columns: number
   mainDiagonalBonusXP: number

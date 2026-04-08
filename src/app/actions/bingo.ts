@@ -14,6 +14,9 @@ import {
   teams,
   teamTileSubmissions,
   teamTierProgress,
+  teamRaceStates,
+  teamRaceJumps,
+  raceActivityLogs,
   tierXpRequirements,
   rowBonuses,
   columnBonuses,
@@ -23,7 +26,7 @@ import {
   events,
 } from "@/server/db/schema"
 import type { UUID } from "crypto"
-import { asc, eq, inArray, and, gt } from "drizzle-orm"
+import { asc, desc, eq, inArray, and, gt } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import fs from "fs/promises"
@@ -244,10 +247,15 @@ export async function createBingo(formData: FormData) {
   const columnsStr = formData.get("columns") as string
   const codephrase = formData.get("codephrase") as string
   const bingoType =
-    (formData.get("bingoType") as "standard" | "progression") || "standard"
+    (formData.get("bingoType") as "standard" | "progression" | "tile-race") ||
+    "standard"
   const tiersUnlockRequirementStr = formData.get(
     "tiersUnlockRequirement"
   ) as string
+  const dieSizeStr = formData.get("dieSize") as string | null
+  const allowMultipleForwardJumpsStr = formData.get(
+    "allowMultipleForwardJumps"
+  ) as string | null
 
   logger.debug({ formData }, "Create bingo form data")
 
@@ -260,6 +268,10 @@ export async function createBingo(formData: FormData) {
   const tiersUnlockRequirement = tiersUnlockRequirementStr
     ? Number.parseInt(tiersUnlockRequirementStr)
     : 1
+  const dieSize = dieSizeStr ? Number.parseInt(dieSizeStr) : 4
+  const allowMultipleForwardJumps =
+    allowMultipleForwardJumpsStr === "true" ||
+    allowMultipleForwardJumpsStr === "on"
 
   if (isNaN(rows) || isNaN(columns) || rows < 1 || columns < 1) {
     throw new Error("Invalid rows or columns")
@@ -293,6 +305,8 @@ export async function createBingo(formData: FormData) {
       columns,
       bingoType,
       tiersUnlockRequirement,
+      dieSize,
+      allowMultipleForwardJumps,
       mainDiagonalBonusXP: rows === columns ? mainDiagonalBonus : 0,
       antiDiagonalBonusXP: rows === columns ? antiDiagonalBonus : 0,
       completeBoardBonusXP: bingoType === "standard" ? completeBoardBonus : 0,
@@ -690,8 +704,10 @@ export interface BingoData {
   rows: number
   codephrase: string
   visible: boolean
-  bingoType: "standard" | "progression"
+  bingoType: "standard" | "progression" | "tile-race"
   tiersUnlockRequirement: number
+  dieSize: number
+  allowMultipleForwardJumps: boolean
   tiles: TileData[]
 }
 
@@ -1214,6 +1230,12 @@ export async function updateTeamTileSubmissionStatus(
           updatedTeamTileSubmission.teamId,
           tile.bingoId
         )
+      } else if (tile && tile.bingo.bingoType === "tile-race") {
+        await handleTileRaceMove(
+          updatedTeamTileSubmission.teamId,
+          tile.bingoId,
+          tile.id
+        )
       }
     }
 
@@ -1548,6 +1570,58 @@ export async function deleteTile(tileId: string, bingoId: string) {
   }
 }
 
+export async function createTileAtPosition(
+  bingoId: string,
+  gridX: number,
+  gridY: number
+) {
+  try {
+    const session = await getServerAuthSession()
+    if (!session?.user) throw new Error("Unauthorized")
+
+    return await db.transaction(async (tx) => {
+      const [bingo] = await tx
+        .select({ id: bingos.id, gameType: events.gameType })
+        .from(bingos)
+        .innerJoin(events, eq(events.id, bingos.eventId))
+        .where(eq(bingos.id, bingoId))
+
+      if (!bingo) throw new Error("Bingo not found")
+
+      // Get current max index to place it correctly if needed
+      const currentTiles = await tx
+        .select({ index: tiles.index })
+        .from(tiles)
+        .where(eq(tiles.bingoId, bingoId))
+
+      const maxIndex = currentTiles.reduce(
+        (max, t) => Math.max(max, t.index),
+        -1
+      )
+
+      const [newTile] = await tx
+        .insert(tiles)
+        .values({
+          bingoId,
+          title: `New Tile`,
+          headerImage: getRandomFrog(bingo.gameType),
+          description: "",
+          weight: 1,
+          index: maxIndex + 1,
+          isHidden: false,
+          gridX,
+          gridY,
+        })
+        .returning()
+
+      return { success: true, tile: newTile }
+    })
+  } catch (error) {
+    logger.error({ error }, "Error creating tile at position")
+    return { success: false, error: "Failed to create tile" }
+  }
+}
+
 export async function addTile(bingoId: string): Promise<AddRowOrColumnResult> {
   try {
     return await db.transaction(async (tx) => {
@@ -1683,8 +1757,10 @@ interface UpdateBingoData {
   visible: boolean
   locked: boolean
   codephrase: string
-  bingoType?: "standard" | "progression"
+  bingoType?: "standard" | "progression" | "tile-race"
   tiersUnlockRequirement?: number
+  dieSize?: number
+  allowMultipleForwardJumps?: boolean
 }
 
 interface PatternBonusData {
@@ -1720,6 +1796,14 @@ export async function updateBingo(
 
       if (data.tiersUnlockRequirement !== undefined) {
         updateData.tiersUnlockRequirement = data.tiersUnlockRequirement
+      }
+
+      if (data.dieSize !== undefined) {
+        updateData.dieSize = data.dieSize
+      }
+
+      if (data.allowMultipleForwardJumps !== undefined) {
+        updateData.allowMultipleForwardJumps = data.allowMultipleForwardJumps
       }
 
       // Update pattern bonuses if provided
@@ -2301,5 +2385,188 @@ export async function deleteTier(bingoId: string, tierToDelete: number) {
   } finally {
     // Revalidate the page to refresh cached data
     revalidatePath("/events")
+  }
+}
+
+export async function handleTileRaceMove(
+  teamId: string,
+  bingoId: string,
+  completedTileId: string
+) {
+  try {
+    const session = await getServerAuthSession()
+    if (!session) return { success: false, error: "Not authenticated" }
+
+    return await db.transaction(async (tx) => {
+      // 1. Fetch bingo details to get die size and jump settings
+      const bingo = await tx.query.bingos.findFirst({
+        where: eq(bingos.id, bingoId),
+        with: {
+          tiles: {
+            orderBy: (tiles, { asc }) => [asc(tiles.index)],
+          },
+        },
+      })
+      if (!bingo) throw new Error("Bingo not found")
+
+      // Check max tile index to know where finish line is
+      const tilesSorted = [...bingo.tiles].sort((a, b) => a.index - b.index)
+      if (tilesSorted.length === 0)
+        return { success: false, error: "No tiles configured" }
+      const maxIndex = tilesSorted[tilesSorted.length - 1]!.index
+
+      // 2. Find or create race state
+      let state = await tx.query.teamRaceStates.findFirst({
+        where: and(
+          eq(teamRaceStates.teamId, teamId),
+          eq(teamRaceStates.bingoId, bingoId)
+        ),
+      })
+
+      if (!state) {
+        const [newState] = await tx
+          .insert(teamRaceStates)
+          .values({
+            teamId,
+            bingoId,
+            currentTileIndex: 1,
+          })
+          .returning()
+        if (!newState) throw new Error("Failed to create race state")
+        state = newState
+      }
+
+      if (state.finished)
+        return { success: true, message: "Team already finished" }
+
+      // 3. Ensure the completed tile is their active tile
+      const completedTile = bingo.tiles.find((t) => t.id === completedTileId)
+      if (!completedTile || completedTile.index !== state.currentTileIndex) {
+        // Just record that a tile was approved, but don't roll if it's not their active tile
+        return {
+          success: true,
+          message: "Tile approved but not current active tile",
+        }
+      }
+
+      // 4. Generate random roll
+      const roll = Math.floor(Math.random() * bingo.dieSize) + 1
+      let newIndex = state.currentTileIndex + roll
+      let finalIndex = newIndex
+
+      // Log the roll
+      const team = await tx.query.teams.findFirst({
+        where: eq(teams.id, teamId),
+      })
+      const teamName = team ? team.name : "Team"
+
+      let activityMsg = `${teamName} completed Tile ${state.currentTileIndex} and rolled a ${roll}, landing on Tile ${newIndex}.`
+
+      // 5. Win Check
+      if (newIndex >= maxIndex) {
+        finalIndex = maxIndex
+        activityMsg = `${teamName} rolled a ${roll} and completed the Tile Race! 🎉`
+        await tx
+          .update(teamRaceStates)
+          .set({ currentTileIndex: finalIndex, finished: true })
+          .where(eq(teamRaceStates.id, state.id))
+        await tx
+          .insert(raceActivityLogs)
+          .values({ teamId, bingoId, message: activityMsg })
+        return { success: true, finalIndex, finished: true }
+      }
+
+      // 6. Jump Check
+      const landingTile = bingo.tiles.find((t) => t.index === newIndex)
+      if (landingTile && landingTile.jumpToIndex) {
+        const jumpTarget = landingTile.jumpToIndex
+        const isChute = jumpTarget < newIndex
+        const isLadder = jumpTarget > newIndex
+
+        // Check history
+        const previousJump = await tx.query.teamRaceJumps.findFirst({
+          where: and(
+            eq(teamRaceJumps.teamId, teamId),
+            eq(teamRaceJumps.bingoId, bingoId),
+            eq(teamRaceJumps.jumpedFromIndex, newIndex)
+          ),
+        })
+
+        if (isChute) {
+          if (!previousJump) {
+            // Take the chute
+            finalIndex = jumpTarget
+            activityMsg += ` Oh no! They fell down a chute to Tile ${finalIndex}!`
+            await tx
+              .insert(teamRaceJumps)
+              .values({ teamId, bingoId, jumpedFromIndex: newIndex })
+          } else {
+            activityMsg += ` They landed on a chute but safely ignored it since they took it before.`
+          }
+        } else if (isLadder) {
+          if (bingo.allowMultipleForwardJumps || !previousJump) {
+            finalIndex = jumpTarget
+            activityMsg += ` Nice! They took a ladder up to Tile ${finalIndex}!`
+            if (!previousJump) {
+              await tx
+                .insert(teamRaceJumps)
+                .values({ teamId, bingoId, jumpedFromIndex: newIndex })
+            }
+          } else {
+            activityMsg += ` They landed on a ladder but couldn't take it again.`
+          }
+        }
+      }
+
+      // 7. Save State
+      await tx
+        .update(teamRaceStates)
+        .set({ currentTileIndex: finalIndex })
+        .where(eq(teamRaceStates.id, state.id))
+      await tx
+        .insert(raceActivityLogs)
+        .values({ teamId, bingoId, message: activityMsg })
+
+      return { success: true, finalIndex, message: activityMsg }
+    })
+  } catch (error) {
+    logger.error({ error }, "Error handling tile race move")
+    return { success: false, error: "Failed to process tile race move" }
+  }
+}
+export async function fetchTeamRaceState(teamId: string, bingoId: string) {
+  try {
+    const state = await db.query.teamRaceStates.findFirst({
+      where: and(
+        eq(teamRaceStates.teamId, teamId),
+        eq(teamRaceStates.bingoId, bingoId)
+      ),
+    })
+
+    if (!state) {
+      return { success: true, currentTileIndex: 1, finished: false }
+    }
+
+    return {
+      success: true,
+      currentTileIndex: state.currentTileIndex,
+      finished: state.finished,
+    }
+  } catch (error) {
+    console.error("Error fetching team race state:", error)
+    return { success: false, error: "Failed to fetch team race state" }
+  }
+}
+
+export async function getRaceActivityLogs(bingoId: string) {
+  try {
+    const logs = await db.query.raceActivityLogs.findMany({
+      where: eq(raceActivityLogs.bingoId, bingoId),
+      orderBy: [desc(raceActivityLogs.createdAt)],
+    })
+    return { success: true, logs }
+  } catch (error) {
+    logger.error({ error }, "Error fetching race activity logs")
+    return { success: false, error: "Failed to fetch race activity logs" }
   }
 }

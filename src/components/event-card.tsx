@@ -28,6 +28,7 @@ import {
   MapPin,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { format } from "date-fns"
 import { useState } from "react"
 import { Textarea } from "@/components/ui/textarea"
 import { requestToJoinEvent } from "@/app/actions/events"
@@ -213,8 +214,8 @@ export function EventCard({
                 <CardDescription className="mt-2 flex items-center text-sm">
                   <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">
-                    {startDate.toLocaleDateString()} -{" "}
-                    {endDate.toLocaleDateString()}
+                    {format(startDate, "MMM d, yyyy")} -{" "}
+                    {format(endDate, "MMM d, yyyy")}
                   </span>
                 </CardDescription>
               </div>
@@ -251,7 +252,7 @@ export function EventCard({
                 <div className="col-span-2 flex items-center space-x-2 rounded-lg bg-muted/50 p-2">
                   <Clock className="h-4 w-4 text-blue-500" />
                   <span className="text-sm font-medium">
-                    Registration: {registrationDeadline.toLocaleDateString()}
+                    Registration: {format(registrationDeadline, "MMM d, yyyy")}
                   </span>
                   {isRegistrationClosed && (
                     <span className="ml-1 font-semibold text-destructive">
@@ -391,7 +392,7 @@ export function EventCard({
           {status === "past" && (
             <div className="flex items-center justify-center text-xs text-muted-foreground">
               <CheckCircle2 className="mr-1 h-3 w-3" />
-              <span>Event completed on {endDate.toLocaleDateString()}</span>
+              <span>Event completed on {format(endDate, "MMM d, yyyy")}</span>
             </div>
           )}
         </CardFooter>

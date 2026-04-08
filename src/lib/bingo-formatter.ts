@@ -14,7 +14,7 @@ export interface FormattedBingo {
   codephrase: string | null
   locked: boolean
   visible: boolean
-  bingoType: "standard" | "progression"
+  bingoType: "standard" | "progression" | "tile-race"
   tiles: Array<{
     id: string
     title: string
@@ -93,7 +93,7 @@ export async function formatBingoData(
     codephrase: string | null
     locked: boolean
     visible: boolean
-    bingoType: "standard" | "progression"
+    bingoType: "standard" | "progression" | "tile-race"
   },
   userTeam: {
     id: string

@@ -25,6 +25,8 @@ import {
   updateSubmissionStatus,
   getTierXpRequirements,
   getSelectableUsersForSubmission,
+  createTileAtPosition,
+  fetchTeamRaceState,
   type SelectableUser,
 } from "@/app/actions/bingo"
 import { getSubmissions } from "@/app/actions/getSubmissions"
@@ -47,6 +49,8 @@ import { GoalsTab } from "./goals-tab"
 import { SubmissionsTab } from "./submissions-tab"
 import { FullSizeImageDialog } from "./full-size-image-dialog"
 import { StatsDialog } from "./stats-dialog"
+import { TileRaceGrid } from "./tile-race/tile-race-grid"
+import { ActivityFeed } from "./tile-race/activity-feed"
 import { BarChart, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSession } from "next-auth/react"
@@ -85,6 +89,9 @@ export default function BingoGrid({
 }: BingoGridProps) {
   const [tiles, setTiles] = useState<Tile[]>(bingo.tiles ?? [])
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null)
+  const [currentTileIndex, setCurrentTileIndex] = useState<number | null>(null)
+  const [raceFinished, setRaceFinished] = useState(false)
+
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editedTile, setEditedTile] = useState<Partial<Tile>>({})
   const [newGoal, setNewGoal] = useState<Partial<Goal>>({ targetValue: 1 })
@@ -231,6 +238,19 @@ export default function BingoGrid({
     }
   }, [isDialogOpen, currentTeamId, bingo.eventId])
 
+  useEffect(() => {
+    const loadTeamRaceState = async () => {
+      if (bingo.bingoType === "tile-race" && currentTeamId) {
+        const result = await fetchTeamRaceState(currentTeamId, bingo.id)
+        if (result.success && result.currentTileIndex !== undefined) {
+          setCurrentTileIndex(result.currentTileIndex)
+          setRaceFinished(result.finished || false)
+        }
+      }
+    }
+    loadTeamRaceState()
+  }, [bingo.id, bingo.bingoType, currentTeamId])
+
   const handleTileClick = async (tile: Tile) => {
     // Check if tile is locked due to progression (but allow if user has management rights)
     if (
@@ -242,6 +262,19 @@ export default function BingoGrid({
       toast({
         title: "Tier locked",
         description: `Complete more tiles in tier ${tile.tier} to unlock this tier`,
+        variant: "destructive",
+      })
+      return
+    }
+    if (
+      bingo.bingoType === "tile-race" &&
+      currentTileIndex !== null &&
+      tile.index !== currentTileIndex &&
+      !(hasSufficientRights() && !isLayoutLocked)
+    ) {
+      toast({
+        title: "Tile locked",
+        description: `This tile is not your current active tile in the race.`,
         variant: "destructive",
       })
       return
@@ -936,6 +969,23 @@ export default function BingoGrid({
           onTilesUpdated={onTileUpdated}
           isEditMode={!isLayoutLocked}
         />
+      ) : bingo.bingoType === "tile-race" ? (
+        <div className="flex w-full flex-col gap-6">
+          <TileRaceGrid
+            tiles={tiles}
+            columns={bingo.columns}
+            rows={bingo.rows}
+            userRole={userRole}
+            currentTeamId={currentTeamId}
+            onTileClick={handleTileClick}
+            isLocked={isLayoutLocked}
+            bingo={bingo}
+            currentTileIndex={currentTileIndex ?? undefined}
+            onTilesUpdated={onTileUpdated}
+            isEditMode={!isLayoutLocked}
+          />
+          <ActivityFeed bingoId={bingo.id} />
+        </div>
       ) : (
         <BingoGridLayout
           ref={gridRef}
@@ -1012,6 +1062,7 @@ export default function BingoGrid({
                 teams={teams}
                 gameType={gameType}
                 isProgressionBingo={bingo.bingoType === "progression"}
+                isTileRaceBingo={bingo.bingoType === "tile-race"}
                 onEditTile={(field, value) =>
                   setEditedTile({ ...editedTile, [field]: value })
                 }

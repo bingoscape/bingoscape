@@ -54,6 +54,8 @@ type EditableTileFields = {
   headerImage: string
   isHidden: boolean
   tier: number
+  jumpToIndex?: number | null
+  index?: number
 }
 
 interface TileDetailsTabProps {
@@ -63,6 +65,7 @@ interface TileDetailsTabProps {
   teams: Team[]
   gameType: "osrs" | "rs3"
   isProgressionBingo?: boolean
+  isTileRaceBingo?: boolean
   onEditTile: <K extends keyof EditableTileFields>(
     field: K,
     value: EditableTileFields[K]
@@ -99,6 +102,7 @@ export function TileDetailsTab({
   teams,
   gameType,
   isProgressionBingo = false,
+  isTileRaceBingo = false,
   onEditTile,
   onUpdateTile,
   onEditorChange,
@@ -339,6 +343,62 @@ export function TileDetailsTab({
                           Tier 0 is unlocked by default
                         </p>
                       </div>
+                    )}
+                    {isTileRaceBingo && (
+                      <>
+                        <div>
+                          <label
+                            htmlFor="index"
+                            className="block text-sm font-medium"
+                          >
+                            Index
+                          </label>
+                          <Input
+                            id="index"
+                            type="number"
+                            min="1"
+                            value={editedTile.index ?? ""}
+                            onChange={(e) => {
+                              const val = e.target.value
+                              onEditTile(
+                                "index",
+                                val === "" ? undefined : Number(val)
+                              )
+                            }}
+                            className="mt-1"
+                            placeholder="e.g., 1"
+                          />
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Path sequence order (1-N)
+                          </p>
+                        </div>
+                        <div>
+                          <label
+                            htmlFor="jumpToIndex"
+                            className="block text-sm font-medium"
+                          >
+                            Jump to Index
+                          </label>
+                          <Input
+                            id="jumpToIndex"
+                            type="number"
+                            min="0"
+                            value={editedTile.jumpToIndex ?? ""}
+                            onChange={(e) => {
+                              const val = e.target.value
+                              onEditTile(
+                                "jumpToIndex",
+                                val === "" ? null : Number(val)
+                              )
+                            }}
+                            className="mt-1"
+                            placeholder="e.g., 5"
+                          />
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Target tile index to jump to on completion
+                          </p>
+                        </div>
+                      </>
                     )}
                     <div className="flex h-full items-center space-x-2 pt-6">
                       <Switch

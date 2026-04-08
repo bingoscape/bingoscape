@@ -22,7 +22,7 @@ export interface ExportedBingo {
     rows: number
     columns: number
     codephrase: string
-    bingoType: "standard" | "progression"
+    bingoType: "standard" | "progression" | "tile-race"
     tiersUnlockRequirement?: number // For progression boards
     mainDiagonalBonusXP?: number // Pattern bonus for main diagonal (standard boards only)
     antiDiagonalBonusXP?: number // Pattern bonus for anti-diagonal (standard boards only)

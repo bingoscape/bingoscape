@@ -37,9 +37,9 @@ export function CreateBingoModal({
   onClose,
 }: CreateBingoModalProps) {
   const [error, setError] = useState<string | null>(null)
-  const [bingoType, setBingoType] = useState<"standard" | "progression">(
-    "standard"
-  )
+  const [bingoType, setBingoType] = useState<
+    "standard" | "progression" | "tile-race"
+  >("standard")
   const [rows, setRows] = useState(5)
   const [columns, setColumns] = useState(5)
   const [rowBonuses, setRowBonuses] = useState<Record<number, number>>({})
@@ -135,9 +135,9 @@ export function CreateBingoModal({
               <Label htmlFor="bingoType">Bingo Type</Label>
               <Select
                 value={bingoType}
-                onValueChange={(value: "standard" | "progression") =>
-                  setBingoType(value)
-                }
+                onValueChange={(
+                  value: "standard" | "progression" | "tile-race"
+                ) => setBingoType(value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select bingo type" />
@@ -145,12 +145,15 @@ export function CreateBingoModal({
                 <SelectContent>
                   <SelectItem value="standard">Standard Bingo</SelectItem>
                   <SelectItem value="progression">Progression Bingo</SelectItem>
+                  <SelectItem value="tile-race">Tile Race</SelectItem>
                 </SelectContent>
               </Select>
               <p className="mt-1 text-sm text-muted-foreground">
                 {bingoType === "standard"
                   ? "Traditional bingo where all tiles are available from the start"
-                  : "Progression-based bingo where teams unlock tiers by completing previous ones"}
+                  : bingoType === "progression"
+                    ? "Progression-based bingo where teams unlock tiers by completing previous ones"
+                    : "Tile race where teams compete to conquer tiles first"}
               </p>
             </div>
 
