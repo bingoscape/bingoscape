@@ -15,11 +15,7 @@
     "lint": "eslint .",
     "start": "next start -p 3344",
     "start:prod": "next start -p 3333",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed"
+    "start:prod": "next start -p 3333"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.1.0",
@@ -103,13 +99,8 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@playwright/test": "^1.54.1",
     "@tailwindcss/typography": "^0.5.15",
-    "@testing-library/dom": "^10.4.0",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.2.0",
     "@types/eslint": "^9.6.0",
-    "@types/jest": "^29.5.14",
     "@types/lodash": "^4.17.10",
     "@types/node": "^20.14.10",
     "@types/react": "19.2.8",
@@ -122,8 +113,6 @@
     "eslint": "^9.18.0",
     "eslint-config-next": "16.1.1",
     "eslint-plugin-drizzle": "^0.2.3",
-    "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0",
     "postcss": "^8.4.39",
     "prettier": "^3.3.2",
     "prettier-plugin-tailwindcss": "^0.6.5",

@@ -11,15 +11,13 @@
 - `npm start` - Start production server on port 3344
 - `npm run start:prod` - Start production server on port 3333
 
+**env-cmd:** Every dev/build script is wrapped with `env-cmd`, which loads `.env` at runtime. **Never run `next dev` or `next build` directly** — env vars will not be loaded and startup will fail.
+
+**CI / Docker builds:** Use `npm run build:ci` (no `env-cmd`) and set `SKIP_ENV_VALIDATION=true` to bypass T3 env validation. The `build:ci` script is what GitHub Actions uses.
+
 ### Testing
 
-- `npm test` - Run all Jest unit tests
-- `npm run test:watch` - Run Jest in watch mode
-- `npm test -- <path-to-test>` - Run a specific test file
-- `npm test -- --testNamePattern="<pattern>"` - Run tests matching a pattern
-- `npm run test:e2e` - Run Playwright end-to-end tests
-- `npm run test:e2e:ui` - Run Playwright with UI
-- `npm run test:e2e:headed` - Run Playwright in headed mode
+Testing infrastructure has been removed and is pending a full rewrite. No test scripts or test dependencies currently exist in the project.
 
 ### Database
 
@@ -27,6 +25,10 @@
 - `npm run db:push` - Push schema to database (force) - **⚠️ USE WITH CAUTION: Deletes data**
 - `npm run db:migrate` - Run database migrations - **✅ PREFERRED for production**
 - `npm run db:studio` - Open Drizzle Studio
+
+**Two Drizzle configs:** `drizzle.config.ts` uses the TS `@/env` alias (works with `env-cmd` npm scripts locally). `drizzle.config.prod.js` uses raw `process.env` (no TS paths — used in Docker/CI). The `db:*` npm scripts use the TS config.
+
+**⚠️ Duplicate migration:** `drizzle/0019_enhance_clan_invites.sql` and `drizzle/0019_overconfident_stranger.sql` both exist — potential migration history conflict. Do not generate a new `0019_*` file; investigate before running `db:generate` if near that sequence.
 
 ### Database Backups & Recovery
 
@@ -94,6 +96,7 @@
 
 - Prettier with tailwindcss plugin auto-formats on save
 - Tailwind classes are auto-sorted by the plugin
+- **No semicolons** (`semi: false`), **double quotes** (`singleQuote: false`), trailing commas ES5-style
 
 ### TypeScript
 
@@ -108,7 +111,6 @@
 - Functions/variables: camelCase (`updateTile`, `handleTileClick`)
 - Files: kebab-case (`event-card.tsx`, `bingo-grid.tsx`)
 - Server actions: camelCase with async (`createBingo`, `updateTile`)
-- Test files: `<name>.test.tsx` in `__tests__` directories or co-located
 
 ### Error Handling
 
@@ -145,20 +147,19 @@
 
 ### Testing
 
-- Unit tests: Jest + React Testing Library
-- E2E tests: Playwright in `tests/` directory
-- Test file pattern: `**/__tests__/**/*.test.[jt]s?(x)`
-- Mock dependencies with `jest.mock()`
-- Use `screen.getBy*` for selecting elements (avoid `screen.queryBy*` for positive assertions)
-- Describe blocks for component/context, `it` for specific test cases
-- Mock current date for consistent testing
+Testing infrastructure has been removed and is pending a full rewrite. No test scripts or test dependencies currently exist in the project.
 
 ### Additional Notes
 
-- React 19.2.3 with Next.js 16.1.1 App Router
+- React 19.2.3 with Next.js 16.1.1 App Router (README incorrectly says 14/18 — trust package.json)
 - PostgreSQL database with Drizzle ORM
 - NextAuth for authentication (Discord OAuth + Credentials)
 - Use `nanoid()` for ID generation
-- Images stored in `public/uploads/` with absolute paths in DB
+- Images stored in `public/uploads/` with absolute paths in DB — served via API rewrite `/uploads/:path` → `/api/uploads/:path` (not served statically)
 - Console removed in production builds
 - Sentry integration for error tracking
+- `SUPER_ADMIN_EMAILS` env var controls superadmin access but is **not** in the T3 env schema — missing it won't fail validation
+- No pre-commit hooks (no Husky/Lefthook) — CI is the only quality gate
+- CI (`ci-cd.yml`) only runs `lint`; type-check is commented out in the workflow
+- Observability: structured logging via `pino`, metrics via `prom-client`; initialized in `src/instrumentation.ts`; full Grafana/Prometheus/Loki stack in `observability/`
+- Deployment target is Docker (`output: "standalone"` in `next.config.mjs`), not Vercel
