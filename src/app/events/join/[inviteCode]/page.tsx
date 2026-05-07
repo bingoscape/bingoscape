@@ -1,4 +1,3 @@
-/* eslint-disable */
 "use client"
 
 import { useState, useEffect, use } from "react";
@@ -12,12 +11,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { RegistrationStatus } from "@/components/registration-status"
 import Link from "next/link"
 
+interface InviteEventData {
+  id: string
+  title: string
+  description: string | null
+  startDate: string | null
+  endDate: string | null
+  requiresApproval: boolean
+}
+
 // Modify the JoinEventPage component to handle previously removed participants
 export default function JoinEventPage(props: { params: Promise<{ inviteCode: string }> }) {
     const params = use(props.params);
     const [isJoining, setIsJoining] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
-    const [event, setEvent] = useState<any>(null)
+    const [event, setEvent] = useState<InviteEventData | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [registrationStatus, setRegistrationStatus] = useState<{
         status: "not_requested" | "pending" | "approved" | "rejected"
@@ -25,7 +33,7 @@ export default function JoinEventPage(props: { params: Promise<{ inviteCode: str
         responseMessage?: string
     } | null>(null)
     const router = useRouter()
-    const { data: session, status } = useSession()
+    const { status } = useSession()
     const { inviteCode } = params
 
     useEffect(() => {

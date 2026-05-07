@@ -25,6 +25,7 @@ import {
 import type { UUID } from "crypto"
 import { asc, eq, inArray, and, gt } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
 import { nanoid } from "nanoid"
 import fs from "fs/promises"
 import path from "path"
@@ -362,6 +363,64 @@ export async function createBingo(formData: FormData) {
   }
 
   return { success: true }
+}
+
+/**
+ * Form action variant of createBingo used by the /events/[id]/bingos/new page.
+ * Validates, creates the bingo, then redirects to the new board.
+ * redirect() is called outside try-catch so Next.js can handle it correctly.
+ */
+export async function createBingoAndRedirect(formData: FormData) {
+  const eventId = formData.get("eventId") as string
+  const title = formData.get("title") as string
+  const rowsStr = formData.get("rows") as string
+  const columnsStr = formData.get("columns") as string
+
+  if (!eventId || !title || !rowsStr || !columnsStr) {
+    throw new Error("Missing required fields")
+  }
+
+  const rows = Number.parseInt(rowsStr)
+  const columns = Number.parseInt(columnsStr)
+  if (isNaN(rows) || isNaN(columns) || rows < 1 || columns < 1) {
+    throw new Error("Invalid rows or columns")
+  }
+
+  const description = (formData.get("description") as string) || ""
+  const codephrase = (formData.get("codephrase") as string) || ""
+
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+  })
+  if (!event) throw new Error("Event not found")
+
+  let newBingoId: string
+
+  try {
+    const newBingo = await db
+      .insert(bingos)
+      .values({ eventId, title, description, codephrase, rows, columns })
+      .returning({ id: bingos.id })
+
+    newBingoId = newBingo[0]!.id
+
+    const tilesToInsert = Array.from({ length: rows * columns }, (_, idx) => ({
+      bingoId: newBingoId,
+      headerImage: getRandomFrog(event.gameType),
+      title: `Tile ${idx + 1}`,
+      description: `Tile ${idx + 1}`,
+      weight: 1,
+      isHidden: false,
+      index: idx,
+    }))
+
+    await db.insert(tiles).values(tilesToInsert)
+  } catch (error) {
+    logger.error({ error }, "Failed to create bingo")
+    throw new Error("Failed to create bingo. Please try again.")
+  }
+
+  redirect(`/events/${eventId}/bingos/${newBingoId}`)
 }
 
 export async function deleteBingo(bingoId: string) {
@@ -2301,5 +2360,21 @@ export async function deleteTier(bingoId: string, tierToDelete: number) {
   } finally {
     // Revalidate the page to refresh cached data
     revalidatePath("/events")
+  }
+}
+
+export async function toggleBingoLock(
+  bingoId: string,
+  locked: boolean
+): Promise<{ success: true; locked: boolean } | { success: false; error: string }> {
+  try {
+    await db
+      .update(bingos)
+      .set({ locked, updatedAt: new Date() })
+      .where(eq(bingos.id, bingoId))
+    revalidatePath("/events")
+    return { success: true, locked }
+  } catch (error) {
+    return { success: false, error: "Failed to update lock state" }
   }
 }

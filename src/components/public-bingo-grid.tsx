@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/hover-card";
 import getRandomFrog from "@/lib/getRandomFrog";
 import type { PublicTeamData } from "@/app/actions/public-events";
+import type { Tile, Bingo } from "@/app/actions/events";
 import { useSwipeable } from "react-swipeable";
 import { useRouter } from "next/navigation";
 import Markdown from "react-markdown";
@@ -34,35 +35,8 @@ interface TeamProgress {
   isComplete: boolean;
 }
 
-interface TileGoal {
-  id: string;
-  description: string;
-  targetValue: number;
-  currentValue?: number;
-}
-
-interface Tile {
-  id: string;
-  title: string;
-  description: string | null;
-  headerImage: string | null;
-  index: number;
-  weight: number;
-  goals?: TileGoal[];
-  isHidden?: boolean;
-}
-
-interface Bingo {
-  id: string;
-  title: string;
-  description: string | null;
-  rows: number;
-  columns: number;
-  tiles: Tile[];
-}
-
 interface PublicBingoGridProps {
-  bingo: Bingo;
+  bingo: Bingo & { tiles: Tile[] };
   teams: PublicTeamData[];
   // Instead of function props, pass the IDs for navigation
   prevBingoId?: string;

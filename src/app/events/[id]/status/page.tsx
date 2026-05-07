@@ -1,68 +1,31 @@
- 
-"use client"
-
-import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
+import { unauthorized } from "next/navigation"
+import { getServerAuthSession } from "@/server/auth"
 import { getUserRegistrationStatus } from "@/app/actions/events"
 import { RegistrationStatus } from "@/components/registration-status"
-import { Loader2 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 
-export default function StatusPage() {
-  const params = useParams()
-  const eventId = params?.id as string
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [registrationData, setRegistrationData] = useState<{
-    status: "not_requested" | "pending" | "approved" | "rejected"
-    message?: string
-    responseMessage?: string
-    eventTitle?: string
-  } | null>(null)
+export default async function StatusPage(props: {
+  params: Promise<{ id: string }>
+}) {
+  const { id: eventId } = await props.params
 
-  useEffect(() => {
-    async function fetchRegistrationStatus() {
-      try {
-        const status = await getUserRegistrationStatus(eventId)
-        setRegistrationData(status)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch registration status")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchRegistrationStatus().then(() => console.log("Registration status fetched")).catch(err => console.error(err))
-  }, [eventId])
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-[50vh]">
-        <Loader2 className="h-8 w-8 animate-spin" role="status" />
-      </div>
-    )
+  const session = await getServerAuthSession()
+  if (!session?.user) {
+    unauthorized()
   }
 
-  if (error) {
-    return (
-      <div className="container mx-auto py-10">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      </div>
-    )
-  }
+  const registrationData = await getUserRegistrationStatus(eventId)
 
-  if (!registrationData) {
+  if (!registrationData || registrationData.status === "not_requested") {
     return (
       <div className="container mx-auto py-10">
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>No Registration Found</AlertTitle>
-          <AlertDescription>You have not registered for this event yet.</AlertDescription>
+          <AlertDescription>
+            You have not registered for this event yet.
+          </AlertDescription>
         </Alert>
       </div>
     )
@@ -80,4 +43,3 @@ export default function StatusPage() {
     </div>
   )
 }
-

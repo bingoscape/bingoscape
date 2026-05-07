@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation"
+import { notFound, unauthorized, forbidden } from "next/navigation"
 import { getServerAuthSession } from "@/server/auth"
 import { getEventById } from "@/app/actions/events"
 import { getBingoItemStatistics } from "@/app/actions/item-statistics"
@@ -14,7 +14,7 @@ export default async function BingoStatsPage(props: { params: Promise<{ id: UUID
   const params = await props.params;
   const session = await getServerAuthSession()
   if (!session || !session.user) {
-    notFound()
+    unauthorized()
   }
 
   const data = await getEventById(params.id)
@@ -26,7 +26,7 @@ export default async function BingoStatsPage(props: { params: Promise<{ id: UUID
 
   // Check if user has access to this event
   if (!userRole) {
-    notFound()
+    forbidden()
   }
 
   // Find the bingo board
@@ -35,11 +35,10 @@ export default async function BingoStatsPage(props: { params: Promise<{ id: UUID
     notFound()
   }
 
-  // Get item statistics for this bingo
-  const itemStatistics = await getBingoItemStatistics(params.bingoId)
-
-  // Get general bingo statistics
-  const bingoStats = await getAllTeamPointsAndTotal(params.bingoId)
+  const [itemStatistics, bingoStats] = await Promise.all([
+    getBingoItemStatistics(params.bingoId),
+    getAllTeamPointsAndTotal(params.bingoId),
+  ])
 
   const hasItemStats = itemStatistics.totalSubmissions > 0
 

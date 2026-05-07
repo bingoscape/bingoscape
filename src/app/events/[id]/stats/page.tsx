@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation"
+import { notFound, unauthorized, forbidden } from "next/navigation"
 import { getServerAuthSession } from "@/server/auth"
 import { getEventById } from "@/app/actions/events"
 import { getEventStats } from "@/app/actions/stats"
@@ -11,7 +11,7 @@ export default async function EventStatsPage(props: { params: Promise<{ id: UUID
   const params = await props.params;
   const session = await getServerAuthSession()
   if (!session || !session.user) {
-    notFound()
+    unauthorized()
   }
 
   const data = await getEventById(params.id)
@@ -23,17 +23,16 @@ export default async function EventStatsPage(props: { params: Promise<{ id: UUID
 
   // Check if user has access to this event
   if (!userRole) {
-    notFound()
+    forbidden()
   }
 
-  // Get event statistics
-  const eventStats = await getEventStats(params.id)
-
-  // Get item statistics
-  const itemStatistics = await getEventItemStatistics(params.id)
-
-  // Get pattern completion data
-  const patternCompletionData = await getEventPatternCompletion(params.id)
+  const [eventStats, itemStatistics, patternCompletionData] = await Promise.all(
+    [
+      getEventStats(params.id),
+      getEventItemStatistics(params.id),
+      getEventPatternCompletion(params.id),
+    ]
+  )
 
   return (
     <div className="container mx-auto py-10">

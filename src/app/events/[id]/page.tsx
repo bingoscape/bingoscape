@@ -1,4 +1,5 @@
-import { notFound } from "next/navigation"
+import { notFound, unauthorized } from "next/navigation"
+import type { Metadata } from "next"
 import {
   Card,
   CardContent,
@@ -34,13 +35,25 @@ import { EventHeaderActions } from "@/components/event-header-actions"
 import AlertBanner from "@/components/ui/alert-banner"
 import { EventRulesSheet } from "@/components/event-rules-sheet"
 
+export async function generateMetadata(props: {
+  params: Promise<{ id: UUID }>
+}): Promise<Metadata> {
+  const { id } = await props.params
+  const data = await getEventById(id)
+  if (!data) return { title: "Event Not Found" }
+  return {
+    title: data.event.title,
+    description: data.event.description ?? undefined,
+  }
+}
+
 export default async function EventBingosPage(props: {
   params: Promise<{ id: UUID }>
 }) {
   const params = await props.params
   const session = await getServerAuthSession()
   if (!session || !session.user) {
-    notFound()
+    unauthorized()
   }
 
   const data = await getEventById(params.id)
@@ -96,17 +109,25 @@ export default async function EventBingosPage(props: {
     )
   }
 
-  const userClans = await getUserClans()
-  const currentTeam = await getCurrentTeamForUser(params.id)
-  const prizePoolData = await calculateEventPrizePool(params.id)
-  const prizePool = prizePoolData.totalPrizePool
-  const registrationStatus = await isRegistrationOpen(params.id)
-  const pendingRegistrationsCount = await getPendingRegistrationCount(params.id)
+  const [
+    userClans,
+    currentTeam,
+    prizePoolData,
+    registrationStatus,
+    pendingRegistrationsCount,
+    rules,
+  ] = await Promise.all([
+    getUserClans(),
+    getCurrentTeamForUser(params.id),
+    calculateEventPrizePool(params.id),
+    isRegistrationOpen(params.id),
+    getPendingRegistrationCount(params.id),
+    getEventRules(params.id),
+  ])
 
+  const prizePool = prizePoolData.totalPrizePool
   const isAdminOrManagement = userRole === "admin" || userRole === "management"
   const isAdmin = userRole === "admin"
-
-  const rules = await getEventRules(params.id)
 
   // Calculate event status
   const now = new Date()
