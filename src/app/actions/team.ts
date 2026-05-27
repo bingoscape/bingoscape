@@ -165,6 +165,7 @@ export async function getCurrentTeamForUser(eventId: string) {
       .select({
         teamId: teamMembers.teamId,
         teamName: teams.name,
+        isLeader: teamMembers.isLeader,
       })
       .from(eventParticipants)
       .innerJoin(teams, eq(teams.eventId, eventParticipants.eventId))
@@ -180,6 +181,7 @@ export async function getCurrentTeamForUser(eventId: string) {
     return {
       id: result[0]!.teamId,
       name: result[0]!.teamName,
+      isLeader: result[0]!.isLeader,
     }
   } catch (error) {
     logger.error({ error }, "Error fetching current team for user:", error)

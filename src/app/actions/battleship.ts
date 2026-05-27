@@ -13,7 +13,6 @@ import {
 } from "@/server/db/schema"
 import { and, eq, ne } from "drizzle-orm"
 import { getServerAuthSession } from "@/server/auth"
-import { getUserRole } from "./events"
 import { indexToCoord } from "@/lib/ship-placement"
 import type { ShipPlacementInput } from "@/lib/ship-placement"
 import { validateShipPlacements } from "@/lib/validate-ship-placements"
@@ -34,8 +33,17 @@ async function assertTeamMemberOrManagement(
     return { ok: false, error: "Not authenticated" }
   }
 
-  const role = await getUserRole(eventId)
-  if (role === "admin" || role === "management") {
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+    columns: {
+      creatorId: true,
+    },
+  })
+  if (!event) {
+    return { ok: false, error: "Event not found" }
+  }
+
+  if (event.creatorId === session.user.id) {
     return { ok: true }
   }
 
@@ -44,10 +52,20 @@ async function assertTeamMemberOrManagement(
       eq(teamMembers.teamId, teamId),
       eq(teamMembers.userId, session.user.id)
     ),
+    columns: {
+      isLeader: true,
+    },
   })
 
   if (!membership) {
     return { ok: false, error: "Not a member of this team" }
+  }
+
+  if (!membership.isLeader) {
+    return {
+      ok: false,
+      error: "Only team leaders or board creator can manage ship placement",
+    }
   }
 
   return { ok: true }

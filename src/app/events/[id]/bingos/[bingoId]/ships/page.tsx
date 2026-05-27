@@ -2,6 +2,7 @@
 
 import { use, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import Link from "next/link"
 import type { UUID } from "crypto"
 import { ArrowLeft } from "lucide-react"
@@ -36,6 +37,7 @@ export default function ShipPlacementPage(props: {
   const searchParams = use(props.searchParams)
   const { id: eventId, bingoId } = params
   const router = useRouter()
+  const { data: session } = useSession()
 
   const [loading, setLoading] = useState(true)
   const [bingo, setBingo] = useState<Bingo | null>(null)
@@ -89,6 +91,19 @@ export default function ShipPlacementPage(props: {
           return
         }
 
+        const isBoardCreator = Boolean(
+          session?.user?.id &&
+            eventData.event.creatorId &&
+            session.user.id === eventData.event.creatorId
+        )
+        const isTeamLeader = Boolean(currentTeam?.isLeader)
+        if (!isBoardCreator && !isTeamLeader) {
+          setError(
+            "Only team leaders or board creator can manage ship placement"
+          )
+          return
+        }
+
         const team = eventData.event.teams?.find(
           (t: { id: string; name: string }) => t.id === effectiveTeamId
         )
@@ -125,7 +140,7 @@ export default function ShipPlacementPage(props: {
     }
 
     void load()
-  }, [eventId, bingoId, searchParams.teamId, router])
+  }, [eventId, bingoId, searchParams.teamId, router, session?.user?.id])
 
   const placedTileIds = useMemo(() => {
     const ids = new Set<string>()

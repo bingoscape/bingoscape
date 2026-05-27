@@ -3,6 +3,7 @@
 
 import { useEffect, useState, use } from "react"
 import { notFound, useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import BingoGridWrapper from "@/components/bingo-grid-wrapper"
 import { getEventById, getUserRole } from "@/app/actions/events"
 import { getTeamsByEventId, getCurrentTeamForUser } from "@/app/actions/team"
@@ -23,6 +24,7 @@ export default function BingoDetailPage(props: {
   const params = use(props.params)
   const { id: eventId, bingoId } = params
   const router = useRouter()
+  const { data: session } = useSession()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<any>(null)
   const [teams, setTeams] = useState<any[]>([])
@@ -98,10 +100,16 @@ export default function BingoDetailPage(props: {
   }
 
   const isAdminOrManagement = userRole === "admin" || userRole === "management"
+  const isBoardCreator = Boolean(
+    session?.user?.id &&
+      data?.event?.creatorId &&
+      session.user.id === data.event.creatorId
+  )
+  const canManageShipPlacement = isBoardCreator || Boolean(currentTeam?.isLeader)
 
   // Determine which team ID to use for the bingo grid
   const effectiveTeamId = isAdminOrManagement ? selectedTeamId : currentTeam?.id
-  const shipPlacementTeamId = currentTeam?.id ?? effectiveTeamId
+  const shipPlacementTeamId = isBoardCreator ? effectiveTeamId : currentTeam?.id
 
   if (loading) {
     return (
@@ -156,7 +164,9 @@ export default function BingoDetailPage(props: {
                 selectedTeamId={selectedTeamId}
               />
             )}
-            {bingo.bingoType === "battleship" && (
+            {bingo.bingoType === "battleship" &&
+              canManageShipPlacement &&
+              shipPlacementTeamId && (
               <BattleshipPlaceShipsButton
                 eventId={eventId}
                 bingoId={bingoId}
