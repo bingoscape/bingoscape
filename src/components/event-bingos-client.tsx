@@ -19,6 +19,7 @@ import { QuickSubmissionButton } from "@/components/quick-submission-button"
 import { QuickSubmissionModal } from "@/components/quick-submission-modal"
 import Link from "next/link"
 import { ListFilter, ChevronLeft, ChevronRight, Edit } from "lucide-react"
+import { BattleshipPlaceShipsButton } from "@/components/battleship-place-ships-button"
 import type { UUID } from "crypto"
 import { useRouter } from "next/navigation"
 
@@ -50,6 +51,7 @@ export function EventBingosClient({
 
   // Determine which team's data to show
   const effectiveTeamId = isAdminOrManagement ? selectedTeamId : currentTeam?.id
+  const shipPlacementTeamId = currentTeam?.id ?? effectiveTeamId
 
   // Filter bingos based on user role and visibility
   const visibleBingos =
@@ -261,6 +263,13 @@ export function EventBingosClient({
                   isSubmissionsLocked={currentBingo.locked || false}
                   onClick={() => setQuickSubmissionModalOpen(true)}
                 />
+                {currentBingo.bingoType === "battleship" && (
+                  <BattleshipPlaceShipsButton
+                    eventId={event.id}
+                    bingoId={currentBingo.id}
+                    teamId={shipPlacementTeamId}
+                  />
+                )}
               </div>
             </div>
           </CardHeader>
@@ -275,18 +284,31 @@ export function EventBingosClient({
                 highlightedTiles={[]}
                 isLayoutLocked={true}
                 userRole={userRole}
+                eventStartDate={event.startDate}
+                eventEndDate={event.endDate}
+                eventCreatorId={event.creatorId}
               />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col justify-between gap-3 pt-4 sm:flex-row">
-            <Link
-              href={`/events/${currentBingo.eventId}/bingos/${currentBingo.id}`}
-              passHref
-            >
-              <Button variant="default" className="w-full sm:w-auto">
-                View Bingo
-              </Button>
-            </Link>
+            <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+              <Link
+                href={`/events/${currentBingo.eventId}/bingos/${currentBingo.id}`}
+                passHref
+              >
+                <Button variant="default" className="w-full sm:w-auto">
+                  View Bingo
+                </Button>
+              </Link>
+              {currentBingo.bingoType === "battleship" && (
+                <BattleshipPlaceShipsButton
+                  eventId={event.id}
+                  bingoId={currentBingo.id}
+                  teamId={shipPlacementTeamId}
+                  className="w-full sm:w-auto"
+                />
+              )}
+            </div>
             {isAdminOrManagement && (
               <Link
                 href={`/events/${currentBingo.eventId}/bingos/${currentBingo.id}/submissions`}

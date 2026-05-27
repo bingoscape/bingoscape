@@ -1,0 +1,383 @@
+"use server"
+
+import { db } from "@/server/db"
+import {
+  battleshipHits,
+  battleshipShips,
+  battleshipShipTiles,
+  bingoShipRules,
+  bingos,
+  teamMembers,
+  teamTileSubmissions,
+  teams,
+  type ShipRule,
+} from "@/server/db/schema"
+import { and, eq, ne } from "drizzle-orm"
+import { getServerAuthSession } from "@/server/auth"
+import { getUserRole } from "./events"
+import { indexToCoord } from "@/lib/ship-placement"
+import type { ShipPlacementInput } from "@/lib/ship-placement"
+import { validateShipPlacements } from "@/lib/validate-ship-placements"
+import { revalidatePath } from "next/cache"
+import { logger } from "@/lib/logger"
+
+export type ShipPlacement = {
+  length: number
+  tileIds: string[]
+}
+
+async function assertTeamMemberOrManagement(
+  eventId: string,
+  teamId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getServerAuthSession()
+  if (!session?.user?.id) {
+    return { ok: false, error: "Not authenticated" }
+  }
+
+  const role = await getUserRole(eventId)
+  if (role === "admin" || role === "management") {
+    return { ok: true }
+  }
+
+  const membership = await db.query.teamMembers.findFirst({
+    where: and(
+      eq(teamMembers.teamId, teamId),
+      eq(teamMembers.userId, session.user.id)
+    ),
+  })
+
+  if (!membership) {
+    return { ok: false, error: "Not a member of this team" }
+  }
+
+  return { ok: true }
+}
+
+export async function getBingoShipRules(bingoId: string) {
+  const rules = await db.query.bingoShipRules.findFirst({
+    where: eq(bingoShipRules.bingoId, bingoId),
+  })
+  return rules?.rulesJson ?? []
+}
+
+export async function getTeamShipPlacements(
+  bingoId: string,
+  teamId: string
+): Promise<{ success: boolean; ships?: ShipPlacement[]; error?: string }> {
+  try {
+    const bingo = await db.query.bingos.findFirst({
+      where: eq(bingos.id, bingoId),
+    })
+    if (!bingo || bingo.bingoType !== "battleship") {
+      return { success: false, error: "Not a battleship board" }
+    }
+
+    const auth = await assertTeamMemberOrManagement(bingo.eventId, teamId)
+    if (!auth.ok) return { success: false, error: auth.error }
+
+    const ships = await db.query.battleshipShips.findMany({
+      where: and(
+        eq(battleshipShips.bingoId, bingoId),
+        eq(battleshipShips.teamId, teamId)
+      ),
+      with: { tiles: true },
+    })
+
+    return {
+      success: true,
+      ships: ships.map((s) => ({
+        length: s.shipLength,
+        tileIds: s.tiles.map((t) => t.tileId),
+      })),
+    }
+  } catch (error) {
+    logger.error({ error }, "Error fetching team ships")
+    return { success: false, error: "Failed to fetch ships" }
+  }
+}
+
+export async function saveTeamShipPlacements(
+  bingoId: string,
+  teamId: string,
+  placements: ShipPlacement[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const bingo = await db.query.bingos.findFirst({
+      where: eq(bingos.id, bingoId),
+      with: { tiles: true, shipRules: true },
+    })
+
+    if (!bingo || bingo.bingoType !== "battleship") {
+      return { success: false, error: "Not a battleship board" }
+    }
+
+    const auth = await assertTeamMemberOrManagement(bingo.eventId, teamId)
+    if (!auth.ok) return { success: false, error: auth.error }
+
+    const rules: ShipRule[] = bingo.shipRules?.rulesJson ?? []
+    if (rules.length === 0) {
+      return { success: false, error: "No ship rules configured for this board" }
+    }
+
+    const tileCoords = bingo.tiles.map((t) => {
+      const { col, row } = indexToCoord(t.index, bingo.columns)
+      return { id: t.id, col, row }
+    })
+
+    const validationError = validateShipPlacements(
+      rules,
+      placements as ShipPlacementInput[],
+      tileCoords
+    )
+    if (validationError) {
+      return { success: false, error: validationError }
+    }
+
+    await db.transaction(async (tx) => {
+      const existingShips = await tx.query.battleshipShips.findMany({
+        where: and(
+          eq(battleshipShips.bingoId, bingoId),
+          eq(battleshipShips.teamId, teamId)
+        ),
+      })
+
+      for (const ship of existingShips) {
+        await tx
+          .delete(battleshipShipTiles)
+          .where(eq(battleshipShipTiles.shipId, ship.id))
+      }
+      await tx
+        .delete(battleshipShips)
+        .where(
+          and(
+            eq(battleshipShips.bingoId, bingoId),
+            eq(battleshipShips.teamId, teamId)
+          )
+        )
+
+      for (const placement of placements) {
+        const [ship] = await tx
+          .insert(battleshipShips)
+          .values({
+            bingoId,
+            teamId,
+            shipLength: placement.length,
+          })
+          .returning()
+
+        if (!ship) continue
+
+        await tx.insert(battleshipShipTiles).values(
+          placement.tileIds.map((tileId) => ({
+            shipId: ship.id,
+            tileId,
+          }))
+        )
+      }
+    })
+
+    revalidatePath(`/events/${bingo.eventId}/bingos/${bingoId}`)
+    revalidatePath(`/events/${bingo.eventId}/bingos/${bingoId}/ships`)
+
+    return { success: true }
+  } catch (error) {
+    logger.error({ error }, "Error saving team ships")
+    return { success: false, error: "Failed to save ships" }
+  }
+}
+
+export async function getBattleshipHits(bingoId: string) {
+  const hits = await db.query.battleshipHits.findMany({
+    where: eq(battleshipHits.bingoId, bingoId),
+  })
+  return hits.map((h) => ({
+    tileId: h.tileId,
+    attackerTeamId: h.attackerTeamId,
+    defenderTeamId: h.defenderTeamId,
+  }))
+}
+
+export async function recordBattleshipHitOnApproval(
+  bingoId: string,
+  tileId: string,
+  attackerTeamId: string,
+  teamTileSubmissionId: string
+): Promise<{ hit: boolean; defenderTeamId?: string }> {
+  const opponentShipTile = await db
+    .select({
+      defenderTeamId: battleshipShips.teamId,
+    })
+    .from(battleshipShipTiles)
+    .innerJoin(
+      battleshipShips,
+      eq(battleshipShipTiles.shipId, battleshipShips.id)
+    )
+    .where(
+      and(
+        eq(battleshipShips.bingoId, bingoId),
+        ne(battleshipShips.teamId, attackerTeamId),
+        eq(battleshipShipTiles.tileId, tileId)
+      )
+    )
+    .limit(1)
+
+  const defender = opponentShipTile[0]
+  if (!defender) {
+    return { hit: false }
+  }
+
+  try {
+    await db.insert(battleshipHits).values({
+      bingoId,
+      tileId,
+      attackerTeamId,
+      defenderTeamId: defender.defenderTeamId,
+      teamTileSubmissionId,
+    })
+    return { hit: true, defenderTeamId: defender.defenderTeamId }
+  } catch {
+    // Unique constraint — hit already recorded for this team/tile
+    return { hit: true, defenderTeamId: defender.defenderTeamId }
+  }
+}
+
+export async function parseShipRulesFromFormData(
+  formData: FormData
+): Promise<ShipRule[]> {
+  const rules: ShipRule[] = []
+  let i = 0
+  while (formData.has(`shipRuleLength-${i}`)) {
+    const length = parseInt(
+      (formData.get(`shipRuleLength-${i}`) as string) || "0"
+    )
+    const count = parseInt((formData.get(`shipRuleCount-${i}`) as string) || "0")
+    if (length > 0 && count > 0) {
+      rules.push({ length, count })
+    }
+    i++
+  }
+  return rules
+}
+
+export async function insertBingoShipRules(
+  bingoId: string,
+  rules: ShipRule[]
+) {
+  if (rules.length === 0) return
+  await db.insert(bingoShipRules).values({
+    bingoId,
+    rulesJson: rules,
+  })
+}
+
+export async function seedRandomBattleshipHits(
+  bingoId: string,
+  requestedCount = 8
+): Promise<{ success: boolean; inserted?: number; error?: string }> {
+  try {
+    const session = await getServerAuthSession()
+    if (!session?.user?.id) {
+      return { success: false, error: "Not authenticated" }
+    }
+
+    const bingo = await db.query.bingos.findFirst({
+      where: eq(bingos.id, bingoId),
+    })
+    if (!bingo || bingo.bingoType !== "battleship") {
+      return { success: false, error: "Not a battleship board" }
+    }
+
+    const role = await getUserRole(bingo.eventId)
+    if (role !== "admin" && role !== "management") {
+      return { success: false, error: "Only management can seed hits" }
+    }
+
+    const eventTeams = await db.query.teams.findMany({
+      where: eq(teams.eventId, bingo.eventId),
+    })
+    if (eventTeams.length < 2) {
+      return { success: false, error: "Need at least two teams" }
+    }
+
+    const ships = await db.query.battleshipShips.findMany({
+      where: eq(battleshipShips.bingoId, bingoId),
+      with: { tiles: true },
+    })
+    if (ships.length === 0) {
+      return { success: false, error: "No ship placements found" }
+    }
+
+    const defenderTilesByTeam = new Map<string, string[]>()
+    for (const ship of ships) {
+      const current = defenderTilesByTeam.get(ship.teamId) ?? []
+      for (const tile of ship.tiles) {
+        current.push(tile.tileId)
+      }
+      defenderTilesByTeam.set(ship.teamId, current)
+    }
+
+    const maxAttempts = Math.max(requestedCount * 4, 12)
+    let inserted = 0
+    let attempts = 0
+
+    while (inserted < requestedCount && attempts < maxAttempts) {
+      attempts++
+      const defenderTeam =
+        eventTeams[Math.floor(Math.random() * eventTeams.length)]
+      if (!defenderTeam) continue
+
+      const candidateTiles = defenderTilesByTeam.get(defenderTeam.id) ?? []
+      if (candidateTiles.length === 0) continue
+
+      const tileId =
+        candidateTiles[Math.floor(Math.random() * candidateTiles.length)]
+      if (!tileId) continue
+
+      const attackerCandidates = eventTeams.filter((t) => t.id !== defenderTeam.id)
+      const attackerTeam =
+        attackerCandidates[Math.floor(Math.random() * attackerCandidates.length)]
+      if (!attackerTeam) continue
+
+      let teamTileSubmission = await db.query.teamTileSubmissions.findFirst({
+        where: and(
+          eq(teamTileSubmissions.tileId, tileId),
+          eq(teamTileSubmissions.teamId, attackerTeam.id)
+        ),
+      })
+
+      if (!teamTileSubmission) {
+        const [created] = await db
+          .insert(teamTileSubmissions)
+          .values({
+            tileId,
+            teamId: attackerTeam.id,
+            status: "approved",
+          })
+          .returning()
+        teamTileSubmission = created
+      }
+
+      if (!teamTileSubmission) continue
+
+      try {
+        await db.insert(battleshipHits).values({
+          bingoId,
+          tileId,
+          attackerTeamId: attackerTeam.id,
+          defenderTeamId: defenderTeam.id,
+          teamTileSubmissionId: teamTileSubmission.id,
+        })
+        inserted++
+      } catch {
+        // Likely uniqueness collision; continue trying random combinations.
+      }
+    }
+
+    revalidatePath(`/events/${bingo.eventId}/bingos/${bingoId}`)
+    return { success: true, inserted }
+  } catch (error) {
+    logger.error({ error }, "Failed seeding random battleship hits")
+    return { success: false, error: "Failed to seed battleship hits" }
+  }
+}

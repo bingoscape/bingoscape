@@ -13,6 +13,8 @@ import { BingoImportExportModal } from "@/components/bingo-import-export-modal"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, RefreshCw, FileJson } from "lucide-react"
+import { BattleshipPlaceShipsButton } from "@/components/battleship-place-ships-button"
+import { BattleshipSeedHitsButton } from "@/components/battleship-seed-hits-button"
 import type { Bingo } from "@/app/actions/events"
 import { cn } from "@/lib/utils"
 
@@ -100,6 +102,7 @@ export default function BingoDetailPage(props: {
 
   // Determine which team ID to use for the bingo grid
   const effectiveTeamId = isAdminOrManagement ? selectedTeamId : currentTeam?.id
+  const shipPlacementTeamId = currentTeam?.id ?? effectiveTeamId
 
   if (loading) {
     return (
@@ -154,6 +157,16 @@ export default function BingoDetailPage(props: {
                 selectedTeamId={selectedTeamId}
               />
             )}
+            {bingo.bingoType === "battleship" && (
+              <BattleshipPlaceShipsButton
+                eventId={eventId}
+                bingoId={bingoId}
+                teamId={shipPlacementTeamId}
+              />
+            )}
+            {bingo.bingoType === "battleship" && isAdminOrManagement && (
+              <BattleshipSeedHitsButton bingoId={bingoId} />
+            )}
             {isAdminOrManagement && (
               <Button
                 variant="outline"
@@ -173,7 +186,9 @@ export default function BingoDetailPage(props: {
                 "mx-auto w-full",
                 bingo.bingoType === "progression"
                   ? "max-w-full"
-                  : "aspect-square max-w-[80vh]"
+                  : bingo.bingoType === "battleship"
+                    ? "aspect-square max-w-[80vh]"
+                    : "aspect-square max-w-[80vh]"
               )}
             >
               <BingoGridWrapper
@@ -183,6 +198,9 @@ export default function BingoDetailPage(props: {
                 currentTeamId={effectiveTeamId}
                 teams={teams}
                 gameType={data.event.gameType}
+                eventStartDate={data.event.startDate}
+                eventEndDate={data.event.endDate}
+                eventCreatorId={data.event.creatorId}
               />
             </div>
           </CardContent>

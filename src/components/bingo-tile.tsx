@@ -2,7 +2,7 @@
 
 import React from "react"
 import Image from "next/image"
-import { Zap, EyeOff } from "lucide-react"
+import { Zap, EyeOff, Sword } from "lucide-react"
 import type { Tile } from "@/app/actions/events"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import getRandomFrog from "@/lib/getRandomFrog"
@@ -24,9 +24,24 @@ interface BingoTileProps {
   currentTeamId?: string
   isLocked: boolean
   isLoading?: boolean
+  isHitByCurrentTeam?: boolean
+  /** Battleship pre-event: empty cells for non-creators (grid position only). */
+  hideTileDetails?: boolean
+  tileLabel?: string
 }
 
-export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, currentTeamId, isLocked, isLoading = false }: BingoTileProps) {
+export function BingoTile({
+  tile,
+  onClick,
+  onTogglePlaceholder,
+  userRole,
+  currentTeamId,
+  isLocked,
+  isLoading = false,
+  isHitByCurrentTeam = false,
+  hideTileDetails = false,
+  tileLabel,
+}: BingoTileProps) {
   const isManagement = userRole === "management" || userRole === "admin"
 
   // Goal tree data state for hovercard
@@ -93,6 +108,21 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
 
   const completionStatus = getCompletionStatus()
 
+  if (hideTileDetails) {
+    return (
+      <div
+        className="relative flex aspect-square min-h-[60px] items-center justify-center rounded-lg border-2 border-muted-foreground/25 bg-muted/20 sm:min-h-[80px] md:min-h-[100px] lg:min-h-[120px]"
+        aria-label={tileLabel ?? `Tile ${tile.index + 1}`}
+      >
+        {tileLabel && (
+          <span className="text-xs font-medium text-muted-foreground/70">
+            {tileLabel}
+          </span>
+        )}
+      </div>
+    )
+  }
+
   const tileClasses = `
     relative rounded-lg overflow-hidden aspect-square group
     transition-all duration-300 ease-in-out
@@ -103,7 +133,7 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
     ${!tile.isHidden ? `
       border-2 cursor-pointer transform hover:scale-[1.01] sm:hover:scale-[1.02] lg:hover:scale-[1.05] hover:z-10 hover:shadow-2xl
       active:scale-[0.98] active:transition-transform active:duration-100
-      ${completionStatus === "completed" ? "border-green-500 bg-green-50 dark:bg-green-900/20 shadow-green-200/50 hover:shadow-green-300/60" : ""}
+      ${!isHitByCurrentTeam && completionStatus === "completed" ? "border-green-500 bg-green-50 dark:bg-green-900/20 shadow-green-200/50 hover:shadow-green-300/60" : ""}
       ${completionStatus === "needs_review" ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 shadow-yellow-200/50 hover:shadow-yellow-300/60" : ""}
       ${completionStatus === "pending" ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-blue-200/50 hover:shadow-blue-300/60" : ""}
       ${completionStatus === "incomplete" ? "border-muted-foreground/40 hover:border-primary shadow-md hover:shadow-xl" : ""}
@@ -206,6 +236,12 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
                   <span className="text-xs font-medium text-foreground">{tile.weight}</span>
                 </div>
               </div>
+
+              {isHitByCurrentTeam && (
+                <div className="absolute left-2 top-2 z-20 rounded-full border border-border bg-background/90 p-1.5 shadow-sm">
+                  <Sword className="h-3.5 w-3.5 text-foreground" />
+                </div>
+              )}
 
               {/* Loading overlay */}
               {isLoading && (

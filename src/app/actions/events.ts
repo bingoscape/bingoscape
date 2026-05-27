@@ -168,7 +168,7 @@ export interface Bingo {
   updatedAt: Date
   locked: boolean
   visible: boolean
-  bingoType: "standard" | "progression"
+  bingoType: "standard" | "progression" | "battleship"
   tiersUnlockRequirement: number
   tiles?: Tile[]
 }

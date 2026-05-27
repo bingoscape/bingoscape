@@ -13,10 +13,12 @@ interface BingoGridLayoutProps {
   isLocked: boolean
   highlightedTiles: number[]
   loadingTileId?: string
+  hitByCurrentTeamTileIds?: Set<string>
+  hideTileDetails?: boolean
 }
 
 export const BingoGridLayout = React.forwardRef<HTMLDivElement, BingoGridLayoutProps>(
-  ({ tiles, columns, rows, userRole, currentTeamId, onTileClick, onTogglePlaceholder, isLocked, highlightedTiles, loadingTileId }, ref) => {
+  ({ tiles, columns, rows, userRole, currentTeamId, onTileClick, onTogglePlaceholder, isLocked, highlightedTiles, loadingTileId, hitByCurrentTeamTileIds, hideTileDetails }, ref) => {
     return (
       <div
         ref={ref}
@@ -44,6 +46,9 @@ export const BingoGridLayout = React.forwardRef<HTMLDivElement, BingoGridLayoutP
               currentTeamId={currentTeamId}
               isLocked={isLocked}
               isLoading={loadingTileId === tile.id}
+              isHitByCurrentTeam={hitByCurrentTeamTileIds?.has(tile.id)}
+              hideTileDetails={hideTileDetails}
+              tileLabel={hideTileDetails ? String(tile.index + 1) : undefined}
             />
           </div>
         ))}
