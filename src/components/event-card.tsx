@@ -324,29 +324,29 @@ export function EventCard({
                   <>
                     {eventData.event.requiresApproval ? (
                       registrationStatus?.status === "pending" ? (
-                        <Link
-                          href={`/events/${eventData.event.id}/status`}
-                          onClick={(e) => e.stopPropagation()}
+                        <Button
+                          variant="outline"
+                          className="hover:bg-yellow-500 hover:text-white"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            router.push(`/events/${eventData.event.id}/status`)
+                          }}
                         >
-                          <Button
-                            variant="outline"
-                            className="hover:bg-yellow-500 hover:text-white"
-                          >
-                            View Status
-                          </Button>
-                        </Link>
+                          View Status
+                        </Button>
                       ) : registrationStatus?.status === "rejected" ? (
-                        <Link
-                          href={`/events/${eventData.event.id}/status`}
-                          onClick={(e) => e.stopPropagation()}
+                        <Button
+                          variant="outline"
+                          className="hover:bg-red-500 hover:text-white"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            router.push(`/events/${eventData.event.id}/status`)
+                          }}
                         >
-                          <Button
-                            variant="outline"
-                            className="hover:bg-red-500 hover:text-white"
-                          >
-                            View Status
-                          </Button>
-                        </Link>
+                          View Status
+                        </Button>
                       ) : (
                         <Button
                           onClick={(e) => {

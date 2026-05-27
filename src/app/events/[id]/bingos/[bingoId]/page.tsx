@@ -14,7 +14,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, RefreshCw, FileJson } from "lucide-react"
 import { BattleshipPlaceShipsButton } from "@/components/battleship-place-ships-button"
-import { BattleshipSeedHitsButton } from "@/components/battleship-seed-hits-button"
 import type { Bingo } from "@/app/actions/events"
 import { cn } from "@/lib/utils"
 
@@ -163,9 +162,6 @@ export default function BingoDetailPage(props: {
                 bingoId={bingoId}
                 teamId={shipPlacementTeamId}
               />
-            )}
-            {bingo.bingoType === "battleship" && isAdminOrManagement && (
-              <BattleshipSeedHitsButton bingoId={bingoId} />
             )}
             {isAdminOrManagement && (
               <Button

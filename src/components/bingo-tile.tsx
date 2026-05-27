@@ -238,7 +238,10 @@ export function BingoTile({
               </div>
 
               {isHitByCurrentTeam && (
-                <div className="absolute left-2 top-2 z-20 rounded-full border border-border bg-background/90 p-1.5 shadow-sm">
+                <div
+                  className="absolute left-2 top-2 z-20 rounded-full border border-border bg-background/90 p-1.5 shadow-sm"
+                  data-testid="battleship-hit-icon"
+                >
                   <Sword className="h-3.5 w-3.5 text-foreground" />
                 </div>
               )}

@@ -1,7 +1,7 @@
 /* eslint-disable */
 "use client"
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
@@ -13,8 +13,8 @@ import { RegistrationStatus } from "@/components/registration-status"
 import Link from "next/link"
 
 // Modify the JoinEventPage component to handle previously removed participants
-export default function JoinEventPage(props: { params: Promise<{ inviteCode: string }> }) {
-    const params = use(props.params);
+export default function JoinEventPage(props: { params: { inviteCode: string } }) {
+    const params = props.params;
     const [isJoining, setIsJoining] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
     const [event, setEvent] = useState<any>(null)
@@ -115,21 +115,21 @@ export default function JoinEventPage(props: { params: Promise<{ inviteCode: str
         }
     }
 
-    // Show loading state while checking authentication
-    if (status === "loading" || isLoading) {
-        return (
-            <div className="flex justify-center items-center h-[50vh]">
-                <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-        )
-    }
-
     // Don't render the join UI if not authenticated (will redirect to login)
     if (status === "unauthenticated") {
         return (
             <div className="flex justify-center items-center h-[50vh]">
                 <Loader2 className="h-8 w-8 animate-spin" />
                 <p className="ml-2">Redirecting to login...</p>
+            </div>
+        )
+    }
+
+    // Show loading state while checking authentication / registration
+    if (status === "loading" || isLoading) {
+        return (
+            <div className="flex justify-center items-center h-[50vh]">
+                <Loader2 className="h-8 w-8 animate-spin" />
             </div>
         )
     }

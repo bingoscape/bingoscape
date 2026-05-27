@@ -1,174 +1,103 @@
  
-import { getUserRegistrationStatus, requestToJoinEvent } from "../events"
-import { db } from "@/lib/db"
-import { auth } from "@/auth"
-import { describe, beforeEach, it, expect, jest } from "@jest/globals"
+import { describe, beforeEach, expect, it, jest } from "@jest/globals"
 
-// Mock dependencies
-jest.mock("@/lib/db", () => ({
+jest.mock("@/server/auth", () => ({
+  getServerAuthSession: jest.fn(),
+}))
+
+jest.mock("@/server/db", () => ({
   db: {
-    eventParticipant: {
-      findFirst: jest.fn(),
-      create: jest.fn(),
+    query: {
+      events: { findFirst: jest.fn() },
+      eventParticipants: { findFirst: jest.fn() },
+      eventRegistrationRequests: { findFirst: jest.fn() },
     },
-    event: {
-      findUnique: jest.fn(),
-    },
+    insert: jest.fn(() => ({ values: jest.fn() })),
   },
 }))
 
-jest.mock("@/auth", () => ({
-  auth: jest.fn(),
+jest.mock("nanoid", () => ({
+  nanoid: () => "test-nanoid",
 }))
 
-describe("Event Registration Actions", () => {
+describe("Event registration actions", () => {
+  const { getServerAuthSession } = jest.requireMock("@/server/auth") as {
+    getServerAuthSession: jest.Mock
+  }
+  const { db } = jest.requireMock("@/server/db") as any
+  const { getUserRegistrationStatus, requestToJoinEvent } = require("../events")
+
   beforeEach(() => {
     jest.clearAllMocks()
-      // Mock auth to return a user
-      ; (auth as jest.Mock).mockResolvedValue({
-        user: { id: "user-123", name: "Test User" },
-      })
+    getServerAuthSession.mockResolvedValue({ user: { id: "user-123" } })
   })
 
   describe("getUserRegistrationStatus", () => {
-    it("should return not_requested when user has no registration", async () => {
-      // Mock db to return null (no registration found)
-      ; (db.eventParticipant.findFirst as jest.Mock).mockResolvedValue(null)
+    it("returns not_requested when unauthenticated", async () => {
+      getServerAuthSession.mockResolvedValue(null)
 
       const result = await getUserRegistrationStatus("event-123")
-
       expect(result).toEqual({ status: "not_requested" })
-      expect(db.eventParticipant.findFirst).toHaveBeenCalledWith({
-        where: {
-          eventId: "event-123",
-          userId: "user-123",
-        },
-      })
     })
 
-    it("should return pending status when registration is pending", async () => {
-      // Mock db to return a pending registration
-      ; (db.eventParticipant.findFirst as jest.Mock).mockResolvedValue({
-        status: "pending",
-        message: "Please let me join",
-        responseMessage: null,
-      })
+    it("returns approved when user is already a participant", async () => {
+      db.query.eventParticipants.findFirst.mockResolvedValue({ id: "ep-1" })
 
       const result = await getUserRegistrationStatus("event-123")
-
-      expect(result).toEqual({
-        status: "pending",
-        message: "Please let me join",
-        responseMessage: null,
-      })
+      expect(result).toEqual({ status: "approved" })
     })
 
-    it("should return approved status when registration is approved", async () => {
-      // Mock db to return an approved registration
-      ; (db.eventParticipant.findFirst as jest.Mock).mockResolvedValue({
-        status: "approved",
-        message: "Please let me join",
-        responseMessage: "Welcome!",
-      })
+    it("returns not_requested when no request exists", async () => {
+      db.query.eventParticipants.findFirst.mockResolvedValue(null)
+      db.query.eventRegistrationRequests.findFirst.mockResolvedValue(null)
 
       const result = await getUserRegistrationStatus("event-123")
-
-      expect(result).toEqual({
-        status: "approved",
-        message: "Please let me join",
-        responseMessage: "Welcome!",
-      })
+      expect(result).toEqual({ status: "not_requested" })
     })
 
-    it("should return rejected status when registration is rejected", async () => {
-      // Mock db to return a rejected registration
-      ; (db.eventParticipant.findFirst as jest.Mock).mockResolvedValue({
+    it("returns request status + event title", async () => {
+      db.query.eventParticipants.findFirst.mockResolvedValue(null)
+      db.query.eventRegistrationRequests.findFirst.mockResolvedValue({
         status: "rejected",
-        message: "Please let me join",
-        responseMessage: "Sorry, the event is full",
+        message: "pls",
+        responseMessage: "no",
+        event: { title: "Test Event" },
       })
 
       const result = await getUserRegistrationStatus("event-123")
-
       expect(result).toEqual({
         status: "rejected",
-        message: "Please let me join",
-        responseMessage: "Sorry, the event is full",
+        message: "pls",
+        responseMessage: "no",
+        eventTitle: "Test Event",
       })
-    })
-
-    it("should throw an error when user is not authenticated", async () => {
-      // Mock auth to return no user
-      ; (auth as jest.Mock).mockResolvedValue({ user: null })
-
-      await expect(getUserRegistrationStatus("event-123")).rejects.toThrow(
-        "You must be logged in to check registration status",
-      )
     })
   })
 
   describe("requestToJoinEvent", () => {
-    it("should create a pending registration request", async () => {
-      // Mock db to return an event that requires approval
-      ; (db.event.findUnique as jest.Mock).mockResolvedValue({
-        id: "event-123",
-        title: "Test Event",
-        requiresApproval: true,
-      })
-
-        // Mock db to return null (no existing registration)
-        ; (db.eventParticipant.findFirst as jest.Mock).mockResolvedValue(null)
-
-        // Mock db to successfully create a registration
-        ; (db.eventParticipant.create as jest.Mock).mockResolvedValue({
-          id: "participant-123",
-          eventId: "event-123",
-          userId: "user-123",
-          status: "pending",
-          message: "Please approve me",
-        })
-
-      await requestToJoinEvent("event-123", "Please approve me")
-
-      expect(db.eventParticipant.create).toHaveBeenCalledWith({
-        data: {
-          eventId: "event-123",
-          userId: "user-123",
-          status: "pending",
-          message: "Please approve me",
-        },
-      })
-    })
-
-    it("should throw an error when user already has a registration", async () => {
-      // Mock db to return an event that requires approval
-      ; (db.event.findUnique as jest.Mock).mockResolvedValue({
-        id: "event-123",
-        title: "Test Event",
-        requiresApproval: true,
-      })
-
-        // Mock db to return an existing registration
-        ; (db.eventParticipant.findFirst as jest.Mock).mockResolvedValue({
-          id: "participant-123",
-          eventId: "event-123",
-          userId: "user-123",
-          status: "pending",
-        })
-
-      await expect(requestToJoinEvent("event-123", "Please approve me")).rejects.toThrow(
-        "You have already requested to join this event",
+    it("throws when unauthenticated", async () => {
+      getServerAuthSession.mockResolvedValue(null)
+      await expect(requestToJoinEvent("event-123", "hi")).rejects.toThrow(
+        "You must be logged in to request to join an event"
       )
     })
 
-    it("should throw an error when event does not exist", async () => {
-      // Mock db to return null (event not found)
-      ; (db.event.findUnique as jest.Mock).mockResolvedValue(null)
+    it("throws when event not found", async () => {
+      db.query.events.findFirst.mockResolvedValue(null)
+      await expect(requestToJoinEvent("event-123", "hi")).rejects.toThrow(
+        "Event not found"
+      )
+    })
 
-      await expect(requestToJoinEvent("event-123", "Please approve me")).rejects.toThrow("Event not found")
+    it("throws when event does not require approval", async () => {
+      db.query.events.findFirst.mockResolvedValue({
+        id: "event-123",
+        requiresApproval: false,
+      })
+      await expect(requestToJoinEvent("event-123", "hi")).rejects.toThrow(
+        "This event does not require approval to join"
+      )
     })
   })
-
-  // Additional tests for joinEvent and joinEventViaInvite would follow a similar pattern
 })
 

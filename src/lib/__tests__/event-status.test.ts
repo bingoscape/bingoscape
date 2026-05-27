@@ -32,4 +32,18 @@ describe("event-status", () => {
       canSeeBattleshipTileDetails(false, "creator-1", "other-user", "management")
     ).toBe(true)
   })
+
+  it("shows tile details to everyone once the event is active", () => {
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date("2026-06-15T12:00:00Z"))
+
+    expect(
+      canSeeBattleshipTileDetails(true, "creator-1", "creator-1", "participant")
+    ).toBe(true)
+    expect(
+      canSeeBattleshipTileDetails(true, "creator-1", "other-user", "participant")
+    ).toBe(true)
+
+    jest.useRealTimers()
+  })
 })

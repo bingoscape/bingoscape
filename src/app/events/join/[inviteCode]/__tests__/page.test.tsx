@@ -13,7 +13,7 @@ jest.mock("next/navigation", () => ({
 
 jest.mock("next-auth/react", () => ({
   useSession: jest.fn(),
-  signIn: jest.fn(),
+  signIn: jest.fn(() => Promise.resolve()),
 }))
 
 jest.mock("@/app/actions/events", () => ({
@@ -45,13 +45,16 @@ describe("JoinEventPage", () => {
       })
   })
 
+  const renderPage = (inviteCode = "invite-123") =>
+    render(<JoinEventPage params={{ inviteCode }} />)
+
   it("redirects to login if user is not authenticated", () => {
     ; (useSession as jest.Mock).mockReturnValue({
       data: null,
       status: "unauthenticated",
     })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" }} />)
+    renderPage()
 
     expect(screen.getByText("Redirecting to login...")).toBeInTheDocument()
   })
@@ -62,9 +65,9 @@ describe("JoinEventPage", () => {
       status: "loading",
     })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" }} />)
+    const { container } = renderPage()
 
-    expect(screen.getByRole("status")).toBeInTheDocument() // Loader component
+    expect(container.querySelector(".animate-spin")).toBeTruthy()
   })
 
   it("redirects to event page if user is already approved", async () => {
@@ -76,7 +79,7 @@ describe("JoinEventPage", () => {
         status: "approved",
       })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" }} />)
+    renderPage()
 
     await waitFor(() => {
       expect(mockRouter.push).toHaveBeenCalledWith("/events/event-123")
@@ -93,7 +96,7 @@ describe("JoinEventPage", () => {
         message: "Please approve me",
       })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" }} />)
+    renderPage()
 
     await waitFor(() => {
       expect(screen.getByText("Registration Status")).toBeInTheDocument()
@@ -112,7 +115,7 @@ describe("JoinEventPage", () => {
         responseMessage: "Sorry, the event is full",
       })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" }} />)
+    renderPage()
 
     await waitFor(() => {
       expect(screen.getByText("Registration Status")).toBeInTheDocument()
@@ -130,7 +133,7 @@ describe("JoinEventPage", () => {
         status: "not_requested",
       })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" }} />)
+    renderPage()
 
     await waitFor(() => {
       expect(screen.getByText("You've been invited to join Test Event!")).toBeInTheDocument()
