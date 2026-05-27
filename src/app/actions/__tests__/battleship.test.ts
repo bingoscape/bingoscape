@@ -49,6 +49,7 @@ const mockTx = {
 jest.mock("@/server/db", () => ({
   db: {
     query: {
+      events: { findFirst: jest.fn() },
       bingos: { findFirst: jest.fn() },
       battleshipShips: { findMany: jest.fn() },
       battleshipHits: { findMany: jest.fn() },
@@ -93,10 +94,15 @@ describe("battleship actions", () => {
     ],
     shipRules: { rulesJson: [{ length: 3, count: 1 }, { length: 2, count: 1 }] },
   }
+  const futureEvent = {
+    startDate: new Date("2100-01-01T00:00:00.000Z"),
+    endDate: new Date("2100-01-02T00:00:00.000Z"),
+  }
 
   beforeEach(() => {
     jest.clearAllMocks()
     getServerAuthSession.mockResolvedValue({ user: { id: "user-1" } })
+    db.query.events.findFirst.mockResolvedValue(futureEvent)
     mockInsertValues.mockReset()
     mockInsertReturning.mockReset()
     mockDeleteWhere.mockReset()
@@ -214,6 +220,26 @@ describe("battleship actions", () => {
       expect(result).toEqual({ success: true })
       expect(db.transaction).toHaveBeenCalled()
       expect(mockInsertValues).toHaveBeenCalled()
+    })
+
+    it("rejects placement when event is active or completed", async () => {
+      db.query.bingos.findFirst.mockResolvedValue(battleshipBingo)
+      db.query.events.findFirst.mockResolvedValue({
+        startDate: new Date("2000-01-01T00:00:00.000Z"),
+        endDate: new Date("2100-01-01T00:00:00.000Z"),
+      })
+
+      const result = await saveTeamShipPlacements(
+        "bingo-1",
+        "team-1",
+        validPlacements
+      )
+
+      expect(result).toEqual({
+        success: false,
+        error: "Ship placement is only allowed before the event starts",
+      })
+      expect(db.transaction).not.toHaveBeenCalled()
     })
   })
 

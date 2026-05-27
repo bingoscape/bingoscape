@@ -7,6 +7,7 @@ import {
   battleshipShipTiles,
   bingoShipRules,
   bingos,
+  events,
   teamMembers,
   type ShipRule,
 } from "@/server/db/schema"
@@ -108,6 +109,25 @@ export async function saveTeamShipPlacements(
 
     if (!bingo || bingo.bingoType !== "battleship") {
       return { success: false, error: "Not a battleship board" }
+    }
+
+    const event = await db.query.events.findFirst({
+      where: eq(events.id, bingo.eventId),
+      columns: { startDate: true, endDate: true },
+    })
+    if (!event) {
+      return { success: false, error: "Event not found" }
+    }
+
+    const now = new Date()
+    const eventIsActive =
+      now >= new Date(event.startDate) && now <= new Date(event.endDate)
+    const eventIsCompleted = now > new Date(event.endDate)
+    if (eventIsActive || eventIsCompleted) {
+      return {
+        success: false,
+        error: "Ship placement is only allowed before the event starts",
+      }
     }
 
     const auth = await assertTeamMemberOrManagement(bingo.eventId, teamId)

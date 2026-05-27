@@ -22,6 +22,7 @@ import {
   indexToCoord,
   type TileCoord,
 } from "@/lib/ship-placement"
+import { isEventActive } from "@/lib/event-status"
 import { getEventById } from "@/app/actions/events"
 import { getCurrentTeamForUser } from "@/app/actions/team"
 import type { Bingo, Tile } from "@/app/actions/events"
@@ -48,6 +49,7 @@ export default function ShipPlacementPage(props: {
     length: number
     tileIds: string[]
   } | null>(null)
+  const [shipPlacementLocked, setShipPlacementLocked] = useState(false)
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
 
@@ -90,9 +92,20 @@ export default function ShipPlacementPage(props: {
         const team = eventData.event.teams?.find(
           (t: { id: string; name: string }) => t.id === effectiveTeamId
         )
+        const eventIsActive = isEventActive(
+          eventData.event.startDate,
+          eventData.event.endDate
+        )
+        const eventIsCompleted = new Date() > new Date(eventData.event.endDate)
+        const placementLocked = eventIsActive || eventIsCompleted
+
         setBingo(foundBingo)
         setTeamId(effectiveTeamId)
         setTeamName(team?.name ?? "Team")
+        setShipPlacementLocked(placementLocked)
+        if (placementLocked) {
+          setMessage("Ship placement is only allowed before the event starts")
+        }
 
         const [shipRules, existingShips] = await Promise.all([
           getBingoShipRules(bingoId),
@@ -139,6 +152,10 @@ export default function ShipPlacementPage(props: {
 
   const onSelect = (tile: Tile) => {
     if (!bingo) return
+    if (shipPlacementLocked) {
+      setError("Ship placement is only allowed before the event starts")
+      return
+    }
     setError("")
 
     if (placedTileIds.has(tile.id)) {
@@ -204,6 +221,10 @@ export default function ShipPlacementPage(props: {
 
   const save = async () => {
     if (!teamId) return
+    if (shipPlacementLocked) {
+      setError("Ship placement is only allowed before the event starts")
+      return
+    }
     if (currentShip) {
       setError("Finish or cancel the ship you are placing first")
       return
@@ -222,6 +243,7 @@ export default function ShipPlacementPage(props: {
   }
 
   const reset = () => {
+    if (shipPlacementLocked) return
     setShips([])
     setCurrentShip(null)
     setMessage("Reset all ships")
@@ -287,13 +309,14 @@ export default function ShipPlacementPage(props: {
           {message && <p className="text-sm text-muted-foreground">{message}</p>}
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={save}>
+            <Button type="button" onClick={save} disabled={shipPlacementLocked}>
               Save placement
             </Button>
             {currentShip && (
               <Button
                 type="button"
                 variant="outline"
+                disabled={shipPlacementLocked}
                 onClick={() => {
                   setCurrentShip(null)
                   setMessage("Cancelled current ship")
@@ -302,7 +325,12 @@ export default function ShipPlacementPage(props: {
                 Cancel current ship
               </Button>
             )}
-            <Button type="button" variant="outline" onClick={reset}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={reset}
+              disabled={shipPlacementLocked}
+            >
               Reset all
             </Button>
           </div>
@@ -316,6 +344,7 @@ export default function ShipPlacementPage(props: {
         savedShipTileIds={placedTileIds}
         currentShipTileIds={new Set(currentShip?.tileIds ?? [])}
         onSelect={onSelect}
+        disabled={shipPlacementLocked}
       />
     </div>
   )
