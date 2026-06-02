@@ -47,7 +47,7 @@ import { GoalsTab } from "./goals-tab"
 import { SubmissionsTab } from "./submissions-tab"
 import { FullSizeImageDialog } from "./full-size-image-dialog"
 import { StatsDialog } from "./stats-dialog"
-import { BarChart, Sword, Zap } from "lucide-react"
+import { BarChart, Sword, Target, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSession } from "next-auth/react"
 import {
@@ -992,6 +992,10 @@ export default function BingoGrid({
           <span className="inline-flex items-center gap-1">
             <Sword className="h-3.5 w-3.5" />
             Hit by your team
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Target className="h-3.5 w-3.5" />
+            Miss (completed, no ship)
           </span>
         </div>
       )}

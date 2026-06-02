@@ -169,6 +169,13 @@
       "when": 1777300000000,
       "tag": "0023_battleship_bingo",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1777365600000,
+      "tag": "0024_battleship_ship_tile_scope_fix",
+      "breakpoints": true
     }
   ]
 }

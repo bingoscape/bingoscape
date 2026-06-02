@@ -2,7 +2,7 @@
 
 import React from "react"
 import Image from "next/image"
-import { Zap, EyeOff, Sword } from "lucide-react"
+import { Zap, EyeOff, Sword, Target } from "lucide-react"
 import type { Tile } from "@/app/actions/events"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import getRandomFrog from "@/lib/getRandomFrog"
@@ -25,6 +25,8 @@ interface BingoTileProps {
   isLocked: boolean
   isLoading?: boolean
   isHitByCurrentTeam?: boolean
+  /** Battleship: approved tile with no opponent ship at this coordinate. */
+  isMissByCurrentTeam?: boolean
   /** Battleship pre-event: empty cells for non-creators (grid position only). */
   hideTileDetails?: boolean
   tileLabel?: string
@@ -39,6 +41,7 @@ export function BingoTile({
   isLocked,
   isLoading = false,
   isHitByCurrentTeam = false,
+  isMissByCurrentTeam = false,
   hideTileDetails = false,
   tileLabel,
 }: BingoTileProps) {
@@ -241,8 +244,18 @@ export function BingoTile({
                 <div
                   className="absolute left-2 top-2 z-20 rounded-full border border-border bg-background/90 p-1.5 shadow-sm"
                   data-testid="battleship-hit-icon"
+                  title="Hit — opponent ship"
                 >
                   <Sword className="h-3.5 w-3.5 text-foreground" />
+                </div>
+              )}
+              {isMissByCurrentTeam && !isHitByCurrentTeam && (
+                <div
+                  className="absolute left-2 top-2 z-20 rounded-full border border-border bg-background/90 p-1.5 shadow-sm"
+                  data-testid="battleship-miss-icon"
+                  title="Miss — no ship at this tile"
+                >
+                  <Target className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
               )}
 

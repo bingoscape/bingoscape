@@ -1191,9 +1191,6 @@ export const battleshipShipTiles = createTable(
   },
   (table) => ({
     pk: uniqueIndex("battleship_ship_tiles_pk").on(table.shipId, table.tileId),
-    tileUnique: uniqueIndex("battleship_ship_tiles_tile_unique").on(
-      table.tileId
-    ),
   })
 )
 

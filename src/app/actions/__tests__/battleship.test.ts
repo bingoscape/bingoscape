@@ -4,6 +4,10 @@ jest.mock("@/server/auth", () => ({
   getServerAuthSession: jest.fn(),
 }))
 
+jest.mock("@/app/actions/events", () => ({
+  getUserRole: jest.fn(),
+}))
+
 jest.mock("next/cache", () => ({
   revalidatePath: jest.fn(),
 }))
@@ -64,6 +68,9 @@ describe("battleship actions", () => {
   const { getServerAuthSession } = jest.requireMock("@/server/auth") as {
     getServerAuthSession: jest.Mock
   }
+  const { getUserRole } = jest.requireMock("@/app/actions/events") as {
+    getUserRole: jest.Mock
+  }
   const { db } = jest.requireMock("@/server/db") as {
     db: {
       query: Record<string, { findFirst: jest.Mock; findMany: jest.Mock }>
@@ -96,6 +103,7 @@ describe("battleship actions", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     getServerAuthSession.mockResolvedValue({ user: { id: "user-1" } })
+    getUserRole.mockResolvedValue("participant")
     db.query.events.findFirst.mockResolvedValue(futureEvent)
     mockInsertValues.mockReset()
     mockInsertReturning.mockReset()
@@ -235,8 +243,9 @@ describe("battleship actions", () => {
       expect(db.transaction).not.toHaveBeenCalled()
     })
 
-    it("rejects non-leaders that are not board creator", async () => {
+    it("rejects non-leaders that are not board creator or event admin", async () => {
       db.query.bingos.findFirst.mockResolvedValue(battleshipBingo)
+      getUserRole.mockResolvedValue("participant")
       db.query.teamMembers.findFirst.mockResolvedValue({ isLeader: false })
 
       const result = await saveTeamShipPlacements(
@@ -247,9 +256,26 @@ describe("battleship actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Only team leaders or board creator can manage ship placement",
+        error:
+          "Only team leaders, event admins, or board creator can manage ship placement",
       })
       expect(db.transaction).not.toHaveBeenCalled()
+    })
+
+    it("allows event management role without team leadership", async () => {
+      db.query.bingos.findFirst.mockResolvedValue(battleshipBingo)
+      getUserRole.mockResolvedValue("management")
+      db.query.teamMembers.findFirst.mockResolvedValue(undefined)
+      mockInsertReturning.mockResolvedValue([{ id: "ship-1" }, { id: "ship-2" }])
+
+      const result = await saveTeamShipPlacements(
+        "bingo-1",
+        "team-1",
+        validPlacements
+      )
+
+      expect(result).toEqual({ success: true })
+      expect(db.transaction).toHaveBeenCalled()
     })
   })
 

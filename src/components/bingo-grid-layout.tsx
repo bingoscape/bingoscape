@@ -47,6 +47,16 @@ export const BingoGridLayout = React.forwardRef<HTMLDivElement, BingoGridLayoutP
               isLocked={isLocked}
               isLoading={loadingTileId === tile.id}
               isHitByCurrentTeam={hitByCurrentTeamTileIds?.has(tile.id)}
+              isMissByCurrentTeam={
+                hitByCurrentTeamTileIds !== undefined &&
+                !!currentTeamId &&
+                !hitByCurrentTeamTileIds.has(tile.id) &&
+                (tile.teamTileSubmissions?.some(
+                  (tts) =>
+                    tts.teamId === currentTeamId && tts.status === "approved"
+                ) ??
+                  false)
+              }
               hideTileDetails={hideTileDetails}
               tileLabel={hideTileDetails ? String(tile.index + 1) : undefined}
             />

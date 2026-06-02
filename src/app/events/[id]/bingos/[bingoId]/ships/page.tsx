@@ -52,6 +52,7 @@ export default function ShipPlacementPage(props: {
     tileIds: string[]
   } | null>(null)
   const [shipPlacementLocked, setShipPlacementLocked] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
 
@@ -96,10 +97,13 @@ export default function ShipPlacementPage(props: {
             eventData.event.creatorId &&
             session.user.id === eventData.event.creatorId
         )
+        const isEventAdminOrManagement =
+          eventData.userRole === "admin" ||
+          eventData.userRole === "management"
         const isTeamLeader = Boolean(currentTeam?.isLeader)
-        if (!isBoardCreator && !isTeamLeader) {
+        if (!isBoardCreator && !isEventAdminOrManagement && !isTeamLeader) {
           setError(
-            "Only team leaders or board creator can manage ship placement"
+            "Only team leaders, event admins, or board creator can manage ship placement"
           )
           return
         }
@@ -236,6 +240,7 @@ export default function ShipPlacementPage(props: {
 
   const save = async () => {
     if (!teamId) return
+    if (isSaving) return
     if (shipPlacementLocked) {
       setError("Ship placement is only allowed before the event starts")
       return
@@ -245,15 +250,20 @@ export default function ShipPlacementPage(props: {
       return
     }
     setError("")
-    const result = await saveTeamShipPlacements(bingoId, teamId, ships)
-    if (result.success) {
-      toast({
-        title: "Ships saved",
-        description: "Your ship placement is hidden from opponents.",
-      })
-      setMessage("Ships saved (hidden from opponents)")
-    } else {
-      setError(result.error ?? "Failed to save")
+    setIsSaving(true)
+    try {
+      const result = await saveTeamShipPlacements(bingoId, teamId, ships)
+      if (result.success) {
+        toast({
+          title: "Ships saved",
+          description: "Your ship placement is hidden from opponents.",
+        })
+        setMessage("Ships saved (hidden from opponents)")
+      } else {
+        setError(result.error ?? "Failed to save")
+      }
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -324,7 +334,11 @@ export default function ShipPlacementPage(props: {
           {message && <p className="text-sm text-muted-foreground">{message}</p>}
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={save} disabled={shipPlacementLocked}>
+            <Button
+              type="button"
+              onClick={save}
+              disabled={shipPlacementLocked || isSaving}
+            >
               Save placement
             </Button>
             {currentShip && (

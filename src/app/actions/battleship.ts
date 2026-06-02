@@ -13,6 +13,7 @@ import {
 } from "@/server/db/schema"
 import { and, eq, ne } from "drizzle-orm"
 import { getServerAuthSession } from "@/server/auth"
+import { getUserRole } from "./events"
 import { indexToCoord } from "@/lib/ship-placement"
 import type { ShipPlacementInput } from "@/lib/ship-placement"
 import { validateShipPlacements } from "@/lib/validate-ship-placements"
@@ -24,7 +25,7 @@ export type ShipPlacement = {
   tileIds: string[]
 }
 
-async function assertTeamMemberOrManagement(
+async function assertShipPlacementAccess(
   eventId: string,
   teamId: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -47,6 +48,11 @@ async function assertTeamMemberOrManagement(
     return { ok: true }
   }
 
+  const role = await getUserRole(eventId)
+  if (role === "admin" || role === "management") {
+    return { ok: true }
+  }
+
   const membership = await db.query.teamMembers.findFirst({
     where: and(
       eq(teamMembers.teamId, teamId),
@@ -64,7 +70,8 @@ async function assertTeamMemberOrManagement(
   if (!membership.isLeader) {
     return {
       ok: false,
-      error: "Only team leaders or board creator can manage ship placement",
+      error:
+        "Only team leaders, event admins, or board creator can manage ship placement",
     }
   }
 
@@ -90,7 +97,7 @@ export async function getTeamShipPlacements(
       return { success: false, error: "Not a battleship board" }
     }
 
-    const auth = await assertTeamMemberOrManagement(bingo.eventId, teamId)
+    const auth = await assertShipPlacementAccess(bingo.eventId, teamId)
     if (!auth.ok) return { success: false, error: auth.error }
 
     const ships = await db.query.battleshipShips.findMany({
@@ -148,7 +155,7 @@ export async function saveTeamShipPlacements(
       }
     }
 
-    const auth = await assertTeamMemberOrManagement(bingo.eventId, teamId)
+    const auth = await assertShipPlacementAccess(bingo.eventId, teamId)
     if (!auth.ok) return { success: false, error: auth.error }
 
     const rules: ShipRule[] = bingo.shipRules?.rulesJson ?? []
@@ -171,18 +178,6 @@ export async function saveTeamShipPlacements(
     }
 
     await db.transaction(async (tx) => {
-      const existingShips = await tx.query.battleshipShips.findMany({
-        where: and(
-          eq(battleshipShips.bingoId, bingoId),
-          eq(battleshipShips.teamId, teamId)
-        ),
-      })
-
-      for (const ship of existingShips) {
-        await tx
-          .delete(battleshipShipTiles)
-          .where(eq(battleshipShipTiles.shipId, ship.id))
-      }
       await tx
         .delete(battleshipShips)
         .where(

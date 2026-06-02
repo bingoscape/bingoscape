@@ -105,11 +105,13 @@ export default function BingoDetailPage(props: {
       data?.event?.creatorId &&
       session.user.id === data.event.creatorId
   )
-  const canManageShipPlacement = isBoardCreator || Boolean(currentTeam?.isLeader)
+  const canManageShipPlacement =
+    isBoardCreator || isAdminOrManagement || Boolean(currentTeam?.isLeader)
 
   // Determine which team ID to use for the bingo grid
   const effectiveTeamId = isAdminOrManagement ? selectedTeamId : currentTeam?.id
-  const shipPlacementTeamId = isBoardCreator ? effectiveTeamId : currentTeam?.id
+  const shipPlacementTeamId =
+    isBoardCreator || isAdminOrManagement ? effectiveTeamId : currentTeam?.id
 
   if (loading) {
     return (

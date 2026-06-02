@@ -69,6 +69,64 @@ describe("BingoTile battleship hits", () => {
     expect(screen.queryByTestId("battleship-hit-icon")).not.toBeInTheDocument()
   })
 
+  it("shows miss icon when tile is completed but not a hit", () => {
+    const tileWithApproval: Tile = {
+      ...baseTile,
+      teamTileSubmissions: [
+        {
+          id: "tts-1",
+          teamId: "team-atk",
+          status: "approved",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          tileId: "tile-1",
+          reviewedBy: null,
+          submissions: [],
+          team: {
+            id: "team-atk",
+            name: "Attackers",
+            eventId: "event-1",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        },
+      ],
+    }
+
+    render(
+      <BingoTile
+        tile={tileWithApproval}
+        onClick={jest.fn()}
+        onTogglePlaceholder={jest.fn()}
+        userRole="participant"
+        currentTeamId="team-atk"
+        isLocked
+        isMissByCurrentTeam
+      />
+    )
+
+    expect(screen.getByTestId("battleship-miss-icon")).toBeInTheDocument()
+    expect(screen.queryByTestId("battleship-hit-icon")).not.toBeInTheDocument()
+  })
+
+  it("does not show miss icon when the tile is a hit", () => {
+    render(
+      <BingoTile
+        tile={baseTile}
+        onClick={jest.fn()}
+        onTogglePlaceholder={jest.fn()}
+        userRole="participant"
+        currentTeamId="team-atk"
+        isLocked
+        isHitByCurrentTeam
+        isMissByCurrentTeam
+      />
+    )
+
+    expect(screen.getByTestId("battleship-hit-icon")).toBeInTheDocument()
+    expect(screen.queryByTestId("battleship-miss-icon")).not.toBeInTheDocument()
+  })
+
   it("renders blank placeholder cells when tile details are hidden", () => {
     render(
       <BingoTile
