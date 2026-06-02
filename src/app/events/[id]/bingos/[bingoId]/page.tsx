@@ -191,12 +191,10 @@ export default function BingoDetailPage(props: {
           <CardContent className="p-2 sm:p-4">
             <div
               className={cn(
-                "mx-auto w-full",
+                "mx-auto w-full overflow-hidden",
                 bingo.bingoType === "progression"
                   ? "max-w-full"
-                  : bingo.bingoType === "battleship"
-                    ? "aspect-square max-w-[80vh]"
-                    : "aspect-square max-w-[80vh]"
+                  : "aspect-square max-w-[min(80vh,100%)]"
               )}
             >
               <BingoGridWrapper

@@ -1233,14 +1233,31 @@ export async function updateTeamTileSubmissionStatus(
         )
       }
 
+      let battleship:
+        | {
+            hit: boolean
+            shipSunk?: boolean
+            shipLength?: number
+          }
+        | undefined
+
       if (tile && tile.bingo.bingoType === "battleship") {
         const { recordBattleshipHitOnApproval } = await import("./battleship")
-        await recordBattleshipHitOnApproval(
+        battleship = await recordBattleshipHitOnApproval(
           tile.bingoId,
           updatedTeamTileSubmission.tileId,
           updatedTeamTileSubmission.teamId,
           updatedTeamTileSubmission.id
         )
+      }
+
+      // Revalidate the submissions page
+      revalidatePath("/bingo")
+
+      return {
+        success: true,
+        teamTileSubmission: updatedTeamTileSubmission,
+        battleship,
       }
     }
 

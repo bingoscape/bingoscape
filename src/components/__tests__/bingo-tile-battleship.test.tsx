@@ -127,6 +127,24 @@ describe("BingoTile battleship hits", () => {
     expect(screen.queryByTestId("battleship-miss-icon")).not.toBeInTheDocument()
   })
 
+  it("shows sunk icon instead of hit icon on fully sunk ship tiles", () => {
+    render(
+      <BingoTile
+        tile={baseTile}
+        onClick={jest.fn()}
+        onTogglePlaceholder={jest.fn()}
+        userRole="participant"
+        currentTeamId="team-atk"
+        isLocked
+        isHitByCurrentTeam
+        isSunkHitByCurrentTeam
+      />
+    )
+
+    expect(screen.getByTestId("battleship-sunk-icon")).toBeInTheDocument()
+    expect(screen.queryByTestId("battleship-hit-icon")).not.toBeInTheDocument()
+  })
+
   it("renders blank placeholder cells when tile details are hidden", () => {
     render(
       <BingoTile

@@ -47,14 +47,17 @@ import { GoalsTab } from "./goals-tab"
 import { SubmissionsTab } from "./submissions-tab"
 import { FullSizeImageDialog } from "./full-size-image-dialog"
 import { StatsDialog } from "./stats-dialog"
-import { BarChart, Sword, Target, Zap } from "lucide-react"
+import { BarChart, Ship, Sword, Target, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSession } from "next-auth/react"
 import {
   getTeamTierProgress,
   initializeTeamTierProgress,
 } from "@/app/actions/bingo"
-import { getBattleshipHits } from "@/app/actions/battleship"
+import {
+  getBattleshipHits,
+  getBattleshipSunkShipTileIds,
+} from "@/app/actions/battleship"
 import {
   canSeeBattleshipTileDetails,
   isEventActive,
@@ -146,31 +149,38 @@ export default function BingoGrid({
   const [hitByCurrentTeamTileIds, setHitByCurrentTeamTileIds] = useState<
     Set<string>
   >(new Set())
+  const [sunkByCurrentTeamTileIds, setSunkByCurrentTeamTileIds] = useState<
+    Set<string>
+  >(new Set())
 
-  // Load battleship hits
-  useEffect(() => {
-    const loadHits = async () => {
-      if (bingo.bingoType !== "battleship") return
-      try {
-        const hits = await getBattleshipHits(bingo.id)
-        if (!currentTeamId) {
-          setHitByCurrentTeamTileIds(new Set(hits.map((h) => h.tileId)))
-          return
-        }
-
-        setHitByCurrentTeamTileIds(
-          new Set(
-            hits
-              .filter((h) => h.attackerTeamId === currentTeamId)
-              .map((h) => h.tileId)
-          )
-        )
-      } catch (error) {
-        console.error("Failed to load battleship hits:", error)
+  const reloadBattleshipMarks = useCallback(async () => {
+    if (bingo.bingoType !== "battleship") return
+    try {
+      const hits = await getBattleshipHits(bingo.id)
+      if (!currentTeamId) {
+        setHitByCurrentTeamTileIds(new Set(hits.map((h) => h.tileId)))
+        setSunkByCurrentTeamTileIds(new Set())
+        return
       }
+
+      setHitByCurrentTeamTileIds(
+        new Set(
+          hits
+            .filter((h) => h.attackerTeamId === currentTeamId)
+            .map((h) => h.tileId)
+        )
+      )
+      const sunk = await getBattleshipSunkShipTileIds(bingo.id, currentTeamId)
+      setSunkByCurrentTeamTileIds(new Set(sunk))
+    } catch (error) {
+      console.error("Failed to load battleship marks:", error)
     }
-    void loadHits()
   }, [bingo.id, bingo.bingoType, currentTeamId])
+
+  // Load battleship hits and sunk ships
+  useEffect(() => {
+    void reloadBattleshipMarks()
+  }, [reloadBattleshipMarks])
 
   // Load tier progress for progression bingo
   useEffect(() => {
@@ -724,23 +734,15 @@ export default function BingoGrid({
         )
 
         if (bingo.bingoType === "battleship" && newStatus === "approved") {
-          const hits = await getBattleshipHits(bingo.id)
-          if (!currentTeamId) {
-            setHitByCurrentTeamTileIds(new Set(hits.map((h) => h.tileId)))
-          } else {
-            setHitByCurrentTeamTileIds(
-              new Set(
-                hits
-                  .filter((h) => h.attackerTeamId === currentTeamId)
-                  .map((h) => h.tileId)
-              )
-            )
-          }
+          await reloadBattleshipMarks()
         }
 
         toast({
-          title: "Status updated",
-          description: `Submission marked as ${newStatus.replace("_", " ")}`,
+          title:
+            result.battleship?.shipSunk ? "Ship sunk!" : "Status updated",
+          description: result.battleship?.shipSunk
+            ? `Your team destroyed a length ${result.battleship.shipLength} opponent ship.`
+            : `Submission marked as ${newStatus.replace("_", " ")}`,
         })
       } else {
         throw new Error(result.error)
@@ -997,6 +999,10 @@ export default function BingoGrid({
             <Target className="h-3.5 w-3.5" />
             Miss (completed, no ship)
           </span>
+          <span className="inline-flex items-center gap-1">
+            <Ship className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+            Sunk by your team
+          </span>
         </div>
       )}
       <div className="mb-4 flex items-center justify-between">
@@ -1037,6 +1043,11 @@ export default function BingoGrid({
           hitByCurrentTeamTileIds={
             bingo.bingoType === "battleship"
               ? hitByCurrentTeamTileIds
+              : undefined
+          }
+          sunkByCurrentTeamTileIds={
+            bingo.bingoType === "battleship"
+              ? sunkByCurrentTeamTileIds
               : undefined
           }
           hideTileDetails={battleshipHideTileDetails}

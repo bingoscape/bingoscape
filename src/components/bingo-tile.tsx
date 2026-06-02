@@ -2,7 +2,7 @@
 
 import React from "react"
 import Image from "next/image"
-import { Zap, EyeOff, Sword, Target } from "lucide-react"
+import { Zap, EyeOff, Sword, Target, Ship } from "lucide-react"
 import type { Tile } from "@/app/actions/events"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import getRandomFrog from "@/lib/getRandomFrog"
@@ -27,6 +27,8 @@ interface BingoTileProps {
   isHitByCurrentTeam?: boolean
   /** Battleship: approved tile with no opponent ship at this coordinate. */
   isMissByCurrentTeam?: boolean
+  /** Battleship: hit tile on an opponent ship fully sunk by your team. */
+  isSunkHitByCurrentTeam?: boolean
   /** Battleship pre-event: empty cells for non-creators (grid position only). */
   hideTileDetails?: boolean
   tileLabel?: string
@@ -42,6 +44,7 @@ export function BingoTile({
   isLoading = false,
   isHitByCurrentTeam = false,
   isMissByCurrentTeam = false,
+  isSunkHitByCurrentTeam = false,
   hideTileDetails = false,
   tileLabel,
 }: BingoTileProps) {
@@ -114,7 +117,7 @@ export function BingoTile({
   if (hideTileDetails) {
     return (
       <div
-        className="relative flex aspect-square min-h-[60px] items-center justify-center rounded-lg border-2 border-muted-foreground/25 bg-muted/20 sm:min-h-[80px] md:min-h-[100px] lg:min-h-[120px]"
+        className="relative flex h-full w-full min-h-0 items-center justify-center rounded-lg border-2 border-muted-foreground/25 bg-muted/20"
         aria-label={tileLabel ?? `Tile ${tile.index + 1}`}
       >
         {tileLabel && (
@@ -127,16 +130,15 @@ export function BingoTile({
   }
 
   const tileClasses = `
-    relative rounded-lg overflow-hidden aspect-square group
-    transition-all duration-300 ease-in-out
-    min-h-[60px] sm:min-h-[80px] md:min-h-[100px] lg:min-h-[120px]
+    relative h-full w-full min-h-0 rounded-lg overflow-hidden group
+    transition-shadow duration-300 ease-in-out
     touch-manipulation
     ${tile.isHidden && isLocked ? "bg-transparent" : ""}
     ${tile.isHidden && !isLocked ? "border-2 border-dashed border-muted-foreground/40 bg-muted/20 cursor-pointer hover:bg-muted/40 hover:border-muted-foreground/60" : ""}
     ${!tile.isHidden ? `
-      border-2 cursor-pointer transform hover:scale-[1.01] sm:hover:scale-[1.02] lg:hover:scale-[1.05] hover:z-10 hover:shadow-2xl
-      active:scale-[0.98] active:transition-transform active:duration-100
-      ${!isHitByCurrentTeam && completionStatus === "completed" ? "border-green-500 bg-green-50 dark:bg-green-900/20 shadow-green-200/50 hover:shadow-green-300/60" : ""}
+      border-2 cursor-pointer hover:z-10 hover:shadow-lg
+      active:transition-transform active:duration-100
+      ${completionStatus === "completed" ? "border-green-500 bg-green-50 dark:bg-green-900/20 shadow-green-200/50 hover:shadow-green-300/60" : ""}
       ${completionStatus === "needs_review" ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 shadow-yellow-200/50 hover:shadow-yellow-300/60" : ""}
       ${completionStatus === "pending" ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-blue-200/50 hover:shadow-blue-300/60" : ""}
       ${completionStatus === "incomplete" ? "border-muted-foreground/40 hover:border-primary shadow-md hover:shadow-xl" : ""}
@@ -173,7 +175,7 @@ export function BingoTile({
     <HoverCard openDelay={200} closeDelay={100} onOpenChange={setIsHoverCardOpen}>
       <HoverCardTrigger asChild>
         <div
-          className={`${tileClasses} focus:outline-none focus:ring-2 sm:focus:ring-4 focus:ring-primary/50 focus:ring-offset-1 sm:focus:ring-offset-2 focus:ring-offset-background focus:scale-[1.01] sm:focus:scale-[1.02] lg:focus:scale-105`}
+          className={`${tileClasses} focus:outline-none focus:ring-2 sm:focus:ring-4 focus:ring-primary/50 focus:ring-offset-1 sm:focus:ring-offset-2 focus:ring-offset-background`}
           onClick={handleClick}
           role="button"
           tabIndex={0}
@@ -240,7 +242,16 @@ export function BingoTile({
                 </div>
               </div>
 
-              {isHitByCurrentTeam && (
+              {isHitByCurrentTeam && isSunkHitByCurrentTeam && (
+                <div
+                  className="absolute left-2 top-2 z-20 rounded-full border border-red-500/60 bg-red-500/15 p-1.5 shadow-sm ring-2 ring-red-400/50"
+                  data-testid="battleship-sunk-icon"
+                  title="Sunk — opponent ship destroyed"
+                >
+                  <Ship className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                </div>
+              )}
+              {isHitByCurrentTeam && !isSunkHitByCurrentTeam && (
                 <div
                   className="absolute left-2 top-2 z-20 rounded-full border border-border bg-background/90 p-1.5 shadow-sm"
                   data-testid="battleship-hit-icon"

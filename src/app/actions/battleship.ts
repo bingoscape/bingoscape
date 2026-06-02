@@ -16,6 +16,7 @@ import { getServerAuthSession } from "@/server/auth"
 import { getUserRole } from "./events"
 import { indexToCoord } from "@/lib/ship-placement"
 import type { ShipPlacementInput } from "@/lib/ship-placement"
+import { getSunkShipTileIds } from "@/lib/battleship-sunk"
 import { validateShipPlacements } from "@/lib/validate-ship-placements"
 import { revalidatePath } from "next/cache"
 import { logger } from "@/lib/logger"
@@ -229,15 +230,63 @@ export async function getBattleshipHits(bingoId: string) {
   }))
 }
 
+export async function getBattleshipSunkShipTileIds(
+  bingoId: string,
+  attackerTeamId: string
+): Promise<string[]> {
+  const [ships, hits] = await Promise.all([
+    db.query.battleshipShips.findMany({
+      where: eq(battleshipShips.bingoId, bingoId),
+      with: { tiles: true },
+    }),
+    getBattleshipHits(bingoId),
+  ])
+
+  return getSunkShipTileIds(
+    ships.map((s) => ({
+      shipId: s.id,
+      teamId: s.teamId,
+      tileIds: s.tiles.map((t) => t.tileId),
+    })),
+    hits,
+    attackerTeamId
+  )
+}
+
+async function isOpponentShipSunkByAttacker(
+  bingoId: string,
+  shipId: string,
+  attackerTeamId: string
+): Promise<boolean> {
+  const ship = await db.query.battleshipShips.findFirst({
+    where: and(eq(battleshipShips.id, shipId), eq(battleshipShips.bingoId, bingoId)),
+    with: { tiles: true },
+  })
+
+  if (!ship || ship.teamId === attackerTeamId || ship.tiles.length === 0) {
+    return false
+  }
+
+  const sunkTiles = await getBattleshipSunkShipTileIds(bingoId, attackerTeamId)
+  return ship.tiles.every((t) => sunkTiles.includes(t.tileId))
+}
+
 export async function recordBattleshipHitOnApproval(
   bingoId: string,
   tileId: string,
   attackerTeamId: string,
   teamTileSubmissionId: string
-): Promise<{ hit: boolean; defenderTeamId?: string }> {
+): Promise<{
+  hit: boolean
+  defenderTeamId?: string
+  shipSunk?: boolean
+  shipLength?: number
+}> {
   const opponentShipTile = await db
     .select({
+      shipId: battleshipShips.id,
       defenderTeamId: battleshipShips.teamId,
+      shipLength: battleshipShips.shipLength,
     })
     .from(battleshipShipTiles)
     .innerJoin(
@@ -266,10 +315,21 @@ export async function recordBattleshipHitOnApproval(
       defenderTeamId: defender.defenderTeamId,
       teamTileSubmissionId,
     })
-    return { hit: true, defenderTeamId: defender.defenderTeamId }
   } catch {
     // Unique constraint — hit already recorded for this team/tile
-    return { hit: true, defenderTeamId: defender.defenderTeamId }
+  }
+
+  const shipSunk = await isOpponentShipSunkByAttacker(
+    bingoId,
+    defender.shipId,
+    attackerTeamId
+  )
+
+  return {
+    hit: true,
+    defenderTeamId: defender.defenderTeamId,
+    shipSunk,
+    shipLength: shipSunk ? defender.shipLength : undefined,
   }
 }
 

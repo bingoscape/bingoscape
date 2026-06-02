@@ -51,7 +51,7 @@ jest.mock("@/server/db", () => ({
     query: {
       events: { findFirst: jest.fn() },
       bingos: { findFirst: jest.fn() },
-      battleshipShips: { findMany: jest.fn() },
+      battleshipShips: { findMany: jest.fn(), findFirst: jest.fn() },
       battleshipHits: { findMany: jest.fn() },
       teamMembers: { findFirst: jest.fn() },
       bingoShipRules: { findFirst: jest.fn() },
@@ -328,10 +328,35 @@ describe("battleship actions", () => {
     })
 
     it("records a hit when tile is on opponent ship", async () => {
-      selectChain.limit.mockResolvedValue([{ defenderTeamId: "team-def" }])
+      selectChain.limit.mockResolvedValue([
+        {
+          shipId: "ship-1",
+          defenderTeamId: "team-def",
+          shipLength: 3,
+        },
+      ])
       db.insert.mockImplementation(() => ({
         values: jest.fn().mockResolvedValue(undefined),
       }))
+      db.query.battleshipShips.findFirst.mockResolvedValue({
+        id: "ship-1",
+        teamId: "team-def",
+        tiles: [{ tileId: "tile-a" }, { tileId: "tile-b" }],
+      })
+      db.query.battleshipShips.findMany.mockResolvedValue([
+        {
+          id: "ship-1",
+          teamId: "team-def",
+          tiles: [{ tileId: "tile-a" }, { tileId: "tile-b" }],
+        },
+      ])
+      db.query.battleshipHits.findMany.mockResolvedValue([
+        {
+          tileId: "tile-a",
+          attackerTeamId: "team-atk",
+          defenderTeamId: "team-def",
+        },
+      ])
 
       const result = await recordBattleshipHitOnApproval(
         "bingo-1",
@@ -339,14 +364,94 @@ describe("battleship actions", () => {
         "team-atk",
         "tts-1"
       )
-      expect(result).toEqual({ hit: true, defenderTeamId: "team-def" })
+      expect(result).toEqual({
+        hit: true,
+        defenderTeamId: "team-def",
+        shipSunk: false,
+        shipLength: undefined,
+      })
+    })
+
+    it("reports when the hit sinks the opponent ship", async () => {
+      selectChain.limit.mockResolvedValue([
+        {
+          shipId: "ship-1",
+          defenderTeamId: "team-def",
+          shipLength: 2,
+        },
+      ])
+      db.insert.mockImplementation(() => ({
+        values: jest.fn().mockResolvedValue(undefined),
+      }))
+      db.query.battleshipShips.findFirst.mockResolvedValue({
+        id: "ship-1",
+        teamId: "team-def",
+        tiles: [{ tileId: "tile-a" }, { tileId: "tile-b" }],
+      })
+      db.query.battleshipShips.findMany.mockResolvedValue([
+        {
+          id: "ship-1",
+          teamId: "team-def",
+          tiles: [{ tileId: "tile-a" }, { tileId: "tile-b" }],
+        },
+      ])
+      db.query.battleshipHits.findMany.mockResolvedValue([
+        {
+          tileId: "tile-a",
+          attackerTeamId: "team-atk",
+          defenderTeamId: "team-def",
+        },
+        {
+          tileId: "tile-b",
+          attackerTeamId: "team-atk",
+          defenderTeamId: "team-def",
+        },
+      ])
+
+      const result = await recordBattleshipHitOnApproval(
+        "bingo-1",
+        "tile-b",
+        "team-atk",
+        "tts-1"
+      )
+      expect(result).toEqual({
+        hit: true,
+        defenderTeamId: "team-def",
+        shipSunk: true,
+        shipLength: 2,
+      })
     })
 
     it("treats duplicate hits as success", async () => {
-      selectChain.limit.mockResolvedValue([{ defenderTeamId: "team-def" }])
+      selectChain.limit.mockResolvedValue([
+        {
+          shipId: "ship-1",
+          defenderTeamId: "team-def",
+          shipLength: 3,
+        },
+      ])
       db.insert.mockImplementation(() => ({
         values: jest.fn().mockRejectedValue(new Error("unique violation")),
       }))
+      db.query.battleshipShips.findFirst.mockResolvedValue({
+        id: "ship-1",
+        teamId: "team-def",
+        tiles: [{ tileId: "tile-a" }],
+      })
+      db.query.battleshipShips.findMany.mockResolvedValue([
+        {
+          id: "ship-1",
+          teamId: "team-def",
+          tiles: [{ tileId: "tile-a" }],
+        },
+      ])
+      db.query.battleshipHits.findMany.mockResolvedValue([
+        {
+          tileId: "tile-a",
+          attackerTeamId: "team-atk",
+          defenderTeamId: "team-def",
+        },
+      ])
 
       const result = await recordBattleshipHitOnApproval(
         "bingo-1",
@@ -356,6 +461,7 @@ describe("battleship actions", () => {
       )
       expect(result.hit).toBe(true)
       expect(result.defenderTeamId).toBe("team-def")
+      expect(result.shipSunk).toBe(true)
     })
   })
 })

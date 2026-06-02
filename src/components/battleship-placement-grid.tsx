@@ -26,10 +26,9 @@ export function BattleshipPlacementGrid({
 }: BattleshipPlacementGridProps) {
   return (
     <div
-      className="grid gap-2 sm:gap-3 w-full max-w-full"
+      className="grid w-full max-w-full min-h-0 gap-1.5 sm:gap-2"
       style={{
         gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-        gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
       }}
       role="grid"
       aria-label="Ship placement grid"
@@ -45,8 +44,8 @@ export function BattleshipPlacementGrid({
             disabled={disabled}
             onClick={() => onSelect(tile)}
             className={cn(
-              "relative aspect-square rounded-lg border-2 transition-all min-h-[48px] sm:min-h-[64px]",
-              "hover:scale-[1.02] active:scale-[0.98]",
+              "relative aspect-square min-h-0 w-full rounded-lg border-2 transition-colors",
+              "active:scale-[0.98]",
               disabled && "cursor-not-allowed opacity-60 hover:scale-100",
               isSaved &&
                 "border-blue-600 bg-blue-100 dark:bg-blue-900/40 ring-2 ring-blue-400",
