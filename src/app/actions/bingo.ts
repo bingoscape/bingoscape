@@ -244,7 +244,8 @@ export async function createBingo(formData: FormData) {
   const columnsStr = formData.get("columns") as string
   const codephrase = formData.get("codephrase") as string
   const bingoType =
-    (formData.get("bingoType") as "standard" | "progression") || "standard"
+    (formData.get("bingoType") as "standard" | "progression" | "battleship") ||
+    "standard"
   const tiersUnlockRequirementStr = formData.get(
     "tiersUnlockRequirement"
   ) as string
@@ -359,6 +360,22 @@ export async function createBingo(formData: FormData) {
   // Initialize tier XP requirements for progression bingos
   if (bingoType === "progression") {
     await initializeTierXpRequirements(bingoId, tiersUnlockRequirement)
+  }
+
+  // Initialize ship rules for battleship bingos
+  if (bingoType === "battleship") {
+    const { parseShipRulesFromFormData, insertBingoShipRules } = await import(
+      "./battleship"
+    )
+    const shipRules = await parseShipRulesFromFormData(formData)
+    const rulesToInsert =
+      shipRules.length === 0
+        ? [
+            { length: 3, count: 2 },
+            { length: 2, count: 1 },
+          ]
+        : shipRules
+    await insertBingoShipRules(bingoId, rulesToInsert, { rows, columns })
   }
 
   return { success: true }
@@ -690,7 +707,7 @@ export interface BingoData {
   rows: number
   codephrase: string
   visible: boolean
-  bingoType: "standard" | "progression"
+  bingoType: "standard" | "progression" | "battleship"
   tiersUnlockRequirement: number
   tiles: TileData[]
 }
@@ -1215,6 +1232,33 @@ export async function updateTeamTileSubmissionStatus(
           tile.bingoId
         )
       }
+
+      let battleship:
+        | {
+            hit: boolean
+            shipSunk?: boolean
+            shipLength?: number
+          }
+        | undefined
+
+      if (tile && tile.bingo.bingoType === "battleship") {
+        const { recordBattleshipHitOnApproval } = await import("./battleship")
+        battleship = await recordBattleshipHitOnApproval(
+          tile.bingoId,
+          updatedTeamTileSubmission.tileId,
+          updatedTeamTileSubmission.teamId,
+          updatedTeamTileSubmission.id
+        )
+      }
+
+      // Revalidate the submissions page
+      revalidatePath("/bingo")
+
+      return {
+        success: true,
+        teamTileSubmission: updatedTeamTileSubmission,
+        battleship,
+      }
     }
 
     // Revalidate the submissions page
@@ -1683,7 +1727,7 @@ interface UpdateBingoData {
   visible: boolean
   locked: boolean
   codephrase: string
-  bingoType?: "standard" | "progression"
+  bingoType?: "standard" | "progression" | "battleship"
   tiersUnlockRequirement?: number
 }
 

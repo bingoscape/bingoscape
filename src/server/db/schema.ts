@@ -5,6 +5,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTableCreator,
   primaryKey,
@@ -152,7 +153,11 @@ export const registrationStatusEnum = pgEnum("registration_status", [
   "approved",
   "rejected",
 ])
-export const bingoTypeEnum = pgEnum("bingo_type", ["standard", "progression"])
+export const bingoTypeEnum = pgEnum("bingo_type", [
+  "standard",
+  "progression",
+  "battleship",
+])
 export const gameTypeEnum = pgEnum("game_type", ["osrs", "rs3"])
 export const logicalOperatorEnum = pgEnum("logical_operator", ["AND", "OR"])
 export const goalTypeEnum = pgEnum("goal_type", ["generic", "item"])
@@ -340,6 +345,9 @@ export const bingosRelations = relations(bingos, ({ one, many }) => ({
   tierXpRequirements: many(tierXpRequirements),
   rowBonuses: many(rowBonuses),
   columnBonuses: many(columnBonuses),
+  shipRules: one(bingoShipRules),
+  ships: many(battleshipShips),
+  hits: many(battleshipHits),
 }))
 
 export const teams = createTable("teams", {
@@ -360,6 +368,7 @@ export const teamsRelations = relations(teams, ({ many, one }) => ({
   }),
   goalProgress: many(teamGoalProgress),
   tierProgress: many(teamTierProgress),
+  battleshipShips: many(battleshipShips),
 }))
 
 export const teamMembers = createTable("team_members", {
@@ -410,6 +419,7 @@ export const tilesRelations = relations(tiles, ({ one, many }) => ({
   goals: many(goals),
   goalGroups: many(goalGroups),
   teamTileSubmissions: many(teamTileSubmissions),
+  shipTiles: many(battleshipShipTiles),
 }))
 
 export const goalGroups = createTable("goal_groups", {
@@ -1119,3 +1129,136 @@ export const discordWebhooksRelations = relations(
     }),
   })
 )
+
+export type ShipRule = {
+  length: number
+  count: number
+}
+
+export const bingoShipRules = createTable("bingo_ship_rules", {
+  bingoId: uuid("bingo_id")
+    .primaryKey()
+    .references(() => bingos.id, { onDelete: "cascade" }),
+  rulesJson: jsonb("rules_json").$type<ShipRule[]>().notNull().default([]),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const bingoShipRulesRelations = relations(bingoShipRules, ({ one }) => ({
+  bingo: one(bingos, {
+    fields: [bingoShipRules.bingoId],
+    references: [bingos.id],
+  }),
+}))
+
+export const battleshipShips = createTable("battleship_ships", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  bingoId: uuid("bingo_id")
+    .notNull()
+    .references(() => bingos.id, { onDelete: "cascade" }),
+  teamId: uuid("team_id")
+    .notNull()
+    .references(() => teams.id, { onDelete: "cascade" }),
+  shipLength: integer("ship_length").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const battleshipShipsRelations = relations(
+  battleshipShips,
+  ({ one, many }) => ({
+    bingo: one(bingos, {
+      fields: [battleshipShips.bingoId],
+      references: [bingos.id],
+    }),
+    team: one(teams, {
+      fields: [battleshipShips.teamId],
+      references: [teams.id],
+    }),
+    tiles: many(battleshipShipTiles),
+  })
+)
+
+export const battleshipShipTiles = createTable(
+  "battleship_ship_tiles",
+  {
+    shipId: uuid("ship_id")
+      .notNull()
+      .references(() => battleshipShips.id, { onDelete: "cascade" }),
+    tileId: uuid("tile_id")
+      .notNull()
+      .references(() => tiles.id, { onDelete: "cascade" }),
+  },
+  (table) => ({
+    pk: uniqueIndex("battleship_ship_tiles_pk").on(table.shipId, table.tileId),
+  })
+)
+
+export const battleshipShipTilesRelations = relations(
+  battleshipShipTiles,
+  ({ one }) => ({
+    ship: one(battleshipShips, {
+      fields: [battleshipShipTiles.shipId],
+      references: [battleshipShips.id],
+    }),
+    tile: one(tiles, {
+      fields: [battleshipShipTiles.tileId],
+      references: [tiles.id],
+    }),
+  })
+)
+
+export const battleshipHits = createTable(
+  "battleship_hits",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    bingoId: uuid("bingo_id")
+      .notNull()
+      .references(() => bingos.id, { onDelete: "cascade" }),
+    tileId: uuid("tile_id")
+      .notNull()
+      .references(() => tiles.id, { onDelete: "cascade" }),
+    attackerTeamId: uuid("attacker_team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    defenderTeamId: uuid("defender_team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    teamTileSubmissionId: uuid("team_tile_submission_id")
+      .notNull()
+      .references(() => teamTileSubmissions.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    hitUnique: uniqueIndex("battleship_hits_unique").on(
+      table.bingoId,
+      table.tileId,
+      table.attackerTeamId
+    ),
+  })
+)
+
+export const battleshipHitsRelations = relations(battleshipHits, ({ one }) => ({
+  bingo: one(bingos, {
+    fields: [battleshipHits.bingoId],
+    references: [bingos.id],
+  }),
+  tile: one(tiles, {
+    fields: [battleshipHits.tileId],
+    references: [tiles.id],
+  }),
+  attackerTeam: one(teams, {
+    fields: [battleshipHits.attackerTeamId],
+    references: [teams.id],
+    relationName: "attackerHits",
+  }),
+  defenderTeam: one(teams, {
+    fields: [battleshipHits.defenderTeamId],
+    references: [teams.id],
+    relationName: "defenderHits",
+  }),
+  teamTileSubmission: one(teamTileSubmissions, {
+    fields: [battleshipHits.teamTileSubmissionId],
+    references: [teamTileSubmissions.id],
+  }),
+}))

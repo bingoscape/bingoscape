@@ -47,13 +47,21 @@ import { GoalsTab } from "./goals-tab"
 import { SubmissionsTab } from "./submissions-tab"
 import { FullSizeImageDialog } from "./full-size-image-dialog"
 import { StatsDialog } from "./stats-dialog"
-import { BarChart, Zap } from "lucide-react"
+import { BarChart, Ship, Sword, Target, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSession } from "next-auth/react"
 import {
   getTeamTierProgress,
   initializeTeamTierProgress,
 } from "@/app/actions/bingo"
+import {
+  getBattleshipHits,
+  getBattleshipSunkShipTileIds,
+} from "@/app/actions/battleship"
+import {
+  canSeeBattleshipTileDetails,
+  isEventActive,
+} from "@/lib/event-status"
 
 // Define an extended submission type that includes goalId, submissionValue, and weight
 interface ExtendedSubmission extends Submission {
@@ -70,6 +78,9 @@ interface BingoGridProps {
   onReorderTiles?: (reorderedTiles: Tile[]) => void
   highlightedTiles: number[]
   onTileUpdated?: () => void
+  eventStartDate?: Date | string
+  eventEndDate?: Date | string
+  eventCreatorId?: string | null
 }
 
 export default function BingoGrid({
@@ -82,6 +93,9 @@ export default function BingoGrid({
   onReorderTiles,
   highlightedTiles,
   onTileUpdated,
+  eventStartDate,
+  eventEndDate,
+  eventCreatorId,
 }: BingoGridProps) {
   const [tiles, setTiles] = useState<Tile[]>(bingo.tiles ?? [])
   const [selectedTile, setSelectedTile] = useState<Tile | null>(null)
@@ -99,6 +113,17 @@ export default function BingoGrid({
   const sortableRef = useRef<Sortable | null>(null)
   const [isStatsDialogOpen, setIsStatsDialogOpen] = useState(false)
   const session = useSession()
+
+  const battleshipHideTileDetails =
+    bingo.bingoType === "battleship" &&
+    eventStartDate != null &&
+    eventEndDate != null &&
+    !canSeeBattleshipTileDetails(
+      isEventActive(eventStartDate, eventEndDate),
+      eventCreatorId,
+      session.data?.user?.id,
+      userRole
+    )
 
   // State for submitting on behalf of another user
   const [selectableUsers, setSelectableUsers] = useState<SelectableUser[]>([])
@@ -121,6 +146,41 @@ export default function BingoGrid({
     }>
   >([])
   const [unlockedTiers, setUnlockedTiers] = useState<Set<number>>(new Set([0]))
+  const [hitByCurrentTeamTileIds, setHitByCurrentTeamTileIds] = useState<
+    Set<string>
+  >(new Set())
+  const [sunkByCurrentTeamTileIds, setSunkByCurrentTeamTileIds] = useState<
+    Set<string>
+  >(new Set())
+
+  const reloadBattleshipMarks = useCallback(async () => {
+    if (bingo.bingoType !== "battleship") return
+    try {
+      const hits = await getBattleshipHits(bingo.id)
+      if (!currentTeamId) {
+        setHitByCurrentTeamTileIds(new Set(hits.map((h) => h.tileId)))
+        setSunkByCurrentTeamTileIds(new Set())
+        return
+      }
+
+      setHitByCurrentTeamTileIds(
+        new Set(
+          hits
+            .filter((h) => h.attackerTeamId === currentTeamId)
+            .map((h) => h.tileId)
+        )
+      )
+      const sunk = await getBattleshipSunkShipTileIds(bingo.id, currentTeamId)
+      setSunkByCurrentTeamTileIds(new Set(sunk))
+    } catch (error) {
+      console.error("Failed to load battleship marks:", error)
+    }
+  }, [bingo.id, bingo.bingoType, currentTeamId])
+
+  // Load battleship hits and sunk ships
+  useEffect(() => {
+    void reloadBattleshipMarks()
+  }, [reloadBattleshipMarks])
 
   // Load tier progress for progression bingo
   useEffect(() => {
@@ -232,6 +292,10 @@ export default function BingoGrid({
   }, [isDialogOpen, currentTeamId, bingo.eventId])
 
   const handleTileClick = async (tile: Tile) => {
+    if (battleshipHideTileDetails && isLayoutLocked) {
+      return
+    }
+
     // Check if tile is locked due to progression (but allow if user has management rights)
     if (
       bingo.bingoType === "progression" &&
@@ -669,9 +733,16 @@ export default function BingoGrid({
           )
         )
 
+        if (bingo.bingoType === "battleship" && newStatus === "approved") {
+          await reloadBattleshipMarks()
+        }
+
         toast({
-          title: "Status updated",
-          description: `Submission marked as ${newStatus.replace("_", " ")}`,
+          title:
+            result.battleship?.shipSunk ? "Ship sunk!" : "Status updated",
+          description: result.battleship?.shipSunk
+            ? `Your team destroyed a length ${result.battleship.shipLength} opponent ship.`
+            : `Submission marked as ${newStatus.replace("_", " ")}`,
         })
       } else {
         throw new Error(result.error)
@@ -913,6 +984,27 @@ export default function BingoGrid({
 
   return (
     <div className="space-y-4">
+      {battleshipHideTileDetails && (
+        <p className="text-sm text-muted-foreground">
+          Tile objectives are hidden until this event is active.
+        </p>
+      )}
+      {bingo.bingoType === "battleship" && !battleshipHideTileDetails && (
+        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <Sword className="h-3.5 w-3.5" />
+            Hit by your team
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Target className="h-3.5 w-3.5" />
+            Miss (completed, no ship)
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Ship className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+            Sunk by your team
+          </span>
+        </div>
+      )}
       <div className="mb-4 flex items-center justify-between">
         <Button
           variant="ghost"
@@ -948,6 +1040,17 @@ export default function BingoGrid({
           onTogglePlaceholder={handleTogglePlaceholder}
           highlightedTiles={highlightedTiles}
           isLocked={isLayoutLocked}
+          hitByCurrentTeamTileIds={
+            bingo.bingoType === "battleship"
+              ? hitByCurrentTeamTileIds
+              : undefined
+          }
+          sunkByCurrentTeamTileIds={
+            bingo.bingoType === "battleship"
+              ? sunkByCurrentTeamTileIds
+              : undefined
+          }
+          hideTileDetails={battleshipHideTileDetails}
         />
       )}
 

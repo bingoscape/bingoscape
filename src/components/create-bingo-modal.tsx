@@ -24,6 +24,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import generateOSRSCodePhrase from "@/lib/codephraseGenerator"
 import { PatternBonusSchematicEditor } from "./pattern-bonus-schematic-editor"
+import { ShipRulesEditor } from "./ship-rules-editor"
+import type { ShipRule } from "@/server/db/schema"
 
 interface CreateBingoModalProps {
   eventId: string
@@ -37,9 +39,13 @@ export function CreateBingoModal({
   onClose,
 }: CreateBingoModalProps) {
   const [error, setError] = useState<string | null>(null)
-  const [bingoType, setBingoType] = useState<"standard" | "progression">(
-    "standard"
-  )
+  const [bingoType, setBingoType] = useState<
+    "standard" | "progression" | "battleship"
+  >("standard")
+  const [shipRules, setShipRules] = useState<ShipRule[]>([
+    { length: 3, count: 2 },
+    { length: 2, count: 1 },
+  ])
   const [rows, setRows] = useState(5)
   const [columns, setColumns] = useState(5)
   const [rowBonuses, setRowBonuses] = useState<Record<number, number>>({})
@@ -73,6 +79,13 @@ export function CreateBingoModal({
 
       // Add complete board bonus
       formData.append("completeBoardBonus", String(completeBoardBonus))
+    }
+
+    if (bingoType === "battleship") {
+      shipRules.forEach((rule, i) => {
+        formData.append(`shipRuleLength-${i}`, String(rule.length))
+        formData.append(`shipRuleCount-${i}`, String(rule.count))
+      })
     }
 
     try {
@@ -135,7 +148,7 @@ export function CreateBingoModal({
               <Label htmlFor="bingoType">Bingo Type</Label>
               <Select
                 value={bingoType}
-                onValueChange={(value: "standard" | "progression") =>
+                onValueChange={(value: "standard" | "progression" | "battleship") =>
                   setBingoType(value)
                 }
               >
@@ -145,12 +158,15 @@ export function CreateBingoModal({
                 <SelectContent>
                   <SelectItem value="standard">Standard Bingo</SelectItem>
                   <SelectItem value="progression">Progression Bingo</SelectItem>
+                  <SelectItem value="battleship">Battleship Bingo</SelectItem>
                 </SelectContent>
               </Select>
               <p className="mt-1 text-sm text-muted-foreground">
                 {bingoType === "standard"
                   ? "Traditional bingo where all tiles are available from the start"
-                  : "Progression-based bingo where teams unlock tiers by completing previous ones"}
+                  : bingoType === "progression"
+                    ? "Progression-based bingo where teams unlock tiers by completing previous ones"
+                    : "Teams place hidden ships on the grid; completing tiles on opponent ships scores hits"}
               </p>
             </div>
 
@@ -208,6 +224,16 @@ export function CreateBingoModal({
                 />
               </div>
             </div>
+
+            {bingoType === "battleship" && (
+              <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+                <ShipRulesEditor
+                  rules={shipRules}
+                  onChange={setShipRules}
+                  board={{ rows, columns }}
+                />
+              </div>
+            )}
 
             {bingoType === "standard" && (
               <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
