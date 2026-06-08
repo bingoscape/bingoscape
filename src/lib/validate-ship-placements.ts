@@ -3,21 +3,20 @@ import {
   type ShipPlacementInput,
   type TileCoord,
 } from "@/lib/ship-placement"
+import { aggregateShipRuleCounts } from "@/lib/ship-rules"
 import type { ShipRule } from "@/server/db/schema"
 
 export function validateShipPlacements(
   rules: ShipRule[],
   placements: ShipPlacementInput[],
-  tileCoords: TileCoord[]
+  tileCoords: TileCoord[],
+  options?: { hiddenTileIds?: Set<string> }
 ): string | null {
   if (placements.length === 0) {
     return "No ships placed"
   }
 
-  const required: Record<number, number> = {}
-  for (const r of rules) {
-    required[r.length] = (required[r.length] ?? 0) + r.count
-  }
+  const required = aggregateShipRuleCounts(rules)
 
   const got: Record<number, number> = {}
   const usedTiles = new Set<string>()
@@ -35,6 +34,9 @@ export function validateShipPlacements(
       }
       if (!tileSet.has(tid)) {
         return `Invalid tile ${tid}`
+      }
+      if (options?.hiddenTileIds?.has(tid)) {
+        return "Cannot place ships on hidden tiles"
       }
       usedTiles.add(tid)
     }

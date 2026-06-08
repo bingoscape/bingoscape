@@ -368,14 +368,14 @@ export async function createBingo(formData: FormData) {
       "./battleship"
     )
     const shipRules = await parseShipRulesFromFormData(formData)
-    if (shipRules.length === 0) {
-      await insertBingoShipRules(bingoId, [
-        { length: 3, count: 2 },
-        { length: 2, count: 1 },
-      ])
-    } else {
-      await insertBingoShipRules(bingoId, shipRules)
-    }
+    const rulesToInsert =
+      shipRules.length === 0
+        ? [
+            { length: 3, count: 2 },
+            { length: 2, count: 1 },
+          ]
+        : shipRules
+    await insertBingoShipRules(bingoId, rulesToInsert, { rows, columns })
   }
 
   return { success: true }

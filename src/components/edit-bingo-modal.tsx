@@ -9,6 +9,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
 import { updateBingo, getBingoWithPatternBonuses } from "@/app/actions/bingo"
 import {
+  getBingoShipRules,
+  updateBingoShipRules,
+} from "@/app/actions/battleship"
+import { ShipRulesEditor } from "./ship-rules-editor"
+import type { ShipRule } from "@/server/db/schema"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -64,12 +70,16 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
   const [mainDiagonalBonus, setMainDiagonalBonus] = useState(0)
   const [antiDiagonalBonus, setAntiDiagonalBonus] = useState(0)
   const [completeBoardBonus, setCompleteBoardBonus] = useState(0)
+  const [shipRules, setShipRules] = useState<ShipRule[]>([])
 
   // Fetch pattern bonus data when modal opens
   useEffect(() => {
     if (isOpen) {
       setIsLoadingPattern(true)
-      void getBingoWithPatternBonuses(bingo.id).then((result) => {
+      void Promise.all([
+        getBingoWithPatternBonuses(bingo.id),
+        getBingoShipRules(bingo.id),
+      ]).then(([result, rules]) => {
         if (result.success && result.data) {
           const data = result.data
           setPatternData({
@@ -82,6 +92,11 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
             rowBonuses: data.rowBonuses,
             columnBonuses: data.columnBonuses,
           })
+          if (data.bingoType === "battleship") {
+            setShipRules(
+              rules.length > 0 ? rules : [{ length: 3, count: 2 }, { length: 2, count: 1 }]
+            )
+          }
 
           // Initialize pattern bonus state
           const rowBonusMap: Record<number, number> = {}
@@ -145,15 +160,22 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
       }
 
       const result = await updateBingo(bingo.id, updateData)
-      if (result.success) {
-        toast({
-          title: "Success",
-          description: "Bingo updated successfully",
-        })
-        onClose()
-      } else {
+      if (!result.success) {
         throw new Error(result.error)
       }
+
+      if (patternData?.bingoType === "battleship") {
+        const rulesResult = await updateBingoShipRules(bingo.id, shipRules)
+        if (!rulesResult.success) {
+          throw new Error(rulesResult.error)
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: "Bingo updated successfully",
+      })
+      onClose()
     } catch (error) {
       console.error(error)
       toast({
@@ -219,6 +241,19 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="h-6 w-6 animate-spin" />
                 <span className="ml-2 text-sm text-muted-foreground">Loading pattern bonuses...</span>
+              </div>
+            )}
+
+            {!isLoadingPattern && patternData && patternData.bingoType === "battleship" && (
+              <div className="rounded-lg border bg-muted/30 p-4">
+                <ShipRulesEditor
+                  rules={shipRules}
+                  onChange={setShipRules}
+                  board={{
+                    rows: patternData.rows,
+                    columns: patternData.columns,
+                  }}
+                />
               </div>
             )}
 

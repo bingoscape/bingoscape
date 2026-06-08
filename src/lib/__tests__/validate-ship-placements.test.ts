@@ -87,4 +87,15 @@ describe("validateShipPlacements", () => {
       )
     ).toBe("Ship length 3 does not match tile count 2")
   })
+
+  it("rejects placements on hidden tiles", () => {
+    expect(
+      validateShipPlacements(
+        rules,
+        [{ length: 2, tileIds: ["t-0-0", "t-1-0"] }],
+        grid5x5,
+        { hiddenTileIds: new Set(["t-0-0"]) }
+      )
+    ).toBe("Cannot place ships on hidden tiles")
+  })
 })

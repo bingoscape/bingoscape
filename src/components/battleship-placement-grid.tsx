@@ -1,14 +1,17 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import type { ShipLengthColor } from "@/lib/ship-length-colors"
 import type { Tile } from "@/app/actions/events"
 
 interface BattleshipPlacementGridProps {
   tiles: Tile[]
   columns: number
   rows: number
-  savedShipTileIds: Set<string>
+  savedTileLengths: Map<string, number>
   currentShipTileIds: Set<string>
+  currentShipLength: number | null
+  lengthColors: Map<number, ShipLengthColor>
   onSelect: (tile: Tile) => void
   hideTileDetails?: boolean
   disabled?: boolean
@@ -17,9 +20,10 @@ interface BattleshipPlacementGridProps {
 export function BattleshipPlacementGrid({
   tiles,
   columns,
-  rows,
-  savedShipTileIds,
+  savedTileLengths,
   currentShipTileIds,
+  currentShipLength,
+  lengthColors,
   onSelect,
   hideTileDetails = true,
   disabled = false,
@@ -34,8 +38,18 @@ export function BattleshipPlacementGrid({
       aria-label="Ship placement grid"
     >
       {tiles.map((tile) => {
-        const isSaved = savedShipTileIds.has(tile.id)
+        const savedLength = savedTileLengths.get(tile.id)
+        const isSaved = savedLength !== undefined
         const isCurrent = currentShipTileIds.has(tile.id)
+        const length = isCurrent
+          ? currentShipLength
+          : isSaved
+            ? savedLength
+            : null
+        const colors =
+          length !== null && length !== undefined
+            ? lengthColors.get(length)
+            : undefined
 
         return (
           <button
@@ -47,10 +61,8 @@ export function BattleshipPlacementGrid({
               "relative aspect-square min-h-0 w-full rounded-lg border-2 transition-colors",
               "active:scale-[0.98]",
               disabled && "cursor-not-allowed opacity-60 hover:scale-100",
-              isSaved &&
-                "border-blue-600 bg-blue-100 dark:bg-blue-900/40 ring-2 ring-blue-400",
-              isCurrent &&
-                "border-amber-500 bg-amber-100 dark:bg-amber-900/40 ring-2 ring-amber-400",
+              isSaved && !isCurrent && colors?.badge,
+              isCurrent && cn(colors?.badge, colors?.badgeSelected),
               !isSaved &&
                 !isCurrent &&
                 "border-muted-foreground/30 bg-muted/30 hover:border-primary"

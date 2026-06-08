@@ -227,7 +227,11 @@ export function CreateBingoModal({
 
             {bingoType === "battleship" && (
               <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
-                <ShipRulesEditor rules={shipRules} onChange={setShipRules} />
+                <ShipRulesEditor
+                  rules={shipRules}
+                  onChange={setShipRules}
+                  board={{ rows, columns }}
+                />
               </div>
             )}
 

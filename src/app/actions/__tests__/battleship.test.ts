@@ -54,6 +54,7 @@ jest.mock("@/server/db", () => ({
       battleshipShips: { findMany: jest.fn(), findFirst: jest.fn() },
       battleshipHits: { findMany: jest.fn() },
       teamMembers: { findFirst: jest.fn() },
+      teams: { findFirst: jest.fn() },
       bingoShipRules: { findFirst: jest.fn() },
     },
     insert: jest.fn(() => mockInsertChain()),
@@ -86,11 +87,11 @@ describe("battleship actions", () => {
     columns: 5,
     bingoType: "battleship" as const,
     tiles: [
-      { id: "tile-a", index: 0 },
-      { id: "tile-b", index: 1 },
-      { id: "tile-c", index: 2 },
-      { id: "tile-d", index: 5 },
-      { id: "tile-e", index: 6 },
+      { id: "tile-a", index: 0, isHidden: false },
+      { id: "tile-b", index: 1, isHidden: false },
+      { id: "tile-c", index: 2, isHidden: false },
+      { id: "tile-d", index: 5, isHidden: false },
+      { id: "tile-e", index: 6, isHidden: false },
     ],
     shipRules: { rulesJson: [{ length: 3, count: 1 }, { length: 2, count: 1 }] },
   }
@@ -109,6 +110,7 @@ describe("battleship actions", () => {
     mockInsertReturning.mockReset()
     mockDeleteWhere.mockReset()
     mockTx.query.battleshipShips.findMany.mockResolvedValue([])
+    db.query.teams.findFirst.mockResolvedValue({ id: "team-1" })
   })
 
   describe("parseShipRulesFromFormData", () => {
@@ -124,8 +126,20 @@ describe("battleship actions", () => {
       formData.append("shipRuleCount-2", "5")
 
       await expect(parseShipRulesFromFormData(formData)).resolves.toEqual([
-        { length: 3, count: 2 },
         { length: 2, count: 1 },
+        { length: 3, count: 2 },
+      ])
+    })
+
+    it("merges duplicate-length rules from form data", async () => {
+      const formData = new FormData()
+      formData.append("shipRuleLength-0", "3")
+      formData.append("shipRuleCount-0", "2")
+      formData.append("shipRuleLength-1", "3")
+      formData.append("shipRuleCount-1", "1")
+
+      await expect(parseShipRulesFromFormData(formData)).resolves.toEqual([
+        { length: 3, count: 3 },
       ])
     })
   })
@@ -144,6 +158,18 @@ describe("battleship actions", () => {
       })
       await expect(getBingoShipRules("bingo-1")).resolves.toEqual([
         { length: 3, count: 2 },
+      ])
+    })
+
+    it("merges duplicate-length rules from storage", async () => {
+      db.query.bingoShipRules.findFirst.mockResolvedValue({
+        rulesJson: [
+          { length: 3, count: 2 },
+          { length: 3, count: 1 },
+        ],
+      })
+      await expect(getBingoShipRules("bingo-1")).resolves.toEqual([
+        { length: 3, count: 3 },
       ])
     })
   })
@@ -182,6 +208,17 @@ describe("battleship actions", () => {
       expect(result.ships).toEqual([
         { length: 3, tileIds: ["tile-a", "tile-b", "tile-c"] },
       ])
+    })
+
+    it("rejects teams that do not belong to the event", async () => {
+      db.query.bingos.findFirst.mockResolvedValue(battleshipBingo)
+      db.query.teams.findFirst.mockResolvedValue(undefined)
+
+      const result = await getTeamShipPlacements("bingo-1", "team-other")
+      expect(result).toEqual({
+        success: false,
+        error: "Team not found in this event",
+      })
     })
   })
 
@@ -276,6 +313,38 @@ describe("battleship actions", () => {
 
       expect(result).toEqual({ success: true })
       expect(db.transaction).toHaveBeenCalled()
+    })
+
+    it("clears saved placements when given an empty array", async () => {
+      db.query.bingos.findFirst.mockResolvedValue(battleshipBingo)
+      db.query.teamMembers.findFirst.mockResolvedValue({ isLeader: true })
+
+      const result = await saveTeamShipPlacements("bingo-1", "team-1", [])
+
+      expect(result).toEqual({ success: true })
+      expect(db.transaction).toHaveBeenCalled()
+    })
+
+    it("rejects placements on hidden tiles", async () => {
+      db.query.bingos.findFirst.mockResolvedValue({
+        ...battleshipBingo,
+        tiles: [
+          { id: "tile-a", index: 0, isHidden: true },
+          { id: "tile-b", index: 1, isHidden: false },
+          { id: "tile-c", index: 2, isHidden: false },
+          { id: "tile-d", index: 5, isHidden: false },
+          { id: "tile-e", index: 6, isHidden: false },
+        ],
+      })
+      db.query.teamMembers.findFirst.mockResolvedValue({ isLeader: true })
+
+      const result = await saveTeamShipPlacements("bingo-1", "team-1", [
+        { length: 3, tileIds: ["tile-a", "tile-b", "tile-c"] },
+        { length: 2, tileIds: ["tile-d", "tile-e"] },
+      ])
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe("Cannot place ships on hidden tiles")
     })
   })
 

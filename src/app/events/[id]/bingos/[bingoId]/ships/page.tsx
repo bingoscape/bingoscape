@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react"
 import Link from "next/link"
 import type { UUID } from "crypto"
 import { ArrowLeft } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -24,6 +25,12 @@ import {
   type TileCoord,
 } from "@/lib/ship-placement"
 import { isEventActive } from "@/lib/event-status"
+import { aggregateShipRuleCounts } from "@/lib/ship-rules"
+import {
+  buildLengthColorMap,
+  firstUnplacedLength,
+} from "@/lib/ship-length-colors"
+import { cn } from "@/lib/utils"
 import { getEventById } from "@/app/actions/events"
 import { getCurrentTeamForUser } from "@/app/actions/team"
 import type { Bingo, Tile } from "@/app/actions/events"
@@ -47,6 +54,7 @@ export default function ShipPlacementPage(props: {
   const [teamName, setTeamName] = useState("")
   const [rules, setRules] = useState<ShipRule[]>([])
   const [ships, setShips] = useState<ShipPlacement[]>([])
+  const [selectedLength, setSelectedLength] = useState<number | null>(null)
   const [currentShip, setCurrentShip] = useState<{
     length: number
     tileIds: string[]
@@ -56,13 +64,18 @@ export default function ShipPlacementPage(props: {
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
 
+  const placeableTiles = useMemo(
+    () => (bingo?.tiles ?? []).filter((t) => !t.isHidden),
+    [bingo?.tiles]
+  )
+
   const tileCoords: TileCoord[] = useMemo(() => {
-    if (!bingo?.tiles) return []
-    return bingo.tiles.map((t) => {
+    if (!bingo) return []
+    return placeableTiles.map((t) => {
       const { col, row } = indexToCoord(t.index, bingo.columns)
       return { id: t.id, col, row }
     })
-  }, [bingo])
+  }, [placeableTiles, bingo])
 
   useEffect(() => {
     const load = async () => {
@@ -86,12 +99,6 @@ export default function ShipPlacementPage(props: {
           return
         }
 
-        const effectiveTeamId = searchParams.teamId ?? currentTeam?.id
-        if (!effectiveTeamId) {
-          setError("You must be on a team to place ships")
-          return
-        }
-
         const isBoardCreator = Boolean(
           session?.user?.id &&
             eventData.event.creatorId &&
@@ -101,6 +108,13 @@ export default function ShipPlacementPage(props: {
           eventData.userRole === "admin" ||
           eventData.userRole === "management"
         const isTeamLeader = Boolean(currentTeam?.isLeader)
+
+        const effectiveTeamId = searchParams.teamId ?? currentTeam?.id
+        if (!effectiveTeamId) {
+          setError("You must be on a team to place ships")
+          return
+        }
+
         if (!isBoardCreator && !isEventAdminOrManagement && !isTeamLeader) {
           setError(
             "Only team leaders, event admins, or board creator can manage ship placement"
@@ -108,9 +122,22 @@ export default function ShipPlacementPage(props: {
           return
         }
 
+        if (
+          !isBoardCreator &&
+          !isEventAdminOrManagement &&
+          effectiveTeamId !== currentTeam?.id
+        ) {
+          setError("You can only manage ship placement for your own team")
+          return
+        }
+
         const team = eventData.event.teams?.find(
           (t: { id: string; name: string }) => t.id === effectiveTeamId
         )
+        if (!team) {
+          setError("Team not found in this event")
+          return
+        }
         const eventIsActive = isEventActive(
           eventData.event.startDate,
           eventData.event.endDate
@@ -132,7 +159,11 @@ export default function ShipPlacementPage(props: {
         ])
 
         setRules(shipRules)
-        if (existingShips.success && existingShips.ships) {
+        if (!existingShips.success) {
+          setError(existingShips.error ?? "Failed to load existing ship placement")
+          return
+        }
+        if (existingShips.ships) {
           setShips(existingShips.ships)
         }
       } catch (e) {
@@ -154,6 +185,16 @@ export default function ShipPlacementPage(props: {
     return ids
   }, [ships])
 
+  const savedTileLengths = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const ship of ships) {
+      for (const tileId of ship.tileIds) {
+        map.set(tileId, ship.length)
+      }
+    }
+    return map
+  }, [ships])
+
   const placedCounts = useMemo(() => {
     const counts: Record<number, number> = {}
     for (const s of ships) {
@@ -162,11 +203,55 @@ export default function ShipPlacementPage(props: {
     return counts
   }, [ships])
 
-  const nextRule = (): ShipRule | null => {
-    for (const r of rules) {
-      if ((placedCounts[r.length] ?? 0) < r.count) return r
+  const requiredCounts = useMemo(
+    () => aggregateShipRuleCounts(rules),
+    [rules]
+  )
+
+  const lengthColors = useMemo(
+    () => buildLengthColorMap(Object.keys(requiredCounts).map(Number)),
+    [requiredCounts]
+  )
+
+  useEffect(() => {
+    if (shipPlacementLocked || currentShip) return
+    const next = firstUnplacedLength(requiredCounts, placedCounts)
+    setSelectedLength((prev) => {
+      if (prev !== null) {
+        const required = requiredCounts[prev] ?? 0
+        const placed = placedCounts[prev] ?? 0
+        if (placed < required) return prev
+      }
+      return next
+    })
+  }, [requiredCounts, placedCounts, shipPlacementLocked, currentShip])
+
+  const placementComplete = useMemo(() => {
+    for (const [length, count] of Object.entries(requiredCounts)) {
+      if ((placedCounts[Number(length)] ?? 0) !== count) {
+        return false
+      }
     }
-    return null
+    return Object.keys(requiredCounts).length > 0
+  }, [requiredCounts, placedCounts])
+
+  const canSave =
+    !shipPlacementLocked &&
+    !currentShip &&
+    (placementComplete || ships.length === 0)
+
+  const selectLength = (length: number) => {
+    if (shipPlacementLocked) return
+    if (currentShip && currentShip.length !== length) {
+      setMessage("Cancel the current ship before switching length")
+      return
+    }
+    const required = requiredCounts[length] ?? 0
+    const placed = placedCounts[length] ?? 0
+    if (placed >= required) return
+    setSelectedLength(length)
+    setError("")
+    setMessage(`Selected length ${length} ship — click tiles on the grid`)
   }
 
   const onSelect = (tile: Tile) => {
@@ -184,12 +269,17 @@ export default function ShipPlacementPage(props: {
 
     let ship = currentShip
     if (!ship) {
-      const rule = nextRule()
-      if (!rule) {
-        setMessage("All ships placed. Save or reset to start over.")
+      if (selectedLength === null) {
+        setMessage("Select a ship length to place")
         return
       }
-      ship = { length: rule.length, tileIds: [] }
+      const required = requiredCounts[selectedLength] ?? 0
+      const placed = placedCounts[selectedLength] ?? 0
+      if (placed >= required) {
+        setMessage(`All length-${selectedLength} ships are already placed`)
+        return
+      }
+      ship = { length: selectedLength, tileIds: [] }
     }
 
     const existingIdx = ship.tileIds.indexOf(tile.id)
@@ -229,7 +319,25 @@ export default function ShipPlacementPage(props: {
       }
       setShips([...ships, next])
       setCurrentShip(null)
-      setMessage(`Placed ship of length ${next.length}`)
+      const remaining = (placedCounts[next.length] ?? 0) + 1
+      const required = requiredCounts[next.length] ?? 0
+      if (remaining < required) {
+        setSelectedLength(next.length)
+        setMessage(
+          `Placed length ${next.length} ship — place another (${remaining}/${required})`
+        )
+      } else {
+        const nextLength = firstUnplacedLength(
+          requiredCounts,
+          { ...placedCounts, [next.length]: remaining }
+        )
+        setSelectedLength(nextLength)
+        setMessage(
+          nextLength
+            ? `Placed length ${next.length} ship — select length ${nextLength} next`
+            : "All ships placed. Save or reset to start over."
+        )
+      }
     } else {
       setCurrentShip(next)
       setMessage(
@@ -255,10 +363,17 @@ export default function ShipPlacementPage(props: {
       const result = await saveTeamShipPlacements(bingoId, teamId, ships)
       if (result.success) {
         toast({
-          title: "Ships saved",
-          description: "Your ship placement is hidden from opponents.",
+          title: ships.length === 0 ? "Ships cleared" : "Ships saved",
+          description:
+            ships.length === 0
+              ? "Your team's ship placement has been removed."
+              : "Your ship placement is hidden from opponents.",
         })
-        setMessage("Ships saved (hidden from opponents)")
+        setMessage(
+          ships.length === 0
+            ? "Ship placement cleared"
+            : "Ships saved (hidden from opponents)"
+        )
       } else {
         setError(result.error ?? "Failed to save")
       }
@@ -271,6 +386,7 @@ export default function ShipPlacementPage(props: {
     if (shipPlacementLocked) return
     setShips([])
     setCurrentShip(null)
+    setSelectedLength(firstUnplacedLength(requiredCounts, {}))
     setMessage("Reset all ships")
   }
 
@@ -294,7 +410,7 @@ export default function ShipPlacementPage(props: {
     )
   }
 
-  const sortedTiles = [...(bingo.tiles ?? [])].sort((a, b) => a.index - b.index)
+  const sortedTiles = [...placeableTiles].sort((a, b) => a.index - b.index)
 
   return (
     <div className="container mx-auto px-4 py-4 max-w-3xl">
@@ -308,38 +424,80 @@ export default function ShipPlacementPage(props: {
       </div>
 
       <p className="text-muted-foreground mb-4">
-        Place ships in one straight line (horizontal or vertical) with no gaps.
-        Click a selected tile again to undo.
+        Select a ship length, then place it in one straight line (horizontal or
+        vertical) with no gaps. Click a selected tile again to undo.
       </p>
 
       <Card className="mb-4">
         <CardHeader>
-          <CardTitle className="text-lg">Ship rules</CardTitle>
+          <CardTitle className="text-lg">Your fleet</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Tap a ship size below, then place it on the grid in one straight
+            line.
+          </p>
         </CardHeader>
         <CardContent className="space-y-3">
-          <ul className="text-sm space-y-1">
-            {rules.map((r, i) => (
-              <li key={i}>
-                {r.count}× length {r.length} — placed{" "}
-                {placedCounts[r.length] ?? 0}/{r.count}
-              </li>
-            ))}
-          </ul>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(requiredCounts)
+              .sort(([a], [b]) => Number(a) - Number(b))
+              .map(([lengthStr, count]) => {
+                const length = Number(lengthStr)
+                const placed = placedCounts[length] ?? 0
+                const isComplete = placed >= count
+                const isActivePlacement =
+                  currentShip !== null && currentShip.length === length
+                const isSelected = selectedLength === length || isActivePlacement
+                const colors = lengthColors.get(length)
+                const isDisabled =
+                  shipPlacementLocked ||
+                  isComplete ||
+                  (currentShip !== null && currentShip.length !== length)
+                return (
+                  <button
+                    key={length}
+                    type="button"
+                    disabled={isDisabled}
+                    onClick={() => selectLength(length)}
+                    className={cn(
+                      "rounded-full transition-opacity",
+                      isDisabled && "cursor-not-allowed opacity-60",
+                      !isDisabled && "hover:opacity-90"
+                    )}
+                  >
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "pointer-events-none border px-3 py-1 text-sm",
+                        colors?.badge,
+                        isSelected && colors?.badgeSelected
+                      )}
+                    >
+                      {length} tiles · {placed}/{count} placed
+                    </Badge>
+                  </button>
+                )
+              })}
+          </div>
           {currentShip && (
             <p className="text-sm">
-              Placing length {currentShip.length} ship:{" "}
-              {currentShip.tileIds.length}/{currentShip.length} tiles
+              Placing {currentShip.length}-tile ship:{" "}
+              {currentShip.tileIds.length}/{currentShip.length} tiles selected
             </p>
           )}
           {message && <p className="text-sm text-muted-foreground">{message}</p>}
           {error && <p className="text-sm text-destructive">{error}</p>}
+          {!canSave && !shipPlacementLocked && !currentShip && ships.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              Place all required ships before saving.
+            </p>
+          )}
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               onClick={save}
-              disabled={shipPlacementLocked || isSaving}
+              disabled={!canSave || isSaving}
             >
-              Save placement
+              {ships.length === 0 ? "Clear placement" : "Save placement"}
             </Button>
             {currentShip && (
               <Button
@@ -369,9 +527,10 @@ export default function ShipPlacementPage(props: {
       <BattleshipPlacementGrid
         tiles={sortedTiles}
         columns={bingo.columns}
-        rows={bingo.rows}
-        savedShipTileIds={placedTileIds}
+        savedTileLengths={savedTileLengths}
         currentShipTileIds={new Set(currentShip?.tileIds ?? [])}
+        currentShipLength={currentShip?.length ?? selectedLength}
+        lengthColors={lengthColors}
         onSelect={onSelect}
         disabled={shipPlacementLocked}
       />

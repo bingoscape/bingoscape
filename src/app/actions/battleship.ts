@@ -9,6 +9,7 @@ import {
   bingos,
   events,
   teamMembers,
+  teams,
   type ShipRule,
 } from "@/server/db/schema"
 import { and, eq, ne } from "drizzle-orm"
@@ -17,6 +18,10 @@ import { getUserRole } from "./events"
 import { indexToCoord } from "@/lib/ship-placement"
 import type { ShipPlacementInput } from "@/lib/ship-placement"
 import { getSunkShipTileIds } from "@/lib/battleship-sunk"
+import {
+  mergeShipRulesByLength,
+  validateShipRulesFitBoard,
+} from "@/lib/ship-rules"
 import { validateShipPlacements } from "@/lib/validate-ship-placements"
 import { revalidatePath } from "next/cache"
 import { logger } from "@/lib/logger"
@@ -79,11 +84,27 @@ async function assertShipPlacementAccess(
   return { ok: true }
 }
 
+async function assertTeamBelongsToEvent(
+  eventId: string,
+  teamId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const team = await db.query.teams.findFirst({
+    where: and(eq(teams.id, teamId), eq(teams.eventId, eventId)),
+    columns: { id: true },
+  })
+
+  if (!team) {
+    return { ok: false, error: "Team not found in this event" }
+  }
+
+  return { ok: true }
+}
+
 export async function getBingoShipRules(bingoId: string) {
   const rules = await db.query.bingoShipRules.findFirst({
     where: eq(bingoShipRules.bingoId, bingoId),
   })
-  return rules?.rulesJson ?? []
+  return mergeShipRulesByLength(rules?.rulesJson ?? [])
 }
 
 export async function getTeamShipPlacements(
@@ -97,6 +118,9 @@ export async function getTeamShipPlacements(
     if (!bingo || bingo.bingoType !== "battleship") {
       return { success: false, error: "Not a battleship board" }
     }
+
+    const teamCheck = await assertTeamBelongsToEvent(bingo.eventId, teamId)
+    if (!teamCheck.ok) return { success: false, error: teamCheck.error }
 
     const auth = await assertShipPlacementAccess(bingo.eventId, teamId)
     if (!auth.ok) return { success: false, error: auth.error }
@@ -156,26 +180,35 @@ export async function saveTeamShipPlacements(
       }
     }
 
+    const teamCheck = await assertTeamBelongsToEvent(bingo.eventId, teamId)
+    if (!teamCheck.ok) return { success: false, error: teamCheck.error }
+
     const auth = await assertShipPlacementAccess(bingo.eventId, teamId)
     if (!auth.ok) return { success: false, error: auth.error }
 
-    const rules: ShipRule[] = bingo.shipRules?.rulesJson ?? []
+    const rules = mergeShipRulesByLength(bingo.shipRules?.rulesJson ?? [])
     if (rules.length === 0) {
       return { success: false, error: "No ship rules configured for this board" }
     }
 
+    const hiddenTileIds = new Set(
+      bingo.tiles.filter((t) => t.isHidden).map((t) => t.id)
+    )
     const tileCoords = bingo.tiles.map((t) => {
       const { col, row } = indexToCoord(t.index, bingo.columns)
       return { id: t.id, col, row }
     })
 
-    const validationError = validateShipPlacements(
-      rules,
-      placements as ShipPlacementInput[],
-      tileCoords
-    )
-    if (validationError) {
-      return { success: false, error: validationError }
+    if (placements.length > 0) {
+      const validationError = validateShipPlacements(
+        rules,
+        placements as ShipPlacementInput[],
+        tileCoords,
+        { hiddenTileIds }
+      )
+      if (validationError) {
+        return { success: false, error: validationError }
+      }
     }
 
     await db.transaction(async (tx) => {
@@ -348,16 +381,84 @@ export async function parseShipRulesFromFormData(
     }
     i++
   }
-  return rules
+  return mergeShipRulesByLength(rules)
 }
 
 export async function insertBingoShipRules(
   bingoId: string,
-  rules: ShipRule[]
+  rules: ShipRule[],
+  board?: { rows: number; columns: number }
 ) {
-  if (rules.length === 0) return
+  const merged = mergeShipRulesByLength(rules)
+  if (merged.length === 0) return
+
+  if (board) {
+    const fitError = validateShipRulesFitBoard(
+      merged,
+      board.rows,
+      board.columns
+    )
+    if (fitError) {
+      throw new Error(fitError)
+    }
+  }
+
   await db.insert(bingoShipRules).values({
     bingoId,
-    rulesJson: rules,
+    rulesJson: merged,
   })
+}
+
+export async function updateBingoShipRules(
+  bingoId: string,
+  rules: ShipRule[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const bingo = await db.query.bingos.findFirst({
+      where: eq(bingos.id, bingoId),
+      columns: { bingoType: true, rows: true, columns: true, eventId: true },
+    })
+
+    if (!bingo || bingo.bingoType !== "battleship") {
+      return { success: false, error: "Not a battleship board" }
+    }
+
+    const merged = mergeShipRulesByLength(rules)
+    if (merged.length === 0) {
+      return { success: false, error: "At least one ship rule is required" }
+    }
+
+    const fitError = validateShipRulesFitBoard(
+      merged,
+      bingo.rows,
+      bingo.columns
+    )
+    if (fitError) {
+      return { success: false, error: fitError }
+    }
+
+    const existing = await db.query.bingoShipRules.findFirst({
+      where: eq(bingoShipRules.bingoId, bingoId),
+    })
+
+    if (existing) {
+      await db
+        .update(bingoShipRules)
+        .set({ rulesJson: merged, updatedAt: new Date() })
+        .where(eq(bingoShipRules.bingoId, bingoId))
+    } else {
+      await db.insert(bingoShipRules).values({
+        bingoId,
+        rulesJson: merged,
+      })
+    }
+
+    revalidatePath(`/events/${bingo.eventId}/bingos/${bingoId}`)
+    revalidatePath(`/events/${bingo.eventId}/bingos/${bingoId}/ships`)
+
+    return { success: true }
+  } catch (error) {
+    logger.error({ error }, "Error updating ship rules")
+    return { success: false, error: "Failed to update ship rules" }
+  }
 }
