@@ -20,6 +20,7 @@ import {
   BarChart2,
 } from "lucide-react"
 import type { GoalTreeNode } from "@/app/actions/goal-groups"
+import { getWikiIconUrl } from "@/lib/osrs-metrics"
 import { useState } from "react"
 
 interface TeamProgress {
@@ -302,7 +303,16 @@ function ProgressTreeNode({ node, depth, collapsedGroups, toggleGroup }: Progres
                 </>
               ) : isMetricGoal && metricGoal ? (
                 <>
-                  <BarChart2 className="h-3 w-3 text-blue-500" />
+                  {metricGoal.metricName ? (
+                    <img
+                      src={getWikiIconUrl(metricGoal.metricName)}
+                      alt={metricGoal.metricName}
+                      className="h-4 w-4 object-contain"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <BarChart2 className="h-3 w-3 text-blue-500" />
+                  )}
                   <Badge variant="secondary" className="text-[10px] h-3 px-0.5 uppercase">
                     {metricGoal.metricType}
                   </Badge>

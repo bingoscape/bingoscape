@@ -13,7 +13,7 @@ interface Goal {
   id: string
   description: string
   targetValue: number
-  goalType?: "generic" | "item"
+  goalType?: "generic" | "item" | "metric"
   itemGoal?: {
     id: string
     goalId: string

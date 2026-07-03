@@ -7,8 +7,9 @@
 import { Badge } from "@/components/ui/badge"
 import { AnimatedProgress } from "@/components/ui/animated-progress"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Layers, Target, CheckCircle2, Circle, Package } from "lucide-react"
+import { Layers, Target, CheckCircle2, Circle, Package, BarChart2 } from "lucide-react"
 import type { GoalTreeNode } from "@/app/actions/goal-groups"
+import { getWikiIconUrl } from "@/lib/osrs-metrics"
 
 interface TeamProgress {
   goalId: string
@@ -208,6 +209,8 @@ function CompactTreeNode({ node, depth, showProgress, maxDepth }: CompactTreeNod
   const percentage = targetValue > 0 ? Math.min(100, (currentValue / targetValue) * 100) : 0
   const isItemGoal = goalData.goalType === "item" && goalData.itemGoal
   const itemGoal = goalData.itemGoal
+  const isMetricGoal = goalData.goalType === "metric" && goalData.metricGoal
+  const metricGoal = goalData.metricGoal
 
   return (
     <div style={{ marginLeft: `${marginLeft}px` }}>
@@ -225,6 +228,22 @@ function CompactTreeNode({ node, depth, showProgress, maxDepth }: CompactTreeNod
                   />
                   <Badge variant="secondary" className="text-[10px] h-3 px-0.5">
                     <Package className="h-2.5 w-2.5" />
+                  </Badge>
+                </>
+              ) : isMetricGoal && metricGoal ? (
+                <>
+                  {metricGoal.metricName ? (
+                    <img
+                      src={getWikiIconUrl(metricGoal.metricName)}
+                      alt={metricGoal.metricName}
+                      className="h-4 w-4 object-contain"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <BarChart2 className="h-3 w-3 text-blue-500" />
+                  )}
+                  <Badge variant="secondary" className="text-[10px] h-3 px-0.5 uppercase">
+                    {metricGoal.metricType}
                   </Badge>
                 </>
               ) : (

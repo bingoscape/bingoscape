@@ -310,7 +310,7 @@ export function QuickSubmissionModal({
             onSubmit={handleImageSubmit}
             showTeamHeader={false}
             disabled={!selectedTile}
-            isMetricOnly={selectedTile?.goals?.length > 0 && selectedTile.goals.every((g: { goalType?: string }) => g.goalType === "metric")}
+            isMetricOnly={!!(selectedTile?.goals && selectedTile.goals.length > 0 && selectedTile.goals.every((g: { goalType?: string }) => g.goalType === "metric"))}
           />
         </div>
       </DialogContent>

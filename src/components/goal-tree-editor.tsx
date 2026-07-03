@@ -78,6 +78,8 @@ import { parseItemName } from "osrs-item-data"
 import type { OsrsItem } from "@/types/osrs-items"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
+import { SKILLS, BOSSES, ACTIVITIES } from "@wise-old-man/utils"
+import { getMetricName, getWikiIconUrl } from "@/lib/osrs-metrics"
 
 interface GoalTreeEditorProps {
   tileId: string
@@ -624,7 +626,7 @@ export function GoalTreeEditor({
                 <RadioGroup
                   value={goalType}
                   onValueChange={(value) =>
-                    setGoalType(value as "generic" | "item")
+                    setGoalType(value as "generic" | "item" | "metric")
                   }
                   className="flex gap-4"
                 >
@@ -782,7 +784,10 @@ export function GoalTreeEditor({
                   <div className="space-y-4">
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Metric Type</Label>
-                      <Select value={metricType} onValueChange={(v: any) => setMetricType(v)}>
+                      <Select value={metricType} onValueChange={(v: any) => {
+                        setMetricType(v)
+                        setMetricName("")
+                      }}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select type" />
                         </SelectTrigger>
@@ -795,12 +800,37 @@ export function GoalTreeEditor({
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Metric Name</Label>
-                      <Input 
-                        value={metricName}
-                        onChange={(e) => setMetricName(e.target.value)}
-                        placeholder="e.g. Woodcutting, Zulrah"
-                        className="mt-1"
-                      />
+                      <Select value={metricName} onValueChange={setMetricName}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Select metric" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px]">
+                          {metricType === "skill" && SKILLS.map(m => (
+                            <SelectItem key={m} value={m}>
+                              <div className="flex items-center gap-2">
+                                <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <span>{getMetricName(m)}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                          {metricType === "boss" && BOSSES.map(m => (
+                            <SelectItem key={m} value={m}>
+                              <div className="flex items-center gap-2">
+                                <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <span>{getMetricName(m)}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                          {metricType === "activity" && ACTIVITIES.map(m => (
+                            <SelectItem key={m} value={m}>
+                              <div className="flex items-center gap-2">
+                                <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <span>{getMetricName(m)}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Target XP/KC/Score</Label>
@@ -1429,7 +1459,10 @@ function TreeNode({
                 <div className="space-y-3">
                   <div>
                     <Label className="text-xs">Metric Type</Label>
-                    <Select value={editMetricType} onValueChange={setEditMetricType}>
+                    <Select value={editMetricType} onValueChange={(v) => {
+                      setEditMetricType(v)
+                      setEditMetricName("")
+                    }}>
                       <SelectTrigger className="h-8 text-sm">
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
@@ -1442,12 +1475,37 @@ function TreeNode({
                   </div>
                   <div>
                     <Label className="text-xs">Metric Name</Label>
-                    <Input 
-                      value={editMetricName}
-                      onChange={(e) => setEditMetricName(e.target.value)}
-                      placeholder="e.g. Woodcutting, Zulrah"
-                      className="mt-1 h-8 text-sm"
-                    />
+                    <Select value={editMetricName} onValueChange={setEditMetricName}>
+                      <SelectTrigger className="mt-1 h-8 text-sm">
+                        <SelectValue placeholder="Select metric" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {editMetricType === "skill" && SKILLS.map(m => (
+                          <SelectItem key={m} value={m}>
+                            <div className="flex items-center gap-2">
+                              <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                              <span>{getMetricName(m)}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                        {editMetricType === "boss" && BOSSES.map(m => (
+                          <SelectItem key={m} value={m}>
+                            <div className="flex items-center gap-2">
+                              <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                              <span>{getMetricName(m)}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                        {editMetricType === "activity" && ACTIVITIES.map(m => (
+                          <SelectItem key={m} value={m}>
+                            <div className="flex items-center gap-2">
+                              <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                              <span>{getMetricName(m)}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               ) : (

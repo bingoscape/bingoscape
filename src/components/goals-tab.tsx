@@ -43,7 +43,7 @@ export function GoalsTab({
   const [selectedGoalForValue, setSelectedGoalForValue] = useState<string | null>(null)
   const [goalValuesState, setGoalValuesState] = useState<Record<string, GoalValue[]>>({})
   const [goalTree, setGoalTree] = useState<GoalTreeNode[]>([])
-  const [goalType, setGoalType] = useState<"generic" | "item">("generic")
+  const [goalType, setGoalType] = useState<"generic" | "item" | "metric">("generic")
   const [selectedItems, setSelectedItems] = useState<OsrsItem[]>([])
   const [itemGoalTargetValue, setItemGoalTargetValue] = useState<number>(1)
   const [isCreatingBulk, setIsCreatingBulk] = useState(false)

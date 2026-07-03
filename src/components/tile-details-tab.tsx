@@ -594,13 +594,13 @@ function TileProgress({
   const [isSyncing, setIsSyncing] = useState(false)
 
   const hasMetricGoals = selectedTile?.goals?.some((g: any) => g.goalType === "metric")
-  const canSync = hasMetricGoals && eventId && (userRole === "admin" || userRole === "management")
+  const canSync = hasMetricGoals && selectedTile?.bingoId && (userRole === "admin" || userRole === "management")
 
   const handleSync = async () => {
-    if (!eventId) return
+    if (!selectedTile?.bingoId) return
     setIsSyncing(true)
     try {
-      const result = await syncTrackerProgress(eventId)
+      const result = await syncTrackerProgress(selectedTile.bingoId)
       if (result.success) {
         toast({
           title: "Sync complete",

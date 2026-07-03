@@ -227,8 +227,6 @@ export const events = createTable("events", {
     .notNull(),
   minimumBuyIn: bigint("minimumBuyIn", { mode: "number" }).default(0).notNull(),
   requiresApproval: boolean("requires_approval").default(false).notNull(), // New field for registration approval
-  trackerCompetitionId: integer("tracker_competition_id"),
-  trackerProvider: varchar("tracker_provider", { length: 50 }),
 })
 
 export const eventsRelations = relations(events, ({ many, one }) => ({
@@ -330,6 +328,8 @@ export const bingos = createTable("bingos", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   locked: boolean("locked").default(false).notNull(),
   visible: boolean("visible").default(false).notNull(),
+  womCompetitionId: integer("wom_competition_id"),
+  womVerificationCode: varchar("wom_verification_code", { length: 255 }),
 })
 
 export const bingosRelations = relations(bingos, ({ one, many }) => ({
@@ -350,6 +350,7 @@ export const teams = createTable("teams", {
     .notNull()
     .references(() => events.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
+  trackerTeamName: varchar("tracker_team_name", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
@@ -512,7 +513,6 @@ export const metricGoals = createTable("metric_goals", {
     .references(() => goals.id, { onDelete: "cascade" }),
   metricType: varchar("metric_type", { length: 50 }).notNull().default("skill"),
   metricName: varchar("metric_name", { length: 100 }).notNull(),
-  trackerProvider: varchar("tracker_provider", { length: 50 }).notNull().default("wiseoldman"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
@@ -539,10 +539,6 @@ export const goalsRelations = relations(goals, ({ one, many }) => ({
   itemGoal: one(itemGoals, {
     fields: [goals.id],
     references: [itemGoals.goalId],
-  }),
-  metricGoal: one(metricGoals, {
-    fields: [goals.id],
-    references: [metricGoals.goalId],
   }),
   metricGoal: one(metricGoals, {
     fields: [goals.id],

@@ -53,7 +53,7 @@ export interface GoalNode extends BaseGoalTreeNode {
   type: "goal"
   description: string
   targetValue: number | null
-  goalType: "generic" | "item"
+  goalType: "generic" | "item" | "metric"
   itemGoal?: ItemGoalData
   goalValues?: GoalValueData[]
   progress?: GoalProgressData
