@@ -13,13 +13,13 @@ export function StatCard({
   alert?: boolean;
 }) {
   return (
-    <div className={`p-6 rounded-2xl border bg-white/10 dark:bg-black/10 backdrop-blur-md shadow-sm flex items-center gap-4 ${alert && value && Number(value) > 0 ? "border-amber-500/50" : "border-slate-200 dark:border-slate-800"}`}>
-      <div className={`p-3 rounded-full ${alert && value && Number(value) > 0 ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-500" : "bg-primary/10 text-primary"}`}>
+    <div className={`p-4 md:p-6 rounded-2xl border bg-white/10 dark:bg-black/10 backdrop-blur-md shadow-sm flex items-center gap-3 md:gap-4 ${alert && value && Number(value) > 0 ? "border-amber-500/50" : "border-slate-200 dark:border-slate-800"}`}>
+      <div className={`p-2.5 md:p-3 rounded-full ${alert && value && Number(value) > 0 ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-500" : "bg-primary/10 text-primary"}`}>
         {icon}
       </div>
       <div>
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <h3 className="text-2xl font-bold">{value}</h3>
+        <p className="text-xs md:text-sm font-medium text-muted-foreground">{title}</p>
+        <h3 className="text-xl md:text-2xl font-bold">{value}</h3>
       </div>
     </div>
   );
