@@ -18,6 +18,7 @@ import { toast } from "@/hooks/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -42,6 +43,7 @@ export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) 
   const [isLocked, setIsLocked] = useState(event.locked)
   const [isPublic, setIsPublic] = useState(event.public)
   const [requiresApproval, setRequiresApproval] = useState(event.requiresApproval || false)
+
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async () => {
@@ -257,6 +259,7 @@ export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) 
               </label>
             </div>
           </div>
+
         </div>
         <DialogFooter>
           <Button type="submit" onClick={handleSubmit} disabled={isSubmitting}>

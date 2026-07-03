@@ -43,6 +43,7 @@ import {
   CheckSquare,
   Component,
   Goal,
+  BarChart2,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import type { GoalTreeNode } from "@/app/actions/goal-groups"
@@ -72,11 +73,13 @@ import {
 } from "@/components/ui/dialog"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { OsrsItemSearch } from "./osrs-item-search"
-import { createItemGoal, updateGoal, updateItemGoal } from "@/app/actions/bingo"
+import { createItemGoal, updateGoal, updateItemGoal, createMetricGoal, updateMetricGoal } from "@/app/actions/bingo"
 import { parseItemName } from "osrs-item-data"
 import type { OsrsItem } from "@/types/osrs-items"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
+import { SKILLS, BOSSES, ACTIVITIES } from "@wise-old-man/utils"
+import { getMetricName, getWikiIconUrl } from "@/lib/osrs-metrics"
 
 interface GoalTreeEditorProps {
   tileId: string
@@ -113,10 +116,16 @@ export function GoalTreeEditor({
   const [showNewGroupDialog, setShowNewGroupDialog] = useState(false)
   const [newGroupOperator, setNewGroupOperator] = useState<"AND" | "OR">("AND")
   const [newGroupMinRequired, setNewGroupMinRequired] = useState<number>(1)
-  const [goalType, setGoalType] = useState<"generic" | "item">("generic")
+  const [goalType, setGoalType] = useState<"generic" | "item" | "metric">("generic")
   const [selectedItems, setSelectedItems] = useState<OsrsItem[]>([])
   const [itemGoalTargetValue, setItemGoalTargetValue] = useState<number>(1)
   const [isCreatingBulk, setIsCreatingBulk] = useState(false)
+  
+  // Metric goal state
+  const [metricProvider, setMetricProvider] = useState<"wiseoldman" | "templeosrs">("wiseoldman")
+  const [metricType, setMetricType] = useState<"skill" | "boss" | "activity">("skill")
+  const [metricName, setMetricName] = useState("")
+  const [metricTargetValue, setMetricTargetValue] = useState<number>(1)
 
   // Multi-selection state for moving multiple goals
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set())
@@ -235,6 +244,31 @@ export function GoalTreeEditor({
     // Refresh tree
     onRefresh()
   }
+  const handleAddMetricGoal = async () => {
+    if (!metricName.trim()) {
+      toast({ title: "Error", description: "Please specify a metric name", variant: "destructive" })
+      return
+    }
+    
+    const result = await createMetricGoal(
+      tileId,
+      metricType,
+      metricName,
+      metricTargetValue,
+      `${metricName} (${metricType})`
+    )
+    
+    if (result.success) {
+      toast({ title: "Metric goal created", description: "Successfully created a new metric goal." })
+      setMetricName("")
+      setMetricTargetValue(1)
+      setGoalType("generic")
+      onRefresh()
+    } else {
+      toast({ title: "Error", description: result.error || "Failed to create metric goal", variant: "destructive" })
+    }
+  }
+
   const [newGroupParentId, setNewGroupParentId] = useState<string | null>(null)
 
   const sensors = useSensors(
@@ -592,7 +626,7 @@ export function GoalTreeEditor({
                 <RadioGroup
                   value={goalType}
                   onValueChange={(value) =>
-                    setGoalType(value as "generic" | "item")
+                    setGoalType(value as "generic" | "item" | "metric")
                   }
                   className="flex gap-4"
                 >
@@ -613,6 +647,13 @@ export function GoalTreeEditor({
                     >
                       <Package className="h-4 w-4" />
                       OSRS Item Goal
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="metric" id="tree-metric" />
+                    <Label htmlFor="tree-metric" className="flex cursor-pointer items-center gap-1 font-normal">
+                      <BarChart2 className="h-4 w-4" />
+                      OSRS Metric
                     </Label>
                   </div>
                 </RadioGroup>
@@ -736,6 +777,79 @@ export function GoalTreeEditor({
                   </Button>
                 </>
               )}
+              
+              {/* Metric Goal Form */}
+              {goalType === "metric" && (
+                <>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Metric Type</Label>
+                      <Select value={metricType} onValueChange={(v: any) => {
+                        setMetricType(v)
+                        setMetricName("")
+                      }}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="skill">Skill</SelectItem>
+                          <SelectItem value="boss">Boss</SelectItem>
+                          <SelectItem value="activity">Activity</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Metric Name</Label>
+                      <Select value={metricName} onValueChange={setMetricName}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Select metric" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px]">
+                          {metricType === "skill" && SKILLS.map(m => (
+                            <SelectItem key={m} value={m}>
+                              <div className="flex items-center gap-2">
+                                <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <span>{getMetricName(m)}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                          {metricType === "boss" && BOSSES.map(m => (
+                            <SelectItem key={m} value={m}>
+                              <div className="flex items-center gap-2">
+                                <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <span>{getMetricName(m)}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                          {metricType === "activity" && ACTIVITIES.map(m => (
+                            <SelectItem key={m} value={m}>
+                              <div className="flex items-center gap-2">
+                                <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                <span>{getMetricName(m)}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Target XP/KC/Score</Label>
+                      <Input
+                        type="number"
+                        value={metricTargetValue}
+                        onChange={(e) => setMetricTargetValue(Number.parseInt(e.target.value) || 1)}
+                        placeholder="1"
+                        min="1"
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={handleAddMetricGoal} disabled={!metricName.trim()} className="w-full">
+                    <BarChart2 className="mr-2 h-4 w-4" />
+                    Add Metric Goal
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -844,6 +958,8 @@ function TreeNode({
   const [editSelectedItem, setEditSelectedItem] = useState<OsrsItem | null>(
     null
   )
+  const [editMetricType, setEditMetricType] = useState<string>("skill")
+  const [editMetricName, setEditMetricName] = useState<string>("")
   const [isSaving, setIsSaving] = useState(false)
 
   // Group name editing state
@@ -894,6 +1010,9 @@ function TreeNode({
         variant: itemGoal.exactVariant,
         imageUrl: itemGoal.imageUrl,
       } as OsrsItem)
+    } else if (goalData.goalType === "metric" && goalData.metricGoal) {
+      setEditMetricType(goalData.metricGoal.metricType)
+      setEditMetricName(goalData.metricGoal.metricName)
     }
 
     setIsEditing(true)
@@ -933,6 +1052,30 @@ function TreeNode({
           toast({
             title: "Goal updated",
             description: "Item goal has been updated successfully.",
+          })
+          handleCancelEdit()
+          onRefresh()
+        } else {
+          toast({
+            title: "Error",
+            description: result.error ?? "Failed to update goal",
+            variant: "destructive",
+          })
+        }
+      } else if (goalData.goalType === "metric") {
+        // Update metric goal
+        const result = await updateMetricGoal(
+          node.id,
+          editMetricType,
+          editMetricName,
+          editTargetValue,
+          `${editMetricName} (${editMetricType})`
+        )
+
+        if (result.success) {
+          toast({
+            title: "Goal updated",
+            description: "Metric goal has been updated successfully.",
           })
           handleCancelEdit()
           onRefresh()
@@ -1269,6 +1412,7 @@ function TreeNode({
 
   const goalData = node.data as any
   const isItemGoal = goalData.goalType === "item" && goalData.itemGoal
+  const isMetricGoal = goalData.goalType === "metric" && goalData.metricGoal
 
   return (
     <div ref={setNodeRef} style={style} className="flex items-center gap-2">
@@ -1311,6 +1455,59 @@ function TreeNode({
                     />
                   </div>
                 </>
+              ) : isMetricGoal ? (
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-xs">Metric Type</Label>
+                    <Select value={editMetricType} onValueChange={(v) => {
+                      setEditMetricType(v)
+                      setEditMetricName("")
+                    }}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="skill">Skill</SelectItem>
+                        <SelectItem value="boss">Boss</SelectItem>
+                        <SelectItem value="activity">Activity</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Metric Name</Label>
+                    <Select value={editMetricName} onValueChange={setEditMetricName}>
+                      <SelectTrigger className="mt-1 h-8 text-sm">
+                        <SelectValue placeholder="Select metric" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {editMetricType === "skill" && SKILLS.map(m => (
+                          <SelectItem key={m} value={m}>
+                            <div className="flex items-center gap-2">
+                              <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                              <span>{getMetricName(m)}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                        {editMetricType === "boss" && BOSSES.map(m => (
+                          <SelectItem key={m} value={m}>
+                            <div className="flex items-center gap-2">
+                              <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                              <span>{getMetricName(m)}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                        {editMetricType === "activity" && ACTIVITIES.map(m => (
+                          <SelectItem key={m} value={m}>
+                            <div className="flex items-center gap-2">
+                              <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                              <span>{getMetricName(m)}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               ) : (
                 <div>
                   <Label className="text-xs">Description</Label>
@@ -1341,7 +1538,8 @@ function TreeNode({
                   disabled={
                     isSaving ||
                     (isItemGoal && !editSelectedItem) ||
-                    (!isItemGoal && !editDescription.trim())
+                    (isMetricGoal && !editMetricName.trim()) ||
+                    (!isItemGoal && !isMetricGoal && !editDescription.trim())
                   }
                   className="h-7 flex-1 text-xs"
                 >
@@ -1386,6 +1584,13 @@ function TreeNode({
                     >
                       <Package className="mr-1 h-3 w-3" />
                       Item
+                    </Badge>
+                  </>
+                ) : isMetricGoal ? (
+                  <>
+                    <BarChart2 className="h-4 w-4 flex-shrink-0 text-blue-500" />
+                    <Badge variant="secondary" className="flex-shrink-0 text-xs">
+                      Metric ({goalData.metricGoal.metricType})
                     </Badge>
                   </>
                 ) : (

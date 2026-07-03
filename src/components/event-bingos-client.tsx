@@ -18,7 +18,8 @@ import { TeamSelector } from "@/components/team-selector"
 import { QuickSubmissionButton } from "@/components/quick-submission-button"
 import { QuickSubmissionModal } from "@/components/quick-submission-modal"
 import Link from "next/link"
-import { ListFilter, ChevronLeft, ChevronRight, Edit } from "lucide-react"
+import { TrackerSettingsModal } from "@/components/tracker-settings-modal"
+import { ListFilter, ChevronLeft, ChevronRight, Edit, Settings } from "lucide-react"
 import type { UUID } from "crypto"
 import { useRouter } from "next/navigation"
 
@@ -47,6 +48,7 @@ export function EventBingosClient({
   const [editBingoModalOpen, setEditBingoModalOpen] = useState(false)
   const [quickSubmissionModalOpen, setQuickSubmissionModalOpen] =
     useState(false)
+  const [trackerSettingsModalOpen, setTrackerSettingsModalOpen] = useState(false)
 
   // Determine which team's data to show
   const effectiveTeamId = isAdminOrManagement ? selectedTeamId : currentTeam?.id
@@ -252,6 +254,13 @@ export function EventBingosClient({
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setTrackerSettingsModalOpen(true)}
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
                       <DeleteBingoButton bingoId={currentBingo.id as UUID} />
                     </>
                   )}
@@ -327,6 +336,17 @@ export function EventBingosClient({
             // Refresh the page to show updated submissions
             router.refresh()
           }}
+        />
+      )}
+
+      {/* Tracker Settings Modal */}
+      {isAdminOrManagement && currentBingo && (
+        <TrackerSettingsModal
+          bingoId={currentBingo.id}
+          womCompetitionId={currentBingo.womCompetitionId}
+          womVerificationCode={currentBingo.womVerificationCode}
+          isOpen={trackerSettingsModalOpen}
+          onClose={() => setTrackerSettingsModalOpen(false)}
         />
       )}
     </>

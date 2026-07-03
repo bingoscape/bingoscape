@@ -155,7 +155,7 @@ export const registrationStatusEnum = pgEnum("registration_status", [
 export const bingoTypeEnum = pgEnum("bingo_type", ["standard", "progression"])
 export const gameTypeEnum = pgEnum("game_type", ["osrs", "rs3"])
 export const logicalOperatorEnum = pgEnum("logical_operator", ["AND", "OR"])
-export const goalTypeEnum = pgEnum("goal_type", ["generic", "item"])
+export const goalTypeEnum = pgEnum("goal_type", ["generic", "item", "metric"])
 export const skillLevelEnum = pgEnum("skill_level", [
   "beginner",
   "intermediate",
@@ -328,6 +328,8 @@ export const bingos = createTable("bingos", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   locked: boolean("locked").default(false).notNull(),
   visible: boolean("visible").default(false).notNull(),
+  womCompetitionId: integer("wom_competition_id"),
+  womVerificationCode: varchar("wom_verification_code", { length: 255 }),
 })
 
 export const bingosRelations = relations(bingos, ({ one, many }) => ({
@@ -348,6 +350,7 @@ export const teams = createTable("teams", {
     .notNull()
     .references(() => events.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
+  trackerTeamName: varchar("tracker_team_name", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
@@ -502,6 +505,25 @@ export const itemGoalsRelations = relations(itemGoals, ({ one }) => ({
   }),
 }))
 
+export const metricGoals = createTable("metric_goals", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  goalId: uuid("goal_id")
+    .notNull()
+    .unique()
+    .references(() => goals.id, { onDelete: "cascade" }),
+  metricType: varchar("metric_type", { length: 50 }).notNull().default("skill"),
+  metricName: varchar("metric_name", { length: 100 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const metricGoalsRelations = relations(metricGoals, ({ one }) => ({
+  goal: one(goals, {
+    fields: [metricGoals.goalId],
+    references: [goals.id],
+  }),
+}))
+
 export const goalsRelations = relations(goals, ({ one, many }) => ({
   tile: one(tiles, {
     fields: [goals.tileId],
@@ -517,6 +539,10 @@ export const goalsRelations = relations(goals, ({ one, many }) => ({
   itemGoal: one(itemGoals, {
     fields: [goals.id],
     references: [itemGoals.goalId],
+  }),
+  metricGoal: one(metricGoals, {
+    fields: [goals.id],
+    references: [metricGoals.goalId],
   }),
 }))
 

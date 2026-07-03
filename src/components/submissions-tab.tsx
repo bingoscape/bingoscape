@@ -452,6 +452,8 @@ export function SubmissionsTab({
   };
 
   const filteredSubmissions = getFilteredSubmissions();
+  
+  const isMetricOnly = selectedTile?.goals?.length ? selectedTile.goals.every((g: any) => g.goalType === 'metric') : false;
 
   return (
     <div className="max-h-[60vh] space-y-6 overflow-y-auto bg-background pr-4 text-foreground">
@@ -470,6 +472,7 @@ export function SubmissionsTab({
               selectableUsers={assignedUsers}
               selectedUserId={selectedUserId}
               onUserSelect={onUserSelect}
+              isMetricOnly={isMetricOnly}
             />
           </div>
         )}

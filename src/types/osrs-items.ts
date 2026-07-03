@@ -35,7 +35,7 @@ export interface GoalWithItem {
   parentGroupId: string | null
   description: string
   targetValue: number
-  goalType: "generic" | "item"
+  goalType: "generic" | "item" | "metric"
   orderIndex: number
   createdAt: Date
   updatedAt: Date

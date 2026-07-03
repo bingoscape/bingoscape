@@ -357,7 +357,7 @@ function formatGoalNode(
     id: string
     description: string
     targetValue: number
-    goalType: "generic" | "item"
+    goalType: "generic" | "item" | "metric"
     orderIndex: number
     itemGoal?: {
       itemId: number

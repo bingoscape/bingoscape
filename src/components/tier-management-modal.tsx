@@ -66,6 +66,7 @@ export function TierManagementModal({ bingo, onTilesUpdated }: TierManagementMod
     if (open) {
       void loadTiles()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, bingo.id])
 
   // Group tiles by tier

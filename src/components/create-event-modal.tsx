@@ -23,6 +23,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 import { GPInput } from "@/components/ui/gp-input"
 import { Calendar } from "@/components/ui/calendar"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Popover,
   PopoverContent,
@@ -451,6 +452,8 @@ export function CreateEventModal({
                 </div>
               </div>
             </div>
+
+
           </div>
 
           <DialogFooter>
