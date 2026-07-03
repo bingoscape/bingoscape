@@ -178,7 +178,7 @@ export async function getClanEvents(clanId: string): Promise<EventData[]> {
     return {
       event: {
         ...event,
-        role: event.creatorId === session.user.id ? "admin" : "participant",
+        role: (event.creatorId === session.user.id ? "admin" : "participant") as import("./events").EventRole,
       },
       totalPrizePool,
     }

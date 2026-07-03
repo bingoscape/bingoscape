@@ -29,7 +29,7 @@ describe("EventCard Component", () => {
     push: jest.fn(),
   }
 
-  const mockEventData = {
+  const mockEventData: any = {
     event: {
       id: "event-123",
       title: "Test Event",

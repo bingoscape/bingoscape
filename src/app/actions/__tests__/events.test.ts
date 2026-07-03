@@ -1,11 +1,11 @@
  
 import { getUserRegistrationStatus, requestToJoinEvent } from "../events"
-import { db } from "@/lib/db"
-import { auth } from "@/auth"
+import { db } from "@/server/db"
+import { auth } from "@/server/auth"
 import { describe, beforeEach, it, expect, jest } from "@jest/globals"
 
 // Mock dependencies
-jest.mock("@/lib/db", () => ({
+jest.mock("@/server/db", () => ({
   db: {
     eventParticipant: {
       findFirst: jest.fn(),
@@ -17,7 +17,7 @@ jest.mock("@/lib/db", () => ({
   },
 }))
 
-jest.mock("@/auth", () => ({
+jest.mock("@/server/auth", () => ({
   auth: jest.fn(),
 }))
 
