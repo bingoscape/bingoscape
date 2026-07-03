@@ -606,7 +606,7 @@ function TileProgress({
           <RefreshCw className="h-4 w-4 animate-spin" />
           <span>Syncing Tracker Data...</span>
         </div>
-      ) as any,
+      ),
       description: "Fetching progress from WiseOldMan. This may take a few seconds.",
       duration: 60000,
     })
