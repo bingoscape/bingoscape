@@ -51,7 +51,7 @@ describe("JoinEventPage", () => {
       status: "unauthenticated",
     })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" }} />)
+    render(<JoinEventPage params={{ inviteCode: "invite-123" } as unknown as Promise<{ inviteCode: string }>} />)
 
     expect(screen.getByText("Redirecting to login...")).toBeInTheDocument()
   })
@@ -62,7 +62,7 @@ describe("JoinEventPage", () => {
       status: "loading",
     })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" }} />)
+    render(<JoinEventPage params={{ inviteCode: "invite-123" } as unknown as Promise<{ inviteCode: string }>} />)
 
     expect(screen.getByRole("status")).toBeInTheDocument() // Loader component
   })
@@ -76,7 +76,7 @@ describe("JoinEventPage", () => {
         status: "approved",
       })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" }} />)
+    render(<JoinEventPage params={{ inviteCode: "invite-123" } as unknown as Promise<{ inviteCode: string }>} />)
 
     await waitFor(() => {
       expect(mockRouter.push).toHaveBeenCalledWith("/events/event-123")
@@ -93,7 +93,7 @@ describe("JoinEventPage", () => {
         message: "Please approve me",
       })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" }} />)
+    render(<JoinEventPage params={{ inviteCode: "invite-123" } as unknown as Promise<{ inviteCode: string }>} />)
 
     await waitFor(() => {
       expect(screen.getByText("Registration Status")).toBeInTheDocument()
@@ -112,7 +112,7 @@ describe("JoinEventPage", () => {
         responseMessage: "Sorry, the event is full",
       })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" }} />)
+    render(<JoinEventPage params={{ inviteCode: "invite-123" } as unknown as Promise<{ inviteCode: string }>} />)
 
     await waitFor(() => {
       expect(screen.getByText("Registration Status")).toBeInTheDocument()
@@ -130,7 +130,7 @@ describe("JoinEventPage", () => {
         status: "not_requested",
       })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" }} />)
+    render(<JoinEventPage params={{ inviteCode: "invite-123" } as unknown as Promise<{ inviteCode: string }>} />)
 
     await waitFor(() => {
       expect(screen.getByText("You've been invited to join Test Event!")).toBeInTheDocument()

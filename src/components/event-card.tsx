@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card"
 import { PrizePoolDisplay } from "./prize-pool-display"
 import { GameTypeBadge } from "./game-type-badge"
+import { MiniBoard } from "./mini-board"
 import type { EventData } from "@/app/actions/events"
 import {
   CalendarIcon,
@@ -26,6 +27,7 @@ import {
   AlertTriangle,
   Star,
   MapPin,
+  Settings,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useState } from "react"
@@ -66,35 +68,6 @@ export function EventCard({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
 
-  const StatusBadge = () => {
-    if (!status) return null
-
-    switch (status) {
-      case "active":
-        return (
-          <Badge className="bg-green-500 text-green-50">
-            <Check className="mr-1 h-3 w-3" />
-            Active
-          </Badge>
-        )
-      case "upcoming":
-        return (
-          <Badge className="bg-blue-600 text-blue-50">
-            <Clock className="mr-1 h-3 w-3" />
-            Upcoming
-          </Badge>
-        )
-      case "past":
-        return (
-          <Badge className="bg-slate-600 text-slate-50">
-            <CheckCircle2 className="mr-1 h-3 w-3" />
-            Completed
-          </Badge>
-        )
-      default:
-        return null
-    }
-  }
 
   const handleRequestSubmit = async () => {
     setIsSubmitting(true)
@@ -178,14 +151,18 @@ export function EventCard({
   }
 
   return (
-    <Link href={`/events/${eventData.event.id}`} className="block h-full">
       <Card
+        onClick={() => router.push(`/events/${eventData.event.id}`)}
         className={cn(
-          "group flex h-full cursor-pointer flex-col overflow-hidden border-gray-600 transition-transform duration-300 hover:-translate-y-0.5 hover:border-gray-400 hover:shadow-md hover:shadow-primary/10",
-          status === "past" && "opacity-90 hover:opacity-100"
+          "h-full group relative flex cursor-pointer flex-col overflow-hidden bg-card/60 backdrop-blur-xl border border-border/50 transition-all duration-500 hover:scale-[1.02] hover:border-primary/50 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-primary/20",
+          status === "past" && "opacity-90 hover:opacity-100",
+          status === "active" && "border-green-500/30 shadow-[0_0_15px_rgba(16,185,129,0.05)]"
         )}
       >
-        <div className="relative">
+        <div className="flex flex-1 flex-col lg:flex-row w-full">
+          {/* Left/Top Column: Info & Metadata */}
+          <div className="flex flex-1 flex-col w-full min-w-0">
+            <div className="relative">
           {/* Prize pool display */}
           {eventData.totalPrizePool > 0 && (
             <div className="absolute left-4 top-4 z-10">
@@ -196,25 +173,25 @@ export function EventCard({
             </div>
           )}
 
-          {/* Status badge */}
-          <div className="absolute right-4 top-4 z-10">
-            <StatusBadge />
-          </div>
-
           <CardHeader className="pb-3 pt-6">
             <div className="flex flex-col space-y-2">
               <div className={`${eventData.totalPrizePool > 0 ? "mt-6" : ""}`}>
-                <div className="flex items-center gap-2">
-                  <CardTitle className="text-xl font-bold tracking-tight">
+                <div className="flex flex-wrap items-center gap-2">
+                  <CardTitle className="bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-xl font-bold tracking-tight text-transparent">
                     {eventData.event.title}
                   </CardTitle>
                   <GameTypeBadge gameType={eventData.event.gameType} />
+                  {eventData.event.role === "admin" && (
+                    <Badge variant="outline" className="border-purple-500 text-purple-500 bg-purple-500/10">
+                      Admin
+                    </Badge>
+                  )}
                 </div>
                 <CardDescription className="mt-2 flex items-center text-sm">
                   <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">
-                    {startDate.toLocaleDateString()} -{" "}
-                    {endDate.toLocaleDateString()}
+                    {startDate.toLocaleDateString("en-US")} -{" "}
+                    {endDate.toLocaleDateString("en-US")}
                   </span>
                 </CardDescription>
               </div>
@@ -230,9 +207,9 @@ export function EventCard({
             )}
 
             {/* Event metadata in a structured grid */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {eventData.event.clan && (
-                <div className="flex items-center space-x-2 rounded-lg bg-muted/50 p-2">
+                <div className="flex items-center space-x-2 rounded-full border border-border/50 bg-muted/40 px-3 py-1.5 backdrop-blur-sm">
                   <Users className="h-4 w-4 text-primary" />
                   <span className="truncate text-sm font-medium">
                     {eventData.event.clan?.name}
@@ -240,18 +217,18 @@ export function EventCard({
                 </div>
               )}
 
-              <div className="flex items-center space-x-2 rounded-lg bg-muted/70 p-2">
+              <div className="flex items-center space-x-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 backdrop-blur-sm">
                 <Trophy className="h-4 w-4 text-amber-500" />
-                <span className="text-sm font-medium">
+                <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
                   {eventData.event.bingos?.length ?? 0} Bingos boards
                 </span>
               </div>
 
               {registrationDeadline && (
-                <div className="col-span-2 flex items-center space-x-2 rounded-lg bg-muted/50 p-2">
+                <div className="col-span-full flex items-center space-x-2 rounded-lg bg-muted/50 p-2">
                   <Clock className="h-4 w-4 text-blue-500" />
                   <span className="text-sm font-medium">
-                    Registration: {registrationDeadline.toLocaleDateString()}
+                    Registration: {registrationDeadline.toLocaleDateString("en-US")}
                   </span>
                   {isRegistrationClosed && (
                     <span className="ml-1 font-semibold text-destructive">
@@ -260,7 +237,59 @@ export function EventCard({
                   )}
                 </div>
               )}
+
+              {eventData.managerData && (
+                <div className="col-span-full space-y-2 mt-2">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Manager Actions</div>
+                  <div className="flex flex-col gap-2">
+                    {eventData.managerData.actionItems.pendingRegistrations > 0 && (
+                      <div className="flex items-center space-x-2 rounded-lg border border-blue-200 bg-blue-50 p-2 dark:border-blue-800 dark:bg-blue-900/20">
+                        <Users className="h-4 w-4 text-blue-500" />
+                        <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                          {eventData.managerData.actionItems.pendingRegistrations} pending join request(s)
+                        </span>
+                      </div>
+                    )}
+                    {eventData.managerData.actionItems.pendingSubmissions > 0 && (
+                      <div className="flex items-center space-x-2 rounded-lg border border-purple-200 bg-purple-50 p-2 dark:border-purple-800 dark:bg-purple-900/20">
+                        <CheckCircle2 className="h-4 w-4 text-purple-500" />
+                        <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                          {eventData.managerData.actionItems.pendingSubmissions} pending submission(s)
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {eventData.participantData && eventData.participantData.team && (
+                <div className="col-span-full mt-2 rounded-lg border border-border/50 bg-muted/20 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Star className="h-4 w-4 text-yellow-500" />
+                      {eventData.participantData.team.name}
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {eventData.participantData.team.memberCount} members
+                    </Badge>
+                  </div>
+                  {eventData.participantData.progress && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="h-2 flex-1 rounded-full bg-secondary overflow-hidden">
+                        <div 
+                          className="h-full bg-primary" 
+                          style={{ width: `${Math.min(100, Math.max(0, (eventData.participantData.progress.completedTiles / Math.max(1, eventData.participantData.progress.totalTiles)) * 100))}%` }} 
+                        />
+                      </div>
+                      <span className="whitespace-nowrap">
+                        {eventData.participantData.progress.completedTiles} / {eventData.participantData.progress.totalTiles} tiles
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+
 
             {eventData.event.requiresApproval && !isParticipant && (
               <div className="flex items-center space-x-2 rounded-lg border border-amber-200 bg-amber-50 p-2 dark:border-amber-800 dark:bg-amber-900/20">
@@ -310,43 +339,87 @@ export function EventCard({
               </div>
             )}
           </div>
-        </CardContent>
+          </CardContent>
+        </div>
+
+        {/* Right/Bottom Column: Mini Board */}
+        {eventData.event.bingos && eventData.event.bingos.length > 0 && eventData.event.bingos[0] && (
+          <div className="flex shrink-0 items-center justify-center p-4 sm:p-6 pt-0 w-full lg:w-72 lg:pt-6 lg:pl-0">
+            <div className="w-[80%] max-w-[20rem] lg:w-full opacity-90 transition-all duration-500 group-hover:scale-105 group-hover:opacity-100 drop-shadow-xl">
+              <MiniBoard 
+                bingoId={eventData.event.bingos[0].id} 
+                rows={eventData.event.bingos[0].rows} 
+                columns={eventData.event.bingos[0].columns} 
+                visible={eventData.event.bingos[0].visible}
+              />
+            </div>
+          </div>
+        )}
+      </div>
         <CardFooter className="flex flex-col gap-3 border-t bg-muted/20 pt-4">
-          {(!isParticipant &&
-            !isRegistrationClosed &&
-            !eventData.event.locked) ||
-          (!isParticipant &&
-            (isRegistrationClosed ?? eventData.event.locked)) ? (
+          {eventData.event.role === "admin" ? (
             <div className="flex w-full gap-3">
-              {!isParticipant &&
-                !isRegistrationClosed &&
-                !eventData.event.locked && (
-                  <>
-                    {eventData.event.requiresApproval ? (
-                      registrationStatus?.status === "pending" ? (
-                        <Link
-                          href={`/events/${eventData.event.id}/status`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
+              <Button 
+                variant="secondary" 
+                className="w-full gap-2"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  router.push(`/events/${eventData.event.id}/admin`)
+                }}
+              >
+                <Settings className="w-4 h-4" />
+                Manage Event
+              </Button>
+            </div>
+          ) : (
+            ((!isParticipant &&
+              !isRegistrationClosed &&
+              !eventData.event.locked) ||
+            (!isParticipant &&
+              (isRegistrationClosed ?? eventData.event.locked))) ? (
+              <div className="flex w-full gap-3">
+                {!isParticipant &&
+                  !isRegistrationClosed &&
+                  !eventData.event.locked && (
+                    <>
+                      {eventData.event.requiresApproval ? (
+                        registrationStatus?.status === "pending" ? (
                           <Button
                             variant="outline"
                             className="hover:bg-yellow-500 hover:text-white"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              router.push(`/events/${eventData.event.id}/status`)
+                            }}
                           >
                             View Status
                           </Button>
-                        </Link>
-                      ) : registrationStatus?.status === "rejected" ? (
-                        <Link
-                          href={`/events/${eventData.event.id}/status`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                        ) : registrationStatus?.status === "rejected" ? (
                           <Button
                             variant="outline"
                             className="hover:bg-red-500 hover:text-white"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              router.push(`/events/${eventData.event.id}/status`)
+                            }}
                           >
                             View Status
                           </Button>
-                        </Link>
+                        ) : (
+                          <Button
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              void handleJoinClick()
+                            }}
+                            className="bg-primary text-primary-foreground shadow-md duration-200 hover:bg-primary/90 hover:shadow-lg"
+                          >
+                            Request to Join
+                          </Button>
+                        )
                       ) : (
                         <Button
                           onClick={(e) => {
@@ -356,46 +429,34 @@ export function EventCard({
                           }}
                           className="bg-primary text-primary-foreground shadow-md duration-200 hover:bg-primary/90 hover:shadow-lg"
                         >
-                          Request to Join
+                          Join
                         </Button>
-                      )
-                    ) : (
-                      <Button
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          void handleJoinClick()
-                        }}
-                        className="bg-primary text-primary-foreground shadow-md duration-200 hover:bg-primary/90 hover:shadow-lg"
-                      >
-                        Join
-                      </Button>
-                    )}
-                  </>
-                )}
+                      )}
+                    </>
+                  )}
 
-              {!isParticipant &&
-                (isRegistrationClosed ?? eventData.event.locked) && (
-                  <Button
-                    disabled
-                    className="opacity-50"
-                    title="Registration is closed"
-                  >
-                    Closed
-                  </Button>
-                )}
-            </div>
-          ) : null}
+                {!isParticipant &&
+                  (isRegistrationClosed ?? eventData.event.locked) && (
+                    <Button
+                      disabled
+                      className="opacity-50"
+                      title="Registration is closed"
+                    >
+                      Closed
+                    </Button>
+                  )}
+              </div>
+            ) : null
+          )}
 
           {/* Additional event info for completed events */}
           {status === "past" && (
             <div className="flex items-center justify-center text-xs text-muted-foreground">
               <CheckCircle2 className="mr-1 h-3 w-3" />
-              <span>Event completed on {endDate.toLocaleDateString()}</span>
+              <span>Event completed on {endDate.toLocaleDateString("en-US")}</span>
             </div>
           )}
         </CardFooter>
       </Card>
-    </Link>
   )
 }

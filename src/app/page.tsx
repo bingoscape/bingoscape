@@ -5,19 +5,28 @@ import { getServerAuthSession } from "@/server/auth"
 import { getEvents } from "@/app/actions/events"
 import Link from "next/link"
 
-export const dynamic = "force-dynamic"
+import { Suspense } from "react"
+
+async function LoggedInDashboard({ userId }: { userId: string }) {
+  const events = await getEvents(userId)
+  
+  return (
+    <div className="space-y-8">
+      <EventList userId={userId} initialEvents={events} />
+    </div>
+  )
+}
 
 export default async function HomePage() {
   const session = await getServerAuthSession()
-  const events = session ? await getEvents(session.user.id) : []
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <main className="container mx-auto px-4 py-8">
         {session ? (
-          <div className="space-y-8">
-            <EventList userId={session.user.id} initialEvents={events} />
-          </div>
+          <Suspense fallback={<div className="flex h-64 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div></div>}>
+            <LoggedInDashboard userId={session.user.id} />
+          </Suspense>
         ) : (
           <>
             {/* Hero Section */}
@@ -58,9 +67,9 @@ export default async function HomePage() {
             <div className="p-8 lg:p-12">
               <div className="flex flex-col items-center gap-12 lg:flex-row">
                 <div className="flex-1">
-                  <h3 className="mb-4 text-2xl font-bold lg:text-3xl">
+                  <h2 className="mb-4 text-2xl font-bold lg:text-3xl">
                     See BingoScape in Action
-                  </h3>
+                  </h2>
                   <p className="mb-6 text-lg text-muted-foreground">
                     Experience dynamic bingo boards with custom goals, real-time
                     tracking, and seamless integration with your OSRS gameplay.

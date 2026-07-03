@@ -1041,6 +1041,7 @@ export default function BingoGrid({
               className="tab-content flex-1 space-y-6 overflow-y-auto"
             >
               <SubmissionsTab
+                teamTileSubmissions={selectedTile?.teamTileSubmissions || []}
                 selectedTile={selectedTile}
                 currentTeamId={currentTeamId}
                 teams={teams}

@@ -97,6 +97,8 @@ interface SubmissionsTabProps {
   selectableUsers?: SelectableUser[];
   selectedUserId?: string;
   onUserSelect?: (userId: string) => void;
+  teamTileSubmissions: any[]; // Updated from selectedTile
+  isAdminView?: boolean;
 }
 
 export function SubmissionsTab({
@@ -117,6 +119,8 @@ export function SubmissionsTab({
   selectableUsers,
   selectedUserId,
   onUserSelect,
+  teamTileSubmissions,
+  isAdminView,
 }: SubmissionsTabProps) {
   const [expandedGoalForms, setExpandedGoalForms] = useState<Set<string>>(
     new Set(),
@@ -135,6 +139,10 @@ export function SubmissionsTab({
   );
   const [statusFilter, setStatusFilter] = useState<string>("pending");
   const [teamFilter, setTeamFilter] = useState<string>("all");
+
+  // Filter state
+  const [boardFilter, setBoardFilter] = useState<string>("all");
+  const [tileFilter, setTileFilter] = useState<string>("all");
 
   // Local state to track real-time status changes
   const [localTileStatuses, setLocalTileStatuses] = useState<
@@ -181,7 +189,7 @@ export function SubmissionsTab({
   };
 
   const currentTeam = teams.find((team) => team.id === currentTeamId);
-  const currentTeamSubmission = selectedTile?.teamTileSubmissions?.find(
+  const currentTeamSubmission = teamTileSubmissions?.find(
     (sub) => sub.teamId === currentTeamId,
   );
 
@@ -242,12 +250,12 @@ export function SubmissionsTab({
 
     // If approving the tile, also update all submissions in that tile
     if (newStatus === "approved") {
-      const teamSubmission = selectedTile?.teamTileSubmissions?.find(
+      const teamSubmission = teamTileSubmissions?.find(
         (ts) => ts.id === teamTileSubmissionId,
       );
       if (teamSubmission) {
         const updatedSubmissionStatuses: Record<string, "approved"> = {};
-        teamSubmission.submissions.forEach((sub) => {
+        teamSubmission.submissions.forEach((sub: any) => {
           updatedSubmissionStatuses[sub.id] = "approved";
         });
         setLocalSubmissionStatuses((prev) => ({
@@ -276,8 +284,8 @@ export function SubmissionsTab({
     // If marking submission as needs_review, also update the parent tile
     if (newStatus === "needs_review") {
       // Find the parent tile submission
-      selectedTile?.teamTileSubmissions?.forEach((teamSub) => {
-        teamSub.submissions.forEach((sub) => {
+      teamTileSubmissions?.forEach((teamSub) => {
+        teamSub.submissions.forEach((sub: any) => {
           if (sub.id === submissionId) {
             setLocalTileStatuses((prev) => ({
               ...prev,
@@ -329,11 +337,11 @@ export function SubmissionsTab({
 
     const currentStatus = getSubmissionStatus(
       submissionId,
-      selectedTile?.teamTileSubmissions
+      teamTileSubmissions
         ?.find((teamSub) =>
-          teamSub.submissions.some((sub) => sub.id === submissionId),
+          teamSub.submissions.some((sub: any) => sub.id === submissionId),
         )
-        ?.submissions.find((sub) => sub.id === submissionId)?.status ||
+        ?.submissions.find((sub: any) => sub.id === submissionId)?.status ||
         "pending",
     );
 
@@ -396,9 +404,9 @@ export function SubmissionsTab({
 
   // Load comments for submissions that have "needs_review" status
   useEffect(() => {
-    if (selectedTile?.teamTileSubmissions) {
-      selectedTile.teamTileSubmissions.forEach((teamSub) => {
-        teamSub.submissions.forEach((submission) => {
+    if (teamTileSubmissions) {
+      teamTileSubmissions.forEach((teamSub) => {
+        teamSub.submissions.forEach((submission: any) => {
           if (
             submission.status === "needs_review" &&
             !submissionComments[submission.id]
@@ -408,13 +416,13 @@ export function SubmissionsTab({
         });
       });
     }
-  }, [selectedTile?.id, submissionComments]);
+  }, [teamTileSubmissions, submissionComments]);
 
   // Filter submissions based on user role and selected filters
   const getFilteredSubmissions = () => {
-    if (!selectedTile?.teamTileSubmissions) return [];
+    if (!teamTileSubmissions) return [];
 
-    let submissions = selectedTile.teamTileSubmissions;
+    let submissions = teamTileSubmissions;
 
     // If user is a normal participant, only show their team's submissions
     if (!hasSufficientRights && currentTeamId) {
@@ -430,6 +438,20 @@ export function SubmissionsTab({
       );
     }
 
+    // Apply Board filter
+    if (boardFilter !== "all") {
+      submissions = submissions.filter(
+        (teamSub) => teamSub.tile?.bingo?.id === boardFilter || teamSub.tile?.bingoId === boardFilter
+      );
+    }
+
+    // Apply Tile filter
+    if (tileFilter !== "all") {
+      submissions = submissions.filter(
+        (teamSub) => teamSub.tile?.id === tileFilter || teamSub.tileId === tileFilter
+      );
+    }
+
     // Apply status filter
     if (statusFilter !== "all") {
       submissions = submissions.filter((teamSub) => {
@@ -438,7 +460,7 @@ export function SubmissionsTab({
         if (currentTileStatus === statusFilter) return true;
 
         // Also check individual submission statuses (with local override)
-        return teamSub.submissions.some((sub) => {
+        return teamSub.submissions.some((sub: any) => {
           const currentSubmissionStatus = getSubmissionStatus(
             sub.id,
             sub.status || "pending",
@@ -455,11 +477,20 @@ export function SubmissionsTab({
   
   const isMetricOnly = selectedTile?.goals?.length ? selectedTile.goals.every((g: any) => g.goalType === 'metric') : false;
 
+  // Extract unique boards and tiles for filters
+  const uniqueBoards = Array.from(new Set(teamTileSubmissions.map(ts => ts.tile?.bingo?.id).filter(Boolean))).map(id => {
+    return teamTileSubmissions.find(ts => ts.tile?.bingo?.id === id)?.tile?.bingo;
+  });
+
+  const uniqueTiles = Array.from(new Set(teamTileSubmissions.map(ts => ts.tile?.id).filter(Boolean))).map(id => {
+    return teamTileSubmissions.find(ts => ts.tile?.id === id)?.tile;
+  });
+
   return (
     <div className="max-h-[60vh] space-y-6 overflow-y-auto bg-background pr-4 text-foreground">
       <div className="space-y-6 p-4">
         {/* Current team submission form */}
-        {currentTeamId && !isSubmissionsLocked && (
+        {!isAdminView && currentTeamId && !isSubmissionsLocked && (
           <div className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm">
             <SubmissionUploadForm
               teamName={currentTeam?.name || "Your Team"}
@@ -491,7 +522,7 @@ export function SubmissionsTab({
         {/* Enhanced Filters */}
         <div className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-foreground">Filters</h3>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
             <div>
               <Label
                 htmlFor="status-filter"
@@ -531,6 +562,53 @@ export function SubmissionsTab({
                 </SelectContent>
               </Select>
             </div>
+
+            {isAdminView && (
+              <>
+                <div>
+                  <Label
+                    htmlFor="board-filter"
+                    className="mb-2 block text-sm font-medium text-muted-foreground"
+                  >
+                    Board Filter
+                  </Label>
+                  <Select value={boardFilter} onValueChange={setBoardFilter}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Filter by board" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Boards</SelectItem>
+                      {uniqueBoards.map((board: any) => (
+                        <SelectItem key={board.id} value={board.id}>
+                          {board.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label
+                    htmlFor="tile-filter"
+                    className="mb-2 block text-sm font-medium text-muted-foreground"
+                  >
+                    Tile Filter
+                  </Label>
+                  <Select value={tileFilter} onValueChange={setTileFilter}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Filter by tile" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Tiles</SelectItem>
+                      {uniqueTiles.filter((t: any) => boardFilter === 'all' || t.bingo?.id === boardFilter || t.bingoId === boardFilter).map((tile: any) => (
+                        <SelectItem key={tile.id} value={tile.id}>
+                          {tile.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
 
             {hasSufficientRights && (
               <div>
@@ -596,6 +674,11 @@ export function SubmissionsTab({
                         />
                         <h3 className="font-semibold text-foreground">
                           {teamSubmission.team.name}
+                          {isAdminView && teamSubmission.tile && (
+                            <span className="text-muted-foreground ml-2 font-normal text-sm">
+                              ({teamSubmission.tile.bingo?.title} - {teamSubmission.tile.title})
+                            </span>
+                          )}
                         </h3>
                         {getStatusBadge(currentTileStatus)}
                       </div>
@@ -639,7 +722,7 @@ export function SubmissionsTab({
                   {teamSubmission.submissions.length > 0 ? (
                     <div className="submission-grid grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 md:grid-cols-3">
                       {teamSubmission.submissions
-                        .filter((submission) => {
+                        .filter((submission: any) => {
                           // Apply status filter to individual submissions (with local override)
                           if (statusFilter === "all") return true;
                           const currentSubmissionStatus = getSubmissionStatus(
@@ -648,7 +731,7 @@ export function SubmissionsTab({
                           );
                           return currentSubmissionStatus === statusFilter;
                         })
-                        .map((submission) => {
+                        .map((submission: any) => {
                           const currentSubmissionStatus = getSubmissionStatus(
                             submission.id,
                             submission.status || "pending",
@@ -780,7 +863,7 @@ export function SubmissionsTab({
                                   submissionId={submission.id}
                                   currentGoalId={submission.goalId}
                                   currentValue={submission.submissionValue}
-                                  goals={selectedTile?.goals || []}
+                                  goals={teamSubmission.tile?.goals || selectedTile?.goals || []}
                                   goalValues={
                                     goalValuesCache[submission.goalId || ""] ||
                                     []

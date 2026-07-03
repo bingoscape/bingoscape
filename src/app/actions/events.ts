@@ -32,7 +32,7 @@ import {
   notifications,
   eventRules,
 } from "@/server/db/schema"
-import { eq, and, asc, sum, sql, desc } from "drizzle-orm"
+import { eq, and, asc, sum, sql, desc, inArray } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { revalidatePath } from "next/cache"
 import type { GoalValue } from "./goals"
@@ -210,8 +210,31 @@ export interface Event {
 }
 
 export interface EventData {
-  event: Event
+  event: Event & { role?: EventRole }
   totalPrizePool: number
+  
+  participantData?: {
+    team: {
+      id: string;
+      name: string;
+      memberCount: number;
+    } | null;
+    progress: {
+      completedTiles: number;
+      totalTiles: number;
+    } | null;
+  };
+
+  managerData?: {
+    actionItems: {
+      pendingRegistrations: number;
+      pendingSubmissions: number;
+    };
+    eventStats: {
+      totalParticipants: number;
+      activeTeams: number;
+    };
+  };
 }
 
 export interface GetEventByIdResult {
@@ -535,21 +558,206 @@ export async function getEvents(userId: string): Promise<EventData[]> {
       orderBy: events.createdAt,
     })
 
-    const eventDataPromises = userEvents.map(async (event) => {
-      const prizePoolData = await calculateEventPrizePool(event.id)
+    if (userEvents.length === 0) return []
+
+    const eventIds = userEvents.map((e) => e.id)
+
+    // 1. Bulk Prize Pool Queries
+    const buyInsResult = await db
+      .select({
+        eventId: eventParticipants.eventId,
+        total: sql<number>`COALESCE(SUM(${eventBuyIns.amount}), 0)`.mapWith(Number),
+      })
+      .from(eventBuyIns)
+      .innerJoin(eventParticipants, eq(eventBuyIns.eventParticipantId, eventParticipants.id))
+      .where(inArray(eventParticipants.eventId, eventIds))
+      .groupBy(eventParticipants.eventId)
+
+    const donationsResult = await db
+      .select({
+        eventId: eventParticipants.eventId,
+        total: sql<number>`COALESCE(SUM(${eventDonations.amount}), 0)`.mapWith(Number),
+      })
+      .from(eventDonations)
+      .innerJoin(eventParticipants, eq(eventDonations.eventParticipantId, eventParticipants.id))
+      .where(inArray(eventParticipants.eventId, eventIds))
+      .groupBy(eventParticipants.eventId)
+
+    const buyInsMap = new Map(buyInsResult.map((r) => [r.eventId, r.total]))
+    const donationsMap = new Map(donationsResult.map((r) => [r.eventId, r.total]))
+
+    // Identify which events the user manages
+    const managedEventIds = userEvents
+      .filter((e) => e.creatorId === userId || e.eventParticipants[0]?.role === "admin" || e.eventParticipants[0]?.role === "management")
+      .map((e) => e.id)
+
+    // 2. Manager Data (if any managed events)
+    const managerDataMap = new Map()
+    if (managedEventIds.length > 0) {
+      const pendingRegResult = await db
+        .select({
+          eventId: eventRegistrationRequests.eventId,
+          count: sql<number>`count(*)`.mapWith(Number),
+        })
+        .from(eventRegistrationRequests)
+        .where(
+          and(
+            inArray(eventRegistrationRequests.eventId, managedEventIds),
+            eq(eventRegistrationRequests.status, "pending")
+          )
+        )
+        .groupBy(eventRegistrationRequests.eventId)
+
+      const pendingSubResult = await db
+        .select({
+          eventId: teams.eventId,
+          count: sql<number>`count(*)`.mapWith(Number),
+        })
+        .from(submissions)
+        .innerJoin(teamTileSubmissions, eq(submissions.teamTileSubmissionId, teamTileSubmissions.id))
+        .innerJoin(teams, eq(teamTileSubmissions.teamId, teams.id))
+        .where(
+          and(
+            inArray(teams.eventId, managedEventIds),
+            eq(submissions.status, "pending")
+          )
+        )
+        .groupBy(teams.eventId)
+
+      const totalPartResult = await db
+        .select({
+          eventId: eventParticipants.eventId,
+          count: sql<number>`count(*)`.mapWith(Number),
+        })
+        .from(eventParticipants)
+        .where(inArray(eventParticipants.eventId, managedEventIds))
+        .groupBy(eventParticipants.eventId)
+
+      const activeTeamsResult = await db
+        .select({
+          eventId: teams.eventId,
+          count: sql<number>`count(*)`.mapWith(Number),
+        })
+        .from(teams)
+        .where(inArray(teams.eventId, managedEventIds))
+        .groupBy(teams.eventId)
+
+      for (const id of managedEventIds) {
+        managerDataMap.set(id, {
+          actionItems: {
+            pendingRegistrations: pendingRegResult.find((r) => r.eventId === id)?.count ?? 0,
+            pendingSubmissions: pendingSubResult.find((r) => r.eventId === id)?.count ?? 0,
+          },
+          eventStats: {
+            totalParticipants: totalPartResult.find((r) => r.eventId === id)?.count ?? 0,
+            activeTeams: activeTeamsResult.find((r) => r.eventId === id)?.count ?? 0,
+          },
+        })
+      }
+    }
+
+    // 3. Participant Data
+    const participantDataMap = new Map()
+    const userTeams = await db
+      .select({
+        eventId: teams.eventId,
+        teamId: teams.id,
+        teamName: teams.name,
+      })
+      .from(teamMembers)
+      .innerJoin(teams, eq(teamMembers.teamId, teams.id))
+      .where(
+        and(
+          inArray(teams.eventId, eventIds),
+          eq(teamMembers.userId, userId)
+        )
+      )
+
+    const userTeamIds = userTeams.map((t) => t.teamId)
+    let teamMemberCounts: { teamId: string, count: number }[] = []
+    let completedTilesCount: { teamId: string, count: number }[] = []
+
+    if (userTeamIds.length > 0) {
+      teamMemberCounts = await db
+        .select({
+          teamId: teamMembers.teamId,
+          count: sql<number>`count(*)`.mapWith(Number),
+        })
+        .from(teamMembers)
+        .where(inArray(teamMembers.teamId, userTeamIds))
+        .groupBy(teamMembers.teamId)
+
+      completedTilesCount = await db
+        .select({
+          teamId: teamTileSubmissions.teamId,
+          count: sql<number>`count(*)`.mapWith(Number),
+        })
+        .from(teamTileSubmissions)
+        .where(
+          and(
+            inArray(teamTileSubmissions.teamId, userTeamIds),
+            eq(teamTileSubmissions.status, "approved")
+          )
+        )
+        .groupBy(teamTileSubmissions.teamId)
+    }
+
+    const bingoTotalTilesResult = await db
+      .select({
+        bingoId: tiles.bingoId,
+        count: sql<number>`count(*)`.mapWith(Number),
+      })
+      .from(tiles)
+      .where(inArray(tiles.bingoId, userEvents.flatMap((e) => e.bingos?.map((b) => b.id) ?? [])))
+      .groupBy(tiles.bingoId)
+
+    const tilesCountMap = new Map(bingoTotalTilesResult.map((r) => [r.bingoId, r.count]))
+
+    for (const t of userTeams) {
+      const memberCount = teamMemberCounts.find((r) => r.teamId === t.teamId)?.count ?? 0
+      const completedTiles = completedTilesCount.find((r) => r.teamId === t.teamId)?.count ?? 0
+      
+      const eventBingos = userEvents.find((e) => e.id === t.eventId)?.bingos
+      const firstBingoId = eventBingos?.[0]?.id
+      const totalTiles = firstBingoId ? (tilesCountMap.get(firstBingoId) ?? 0) : 0
+
+      participantDataMap.set(t.eventId, {
+        team: {
+          id: t.teamId,
+          name: t.teamName,
+          memberCount,
+        },
+        progress: {
+          completedTiles,
+          totalTiles,
+        },
+      })
+    }
+
+    const eventData = userEvents.map((event) => {
+      const role = event.creatorId === userId
+        ? "admin"
+        : (event.eventParticipants[0]?.role ?? "participant")
+              
+      const basePrizePool = event.basePrizePool
+      const totalBuyIns = buyInsMap.get(event.id) ?? 0
+      const totalDonations = donationsMap.get(event.id) ?? 0
+      const totalPrizePool = basePrizePool + totalBuyIns + totalDonations
+
+      const isManager = role === "admin" || role === "management"
+      
       return {
         event: {
           ...event,
-          role:
-            event.creatorId === userId
-              ? "admin"
-              : (event.eventParticipants[0]?.role ?? "participant"),
+          role,
         },
-        totalPrizePool: prizePoolData.totalPrizePool,
+        totalPrizePool,
+        ...(isManager && managerDataMap.has(event.id) ? { managerData: managerDataMap.get(event.id) } : {}),
+        participantData: participantDataMap.get(event.id) ?? undefined,
       }
     })
 
-    return await Promise.all(eventDataPromises)
+    return eventData
   } catch (error) {
     logger.error({ error }, "Error fetching events")
     throw new Error("Failed to fetch events")
@@ -2240,3 +2448,67 @@ export async function deleteEventRule(
     return { success: false, error: "Failed to delete rule" }
   }
 }
+
+export async function getMiniBoardTiles(bingoId: string) {
+  const session = await getServerAuthSession()
+  if (!session) return []
+
+  const bingo = await db.query.bingos.findFirst({
+    where: eq(bingos.id, bingoId),
+    columns: { eventId: true, visible: true },
+  })
+
+  if (!bingo || !bingo.visible) return []
+
+  const userTeam = await db
+    .select({ teamId: teams.id })
+    .from(teamMembers)
+    .innerJoin(teams, eq(teamMembers.teamId, teams.id))
+    .where(
+      and(
+        eq(teamMembers.userId, session.user.id),
+        eq(teams.eventId, bingo.eventId)
+      )
+    )
+    .limit(1)
+
+  const teamId = userTeam[0]?.teamId
+
+  const allTiles = await db.query.tiles.findMany({
+    where: eq(tiles.bingoId, bingoId),
+    columns: {
+      id: true,
+      index: true,
+      isHidden: true,
+      title: true,
+      headerImage: true,
+    },
+    orderBy: (tiles, { asc }) => [asc(tiles.index)],
+  })
+
+  if (!teamId) {
+    return allTiles.map((tile) => ({
+      ...tile,
+      isCompleted: false,
+    }))
+  }
+
+  const submissions = await db.query.teamTileSubmissions.findMany({
+    where: eq(teamTileSubmissions.teamId, teamId),
+    columns: {
+      tileId: true,
+      status: true,
+    },
+  })
+
+  const submissionMap = new Map(submissions.map((s) => [s.tileId, s.status]))
+
+  return allTiles.map((tile) => {
+    const status = submissionMap.get(tile.id) || "none"
+    return {
+      ...tile,
+      isCompleted: status === "approved",
+    }
+  })
+}
+
