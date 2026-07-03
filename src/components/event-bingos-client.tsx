@@ -19,7 +19,7 @@ import { QuickSubmissionButton } from "@/components/quick-submission-button"
 import { QuickSubmissionModal } from "@/components/quick-submission-modal"
 import Link from "next/link"
 import { TrackerSettingsModal } from "@/components/tracker-settings-modal"
-import { ListFilter, ChevronLeft, ChevronRight, Edit, Settings } from "lucide-react"
+import { ListFilter, ChevronLeft, ChevronRight, Edit, Link as LinkIcon } from "lucide-react"
 import type { UUID } from "crypto"
 import { useRouter } from "next/navigation"
 
@@ -254,12 +254,13 @@ export function EventBingosClient({
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
+                      <Button 
+                        variant="ghost" 
                         size="icon"
+                        title="Tracker Settings"
                         onClick={() => setTrackerSettingsModalOpen(true)}
                       >
-                        <Settings className="h-4 w-4" />
+                        <LinkIcon className="h-4 w-4" />
                       </Button>
                       <DeleteBingoButton bingoId={currentBingo.id as UUID} />
                     </>

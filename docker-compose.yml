@@ -98,7 +98,7 @@ services:
       SKIP_ENV_VALIDATION: "1"
       NODE_ENV: production
     working_dir: /app
-    command: npm run db:push
+    command: npx drizzle-kit push
     networks:
       - bingoscape-network
     profiles:

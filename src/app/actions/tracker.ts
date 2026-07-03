@@ -81,6 +81,11 @@ export async function syncTrackerProgress(bingoId: string) {
           logger.warn({ err, rsn }, `Failed to fetch gains for ${rsn}`);
         }
       }));
+      
+      // Delay between chunks to prevent rate-limiting
+      if (i + 5 < uniqueRsns.length) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     }
 
     function getMetricGain(gains: WOMGainsData | undefined, metricName: string): number {
