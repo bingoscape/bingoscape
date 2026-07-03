@@ -18,6 +18,7 @@ import { toast } from "@/hooks/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -42,6 +43,10 @@ export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) 
   const [isLocked, setIsLocked] = useState(event.locked)
   const [isPublic, setIsPublic] = useState(event.public)
   const [requiresApproval, setRequiresApproval] = useState(event.requiresApproval || false)
+  const [trackerProvider, setTrackerProvider] = useState<string>(event.trackerProvider || "none")
+  const [trackerCompetitionId, setTrackerCompetitionId] = useState<string>(
+    event.trackerCompetitionId ? String(event.trackerCompetitionId) : ""
+  )
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async () => {
@@ -58,6 +63,8 @@ export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) 
         locked: isLocked,
         public: isPublic,
         requiresApproval,
+        trackerProvider: trackerProvider !== "none" ? trackerProvider : null,
+        trackerCompetitionId: trackerProvider !== "none" && trackerCompetitionId ? parseInt(trackerCompetitionId) : null,
       })
       toast({
         title: "Event updated",
@@ -257,6 +264,38 @@ export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) 
               </label>
             </div>
           </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="trackerProvider" className="text-right">
+              Tracker
+            </Label>
+            <div className="col-span-3">
+              <Select value={trackerProvider} onValueChange={setTrackerProvider}>
+                <SelectTrigger id="trackerProvider">
+                  <SelectValue placeholder="Select a provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None (Manual)</SelectItem>
+                  <SelectItem value="wiseoldman">WiseOldMan</SelectItem>
+                  <SelectItem value="templeosrs">TempleOSRS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {trackerProvider !== "none" && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="trackerCompetitionId" className="text-right">
+                Competition ID
+              </Label>
+              <Input
+                id="trackerCompetitionId"
+                type="number"
+                value={trackerCompetitionId}
+                onChange={(e) => setTrackerCompetitionId(e.target.value)}
+                className="col-span-3"
+                placeholder="e.g. 12345"
+              />
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button type="submit" onClick={handleSubmit} disabled={isSubmitting}>

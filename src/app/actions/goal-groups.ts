@@ -387,6 +387,7 @@ export async function getGoalTree(tileId: string): Promise<GoalTreeNode[]> {
         goalValues: true,
         teamProgress: true,
         itemGoal: true,
+        metricGoal: true,
       },
     })
 

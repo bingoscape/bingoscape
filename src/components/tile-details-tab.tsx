@@ -1,6 +1,10 @@
 /* eslint-disable */
 "use client"
 
+import { useRouter } from "next/navigation"
+import { syncTrackerProgress } from "@/app/actions/tracker"
+import { toast } from "@/hooks/use-toast"
+
 import { useCallback } from "react"
 import { useState, useEffect } from "react"
 import type React from "react"
@@ -24,6 +28,7 @@ import {
   Network,
   List,
   Package,
+  RefreshCw,
 } from "lucide-react"
 import Markdown from "react-markdown"
 import { Switch } from "@/components/ui/switch"
@@ -62,6 +67,7 @@ interface TileDetailsTabProps {
   userRole: "admin" | "management" | "participant"
   teams: Team[]
   gameType: "osrs" | "rs3"
+  eventId?: string
   isProgressionBingo?: boolean
   onEditTile: <K extends keyof EditableTileFields>(
     field: K,
@@ -98,6 +104,7 @@ export function TileDetailsTab({
   userRole,
   teams,
   gameType,
+  eventId,
   isProgressionBingo = false,
   onEditTile,
   onUpdateTile,
@@ -527,6 +534,7 @@ export function TileDetailsTab({
             teams={teams}
             onUpdateProgress={onUpdateProgress}
             userRole={userRole}
+            eventId={eventId}
           />
         </div>
       </div>
@@ -539,11 +547,13 @@ function TileProgress({
   teams,
   onUpdateProgress,
   userRole,
+  eventId,
 }: {
   selectedTile: Tile | null
   teams: Team[]
   onUpdateProgress: (goalId: string, teamId: string, newValue: number) => void
   userRole: "admin" | "management" | "participant"
+  eventId?: string
 }) {
   const [teamTreeData, setTeamTreeData] = useState<
     Map<string, { tree: any[]; teamProgress: any[] }>
@@ -580,8 +590,55 @@ function TileProgress({
     )
   }
 
+  const router = useRouter()
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  const hasMetricGoals = selectedTile?.goals?.some((g: any) => g.goalType === "metric")
+  const canSync = hasMetricGoals && eventId && (userRole === "admin" || userRole === "management")
+
+  const handleSync = async () => {
+    if (!eventId) return
+    setIsSyncing(true)
+    try {
+      const result = await syncTrackerProgress(eventId)
+      if (result.success) {
+        toast({
+          title: "Sync complete",
+          description: result.message || "Tracker data synchronized successfully.",
+        })
+        router.refresh()
+      } else {
+        toast({
+          title: "Sync failed",
+          description: result.error || "Failed to synchronize tracker data.",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred during sync.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
+      {canSync && (
+        <div className="flex justify-end">
+          <Button onClick={handleSync} disabled={isSyncing} variant="outline" size="sm">
+            {isSyncing ? (
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
+            {isSyncing ? "Syncing..." : "Sync Tracker Data"}
+          </Button>
+        </div>
+      )}
       {/* <h4 className="font-semibold text-lg">Team Progress</h4> */}
 
       <div className="space-y-6">

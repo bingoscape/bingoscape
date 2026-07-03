@@ -6,6 +6,7 @@ import {
   bingos,
   goals,
   itemGoals,
+  metricGoals,
   teamGoalProgress,
   tiles,
   submissions,
@@ -512,6 +513,86 @@ export async function createItemGoal(
   } catch (error) {
     logger.error({ error }, "Error creating item goal")
     return { success: false, error: "Failed to create item goal" }
+  }
+}
+
+export async function createMetricGoal(
+  tileId: string,
+  metricType: string,
+  metricName: string,
+  targetValue: number,
+  description?: string
+) {
+  try {
+    const goalDescription = description || `${metricName} (${metricType})`
+    
+    // Create the goal first
+    const [newGoal] = await db
+      .insert(goals)
+      .values({
+        tileId,
+        description: goalDescription,
+        targetValue,
+        goalType: "metric",
+      })
+      .returning()
+
+    if (!newGoal) {
+      return { success: false, error: "Failed to create goal" }
+    }
+
+    // Create the metric goal metadata
+    const [metricGoalData] = await db
+      .insert(metricGoals)
+      .values({
+        goalId: newGoal.id,
+        metricType,
+        metricName,
+      })
+      .returning()
+
+    return { success: true, goal: newGoal, metricGoal: metricGoalData }
+  } catch (error) {
+    logger.error({ error }, "Error creating metric goal")
+    return { success: false, error: "Failed to create metric goal" }
+  }
+}
+
+export async function updateMetricGoal(
+  goalId: string,
+  metricType: string,
+  metricName: string,
+  targetValue: number,
+  description?: string
+) {
+  try {
+    const goalDescription = description || `${metricName} (${metricType})`
+    
+    // Update the base goal
+    await db
+      .update(goals)
+      .set({
+        description: goalDescription,
+        targetValue,
+        updatedAt: new Date(),
+      })
+      .where(eq(goals.id, goalId))
+
+    // Update the metric goal metadata
+    await db
+      .update(metricGoals)
+      .set({
+        metricType,
+        metricName,
+        updatedAt: new Date(),
+      })
+      .where(eq(metricGoals.goalId, goalId))
+
+    revalidatePath("/")
+    return { success: true }
+  } catch (error) {
+    logger.error({ error }, "Error updating metric goal")
+    return { success: false, error: "Failed to update metric goal" }
   }
 }
 

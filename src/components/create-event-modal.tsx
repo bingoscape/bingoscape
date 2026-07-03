@@ -23,6 +23,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 import { GPInput } from "@/components/ui/gp-input"
 import { Calendar } from "@/components/ui/calendar"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Popover,
   PopoverContent,
@@ -64,6 +65,8 @@ export function CreateEventModal({
   const [minimumBuyIn, setMinimumBuyIn] = useState(0)
   const [basePrizePool, setBasePrizePool] = useState(0)
   const [requiresApproval, setRequiresApproval] = useState(false)
+  const [trackerProvider, setTrackerProvider] = useState<string>("none")
+  const [trackerCompetitionId, setTrackerCompetitionId] = useState<string>("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<FormErrors>({})
 
@@ -177,6 +180,12 @@ export function CreateEventModal({
     formData.append("minimumBuyIn", minimumBuyIn.toString())
     formData.append("basePrizePool", basePrizePool.toString())
     formData.append("requiresApproval", requiresApproval.toString())
+    if (trackerProvider !== "none") {
+      formData.append("trackerProvider", trackerProvider)
+      if (trackerCompetitionId) {
+        formData.append("trackerCompetitionId", trackerCompetitionId)
+      }
+    }
 
     try {
       const result = await createEvent(formData)
@@ -195,6 +204,8 @@ export function CreateEventModal({
         setMinimumBuyIn(0)
         setBasePrizePool(0)
         setRequiresApproval(false)
+        setTrackerProvider("none")
+        setTrackerCompetitionId("")
         setErrors({})
 
         onClose()
@@ -450,6 +461,49 @@ export function CreateEventModal({
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* Tracker Integration Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Tracker Integration
+                </h3>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="trackerProvider">Tracking Provider</Label>
+                <Select value={trackerProvider} onValueChange={setTrackerProvider}>
+                  <SelectTrigger id="trackerProvider">
+                    <SelectValue placeholder="Select a provider" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None (Manual Only)</SelectItem>
+                    <SelectItem value="wiseoldman">WiseOldMan</SelectItem>
+                    <SelectItem value="templeosrs">TempleOSRS</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Enable automatic progress tracking for XP goals
+                </p>
+              </div>
+
+              {trackerProvider !== "none" && (
+                <div className="space-y-2">
+                  <Label htmlFor="trackerCompetitionId">Competition ID</Label>
+                  <Input
+                    id="trackerCompetitionId"
+                    value={trackerCompetitionId}
+                    onChange={(e) => setTrackerCompetitionId(e.target.value)}
+                    placeholder={`e.g. 12345`}
+                    type="number"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The {trackerProvider === "wiseoldman" ? "WiseOldMan" : "TempleOSRS"} competition ID to pull data from
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

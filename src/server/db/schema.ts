@@ -155,7 +155,7 @@ export const registrationStatusEnum = pgEnum("registration_status", [
 export const bingoTypeEnum = pgEnum("bingo_type", ["standard", "progression"])
 export const gameTypeEnum = pgEnum("game_type", ["osrs", "rs3"])
 export const logicalOperatorEnum = pgEnum("logical_operator", ["AND", "OR"])
-export const goalTypeEnum = pgEnum("goal_type", ["generic", "item"])
+export const goalTypeEnum = pgEnum("goal_type", ["generic", "item", "metric"])
 export const skillLevelEnum = pgEnum("skill_level", [
   "beginner",
   "intermediate",
@@ -227,6 +227,8 @@ export const events = createTable("events", {
     .notNull(),
   minimumBuyIn: bigint("minimumBuyIn", { mode: "number" }).default(0).notNull(),
   requiresApproval: boolean("requires_approval").default(false).notNull(), // New field for registration approval
+  trackerCompetitionId: integer("tracker_competition_id"),
+  trackerProvider: varchar("tracker_provider", { length: 50 }),
 })
 
 export const eventsRelations = relations(events, ({ many, one }) => ({
@@ -502,6 +504,26 @@ export const itemGoalsRelations = relations(itemGoals, ({ one }) => ({
   }),
 }))
 
+export const metricGoals = createTable("metric_goals", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  goalId: uuid("goal_id")
+    .notNull()
+    .unique()
+    .references(() => goals.id, { onDelete: "cascade" }),
+  metricType: varchar("metric_type", { length: 50 }).notNull().default("skill"),
+  metricName: varchar("metric_name", { length: 100 }).notNull(),
+  trackerProvider: varchar("tracker_provider", { length: 50 }).notNull().default("wiseoldman"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const metricGoalsRelations = relations(metricGoals, ({ one }) => ({
+  goal: one(goals, {
+    fields: [metricGoals.goalId],
+    references: [goals.id],
+  }),
+}))
+
 export const goalsRelations = relations(goals, ({ one, many }) => ({
   tile: one(tiles, {
     fields: [goals.tileId],
@@ -517,6 +539,14 @@ export const goalsRelations = relations(goals, ({ one, many }) => ({
   itemGoal: one(itemGoals, {
     fields: [goals.id],
     references: [itemGoals.goalId],
+  }),
+  metricGoal: one(metricGoals, {
+    fields: [goals.id],
+    references: [metricGoals.goalId],
+  }),
+  metricGoal: one(metricGoals, {
+    fields: [goals.id],
+    references: [metricGoals.goalId],
   }),
 }))
 

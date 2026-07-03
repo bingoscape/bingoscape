@@ -147,3 +147,30 @@ export async function updatePlayerOnWOM(runescapeName: string): Promise<FetchWOM
     }
   }
 }
+
+export interface FetchWOMCompetitionResult {
+  success: boolean
+  data?: unknown // using unknown or CompetitionDetails type
+  error?: string
+}
+
+/**
+ * Fetch competition details from WiseOldMan API
+ */
+export async function fetchCompetitionFromWOM(
+  competitionId: number
+): Promise<FetchWOMCompetitionResult> {
+  try {
+    const competition = await womClient.competitions.getCompetitionDetails(competitionId)
+    return {
+      success: true,
+      data: competition,
+    }
+  } catch (error) {
+    logger.error({ error }, "Error fetching WiseOldMan competition:", error)
+    return {
+      success: false,
+      error: "Failed to fetch competition data from WiseOldMan.",
+    }
+  }
+}

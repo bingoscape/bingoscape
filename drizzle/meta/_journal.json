@@ -162,6 +162,20 @@
       "when": 1774684930804,
       "tag": "0022_wooden_preak",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1783061338316,
+      "tag": "0023_magenta_bill_hollister",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1783062592674,
+      "tag": "0024_brown_mole_man",
+      "breakpoints": true
     }
   ]
 }

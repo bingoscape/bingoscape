@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, Loader2, CheckCircle2, Users } from "lucide-react";
+import { Upload, Loader2, CheckCircle2, Users, BarChart2 } from "lucide-react";
 import type { SelectableUser } from "@/app/actions/bingo";
 
 interface SubmissionUploadFormProps {
@@ -28,6 +28,7 @@ interface SubmissionUploadFormProps {
   selectableUsers?: SelectableUser[];
   selectedUserId?: string;
   onUserSelect?: (userId: string) => void;
+  isMetricOnly?: boolean;
 }
 
 export function SubmissionUploadForm({
@@ -42,6 +43,7 @@ export function SubmissionUploadForm({
   selectableUsers,
   selectedUserId,
   onUserSelect,
+  isMetricOnly = false,
 }: SubmissionUploadFormProps) {
   // Filter out unassigned users before processing
   const assignedUsers =
@@ -128,14 +130,34 @@ export function SubmissionUploadForm({
       )}
 
       <div>
-        <Label
-          htmlFor="image"
-          className="mb-2 block text-sm font-medium text-muted-foreground"
-        >
-          Upload Image
-        </Label>
+        {!isMetricOnly && (
+          <Label
+            htmlFor="image"
+            className="mb-2 block text-sm font-medium text-muted-foreground"
+          >
+            Upload Image
+          </Label>
+        )}
 
-        {/* Enhanced drag-and-drop upload area */}
+        {isMetricOnly ? (
+          <div className="rounded-lg border-2 border-dashed border-blue-200 bg-blue-50/50 p-8 text-center transition-all duration-200">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="rounded-full bg-blue-100 p-4">
+                <BarChart2 className="h-8 w-8 text-blue-500" />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">
+                  Automatic Progress Tracking
+                </p>
+                <p className="text-xs text-muted-foreground max-w-[250px] mx-auto">
+                  This tile&apos;s progress is synced automatically via the configured tracker. Manual submissions are disabled.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Enhanced drag-and-drop upload area */}
         <div className="relative">
           <div
             className={`rounded-lg border-2 border-dashed p-8 text-center transition-all duration-200 ${
@@ -263,6 +285,7 @@ export function SubmissionUploadForm({
           </div>
           <span>to paste an image directly</span>
         </div>
+        </>)}
       </div>
     </div>
   );

@@ -1010,6 +1010,7 @@ export default function BingoGrid({
                 editedTile={editedTile}
                 userRole={userRole}
                 teams={teams}
+                eventId={bingo.eventId}
                 gameType={gameType}
                 isProgressionBingo={bingo.bingoType === "progression"}
                 onEditTile={(field, value) =>

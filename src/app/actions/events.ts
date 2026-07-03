@@ -207,6 +207,8 @@ export interface Event {
   basePrizePool: number
   registrationDeadline: Date | null
   requiresApproval: boolean
+  trackerProvider?: string | null
+  trackerCompetitionId?: number | null
 }
 
 export interface EventData {
@@ -268,6 +270,9 @@ export async function createEvent(formData: FormData) {
   const bpp = formData.get("basePrizePool") as string
   const mbi = formData.get("minimumBuyIn") as string
   const requiresApproval = formData.get("requiresApproval") === "true"
+  const trackerProvider = formData.get("trackerProvider") as string | null
+  const trackerCompetitionIdStr = formData.get("trackerCompetitionId") as string | null
+  const trackerCompetitionId = trackerCompetitionIdStr ? parseInt(trackerCompetitionIdStr) : null
 
   if (!title || !startDateStr || !endDateStr) {
     return { success: false, error: "Missing required fields" }
@@ -316,6 +321,8 @@ export async function createEvent(formData: FormData) {
           minimumBuyIn,
           creatorId: session.user.id,
           requiresApproval,
+          trackerProvider,
+          trackerCompetitionId,
         })
         .returning()
 
@@ -569,6 +576,8 @@ export async function updateEvent(
     locked?: boolean
     public?: boolean
     requiresApproval?: boolean
+    trackerProvider?: string | null
+    trackerCompetitionId?: number | null
   }
 ) {
   try {
@@ -587,6 +596,8 @@ export async function updateEvent(
         locked: eventData.locked,
         public: eventData.public,
         requiresApproval: eventData.requiresApproval,
+        trackerProvider: eventData.trackerProvider,
+        trackerCompetitionId: eventData.trackerCompetitionId,
         updatedAt: new Date(),
       })
       .where(eq(events.id, eventId))
