@@ -1,6 +1,9 @@
+import { registerOTel } from '@vercel/otel';
 import { logger } from "@/lib/logger";
 
 export async function register() {
+  registerOTel({ serviceName: 'bingoscape-next' });
+
   if (process.env.NEXT_RUNTIME === "nodejs") {
     logger.info("Initializing observability for Node.js runtime");
 

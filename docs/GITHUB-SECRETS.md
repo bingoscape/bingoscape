@@ -87,14 +87,7 @@ These secrets are optional but recommended for enhanced functionality.
 
 **Note:** If you don't configure these, users simply won't see GitHub/Google login options.
 
-### Monitoring & Error Tracking
 
-| Secret Name | Description | Where to Get |
-|-------------|-------------|--------------|
-| `SENTRY_AUTH_TOKEN` | Sentry authentication token for source maps | [Sentry Settings](https://sentry.io/settings/account/api/auth-tokens/) |
-| `SENTRY_DSN` | Sentry Data Source Name for error tracking | [Sentry Project Settings](https://sentry.io/settings/projects/) |
-
-**Note:** Without these, error tracking won't work, but the app will function normally.
 
 ### SSL Certificate Configuration
 
@@ -154,8 +147,6 @@ Use this checklist to ensure all required secrets are configured:
 - [ ] `GITHUB_CLIENT_SECRET` - (Optional) For GitHub OAuth
 - [ ] `GOOGLE_CLIENT_ID` - (Optional) For Google OAuth
 - [ ] `GOOGLE_CLIENT_SECRET` - (Optional) For Google OAuth
-- [ ] `SENTRY_AUTH_TOKEN` - (Optional) For error tracking
-- [ ] `SENTRY_DSN` - (Optional) For error monitoring
 - [ ] `CERTBOT_EMAIL` - (Optional) For SSL certificates
 
 ---

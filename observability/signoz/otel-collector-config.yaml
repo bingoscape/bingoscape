@@ -1,0 +1,69 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'nextjs-app'
+          scrape_interval: 15s
+          static_configs:
+            - targets: ['app:3000']
+          metrics_path: '/api/metrics'
+        - job_name: 'postgres-exporter'
+          scrape_interval: 15s
+          static_configs:
+            - targets: ['postgres-exporter:9187']
+
+  filelog/docker:
+    include: [ "/var/lib/docker/containers/*/*.log" ]
+    start_at: end
+    include_file_path: true
+    include_file_name: false
+    operators:
+      - type: json_parser
+        id: docker_json_parser
+        timestamp:
+          parse_from: attributes.time
+          layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+      - type: move
+        from: attributes.log
+        to: body
+
+processors:
+  batch:
+    send_batch_size: 1000
+    timeout: 10s
+
+exporters:
+  clickhousetraces:
+    datasource: tcp://signoz-clickhouse:9000/signoz_traces
+    docker_multi_node_cluster: false
+    low_cardinal_exception_grouping: false
+  clickhousemetricswrite:
+    endpoint: tcp://signoz-clickhouse:9000/signoz_metrics
+    resource_to_telemetry_conversion:
+      enabled: true
+  clickhouselogsexporter:
+    dsn: tcp://signoz-clickhouse:9000/signoz_logs
+    docker_multi_node_cluster: false
+    timeout: 5s
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [clickhousetraces]
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [batch]
+      exporters: [clickhousemetricswrite]
+    logs:
+      receivers: [otlp, filelog/docker]
+      processors: [batch]
+      exporters: [clickhouselogsexporter]
