@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -19,6 +19,7 @@ import { getMetricName, getWikiIconUrl } from "@/lib/osrs-metrics"
 import { Eye, EyeOff, Copy, ExternalLink, RefreshCw, Unlink } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 
 interface TrackerSettingsModalProps {
   bingoId: string
@@ -98,7 +99,7 @@ export function TrackerSettingsModal({ bingoId, womCompetitionId, womVerificatio
           <RefreshCw className="h-4 w-4 animate-spin" />
           <span>Syncing Tracker Data...</span>
         </div>
-      ) as any,
+      ) as React.ReactNode,
       description: "Fetching progress from WiseOldMan. This may take a few seconds.",
       duration: 60000,
     })
@@ -151,7 +152,7 @@ export function TrackerSettingsModal({ bingoId, womCompetitionId, womVerificatio
       } else {
         toast({ title: "Error", description: result.error || "Failed to link competition.", variant: "destructive" })
       }
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "An error occurred.", variant: "destructive" })
     } finally {
       setIsSubmitting(false)
@@ -171,7 +172,7 @@ export function TrackerSettingsModal({ bingoId, womCompetitionId, womVerificatio
       } else {
         toast({ title: "Error", description: result.error || "Failed to create competition.", variant: "destructive" })
       }
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "An error occurred.", variant: "destructive" })
     } finally {
       setIsSubmitting(false)
@@ -294,10 +295,13 @@ export function TrackerSettingsModal({ bingoId, womCompetitionId, womVerificatio
                   {METRICS.map(m => (
                     <SelectItem key={m} value={m}>
                       <div className="flex items-center gap-2">
-                        <img 
+                        <Image 
                           src={getWikiIconUrl(m)} 
                           alt={m} 
-                          className="w-4 h-4 object-contain"
+                          width={16}
+                          height={16}
+                          className="object-contain"
+                          unoptimized
                           onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         />
                         <span>{getMetricName(m)}</span>
