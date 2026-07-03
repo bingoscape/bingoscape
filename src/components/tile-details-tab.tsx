@@ -599,26 +599,45 @@ function TileProgress({
   const handleSync = async () => {
     if (!selectedTile?.bingoId) return
     setIsSyncing(true)
+
+    const { id, update } = toast({
+      title: (
+        <div className="flex items-center gap-2">
+          <RefreshCw className="h-4 w-4 animate-spin" />
+          <span>Syncing Tracker Data...</span>
+        </div>
+      ) as any,
+      description: "Fetching progress from WiseOldMan. This may take a few seconds.",
+      duration: 60000,
+    })
+
     try {
       const result = await syncTrackerProgress(selectedTile.bingoId)
       if (result.success) {
-        toast({
+        update({
+          id,
           title: "Sync complete",
           description: result.message || "Tracker data synchronized successfully.",
+          variant: "default",
+          duration: 5000,
         })
         router.refresh()
       } else {
-        toast({
+        update({
+          id,
           title: "Sync failed",
           description: result.error || "Failed to synchronize tracker data.",
-          variant: "destructive"
+          variant: "destructive",
+          duration: 5000,
         })
       }
     } catch (error) {
-      toast({
+      update({
+        id,
         title: "Error",
         description: "An unexpected error occurred during sync.",
-        variant: "destructive"
+        variant: "destructive",
+        duration: 5000,
       })
     } finally {
       setIsSyncing(false)

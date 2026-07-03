@@ -91,13 +91,37 @@ export function TrackerSettingsModal({ bingoId, womCompetitionId, womVerificatio
 
   const handleSync = async () => {
     setIsSyncing(true)
+    
+    const { id, update } = toast({
+      title: (
+        <div className="flex items-center gap-2">
+          <RefreshCw className="h-4 w-4 animate-spin" />
+          <span>Syncing Tracker Data...</span>
+        </div>
+      ) as any,
+      description: "Fetching progress from WiseOldMan. This may take a few seconds.",
+      duration: 60000,
+    })
+
     try {
       const result = await syncTrackerProgress(bingoId)
       if (result.success) {
-        toast({ title: "Success", description: "Tracker progress synced!" })
+        update({
+          id,
+          title: "Sync complete",
+          description: "Tracker progress synced successfully!",
+          variant: "default",
+          duration: 5000,
+        })
         router.refresh()
       } else {
-        toast({ title: "Error", description: result.error || "Failed to sync progress.", variant: "destructive" })
+        update({
+          id,
+          title: "Sync failed",
+          description: result.error || "Failed to sync progress.",
+          variant: "destructive",
+          duration: 5000,
+        })
       }
     } finally {
       setIsSyncing(false)
