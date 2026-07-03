@@ -1,5 +1,5 @@
 {
-  "id": "c36d2cf6-0039-465f-a620-741a9650707e",
+  "id": "5e65871b-757b-4b52-9595-f1c1b574832c",
   "prevId": "059fbcdf-87cd-4480-9269-1437d0957182",
   "version": "7",
   "dialect": "postgresql",
@@ -424,6 +424,18 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
+        },
+        "wom_competition_id": {
+          "name": "wom_competition_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "wom_verification_code": {
+          "name": "wom_verification_code",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -1450,18 +1462,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
-        },
-        "tracker_competition_id": {
-          "name": "tracker_competition_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "tracker_provider": {
-          "name": "tracker_provider",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {},
@@ -1890,18 +1890,18 @@
           "primaryKey": false,
           "notNull": true
         },
-        "metric": {
-          "name": "metric",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tracker_provider": {
-          "name": "tracker_provider",
+        "metric_type": {
+          "name": "metric_type",
           "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true,
-          "default": "'wiseoldman'"
+          "default": "'skill'"
+        },
+        "metric_name": {
+          "name": "metric_name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",
@@ -3060,6 +3060,12 @@
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
+        },
+        "tracker_team_name": {
+          "name": "tracker_team_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",

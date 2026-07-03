@@ -1,1 +1,0 @@
-ALTER TABLE "bingoscape-next_teams" ADD COLUMN "tracker_team_name" varchar(255);
