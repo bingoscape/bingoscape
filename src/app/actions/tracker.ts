@@ -3,14 +3,9 @@
 import { db } from "@/server/db"
 import { eq, and, inArray } from "drizzle-orm"
 import { 
-  events, 
   teams, 
-  teamMembers, 
-  users, 
   teamGoalProgress, 
-  metricGoals, 
   goals,
-  teamTileSubmissions,
   tiles,
   bingos
 } from "@/server/db/schema"
@@ -66,7 +61,15 @@ export async function syncTrackerProgress(bingoId: string) {
 
     const uniqueRsns = Array.from(new Set(womComp.participations.map(p => p.player.username)));
     const womClient = new WOMClient({ apiKey: process.env.WISEOLDMAN_API_KEY });
-    const gainsMap = new Map<string, any>();
+    interface WOMGainsData {
+      data?: {
+        skills?: Record<string, { experience?: { gained?: number } }>;
+        bosses?: Record<string, { kills?: { gained?: number } }>;
+        activities?: Record<string, { score?: { gained?: number } }>;
+        computed?: Record<string, { value?: { gained?: number } }>;
+      }
+    }
+    const gainsMap = new Map<string, WOMGainsData>();
 
     for (let i = 0; i < uniqueRsns.length; i += 5) {
       const chunk = uniqueRsns.slice(i, i + 5);
@@ -80,7 +83,7 @@ export async function syncTrackerProgress(bingoId: string) {
       }));
     }
 
-    function getMetricGain(gains: any, metricName: string): number {
+    function getMetricGain(gains: WOMGainsData | undefined, metricName: string): number {
       if (!gains || !gains.data) return 0;
       const { data } = gains;
       
