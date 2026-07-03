@@ -209,11 +209,11 @@ jobs:
 
             # Stop existing containers
             echo "🛑 Stopping existing containers..."
-            docker compose down
+            docker compose down --remove-orphans
 
             # Start containers with new image
             echo "▶️  Starting containers..."
-            docker compose --env-file ./.env up -d
+            docker compose --env-file ./.env up -d --remove-orphans
 
             # Wait for containers to be healthy
             echo "⏳ Waiting for containers to be healthy..."
