@@ -336,7 +336,7 @@ DISCORD_CLIENT_ID="prod-client-id"
 DISCORD_CLIENT_SECRET="prod-client-secret"
 
 # Optional: OpenTelemetry (SigNoz APM)
-OTEL_EXPORTER_OTLP_ENDPOINT="http://otel-collector:4318"
+OTEL_EXPORTER_OTLP_ENDPOINT="http://host.docker.internal:4318"
 ```
 
 ### Platform Deployment

@@ -1,8 +1,22 @@
-import { registerOTel } from '@vercel/otel';
+import { registerOTel, OTLPHttpJsonTraceExporter } from '@vercel/otel';
+import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
 import { logger } from "@/lib/logger";
 
+diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
+
 export async function register() {
-  registerOTel({ serviceName: 'bingoscape-next' });
+  const otelEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+  const tracesEndpoint = process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || (otelEndpoint ? `${otelEndpoint}/v1/traces` : undefined);
+
+  registerOTel({
+    serviceName: process.env.OTEL_SERVICE_NAME || 'bingoscape-next',
+    traceExporter: tracesEndpoint ? new OTLPHttpJsonTraceExporter({
+      url: tracesEndpoint,
+      headers: process.env.SIGNOZ_INGESTION_KEY
+        ? { 'signoz-ingestion-key': process.env.SIGNOZ_INGESTION_KEY }
+        : undefined,
+    }) : undefined,
+  });
 
   if (process.env.NEXT_RUNTIME === "nodejs") {
     logger.info("Initializing observability for Node.js runtime");
