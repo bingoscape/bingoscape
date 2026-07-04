@@ -63,7 +63,7 @@ services:
       # Observability Configuration
       METRICS_ENABLED: "true"
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://signoz-otel-collector:4318"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://host.docker.internal:4318"
 
       # Alert Configuration
       ALERT_DISCORD_WEBHOOK_URL: ${ALERT_DISCORD_WEBHOOK_URL:-}
