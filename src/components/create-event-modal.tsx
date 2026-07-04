@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/popover"
 import { CalendarIcon, Info } from "lucide-react"
 import { format, differenceInDays, addDays } from "date-fns"
+import { fromZonedTime } from "date-fns-tz"
 import { cn } from "@/lib/utils"
 import type { DateRange } from "react-day-picker"
 
@@ -64,6 +65,9 @@ export function CreateEventModal({
   >(undefined)
   const [minimumBuyIn, setMinimumBuyIn] = useState(0)
   const [basePrizePool, setBasePrizePool] = useState(0)
+  const [timezone, setTimezone] = useState<string>(
+    Intl.DateTimeFormat().resolvedOptions().timeZone
+  )
   const [requiresApproval, setRequiresApproval] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<FormErrors>({})
@@ -167,14 +171,15 @@ export function CreateEventModal({
     formData.append("title", title.trim())
     formData.append("description", description.trim())
     formData.append("gameType", gameType)
-    formData.append("startDate", dateRange.from.toISOString())
-    formData.append("endDate", dateRange.to.toISOString())
+    formData.append("startDate", fromZonedTime(format(dateRange.from, "yyyy-MM-dd'T'HH:mm:ss"), timezone).toISOString())
+    formData.append("endDate", fromZonedTime(format(dateRange.to, "yyyy-MM-dd'T'HH:mm:ss"), timezone).toISOString())
     if (registrationDeadline) {
       formData.append(
         "registrationDeadline",
-        registrationDeadline.toISOString()
+        fromZonedTime(format(registrationDeadline, "yyyy-MM-dd'T'HH:mm:ss"), timezone).toISOString()
       )
     }
+    formData.append("timezone", timezone)
     formData.append("minimumBuyIn", minimumBuyIn.toString())
     formData.append("basePrizePool", basePrizePool.toString())
     formData.append("requiresApproval", requiresApproval.toString())
@@ -325,6 +330,25 @@ export function CreateEventModal({
                   Schedule
                 </h3>
                 <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Event Timezone</Label>
+                <Select value={timezone} onValueChange={setTimezone}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select timezone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Intl.supportedValuesOf("timeZone").map((tz) => (
+                      <SelectItem key={tz} value={tz}>
+                        {tz}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Dates and times will be set in this timezone.
+                </p>
               </div>
 
               <div className="space-y-2">

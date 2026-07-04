@@ -169,6 +169,13 @@
       "when": 1783073586716,
       "tag": "0023_gifted_whistler",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1783202122767,
+      "tag": "0024_swift_sage",
+      "breakpoints": true
     }
   ]
 }
