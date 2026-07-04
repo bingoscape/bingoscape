@@ -1,6 +1,6 @@
 {
-  "id": "1cb830f4-0110-46b5-a8ce-8aae9cc20840",
-  "prevId": "5e65871b-757b-4b52-9595-f1c1b574832c",
+  "id": "617af161-2de9-404c-b3a6-7087a8adc151",
+  "prevId": "1cb830f4-0110-46b5-a8ce-8aae9cc20840",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1378,19 +1378,19 @@
         },
         "start_date": {
           "name": "start_date",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true
         },
         "end_date": {
           "name": "end_date",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true
         },
         "registration_deadline": {
           "name": "registration_deadline",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
