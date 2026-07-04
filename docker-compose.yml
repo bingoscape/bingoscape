@@ -70,6 +70,8 @@ services:
 
       # Skip environment validation in container
       SKIP_ENV_VALIDATION: "1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # Port 3000 is only exposed to Docker network (nginx proxies to it)
     ports:
       - "127.0.0.1:3000:3000"
@@ -103,51 +105,7 @@ services:
     profiles:
       - tools # Only run when explicitly specified
 
-  # --- Observability: SigNoz ---
-  clickhouse:
-    image: clickhouse/clickhouse-server:24.3
-    container_name: signoz-clickhouse
-    volumes:
-      - signoz_clickhouse_data:/var/lib/clickhouse
-    networks:
-      - bingoscape-network
 
-  query-service:
-    image: signoz/query-service:latest
-    container_name: signoz-query-service
-    depends_on:
-      - clickhouse
-    environment:
-      - CLICKHOUSE_HOST=signoz-clickhouse
-      - CLICKHOUSE_PORT=9000
-    networks:
-      - bingoscape-network
-
-  frontend:
-    image: signoz/frontend:latest
-    container_name: signoz-frontend
-    ports:
-      - "3301:3301" # SigNoz UI
-    depends_on:
-      - query-service
-    networks:
-      - bingoscape-network
-
-  otel-collector:
-    image: signoz/signoz-otel-collector:latest
-    container_name: signoz-otel-collector
-    command: ["--config=/etc/otel-collector-config.yaml"]
-    volumes:
-      - ./observability/signoz/otel-collector-config.yaml:/etc/otel-collector-config.yaml
-      # Mount docker socket/logs to allow filelog scraping of pino logs
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-    ports:
-      - "4317:4317" # OTLP gRPC
-      - "4318:4318" # OTLP HTTP
-    depends_on:
-      - clickhouse
-    networks:
-      - bingoscape-network
 
   # PostgreSQL Exporter - Database metrics
   postgres-exporter:
@@ -188,8 +146,6 @@ services:
 
 volumes:
   postgres_data:
-    driver: local
-  signoz_clickhouse_data:
     driver: local
 
 networks:

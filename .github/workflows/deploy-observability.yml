@@ -1,0 +1,78 @@
+name: Deploy Observability (SigNoz)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy to"
+        required: true
+        type: choice
+        options:
+          - production
+        default: "production"
+
+jobs:
+  deploy-observability:
+    name: Deploy SigNoz
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Deploy SigNoz via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "🚀 Starting SigNoz deployment..."
+            
+            # Create a directory for signoz
+            OBSERVABILITY_DIR=~/signoz
+            mkdir -p "$OBSERVABILITY_DIR"
+            cd "$OBSERVABILITY_DIR"
+            
+            # Stop existing bingoscape containers if they exist, to free up ports
+            # Ensure the old clickhouse, frontend, etc. are stopped.
+            if [ -d ~/bingoscape ]; then
+              echo "🛑 Stopping existing application containers to free up ports..."
+              cd ~/bingoscape && docker compose down || true
+              cd "$OBSERVABILITY_DIR"
+            fi
+
+            # Install foundryctl if not installed
+            if ! command -v foundryctl &> /dev/null; then
+              echo "⚙️ Installing foundryctl..."
+              curl -fsSL https://signoz.io/foundry.sh | bash
+            fi
+            
+            # Add foundryctl to PATH if needed
+            export PATH="$HOME/.foundry/bin:$PATH"
+            
+            # Create casting.yaml
+            echo "📝 Generating casting.yaml..."
+            cat > casting.yaml << 'EOF'
+            apiVersion: v1alpha1
+            kind: Installation
+            metadata:
+              name: signoz
+            spec:
+              deployment:
+                flavor: compose
+                mode: docker
+            EOF
+            
+            # Run foundryctl cast
+            echo "▶️ Deploying SigNoz..."
+            foundryctl cast -f casting.yaml || ~/.foundry/bin/foundryctl cast -f casting.yaml
+            
+            echo "✅ SigNoz deployment completed successfully!"
+
+      - name: Post deployment summary
+        if: always()
+        run: |
+          echo "## SigNoz Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployed by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY

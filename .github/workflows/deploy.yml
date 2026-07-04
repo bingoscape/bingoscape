@@ -174,7 +174,7 @@ jobs:
             SMTP_PASSWORD="${{ secrets.SMTP_PASSWORD }}"
             METRICS_ENABLED="true"
             LOG_LEVEL="${{ secrets.LOG_LEVEL }}"
-            OTEL_EXPORTER_OTLP_ENDPOINT="http://signoz-otel-collector:4318"
+            OTEL_EXPORTER_OTLP_ENDPOINT="http://host.docker.internal:4318"
 
             NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}"
 
