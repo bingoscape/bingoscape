@@ -1,0 +1,71 @@
+{
+  "title": "Database Performance Dashboard",
+  "description": "Track the health and responsiveness of the database layer.",
+  "tags": [
+    "database",
+    "bingoscape"
+  ],
+  "variables": {},
+  "widgets": [
+    {
+      "id": "1",
+      "panelTypes": "timeseries",
+      "title": "Database Query Rate (QPS)",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "sum by (operation) (rate(db_queries_total[5m]))",
+            "legend": "{{operation}}",
+            "name": "queryA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "2",
+      "panelTypes": "timeseries",
+      "title": "Query Latency",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "histogram_quantile(0.99, sum by (le, operation) (rate(db_query_duration_seconds_bucket[5m])))",
+            "legend": "p99 - {{operation}}",
+            "name": "queryA"
+          },
+          {
+            "query": "histogram_quantile(0.95, sum by (le, operation) (rate(db_query_duration_seconds_bucket[5m])))",
+            "legend": "p95 - {{operation}}",
+            "name": "queryB"
+          },
+          {
+            "query": "histogram_quantile(0.50, sum by (le, operation) (rate(db_query_duration_seconds_bucket[5m])))",
+            "legend": "p50 - {{operation}}",
+            "name": "queryC"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3",
+      "panelTypes": "value",
+      "title": "Active Database Connections",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "sum(db_connections_active)",
+            "legend": "Connections",
+            "name": "queryA"
+          }
+        ]
+      }
+    }
+  ],
+  "layout": [
+    { "w": 6, "h": 3, "x": 0, "y": 0, "i": "1" },
+    { "w": 6, "h": 3, "x": 6, "y": 0, "i": "3" },
+    { "w": 12, "h": 4, "x": 0, "y": 3, "i": "2" }
+  ]
+}

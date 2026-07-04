@@ -1,0 +1,142 @@
+{
+  "title": "Business KPIs Dashboard",
+  "description": "Track user engagement, core game loop success, and monetization/financial events.",
+  "tags": [
+    "business",
+    "bingoscape"
+  ],
+  "variables": {},
+  "widgets": [
+    {
+      "id": "1",
+      "panelTypes": "value",
+      "title": "Active Users",
+      "description": "Real-time visibility into the number of users interacting with the platform",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "bingoscape_active_users",
+            "legend": "Active Users",
+            "name": "queryA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "2",
+      "panelTypes": "value",
+      "title": "Total Events Created (24h)",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "sum(increase(bingoscape_events_created_total[24h]))",
+            "legend": "Events Created",
+            "name": "queryA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3",
+      "panelTypes": "timeseries",
+      "title": "Events Created Rate",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "sum(rate(bingoscape_events_created_total[5m]))",
+            "legend": "Rate",
+            "name": "queryA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "4",
+      "panelTypes": "value",
+      "title": "Bingos Completed (24h)",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "sum(increase(bingoscape_bingos_completed_total[24h]))",
+            "legend": "Bingos Completed",
+            "name": "queryA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "5",
+      "panelTypes": "timeseries",
+      "title": "Bingos Completed Rate",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "sum(rate(bingoscape_bingos_completed_total[5m]))",
+            "legend": "Rate",
+            "name": "queryA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "6",
+      "panelTypes": "timeseries",
+      "title": "Tile Submissions Rate",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "sum by (status) (rate(bingoscape_tile_submissions_total[5m]))",
+            "legend": "{{status}}",
+            "name": "queryA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "7",
+      "panelTypes": "value",
+      "title": "Buy-ins Total (24h)",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "sum(increase(bingoscape_buy_ins_total[24h]))",
+            "legend": "Total Buy-ins",
+            "name": "queryA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "8",
+      "panelTypes": "timeseries",
+      "title": "Buy-ins Rate",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "sum(rate(bingoscape_buy_ins_total[5m]))",
+            "legend": "Rate",
+            "name": "queryA"
+          }
+        ]
+      }
+    }
+  ],
+  "layout": [
+    { "w": 3, "h": 2, "x": 0, "y": 0, "i": "1" },
+    { "w": 3, "h": 2, "x": 3, "y": 0, "i": "2" },
+    { "w": 3, "h": 2, "x": 6, "y": 0, "i": "4" },
+    { "w": 3, "h": 2, "x": 9, "y": 0, "i": "7" },
+    { "w": 6, "h": 3, "x": 0, "y": 2, "i": "3" },
+    { "w": 6, "h": 3, "x": 6, "y": 2, "i": "5" },
+    { "w": 6, "h": 3, "x": 0, "y": 5, "i": "6" },
+    { "w": 6, "h": 3, "x": 6, "y": 5, "i": "8" }
+  ]
+}

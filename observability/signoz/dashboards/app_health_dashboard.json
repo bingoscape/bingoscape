@@ -1,0 +1,152 @@
+{
+  "title": "Application Health & Reliability Dashboard",
+  "description": "Monitor the stability, responsiveness, and error rates of the Next.js application.",
+  "tags": [
+    "application",
+    "bingoscape",
+    "health"
+  ],
+  "variables": {},
+  "widgets": [
+    {
+      "id": "1",
+      "panelTypes": "timeseries",
+      "title": "HTTP Request Rate (RPS)",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "sum by (method, route) (rate(http_requests_total[5m]))",
+            "legend": "{{method}} {{route}}",
+            "name": "queryA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "2",
+      "panelTypes": "timeseries",
+      "title": "HTTP Error Rate",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "sum by (status_code) (rate(http_requests_total{status_code=~\"4..|5..\"}[5m]))",
+            "legend": "{{status_code}}",
+            "name": "queryA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3",
+      "panelTypes": "timeseries",
+      "title": "API Latency",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))",
+            "legend": "p99",
+            "name": "queryA"
+          },
+          {
+            "query": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))",
+            "legend": "p95",
+            "name": "queryB"
+          },
+          {
+            "query": "histogram_quantile(0.50, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))",
+            "legend": "p50",
+            "name": "queryC"
+          }
+        ]
+      }
+    },
+    {
+      "id": "4",
+      "panelTypes": "timeseries",
+      "title": "Application Errors by Type",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "sum by (type) (rate(bingoscape_errors_total[5m]))",
+            "legend": "{{type}}",
+            "name": "queryA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "5",
+      "panelTypes": "timeseries",
+      "title": "Client-Side JavaScript Errors",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "sum by (error_type) (rate(bingoscape_client_errors_total[5m]))",
+            "legend": "{{error_type}}",
+            "name": "queryA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "6",
+      "panelTypes": "timeseries",
+      "title": "Node.js CPU Usage",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "sum(rate(process_cpu_seconds_total[5m]))",
+            "legend": "CPU Seconds/s",
+            "name": "queryA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "7",
+      "panelTypes": "timeseries",
+      "title": "Node.js Heap Size",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "sum(nodejs_heap_size_used_bytes)",
+            "legend": "Heap Bytes",
+            "name": "queryA"
+          }
+        ]
+      }
+    },
+    {
+      "id": "8",
+      "panelTypes": "value",
+      "title": "Event Loop Lag (Max)",
+      "query": {
+        "queryType": "promql",
+        "promql": [
+          {
+            "query": "max(nodejs_eventloop_lag_seconds)",
+            "legend": "Seconds",
+            "name": "queryA"
+          }
+        ]
+      }
+    }
+  ],
+  "layout": [
+    { "w": 6, "h": 3, "x": 0, "y": 0, "i": "1" },
+    { "w": 6, "h": 3, "x": 6, "y": 0, "i": "2" },
+    { "w": 12, "h": 3, "x": 0, "y": 3, "i": "3" },
+    { "w": 6, "h": 3, "x": 0, "y": 6, "i": "4" },
+    { "w": 6, "h": 3, "x": 6, "y": 6, "i": "5" },
+    { "w": 4, "h": 3, "x": 0, "y": 9, "i": "6" },
+    { "w": 4, "h": 3, "x": 4, "y": 9, "i": "7" },
+    { "w": 4, "h": 3, "x": 8, "y": 9, "i": "8" }
+  ]
+}
