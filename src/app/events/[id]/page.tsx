@@ -33,6 +33,7 @@ import { EventBingosClient } from "@/components/event-bingos-client"
 import { EventHeaderActions } from "@/components/event-header-actions"
 import AlertBanner from "@/components/ui/alert-banner"
 import { EventRulesSheet } from "@/components/event-rules-sheet"
+import { EventTimeDisplay } from "@/components/event-time-display"
 
 export default async function EventBingosPage(props: {
   params: Promise<{ id: UUID }>
@@ -164,13 +165,11 @@ export default async function EventBingosPage(props: {
                   </span>
                 )}
               </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Badge variant="outline" className="min-w-[180px] text-xs">
-                  <Calendar className="mr-1 h-4 w-4" />
-                  {startDate.toLocaleDateString()}
-                  &nbsp;-&nbsp;
-                  {endDate.toLocaleDateString()}
-                </Badge>
+              <div className="mt-4 mb-2 flex flex-col gap-0.5 border-l-2 border-primary/20 pl-3">
+                <EventTimeDisplay date={startDate} label="Start" eventTz={event.timezone || "UTC"} />
+                <EventTimeDisplay date={endDate} label="End" eventTz={event.timezone || "UTC"} />
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
                 <Badge variant="outline" className="text-xs">
                   <Trophy className="mr-1 h-4 w-4" />
                   <PrizePoolDisplay prizePool={prizePool} />

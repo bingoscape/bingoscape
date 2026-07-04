@@ -14,21 +14,9 @@ import { PrizePoolDisplay } from "./prize-pool-display"
 import { GameTypeBadge } from "./game-type-badge"
 import { MiniBoard } from "./mini-board"
 import type { EventData } from "@/app/actions/events"
-import {
-  CalendarIcon,
-  Users,
-  Trophy,
-  ArrowRight,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Clock3,
-  Check,
-  AlertTriangle,
-  Star,
-  MapPin,
-  Settings,
-} from "lucide-react"
+import { Clock, Users, CalendarIcon, Trophy, ShieldAlert, FileText, CheckCircle2, XCircle, Clock3, Check, AlertTriangle, Star, MapPin, Settings, ArrowRight } from "lucide-react"
+import { format } from "date-fns"
+import { formatInTimeZone } from "date-fns-tz"
 import { Badge } from "@/components/ui/badge"
 import { useState } from "react"
 import { Textarea } from "@/components/ui/textarea"
@@ -36,6 +24,7 @@ import { requestToJoinEvent } from "@/app/actions/events"
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { EventTimeDisplay } from "./event-time-display"
 
 interface EventCardProps {
   eventData: EventData
@@ -61,6 +50,10 @@ export function EventCard({
   const registrationDeadline = eventData.event.registrationDeadline
     ? new Date(eventData.event.registrationDeadline)
     : null
+
+  const eventTz = eventData.event.timezone || "UTC"
+  const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
+
   const isRegistrationClosed =
     !!registrationDeadline && new Date() > registrationDeadline
   const [showRequestForm, setShowRequestForm] = useState(false)
@@ -187,12 +180,14 @@ export function EventCard({
                     </Badge>
                   )}
                 </div>
-                <CardDescription className="mt-2 flex items-center text-sm">
-                  <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">
-                    {startDate.toLocaleDateString("en-US")} -{" "}
-                    {endDate.toLocaleDateString("en-US")}
-                  </span>
+                <CardDescription className="mt-3 flex flex-col gap-1 text-sm">
+                  <div className="flex items-start">
+                    <CalendarIcon className="mr-2.5 h-4 w-4 text-muted-foreground mt-1 shrink-0" />
+                    <div className="flex flex-col w-full">
+                      <EventTimeDisplay date={startDate} label="Start" eventTz={eventTz} />
+                      <EventTimeDisplay date={endDate} label="End" eventTz={eventTz} />
+                    </div>
+                  </div>
                 </CardDescription>
               </div>
             </div>

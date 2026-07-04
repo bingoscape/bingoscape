@@ -210,9 +210,13 @@ export const events = createTable("events", {
   id: uuid("id").defaultRandom().primaryKey(),
   title: varchar("name", { length: 255 }).notNull(),
   description: varchar("description", { length: 1000 }),
-  startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
-  registrationDeadline: timestamp("registration_deadline"),
+  startDate: timestamp("start_date", { mode: "date", withTimezone: true }).notNull(),
+  endDate: timestamp("end_date", { mode: "date", withTimezone: true }).notNull(),
+  registrationDeadline: timestamp("registration_deadline", {
+    mode: "date",
+    withTimezone: true,
+  }),
+  timezone: varchar("timezone", { length: 100 }).notNull().default("UTC"),
   creatorId: uuid("creator_id").references(() => users.id, {
     onDelete: "set null",
   }),

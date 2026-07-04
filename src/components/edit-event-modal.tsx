@@ -21,6 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
+import { toZonedTime, fromZonedTime } from "date-fns-tz"
 import { cn } from "@/lib/utils"
 import type { Event } from "@/app/actions/events"
 
@@ -33,10 +34,16 @@ interface EditEventModalProps {
 export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) {
   const [title, setTitle] = useState(event.title)
   const [description, setDescription] = useState(event.description ?? "")
-  const [startDate, setStartDate] = useState<Date>(new Date(event.startDate))
-  const [endDate, setEndDate] = useState<Date>(new Date(event.endDate))
+  const [timezone, setTimezone] = useState(event.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone)
+  
+  const [startDate, setStartDate] = useState<Date>(
+    event.startDate ? toZonedTime(new Date(event.startDate), event.timezone || "UTC") : new Date()
+  )
+  const [endDate, setEndDate] = useState<Date>(
+    event.endDate ? toZonedTime(new Date(event.endDate), event.timezone || "UTC") : new Date()
+  )
   const [registrationDeadline, setRegistrationDeadline] = useState<Date | undefined>(
-    event.registrationDeadline ? new Date(event.registrationDeadline) : undefined,
+    event.registrationDeadline ? toZonedTime(new Date(event.registrationDeadline), event.timezone || "UTC") : undefined,
   )
   const [minimumBuyIn, setMinimumBuyIn] = useState(event.minimumBuyIn)
   const [basePrizePool, setBasePrizePool] = useState(event.basePrizePool)
@@ -52,9 +59,12 @@ export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) 
       await updateEvent(event.id, {
         title,
         description,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        registrationDeadline: registrationDeadline ? registrationDeadline.toISOString() : null,
+        startDate: fromZonedTime(format(startDate, "yyyy-MM-dd'T'HH:mm:ss"), timezone).toISOString(),
+        endDate: fromZonedTime(format(endDate, "yyyy-MM-dd'T'HH:mm:ss"), timezone).toISOString(),
+        registrationDeadline: registrationDeadline 
+          ? fromZonedTime(format(registrationDeadline, "yyyy-MM-dd'T'HH:mm:ss"), timezone).toISOString() 
+          : null,
+        timezone,
         minimumBuyIn,
         basePrizePool,
         locked: isLocked,
@@ -107,6 +117,25 @@ export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) 
               onChange={(e) => setDescription(e.target.value)}
               className="col-span-3"
             />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="timezone" className="text-right">
+              Event Timezone
+            </Label>
+            <div className="col-span-3">
+              <Select value={timezone} onValueChange={setTimezone}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Intl.supportedValuesOf("timeZone").map((tz) => (
+                    <SelectItem key={tz} value={tz}>
+                      {tz}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="startDate" className="text-right">

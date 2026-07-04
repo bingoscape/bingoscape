@@ -206,6 +206,7 @@ export interface Event {
   minimumBuyIn: number
   basePrizePool: number
   registrationDeadline: Date | null
+  timezone: string
   requiresApproval: boolean
 }
 
@@ -288,6 +289,7 @@ export async function createEvent(formData: FormData) {
   const startDateStr = formData.get("startDate") as string
   const endDateStr = formData.get("endDate") as string
   const registrationDeadlineStr = formData.get("registrationDeadline") as string
+  const timezone = (formData.get("timezone") as string) || "UTC"
   const bpp = formData.get("basePrizePool") as string
   const mbi = formData.get("minimumBuyIn") as string
   const requiresApproval = formData.get("requiresApproval") === "true"
@@ -335,6 +337,7 @@ export async function createEvent(formData: FormData) {
           startDate,
           endDate,
           registrationDeadline,
+          timezone,
           basePrizePool,
           minimumBuyIn,
           creatorId: session.user.id,
@@ -772,6 +775,7 @@ export async function updateEvent(
     startDate: string
     endDate: string
     registrationDeadline: string | null
+    timezone?: string
     minimumBuyIn: number
     basePrizePool: number
     locked?: boolean
@@ -790,6 +794,7 @@ export async function updateEvent(
         registrationDeadline: eventData.registrationDeadline
           ? new Date(eventData.registrationDeadline)
           : null,
+        timezone: eventData.timezone,
         minimumBuyIn: eventData.minimumBuyIn,
         basePrizePool: eventData.basePrizePool,
         locked: eventData.locked,
