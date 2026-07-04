@@ -49,7 +49,7 @@ jobs:
             fi
             
             # Add foundryctl to PATH if needed
-            export PATH="$HOME/.foundry/bin:$PATH"
+            export PATH="$HOME/.local/bin:$HOME/.foundry/bin:$PATH"
             
             # Create casting.yaml
             echo "📝 Generating casting.yaml..."
@@ -66,7 +66,7 @@ jobs:
             
             # Run foundryctl cast
             echo "▶️ Deploying SigNoz..."
-            foundryctl cast -f casting.yaml || ~/.foundry/bin/foundryctl cast -f casting.yaml
+            foundryctl cast -f casting.yaml
             
             echo "✅ SigNoz deployment completed successfully!"
 
