@@ -19,30 +19,8 @@ export async function GET(request: Request) {
 
     const now = new Date()
 
-    // 2. Find events to unlock
-    const eventsToUnlock = await db.query.events.findMany({
-      where: and(
-        eq(events.locked, true),
-        lte(events.startDate, now)
-      ),
-      columns: {
-        id: true,
-      },
-    })
-
-    const eventIdsToUnlock = eventsToUnlock.map((e) => e.id)
-
-    // 3. Unlock events
-    if (eventIdsToUnlock.length > 0) {
-      logger.info({ eventIds: eventIdsToUnlock }, "Unlocking events")
-      await db
-        .update(events)
-        .set({
-          locked: false,
-          public: true,
-        })
-        .where(inArray(events.id, eventIdsToUnlock))
-    }
+    // 2. Events do not need to be unlocked by cron (public/locked are managed manually)
+    const eventIdsToUnlock: string[] = []
 
     // 4. Find bingos to unlock based on their own scheduled date OR event start date if null
     
@@ -61,7 +39,7 @@ export async function GET(request: Request) {
     // Find bingos
     const bingosToUnlockQuery = await db.query.bingos.findMany({
       where: and(
-        eq(bingos.locked, true),
+        or(eq(bingos.locked, true), eq(bingos.visible, false)),
         or(
           lte(bingos.scheduledUnlockDate, now),
           unlockedEventIds.length > 0 
