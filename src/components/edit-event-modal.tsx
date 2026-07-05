@@ -1,12 +1,13 @@
 "use client"
 
+import React from "react"
 import { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -16,10 +17,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { updateEvent } from "@/app/actions/events"
 import { toast } from "@/hooks/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CalendarIcon } from "lucide-react"
+import { GPInput } from "@/components/ui/gp-input"
+import { CalendarIcon, Info, Coins, Shield, Eye, Lock, CheckSquare } from "lucide-react"
 import { format } from "date-fns"
 import { toZonedTime, fromZonedTime } from "date-fns-tz"
 import { cn } from "@/lib/utils"
@@ -31,7 +32,15 @@ interface EditEventModalProps {
   onClose: () => void
 }
 
+const TABS = [
+  { id: 'overview', label: 'Overview', icon: Info },
+  { id: 'schedule', label: 'Schedule', icon: CalendarIcon },
+  { id: 'financials', label: 'Financials', icon: Coins },
+  { id: 'access', label: 'Access & Rules', icon: Shield },
+];
+
 export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) {
+  const [activeTab, setActiveTab] = useState('overview')
   const [title, setTitle] = useState(event.title)
   const [description, setDescription] = useState(event.description ?? "")
   const [timezone, setTimezone] = useState(event.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone)
@@ -89,214 +98,236 @@ export function EditEventModal({ event, isOpen, onClose }: EditEventModalProps) 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[525px]">
-        <DialogHeader>
-          <DialogTitle>Edit Event</DialogTitle>
-          <DialogDescription>Make changes to your event here. Click save when you&apos;re done.</DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="title" className="text-right">
-              Title
-            </Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="col-span-3"
-              required
-            />
+      <DialogContent className="max-w-4xl p-0 overflow-hidden flex h-[600px] border-0">
+        {/* Sidebar Navigation */}
+        <div className="w-64 bg-muted/30 border-r flex flex-col p-4">
+          <DialogHeader className="mb-6 text-left">
+            <DialogTitle>Edit Event</DialogTitle>
+            <DialogDescription className="text-xs">
+              Manage your event settings
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-1">
+            {TABS.map(tab => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  type="button"
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors text-left",
+                    activeTab === tab.id 
+                      ? "bg-primary/10 text-primary font-medium" 
+                      : "hover:bg-muted text-muted-foreground"
+                  )}
+                >
+                  <Icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="description" className="text-right">
-              Description
-            </Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="col-span-3"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="timezone" className="text-right">
-              Event Timezone
-            </Label>
-            <div className="col-span-3">
-              <Select value={timezone} onValueChange={setTimezone}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select timezone" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Intl.supportedValuesOf("timeZone").map((tz) => (
-                    <SelectItem key={tz} value={tz}>
-                      {tz}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="startDate" className="text-right">
-              Start Date
-            </Label>
-            <div className="col-span-3">
-              <Popover modal={true}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={(date) => date && setStartDate(date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="endDate" className="text-right">
-              End Date
-            </Label>
-            <div className="col-span-3">
-              <Popover modal={true}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={endDate}
-                    onSelect={(date) => date && setEndDate(date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="registrationDeadline" className="text-right">
-              Registration Deadline
-            </Label>
-            <div className="col-span-3">
-              <Popover modal={true}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !registrationDeadline && "text-muted-foreground",
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {registrationDeadline ? format(registrationDeadline, "PPP") : <span>Optional</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={registrationDeadline}
-                    onSelect={setRegistrationDeadline}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="minimumBuyIn" className="text-right">
-              Minimum Buy-In
-            </Label>
-            <Input
-              id="minimumBuyIn"
-              type="number"
-              value={minimumBuyIn}
-              onChange={(e) => setMinimumBuyIn(Number(e.target.value))}
-              className="col-span-3"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="basePrizePool" className="text-right">
-              Base Prize Pool
-            </Label>
-            <Input
-              id="basePrizePool"
-              type="number"
-              value={basePrizePool}
-              onChange={(e) => setBasePrizePool(Number(e.target.value))}
-              className="col-span-3"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="isLocked" className="text-right">
-              Lock Registration
-            </Label>
-            <div className="flex items-center space-x-2">
-              <Checkbox id="isLocked" checked={isLocked} onCheckedChange={(checked) => setIsLocked(!!checked)} />
-              <label
-                htmlFor="isLocked"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+        </div>
+
+        {/* Content Area */}
+        <div className="flex-1 flex flex-col relative overflow-hidden bg-background">
+          <div className="flex-1 overflow-y-auto p-8">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
               >
-                Prevent new registrations
-              </label>
-            </div>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="isPublic" className="text-right">
-              Public Event
-            </Label>
-            <div className="flex items-center space-x-2">
-              <Checkbox id="isPublic" checked={isPublic} onCheckedChange={(checked) => setIsPublic(!!checked)} />
-              <label
-                htmlFor="isPublic"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Visible in public listings
-              </label>
-            </div>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="requiresApproval" className="text-right">
-              Require Approval
-            </Label>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="requiresApproval"
-                checked={requiresApproval}
-                onCheckedChange={(checked) => setRequiresApproval(!!checked)}
-              />
-              <label
-                htmlFor="requiresApproval"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Require admin approval for registrations
-              </label>
-            </div>
+                {activeTab === 'overview' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium">Overview</h3>
+                      <p className="text-sm text-muted-foreground">Basic details about your event.</p>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="title">Event Title</Label>
+                        <Input
+                          id="title"
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                          id="description"
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          rows={5}
+                          className="resize-none"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="timezone">Event Timezone</Label>
+                        <Select value={timezone} onValueChange={setTimezone}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select timezone" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Intl.supportedValuesOf("timeZone").map((tz) => (
+                              <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'schedule' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium">Schedule</h3>
+                      <p className="text-sm text-muted-foreground">Manage when your event runs.</p>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Start Date</Label>
+                          <DateTimePicker
+                            date={startDate}
+                            setDate={(d) => d && setStartDate(d)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>End Date</Label>
+                          <DateTimePicker
+                            date={endDate}
+                            setDate={(d) => d && setEndDate(d)}
+                            fromDate={startDate}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Registration Deadline</Label>
+                        <DateTimePicker
+                          date={registrationDeadline}
+                          setDate={setRegistrationDeadline}
+                          placeholder="Optional"
+                          toDate={startDate}
+                        />
+                        <p className="text-xs text-muted-foreground">Players cannot join the event after this date.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'financials' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium">Financials</h3>
+                      <p className="text-sm text-muted-foreground">Manage the prize pool and entry fees.</p>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Minimum Buy-In</Label>
+                        <GPInput
+                          id="minimumBuyIn"
+                          value={minimumBuyIn}
+                          onChange={setMinimumBuyIn}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Base Prize Pool</Label>
+                        <GPInput
+                          id="basePrizePool"
+                          value={basePrizePool}
+                          onChange={setBasePrizePool}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'access' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium">Access & Rules</h3>
+                      <p className="text-sm text-muted-foreground">Control who can see and join your event.</p>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex items-start space-x-4 rounded-xl border p-4 bg-muted/10 transition-colors hover:bg-muted/30">
+                        <Checkbox
+                          id="isPublic"
+                          checked={isPublic}
+                          onCheckedChange={(checked: boolean) => setIsPublic(!!checked)}
+                          className="mt-1"
+                        />
+                        <div className="space-y-1">
+                          <Label htmlFor="isPublic" className="text-base font-medium flex items-center gap-2 cursor-pointer">
+                            <Eye className="w-4 h-4 text-muted-foreground" />
+                            Public Event
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            When enabled, this event will be visible in public listings for anyone to see.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-4 rounded-xl border p-4 bg-muted/10 transition-colors hover:bg-muted/30">
+                        <Checkbox
+                          id="requiresApproval"
+                          checked={requiresApproval}
+                          onCheckedChange={(checked: boolean) => setRequiresApproval(!!checked)}
+                          className="mt-1"
+                        />
+                        <div className="space-y-1">
+                          <Label htmlFor="requiresApproval" className="text-base font-medium flex items-center gap-2 cursor-pointer">
+                            <CheckSquare className="w-4 h-4 text-muted-foreground" />
+                            Require Approval
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            Users can request to join, but an admin must approve their registration.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-4 rounded-xl border border-destructive/20 p-4 bg-destructive/5 transition-colors hover:bg-destructive/10">
+                        <Checkbox
+                          id="isLocked"
+                          checked={isLocked}
+                          onCheckedChange={(checked: boolean) => setIsLocked(!!checked)}
+                          className="mt-1"
+                        />
+                        <div className="space-y-1">
+                          <Label htmlFor="isLocked" className="text-base font-medium flex items-center gap-2 cursor-pointer text-destructive">
+                            <Lock className="w-4 h-4" />
+                            Lock Registration
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            Prevent all new registrations, even if the registration deadline hasn&apos;t passed.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
 
+          {/* Fixed Footer */}
+          <div className="p-4 border-t bg-background flex justify-end gap-2 relative z-10">
+            <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
         </div>
-        <DialogFooter>
-          <Button type="submit" onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : "Save changes"}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
-
