@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label"
 import { createBingo } from "@/app/actions/bingo"
 import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { DateTimePicker } from "@/components/ui/date-time-picker"
+import { Checkbox } from "@/components/ui/checkbox"
 import generateOSRSCodePhrase from "@/lib/codephraseGenerator"
 import { PatternBonusSchematicEditor } from "./pattern-bonus-schematic-editor"
 import { ArrowLeft, ArrowRight, Dices, Grid3X3, ArrowUpRight, PlusCircle, CheckCircle2 } from "lucide-react"
@@ -61,6 +63,8 @@ export function CreateBingoModal({
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [codephrase, setCodephrase] = useState("")
+  const [inheritEventStart, setInheritEventStart] = useState(true)
+  const [scheduledUnlockDate, setScheduledUnlockDate] = useState<Date | undefined>(undefined)
 
   // Step 2
   const [bingoType, setBingoType] = useState<"standard" | "progression">("standard")
@@ -93,6 +97,8 @@ export function CreateBingoModal({
       setMainDiagonalBonus(0)
       setAntiDiagonalBonus(0)
       setCompleteBoardBonus(0)
+      setInheritEventStart(true)
+      setScheduledUnlockDate(undefined)
       setError(null)
     }
   }, [isOpen])
@@ -129,6 +135,10 @@ export function CreateBingoModal({
     formData.append("bingoType", bingoType)
     formData.append("rows", String(rows))
     formData.append("columns", String(columns))
+    
+    if (!inheritEventStart && scheduledUnlockDate) {
+      formData.append("scheduledUnlockDate", scheduledUnlockDate.toISOString())
+    }
 
     if (bingoType === "progression") {
       formData.append("tiersUnlockRequirement", String(tiersUnlockRequirement))
@@ -235,6 +245,45 @@ export function CreateBingoModal({
                       className="resize-none"
                       rows={4}
                     />
+                  </div>
+
+                  <div className="space-y-4 rounded-xl border p-4 bg-muted/20">
+                    <div>
+                      <h3 className="font-semibold text-sm">Visibility & Unlock</h3>
+                      <p className="text-xs text-muted-foreground mt-1">Configure when this board will become visible and unlocked for participants.</p>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="inheritEventStart" 
+                        checked={inheritEventStart}
+                        onCheckedChange={(checked) => setInheritEventStart(checked as boolean)}
+                      />
+                      <Label htmlFor="inheritEventStart" className="text-sm cursor-pointer">
+                        Unlock automatically when the event starts
+                      </Label>
+                    </div>
+
+                    <AnimatePresence>
+                      {!inheritEventStart && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="pt-2 space-y-2">
+                            <Label>Scheduled Unlock Time</Label>
+                            <DateTimePicker
+                              date={scheduledUnlockDate}
+                              setDate={setScheduledUnlockDate}
+                              placeholder="Select a custom unlock date and time"
+                            />
+                            <p className="text-xs text-muted-foreground">Uses the same timezone as the event.</p>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
               )}
@@ -376,6 +425,13 @@ export function CreateBingoModal({
                           <p className="font-medium">{tiersUnlockRequirement} XP</p>
                         </div>
                       )}
+                      
+                      <div className="col-span-2 mt-2 pt-2 border-t">
+                        <p className="text-muted-foreground text-xs mb-1">Unlock Schedule</p>
+                        <p className="font-medium">
+                          {inheritEventStart ? "At Event Start" : scheduledUnlockDate ? scheduledUnlockDate.toLocaleString() : "Not scheduled"}
+                        </p>
+                      </div>
                     </div>
                   </div>
 

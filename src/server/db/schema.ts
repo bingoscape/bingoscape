@@ -331,6 +331,7 @@ export const bingos = createTable("bingos", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   locked: boolean("locked").default(false).notNull(),
   visible: boolean("visible").default(false).notNull(),
+  scheduledUnlockDate: timestamp("scheduled_unlock_date", { mode: "date" }),
   womCompetitionId: integer("wom_competition_id"),
   womVerificationCode: varchar("wom_verification_code", { length: 255 }),
 })

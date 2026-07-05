@@ -19,9 +19,10 @@ import { QuickSubmissionButton } from "@/components/quick-submission-button"
 import { QuickSubmissionModal } from "@/components/quick-submission-modal"
 import Link from "next/link"
 import { TrackerSettingsModal } from "@/components/tracker-settings-modal"
-import { ListFilter, ChevronLeft, ChevronRight, Edit, Link as LinkIcon } from "lucide-react"
+import { ListFilter, ChevronLeft, ChevronRight, Edit, Link as LinkIcon, Lock } from "lucide-react"
 import type { UUID } from "crypto"
 import { useRouter } from "next/navigation"
+import { EventTimeDisplay } from "./event-time-display"
 
 interface EventBingosClientProps {
   event: any
@@ -56,7 +57,7 @@ export function EventBingosClient({
   // Filter bingos based on user role and visibility
   const visibleBingos =
     event.bingos?.filter(
-      (bingo: any) => isAdminOrManagement || bingo.visible === true
+      (bingo: any) => isAdminOrManagement || bingo.visible === true || bingo.locked === true
     ) ?? []
 
   // Get current bingo based on index
@@ -107,6 +108,9 @@ export function EventBingosClient({
       )
     }
   }
+
+  const isUpcoming = currentBingo && currentBingo.locked && !currentBingo.visible
+  const unlockDate = currentBingo ? (currentBingo.scheduledUnlockDate ? new Date(currentBingo.scheduledUnlockDate) : new Date(event.startDate)) : null
 
   return (
     <>
@@ -274,19 +278,42 @@ export function EventBingosClient({
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-4">
-            <div className="relative rounded-lg border border-muted/40 bg-muted/20 p-2">
-              <BingoGrid
-                key={currentBingo.id} // Add key to force re-render when bingo changes
-                bingo={currentBingo}
-                currentTeamId={effectiveTeamId}
-                teams={event.teams ?? []}
-                gameType={event.gameType || "osrs"}
-                highlightedTiles={[]}
-                isLayoutLocked={true}
-                userRole={userRole}
-              />
-            </div>
+          <CardContent className="p-4 relative">
+            {isUpcoming && !isAdminOrManagement ? (
+              <div className="flex flex-col items-center justify-center p-12 text-center rounded-lg border border-muted/40 bg-muted/20 min-h-[300px]">
+                <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                  <Lock className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Board Locked</h3>
+                <p className="text-muted-foreground mb-4 max-w-md">
+                  This bingo board is currently locked and will become available at:
+                </p>
+                {unlockDate && (
+                  <div className="bg-background rounded-md px-4 py-3 border font-medium text-lg">
+                    <EventTimeDisplay date={unlockDate} label="Unlocks" eventTz={event.timezone || "UTC"} />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="relative rounded-lg border border-muted/40 bg-muted/20 p-2">
+                {isUpcoming && isAdminOrManagement && (
+                  <div className="absolute top-4 right-4 z-10 bg-black/80 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20 backdrop-blur-sm">
+                    <Lock className="h-3 w-3" />
+                    Upcoming (Locked)
+                  </div>
+                )}
+                <BingoGrid
+                  key={currentBingo.id} // Add key to force re-render when bingo changes
+                  bingo={currentBingo}
+                  currentTeamId={effectiveTeamId}
+                  teams={event.teams ?? []}
+                  gameType={event.gameType || "osrs"}
+                  highlightedTiles={[]}
+                  isLayoutLocked={true}
+                  userRole={userRole}
+                />
+              </div>
+            )}
           </CardContent>
           <CardFooter className="flex flex-col justify-between gap-3 pt-4 sm:flex-row">
             <Link
