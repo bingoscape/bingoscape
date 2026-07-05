@@ -1,0 +1,1 @@
+ALTER TABLE "bingoscape-next_bingos" ADD COLUMN "scheduled_unlock_date" timestamp;

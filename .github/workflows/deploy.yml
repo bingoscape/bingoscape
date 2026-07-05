@@ -157,6 +157,7 @@ jobs:
             # APPLICATION CONFIGURATION
             # ==============================================
             SUPER_ADMIN_EMAILS="${{ secrets.SUPER_ADMIN_EMAILS }}"
+            CRON_SECRET="${{ secrets.CRON_SECRET }}"
             NODE_ENV=production
 
             # ==============================================

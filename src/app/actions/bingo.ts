@@ -282,6 +282,9 @@ export async function createBingo(formData: FormData) {
     parseInt((formData.get("antiDiagonalBonus") as string) || "0") || 0
   const completeBoardBonus =
     parseInt((formData.get("completeBoardBonus") as string) || "0") || 0
+    
+  const scheduledUnlockDateStr = formData.get("scheduledUnlockDate") as string
+  const scheduledUnlockDate = scheduledUnlockDateStr ? new Date(scheduledUnlockDateStr) : null
 
   const newBingo = await db
     .insert(bingos)
@@ -297,6 +300,7 @@ export async function createBingo(formData: FormData) {
       mainDiagonalBonusXP: rows === columns ? mainDiagonalBonus : 0,
       antiDiagonalBonusXP: rows === columns ? antiDiagonalBonus : 0,
       completeBoardBonusXP: bingoType === "standard" ? completeBoardBonus : 0,
+      scheduledUnlockDate,
     })
     .returning({ id: bingos.id })
 
