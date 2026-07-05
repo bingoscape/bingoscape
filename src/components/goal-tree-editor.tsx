@@ -114,7 +114,7 @@ export function GoalTreeEditor({
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showNewGroupDialog, setShowNewGroupDialog] = useState(false)
-  const [newGroupOperator, setNewGroupOperator] = useState<"AND" | "OR">("AND")
+  const [newGroupOperator, setNewGroupOperator] = useState<"AND" | "OR" | "SUM">("AND")
   const [newGroupMinRequired, setNewGroupMinRequired] = useState<number>(1)
   const [goalType, setGoalType] = useState<"generic" | "item" | "metric">("generic")
   const [selectedItems, setSelectedItems] = useState<OsrsItem[]>([])
@@ -471,7 +471,7 @@ export function GoalTreeEditor({
 
   const handleUpdateGroupOperator = async (
     groupId: string,
-    operator: "AND" | "OR"
+    operator: "AND" | "OR" | "SUM"
   ) => {
     const result = await updateGoalGroup(groupId, { logicalOperator: operator })
     if (result.success) {
@@ -870,7 +870,7 @@ export function GoalTreeEditor({
               <Select
                 value={newGroupOperator}
                 onValueChange={(v) => {
-                  setNewGroupOperator(v as "AND" | "OR")
+                  setNewGroupOperator(v as "AND" | "OR" | "SUM")
                   if (v === "AND") {
                     setNewGroupMinRequired(1) // Reset to 1 when switching to AND
                   }
@@ -881,33 +881,32 @@ export function GoalTreeEditor({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="AND">AND (all required)</SelectItem>
-                  <SelectItem value="OR">OR (configurable required)</SelectItem>
+                  <SelectItem value="OR">OR (min required)</SelectItem>
+                  <SelectItem value="SUM">SUM (pooled progress)</SelectItem>
                 </SelectContent>
               </Select>
               <p className="mt-1 text-xs text-muted-foreground">
                 {newGroupOperator === "AND"
                   ? "All goals in this group must be completed"
+                  : newGroupOperator === "SUM"
+                  ? "Progress from all goals is pooled"
                   : `At least ${newGroupMinRequired} goal${newGroupMinRequired !== 1 ? "s" : ""} in this group must be completed`}
               </p>
             </div>
-            {newGroupOperator === "OR" && (
-              <div>
-                <Label htmlFor="minRequired">Minimum Required Goals</Label>
-                <Input
-                  id="minRequired"
-                  type="number"
-                  min="1"
-                  value={newGroupMinRequired}
-                  onChange={(e) =>
-                    setNewGroupMinRequired(
-                      Math.max(1, Number.parseInt(e.target.value) || 1)
-                    )
-                  }
-                  className="mt-1"
-                />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  How many goals must be completed for this OR group to be
-                  satisfied
+            {(newGroupOperator === "OR" || newGroupOperator === "SUM") && (
+              <div className="flex flex-col gap-1 mt-2">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs shrink-0">{newGroupOperator === "SUM" ? "Target Sum:" : "Min Goals Required:"}</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    className="h-8 w-20"
+                    value={newGroupMinRequired}
+                    onChange={(e) => setNewGroupMinRequired(Math.max(1, Number.parseInt(e.target.value) || 1))}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  {newGroupOperator === "SUM" ? "The total numerical progress required across all children" : "How many goals must be completed for this OR group to be satisfied"}
                 </p>
               </div>
             )}
@@ -931,7 +930,7 @@ interface TreeNodeProps {
   node: FlatNode
   expanded: boolean
   onToggle: () => void
-  onUpdateOperator: (groupId: string, operator: "AND" | "OR") => void
+  onUpdateOperator: (groupId: string, operator: "AND" | "OR" | "SUM") => void
   onDeleteGroup: (groupId: string) => void
   onDeleteGoal: (goalId: string) => void
   onRefresh: () => void
@@ -1291,7 +1290,7 @@ function TreeNode({
                       <Select
                         value={groupData.logicalOperator}
                         onValueChange={(v) =>
-                          onUpdateOperator(node.id, v as "AND" | "OR")
+                          onUpdateOperator(node.id, v as "AND" | "OR" | "SUM")
                         }
                       >
                         <SelectTrigger className="h-7 w-24">
@@ -1300,6 +1299,7 @@ function TreeNode({
                         <SelectContent>
                           <SelectItem value="AND">AND</SelectItem>
                           <SelectItem value="OR">OR</SelectItem>
+                          <SelectItem value="SUM">SUM</SelectItem>
                         </SelectContent>
                       </Select>
                     ) : (
@@ -1313,7 +1313,7 @@ function TreeNode({
                         {groupData.logicalOperator}
                       </Badge>
                     )}
-                    {groupData.logicalOperator === "OR" && (
+                    {(groupData.logicalOperator === "OR" || groupData.logicalOperator === "SUM") && (
                       <>
                         {isEditingMinRequired ? (
                           <div className="flex items-center gap-1">
@@ -1371,7 +1371,7 @@ function TreeNode({
                         ) : (
                           <div className="flex items-center gap-1">
                             <Badge variant="outline" className="text-xs">
-                              Min: {(groupData.minRequiredGoals as number) || 1}
+                              {groupData.logicalOperator === "SUM" ? "Target:" : "Min:"} {(groupData.minRequiredGoals as number) || 1}
                             </Badge>
                             {hasSufficientRights && (
                               <Button

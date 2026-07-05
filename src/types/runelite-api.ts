@@ -65,7 +65,7 @@ export interface GoalNode extends BaseGoalTreeNode {
 export interface GroupNode extends BaseGoalTreeNode {
   type: "group"
   name: string | null
-  logicalOperator: "AND" | "OR"
+  logicalOperator: "AND" | "OR" | "SUM"
   minRequiredGoals: number
   progress?: GroupProgressData
   children: GoalTreeNode[]
