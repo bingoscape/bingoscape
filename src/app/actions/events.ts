@@ -37,7 +37,6 @@ import { nanoid } from "nanoid"
 import { revalidatePath } from "next/cache"
 import type { GoalValue } from "./goals"
 import { logger } from "@/lib/logger"
-import { fromZonedTime } from "date-fns-tz"
 
 export interface Image {
   id: string
@@ -299,10 +298,10 @@ export async function createEvent(formData: FormData) {
     return { success: false, error: "Missing required fields" }
   }
 
-  const startDate = fromZonedTime(startDateStr, timezone)
-  const endDate = fromZonedTime(endDateStr, timezone)
+  const startDate = new Date(startDateStr)
+  const endDate = new Date(endDateStr)
   const registrationDeadline = registrationDeadlineStr
-    ? fromZonedTime(registrationDeadlineStr, timezone)
+    ? new Date(registrationDeadlineStr)
     : null
 
   if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
@@ -801,10 +800,10 @@ export async function updateEvent(
       .set({
         title: eventData.title,
         description: eventData.description,
-        startDate: fromZonedTime(eventData.startDate, eventData.timezone || "UTC"),
-        endDate: fromZonedTime(eventData.endDate, eventData.timezone || "UTC"),
+        startDate: new Date(eventData.startDate),
+        endDate: new Date(eventData.endDate),
         registrationDeadline: eventData.registrationDeadline
-          ? fromZonedTime(eventData.registrationDeadline, eventData.timezone || "UTC")
+          ? new Date(eventData.registrationDeadline)
           : null,
         timezone: eventData.timezone,
         minimumBuyIn: eventData.minimumBuyIn,

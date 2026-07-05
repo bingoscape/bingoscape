@@ -1,0 +1,4 @@
+ALTER TABLE "bingoscape-next_bingos" ALTER COLUMN "scheduled_unlock_date" SET DATA TYPE timestamp with time zone USING "scheduled_unlock_date" AT TIME ZONE 'UTC';--> statement-breakpoint
+ALTER TABLE "bingoscape-next_events" ALTER COLUMN "start_date" SET DATA TYPE timestamp with time zone USING "start_date" AT TIME ZONE 'UTC';--> statement-breakpoint
+ALTER TABLE "bingoscape-next_events" ALTER COLUMN "end_date" SET DATA TYPE timestamp with time zone USING "end_date" AT TIME ZONE 'UTC';--> statement-breakpoint
+ALTER TABLE "bingoscape-next_events" ALTER COLUMN "registration_deadline" SET DATA TYPE timestamp with time zone USING "registration_deadline" AT TIME ZONE 'UTC';

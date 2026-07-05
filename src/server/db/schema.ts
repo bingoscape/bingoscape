@@ -210,10 +210,11 @@ export const events = createTable("events", {
   id: uuid("id").defaultRandom().primaryKey(),
   title: varchar("name", { length: 255 }).notNull(),
   description: varchar("description", { length: 1000 }),
-  startDate: timestamp("start_date", { mode: "date" }).notNull(),
-  endDate: timestamp("end_date", { mode: "date" }).notNull(),
+  startDate: timestamp("start_date", { mode: "date", withTimezone: true }).notNull(),
+  endDate: timestamp("end_date", { mode: "date", withTimezone: true }).notNull(),
   registrationDeadline: timestamp("registration_deadline", {
     mode: "date",
+    withTimezone: true,
   }),
   timezone: varchar("timezone", { length: 100 }).notNull().default("UTC"),
   creatorId: uuid("creator_id").references(() => users.id, {
@@ -331,7 +332,7 @@ export const bingos = createTable("bingos", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   locked: boolean("locked").default(false).notNull(),
   visible: boolean("visible").default(false).notNull(),
-  scheduledUnlockDate: timestamp("scheduled_unlock_date", { mode: "date" }),
+  scheduledUnlockDate: timestamp("scheduled_unlock_date", { mode: "date", withTimezone: true }),
   womCompetitionId: integer("wom_competition_id"),
   womVerificationCode: varchar("wom_verification_code", { length: 255 }),
 })
