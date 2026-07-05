@@ -745,6 +745,18 @@ export async function generateBalancedTeams(
 
   revalidatePath(`/events/${eventId}`)
 
+  logger.info({
+    eventId,
+    action: "generateBalancedTeams",
+    teamsCreated: numberOfTeams,
+    participantsAssigned: unassignedParticipants.length,
+    objectiveScore: optimizedAssignment.objective,
+    saConfig: {
+      iterations: saConfig.iterations,
+      varianceWeights: saConfig.varianceWeights
+    }
+  }, "Balanced teams generated successfully")
+
   return {
     teamsCreated: numberOfTeams,
     participantsAssigned: unassignedParticipants.length,

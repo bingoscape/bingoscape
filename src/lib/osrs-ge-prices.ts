@@ -5,6 +5,8 @@
  * API Documentation: https://oldschool.runescape.wiki/w/RuneScape:Real-time_Prices
  */
 
+import { logger } from "@/lib/logger"
+
 // Type definitions for GE API responses
 interface GEPriceData {
   high: number | null
@@ -88,7 +90,7 @@ async function fetchAllGEPrices(): Promise<Map<number, CachedPrice>> {
     lastFullFetch = now;
     return prices;
   } catch (error) {
-    console.error("Error fetching GE prices:", error);
+    logger.error({ error, action: "fetchAllGEPrices" }, "Error fetching GE prices")
     throw new Error(`Failed to fetch GE prices: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }

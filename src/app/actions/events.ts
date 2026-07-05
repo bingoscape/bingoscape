@@ -358,9 +358,20 @@ export async function createEvent(formData: FormData) {
 
     revalidatePath("/")
 
+    if (newEvent) {
+      logger.info({ 
+        eventId: newEvent.id, 
+        creatorId: session.user.id, 
+        gameType: newEvent.gameType,
+        requiresApproval: newEvent.requiresApproval,
+        basePrizePool: newEvent.basePrizePool,
+        minimumBuyIn: newEvent.minimumBuyIn
+      }, "Event created successfully")
+    }
+
     return { success: !!newEvent }
   } catch (error) {
-    logger.error({ error }, "Error creating event")
+    logger.error({ error, action: "createEvent", userId: session.user.id }, "Error creating event")
     return { success: false, error: "Failed to create event" }
   }
 }
@@ -808,9 +819,19 @@ export async function updateEvent(
     // Revalidate the event page to reflect the changes
     revalidatePath(`/events/${eventId}`)
 
+    logger.info({
+      eventId,
+      action: "updateEvent",
+      locked: eventData.locked,
+      public: eventData.public,
+      requiresApproval: eventData.requiresApproval,
+      basePrizePool: eventData.basePrizePool,
+      minimumBuyIn: eventData.minimumBuyIn
+    }, "Event updated successfully")
+
     return { success: true }
   } catch (error) {
-    logger.error({ error }, "Error updating event")
+    logger.error({ error, eventId, action: "updateEvent" }, "Error updating event")
     throw new Error("Failed to update event")
   }
 }
