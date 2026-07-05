@@ -72,7 +72,7 @@ export async function registerUser(input: SignUpInput) {
     }
 
     // Log other errors but don't expose details
-    logger.error({ error }, "Registration error:", error)
+    logger.error("Registration error")
     return {
       success: false,
       error: "An unexpected error occurred. Please try again.",
