@@ -302,6 +302,8 @@ export async function createBingo(formData: FormData) {
       antiDiagonalBonusXP: rows === columns ? antiDiagonalBonus : 0,
       completeBoardBonusXP: bingoType === "standard" ? completeBoardBonus : 0,
       scheduledUnlockDate,
+      locked: true,
+      visible: false,
     })
     .returning({ id: bingos.id })
 
