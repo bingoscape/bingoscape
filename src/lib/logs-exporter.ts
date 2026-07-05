@@ -8,7 +8,7 @@ import type { LogEntry } from './logger';
 let isInitialized = false;
 let loggerProvider: LoggerProvider | null = null;
 
-const LOG_EXPORT_URL = process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT 
+const LOG_EXPORT_URL = process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
   ?? (process.env.OTEL_EXPORTER_OTLP_ENDPOINT ? `${process.env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/logs` : 'http://localhost:4318/v1/logs');
 
 function createLoggerProvider() {
@@ -55,7 +55,6 @@ function getSeverityNumber(level: LogEntry['level']): number {
     case 'info': return 9;
     case 'warn': return 13;
     case 'error': return 17;
-    case 'fatal': return 21;
     default: return 9;
   }
 }

@@ -1,184 +1,127 @@
-import pino from "pino";
-import { trace } from "@opentelemetry/api";
-import { exportLogEntry } from "./logs-exporter";
+import { trace } from '@opentelemetry/api'
+import { exportLogEntry } from '@/lib/logs-exporter'
 
 export interface LogContext {
-  traceId?: string;
-  spanId?: string;
-  [key: string]: unknown;
+  traceId?: string
+  spanId?: string
+  [key: string]: unknown
 }
 
+// This interface is imported by logs-exporter.ts
 export interface LogEntry {
-  timestamp: string;
-  level: "debug" | "info" | "warn" | "error" | "fatal";
-  message: string;
-  context: LogContext;
-  error?: Error;
+  timestamp: string
+  level: 'debug' | 'info' | 'warn' | 'error'
+  message: string
+  context: LogContext
+  error?: Error
 }
 
-// Determine log level from environment
-const logLevel =
-  process.env.LOG_LEVEL ||
-  (process.env.NODE_ENV === "production" ? "info" : "debug");
+class Logger {
+  private getTraceContext(): Pick<LogContext, 'traceId' | 'spanId'> {
+    const span = trace.getActiveSpan()
+    if (!span) return {}
+    const { traceId, spanId } = span.spanContext()
+    return { traceId, spanId }
+  }
 
-const otelStream = {
-  write(msg: string) {
-    // 1. Write to stdout so Docker captures it
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const proc = typeof process !== "undefined" ? (process as any) : null;
-    if (proc?.stdout?.write) {
-      proc.stdout.write(msg);
-    } else {
-      console.log(msg);
+  private log(
+    level: 'debug' | 'info' | 'warn' | 'error',
+    message: string,
+    context?: LogContext,
+    error?: Error
+  ) {
+    const entry: LogEntry = {
+      // Use the LogEntry type
+      timestamp: new Date().toISOString(),
+      level,
+      message,
+      context: { ...this.getTraceContext(), ...context },
+      error,
     }
-    
-    // 2. Parse and send to OpenTelemetry
-    try {
-      const parsed = JSON.parse(msg);
-      
-      let level: LogEntry["level"] = "info";
-      if (parsed.level === 20) level = "debug";
-      if (parsed.level === 30) level = "info";
-      if (parsed.level === 40) level = "warn";
-      if (parsed.level >= 50) level = "error";
 
-      exportLogEntry({
-        timestamp: new Date(parsed.time || Date.now()).toISOString(),
-        level,
-        message: parsed.msg || "",
-        context: {
-           traceId: parsed.trace_id,
-           spanId: parsed.span_id,
-           ...parsed,
-        },
-        error: parsed.err || parsed.error,
-      });
-    } catch {
-      // Ignore parse errors
+    if (typeof window === 'undefined') {
+      exportLogEntry(entry)
     }
   }
-};
 
-const options: pino.LoggerOptions = {
-  level: logLevel,
+  private _handleArgs(
+    level: 'debug' | 'info' | 'warn' | 'error',
+    arg1: string | LogContext,
+    arg2?: unknown,
+    ...args: unknown[]
+  ) {
+    let message = ''
+    let context: LogContext = {}
+    let error: Error | undefined = undefined
 
-  // Mixin to inject active trace context into every log entry
-  mixin() {
-    const span = trace.getActiveSpan();
-    if (span) {
-      const spanContext = span.spanContext();
-      return {
-        trace_id: spanContext.traceId,
-        span_id: spanContext.spanId,
-        trace_flags: `0${spanContext.traceFlags.toString(16)}`,
-      };
-    }
-    return {};
-  },
-
-  ...(process.env.NODE_ENV === "production"
-    ? {
-        formatters: {
-          level: (label) => ({ level: label }),
-        },
-        timestamp: pino.stdTimeFunctions.isoTime,
+    if (typeof arg1 === 'string') {
+      message = arg1
+      if (level === 'error') {
+        if (arg2 instanceof Error) {
+          error = arg2
+          if (args.length > 0 && typeof args[0] === 'object' && args[0] !== null) {
+            context = args[0] as LogContext
+          }
+        } else if (typeof arg2 === 'object' && arg2 !== null) {
+          context = arg2 as LogContext
+        }
+      } else {
+        if (typeof arg2 === 'object' && arg2 !== null) {
+          context = arg2 as LogContext
+        }
       }
-    : {
-        transport: {
-          target: "pino-pretty",
-          options: {
-            colorize: true,
-            translateTime: "HH:MM:ss Z",
-            ignore: "pid,hostname",
-          },
-        },
-      }),
+    } else if (typeof arg1 === 'object' && arg1 !== null) {
+      context = arg1 as LogContext
+      if (typeof arg2 === 'string') {
+        message = arg2
+      }
+      if (args.length > 0) {
+        if (args[0] instanceof Error) {
+          error = args[0]
+        } else if (args[0] !== undefined) {
+          error = new Error(String(args[0]))
+        }
+      }
+    }
 
-  // Base context included in all logs
-  base: {
-    env: process.env.NODE_ENV,
-    service: "bingoscape",
-  },
+    // Make sure we have an Error instance for the entry
+    if (!error && context.error instanceof Error) {
+      error = context.error
+    } else if (!error && context.err instanceof Error) {
+      error = context.err
+    } else if (!error && context.error) {
+      error = new Error(String(context.error))
+    } else if (!error && context.err) {
+      error = new Error(String(context.err))
+    }
 
-  // Redact sensitive fields
-  redact: {
-    paths: [
-      "password",
-      "token",
-      "accessToken",
-      "refreshToken",
-      "secret",
-      "apiKey",
-      "authorization",
-      "*.password",
-      "*.token",
-      "*.secret",
-      "req.headers.authorization",
-      "req.headers.cookie",
-    ],
-    remove: true,
-  },
+    this.log(level, message, context, error)
+  }
 
-  // Serialize errors properly
-  serializers: {
-    err: pino.stdSerializers.err,
-    error: pino.stdSerializers.err,
-    req: pino.stdSerializers.req,
-    res: pino.stdSerializers.res,
-  },
-};
+  // Public methods for a complete logger
+  info(message: string, context?: LogContext): void;
+  info(context: LogContext, message: string, ...args: unknown[]): void;
+  info(arg1: string | LogContext, arg2?: unknown, ...args: unknown[]) {
+    this._handleArgs('info', arg1, arg2, ...args)
+  }
 
-// Create the logger instance
-export const logger = process.env.NODE_ENV === "production"
-  ? pino(options, otelStream)
-  : pino(options);
+  debug(message: string, context?: LogContext): void;
+  debug(context: LogContext, message: string, ...args: unknown[]): void;
+  debug(arg1: string | LogContext, arg2?: unknown, ...args: unknown[]) {
+    this._handleArgs('debug', arg1, arg2, ...args)
+  }
 
-/**
- * Create a child logger with additional context
- * @param context - Additional context to include in all logs from this logger
- */
-export function createLogger(context: Record<string, unknown>) {
-  return logger.child(context);
-}
+  warn(message: string, context?: LogContext): void;
+  warn(context: LogContext, message: string, ...args: unknown[]): void;
+  warn(arg1: string | LogContext, arg2?: unknown, ...args: unknown[]) {
+    this._handleArgs('warn', arg1, arg2, ...args)
+  }
 
-/**
- * Log with execution time measurement
- * @param fn - Async function to execute
- * @param context - Context for logging
- */
-export async function withLogging<T>(
-  fn: () => Promise<T>,
-  context: {
-    operation: string;
-    userId?: string;
-    [key: string]: unknown;
-  },
-): Promise<T> {
-  const startTime = Date.now();
-  const childLogger = logger.child(context);
-
-  try {
-    childLogger.info({ event: "start" }, `Starting ${context.operation}`);
-    const result = await fn();
-    const duration = Date.now() - startTime;
-
-    childLogger.info(
-      { event: "complete", duration },
-      `Completed ${context.operation} in ${duration}ms`,
-    );
-
-    return result;
-  } catch (error) {
-    const duration = Date.now() - startTime;
-
-    childLogger.error(
-      { event: "error", error, duration },
-      `Failed ${context.operation} after ${duration}ms`,
-    );
-
-    throw error;
+  error(message: string, error?: Error, context?: LogContext): void;
+  error(context: LogContext, message: string, ...args: unknown[]): void;
+  error(arg1: string | LogContext, arg2?: unknown, ...args: unknown[]) {
+    this._handleArgs('error', arg1, arg2, ...args)
   }
 }
 
-// Export default logger
-export default logger;
+export const logger = new Logger()
