@@ -211,9 +211,10 @@ export async function updateTile(
 ) {
   try {
     await db.update(tiles).set(updatedTile).where(eq(tiles.id, tileId))
+    logger.info({ tileId, action: "updateTile" }, "Tile updated successfully")
     return { success: true }
   } catch (error) {
-    logger.error({ error }, "Error updating tile")
+    logger.error({ error, tileId, action: "updateTile" }, "Error updating tile")
     return { success: false, error: "Failed to update tile" }
   }
 }
@@ -365,6 +366,15 @@ export async function createBingo(formData: FormData) {
   if (bingoType === "progression") {
     await initializeTierXpRequirements(bingoId, tiersUnlockRequirement)
   }
+
+  logger.info({
+    eventId,
+    bingoId,
+    bingoType,
+    rows,
+    columns,
+    action: "createBingo"
+  }, "Bingo created successfully")
 
   return { success: true }
 }
@@ -1103,9 +1113,19 @@ export async function submitImage(formData: FormData) {
     // Revalidate the bingo page
     revalidatePath("/bingo")
 
+    logger.info({
+      submissionId: newSubmission?.submission?.id,
+      tileId,
+      teamId: effectiveTeamId,
+      submitterId: session.user.id,
+      targetUserId: targetUser.id,
+      action: "submitImage"
+    }, "Image submitted successfully")
+
     return { success: true, submission: newSubmission.submission }
   } catch (error) {
-    logger.error({ error }, "Error submitting image")
+    const catchTileId = formData.get("tileId") as string | null
+    logger.error({ error, tileId: catchTileId, action: "submitImage" }, "Error submitting image")
     return { success: false, error: (error as Error).message }
   }
 }
@@ -1244,9 +1264,16 @@ export async function updateSubmissionStatus(
     // Revalidate the submissions page
     revalidatePath("/bingo")
 
+    logger.info({
+      submissionId,
+      newStatus,
+      reviewerId: session.user.id,
+      action: "updateSubmissionStatus"
+    }, "Submission status updated")
+
     return { success: true, submission: updatedSubmission }
   } catch (error) {
-    logger.error({ error }, "Error updating submission status")
+    logger.error({ error, submissionId, action: "updateSubmissionStatus" }, "Error updating submission status")
     return { success: false, error: "Failed to update submission status" }
   }
 }
@@ -1305,9 +1332,16 @@ export async function updateTeamTileSubmissionStatus(
     // Revalidate the submissions page
     revalidatePath("/bingo")
 
+    logger.info({
+      teamTileSubmissionId,
+      newStatus,
+      reviewerId: session.user.id,
+      action: "updateTeamTileSubmissionStatus"
+    }, "Team tile submission status updated")
+
     return { success: true, teamTileSubmission: updatedTeamTileSubmission }
   } catch (error) {
-    logger.error({ error }, "Error updating team tile submission status")
+    logger.error({ error, teamTileSubmissionId, action: "updateTeamTileSubmissionStatus" }, "Error updating team tile submission status")
     return {
       success: false,
       error: "Failed to update team tile submission status",
@@ -1460,10 +1494,17 @@ export async function updateSubmissionStatusWithComment(
       // Revalidate the submissions page
       revalidatePath("/bingo")
 
+      logger.info({
+        submissionId,
+        newStatus,
+        reviewerId: session.user.id,
+        action: "updateSubmissionStatusWithComment"
+      }, "Submission status with comment updated")
+
       return { success: true, submission: updatedSubmission }
     })
   } catch (error) {
-    logger.error({ error }, "Error updating submission status with comment")
+    logger.error({ error, submissionId, action: "updateSubmissionStatusWithComment" }, "Error updating submission status with comment")
     return { success: false, error: "Failed to update submission status" }
   }
 }

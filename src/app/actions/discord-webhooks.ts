@@ -75,6 +75,7 @@ export async function createDiscordWebhook(
     // Test the webhook first
     const testResult = await testDiscordWebhook(webhookUrl)
     if (!testResult) {
+      logger.warn({ eventId, action: "createDiscordWebhook" }, "Webhook test failed during creation")
       return { success: false, error: `Webhook test failed` }
     }
 
@@ -112,9 +113,11 @@ export async function createDiscordWebhook(
 
     revalidatePath(`/events/${eventId}`)
 
+    logger.info({ eventId, webhookId: webhook!.id, action: "createDiscordWebhook" }, "Discord webhook created successfully")
+
     return { success: true, webhook: webhook! }
   } catch (error) {
-    logger.error({ error }, "Error creating Discord webhook:", error)
+    logger.error({ error, eventId, action: "createDiscordWebhook" }, "Error creating Discord webhook")
     return { success: false, error: "Failed to create webhook" }
   }
 }
@@ -164,6 +167,7 @@ export async function updateDiscordWebhook(
 
       const testResult = await testDiscordWebhook(updates.webhookUrl)
       if (!testResult) {
+        logger.warn({ webhookId, action: "updateDiscordWebhook" }, "Webhook test failed during update")
         return { success: false, error: `Webhook test failed` }
       }
     }
@@ -178,9 +182,11 @@ export async function updateDiscordWebhook(
 
     revalidatePath(`/events/${webhook.eventId}`)
 
+    logger.info({ webhookId, eventId: webhook.eventId, action: "updateDiscordWebhook" }, "Discord webhook updated successfully")
+
     return { success: true }
   } catch (error) {
-    logger.error({ error }, "Error updating Discord webhook:", error)
+    logger.error({ error, webhookId, action: "updateDiscordWebhook" }, "Error updating Discord webhook")
     return { success: false, error: "Failed to update webhook" }
   }
 }
@@ -224,9 +230,11 @@ export async function deleteDiscordWebhook(webhookId: string): Promise<{ success
 
     revalidatePath(`/events/${webhook.eventId}`)
 
+    logger.info({ webhookId, eventId: webhook.eventId, action: "deleteDiscordWebhook" }, "Discord webhook deleted successfully")
+
     return { success: true }
   } catch (error) {
-    logger.error({ error }, "Error deleting Discord webhook:", error)
+    logger.error({ error, webhookId, action: "deleteDiscordWebhook" }, "Error deleting Discord webhook")
     return { success: false, error: "Failed to delete webhook" }
   }
 }
@@ -246,9 +254,16 @@ export async function testWebhook(webhookId: string): Promise<{ success: boolean
       return { success: false, error: "Webhook not found" }
     }
 
-    return { success: await testDiscordWebhook(webhook.webhookUrl), error: "Failed to test webhook" }
+    const success = await testDiscordWebhook(webhook.webhookUrl)
+    if (!success) {
+      logger.warn({ webhookId, action: "testWebhook" }, "Webhook test failed")
+    } else {
+      logger.info({ webhookId, action: "testWebhook" }, "Webhook test succeeded")
+    }
+
+    return { success, error: "Failed to test webhook" }
   } catch (error) {
-    logger.error({ error }, "Error testing webhook:", error)
+    logger.error({ error, webhookId, action: "testWebhook" }, "Error testing webhook")
     return { success: false, error: "Failed to test webhook" }
   }
 }

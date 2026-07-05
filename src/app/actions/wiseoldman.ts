@@ -79,6 +79,7 @@ export async function fetchPlayerDataFromWOM(
       }
     }
 
+    logger.debug({ runescapeName, action: "fetchPlayerDataFromWOM" }, "Successfully fetched player data from WiseOldMan")
     return {
       success: true,
       data: {
@@ -91,11 +92,12 @@ export async function fetchPlayerDataFromWOM(
       },
     }
   } catch (error) {
-    logger.error({ error }, "Error fetching WiseOldMan data:", error)
+    logger.error({ error, runescapeName, action: "fetchPlayerDataFromWOM" }, "Error fetching WiseOldMan data")
 
     // Handle specific error cases
     if (error instanceof Error) {
       if (error.message.includes("404") || error.message.includes("not found")) {
+        logger.warn({ runescapeName, action: "fetchPlayerDataFromWOM" }, "Player not found on WiseOldMan")
         return {
           success: false,
           error: "Player not found on WiseOldMan. They may need to be tracked first at wiseoldman.net",
@@ -103,6 +105,7 @@ export async function fetchPlayerDataFromWOM(
       }
 
       if (error.message.includes("429") || error.message.includes("rate limit")) {
+        logger.warn({ runescapeName, action: "fetchPlayerDataFromWOM" }, "WiseOldMan API rate limit exceeded")
         return {
           success: false,
           error: "Rate limit exceeded. Please try again in a few minutes.",
@@ -137,9 +140,13 @@ export async function updatePlayerOnWOM(runescapeName: string): Promise<FetchWOM
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
     // Fetch the updated data
-    return await fetchPlayerDataFromWOM(runescapeName)
+    const updatedData = await fetchPlayerDataFromWOM(runescapeName)
+    if (updatedData.success) {
+      logger.info({ runescapeName, action: "updatePlayerOnWOM" }, "Successfully updated player on WiseOldMan")
+    }
+    return updatedData
   } catch (error) {
-    logger.error({ error }, "Error updating WiseOldMan data:", error)
+    logger.error({ error, runescapeName, action: "updatePlayerOnWOM" }, "Error updating WiseOldMan data")
 
     return {
       success: false,

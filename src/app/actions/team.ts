@@ -9,6 +9,16 @@ import { revalidatePath } from "next/cache"
 export async function createTeam(eventId: string, name: string) {
   const [team] = await db.insert(teams).values({ eventId, name }).returning()
   revalidatePath(`/events/${eventId}`)
+  
+  if (team) {
+    logger.info({
+      eventId,
+      teamId: team.id,
+      teamName: name,
+      action: "createTeam"
+    }, "Team created successfully")
+  }
+  
   return team
 }
 
@@ -56,6 +66,12 @@ export async function addUserToTeam(teamId: string, userId: string) {
   })
   if (team) {
     revalidatePath(`/events/${team.event.id}`)
+    logger.info({
+      eventId: team.event.id,
+      teamId,
+      userId,
+      action: "addUserToTeam"
+    }, "User added to team successfully")
   }
   return member
 }
@@ -68,6 +84,12 @@ export async function removeUserFromTeam(teamId: string, userId: string) {
   await db.delete(teamMembers).where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId)))
   if (team) {
     revalidatePath(`/events/${team.event.id}`)
+    logger.info({
+      eventId: team.event.id,
+      teamId,
+      userId,
+      action: "removeUserFromTeam"
+    }, "User removed from team successfully")
   }
 }
 
@@ -80,6 +102,11 @@ export async function deleteTeam(teamId: string) {
   await db.delete(teams).where(eq(teams.id, teamId))
   if (team) {
     revalidatePath(`/events/${team.event.id}`)
+    logger.info({
+      eventId: team.event.id,
+      teamId,
+      action: "deleteTeam"
+    }, "Team deleted successfully")
   }
 }
 
