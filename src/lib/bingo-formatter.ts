@@ -425,52 +425,87 @@ function formatGoalNode(
  * - totalCount: for OR groups, use minRequiredGoals; for AND groups, use total children
  * - isComplete: whether the group requirements are met
  */
-function calculateGroupProgress(
+export function calculateGroupProgress(
   groupNode: GroupNode,
   allGoals: Array<{ id: string; targetValue: number }>,
   teamProgressMap: Map<string, number>
 ): GroupProgressData {
-  // Check if each immediate child is complete
-  function isChildComplete(node: GoalTreeNode): boolean {
+  // Check if each immediate child is complete and its numerical progress
+  function getChildProgress(node: GoalTreeNode): { isComplete: boolean, currentValue: number } {
     if (node.type === "goal") {
       const currentValue = teamProgressMap.get(node.id) ?? 0
-      return currentValue >= node.targetValue!
+      return {
+        isComplete: currentValue >= node.targetValue!,
+        currentValue
+      }
     } else {
       // For nested groups, recursively evaluate based on their logical operator
-      const childResults = node.children.map(isChildComplete)
+      const childResults = node.children.map(getChildProgress)
+
+      let isComplete = false
+      let currentValue = 0
 
       if (node.logicalOperator === "AND") {
-        // AND: all children must be complete
-        return childResults.every((result) => result)
+        isComplete = childResults.every((result) => result.isComplete)
+        currentValue = isComplete ? 1 : 0
+      } else if (node.logicalOperator === "OR") {
+        const completedChildren = childResults.filter((result) => result.isComplete).length
+        isComplete = completedChildren >= node.minRequiredGoals
+        currentValue = isComplete ? 1 : 0
       } else {
-        // OR: at least minRequiredGoals children must be complete
-        const completedChildren = childResults.filter((result) => result).length
-        return completedChildren >= node.minRequiredGoals
+        // SUM operator uses pooled sum logic
+        for (let i = 0; i < node.children.length; i++) {
+          const childNode = node.children[i]!
+          const result = childResults[i]!
+          if (childNode.type === "goal") {
+            currentValue += result.currentValue
+          } else {
+            currentValue += result.isComplete ? 1 : 0
+          }
+        }
+        isComplete = currentValue >= node.minRequiredGoals
       }
+
+      return { isComplete, currentValue }
     }
   }
 
-  // Count completed immediate children
-  const childCompletionResults = groupNode.children.map(isChildComplete)
-  const completedCount = childCompletionResults.filter((result) => result).length
+  // Get progress results for all immediate children
+  const childResults = groupNode.children.map(getChildProgress)
+  const completedCount = childResults.filter((result) => result.isComplete).length
 
-  // Determine totalCount based on logical operator
   let totalCount: number
+  let calculatedCompletedCount: number
+  let isComplete: boolean
+
   if (groupNode.logicalOperator === "AND") {
     // AND: all children must be complete
     totalCount = groupNode.children.length
-  } else {
+    calculatedCompletedCount = completedCount
+    isComplete = calculatedCompletedCount === totalCount
+  } else if (groupNode.logicalOperator === "OR") {
     // OR: only minRequiredGoals need to be complete
     totalCount = Math.min(groupNode.minRequiredGoals, groupNode.children.length)
+    calculatedCompletedCount = completedCount
+    isComplete = calculatedCompletedCount >= groupNode.minRequiredGoals
+  } else {
+    // SUM: sum uncapped goal progress and boolean group completions
+    totalCount = groupNode.minRequiredGoals
+    calculatedCompletedCount = 0
+    for (let i = 0; i < groupNode.children.length; i++) {
+      const childNode = groupNode.children[i]!
+      const result = childResults[i]!
+      if (childNode.type === "goal") {
+        calculatedCompletedCount += result.currentValue
+      } else {
+        calculatedCompletedCount += result.isComplete ? 1 : 0
+      }
+    }
+    isComplete = calculatedCompletedCount >= totalCount
   }
 
-  // Determine if the group is complete
-  const isComplete = groupNode.logicalOperator === "AND"
-    ? completedCount === groupNode.children.length
-    : completedCount >= groupNode.minRequiredGoals
-
   return {
-    completedCount,
+    completedCount: calculatedCompletedCount,
     totalCount,
     isComplete,
   }

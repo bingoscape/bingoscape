@@ -154,7 +154,7 @@ export const registrationStatusEnum = pgEnum("registration_status", [
 ])
 export const bingoTypeEnum = pgEnum("bingo_type", ["standard", "progression"])
 export const gameTypeEnum = pgEnum("game_type", ["osrs", "rs3"])
-export const logicalOperatorEnum = pgEnum("logical_operator", ["AND", "OR"])
+export const logicalOperatorEnum = pgEnum("logical_operator", ["AND", "OR", "SUM"])
 export const goalTypeEnum = pgEnum("goal_type", ["generic", "item", "metric"])
 export const skillLevelEnum = pgEnum("skill_level", [
   "beginner",
@@ -432,7 +432,7 @@ export const goalGroups = createTable("goal_groups", {
   ),
   name: text("name"), // Optional custom name for the group
   logicalOperator: logicalOperatorEnum("logical_operator").notNull(),
-  minRequiredGoals: integer("min_required_goals").notNull().default(1), // For OR groups: minimum number of goals that must be completed
+  minRequiredGoals: integer("min_required_goals").notNull().default(1), // For OR: min goals complete. For SUM: target cumulative progress
   orderIndex: integer("order_index").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

@@ -82,16 +82,29 @@ export function CompactGoalTree({
     // Apply logical operator
     let isComplete = false
     const minRequired = (groupData.minRequiredGoals as number) || 1
+    let displayTotal = totalChildren
+    let displayCompleted = completedCount
 
     if (groupData.logicalOperator === "AND") {
       isComplete = totalChildren > 0 && completedCount === totalChildren
-    } else {
+    } else if (groupData.logicalOperator === "OR") {
       // OR - check if at least minRequiredGoals are complete
       isComplete = completedCount >= minRequired
+      displayTotal = minRequired
+    } else {
+      // SUM
+      let sum = 0
+      for (const child of evaluatedChildren) {
+        if (child.type === "goal") {
+          sum += child.progress?.currentValue ?? 0
+        } else {
+          sum += child.isGroupComplete ? 1 : 0
+        }
+      }
+      isComplete = sum >= minRequired
+      displayTotal = minRequired
+      displayCompleted = sum
     }
-
-    const displayTotal = groupData.logicalOperator === "OR" ? minRequired : totalChildren
-    const displayCompleted = completedCount
 
     return {
       ...node,
@@ -161,7 +174,9 @@ function CompactTreeNode({ node, depth, showProgress, maxDepth }: CompactTreeNod
                 <strong>Group ({groupData.logicalOperator}):</strong>
                 {" "}{groupData.logicalOperator === "AND"
                   ? "All goals required"
-                  : "Any one goal required"}
+                  : groupData.logicalOperator === "OR"
+                    ? `At least ${groupData.minRequiredGoals || 1} goal(s) required`
+                    : `Requires cumulative progress of ${groupData.minRequiredGoals || 1}`}
               </p>
             </TooltipContent>
           </Tooltip>

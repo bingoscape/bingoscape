@@ -16,7 +16,7 @@ export interface GoalGroup {
   tileId: string
   parentGroupId: string | null
   name: string | null
-  logicalOperator: "AND" | "OR"
+  logicalOperator: "AND" | "OR" | "SUM"
   minRequiredGoals: number
   orderIndex: number
   createdAt: Date
@@ -53,7 +53,7 @@ export interface GoalTreeNode {
  */
 export async function createGoalGroup(
   tileId: string,
-  logicalOperator: "AND" | "OR",
+  logicalOperator: "AND" | "OR" | "SUM",
   parentGroupId?: string | null,
   minRequiredGoals = 1,
 ) {
@@ -93,14 +93,14 @@ export async function createGoalGroup(
 export async function updateGoalGroup(
   groupId: string,
   updates: {
-    logicalOperator?: "AND" | "OR"
+    logicalOperator?: "AND" | "OR" | "SUM"
     name?: string | null
     minRequiredGoals?: number
   }
 ) {
   try {
     const updateData: {
-      logicalOperator?: "AND" | "OR"
+      logicalOperator?: "AND" | "OR" | "SUM"
       name?: string | null
       minRequiredGoals?: number
       updatedAt: Date

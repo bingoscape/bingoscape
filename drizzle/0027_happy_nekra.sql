@@ -1,0 +1,1 @@
+ALTER TYPE "logical_operator" ADD VALUE 'SUM';
