@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { db } from "@/server/db"
 import { events, bingos } from "@/server/db/schema"
 import { eq, and, lte, or, inArray, isNull } from "drizzle-orm"
+import { logger } from "@/lib/logger"
 
 export const dynamic = "force-dynamic" // Ensure this is not cached
 
@@ -12,6 +13,7 @@ export async function GET(request: Request) {
     const cronSecret = process.env.CRON_SECRET
 
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      logger.warn("Unauthorized attempt to access cron unlock route")
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
@@ -32,6 +34,7 @@ export async function GET(request: Request) {
 
     // 3. Unlock events
     if (eventIdsToUnlock.length > 0) {
+      logger.info({ eventIds: eventIdsToUnlock }, "Unlocking events")
       await db
         .update(events)
         .set({
@@ -75,6 +78,7 @@ export async function GET(request: Request) {
 
     // 5. Unlock bingos
     if (bingoIdsToUnlock.length > 0) {
+      logger.info({ bingoIds: bingoIdsToUnlock }, "Unlocking bingos")
       await db
         .update(bingos)
         .set({
@@ -83,6 +87,8 @@ export async function GET(request: Request) {
         })
         .where(inArray(bingos.id, bingoIdsToUnlock))
     }
+    
+    logger.info({ eventsUnlocked: eventIdsToUnlock.length, bingosUnlocked: bingoIdsToUnlock.length }, "Cron unlock completed successfully")
 
     return NextResponse.json({
       success: true,
@@ -90,7 +96,7 @@ export async function GET(request: Request) {
       bingosUnlocked: bingoIdsToUnlock.length,
     })
   } catch (error) {
-    console.error("Error in cron unlock route:", error)
-    return new NextResponse("Internal Server Error", { status: 500 })
+      logger.error({ error }, "Error in cron unlock route")
+      return new NextResponse("Internal Server Error", { status: 500 })
   }
 }
