@@ -71,6 +71,7 @@ export function exportLogEntry(entry: LogEntry) {
     process.env.OTEL_SERVICE_NAME ?? 'bingoscape-next'
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const attributes: Record<string, any> = {
     ...entry.context,
     'log.level': entry.level,
