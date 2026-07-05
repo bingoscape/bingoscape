@@ -24,6 +24,7 @@ const logLevel =
 const otelStream = {
   write(msg: string) {
     // 1. Write to stdout so Docker captures it
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const proc = typeof process !== "undefined" ? (process as any) : null;
     if (proc?.stdout?.write) {
       proc.stdout.write(msg);
@@ -52,7 +53,7 @@ const otelStream = {
         },
         error: parsed.err || parsed.error,
       });
-    } catch (e) {
+    } catch {
       // Ignore parse errors
     }
   }
