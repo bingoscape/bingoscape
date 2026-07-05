@@ -1,16 +1,64 @@
 import pino from "pino";
 import { trace } from "@opentelemetry/api";
+import { exportLogEntry } from "./logs-exporter";
+
+export interface LogContext {
+  traceId?: string;
+  spanId?: string;
+  [key: string]: unknown;
+}
+
+export interface LogEntry {
+  timestamp: string;
+  level: "debug" | "info" | "warn" | "error" | "fatal";
+  message: string;
+  context: LogContext;
+  error?: Error;
+}
 
 // Determine log level from environment
 const logLevel =
   process.env.LOG_LEVEL ||
   (process.env.NODE_ENV === "production" ? "info" : "debug");
 
-const otelEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
-const logsEndpoint = process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT || (otelEndpoint ? `${otelEndpoint}/v1/logs` : undefined);
+const otelStream = {
+  write(msg: string) {
+    // 1. Write to stdout so Docker captures it
+    const proc = typeof process !== "undefined" ? (process as any) : null;
+    if (proc?.stdout?.write) {
+      proc.stdout.write(msg);
+    } else {
+      console.log(msg);
+    }
+    
+    // 2. Parse and send to OpenTelemetry
+    try {
+      const parsed = JSON.parse(msg);
+      
+      let level: LogEntry["level"] = "info";
+      if (parsed.level === 20) level = "debug";
+      if (parsed.level === 30) level = "info";
+      if (parsed.level === 40) level = "warn";
+      if (parsed.level >= 50) level = "error";
 
-// Create the logger instance
-export const logger = pino({
+      exportLogEntry({
+        timestamp: new Date(parsed.time || Date.now()).toISOString(),
+        level,
+        message: parsed.msg || "",
+        context: {
+           traceId: parsed.trace_id,
+           spanId: parsed.span_id,
+           ...parsed,
+        },
+        error: parsed.err || parsed.error,
+      });
+    } catch (e) {
+      // Ignore parse errors
+    }
+  }
+};
+
+const options: pino.LoggerOptions = {
   level: logLevel,
 
   // Mixin to inject active trace context into every log entry
@@ -27,40 +75,10 @@ export const logger = pino({
     return {};
   },
 
-  // Production with OTEL: Use OpenTelemetry transport
-  // Production without OTEL: JSON for structured logging
-  // Development: Pretty print for readability
   ...(process.env.NODE_ENV === "production"
-    ? logsEndpoint ? {
-        transport: {
-          target: "pino-opentelemetry-transport",
-          options: {
-            loggerName: "bingoscape",
-            resourceAttributes: {
-              "service.name": process.env.OTEL_SERVICE_NAME || "bingoscape-next",
-            },
-            logRecordProcessorOptions: {
-              recordProcessorType: "batch",
-              exporterOptions: {
-                protocol: "http",
-                url: logsEndpoint,
-                headers: process.env.SIGNOZ_INGESTION_KEY
-                  ? { "signoz-ingestion-key": process.env.SIGNOZ_INGESTION_KEY }
-                  : undefined,
-              },
-            },
-          },
-        },
+    ? {
         formatters: {
-          level: (label) => {
-            return { level: label };
-          },
-        },
-      } : {
-        formatters: {
-          level: (label) => {
-            return { level: label };
-          },
+          level: (label) => ({ level: label }),
         },
         timestamp: pino.stdTimeFunctions.isoTime,
       }
@@ -107,7 +125,12 @@ export const logger = pino({
     req: pino.stdSerializers.req,
     res: pino.stdSerializers.res,
   },
-});
+};
+
+// Create the logger instance
+export const logger = process.env.NODE_ENV === "production"
+  ? pino(options, otelStream)
+  : pino(options);
 
 /**
  * Create a child logger with additional context

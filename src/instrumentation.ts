@@ -1,6 +1,7 @@
 import { registerOTel, OTLPHttpJsonTraceExporter } from '@vercel/otel';
 import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
 import { logger } from "@/lib/logger";
+import { initializeLogsExporter } from "@/lib/logs-exporter";
 
 diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
 
@@ -20,6 +21,9 @@ export async function register() {
 
   if (process.env.NEXT_RUNTIME === "nodejs") {
     logger.info("Initializing observability for Node.js runtime");
+
+    // Initialize logs exporter
+    initializeLogsExporter();
 
     // Initialize metrics collection
     await import("@/lib/metrics");
