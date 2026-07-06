@@ -326,6 +326,7 @@ function preparePlayerFeatures(
   return participants.map(p => {
     const metadata = metadataMap.get(p.userId)
     const timezoneOffset = getTimezoneOffset(metadata?.timezone)
+    const mappedSkill = metadata?.skillLevel ? skillLevelMapping[metadata.skillLevel] : undefined
 
     return {
       userId: p.userId,
@@ -334,9 +335,7 @@ function preparePlayerFeatures(
       ehp: metadata?.ehp ?? meanEhp,
       ehb: metadata?.ehb ?? meanEhb,
       dailyHours: metadata?.dailyHoursAvailable ?? meanDailyHours,
-      skillLevel: metadata?.skillLevel && skillLevelMapping[metadata.skillLevel] !== undefined
-        ? skillLevelMapping[metadata.skillLevel]
-        : meanSkillLevel,
+      skillLevel: mappedSkill !== undefined ? mappedSkill : meanSkillLevel,
     }
   })
 }
@@ -719,7 +718,7 @@ export async function generateBalancedTeams(
   // Prepare player features for simulated annealing
   const playerFeatures = preparePlayerFeatures(
     unassignedParticipants.map(p => ({ userId: p.user.id })),
-    metadataMap as Map<string, any>,
+    metadataMap as unknown as Parameters<typeof preparePlayerFeatures>[1],
     config.simulatedAnnealing?.skillLevelMapping
   )
 
@@ -738,7 +737,7 @@ export async function generateBalancedTeams(
       ehp: config.simulatedAnnealing?.varianceWeights?.ehp ?? defaults.weights.averageEHP,
       ehb: config.simulatedAnnealing?.varianceWeights?.ehb ?? defaults.weights.averageEHB,
       dailyHours: config.simulatedAnnealing?.varianceWeights?.dailyHours ?? defaults.weights.averageDailyHours,
-      skillLevel: config.simulatedAnnealing?.varianceWeights?.skillLevel ?? (defaults.weights as any).skillLevel ?? 0,
+      skillLevel: config.simulatedAnnealing?.varianceWeights?.skillLevel ?? (defaults.weights as Record<string, number>).skillLevel ?? 0,
     },
 
     // New: Extended parameters
