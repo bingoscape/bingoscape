@@ -47,6 +47,7 @@ interface SimulatedAnnealingConfig {
     ehp: number // Weight for EHP variance
     ehb: number // Weight for EHB variance
     dailyHours: number // Weight for daily hours variance
+    skillLevel?: number // Weight for skill level variance
   }
 
   // New: Random seed for reproducibility (optional)
@@ -69,6 +70,7 @@ interface PlayerFeatures {
   ehp: number // Imputed with mean if missing
   ehb: number // Imputed with mean if missing
   dailyHours: number // Imputed with mean if missing
+  skillLevel: number // Imputed with mean if missing
 }
 
 interface TeamAssignment {
@@ -234,6 +236,7 @@ interface GlobalStats {
   ehp: { mean: number; stdDev: number }
   ehb: { mean: number; stdDev: number }
   dailyHours: { mean: number; stdDev: number }
+  skillLevel: { mean: number; stdDev: number }
   // Note: Timezone uses circular statistics, not z-scores
 }
 
@@ -248,6 +251,7 @@ function calculateGlobalStats(players: PlayerFeatures[]): GlobalStats {
   const ehpValues = players.map(p => p.ehp)
   const ehbValues = players.map(p => p.ehb)
   const dailyHoursValues = players.map(p => p.dailyHours)
+  const skillLevelValues = players.map(p => p.skillLevel)
 
   return {
     ehp: {
@@ -261,6 +265,10 @@ function calculateGlobalStats(players: PlayerFeatures[]): GlobalStats {
     dailyHours: {
       mean: calculateMean(dailyHoursValues),
       stdDev: calculateStandardDeviation(dailyHoursValues),
+    },
+    skillLevel: {
+      mean: calculateMean(skillLevelValues),
+      stdDev: calculateStandardDeviation(skillLevelValues),
     },
   }
 }
@@ -294,7 +302,15 @@ function preparePlayerFeatures(
     ehp: number | null
     ehb: number | null
     dailyHoursAvailable: number | null
-  }>
+    skillLevel?: string | null
+  }>,
+  skillLevelMapping: Record<string, number> = {
+    beginner: 1,
+    intermediate: 2,
+    advanced: 3,
+    expert: 4,
+    pvmgod: 5
+  }
 ): PlayerFeatures[] {
   const allMetadata = Array.from(metadataMap.values())
 
@@ -302,10 +318,15 @@ function preparePlayerFeatures(
   const meanEhp = calculateMean(allMetadata.map(m => m.ehp))
   const meanEhb = calculateMean(allMetadata.map(m => m.ehb))
   const meanDailyHours = calculateMean(allMetadata.map(m => m.dailyHoursAvailable))
+  
+  const skillValues = allMetadata
+    .map(m => m.skillLevel && skillLevelMapping[m.skillLevel] ? skillLevelMapping[m.skillLevel] : null)
+  const meanSkillLevel = calculateMean(skillValues)
 
   return participants.map(p => {
     const metadata = metadataMap.get(p.userId)
     const timezoneOffset = getTimezoneOffset(metadata?.timezone)
+    const mappedSkill = metadata?.skillLevel ? skillLevelMapping[metadata.skillLevel] : undefined
 
     return {
       userId: p.userId,
@@ -314,6 +335,7 @@ function preparePlayerFeatures(
       ehp: metadata?.ehp ?? meanEhp,
       ehb: metadata?.ehb ?? meanEhb,
       dailyHours: metadata?.dailyHoursAvailable ?? meanDailyHours,
+      skillLevel: mappedSkill !== undefined ? mappedSkill : meanSkillLevel,
     }
   })
 }
@@ -345,6 +367,7 @@ function calculateObjective(
         avgEhp: 0,
         avgEhb: 0,
         avgDailyHours: 0,
+        avgSkillLevel: 0,
         timezoneAngles: [] as number[],
       }
     }
@@ -353,6 +376,7 @@ function calculateObjective(
       avgEhp: players.reduce((sum, p) => sum + p.ehp, 0) / players.length,
       avgEhb: players.reduce((sum, p) => sum + p.ehb, 0) / players.length,
       avgDailyHours: players.reduce((sum, p) => sum + p.dailyHours, 0) / players.length,
+      avgSkillLevel: players.reduce((sum, p) => sum + p.skillLevel, 0) / players.length,
       timezoneAngles: players.map(p => p.timezoneAngle),
     }
   })
@@ -367,11 +391,15 @@ function calculateObjective(
   const dailyHoursZScores = teamStats.map(s =>
     calculateZScore(s.avgDailyHours, globalStats.dailyHours.mean, globalStats.dailyHours.stdDev)
   )
+  const skillLevelZScores = teamStats.map(s =>
+    calculateZScore(s.avgSkillLevel, globalStats.skillLevel.mean, globalStats.skillLevel.stdDev)
+  )
 
   // Calculate variance of z-scores across teams (lower = more balanced)
   const ehpVariance = calculateVariance(ehpZScores)
   const ehbVariance = calculateVariance(ehbZScores)
   const dailyHoursVariance = calculateVariance(dailyHoursZScores)
+  const skillLevelVariance = calculateVariance(skillLevelZScores)
 
   // Calculate timezone balance using CIRCULAR VARIANCE (not player scoring)
   // This is the CORRECT approach for timezone balancing:
@@ -389,6 +417,8 @@ function calculateObjective(
     calculateCircularVariance(s.timezoneAngles)
   )
   const timezoneVariance = calculateVariance(timezoneCircularVariances)
+  const timezoneMean = calculateMean(timezoneCircularVariances)
+  const timezoneObjective = timezoneMean + timezoneVariance
 
   // Calculate team size variance (promotes equal-sized teams)
   const teamSizes = assignment.map(team => team.length)
@@ -405,10 +435,11 @@ function calculateObjective(
 
   // Weighted sum of variances (weights should sum to 1.0, excluding teamSize)
   const baseObjective = (
-    config.varianceWeights.timezone * timezoneVariance +
+    config.varianceWeights.timezone * timezoneObjective +
     config.varianceWeights.ehp * ehpVariance +
     config.varianceWeights.ehb * ehbVariance +
-    config.varianceWeights.dailyHours * dailyHoursVariance
+    config.varianceWeights.dailyHours * dailyHoursVariance +
+    (config.varianceWeights.skillLevel ?? 0) * skillLevelVariance
   )
 
   // Add small fixed penalty for team size variance as tiebreaker (not user-configurable)
@@ -599,11 +630,13 @@ export async function generateBalancedTeams(
 
       // New: Variance weights (replaces participant weights in SA)
       // Note: Team size is enforced as a hard constraint, not a weight
+      skillLevelMapping?: Record<string, number>
       varianceWeights?: {
         timezone?: number
         ehp?: number
         ehb?: number
         dailyHours?: number
+        skillLevel?: number
       }
 
       // New: Move operator probabilities
@@ -685,7 +718,8 @@ export async function generateBalancedTeams(
   // Prepare player features for simulated annealing
   const playerFeatures = preparePlayerFeatures(
     unassignedParticipants.map(p => ({ userId: p.user.id })),
-    metadataMap
+    metadataMap as unknown as Parameters<typeof preparePlayerFeatures>[1],
+    config.simulatedAnnealing?.skillLevelMapping
   )
 
   // Configure simulated annealing with standard defaults
@@ -703,6 +737,7 @@ export async function generateBalancedTeams(
       ehp: config.simulatedAnnealing?.varianceWeights?.ehp ?? defaults.weights.averageEHP,
       ehb: config.simulatedAnnealing?.varianceWeights?.ehb ?? defaults.weights.averageEHB,
       dailyHours: config.simulatedAnnealing?.varianceWeights?.dailyHours ?? defaults.weights.averageDailyHours,
+      skillLevel: config.simulatedAnnealing?.varianceWeights?.skillLevel ?? (defaults.weights as Record<string, number>).skillLevel ?? 0,
     },
 
     // New: Extended parameters

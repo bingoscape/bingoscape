@@ -14,6 +14,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -29,7 +36,7 @@ import {
 } from "@/components/ui/popover"
 import { toast } from "@/hooks/use-toast"
 import { getPlayerMetadata, updatePlayerMetadata, updateOwnPlayerMetadata, fetchWOMDataForPlayer } from "@/app/actions/player-metadata"
-import { Loader2, User, Download, Check, ChevronsUpDown, Lock } from "lucide-react"
+import { Loader2, User, Download, Check, ChevronsUpDown, Lock, Sprout, Sword, Shield, Target, Crown } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -70,6 +77,7 @@ export function PlayerMetadataModal({
     totalLevel: "",
     timezone: "",
     dailyHoursAvailable: "",
+    skillLevel: "",
     notes: "",
     womPlayerData: "",
   })
@@ -97,6 +105,7 @@ export function PlayerMetadataModal({
           totalLevel: metadata.totalLevel?.toString() ?? "",
           timezone: metadata.timezone ?? "",
           dailyHoursAvailable: metadata.dailyHoursAvailable?.toString() ?? "",
+          skillLevel: metadata.skillLevel ?? "",
           notes: metadata.notes ?? "",
           womPlayerData: metadata.womPlayerData ?? "",
         })
@@ -110,6 +119,7 @@ export function PlayerMetadataModal({
           totalLevel: "",
           timezone: "",
           dailyHoursAvailable: "",
+          skillLevel: "",
           notes: "",
           womPlayerData: "",
         })
@@ -137,6 +147,7 @@ export function PlayerMetadataModal({
           dailyHoursAvailable: formData.dailyHoursAvailable
             ? parseFloat(formData.dailyHoursAvailable)
             : null,
+          skillLevel: (formData.skillLevel as "beginner" | "intermediate" | "advanced" | "expert" | "pvmgod" | null) || null,
         })
       } else {
         // Use admin action (all fields)
@@ -149,6 +160,7 @@ export function PlayerMetadataModal({
           dailyHoursAvailable: formData.dailyHoursAvailable
             ? parseFloat(formData.dailyHoursAvailable)
             : null,
+          skillLevel: (formData.skillLevel as "beginner" | "intermediate" | "advanced" | "expert" | "pvmgod" | null) || null,
           notes: formData.notes || null,
           womPlayerData: formData.womPlayerData || null,
           lastFetchedFromWOM: lastFetched,
@@ -471,6 +483,31 @@ export function PlayerMetadataModal({
               </Popover>
               <p className="text-xs text-muted-foreground">
                 Player&apos;s local timezone for activity scheduling
+              </p>
+            </div>
+
+            {/* Skill Level */}
+            <div className="space-y-2">
+              <Label htmlFor="skillLevel">
+                Perceived Skill Level
+              </Label>
+              <Select
+                value={formData.skillLevel}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, skillLevel: value }))}
+              >
+                <SelectTrigger id="skillLevel">
+                  <SelectValue placeholder="Select a skill level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="beginner"><span className="flex items-center"><Sprout className="w-4 h-4 mr-2 text-green-500" /> Beginner</span></SelectItem>
+                  <SelectItem value="intermediate"><span className="flex items-center"><Sword className="w-4 h-4 mr-2 text-blue-500" /> Intermediate</span></SelectItem>
+                  <SelectItem value="advanced"><span className="flex items-center"><Shield className="w-4 h-4 mr-2 text-purple-500" /> Advanced</span></SelectItem>
+                  <SelectItem value="expert"><span className="flex items-center"><Target className="w-4 h-4 mr-2 text-red-500" /> Expert</span></SelectItem>
+                  <SelectItem value="pvmgod"><span className="flex items-center"><Crown className="w-4 h-4 mr-2 text-yellow-500" /> God-tier PVMer</span></SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Self-reported skill tier for team balancing
               </p>
             </div>
 

@@ -117,6 +117,12 @@ export interface SAStandardConfig {
      * @default 0.20 (20%)
      */
     averageDailyHours: number
+
+    /**
+     * Weight for skill level balance
+     * @default 0.20 (20%)
+     */
+    skillLevel: number
   }
 
   /**
@@ -170,12 +176,11 @@ export const SA_STANDARD_CONFIG: SAStandardConfig = {
   weights: {
     // Normalized weights (sum to 1.0)
     // Team size is now enforced as a hard constraint (not a weight)
-    // 2/5 = 0.40 for timezone (emphasized)
-    // 1/5 = 0.20 for each other metric
-    timezoneVariance: 0.40,      // Emphasize timezone cohesion (40%)
+    timezoneVariance: 0.20,      // 20%
     averageEHP: 0.20,            // 20%
     averageEHB: 0.20,            // 20%
     averageDailyHours: 0.20,     // 20%
+    skillLevel: 0.20,            // 20%
   },
   termination: {
     minTemperature: 0.0001,
@@ -210,10 +215,11 @@ export const SA_PRESETS: Record<'small' | 'medium' | 'large', SAStandardConfig> 
       moveProbability: 0.3,
     },
     weights: {
-      timezoneVariance: 0.40,
+      timezoneVariance: 0.20,
       averageEHP: 0.20,
       averageEHB: 0.20,
       averageDailyHours: 0.20,
+      skillLevel: 0.20,
     },
     termination: {
       minTemperature: 0.0001,
@@ -251,10 +257,11 @@ export const SA_PRESETS: Record<'small' | 'medium' | 'large', SAStandardConfig> 
       moveProbability: 0.3,
     },
     weights: {
-      timezoneVariance: 0.40,
+      timezoneVariance: 0.20,
       averageEHP: 0.20,
       averageEHB: 0.20,
       averageDailyHours: 0.20,
+      skillLevel: 0.20,
     },
     termination: {
       minTemperature: 0.0001,
@@ -349,6 +356,9 @@ export function validateConfig(config: SAStandardConfig): { valid: boolean; erro
   if (config.weights.averageDailyHours < 0) {
     errors.push('Daily hours weight must be non-negative')
   }
+  if (config.weights.skillLevel < 0) {
+    errors.push('Skill level weight must be non-negative')
+  }
 
   // Weight sum validation - must sum to 1.0 (with small tolerance for floating point)
   // Note: Team size is now a hard constraint, not a configurable weight
@@ -356,7 +366,8 @@ export function validateConfig(config: SAStandardConfig): { valid: boolean; erro
     config.weights.timezoneVariance +
     config.weights.averageEHP +
     config.weights.averageEHB +
-    config.weights.averageDailyHours
+    config.weights.averageDailyHours +
+    config.weights.skillLevel
   if (Math.abs(weightSum - 1.0) > 0.001) {
     errors.push(`Weights must sum to 1.0 (currently ${weightSum.toFixed(3)})`)
   }
