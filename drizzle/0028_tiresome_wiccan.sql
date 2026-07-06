@@ -1,0 +1,1 @@
+ALTER TABLE "bingoscape-next_player_metadata" ADD COLUMN "skill_level" "skill_level";

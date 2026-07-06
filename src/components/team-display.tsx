@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { getTeamsByEventId } from "@/app/actions/team"
 import { getEventParticipants } from "@/app/actions/events"
 import { toast } from "@/hooks/use-toast"
-import { Shield, Edit, Users } from "lucide-react"
+import { Shield, Edit, Users, Sprout, Sword, Target, Crown } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { PlayerMetadataModal } from "./player-metadata-modal"
 
@@ -18,6 +18,7 @@ type TeamMember = {
     name: string | null
     runescapeName: string | null
     image: string | null
+    skillLevel?: string | null
   }
   isLeader: boolean
 }
@@ -34,6 +35,18 @@ type Participant = {
   role: string
   teamId: string | null
   teamName: string | null
+  skillLevel?: string | null
+}
+
+const getSkillLevelDetails = (level?: string | null) => {
+  switch (level) {
+    case "beginner": return { label: "Beginner", icon: Sprout, color: "text-green-500 border-green-500/20 bg-green-500/10" }
+    case "intermediate": return { label: "Intermediate", icon: Sword, color: "text-blue-500 border-blue-500/20 bg-blue-500/10" }
+    case "advanced": return { label: "Advanced", icon: Target, color: "text-purple-500 border-purple-500/20 bg-purple-500/10" }
+    case "expert": return { label: "Expert", icon: Shield, color: "text-red-500 border-red-500/20 bg-red-500/10" }
+    case "pvmgod": return { label: "PvM God", icon: Crown, color: "text-yellow-500 border-yellow-500/20 bg-yellow-500/10" }
+    default: return null
+  }
 }
 
 export function TeamDisplay({ eventId }: { eventId: string }) {
@@ -92,6 +105,17 @@ export function TeamDisplay({ eventId }: { eventId: string }) {
           {member.isLeader && (
             <Shield className="h-4 w-4 text-yellow-500" aria-label="Team Leader" />
           )}
+          {member.user.skillLevel && (() => {
+            const skillInfo = getSkillLevelDetails(member.user.skillLevel)
+            if (!skillInfo) return null;
+            const Icon = skillInfo.icon
+            return (
+              <Badge variant="outline" className={`text-[10px] h-5 px-1.5 flex items-center gap-1 ${skillInfo.color}`}>
+                <Icon className="h-3 w-3" />
+                {skillInfo.label}
+              </Badge>
+            )
+          })()}
           {isCurrentUser && (
             <Badge variant="outline" className="text-xs">You</Badge>
           )}
@@ -121,6 +145,17 @@ export function TeamDisplay({ eventId }: { eventId: string }) {
             <AvatarFallback>{participant.runescapeName[0] ?? 'U'}</AvatarFallback>
           </Avatar>
           <span>{participant.runescapeName}</span>
+          {participant.skillLevel && (() => {
+            const skillInfo = getSkillLevelDetails(participant.skillLevel)
+            if (!skillInfo) return null;
+            const Icon = skillInfo.icon
+            return (
+              <Badge variant="outline" className={`text-[10px] h-5 px-1.5 flex items-center gap-1 ${skillInfo.color}`}>
+                <Icon className="h-3 w-3" />
+                {skillInfo.label}
+              </Badge>
+            )
+          })()}
           {isCurrentUser && (
             <Badge variant="outline" className="text-xs">You</Badge>
           )}

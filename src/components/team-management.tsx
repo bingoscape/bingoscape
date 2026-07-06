@@ -79,6 +79,7 @@ type TeamMember = {
     runescapeName: string | null
     image: string | null
     hasMetadata?: boolean
+    skillLevel?: string | null
   }
   isLeader: boolean
 }
@@ -95,6 +96,19 @@ type Participant = {
   runescapeName: string | null
   image: string | null
   hasMetadata?: boolean
+  skillLevel?: string | null
+}
+
+function getSkillRingClass(skillLevel?: string | null) {
+  if (!skillLevel) return "ring-2 ring-orange-400 ring-offset-2 ring-offset-background"
+  switch (skillLevel) {
+    case "beginner": return "ring-2 ring-green-500 ring-offset-2 ring-offset-background"
+    case "intermediate": return "ring-2 ring-blue-500 ring-offset-2 ring-offset-background"
+    case "advanced": return "ring-2 ring-purple-500 ring-offset-2 ring-offset-background"
+    case "expert": return "ring-2 ring-red-500 ring-offset-2 ring-offset-background"
+    case "pvmgod": return "ring-2 ring-yellow-500 ring-offset-2 ring-offset-background"
+    default: return "ring-2 ring-orange-400 ring-offset-2 ring-offset-background"
+  }
 }
 
 const PlayerDragOverlay = ({ activeDragData }: { activeDragData: any }) => {
@@ -102,9 +116,7 @@ const PlayerDragOverlay = ({ activeDragData }: { activeDragData: any }) => {
 
   if (activeDragData.type === "member") {
     const member = activeDragData.member
-    const avatarRingClass = member.user.hasMetadata
-      ? "ring-2 ring-green-500 ring-offset-2 ring-offset-background"
-      : "ring-2 ring-orange-400 ring-offset-2 ring-offset-background"
+    const avatarRingClass = getSkillRingClass(member.user.skillLevel)
 
     return (
       <div className="absolute -left-4 -top-9 flex min-w-64 items-center gap-4 rounded-md border-2 border-secondary bg-card py-4 pl-4 shadow-2xl">
@@ -132,9 +144,7 @@ const PlayerDragOverlay = ({ activeDragData }: { activeDragData: any }) => {
 
   if (activeDragData.type === "unassigned") {
     const participant = activeDragData.participant
-    const avatarRingClass = participant.hasMetadata
-      ? "ring-2 ring-green-500 ring-offset-2 ring-offset-background"
-      : "ring-2 ring-orange-400 ring-offset-2 ring-offset-background"
+    const avatarRingClass = getSkillRingClass(participant.skillLevel)
 
     return (
       <div className="absolute -left-4 -top-9 flex min-w-64 items-center gap-4 rounded-md border-2 border-secondary bg-card py-4 pl-4 shadow-2xl">
@@ -181,10 +191,8 @@ function DraggableMember({
     },
   })
 
-  // Determine avatar ring color based on metadata status
-  const avatarRingClass = member.user.hasMetadata
-    ? "ring-2 ring-green-500 ring-offset-2 ring-offset-background"
-    : "ring-2 ring-orange-400 ring-offset-2 ring-offset-background"
+  // Determine avatar ring color based on skill level
+  const avatarRingClass = getSkillRingClass(member.user.skillLevel)
 
   return (
     <li
@@ -554,6 +562,21 @@ function TeamCard({
                 </TooltipProvider>
               )}
 
+              {/* Skill Level Badge */}
+              {teamStats.averageSkillLevel !== null && teamStats.averageSkillLevel !== undefined && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="flex items-center gap-1.5 bg-background">
+                        <Crown className="h-3 w-3 text-yellow-500" />
+                        <span className="font-medium">Avg Skill: {teamStats.averageSkillLevel.toFixed(1)}</span>
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>Average Team Skill Level (1-5)</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
               {/* Balance Score */}
               {eventAvgEHP && eventAvgEHB && (
                 <TooltipProvider>
@@ -847,10 +870,8 @@ function DraggableUnassignedParticipant({
     },
   })
 
-  // Determine avatar ring color based on metadata status
-  const avatarRingClass = participant.hasMetadata
-    ? "ring-2 ring-green-500 ring-offset-2 ring-offset-background"
-    : "ring-2 ring-orange-400 ring-offset-2 ring-offset-background"
+  // Determine avatar ring color based on skill level
+  const avatarRingClass = getSkillRingClass(participant.skillLevel)
 
   return (
     <li
@@ -947,12 +968,18 @@ export function TeamManagement({ eventId }: { eventId: string }) {
   const [statistics, setStatistics] = useState<EventTeamStatistics | null>(null)
   const [statisticsLoading, setStatisticsLoading] = useState(false)
 
-  // Get unassigned participants
+  // Get unassigned participants, sorted by skill level (descending)
   const unassignedParticipants = useMemo(() => {
-    return participants.filter(
+    const unassigned = participants.filter(
       (p) =>
         !teams.some((team) => team.teamMembers.some((m) => m.user.id === p.id))
     )
+    const skillOrder: Record<string, number> = { pvmgod: 5, expert: 4, advanced: 3, intermediate: 2, beginner: 1 }
+    return unassigned.sort((a, b) => {
+      const aVal = a.skillLevel ? skillOrder[a.skillLevel] || 0 : 0
+      const bVal = b.skillLevel ? skillOrder[b.skillLevel] || 0 : 0
+      return bVal - aVal
+    })
   }, [participants, teams])
 
   useEffect(() => {

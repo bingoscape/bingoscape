@@ -63,6 +63,7 @@ export async function updatePlayerMetadata(
     ehb?: number | null
     combatLevel?: number | null
     totalLevel?: number | null
+    skillLevel?: "beginner" | "intermediate" | "advanced" | "expert" | "pvmgod" | null
     timezone?: string | null
     dailyHoursAvailable?: number | null
     notes?: string | null
@@ -130,6 +131,7 @@ export async function updatePlayerMetadata(
 export async function updateOwnPlayerMetadata(
   eventId: string,
   data: {
+    skillLevel?: "beginner" | "intermediate" | "advanced" | "expert" | "pvmgod" | null
     timezone?: string | null
     dailyHoursAvailable?: number | null
   }
@@ -154,6 +156,7 @@ export async function updateOwnPlayerMetadata(
   // Only allow updating timezone and dailyHoursAvailable
   // Explicitly block any other fields to prevent tampering
   const allowedData = {
+    skillLevel: data.skillLevel,
     timezone: data.timezone,
     dailyHoursAvailable: data.dailyHoursAvailable,
   }

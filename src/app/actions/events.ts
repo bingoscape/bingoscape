@@ -1200,6 +1200,14 @@ export async function getEventParticipants(eventId: string) {
         // Only include team if it belongs to this event
         // const team = teamMember?.team.eventId === eventId ? teamMember.team : null
 
+        // Get metadata (skillLevel)
+        const metadata = await db.query.playerMetadata.findFirst({
+          where: and(
+            eq(playerMetadata.userId, participant.userId),
+            eq(playerMetadata.eventId, eventId)
+          ),
+        })
+
         return {
           id: participant.userId,
           runescapeName: user?.runescapeName ?? "",
@@ -1208,6 +1216,7 @@ export async function getEventParticipants(eventId: string) {
           teamName: t != null ? t.name : null,
           buyIn: buyIn,
           totalDonations: totalDonations,
+          skillLevel: metadata?.skillLevel ?? null,
         }
       })
     )

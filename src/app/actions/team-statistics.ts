@@ -17,6 +17,7 @@ export interface TeamStatistics {
   averageCombatLevel: number | null
   averageTotalLevel: number | null
   totalDailyHours: number | null
+  averageSkillLevel: number | null
   timezoneDistribution: Array<{ timezone: string; count: number }>
   timezoneDiversityScore: number
   timezoneHourVariance: number // Hour spread across timezones (range/2)
@@ -32,11 +33,13 @@ export interface BalanceMetrics {
   ehbVariance: number
   timezoneVariance: number
   dailyHoursVariance: number
+  skillLevelVariance: number
   overallBalanceScore: number // 0-100, higher = better balanced
   standardDeviations: {
     ehp: number
     ehb: number
     dailyHours: number
+    skillLevel: number
   }
 }
 
@@ -139,6 +142,22 @@ export async function getEventTeamStatistics(
           )
         : null
 
+    const skillMapping: Record<string, number> = {
+      beginner: 1,
+      intermediate: 2,
+      advanced: 3,
+      expert: 4,
+      pvmgod: 5,
+    }
+
+    const averageSkillLevel =
+      metadataList.length > 0
+        ? metadataList.reduce(
+            (sum, m) => sum + (m?.skillLevel ? skillMapping[m.skillLevel as string] || 0 : 0),
+            0
+          ) / (metadataList.filter((m) => m?.skillLevel != null).length || 1)
+        : null
+
     // Timezone distribution
     const timezoneMap = new Map<string, number>()
     metadataList.forEach((m) => {
@@ -185,6 +204,8 @@ export async function getEventTeamStatistics(
           : null,
       totalDailyHours:
         totalDailyHours && !isNaN(totalDailyHours) ? totalDailyHours : null,
+      averageSkillLevel:
+        averageSkillLevel && !isNaN(averageSkillLevel) ? averageSkillLevel : null,
       timezoneDistribution,
       timezoneDiversityScore,
       timezoneHourVariance,
@@ -260,6 +281,7 @@ function calculateBalanceMetrics(teams: TeamStatistics[]): BalanceMetrics {
   const teamsWithEHP = teams.filter((t) => t.averageEHP != null)
   const teamsWithEHB = teams.filter((t) => t.averageEHB != null)
   const teamsWithHours = teams.filter((t) => t.totalDailyHours != null)
+  const teamsWithSkillLevel = teams.filter((t) => t.averageSkillLevel != null)
 
   // Calculate variance for each metric
   const ehpVariance =
@@ -277,6 +299,11 @@ function calculateBalanceMetrics(teams: TeamStatistics[]): BalanceMetrics {
       ? calculateVariance(teamsWithHours.map((t) => t.totalDailyHours!))
       : 0
 
+  const skillLevelVariance =
+    teamsWithSkillLevel.length > 1
+      ? calculateVariance(teamsWithSkillLevel.map((t) => t.averageSkillLevel!))
+      : 0
+
   // Timezone variance based on diversity scores
   const timezoneVariance =
     teams.length > 1
@@ -287,6 +314,7 @@ function calculateBalanceMetrics(teams: TeamStatistics[]): BalanceMetrics {
   const ehpStdDev = Math.sqrt(ehpVariance)
   const ehbStdDev = Math.sqrt(ehbVariance)
   const dailyHoursStdDev = Math.sqrt(dailyHoursVariance)
+  const skillLevelStdDev = Math.sqrt(skillLevelVariance)
 
   // Overall balance score (0-100)
   // Lower variance = higher score
@@ -294,9 +322,10 @@ function calculateBalanceMetrics(teams: TeamStatistics[]): BalanceMetrics {
   const normalizedEHPVariance = teamsWithEHP.length > 1 ? normalizeVariance(ehpVariance, teamsWithEHP.map((t) => t.averageEHP!)) : 0
   const normalizedEHBVariance = teamsWithEHB.length > 1 ? normalizeVariance(ehbVariance, teamsWithEHB.map((t) => t.averageEHB!)) : 0
   const normalizedHoursVariance = teamsWithHours.length > 1 ? normalizeVariance(dailyHoursVariance, teamsWithHours.map((t) => t.totalDailyHours!)) : 0
+  const normalizedSkillVariance = teamsWithSkillLevel.length > 1 ? normalizeVariance(skillLevelVariance, teamsWithSkillLevel.map((t) => t.averageSkillLevel!)) : 0
 
   const avgNormalizedVariance =
-    (normalizedEHPVariance + normalizedEHBVariance + normalizedHoursVariance + timezoneVariance) / 4
+    (normalizedEHPVariance + normalizedEHBVariance + normalizedHoursVariance + normalizedSkillVariance + timezoneVariance) / 5
 
   const overallBalanceScore = Math.max(0, Math.min(100, (1 - avgNormalizedVariance) * 100))
 
@@ -305,11 +334,13 @@ function calculateBalanceMetrics(teams: TeamStatistics[]): BalanceMetrics {
     ehbVariance,
     timezoneVariance,
     dailyHoursVariance,
+    skillLevelVariance,
     overallBalanceScore: Math.round(overallBalanceScore),
     standardDeviations: {
       ehp: ehpStdDev,
       ehb: ehbStdDev,
       dailyHours: dailyHoursStdDev,
+      skillLevel: skillLevelStdDev,
     },
   }
 }

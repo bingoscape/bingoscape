@@ -41,18 +41,22 @@ export async function getTeamsByEventId(eventId: string) {
     ),
   })
 
-  const metadataMap = new Map(metadataRecords.map(m => [m.userId, true]))
+  const metadataMap = new Map(metadataRecords.map(m => [m.userId, m]))
 
   // Add hasMetadata flag to team members
   const teamsWithMetadata = eventTeams.map(team => ({
     ...team,
-    teamMembers: team.teamMembers.map(member => ({
-      ...member,
-      user: {
-        ...member.user,
-        hasMetadata: metadataMap.has(member.user.id),
-      },
-    })),
+    teamMembers: team.teamMembers.map(member => {
+      const metadata = metadataMap.get(member.user.id)
+      return {
+        ...member,
+        user: {
+          ...member.user,
+          hasMetadata: !!metadata,
+          skillLevel: metadata?.skillLevel ?? null,
+        },
+      }
+    }),
   }))
 
   return teamsWithMetadata
@@ -140,13 +144,17 @@ export async function getEventParticipants(eventId: string) {
     where: eq(playerMetadata.eventId, eventId),
   })
 
-  const metadataMap = new Map(metadataRecords.map(m => [m.userId, true]))
+  const metadataMap = new Map(metadataRecords.map(m => [m.userId, m]))
 
   // Add hasMetadata flag to participants
-  const participantsWithMetadata = participants.map(participant => ({
-    ...participant,
-    hasMetadata: metadataMap.has(participant.id),
-  }))
+  const participantsWithMetadata = participants.map(participant => {
+    const metadata = metadataMap.get(participant.id)
+    return {
+      ...participant,
+      hasMetadata: !!metadata,
+      skillLevel: metadata?.skillLevel ?? null,
+    }
+  })
 
   return participantsWithMetadata
 }

@@ -178,6 +178,7 @@ export const playerMetadata = createTable(
     ehb: real("ehb"), // Efficient Hours Bossed (nullable)
     combatLevel: integer("combat_level"), // OSRS combat level from WiseOldMan
     totalLevel: integer("total_level"), // Total skill level from WiseOldMan
+    skillLevel: skillLevelEnum("skill_level"), // Perceived skill level
     timezone: varchar("timezone", { length: 100 }), // e.g., "America/New_York", "Europe/London"
     dailyHoursAvailable: real("daily_hours_available"), // Planned daily participation time
     notes: text("notes"), // Management notes about the player

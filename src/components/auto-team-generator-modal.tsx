@@ -85,10 +85,11 @@ export function AutoTeamGeneratorModal({
     // Variance weights (normalized to sum to 1.0)
     // Note: Team size is now enforced as a hard constraint
     varianceWeights: {
-      timezone: 0.40,      // 40%
+      timezone: 0.20,      // 20%
       ehp: 0.20,           // 20%
       ehb: 0.20,           // 20%
       dailyHours: 0.20,    // 20%
+      skillLevel: 0.20,    // 20%
     },
 
     // Move operators
@@ -96,6 +97,16 @@ export function AutoTeamGeneratorModal({
       swapProbability: 0.7,
       moveProbability: 0.3,
     },
+  })
+
+  // Skill Mapping State
+  const [skillMappingStrategy, setSkillMappingStrategy] = useState<"linear" | "exponential" | "fibonacci" | "custom">("linear")
+  const [customSkillMapping, setCustomSkillMapping] = useState({
+    beginner: 1,
+    intermediate: 2,
+    advanced: 3,
+    expert: 4,
+    pvmgod: 5,
   })
 
   // Helper: Handle preset change
@@ -114,6 +125,7 @@ export function AutoTeamGeneratorModal({
           ehp: presetConfig.weights.averageEHP,
           ehb: presetConfig.weights.averageEHB,
           dailyHours: presetConfig.weights.averageDailyHours,
+          skillLevel: presetConfig.weights.skillLevel,
         },
         moves: {
           swapProbability: presetConfig.moves.swapProbability,
@@ -241,12 +253,21 @@ export function AutoTeamGeneratorModal({
     try {
       if (generationMode === "balanced") {
         // Use balanced generation algorithm with simulated annealing
+        const activeSkillMapping = (() => {
+          switch (skillMappingStrategy) {
+            case "linear": return { beginner: 1, intermediate: 2, advanced: 3, expert: 4, pvmgod: 5 }
+            case "exponential": return { beginner: 1, intermediate: 2, advanced: 4, expert: 8, pvmgod: 16 }
+            case "fibonacci": return { beginner: 1, intermediate: 2, advanced: 3, expert: 5, pvmgod: 8 }
+            case "custom": return customSkillMapping
+          }
+        })()
+
         const result = await generateBalancedTeams(eventId, {
           generationMethod,
           teamSize: generationMethod === "teamSize" ? teamSize : undefined,
           teamCount: generationMethod === "teamCount" ? teamCount : undefined,
           teamNamePrefix,
-          simulatedAnnealing: saConfig,
+          simulatedAnnealing: { ...saConfig, skillLevelMapping: activeSkillMapping },
         })
 
         await onTeamsGenerated()
@@ -543,7 +564,7 @@ export function AutoTeamGeneratorModal({
 
                 {/* Variance Weights */}
                 <div className="space-y-3 rounded-lg border p-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-4">
                     <Label className="text-base font-semibold">Variance Weights</Label>
                     <TooltipProvider>
                       <Tooltip>
@@ -555,6 +576,15 @@ export function AutoTeamGeneratorModal({
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
+                  </div>
+
+                  {/* Visual Balance Bar */}
+                  <div className="w-full h-3 flex rounded-full overflow-hidden mb-6">
+                    <div className="bg-blue-500" style={{ width: `${saConfig.varianceWeights.timezone * 100}%` }} title="Timezone" />
+                    <div className="bg-green-500" style={{ width: `${saConfig.varianceWeights.ehp * 100}%` }} title="EHP" />
+                    <div className="bg-purple-500" style={{ width: `${saConfig.varianceWeights.ehb * 100}%` }} title="EHB" />
+                    <div className="bg-yellow-500" style={{ width: `${saConfig.varianceWeights.dailyHours * 100}%` }} title="Daily Hours" />
+                    <div className="bg-red-500" style={{ width: `${saConfig.varianceWeights.skillLevel * 100}%` }} title="Skill Level" />
                   </div>
 
                   {/* Timezone Variance Weight */}
@@ -617,6 +647,21 @@ export function AutoTeamGeneratorModal({
                     />
                   </div>
 
+                  {/* Skill Level Variance Weight */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm">Skill Level Balance</Label>
+                      <span className="text-sm font-medium">{(saConfig.varianceWeights.skillLevel * 100).toFixed(1)}%</span>
+                    </div>
+                    <Slider
+                      value={[saConfig.varianceWeights.skillLevel * 100]}
+                      onValueChange={([value]) => updateConfig('varianceWeights.skillLevel', value! / 100)}
+                      min={0}
+                      max={100}
+                      step={1}
+                    />
+                  </div>
+
                   {/* Team Size Balance Note */}
                   <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
                     <p className="font-medium">Team Size Balance</p>
@@ -627,6 +672,59 @@ export function AutoTeamGeneratorModal({
                 <p className="text-xs text-muted-foreground mt-2">
                   Weights must sum to 100%. Changing one weight proportionally adjusts others.
                 </p>
+
+                {/* Categorical Skill Mapping Strategy */}
+                <div className="space-y-3 rounded-lg border p-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">Skill Level Mapping Strategy</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          Determines the numerical gap between different categorical skill levels during optimization.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <Select value={skillMappingStrategy} onValueChange={(value) => setSkillMappingStrategy(value as any)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="linear">Linear [1, 2, 3, 4, 5]</SelectItem>
+                      <SelectItem value="exponential">Exponential [1, 2, 4, 8, 16]</SelectItem>
+                      <SelectItem value="fibonacci">Fibonacci [1, 2, 3, 5, 8]</SelectItem>
+                      <SelectItem value="custom">Custom</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {skillMappingStrategy === "custom" && (
+                    <div className="grid grid-cols-5 gap-2 mt-2">
+                      <div className="space-y-1 text-center">
+                        <Label className="text-xs">Beginner</Label>
+                        <Input type="number" value={customSkillMapping.beginner} onChange={(e) => setCustomSkillMapping(p => ({ ...p, beginner: Number(e.target.value) }))} />
+                      </div>
+                      <div className="space-y-1 text-center">
+                        <Label className="text-xs">Interm.</Label>
+                        <Input type="number" value={customSkillMapping.intermediate} onChange={(e) => setCustomSkillMapping(p => ({ ...p, intermediate: Number(e.target.value) }))} />
+                      </div>
+                      <div className="space-y-1 text-center">
+                        <Label className="text-xs">Advanced</Label>
+                        <Input type="number" value={customSkillMapping.advanced} onChange={(e) => setCustomSkillMapping(p => ({ ...p, advanced: Number(e.target.value) }))} />
+                      </div>
+                      <div className="space-y-1 text-center">
+                        <Label className="text-xs">Expert</Label>
+                        <Input type="number" value={customSkillMapping.expert} onChange={(e) => setCustomSkillMapping(p => ({ ...p, expert: Number(e.target.value) }))} />
+                      </div>
+                      <div className="space-y-1 text-center">
+                        <Label className="text-xs">God-tier</Label>
+                        <Input type="number" value={customSkillMapping.pvmgod} onChange={(e) => setCustomSkillMapping(p => ({ ...p, pvmgod: Number(e.target.value) }))} />
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Move Operators */}
                 <div className="space-y-3 rounded-lg border p-4">
