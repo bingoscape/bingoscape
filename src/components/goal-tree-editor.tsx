@@ -99,6 +99,7 @@ interface FlatNode {
   parentId: string | null
   depth: number
   orderIndex: number
+  parentOperator?: "AND" | "OR" | "SUM"
 }
 
 export function GoalTreeEditor({
@@ -282,16 +283,18 @@ export function GoalTreeEditor({
   const flattenTree = (
     nodes: GoalTreeNode[],
     parentId: string | null = null,
+    parentOperator?: "AND" | "OR" | "SUM",
     depth = 0
   ): FlatNode[] => {
     return nodes.flatMap((node, index) => {
-      const flatNode = {
+      const flatNode: FlatNode = {
         id: node.id,
         type: node.type,
         data: node.data,
         parentId,
         depth,
         orderIndex: index,
+        parentOperator,
       }
 
       if (
@@ -299,7 +302,8 @@ export function GoalTreeEditor({
         node.children &&
         expandedGroups.has(node.id)
       ) {
-        return [flatNode, ...flattenTree(node.children, node.id, depth + 1)]
+        const groupOperator = (node.data as any)?.logicalOperator as "AND" | "OR" | "SUM"
+        return [flatNode, ...flattenTree(node.children, node.id, groupOperator, depth + 1)]
       }
 
       return flatNode
@@ -693,6 +697,9 @@ export function GoalTreeEditor({
                         }
                         className="mt-1"
                       />
+                      <p className="mt-1 text-[10px] text-muted-foreground">
+                        Note: In a SUM group, this target is illustrative and does not cap contributions.
+                      </p>
                     </div>
                   </div>
                   <Button onClick={onAddGoal} className="w-full">
@@ -753,7 +760,7 @@ export function GoalTreeEditor({
                         className="mt-1"
                       />
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Number of times this item must be obtained
+                        Number of times this item must be obtained. In a SUM group, this target is illustrative and does not cap contributions.
                       </p>
                     </div>
                   </div>
@@ -842,6 +849,9 @@ export function GoalTreeEditor({
                         min="1"
                         className="mt-1"
                       />
+                      <p className="mt-1 text-[10px] text-muted-foreground">
+                        Note: In a SUM group, this target is illustrative and does not cap contributions.
+                      </p>
                     </div>
                   </div>
                   <Button onClick={handleAddMetricGoal} disabled={!metricName.trim()} className="w-full">
@@ -1208,9 +1218,12 @@ function TreeNode({
         )}
         <Card
           className={cn(
-            "flex-1 cursor-pointer border-blue-500/30 bg-blue-500/10 transition-all",
-            isOver && "border-2 border-blue-500 bg-blue-500/20",
-            isSelected && "border-2 border-blue-600 shadow-md"
+            "flex-1 cursor-pointer transition-all",
+            groupData.logicalOperator === "SUM"
+              ? "border-indigo-500/30 bg-indigo-500/10 dark:bg-indigo-950/20"
+              : "border-blue-500/30 bg-blue-500/10",
+            isOver && (groupData.logicalOperator === "SUM" ? "border-2 border-indigo-500 bg-indigo-500/20" : "border-2 border-blue-500 bg-blue-500/20"),
+            isSelected && (groupData.logicalOperator === "SUM" ? "border-2 border-indigo-600 shadow-md" : "border-2 border-blue-600 shadow-md")
           )}
           onClick={(e) => onNodeClick(node.id, e)}
         >
@@ -1218,7 +1231,7 @@ function TreeNode({
             <div className="flex items-center justify-between">
               {isEditingGroupName ? (
                 <div className="flex flex-1 items-center gap-2">
-                  <Layers className="h-4 w-4 text-blue-500" />
+                  <Layers className={cn("h-4 w-4", groupData.logicalOperator === "SUM" ? "text-indigo-500" : "text-blue-500")} />
                   <Input
                     value={editGroupName}
                     onChange={(e) => setEditGroupName(e.target.value)}
@@ -1269,7 +1282,7 @@ function TreeNode({
                         <ChevronRight className="h-4 w-4" />
                       )}
                     </Button>
-                    <Layers className="h-4 w-4 text-blue-500" />
+                    <Layers className={cn("h-4 w-4", groupData.logicalOperator === "SUM" ? "text-indigo-500" : "text-blue-500")} />
                     <span className="font-medium">
                       {(groupData.name as string | null) || "Group"}
                     </span>
@@ -1530,6 +1543,11 @@ function TreeNode({
                   min="1"
                   className="mt-1 h-8 text-sm"
                 />
+                {node.parentOperator === "SUM" && (
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    Note: In a SUM group, this target is illustrative and does not cap contributions.
+                  </p>
+                )}
               </div>
               <div className="flex gap-2">
                 <Button

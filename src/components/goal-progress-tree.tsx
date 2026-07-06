@@ -22,6 +22,7 @@ import {
 import type { GoalTreeNode } from "@/app/actions/goal-groups"
 import { getWikiIconUrl } from "@/lib/osrs-metrics"
 import { useState } from "react"
+import { cn } from "@/lib/utils"
 
 interface TeamProgress {
   goalId: string
@@ -45,6 +46,9 @@ interface ProgressNode extends GoalTreeNode {
     total: number
     percentage: number
   }
+  inSumGroup?: boolean
+  parentGroupTarget?: number
+  children?: ProgressNode[]
 }
 
 export function GoalProgressTree({
@@ -70,19 +74,23 @@ export function GoalProgressTree({
   }
 
   // Recursively evaluate group completion
-  const evaluateGroup = (node: GoalTreeNode): ProgressNode => {
+  const evaluateGroup = (node: GoalTreeNode, inSumGroup = false, parentGroupTarget = 0): ProgressNode => {
     if (node.type === "goal") {
       const goalData = node.data as any
       const progress = teamProgress.find((p) => p.goalId === node.id)
       return {
         ...node,
         progress,
+        inSumGroup,
+        parentGroupTarget,
       }
     }
 
     // It's a group - evaluate children
     const groupData = node.data as any
-    const evaluatedChildren = (node.children || []).map((child) => evaluateGroup(child))
+    const isSumGroup = groupData.logicalOperator === "SUM"
+    const sumGroupTarget = isSumGroup ? ((groupData.minRequiredGoals as number) || 1) : 0
+    const evaluatedChildren = (node.children || []).map((child) => evaluateGroup(child, isSumGroup, sumGroupTarget))
 
     // Count completed children
     const completedChildren = evaluatedChildren.filter((child) => {
@@ -126,6 +134,8 @@ export function GoalProgressTree({
       ...node,
       children: evaluatedChildren,
       isGroupComplete: isComplete,
+      inSumGroup,
+      parentGroupTarget,
       groupProgress: {
         completed: displayCompleted,
         total: displayTotal,
@@ -204,12 +214,21 @@ function ProgressTreeNode({ node, depth, collapsedGroups, toggleGroup }: Progres
     const groupData = node.data as any
     const hasChildren = node.children && node.children.length > 0
     const isCollapsed = collapsedGroups.has(node.id)
+    const isSumGroup = groupData.logicalOperator === "SUM"
 
     return (
-      <div style={{ marginLeft: `${marginLeft}px` }}>
+      <div 
+        style={{ marginLeft: `${marginLeft}px` }}
+        className={cn(
+          isSumGroup && "bg-indigo-50/10 dark:bg-indigo-950/10 backdrop-blur-sm border border-indigo-100/30 dark:border-indigo-900/30 rounded-lg p-2 my-1.5 shadow-[0_2px_8px_-3px_rgba(99,102,241,0.15)]"
+        )}
+      >
         <Collapsible open={!isCollapsed} onOpenChange={() => toggleGroup(node.id)}>
           <CollapsibleTrigger asChild>
-            <div className="flex items-center gap-1 py-0.5 cursor-pointer hover:bg-muted/50 rounded transition-colors">
+            <div className={cn(
+              "flex items-center gap-1 py-0.5 cursor-pointer rounded transition-colors",
+              isSumGroup ? "hover:bg-indigo-100/20 text-indigo-950 dark:text-indigo-200" : "hover:bg-muted/50"
+            )}>
               {/* Chevron Icon */}
               {isCollapsed ? (
                 <ChevronRight className="h-3 w-3 text-muted-foreground" />
@@ -351,17 +370,30 @@ function ProgressTreeNode({ node, depth, collapsedGroups, toggleGroup }: Progres
           </TooltipContent>
         </Tooltip>
 
-        {/* Mini Progress Bar */}
-        <div className="flex items-center gap-1 flex-1 min-w-0">
-          <AnimatedProgress
-            value={percentage}
-            className="h-1 flex-1"
-            indicatorClassName={isComplete ? "bg-green-500" : "bg-blue-500"}
-          />
-          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-            {currentValue}/{targetValue}
-          </span>
-        </div>
+        {/* Mini Progress Bar or Contributor View */}
+        {node.inSumGroup ? (
+          <div className="flex items-center gap-2 justify-end flex-1 min-w-0 mr-1">
+            <Badge variant="outline" className="text-[10px] font-semibold bg-indigo-50/80 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border-indigo-200/60 shadow-sm px-2 py-0.5 rounded-full">
+              +{currentValue}
+            </Badge>
+            {node.parentGroupTarget && node.parentGroupTarget > 0 ? (
+              <Badge variant="secondary" className="text-[9px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/40 px-2 py-0.5 rounded-full">
+                {((currentValue / node.parentGroupTarget) * 100).toFixed(0)}% share
+              </Badge>
+            ) : null}
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 flex-1 min-w-0">
+            <AnimatedProgress
+              value={percentage}
+              className="h-1 flex-1"
+              indicatorClassName={isComplete ? "bg-green-500" : "bg-blue-500"}
+            />
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+              {currentValue}/{targetValue}
+            </span>
+          </div>
+        )}
 
         {/* Completion Indicator */}
         {isComplete ? (
