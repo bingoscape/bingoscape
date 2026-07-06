@@ -33,6 +33,9 @@ interface ProgressNode extends GoalTreeNode {
     total: number
     percentage: number
   }
+  inSumGroup?: boolean
+  parentGroupTarget?: number
+  children?: ProgressNode[]
 }
 
 /**
@@ -54,19 +57,23 @@ export function CompactGoalTree({
   className = "",
 }: CompactGoalTreeProps) {
   // Recursively evaluate group completion
-  const evaluateGroup = (node: GoalTreeNode): ProgressNode => {
+  const evaluateGroup = (node: GoalTreeNode, inSumGroup = false, parentGroupTarget = 0): ProgressNode => {
     if (node.type === "goal") {
       const goalData = node.data as any
       const progress = teamProgress.find((p) => p.goalId === node.id)
       return {
         ...node,
         progress,
+        inSumGroup,
+        parentGroupTarget,
       }
     }
 
     // It's a group - evaluate children
     const groupData = node.data as any
-    const evaluatedChildren = (node.children ?? []).map((child) => evaluateGroup(child))
+    const isSumGroup = groupData.logicalOperator === "SUM"
+    const sumGroupTarget = isSumGroup ? ((groupData.minRequiredGoals as number) || 1) : 0
+    const evaluatedChildren = (node.children ?? []).map((child) => evaluateGroup(child, isSumGroup, sumGroupTarget))
 
     // Count completed children
     const completedChildren = evaluatedChildren.filter((child) => {
@@ -110,6 +117,8 @@ export function CompactGoalTree({
       ...node,
       children: evaluatedChildren,
       isGroupComplete: isComplete,
+      inSumGroup,
+      parentGroupTarget,
       groupProgress: {
         completed: displayCompleted,
         total: displayTotal,
@@ -282,18 +291,31 @@ function CompactTreeNode({ node, depth, showProgress, maxDepth }: CompactTreeNod
           </TooltipContent>
         </Tooltip>
 
-        {/* Mini Progress Bar */}
+        {/* Mini Progress Bar or Contributor View */}
         {showProgress && (
-          <div className="flex items-center gap-1 flex-1 min-w-0">
-            <AnimatedProgress
-              value={percentage}
-              className="h-1 flex-1"
-              indicatorClassName={isComplete ? "bg-green-500" : "bg-blue-500"}
-            />
-            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-              {currentValue}/{targetValue}
-            </span>
-          </div>
+          node.inSumGroup ? (
+            <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end mr-1">
+              <Badge variant="outline" className="text-[9px] font-semibold h-3.5 px-1 py-0 bg-indigo-50 text-indigo-600 border-indigo-200">
+                +{currentValue}
+              </Badge>
+              {node.parentGroupTarget && node.parentGroupTarget > 0 ? (
+                <span className="text-[9px] text-muted-foreground whitespace-nowrap font-medium">
+                  ({((currentValue / node.parentGroupTarget) * 100).toFixed(0)}% of target)
+                </span>
+              ) : null}
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 flex-1 min-w-0">
+              <AnimatedProgress
+                value={percentage}
+                className="h-1 flex-1"
+                indicatorClassName={isComplete ? "bg-green-500" : "bg-blue-500"}
+              />
+              <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                {currentValue}/{targetValue}
+              </span>
+            </div>
+          )
         )}
 
         {/* Completion Indicator */}
