@@ -44,6 +44,82 @@ import { logger } from "@/lib/logger"
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
 
+// ---------------------------------------------------------------------------
+// Private auth-guard helpers (C2 fix)
+// ---------------------------------------------------------------------------
+
+/**
+ * Verifies that the currently authenticated user holds the admin or management
+ * role for the event that owns the given bingo.
+ * Returns the eventId on success, or throws a descriptive error on failure.
+ */
+async function requireBingoAdmin(bingoId: string): Promise<string> {
+  const session = await getServerAuthSession()
+  if (!session?.user) throw new Error("Unauthorized")
+
+  const bingo = await db.query.bingos.findFirst({
+    where: eq(bingos.id, bingoId),
+    columns: { eventId: true },
+  })
+  if (!bingo) throw new Error("Bingo not found")
+
+  const role = await getUserRole(bingo.eventId)
+  if (role !== "admin" && role !== "management") {
+    throw new Error("Forbidden: admin or management role required")
+  }
+
+  return bingo.eventId
+}
+
+/**
+ * Same check as requireBingoAdmin but starting from a tileId.
+ */
+async function requireBingoAdminForTile(tileId: string): Promise<string> {
+  const session = await getServerAuthSession()
+  if (!session?.user) throw new Error("Unauthorized")
+
+  const tile = await db.query.tiles.findFirst({
+    where: eq(tiles.id, tileId),
+    columns: { bingoId: true },
+    with: { bingo: { columns: { eventId: true } } },
+  })
+  if (!tile) throw new Error("Tile not found")
+
+  const role = await getUserRole(tile.bingo.eventId)
+  if (role !== "admin" && role !== "management") {
+    throw new Error("Forbidden: admin or management role required")
+  }
+
+  return tile.bingo.eventId
+}
+
+/**
+ * Same check as requireBingoAdmin but starting from a goalId.
+ */
+async function requireBingoAdminForGoal(goalId: string): Promise<string> {
+  const session = await getServerAuthSession()
+  if (!session?.user) throw new Error("Unauthorized")
+
+  const goal = await db.query.goals.findFirst({
+    where: eq(goals.id, goalId),
+    columns: { tileId: true },
+    with: {
+      tile: {
+        columns: { bingoId: true },
+        with: { bingo: { columns: { eventId: true } } },
+      },
+    },
+  })
+  if (!goal) throw new Error("Goal not found")
+
+  const role = await getUserRole(goal.tile.bingo.eventId)
+  if (role !== "admin" && role !== "management") {
+    throw new Error("Forbidden: admin or management role required")
+  }
+
+  return goal.tile.bingo.eventId
+}
+
 interface AddRowOrColumnSuccessResult {
   success: true
   tiles: Tile[]
@@ -209,6 +285,7 @@ export async function updateTile(
   updatedTile: Partial<typeof tiles.$inferInsert>
 ) {
   try {
+    await requireBingoAdminForTile(tileId)
     await db.update(tiles).set(updatedTile).where(eq(tiles.id, tileId))
     logger.info({ tileId, action: "updateTile" }, "Tile updated successfully")
     return { success: true }
@@ -222,6 +299,11 @@ export async function reorderTiles(
   reorderedTiles: Array<{ id: string; index: number }>
 ) {
   try {
+    // Guard: verify caller is admin/management for the bingo that owns these tiles.
+    // We check the first tile; all tiles in a reorder call belong to the same bingo.
+    const firstTileId = reorderedTiles[0]?.id
+    if (!firstTileId) return { success: false, error: "No tiles provided" }
+    await requireBingoAdminForTile(firstTileId)
     await db.transaction(async (tx) => {
       for (const tile of reorderedTiles) {
         await tx
@@ -240,6 +322,19 @@ export async function reorderTiles(
 export async function createBingo(formData: FormData) {
   const eventId = formData.get("eventId") as UUID
   const title = formData.get("title") as string
+
+  // Auth guard: only event admin/management may create bingos.
+  {
+    const session = await getServerAuthSession()
+    if (!session?.user) return { success: false, error: "Unauthorized" }
+    const role = await getUserRole(eventId)
+    if (role !== "admin" && role !== "management") {
+      return {
+        success: false,
+        error: "Forbidden: admin or management role required",
+      }
+    }
+  }
   const description = formData.get("description") as string
   const rowsStr = formData.get("rows") as string
   const columnsStr = formData.get("columns") as string
@@ -394,16 +489,13 @@ export async function createBingo(formData: FormData) {
 
 export async function deleteBingo(bingoId: string) {
   try {
+    await requireBingoAdmin(bingoId)
     await db.transaction(async (tx) => {
       // Delete all tiles associated with the bingo
-      await tx
-        .delete(tiles)
-        .where(eq(tiles.bingoId, bingoId))
+      await tx.delete(tiles).where(eq(tiles.bingoId, bingoId))
 
       // Delete the bingo itself
-      await tx
-        .delete(bingos)
-        .where(eq(bingos.id, bingoId))
+      await tx.delete(bingos).where(eq(bingos.id, bingoId))
       // console.table(tilesDeleted, bingosDeleted);
     })
 
@@ -419,6 +511,7 @@ export async function addGoal(
   goal: { description: string; targetValue: number }
 ) {
   try {
+    await requireBingoAdminForTile(tileId)
     const [newGoal] = await db
       .insert(goals)
       .values({
@@ -437,6 +530,7 @@ export async function addGoal(
 
 export async function deleteGoal(goalId: string) {
   try {
+    await requireBingoAdminForGoal(goalId)
     await db.delete(goals).where(eq(goals.id, goalId))
     return { success: true }
   } catch (error) {
@@ -456,6 +550,7 @@ export async function updateGoal(
   }
 ) {
   try {
+    await requireBingoAdminForGoal(goalId)
     // Validate inputs
     if (updates.targetValue !== undefined && updates.targetValue <= 0) {
       return { success: false, error: "Target value must be greater than 0" }
@@ -593,6 +688,7 @@ export async function updateMetricGoal(
   description?: string
 ) {
   try {
+    await requireBingoAdminForGoal(goalId)
     const goalDescription = description || `${metricName} (${metricType})`
 
     // Update the base goal
@@ -659,6 +755,7 @@ export async function updateItemGoal(
   targetValue?: number
 ) {
   try {
+    await requireBingoAdminForGoal(goalId)
     // Build goal update object
     const goalUpdate: Partial<typeof goals.$inferInsert> & { updatedAt: Date } =
       {
@@ -1608,6 +1705,7 @@ export async function addRowOrColumn(
   type: "row" | "column"
 ): Promise<AddRowOrColumnResult> {
   try {
+    await requireBingoAdmin(bingoId)
     return await db.transaction(async (tx) => {
       const [bingo] = await tx
         .select()
@@ -1669,6 +1767,7 @@ export async function addRowOrColumn(
 
 export async function deleteTile(tileId: string, bingoId: string) {
   try {
+    await requireBingoAdmin(bingoId)
     await db.transaction(async (tx) => {
       // Delete the tile
       await tx.delete(tiles).where(eq(tiles.id, tileId))
@@ -1689,10 +1788,7 @@ export async function deleteTile(tileId: string, bingoId: string) {
       }
 
       // Update bingo dimensions
-      await tx
-        .select()
-        .from(bingos)
-        .where(eq(bingos.id, bingoId))
+      await tx.select().from(bingos).where(eq(bingos.id, bingoId))
 
       const newTotalTiles = remainingTiles.length
       const newRows = Math.floor(Math.sqrt(newTotalTiles))
@@ -1713,6 +1809,7 @@ export async function deleteTile(tileId: string, bingoId: string) {
 
 export async function addTile(bingoId: string): Promise<AddRowOrColumnResult> {
   try {
+    await requireBingoAdmin(bingoId)
     return await db.transaction(async (tx) => {
       const [bingo] = await tx
         .select()
@@ -1766,6 +1863,7 @@ export async function deleteRowOrColumn(
   type: "row" | "column"
 ): Promise<AddRowOrColumnResult> {
   try {
+    await requireBingoAdmin(bingoId)
     return await db.transaction(async (tx) => {
       const [bingo] = await tx
         .select()
@@ -1867,6 +1965,7 @@ export async function updateBingo(
   data: UpdateBingoDataWithBonuses
 ) {
   try {
+    await requireBingoAdmin(bingoId)
     await db.transaction(async (tx) => {
       const updateData: any = {
         title: data.title,
@@ -2234,6 +2333,7 @@ export async function getProgressionBingoTiles(
 
 export async function updateTileTier(tileId: string, newTier: number) {
   try {
+    await requireBingoAdminForTile(tileId)
     await db
       .update(tiles)
       .set({ tier: newTier, updatedAt: new Date() })
@@ -2265,6 +2365,7 @@ export async function setTierXpRequirement(
   xpRequired: number
 ) {
   try {
+    await requireBingoAdmin(bingoId)
     // Try to update existing record
     const existingReq = await db.query.tierXpRequirements.findFirst({
       where: and(
@@ -2298,6 +2399,7 @@ export async function initializeTierXpRequirements(
   defaultXpRequired: number = 5
 ) {
   try {
+    await requireBingoAdmin(bingoId)
     // Get all unique tiers for this bingo
     const tierResults = await db
       .selectDistinct({ tier: tiles.tier })
@@ -2325,6 +2427,7 @@ export async function initializeTierXpRequirements(
 
 export async function createNewTier(bingoId: string) {
   try {
+    await requireBingoAdmin(bingoId)
     return await db.transaction(async (tx) => {
       // Get the highest tier number for this bingo
       const maxTierResult = await tx
@@ -2390,6 +2493,7 @@ export async function createNewTier(bingoId: string) {
 
 export async function deleteTier(bingoId: string, tierToDelete: number) {
   try {
+    await requireBingoAdmin(bingoId)
     return await db.transaction(async (tx) => {
       // First, delete all tiles in the specified tier
       const deletedTiles = await tx
