@@ -15,8 +15,6 @@ export async function validateApiKey(req: Request): Promise<string | null> {
     if (!authHeader) {
       return null
     }
-    console.log("authHeader", authHeader)
-
     // Extract the API key (Bearer token format)
     const match = authHeader.match(/^Bearer\s+(.+)$/)
     if (!match) {
