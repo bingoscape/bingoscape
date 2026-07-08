@@ -24,7 +24,7 @@ export default async function SuperAdminLayout({
             <h1 className="text-3xl font-bold">Super Admin Panel</h1>
             <Link href="/">
               <Button variant="outline" size="sm">
-                <Home className="h-4 w-4 mr-2" />
+                <Home className="mr-2 h-4 w-4" />
                 Back to App
               </Button>
             </Link>
@@ -38,25 +38,25 @@ export default async function SuperAdminLayout({
             <nav className="space-y-1">
               <Link href="/super-admin">
                 <Button variant="ghost" className="w-full justify-start">
-                  <BarChart3 className="h-4 w-4 mr-2" />
+                  <BarChart3 className="mr-2 h-4 w-4" />
                   Dashboard
                 </Button>
               </Link>
               <Link href="/super-admin/users">
                 <Button variant="ghost" className="w-full justify-start">
-                  <Users className="h-4 w-4 mr-2" />
+                  <Users className="mr-2 h-4 w-4" />
                   Users
                 </Button>
               </Link>
               <Link href="/super-admin/clans">
                 <Button variant="ghost" className="w-full justify-start">
-                  <Shield className="h-4 w-4 mr-2" />
+                  <Shield className="mr-2 h-4 w-4" />
                   Clans
                 </Button>
               </Link>
               <Link href="/super-admin/events">
                 <Button variant="ghost" className="w-full justify-start">
-                  <Calendar className="h-4 w-4 mr-2" />
+                  <Calendar className="mr-2 h-4 w-4" />
                   Events
                 </Button>
               </Link>

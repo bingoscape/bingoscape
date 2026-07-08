@@ -16,7 +16,13 @@ interface ProgressSliderProps {
   onUpdateProgress: (goalId: string, teamId: string, newValue: number) => void
 }
 
-export function ProgressSlider({ goalId, teamId, currentValue, maxValue, onUpdateProgress }: ProgressSliderProps) {
+export function ProgressSlider({
+  goalId,
+  teamId,
+  currentValue,
+  maxValue,
+  onUpdateProgress,
+}: ProgressSliderProps) {
   const [localValue, setLocalValue] = useState(currentValue)
   const [isEditing, setIsEditing] = useState(false)
   const [inputValue, setInputValue] = useState(currentValue.toString())
@@ -31,7 +37,10 @@ export function ProgressSlider({ goalId, teamId, currentValue, maxValue, onUpdat
   }
 
   const handleInputBlur = () => {
-    const newValue = Math.min(Math.max(Number.parseInt(inputValue) || 0, 0), maxValue)
+    const newValue = Math.min(
+      Math.max(Number.parseInt(inputValue) || 0, 0),
+      maxValue
+    )
     setLocalValue(newValue)
     setInputValue(newValue.toString())
     setIsEditing(false)
@@ -70,7 +79,7 @@ export function ProgressSlider({ goalId, teamId, currentValue, maxValue, onUpdat
             max={maxValue}
           />
         ) : (
-          <div className="text-sm w-20 text-right">{localValue}</div>
+          <div className="w-20 text-right text-sm">{localValue}</div>
         )}
         <div className="text-sm">/ {maxValue}</div>
 
@@ -80,11 +89,13 @@ export function ProgressSlider({ goalId, teamId, currentValue, maxValue, onUpdat
           onClick={() => setIsEditing(!isEditing)}
           aria-label={isEditing ? "Confirm edit" : "Edit value"}
         >
-          {isEditing ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+          {isEditing ? (
+            <Check className="h-4 w-4" />
+          ) : (
+            <Pencil className="h-4 w-4" />
+          )}
         </Button>
       </div>
     </div>
   )
 }
-
-

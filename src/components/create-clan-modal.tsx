@@ -1,14 +1,21 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
-import { createClan } from '@/app/actions/clan'
+import { createClan } from "@/app/actions/clan"
 
 export default function CreateClanModal() {
   const [open, setOpen] = useState(false)
@@ -19,11 +26,14 @@ export default function CreateClanModal() {
     e.preventDefault()
     setIsLoading(true)
     const formData = new FormData(e.currentTarget)
-    const name = formData.get('name') as string
-    const description = formData.get('description') as string
+    const name = formData.get("name") as string
+    const description = formData.get("description") as string
 
     try {
-      await createClan(name, description)
+      const result = await createClan(name, description)
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create clan")
+      }
       setOpen(false)
       toast({
         title: "Clan created",
@@ -33,7 +43,8 @@ export default function CreateClanModal() {
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       })
     } finally {
@@ -49,7 +60,9 @@ export default function CreateClanModal() {
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Create New Clan</DialogTitle>
-          <DialogDescription>Create a new clan for your OSRS adventures.</DialogDescription>
+          <DialogDescription>
+            Create a new clan for your OSRS adventures.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -68,4 +81,3 @@ export default function CreateClanModal() {
     </Dialog>
   )
 }
-

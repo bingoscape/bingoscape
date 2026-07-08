@@ -13,9 +13,15 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Trash2, TestTube, Plus, MessageSquare } from 'lucide-react'
+import { Trash2, TestTube, Plus, MessageSquare } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import {
   createDiscordWebhook,
@@ -40,7 +46,9 @@ interface DiscordWebhookManagementProps {
   eventId: string
 }
 
-export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementProps) {
+export function DiscordWebhookManagement({
+  eventId,
+}: DiscordWebhookManagementProps) {
   const [open, setOpen] = useState(false)
   const [webhooks, setWebhooks] = useState<DiscordWebhook[]>([])
   const [loading, setLoading] = useState(false)
@@ -64,7 +72,13 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
 
   useEffect(() => {
     if (open) {
-      loadWebhooks().then(() => { console.log("Webhooks loaded") }).catch((error) => { console.error("Error loading webhooks:", error) })
+      loadWebhooks()
+        .then(() => {
+          console.log("Webhooks loaded")
+        })
+        .catch((error) => {
+          console.error("Error loading webhooks:", error)
+        })
     }
   }, [open])
 
@@ -83,7 +97,7 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
       const result = await createDiscordWebhook(
         eventId,
         newWebhook.name,
-        newWebhook.webhookUrl,
+        newWebhook.webhookUrl
       )
 
       if (result.success) {
@@ -92,7 +106,11 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
           description: "Discord webhook created successfully",
         })
         setNewWebhook({ name: "", webhookUrl: "" })
-        loadWebhooks().then(() => console.log("Webhooks reloaded after creation")).catch((error) => { console.error("Error reloading webhooks:", error) })
+        loadWebhooks()
+          .then(() => console.log("Webhooks reloaded after creation"))
+          .catch((error) => {
+            console.error("Error reloading webhooks:", error)
+          })
       } else {
         toast({
           title: "Error",
@@ -119,7 +137,11 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
           title: "Success",
           description: `Webhook ${isActive ? "enabled" : "disabled"}`,
         })
-        loadWebhooks().then(() => console.log("Webhooks reloaded after toggle")).catch((error) => { console.error("Error reloading webhooks:", error) })
+        loadWebhooks()
+          .then(() => console.log("Webhooks reloaded after toggle"))
+          .catch((error) => {
+            console.error("Error reloading webhooks:", error)
+          })
       } else {
         toast({
           title: "Error",
@@ -146,7 +168,11 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
           title: "Success",
           description: "Webhook deleted successfully",
         })
-        loadWebhooks().then(() => console.log("Webhooks reloaded after deletion")).catch((error) => { console.error("Error reloading webhooks:", error) })
+        loadWebhooks()
+          .then(() => console.log("Webhooks reloaded after deletion"))
+          .catch((error) => {
+            console.error("Error reloading webhooks:", error)
+          })
       } else {
         toast({
           title: "Error",
@@ -195,11 +221,15 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
           Discord Webhooks
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" onOpenAutoFocus={(e) => e.preventDefault()}>
+      <DialogContent
+        className="max-h-[80vh] max-w-4xl overflow-y-auto"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Discord Webhook Management</DialogTitle>
           <DialogDescription>
-            Manage Discord webhooks for this event. Webhooks will automatically post submission notifications.
+            Manage Discord webhooks for this event. Webhooks will automatically
+            post submission notifications.
           </DialogDescription>
         </DialogHeader>
 
@@ -223,7 +253,9 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
                     id="webhook-name"
                     placeholder="e.g., Main Discord"
                     value={newWebhook.name}
-                    onChange={(e) => setNewWebhook({ ...newWebhook, name: e.target.value })}
+                    onChange={(e) =>
+                      setNewWebhook({ ...newWebhook, name: e.target.value })
+                    }
                   />
                 </div>
                 <div>
@@ -233,7 +265,12 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
                     type="url"
                     placeholder="https://discord.com/api/webhooks/..."
                     value={newWebhook.webhookUrl}
-                    onChange={(e) => setNewWebhook({ ...newWebhook, webhookUrl: e.target.value })}
+                    onChange={(e) =>
+                      setNewWebhook({
+                        ...newWebhook,
+                        webhookUrl: e.target.value,
+                      })
+                    }
                     onPaste={(e) => {
                       // Ensure paste event is handled properly
                       e.stopPropagation()
@@ -251,7 +288,9 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
 
           {/* Existing Webhooks */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Existing Webhooks ({webhooks.length})</h3>
+            <h3 className="text-lg font-semibold">
+              Existing Webhooks ({webhooks.length})
+            </h3>
             {webhooks.length === 0 ? (
               <Card>
                 <CardContent className="pt-6">
@@ -267,13 +306,17 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <div>
-                          <CardTitle className="text-base">{webhook.name}</CardTitle>
+                          <CardTitle className="text-base">
+                            {webhook.name}
+                          </CardTitle>
                           <CardDescription className="font-mono text-xs">
                             {webhook.webhookUrl.substring(0, 50)}...
                           </CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant={webhook.isActive ? "default" : "secondary"}>
+                          <Badge
+                            variant={webhook.isActive ? "default" : "secondary"}
+                          >
                             {webhook.isActive ? "Active" : "Inactive"}
                           </Badge>
                         </div>
@@ -296,9 +339,11 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleTestWebhook(webhook.webhookUrl)}
+                            onClick={() =>
+                              handleTestWebhook(webhook.webhookUrl)
+                            }
                           >
-                            <TestTube className="h-4 w-4 mr-1" />
+                            <TestTube className="mr-1 h-4 w-4" />
                             Test
                           </Button>
                           <Button
@@ -306,7 +351,7 @@ export function DiscordWebhookManagement({ eventId }: DiscordWebhookManagementPr
                             size="sm"
                             onClick={() => handleDeleteWebhook(webhook.id)}
                           >
-                            <Trash2 className="h-4 w-4 mr-1" />
+                            <Trash2 className="mr-1 h-4 w-4" />
                             Delete
                           </Button>
                         </div>

@@ -7,12 +7,15 @@ export async function GET() {
     baseUrl: "/api/runelite",
     description: "API for the BingoScape RuneLite plugin",
     changelog: {
-      "2.0.0": "Added hierarchical goal tree structure with goal groups, item goals, and goal values. Maintained backwards compatibility with flat goals array.",
-      "1.0.0": "Initial API release with basic bingo, tile, and submission endpoints",
+      "2.0.0":
+        "Added hierarchical goal tree structure with goal groups, item goals, and goal values. Maintained backwards compatibility with flat goals array.",
+      "1.0.0":
+        "Initial API release with basic bingo, tile, and submission endpoints",
     },
     authentication: {
       type: "Bearer Token",
-      description: "All endpoints require an API key to be passed in the Authorization header as a Bearer token",
+      description:
+        "All endpoints require an API key to be passed in the Authorization header as a Bearer token",
       example: "Authorization: Bearer bsn_your_api_key_here",
     },
     endpoints: [
@@ -141,7 +144,8 @@ export async function GET() {
     ],
     dataStructures: {
       goalTree: {
-        description: "Hierarchical goal structure supporting nested goal groups with AND/OR logic",
+        description:
+          "Hierarchical goal structure supporting nested goal groups with AND/OR logic",
         notes: [
           "The goalTree field is NEW in v2.0.0 and provides rich hierarchical goal data",
           "The flat goals array is maintained for backwards compatibility",
@@ -161,7 +165,8 @@ export async function GET() {
               description: "Present when goalType is 'item'",
               itemId: "number - OSRS item ID",
               baseName: "string - Base item name (e.g. 'Amulet of glory')",
-              exactVariant: "string | null - Specific variant if required (e.g. 'Amulet of glory (4)')",
+              exactVariant:
+                "string | null - Specific variant if required (e.g. 'Amulet of glory (4)')",
               imageUrl: "string - Path to item icon",
             },
             goalValues: {
@@ -170,14 +175,16 @@ export async function GET() {
                 {
                   id: "string - Goal value UUID",
                   value: "number - Submission value",
-                  description: "string - Description (e.g. 'Easy clue: 0.5 points')",
+                  description:
+                    "string - Description (e.g. 'Easy clue: 0.5 points')",
                 },
               ],
             },
             progress: {
               description: "Present when user has a team",
               approvedProgress: "number - Approved submissions total",
-              totalProgress: "number - All submissions total (approved + pending)",
+              totalProgress:
+                "number - All submissions total (approved + pending)",
               approvedPercentage: "number - Percentage complete (0-100)",
               isCompleted: "boolean - Whether goal is complete",
             },
@@ -188,7 +195,8 @@ export async function GET() {
             orderIndex: "number - Display order within parent",
             name: "string | null - Optional custom group name",
             logicalOperator: "string - 'AND' or 'OR'",
-            minRequiredGoals: "number - For OR groups, minimum children that must be complete",
+            minRequiredGoals:
+              "number - For OR groups, minimum children that must be complete",
             children: "GoalTreeNode[] - Nested goals and/or groups",
             progress: {
               description: "Present when user has a team",
@@ -385,4 +393,3 @@ export async function GET() {
 
   return NextResponse.json(apiDocs)
 }
-

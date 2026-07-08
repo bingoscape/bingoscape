@@ -20,7 +20,12 @@ type MiniTile = {
   isCompleted?: boolean
 }
 
-export function MiniBoard({ bingoId, rows, columns, visible = true }: MiniBoardProps) {
+export function MiniBoard({
+  bingoId,
+  rows,
+  columns,
+  visible = true,
+}: MiniBoardProps) {
   const [tiles, setTiles] = useState<MiniTile[]>([])
   const [loading, setLoading] = useState(visible)
 
@@ -41,9 +46,9 @@ export function MiniBoard({ bingoId, rows, columns, visible = true }: MiniBoardP
         if (mounted) setLoading(false)
       }
     }
-    
+
     void loadTiles()
-    
+
     return () => {
       mounted = false
     }
@@ -51,14 +56,17 @@ export function MiniBoard({ bingoId, rows, columns, visible = true }: MiniBoardP
 
   if (!visible) {
     return (
-      <div 
-        className="grid gap-1 sm:gap-1.5 bg-background/50 p-1.5 sm:p-2 rounded-lg sm:rounded-xl overflow-hidden border border-border/50 shadow-inner backdrop-blur-md opacity-80" 
+      <div
+        className="grid gap-1 overflow-hidden rounded-lg border border-border/50 bg-background/50 p-1.5 opacity-80 shadow-inner backdrop-blur-md sm:gap-1.5 sm:rounded-xl sm:p-2"
         style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
       >
         {Array.from({ length: rows * columns }).map((_, i) => (
-          <div key={i} className="aspect-square flex items-center justify-center rounded sm:rounded-md bg-muted/20 border-2 border-dashed border-muted-foreground/30">
+          <div
+            key={i}
+            className="flex aspect-square items-center justify-center rounded border-2 border-dashed border-muted-foreground/30 bg-muted/20 sm:rounded-md"
+          >
             {i === Math.floor((rows * columns) / 2) && (
-              <Lock className="w-6 h-6 text-muted-foreground/50" />
+              <Lock className="h-6 w-6 text-muted-foreground/50" />
             )}
           </div>
         ))}
@@ -68,46 +76,51 @@ export function MiniBoard({ bingoId, rows, columns, visible = true }: MiniBoardP
 
   if (loading) {
     return (
-      <div 
-        className="grid gap-1 sm:gap-1.5 bg-background/50 p-1.5 sm:p-2 rounded-lg sm:rounded-xl overflow-hidden opacity-50 animate-pulse border border-border/50 shadow-inner backdrop-blur-md" 
+      <div
+        className="grid animate-pulse gap-1 overflow-hidden rounded-lg border border-border/50 bg-background/50 p-1.5 opacity-50 shadow-inner backdrop-blur-md sm:gap-1.5 sm:rounded-xl sm:p-2"
         style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
       >
         {Array.from({ length: rows * columns }).map((_, i) => (
-          <div key={i} className="aspect-square rounded sm:rounded-md bg-muted/40 border border-border/50" />
+          <div
+            key={i}
+            className="aspect-square rounded border border-border/50 bg-muted/40 sm:rounded-md"
+          />
         ))}
       </div>
     )
   }
 
   return (
-    <div 
-      className="grid gap-1 sm:gap-1.5 bg-background/50 p-1.5 sm:p-2 rounded-lg sm:rounded-xl overflow-hidden shadow-inner backdrop-blur-md border border-border/50" 
+    <div
+      className="grid gap-1 overflow-hidden rounded-lg border border-border/50 bg-background/50 p-1.5 shadow-inner backdrop-blur-md sm:gap-1.5 sm:rounded-xl sm:p-2"
       style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
     >
-      {tiles.map(tile => (
-        <div 
-          key={tile.id} 
-          className={`aspect-square relative flex items-center justify-center overflow-hidden rounded sm:rounded-md transition-transform hover:scale-105 ${
-            tile.isHidden 
-              ? "bg-muted/20 border-2 border-dashed border-muted-foreground/30" 
-              : tile.isCompleted 
-                ? "border-green-500 bg-green-50 dark:bg-green-900/20 border-2 shadow-sm"
-                : "bg-card border border-border/80 shadow-sm"
+      {tiles.map((tile) => (
+        <div
+          key={tile.id}
+          className={`relative flex aspect-square items-center justify-center overflow-hidden rounded transition-transform hover:scale-105 sm:rounded-md ${
+            tile.isHidden
+              ? "border-2 border-dashed border-muted-foreground/30 bg-muted/20"
+              : tile.isCompleted
+                ? "border-2 border-green-500 bg-green-50 shadow-sm dark:bg-green-900/20"
+                : "border border-border/80 bg-card shadow-sm"
           }`}
           title={tile.isHidden ? "Hidden Tile" : tile.title}
         >
           {tile.isHidden ? (
-            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/30 font-bold text-xs">
+            <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-muted-foreground/30">
               ?
             </div>
           ) : tile.headerImage ? (
-            <img 
-              src={tile.headerImage} 
-              alt={tile.title} 
-              className={`absolute inset-0 h-full w-full object-contain p-0.5 ${tile.isCompleted ? 'brightness-110 saturate-110' : 'opacity-90'}`} 
+            <img
+              src={tile.headerImage}
+              alt={tile.title}
+              className={`absolute inset-0 h-full w-full object-contain p-0.5 ${tile.isCompleted ? "saturate-110 brightness-110" : "opacity-90"}`}
             />
           ) : (
-            <div className={`absolute inset-0 flex items-center justify-center ${tile.isCompleted ? 'bg-green-500' : 'bg-primary/20'}`} />
+            <div
+              className={`absolute inset-0 flex items-center justify-center ${tile.isCompleted ? "bg-green-500" : "bg-primary/20"}`}
+            />
           )}
         </div>
       ))}

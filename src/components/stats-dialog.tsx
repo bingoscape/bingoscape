@@ -2,9 +2,21 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card"
 import {
   ChartContainer,
   ChartTooltip,
@@ -26,7 +38,15 @@ import {
   AreaChart,
   Area,
 } from "recharts"
-import { Trophy, TrendingUp, Calendar, Grid, BarChart2, Award, Sparkles } from "lucide-react"
+import {
+  Trophy,
+  TrendingUp,
+  Calendar,
+  Grid,
+  BarChart2,
+  Award,
+  Sparkles,
+} from "lucide-react"
 import type { Team } from "@/app/actions/events"
 import { getAllTeamPointsAndTotal } from "@/app/actions/stats"
 import type { StatsData, TeamUserSubmissions } from "@/app/actions/stats"
@@ -45,11 +65,24 @@ interface StatsDialogProps {
   bingoId: string
 }
 
-export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, teams, bingoId }: StatsDialogProps) {
+export function StatsDialog({
+  isOpen,
+  onOpenChange,
+  userRole,
+  currentTeamId,
+  teams,
+  bingoId,
+}: StatsDialogProps) {
   const [statsData, setStatsData] = useState<StatsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [patternData, setPatternData] = useState<Map<string, PatternCompletionResult>>(new Map())
-  const [bingoInfo, setBingoInfo] = useState<{ rows: number; columns: number; bingoType: string } | null>(null)
+  const [patternData, setPatternData] = useState<
+    Map<string, PatternCompletionResult>
+  >(new Map())
+  const [bingoInfo, setBingoInfo] = useState<{
+    rows: number
+    columns: number
+    bingoType: string
+  } | null>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -85,9 +118,9 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
         }
       }
 
-      fetchData()
-        
-        .catch((error) => console.error("Error fetching stats data:", error))
+      fetchData().catch((error) =>
+        console.error("Error fetching stats data:", error)
+      )
     }
   }, [isOpen, bingoId, teams])
 
@@ -112,7 +145,10 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
   // Format tile completion data
   const tileCompletionData =
     statsData?.tileCompletions.slice(0, 10).map((tile) => ({
-      name: tile.title.length > 20 ? tile.title.substring(0, 20) + "..." : tile.title,
+      name:
+        tile.title.length > 20
+          ? tile.title.substring(0, 20) + "..."
+          : tile.title,
       completions: tile.completionCount,
       weight: tile.weight,
       fullTitle: tile.title,
@@ -121,7 +157,10 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
   // Format activity timeline data
   const activityTimelineData =
     statsData?.activityTimeline.map((day) => ({
-      date: new Date(day.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      date: new Date(day.date).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
       submissions: day.submissions,
       fullDate: day.date,
     })) || []
@@ -136,7 +175,9 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
         pending: team.pending,
         declined: team.declined,
         requiresInteraction: team.requiresInteraction,
-        acceptedRate: Number.parseFloat(((team.accepted / total) * 100).toFixed(1)),
+        acceptedRate: Number.parseFloat(
+          ((team.accepted / total) * 100).toFixed(1)
+        ),
       }
     }) || []
 
@@ -242,14 +283,14 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="flex h-[80vh] flex-col overflow-hidden sm:max-w-[900px]">
         <DialogHeader>
           <DialogTitle>Team Statistics</DialogTitle>
         </DialogHeader>
 
         {isLoading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div className="flex flex-1 items-center justify-center">
+            <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto p-4">
@@ -259,11 +300,17 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                   <Trophy className="h-4 w-4 md:mr-1" />
                   <span className="hidden md:inline">XP</span>
                 </TabsTrigger>
-                <TabsTrigger value="contributors" className="flex items-center gap-1">
+                <TabsTrigger
+                  value="contributors"
+                  className="flex items-center gap-1"
+                >
                   <Award className="h-4 w-4 md:mr-1" />
                   <span className="hidden md:inline">Team MVPs</span>
                 </TabsTrigger>
-                <TabsTrigger value="efficiency" className="flex items-center gap-1">
+                <TabsTrigger
+                  value="efficiency"
+                  className="flex items-center gap-1"
+                >
                   <TrendingUp className="h-4 w-4 md:mr-1" />
                   <span className="hidden md:inline">Efficiency</span>
                 </TabsTrigger>
@@ -271,7 +318,10 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                   <Grid className="h-4 w-4 md:mr-1" />
                   <span className="hidden md:inline">Tiles</span>
                 </TabsTrigger>
-                <TabsTrigger value="activity" className="flex items-center gap-1">
+                <TabsTrigger
+                  value="activity"
+                  className="flex items-center gap-1"
+                >
                   <Calendar className="h-4 w-4 md:mr-1" />
                   <span className="hidden md:inline">Activity</span>
                 </TabsTrigger>
@@ -279,7 +329,10 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                   <BarChart2 className="h-4 w-4 md:mr-1" />
                   <span className="hidden md:inline">Status</span>
                 </TabsTrigger>
-                <TabsTrigger value="patterns" className="flex items-center gap-1">
+                <TabsTrigger
+                  value="patterns"
+                  className="flex items-center gap-1"
+                >
                   <Sparkles className="h-4 w-4 md:mr-1" />
                   <span className="hidden md:inline">Bonuses</span>
                 </TabsTrigger>
@@ -293,13 +346,16 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                       Team XP Leaderboard
                     </CardTitle>
                     <CardDescription>
-                      Total XP earned by each team (base XP from tiles + bonus XP from patterns)
+                      Total XP earned by each team (base XP from tiles + bonus
+                      XP from patterns)
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="h-[400px]">
                     {teamPointsData.length === 0 ? (
-                      <div className="flex items-center justify-center h-full">
-                        <p className="text-muted-foreground">No data available</p>
+                      <div className="flex h-full items-center justify-center">
+                        <p className="text-muted-foreground">
+                          No data available
+                        </p>
                       </div>
                     ) : (
                       <ChartContainer config={xpChartConfig}>
@@ -307,15 +363,42 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                           <BarChart
                             data={teamPointsData}
                             layout="vertical"
-                            margin={{ top: 10, right: 50, left: 10, bottom: 10 }}
+                            margin={{
+                              top: 10,
+                              right: 50,
+                              left: 10,
+                              bottom: 10,
+                            }}
                           >
                             <CartesianGrid horizontal strokeDasharray="3 3" />
-                            <YAxis dataKey="name" type="category" width={120} tickLine={false} axisLine={false} />
-                            <XAxis type="number" domain={[0, statsData?.totalPossibleXP || "auto"]} />
-                            <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                            <YAxis
+                              dataKey="name"
+                              type="category"
+                              width={120}
+                              tickLine={false}
+                              axisLine={false}
+                            />
+                            <XAxis
+                              type="number"
+                              domain={[0, statsData?.totalPossibleXP || "auto"]}
+                            />
+                            <ChartTooltip
+                              cursor={false}
+                              content={<ChartTooltipContent />}
+                            />
                             <ChartLegend content={<ChartLegendContent />} />
-                            <Bar dataKey="baseXP" stackId="a" fill="var(--color-baseXP)" radius={[0, 0, 0, 0]} />
-                            <Bar dataKey="bonusXP" stackId="a" fill="var(--color-bonusXP)" radius={[0, 4, 4, 0]}>
+                            <Bar
+                              dataKey="baseXP"
+                              stackId="a"
+                              fill="var(--color-baseXP)"
+                              radius={[0, 0, 0, 0]}
+                            />
+                            <Bar
+                              dataKey="bonusXP"
+                              stackId="a"
+                              fill="var(--color-bonusXP)"
+                              radius={[0, 4, 4, 0]}
+                            >
                               <LabelList
                                 dataKey="xp"
                                 position="right"
@@ -336,8 +419,9 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                 </Card>
               </TabsContent>
               <TabsContent value="contributors" className="mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {statsData?.teamUserWeightedSubmissions && statsData.teamUserWeightedSubmissions.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {statsData?.teamUserWeightedSubmissions &&
+                  statsData.teamUserWeightedSubmissions.length > 0 ? (
                     statsData.teamUserWeightedSubmissions.map((team) => (
                       <Card key={team.teamId} className="flex flex-col">
                         <CardHeader className="items-center pb-0">
@@ -345,7 +429,10 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                             <Award className="h-4 w-4 text-amber-500" />
                             {team.teamName} MVPs
                           </CardTitle>
-                          <CardDescription>Contribution weighted by tile XP and submission ratio</CardDescription>
+                          <CardDescription>
+                            Contribution weighted by tile XP and submission
+                            ratio
+                          </CardDescription>
                         </CardHeader>
                         <CardContent className="flex-1 pb-0">
                           <ChartContainer
@@ -362,7 +449,7 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                                   }
                                   return acc
                                 },
-                                {} as Record<string, any>,
+                                {} as Record<string, any>
                               ),
                             }}
                             className="mx-auto aspect-square max-h-[200px] pb-0 [&_.recharts-pie-label-text]:fill-foreground"
@@ -373,11 +460,18 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                                   if (active && payload && payload.length) {
                                     const data = payload[0]?.payload
                                     return (
-                                      <div className="bg-background border border-border p-2 rounded-md shadow-md">
-                                        <p className="font-medium">{data.name}</p>
-                                        <p>Contribution Score: {data.contributionScore}</p>
+                                      <div className="rounded-md border border-border bg-background p-2 shadow-md">
+                                        <p className="font-medium">
+                                          {data.name}
+                                        </p>
+                                        <p>
+                                          Contribution Score:{" "}
+                                          {data.contributionScore}
+                                        </p>
                                         <p>Total Images: {data.totalImages}</p>
-                                        <p>Tiles Completed: {data.totalTiles}</p>
+                                        <p>
+                                          Tiles Completed: {data.totalTiles}
+                                        </p>
                                         <p>Total XP: {data.totalXP}</p>
                                       </div>
                                     )
@@ -400,20 +494,25 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                                 label={(entry) => entry.name}
                                 labelLine={false}
                               />
-                              <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+                              <ChartLegend
+                                content={<ChartLegendContent nameKey="name" />}
+                              />
                             </PieChart>
                           </ChartContainer>
                         </CardContent>
-                        <CardFooter className="text-sm text-center">
+                        <CardFooter className="text-center text-sm">
                           <div className="w-full leading-none text-muted-foreground">
-                            Pie slices represent weighted contribution based on tile XP and submission ratio
+                            Pie slices represent weighted contribution based on
+                            tile XP and submission ratio
                           </div>
                         </CardFooter>
                       </Card>
                     ))
                   ) : (
-                    <div className="col-span-2 flex items-center justify-center h-[300px]">
-                      <p className="text-muted-foreground">No MVP data available</p>
+                    <div className="col-span-2 flex h-[300px] items-center justify-center">
+                      <p className="text-muted-foreground">
+                        No MVP data available
+                      </p>
                     </div>
                   )}
                 </div>
@@ -426,12 +525,16 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                       <TrendingUp className="h-5 w-5 text-green-500" />
                       Team Efficiency
                     </CardTitle>
-                    <CardDescription>XP earned per submission (higher is better)</CardDescription>
+                    <CardDescription>
+                      XP earned per submission (higher is better)
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="h-[400px]">
                     {teamEfficiencyData.length === 0 ? (
-                      <div className="flex items-center justify-center h-full">
-                        <p className="text-muted-foreground">No data available</p>
+                      <div className="flex h-full items-center justify-center">
+                        <p className="text-muted-foreground">
+                          No data available
+                        </p>
                       </div>
                     ) : (
                       <ChartContainer config={efficiencyChartConfig}>
@@ -439,13 +542,31 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                           <BarChart
                             data={teamEfficiencyData}
                             layout="vertical"
-                            margin={{ top: 10, right: 80, left: 10, bottom: 10 }}
+                            margin={{
+                              top: 10,
+                              right: 80,
+                              left: 10,
+                              bottom: 10,
+                            }}
                           >
                             <CartesianGrid horizontal strokeDasharray="3 3" />
-                            <YAxis dataKey="name" type="category" width={120} tickLine={false} axisLine={false} />
+                            <YAxis
+                              dataKey="name"
+                              type="category"
+                              width={120}
+                              tickLine={false}
+                              axisLine={false}
+                            />
                             <XAxis type="number" />
-                            <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                            <Bar dataKey="efficiency" fill="var(--color-efficiency)" radius={4}>
+                            <ChartTooltip
+                              cursor={false}
+                              content={<ChartTooltipContent />}
+                            />
+                            <Bar
+                              dataKey="efficiency"
+                              fill="var(--color-efficiency)"
+                              radius={4}
+                            >
                               <LabelList
                                 dataKey="efficiency"
                                 position="right"
@@ -460,7 +581,8 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                   </CardContent>
                   <CardFooter className="flex-col items-start gap-2 text-sm">
                     <div className="leading-none text-muted-foreground">
-                      Higher efficiency means teams are earning more XP with fewer submissions
+                      Higher efficiency means teams are earning more XP with
+                      fewer submissions
                     </div>
                   </CardFooter>
                 </Card>
@@ -473,12 +595,16 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                       <Grid className="h-5 w-5 text-purple-500" />
                       Most Completed Tiles
                     </CardTitle>
-                    <CardDescription>Top 10 tiles by completion count</CardDescription>
+                    <CardDescription>
+                      Top 10 tiles by completion count
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="h-[400px]">
                     {tileCompletionData.length === 0 ? (
-                      <div className="flex items-center justify-center h-full">
-                        <p className="text-muted-foreground">No data available</p>
+                      <div className="flex h-full items-center justify-center">
+                        <p className="text-muted-foreground">
+                          No data available
+                        </p>
                       </div>
                     ) : (
                       <ChartContainer config={tileCompletionChartConfig}>
@@ -486,28 +612,51 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                           <BarChart
                             data={tileCompletionData}
                             layout="vertical"
-                            margin={{ top: 10, right: 50, left: 10, bottom: 10 }}
+                            margin={{
+                              top: 10,
+                              right: 50,
+                              left: 10,
+                              bottom: 10,
+                            }}
                           >
                             <CartesianGrid horizontal strokeDasharray="3 3" />
-                            <YAxis dataKey="name" type="category" width={150} tickLine={false} axisLine={false} />
+                            <YAxis
+                              dataKey="name"
+                              type="category"
+                              width={150}
+                              tickLine={false}
+                              axisLine={false}
+                            />
                             <XAxis type="number" />
                             <ChartTooltip
                               cursor={false}
                               content={({ active, payload }) => {
                                 if (active && payload && payload.length) {
                                   return (
-                                    <div className="bg-background border border-border p-2 rounded-md shadow-md">
-                                      <p className="font-medium">{payload[0]?.payload.fullTitle}</p>
+                                    <div className="rounded-md border border-border bg-background p-2 shadow-md">
+                                      <p className="font-medium">
+                                        {payload[0]?.payload.fullTitle}
+                                      </p>
                                       <p>Completions: {payload[0]?.value}</p>
-                                      <p>XP Value: {payload[0]?.payload.weight}</p>
+                                      <p>
+                                        XP Value: {payload[0]?.payload.weight}
+                                      </p>
                                     </div>
                                   )
                                 }
                                 return null
                               }}
                             />
-                            <Bar dataKey="completions" fill="var(--color-completions)" radius={4}>
-                              <LabelList dataKey="completions" position="right" className="fill-foreground" />
+                            <Bar
+                              dataKey="completions"
+                              fill="var(--color-completions)"
+                              radius={4}
+                            >
+                              <LabelList
+                                dataKey="completions"
+                                position="right"
+                                className="fill-foreground"
+                              />
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
@@ -524,17 +673,24 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                       <Calendar className="h-5 w-5 text-blue-500" />
                       Activity Timeline
                     </CardTitle>
-                    <CardDescription>Submission activity over the last 30 days</CardDescription>
+                    <CardDescription>
+                      Submission activity over the last 30 days
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="h-[400px]">
                     {activityTimelineData.length === 0 ? (
-                      <div className="flex items-center justify-center h-full">
-                        <p className="text-muted-foreground">No activity data available</p>
+                      <div className="flex h-full items-center justify-center">
+                        <p className="text-muted-foreground">
+                          No activity data available
+                        </p>
                       </div>
                     ) : (
                       <ChartContainer config={activityChartConfig}>
                         <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={activityTimelineData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                          <AreaChart
+                            data={activityTimelineData}
+                            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                          >
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="date" tickLine={false} />
                             <YAxis />
@@ -542,8 +698,10 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                               content={({ active, payload }) => {
                                 if (active && payload && payload.length) {
                                   return (
-                                    <div className="bg-background border border-border p-2 rounded-md shadow-md">
-                                      <p className="font-medium">{payload[0]?.payload.date}</p>
+                                    <div className="rounded-md border border-border bg-background p-2 shadow-md">
+                                      <p className="font-medium">
+                                        {payload[0]?.payload.date}
+                                      </p>
                                       <p>Submissions: {payload[0]?.value}</p>
                                     </div>
                                   )
@@ -578,26 +736,49 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                       <BarChart2 className="h-5 w-5 text-orange-500" />
                       Submission Status
                     </CardTitle>
-                    <CardDescription>Breakdown of submission statuses by team</CardDescription>
+                    <CardDescription>
+                      Breakdown of submission statuses by team
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="h-[400px]">
                     {submissionStatusData.length === 0 ? (
-                      <div className="flex items-center justify-center h-full">
-                        <p className="text-muted-foreground">No status data available</p>
+                      <div className="flex h-full items-center justify-center">
+                        <p className="text-muted-foreground">
+                          No status data available
+                        </p>
                       </div>
                     ) : (
                       <ChartContainer config={submissionStatusChartConfig}>
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={submissionStatusData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                          <BarChart
+                            data={submissionStatusData}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                          >
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="name" />
                             <YAxis />
                             <ChartTooltip content={<ChartTooltipContent />} />
                             <Legend />
-                            <Bar dataKey="accepted" stackId="a" fill="var(--color-accepted)" />
-                            <Bar dataKey="pending" stackId="a" fill="var(--color-pending)" />
-                            <Bar dataKey="declined" stackId="a" fill="var(--color-declined)" />
-                            <Bar dataKey="requiresInteraction" stackId="a" fill="var(--color-requiresInteraction)" />
+                            <Bar
+                              dataKey="accepted"
+                              stackId="a"
+                              fill="var(--color-accepted)"
+                            />
+                            <Bar
+                              dataKey="pending"
+                              stackId="a"
+                              fill="var(--color-pending)"
+                            />
+                            <Bar
+                              dataKey="declined"
+                              stackId="a"
+                              fill="var(--color-declined)"
+                            />
+                            <Bar
+                              dataKey="requiresInteraction"
+                              stackId="a"
+                              fill="var(--color-requiresInteraction)"
+                            />
                           </BarChart>
                         </ResponsiveContainer>
                       </ChartContainer>
@@ -605,7 +786,8 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                   </CardContent>
                   <CardFooter className="flex-col items-start gap-2 text-sm">
                     <div className="leading-none text-muted-foreground">
-                      Teams with higher acceptance rates are more successful at completing tiles correctly
+                      Teams with higher acceptance rates are more successful at
+                      completing tiles correctly
                     </div>
                   </CardFooter>
                 </Card>
@@ -622,7 +804,8 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                     </CardHeader>
                     <CardContent>
                       <p className="text-muted-foreground">
-                        Pattern bonuses are only available for standard bingo boards.
+                        Pattern bonuses are only available for standard bingo
+                        boards.
                       </p>
                     </CardContent>
                   </Card>
@@ -633,15 +816,23 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
                       if (!teamPatterns || !bingoInfo) return null
 
                       // Get completed tile indices for this team
-                      const teamTiles = statsData?.teamPoints.find((tp) => tp.teamId === team.id)
+                      const teamTiles = statsData?.teamPoints.find(
+                        (tp) => tp.teamId === team.id
+                      )
                       const completedTileIndices = new Set<number>()
 
                       // We need to fetch the actual completed tiles, but for now we'll show the pattern data
                       // This is a simplified version - in production you'd want to pass actual tile completion data
 
                       return (
-                        <div key={team.id} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          <BonusXPBreakdown patterns={teamPatterns} teamName={team.name} />
+                        <div
+                          key={team.id}
+                          className="grid grid-cols-1 gap-6 lg:grid-cols-2"
+                        >
+                          <BonusXPBreakdown
+                            patterns={teamPatterns}
+                            teamName={team.name}
+                          />
                           <PatternCompletionGrid
                             patterns={teamPatterns}
                             teamName={team.name}
@@ -662,4 +853,3 @@ export function StatsDialog({ isOpen, onOpenChange, userRole, currentTeamId, tea
     </Dialog>
   )
 }
-

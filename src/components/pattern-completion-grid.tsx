@@ -1,6 +1,12 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Check } from "lucide-react"
 import type { PatternCompletionResult } from "@/app/actions/pattern-completion"
 
@@ -20,8 +26,12 @@ export function PatternCompletionGrid({
   completedTileIndices,
 }: PatternCompletionGridProps) {
   // Create a set of completed row/column indices for quick lookup
-  const completedRowIndices = new Set(patterns.completedRows.map((r) => r.index!))
-  const completedColumnIndices = new Set(patterns.completedColumns.map((c) => c.index!))
+  const completedRowIndices = new Set(
+    patterns.completedRows.map((r) => r.index!)
+  )
+  const completedColumnIndices = new Set(
+    patterns.completedColumns.map((c) => c.index!)
+  )
 
   // Check if a tile is on the main diagonal
   const isOnMainDiagonal = (index: number): boolean => {
@@ -45,7 +55,9 @@ export function PatternCompletionGrid({
     const col = index % columns
     const isCompleted = completedTileIndices.has(index)
 
-    const classes = ["relative border aspect-square flex items-center justify-center"]
+    const classes = [
+      "relative border aspect-square flex items-center justify-center",
+    ]
 
     // Base color
     if (isCompleted) {
@@ -88,20 +100,20 @@ export function PatternCompletionGrid({
           {/* Legend */}
           <div className="flex flex-wrap gap-4 text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-green-100 border-2 border-green-600"></div>
+              <div className="h-4 w-4 border-2 border-green-600 bg-green-100"></div>
               <span>Completed Tile</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-gray-100 border-r-4 border-r-green-600"></div>
+              <div className="h-4 w-4 border-r-4 border-r-green-600 bg-gray-100"></div>
               <span>Completed Row</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-gray-100 border-b-4 border-b-blue-600"></div>
+              <div className="h-4 w-4 border-b-4 border-b-blue-600 bg-gray-100"></div>
               <span>Completed Column</span>
             </div>
             {rows === columns && (
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-gray-100 border-4 border-purple-600"></div>
+                <div className="h-4 w-4 border-4 border-purple-600 bg-gray-100"></div>
                 <span>Completed Diagonal</span>
               </div>
             )}
@@ -109,7 +121,7 @@ export function PatternCompletionGrid({
 
           {/* Grid */}
           <div
-            className="grid gap-1 w-fit mx-auto"
+            className="mx-auto grid w-fit gap-1"
             style={{
               gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
             }}
@@ -117,7 +129,7 @@ export function PatternCompletionGrid({
             {Array.from({ length: rows * columns }).map((_, index) => (
               <div key={index} className={getTileStyle(index)}>
                 {completedTileIndices.has(index) && (
-                  <Check className="w-4 h-4 text-green-700" />
+                  <Check className="h-4 w-4 text-green-700" />
                 )}
               </div>
             ))}
@@ -126,12 +138,17 @@ export function PatternCompletionGrid({
           {/* Row Labels with Bonuses */}
           {patterns.completedRows.length > 0 && (
             <div className="mt-4">
-              <h4 className="text-sm font-medium mb-2">Row Bonuses:</h4>
+              <h4 className="mb-2 text-sm font-medium">Row Bonuses:</h4>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 {patterns.completedRows.map((row) => (
-                  <div key={`row-label-${row.index}`} className="flex justify-between">
+                  <div
+                    key={`row-label-${row.index}`}
+                    className="flex justify-between"
+                  >
                     <span>Row {row.index! + 1}:</span>
-                    <span className="font-medium text-green-600">+{row.bonusXP} XP</span>
+                    <span className="font-medium text-green-600">
+                      +{row.bonusXP} XP
+                    </span>
                   </div>
                 ))}
               </div>
@@ -141,12 +158,17 @@ export function PatternCompletionGrid({
           {/* Column Labels with Bonuses */}
           {patterns.completedColumns.length > 0 && (
             <div className="mt-4">
-              <h4 className="text-sm font-medium mb-2">Column Bonuses:</h4>
+              <h4 className="mb-2 text-sm font-medium">Column Bonuses:</h4>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 {patterns.completedColumns.map((col) => (
-                  <div key={`col-label-${col.index}`} className="flex justify-between">
+                  <div
+                    key={`col-label-${col.index}`}
+                    className="flex justify-between"
+                  >
                     <span>Column {col.index! + 1}:</span>
-                    <span className="font-medium text-blue-600">+{col.bonusXP} XP</span>
+                    <span className="font-medium text-blue-600">
+                      +{col.bonusXP} XP
+                    </span>
                   </div>
                 ))}
               </div>
@@ -154,9 +176,10 @@ export function PatternCompletionGrid({
           )}
 
           {/* Diagonal Labels with Bonuses */}
-          {((patterns.mainDiagonal ?? false) || (patterns.antiDiagonal ?? false)) && (
+          {((patterns.mainDiagonal ?? false) ||
+            (patterns.antiDiagonal ?? false)) && (
             <div className="mt-4">
-              <h4 className="text-sm font-medium mb-2">Diagonal Bonuses:</h4>
+              <h4 className="mb-2 text-sm font-medium">Diagonal Bonuses:</h4>
               <div className="grid grid-cols-1 gap-2 text-sm">
                 {patterns.mainDiagonal && (
                   <div className="flex justify-between">

@@ -1,5 +1,5 @@
 // // @ts-nocheck
-// import { getUserRegistrationStatus, requestToJoinEvent } from "../events"
+// import {  getUserRegistrationStatus, requestToJoinEvent  } from "../events"
 // import { db } from "@/server/db"
 // import { auth } from "@/server/auth"
 // import { describe, beforeEach, it, expect, jest } from "@jest/globals"

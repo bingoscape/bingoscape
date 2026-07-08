@@ -4,7 +4,14 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -56,7 +63,7 @@ export function SuperAdminEventsTable({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    const params = new URLSearchParams(searchParams ?? '')
+    const params = new URLSearchParams(searchParams ?? "")
     if (search) {
       params.set("search", search)
     } else {
@@ -67,7 +74,7 @@ export function SuperAdminEventsTable({
   }
 
   const handlePageChange = (page: number) => {
-    const params = new URLSearchParams(searchParams ?? '')
+    const params = new URLSearchParams(searchParams ?? "")
     params.set("page", page.toString())
     router.push(`/super-admin/events?${params.toString()}`)
   }
@@ -76,7 +83,7 @@ export function SuperAdminEventsTable({
     <div className="space-y-4">
       <form onSubmit={handleSearch} className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
           <Input
             placeholder="Search events by title or description..."
             value={search}
@@ -107,16 +114,25 @@ export function SuperAdminEventsTable({
                   <div>
                     <div className="font-medium">{event.title}</div>
                     {event.description && (
-                      <div className="text-sm text-muted-foreground line-clamp-1">{event.description}</div>
+                      <div className="line-clamp-1 text-sm text-muted-foreground">
+                        {event.description}
+                      </div>
                     )}
                   </div>
                 </TableCell>
                 <TableCell>
                   {event.creator ? (
-                    <Link href={`/super-admin/users/${event.creator.id}`} className="hover:underline">
-                      <div className="font-medium">{event.creator.name ?? event.creator.email}</div>
+                    <Link
+                      href={`/super-admin/users/${event.creator.id}`}
+                      className="hover:underline"
+                    >
+                      <div className="font-medium">
+                        {event.creator.name ?? event.creator.email}
+                      </div>
                       {event.creator.runescapeName && (
-                        <div className="text-sm text-muted-foreground">{event.creator.runescapeName}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {event.creator.runescapeName}
+                        </div>
                       )}
                     </Link>
                   ) : (
@@ -127,7 +143,7 @@ export function SuperAdminEventsTable({
                   {event.clan ? (
                     <Link
                       href={`/super-admin/clans/${event.clan.id}`}
-                      className="hover:underline flex items-center gap-1"
+                      className="flex items-center gap-1 hover:underline"
                     >
                       <Shield className="h-4 w-4 text-muted-foreground" />
                       {event.clan.name}
@@ -155,7 +171,9 @@ export function SuperAdminEventsTable({
                 <TableCell>
                   <div className="text-sm">
                     <div>{new Date(event.startDate).toLocaleDateString()}</div>
-                    <div className="text-muted-foreground">to {new Date(event.endDate).toLocaleDateString()}</div>
+                    <div className="text-muted-foreground">
+                      to {new Date(event.endDate).toLocaleDateString()}
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -178,7 +196,8 @@ export function SuperAdminEventsTable({
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Showing {(currentPage - 1) * 50 + 1} to {Math.min(currentPage * 50, totalCount)} of {totalCount} events
+            Showing {(currentPage - 1) * 50 + 1} to{" "}
+            {Math.min(currentPage * 50, totalCount)} of {totalCount} events
           </div>
           <div className="flex items-center gap-2">
             <Button

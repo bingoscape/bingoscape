@@ -31,6 +31,10 @@ export const getUserClans = authActionClient
 
       return { success: true as const, userClans }
     } catch (error) {
-      return { success: false as const, error: error instanceof Error ? error.message : "Failed to get user clans" }
+      return {
+        success: false as const,
+        error:
+          error instanceof Error ? error.message : "Failed to get user clans",
+      }
     }
   })

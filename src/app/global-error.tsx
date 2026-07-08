@@ -1,12 +1,12 @@
-"use client";
+"use client"
 
-import NextError from "next/error";
-import { useEffect } from "react";
+import NextError from "next/error"
+import { useEffect } from "react"
 
 export default function GlobalError({
   error,
 }: {
-  error: Error & { digest?: string };
+  error: Error & { digest?: string }
 }) {
   useEffect(() => {
     // Log error to our custom error API endpoint
@@ -24,9 +24,9 @@ export default function GlobalError({
         timestamp: Date.now(),
       }),
     }).catch((err) => {
-      console.error("Failed to log error:", err);
-    });
-  }, [error]);
+      console.error("Failed to log error:", err)
+    })
+  }, [error])
 
   return (
     <html>
@@ -38,5 +38,5 @@ export default function GlobalError({
         <NextError statusCode={0} />
       </body>
     </html>
-  );
+  )
 }

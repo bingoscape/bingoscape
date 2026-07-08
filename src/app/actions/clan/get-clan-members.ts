@@ -7,7 +7,7 @@ import { clanMembers, users } from "@/server/db/schema"
 import { eq, sql } from "drizzle-orm"
 
 const schema = z.object({
-  clanId: z.string()
+  clanId: z.string(),
 })
 
 export const getClanMembers = authActionClient
@@ -37,6 +37,10 @@ export const getClanMembers = authActionClient
 
       return { success: true as const, members }
     } catch (error) {
-      return { success: false as const, error: error instanceof Error ? error.message : "Failed to get clan members" }
+      return {
+        success: false as const,
+        error:
+          error instanceof Error ? error.message : "Failed to get clan members",
+      }
     }
   })

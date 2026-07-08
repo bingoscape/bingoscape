@@ -1,9 +1,13 @@
- 
 "use client"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +29,11 @@ interface UserTemplateActionsProps {
   templateData?: string
 }
 
-export function UserTemplateActions({ templateId, downloadCount, templateData }: UserTemplateActionsProps) {
+export function UserTemplateActions({
+  templateId,
+  downloadCount,
+  templateData,
+}: UserTemplateActionsProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const router = useRouter()
@@ -35,7 +43,11 @@ export function UserTemplateActions({ templateId, downloadCount, templateData }:
   if (templateData) {
     try {
       const parsedData = JSON.parse(templateData)
-      if (parsedData.metadata && parsedData.metadata.rows && parsedData.metadata.columns) {
+      if (
+        parsedData.metadata &&
+        parsedData.metadata.rows &&
+        parsedData.metadata.columns
+      ) {
         gridSize = `${parsedData.metadata.rows}×${parsedData.metadata.columns}`
       }
     } catch (error) {
@@ -59,7 +71,8 @@ export function UserTemplateActions({ templateId, downloadCount, templateData }:
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete template",
+        description:
+          error instanceof Error ? error.message : "Failed to delete template",
         variant: "destructive",
       })
     } finally {
@@ -97,12 +110,16 @@ export function UserTemplateActions({ templateId, downloadCount, templateData }:
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your template.
+              This action cannot be undone. This will permanently delete your
+              template.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -120,4 +137,3 @@ export function UserTemplateActions({ templateId, downloadCount, templateData }:
     </>
   )
 }
-

@@ -232,75 +232,82 @@ export default function BingoGrid({
     }
   }, [isDialogOpen, currentTeamId, bingo.eventId])
 
-  const handleTileClick = useCallback(async (tile: Tile) => {
-    // Check if tile is locked due to progression (but allow if user has management rights)
-    if (
-      bingo.bingoType === "progression" &&
-      !unlockedTiers.has(tile.tier) &&
-      isLayoutLocked &&
-      !hasSufficientRights()
-    ) {
-      toast({
-        title: "Tier locked",
-        description: `Complete more tiles in tier ${tile.tier} to unlock this tier`,
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (tile.isHidden && !isLayoutLocked && hasSufficientRights()) {
-      await handleTogglePlaceholder(tile)
-      return
-    }
-
-    try {
-      const goals = await getTileGoalsAndProgress(tile.id)
-      const teamTileSubmissions = await getSubmissions(tile.id)
-      const updatedTile: Tile = { ...tile, goals, teamTileSubmissions }
-      setSelectedTile(updatedTile)
-      setEditedTile(updatedTile)
-      setIsDialogOpen(true)
-    } catch (error) {
-      console.error("Error fetching tile data:", error)
-      toast({
-        title: "Error",
-        description: "Failed to fetch tile data",
-        variant: "destructive",
-      })
-    }
-  }, [bingo.bingoType, isLayoutLocked, unlockedTiers])
-
-  const handleTogglePlaceholder = useCallback(async (tile: Tile) => {
-    if (isLayoutLocked) {
-      toast({
-        title: "Layout locked",
-        description: "The bingo board layout is currently locked for editing.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    const updatedTile = { ...tile, isHidden: !tile.isHidden }
-    const result = await updateTile(tile.id, updatedTile)
-    if (result.success) {
-      setTiles((prevTiles) =>
-        prevTiles.map((t) => (t.id === tile.id ? updatedTile : t))
-      )
-      if (onTileUpdated) {
-        onTileUpdated()
+  const handleTileClick = useCallback(
+    async (tile: Tile) => {
+      // Check if tile is locked due to progression (but allow if user has management rights)
+      if (
+        bingo.bingoType === "progression" &&
+        !unlockedTiers.has(tile.tier) &&
+        isLayoutLocked &&
+        !hasSufficientRights()
+      ) {
+        toast({
+          title: "Tier locked",
+          description: `Complete more tiles in tier ${tile.tier} to unlock this tier`,
+          variant: "destructive",
+        })
+        return
       }
-      toast({
-        title: "Tile updated",
-        description: `The tile is now ${updatedTile.isHidden ? "a placeholder" : "no longer a placeholder"}.`,
-      })
-    } else {
-      toast({
-        title: "Error",
-        description: "Failed to update tile",
-        variant: "destructive",
-      })
-    }
-  }, [isLayoutLocked, onTileUpdated])
+
+      if (tile.isHidden && !isLayoutLocked && hasSufficientRights()) {
+        await handleTogglePlaceholder(tile)
+        return
+      }
+
+      try {
+        const goals = await getTileGoalsAndProgress(tile.id)
+        const teamTileSubmissions = await getSubmissions(tile.id)
+        const updatedTile: Tile = { ...tile, goals, teamTileSubmissions }
+        setSelectedTile(updatedTile)
+        setEditedTile(updatedTile)
+        setIsDialogOpen(true)
+      } catch (error) {
+        console.error("Error fetching tile data:", error)
+        toast({
+          title: "Error",
+          description: "Failed to fetch tile data",
+          variant: "destructive",
+        })
+      }
+    },
+    [bingo.bingoType, isLayoutLocked, unlockedTiers]
+  )
+
+  const handleTogglePlaceholder = useCallback(
+    async (tile: Tile) => {
+      if (isLayoutLocked) {
+        toast({
+          title: "Layout locked",
+          description:
+            "The bingo board layout is currently locked for editing.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const updatedTile = { ...tile, isHidden: !tile.isHidden }
+      const result = await updateTile(tile.id, updatedTile)
+      if (result.success) {
+        setTiles((prevTiles) =>
+          prevTiles.map((t) => (t.id === tile.id ? updatedTile : t))
+        )
+        if (onTileUpdated) {
+          onTileUpdated()
+        }
+        toast({
+          title: "Tile updated",
+          description: `The tile is now ${updatedTile.isHidden ? "a placeholder" : "no longer a placeholder"}.`,
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update tile",
+          variant: "destructive",
+        })
+      }
+    },
+    [isLayoutLocked, onTileUpdated]
+  )
 
   const handleTileUpdate = useCallback(async () => {
     if (selectedTile && editedTile) {
@@ -380,83 +387,89 @@ export default function BingoGrid({
     }
   }, [selectedTile, newGoal, teams])
 
-  const handleDeleteGoal = useCallback(async (goalId: string) => {
-    if (selectedTile) {
-      const result = await deleteGoal(goalId)
-      if (result.success) {
-        setSelectedTile((prev) =>
-          prev
-            ? { ...prev, goals: prev.goals?.filter((g) => g.id !== goalId) }
-            : null
-        )
-        setTiles((prevTiles) =>
-          prevTiles.map((tile) =>
-            tile.id === selectedTile.id
-              ? { ...tile, goals: tile.goals?.filter((g) => g.id !== goalId) }
-              : tile
+  const handleDeleteGoal = useCallback(
+    async (goalId: string) => {
+      if (selectedTile) {
+        const result = await deleteGoal(goalId)
+        if (result.success) {
+          setSelectedTile((prev) =>
+            prev
+              ? { ...prev, goals: prev.goals?.filter((g) => g.id !== goalId) }
+              : null
           )
-        )
+          setTiles((prevTiles) =>
+            prevTiles.map((tile) =>
+              tile.id === selectedTile.id
+                ? { ...tile, goals: tile.goals?.filter((g) => g.id !== goalId) }
+                : tile
+            )
+          )
+          toast({
+            title: "Goal deleted",
+            description:
+              "The goal has been successfully deleted from the tile.",
+          })
+        } else {
+          toast({
+            title: "Error",
+            description: result.error ?? "Failed to delete goal",
+            variant: "destructive",
+          })
+        }
+      }
+    },
+    [selectedTile]
+  )
+
+  const handleProgressUpdate = useCallback(
+    async (goalId: string, teamId: string, newValue: number) => {
+      const result = await updateGoalProgress(goalId, teamId, newValue)
+      if (result.success) {
+        setSelectedTile((prev) => {
+          if (prev?.goals) {
+            return {
+              ...prev,
+              goals: prev.goals.map((goal) =>
+                goal.id === goalId
+                  ? {
+                      ...goal,
+                      teamProgress:
+                        goal.teamProgress?.map((progress) =>
+                          progress.teamId === teamId
+                            ? { ...progress, currentValue: newValue }
+                            : progress
+                        ) || [],
+                    }
+                  : goal
+              ),
+            }
+          }
+          return prev
+        })
         toast({
-          title: "Goal deleted",
-          description: "The goal has been successfully deleted from the tile.",
+          title: "Progress updated",
+          description: "The goal progress has been successfully updated.",
         })
       } else {
         toast({
           title: "Error",
-          description: result.error ?? "Failed to delete goal",
+          description: result.error ?? "Failed to update goal progress",
           variant: "destructive",
         })
       }
-    }
-  }, [selectedTile])
+    },
+    []
+  )
 
-  const handleProgressUpdate = useCallback(async (
-    goalId: string,
-    teamId: string,
-    newValue: number
-  ) => {
-    const result = await updateGoalProgress(goalId, teamId, newValue)
-    if (result.success) {
-      setSelectedTile((prev) => {
-        if (prev?.goals) {
-          return {
-            ...prev,
-            goals: prev.goals.map((goal) =>
-              goal.id === goalId
-                ? {
-                    ...goal,
-                    teamProgress:
-                      goal.teamProgress?.map((progress) =>
-                        progress.teamId === teamId
-                          ? { ...progress, currentValue: newValue }
-                          : progress
-                      ) || [],
-                  }
-                : goal
-            ),
-          }
-        }
-        return prev
-      })
-      toast({
-        title: "Progress updated",
-        description: "The goal progress has been successfully updated.",
-      })
-    } else {
-      toast({
-        title: "Error",
-        description: result.error ?? "Failed to update goal progress",
-        variant: "destructive",
-      })
-    }
-  }, [])
-
-  const handleImageChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      setSelectedImage(file)
-    }
-  }, [])
+  const handleImageChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      if (file) {
+        setSelectedImage(file)
+      }
+    },
+    []
+  )
 
   const refreshSubmissions = async (tileId: string) => {
     try {
@@ -487,66 +500,77 @@ export default function BingoGrid({
     }
   }
 
-  const handleImageSubmit = useCallback(async (onBehalfOfUserId?: string) => {
-    // Prevent concurrent uploads
-    if (isUploadingImage) {
-      return
-    }
-
-    if (bingo.locked) {
-      toast({
-        title: "Submissions locked",
-        description: "Submissions are currently locked for this bingo board",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (!selectedTile || !(selectedImage || pastedImage) || !currentTeamId) {
-      toast({
-        title: "Error",
-        description: "Missing required information for submission",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Set uploading state
-    setIsUploadingImage(true)
-
-    try {
-      const formData = new FormData()
-      formData.append("image", selectedImage ?? pastedImage!)
-      formData.append("tileId", selectedTile.id)
-      formData.append("teamId", currentTeamId)
-
-      // Include onBehalfOfUserId if provided
-      if (onBehalfOfUserId) {
-        formData.append("onBehalfOfUserId", onBehalfOfUserId)
+  const handleImageSubmit = useCallback(
+    async (onBehalfOfUserId?: string) => {
+      // Prevent concurrent uploads
+      if (isUploadingImage) {
+        return
       }
 
-      const result = await submitImage(formData)
-
-      if (result.success) {
-        setSelectedImage(null)
-        setPastedImage(null)
+      if (bingo.locked) {
         toast({
-          title: "Image submitted",
-          description: "Your image has been successfully submitted for review",
-        })
-        await refreshSubmissions(selectedTile.id)
-      } else {
-        toast({
-          title: "Error",
-          description: result.error ?? "Failed to submit image",
+          title: "Submissions locked",
+          description: "Submissions are currently locked for this bingo board",
           variant: "destructive",
         })
+        return
       }
-    } finally {
-      // Always reset uploading state
-      setIsUploadingImage(false)
-    }
-  }, [isUploadingImage, bingo.locked, selectedTile, selectedImage, pastedImage, currentTeamId])
+
+      if (!selectedTile || !(selectedImage || pastedImage) || !currentTeamId) {
+        toast({
+          title: "Error",
+          description: "Missing required information for submission",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Set uploading state
+      setIsUploadingImage(true)
+
+      try {
+        const formData = new FormData()
+        formData.append("image", selectedImage ?? pastedImage!)
+        formData.append("tileId", selectedTile.id)
+        formData.append("teamId", currentTeamId)
+
+        // Include onBehalfOfUserId if provided
+        if (onBehalfOfUserId) {
+          formData.append("onBehalfOfUserId", onBehalfOfUserId)
+        }
+
+        const result = await submitImage(formData)
+
+        if (result.success) {
+          setSelectedImage(null)
+          setPastedImage(null)
+          toast({
+            title: "Image submitted",
+            description:
+              "Your image has been successfully submitted for review",
+          })
+          await refreshSubmissions(selectedTile.id)
+        } else {
+          toast({
+            title: "Error",
+            description: result.error ?? "Failed to submit image",
+            variant: "destructive",
+          })
+        }
+      } finally {
+        // Always reset uploading state
+        setIsUploadingImage(false)
+      }
+    },
+    [
+      isUploadingImage,
+      bingo.locked,
+      selectedTile,
+      selectedImage,
+      pastedImage,
+      currentTeamId,
+    ]
+  )
 
   const handlePaste = useCallback(
     (event: ClipboardEvent) => {
@@ -620,297 +644,312 @@ export default function BingoGrid({
     }
   }, [isDialogOpen])
 
-  const handleTeamTileSubmissionStatusUpdate = useCallback(async (
-    teamTileSubmissionId: string | undefined,
-    newStatus: "approved" | "needs_review"
-  ) => {
-    if (!teamTileSubmissionId || !selectedTile) {
-      toast({
-        title: "Error",
-        description: "No submission found for this team",
-        variant: "destructive",
-      })
-      return
-    }
+  const handleTeamTileSubmissionStatusUpdate = useCallback(
+    async (
+      teamTileSubmissionId: string | undefined,
+      newStatus: "approved" | "needs_review"
+    ) => {
+      if (!teamTileSubmissionId || !selectedTile) {
+        toast({
+          title: "Error",
+          description: "No submission found for this team",
+          variant: "destructive",
+        })
+        return
+      }
 
-    try {
-      const result = await updateTeamTileSubmissionStatus(
-        teamTileSubmissionId,
-        newStatus
-      )
-      if (result.success) {
-        // Update local state with the new status
-        const updateSubmissions = (submissions: any[] | undefined) =>
-          submissions?.map((tts) =>
-            tts.id === teamTileSubmissionId
-              ? { ...tts, status: newStatus }
-              : tts
-          )
-
-        setSelectedTile((prev) =>
-          prev
-            ? {
-                ...prev,
-                teamTileSubmissions: updateSubmissions(
-                  prev.teamTileSubmissions
-                ),
-              }
-            : null
+      try {
+        const result = await updateTeamTileSubmissionStatus(
+          teamTileSubmissionId,
+          newStatus
         )
-        setTiles((prevTiles) =>
-          prevTiles.map((tile) =>
-            tile.id === selectedTile.id
+        if (result.success) {
+          // Update local state with the new status
+          const updateSubmissions = (submissions: any[] | undefined) =>
+            submissions?.map((tts) =>
+              tts.id === teamTileSubmissionId
+                ? { ...tts, status: newStatus }
+                : tts
+            )
+
+          setSelectedTile((prev) =>
+            prev
               ? {
-                  ...tile,
+                  ...prev,
                   teamTileSubmissions: updateSubmissions(
-                    tile.teamTileSubmissions
+                    prev.teamTileSubmissions
                   ),
                 }
-              : tile
+              : null
           )
-        )
+          setTiles((prevTiles) =>
+            prevTiles.map((tile) =>
+              tile.id === selectedTile.id
+                ? {
+                    ...tile,
+                    teamTileSubmissions: updateSubmissions(
+                      tile.teamTileSubmissions
+                    ),
+                  }
+                : tile
+            )
+          )
 
+          toast({
+            title: "Status updated",
+            description: `Submission marked as ${newStatus.replace("_", " ")}`,
+          })
+        } else {
+          throw new Error(result.error)
+        }
+      } catch (error) {
+        console.error("Error updating submission status:", error)
         toast({
-          title: "Status updated",
-          description: `Submission marked as ${newStatus.replace("_", " ")}`,
+          title: "Error",
+          description: "Failed to update submission status",
+          variant: "destructive",
         })
-      } else {
-        throw new Error(result.error)
       }
-    } catch (error) {
-      console.error("Error updating submission status:", error)
-      toast({
-        title: "Error",
-        description: "Failed to update submission status",
-        variant: "destructive",
-      })
-    }
-  }, [selectedTile])
+    },
+    [selectedTile]
+  )
 
-  const handleDeleteSubmission = useCallback(async (submissionId: string) => {
-    if (!selectedTile) return
+  const handleDeleteSubmission = useCallback(
+    async (submissionId: string) => {
+      if (!selectedTile) return
 
-    try {
-      const result = await deleteSubmission(submissionId)
-      if (result.success) {
-        // Update the local state to remove the deleted submission
-        setSelectedTile((prev) => {
-          if (!prev) return null
+      try {
+        const result = await deleteSubmission(submissionId)
+        if (result.success) {
+          // Update the local state to remove the deleted submission
+          setSelectedTile((prev) => {
+            if (!prev) return null
 
-          const updatedTeamTileSubmissions = prev.teamTileSubmissions?.map(
-            (tts) => ({
-              ...tts,
-              submissions: tts.submissions.filter(
-                (sub) => sub.id !== submissionId
-              ),
+            const updatedTeamTileSubmissions = prev.teamTileSubmissions?.map(
+              (tts) => ({
+                ...tts,
+                submissions: tts.submissions.filter(
+                  (sub) => sub.id !== submissionId
+                ),
+              })
+            )
+
+            return {
+              ...prev,
+              teamTileSubmissions: updatedTeamTileSubmissions,
+            }
+          })
+
+          // Update the tiles state as well
+          setTiles((prevTiles) =>
+            prevTiles.map((tile) => {
+              if (tile.id === selectedTile.id) {
+                const updatedTeamTileSubmissions =
+                  tile.teamTileSubmissions?.map((tts) => ({
+                    ...tts,
+                    submissions: tts.submissions.filter(
+                      (sub) => sub.id !== submissionId
+                    ),
+                  }))
+
+                return {
+                  ...tile,
+                  teamTileSubmissions: updatedTeamTileSubmissions,
+                }
+              }
+              return tile
             })
           )
 
-          return {
-            ...prev,
-            teamTileSubmissions: updatedTeamTileSubmissions,
-          }
-        })
-
-        // Update the tiles state as well
-        setTiles((prevTiles) =>
-          prevTiles.map((tile) => {
-            if (tile.id === selectedTile.id) {
-              const updatedTeamTileSubmissions = tile.teamTileSubmissions?.map(
-                (tts) => ({
-                  ...tts,
-                  submissions: tts.submissions.filter(
-                    (sub) => sub.id !== submissionId
-                  ),
-                })
-              )
-
-              return {
-                ...tile,
-                teamTileSubmissions: updatedTeamTileSubmissions,
-              }
-            }
-            return tile
+          toast({
+            title: "Submission deleted",
+            description: "The submission has been successfully deleted.",
           })
-        )
-
+        } else {
+          throw new Error("Failed to delete submission")
+        }
+      } catch (error) {
+        console.error("Error deleting submission:", error)
         toast({
-          title: "Submission deleted",
-          description: "The submission has been successfully deleted.",
+          title: "Error",
+          description: "Failed to delete submission",
+          variant: "destructive",
         })
-      } else {
-        throw new Error("Failed to delete submission")
       }
-    } catch (error) {
-      console.error("Error deleting submission:", error)
-      toast({
-        title: "Error",
-        description: "Failed to delete submission",
-        variant: "destructive",
-      })
-    }
-  }, [selectedTile])
+    },
+    [selectedTile]
+  )
 
-  const handleDeleteTile = useCallback(async (tileId: string) => {
-    if (isLayoutLocked) {
-      toast({
-        title: "Layout locked",
-        description: "The bingo board layout is currently locked for editing.",
-      })
-      return
-    }
-
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this tile?"
-    )
-    if (!confirmDelete) return
-
-    try {
-      const result = await deleteTile(tileId, bingo.id)
-      if (result.success) {
-        setTiles((prevTiles) => prevTiles.filter((tile) => tile.id !== tileId))
+  const handleDeleteTile = useCallback(
+    async (tileId: string) => {
+      if (isLayoutLocked) {
         toast({
-          title: "Tile deleted",
-          description: "The tile has been successfully deleted.",
+          title: "Layout locked",
+          description:
+            "The bingo board layout is currently locked for editing.",
         })
-      } else {
-        throw new Error(result.error)
+        return
       }
-    } catch (error) {
-      console.error("Error deleting tile:", error)
-      toast({
-        title: "Error",
-        description: "Failed to delete tile",
-        variant: "destructive",
-      })
-    }
-  }, [isLayoutLocked, bingo.id])
+
+      const confirmDelete = window.confirm(
+        "Are you sure you want to delete this tile?"
+      )
+      if (!confirmDelete) return
+
+      try {
+        const result = await deleteTile(tileId, bingo.id)
+        if (result.success) {
+          setTiles((prevTiles) =>
+            prevTiles.filter((tile) => tile.id !== tileId)
+          )
+          toast({
+            title: "Tile deleted",
+            description: "The tile has been successfully deleted.",
+          })
+        } else {
+          throw new Error(result.error)
+        }
+      } catch (error) {
+        console.error("Error deleting tile:", error)
+        toast({
+          title: "Error",
+          description: "Failed to delete tile",
+          variant: "destructive",
+        })
+      }
+    },
+    [isLayoutLocked, bingo.id]
+  )
 
   // Updated to handle goal assignment with proper typing including value and weight
-  const handleSubmissionStatusUpdate = useCallback(async (
-    submissionId: string,
-    newStatus: "pending" | "approved" | "needs_review",
-    goalId?: string | null,
-    submissionValue?: number | null
-  ) => {
-    try {
-      console.log(
-        `Updating submission ${submissionId} with status ${newStatus}, goalId ${goalId}, value ${submissionValue}`
-      )
-
-      // Only allow approved or needs_review to be passed to the server action
-      const validStatus = newStatus === "pending" ? "needs_review" : newStatus
-
-      const result = await updateSubmissionStatus(
-        submissionId,
-        validStatus,
-        goalId,
-        submissionValue
-      )
-      if (result.success) {
-        // Update local state for both individual submission and potentially team status
-        setSelectedTile((prev) => {
-          if (!prev) return null
-
-          // Create a deep copy of the tile with updated submissions
-          const updatedTile = { ...prev }
-
-          if (updatedTile.teamTileSubmissions) {
-            updatedTile.teamTileSubmissions =
-              updatedTile.teamTileSubmissions.map((tts) => {
-                return {
-                  ...tts,
-                  submissions: tts.submissions.map((sub) => {
-                    if (sub.id === submissionId) {
-                      // Create a new submission object with updated fields
-                      // Use type assertion to handle the goalId property
-                      const updatedSub = { ...sub } as ExtendedSubmission
-                      updatedSub.status = newStatus
-                      updatedSub.reviewedBy = session.data?.user?.id || null
-                      updatedSub.reviewedAt = new Date()
-
-                      // Update goalId, submissionValue, and weight if provided
-                      if (goalId !== undefined) {
-                        updatedSub.goalId = goalId
-                      }
-                      if (submissionValue !== undefined) {
-                        updatedSub.submissionValue = submissionValue
-                      }
-
-                      return updatedSub
-                    }
-                    return sub
-                  }),
-                }
-              })
-          }
-
-          return updatedTile
-        })
-
-        // Also update the tiles state
-        setTiles((prevTiles) =>
-          prevTiles.map((tile) => {
-            if (tile.id === selectedTile?.id) {
-              const updatedTile = { ...tile }
-
-              if (updatedTile.teamTileSubmissions) {
-                updatedTile.teamTileSubmissions =
-                  updatedTile.teamTileSubmissions.map((tts) => {
-                    return {
-                      ...tts,
-                      submissions: tts.submissions.map((sub) => {
-                        if (sub.id === submissionId) {
-                          // Create a new submission object with updated fields
-                          // Use type assertion to handle the goalId property
-                          const updatedSub = { ...sub } as ExtendedSubmission
-                          updatedSub.status = newStatus
-                          updatedSub.reviewedBy = session.data?.user?.id || null
-                          updatedSub.reviewedAt = new Date()
-
-                          // Update goalId, submissionValue, and weight if provided
-                          if (goalId !== undefined) {
-                            updatedSub.goalId = goalId
-                          }
-                          if (submissionValue !== undefined) {
-                            updatedSub.submissionValue = submissionValue
-                          }
-
-                          return updatedSub
-                        }
-                        return sub
-                      }),
-                    }
-                  })
-              }
-
-              return updatedTile
-            }
-            return tile
-          })
+  const handleSubmissionStatusUpdate = useCallback(
+    async (
+      submissionId: string,
+      newStatus: "pending" | "approved" | "needs_review",
+      goalId?: string | null,
+      submissionValue?: number | null
+    ) => {
+      try {
+        console.log(
+          `Updating submission ${submissionId} with status ${newStatus}, goalId ${goalId}, value ${submissionValue}`
         )
 
-        const message =
-          goalId !== undefined
-            ? `Submission ${newStatus.replace("_", " ")}, goal ${goalId ? "assigned" : "removed"}${submissionValue ? ` with value ${submissionValue}` : ""}`
-            : `Submission marked as ${newStatus.replace("_", " ")}`
+        // Only allow approved or needs_review to be passed to the server action
+        const validStatus = newStatus === "pending" ? "needs_review" : newStatus
 
+        const result = await updateSubmissionStatus(
+          submissionId,
+          validStatus,
+          goalId,
+          submissionValue
+        )
+        if (result.success) {
+          // Update local state for both individual submission and potentially team status
+          setSelectedTile((prev) => {
+            if (!prev) return null
+
+            // Create a deep copy of the tile with updated submissions
+            const updatedTile = { ...prev }
+
+            if (updatedTile.teamTileSubmissions) {
+              updatedTile.teamTileSubmissions =
+                updatedTile.teamTileSubmissions.map((tts) => {
+                  return {
+                    ...tts,
+                    submissions: tts.submissions.map((sub) => {
+                      if (sub.id === submissionId) {
+                        // Create a new submission object with updated fields
+                        // Use type assertion to handle the goalId property
+                        const updatedSub = { ...sub } as ExtendedSubmission
+                        updatedSub.status = newStatus
+                        updatedSub.reviewedBy = session.data?.user?.id || null
+                        updatedSub.reviewedAt = new Date()
+
+                        // Update goalId, submissionValue, and weight if provided
+                        if (goalId !== undefined) {
+                          updatedSub.goalId = goalId
+                        }
+                        if (submissionValue !== undefined) {
+                          updatedSub.submissionValue = submissionValue
+                        }
+
+                        return updatedSub
+                      }
+                      return sub
+                    }),
+                  }
+                })
+            }
+
+            return updatedTile
+          })
+
+          // Also update the tiles state
+          setTiles((prevTiles) =>
+            prevTiles.map((tile) => {
+              if (tile.id === selectedTile?.id) {
+                const updatedTile = { ...tile }
+
+                if (updatedTile.teamTileSubmissions) {
+                  updatedTile.teamTileSubmissions =
+                    updatedTile.teamTileSubmissions.map((tts) => {
+                      return {
+                        ...tts,
+                        submissions: tts.submissions.map((sub) => {
+                          if (sub.id === submissionId) {
+                            // Create a new submission object with updated fields
+                            // Use type assertion to handle the goalId property
+                            const updatedSub = { ...sub } as ExtendedSubmission
+                            updatedSub.status = newStatus
+                            updatedSub.reviewedBy =
+                              session.data?.user?.id || null
+                            updatedSub.reviewedAt = new Date()
+
+                            // Update goalId, submissionValue, and weight if provided
+                            if (goalId !== undefined) {
+                              updatedSub.goalId = goalId
+                            }
+                            if (submissionValue !== undefined) {
+                              updatedSub.submissionValue = submissionValue
+                            }
+
+                            return updatedSub
+                          }
+                          return sub
+                        }),
+                      }
+                    })
+                }
+
+                return updatedTile
+              }
+              return tile
+            })
+          )
+
+          const message =
+            goalId !== undefined
+              ? `Submission ${newStatus.replace("_", " ")}, goal ${goalId ? "assigned" : "removed"}${submissionValue ? ` with value ${submissionValue}` : ""}`
+              : `Submission marked as ${newStatus.replace("_", " ")}`
+
+          toast({
+            title: "Submission updated",
+            description: message,
+          })
+        } else {
+          throw new Error(result.error || "Failed to update submission status")
+        }
+      } catch (error) {
+        console.error("Error updating submission status:", error)
         toast({
-          title: "Submission updated",
-          description: message,
+          title: "Error",
+          description: "Failed to update submission status",
+          variant: "destructive",
         })
-      } else {
-        throw new Error(result.error || "Failed to update submission status")
       }
-    } catch (error) {
-      console.error("Error updating submission status:", error)
-      toast({
-        title: "Error",
-        description: "Failed to update submission status",
-        variant: "destructive",
-      })
-    }
-  }, [selectedTile, session.data?.user?.id])
+    },
+    [selectedTile, session.data?.user?.id]
+  )
 
   return (
     <div className="space-y-4">
@@ -962,7 +1001,9 @@ export default function BingoGrid({
         eventId={bingo.eventId}
         gameType={gameType}
         isProgressionBingo={bingo.bingoType === "progression"}
-        onEditTile={(field, value) => setEditedTile({ ...editedTile, [field]: value })}
+        onEditTile={(field, value) =>
+          setEditedTile({ ...editedTile, [field]: value })
+        }
         onUpdateTile={handleTileUpdate}
         onEditorChange={handleEditorChange}
         onUpdateProgress={handleProgressUpdate}
@@ -970,7 +1011,9 @@ export default function BingoGrid({
         hasSufficientRights={hasSufficientRights()}
         onDeleteGoal={handleDeleteGoal}
         onAddGoal={handleAddGoal}
-        onNewGoalChange={(field, value) => setNewGoal({ ...newGoal, [field]: value })}
+        onNewGoalChange={(field, value) =>
+          setNewGoal({ ...newGoal, [field]: value })
+        }
         currentTeamId={currentTeamId}
         selectedImage={selectedImage}
         pastedImage={pastedImage}

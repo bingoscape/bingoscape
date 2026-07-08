@@ -11,7 +11,7 @@ export const signInSchema = z.object({
     .max(30, "Username must be 30 characters or less")
     .regex(
       /^[a-zA-Z0-9_-]+$/,
-      "Username can only contain letters, numbers, hyphens, and underscores",
+      "Username can only contain letters, numbers, hyphens, and underscores"
     ),
   password: z
     .string()
@@ -31,7 +31,7 @@ export const signUpSchema = z
       .max(30, "Username must be 30 characters or less")
       .regex(
         /^[a-zA-Z0-9_-]+$/,
-        "Username can only contain letters, numbers, hyphens, and underscores",
+        "Username can only contain letters, numbers, hyphens, and underscores"
       ),
     password: z
       .string()
@@ -39,7 +39,7 @@ export const signUpSchema = z
       .max(100, "Password is too long")
       .regex(
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-        "Password must contain at least one uppercase letter, one lowercase letter, and one number",
+        "Password must contain at least one uppercase letter, one lowercase letter, and one number"
       ),
     confirmPassword: z.string(),
     runescapeName: z
@@ -48,7 +48,7 @@ export const signUpSchema = z
       .max(12, "RuneScape name must be 12 characters or less")
       .regex(
         /^[a-zA-Z0-9 _-]+$/,
-        "RuneScape name can only contain letters, numbers, spaces, hyphens, and underscores",
+        "RuneScape name can only contain letters, numbers, spaces, hyphens, and underscores"
       )
       .optional(),
   })
@@ -61,10 +61,7 @@ export const signUpSchema = z
  * Schema for validating password reset request.
  */
 export const resetPasswordRequestSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Invalid email format"),
+  email: z.string().min(1, "Email is required").email("Invalid email format"),
 })
 
 /**
@@ -79,7 +76,7 @@ export const resetPasswordSchema = z
       .max(100, "Password is too long")
       .regex(
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-        "Password must contain at least one uppercase letter, one lowercase letter, and one number",
+        "Password must contain at least one uppercase letter, one lowercase letter, and one number"
       ),
     confirmPassword: z.string(),
   })

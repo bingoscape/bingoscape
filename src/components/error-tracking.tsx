@@ -1,6 +1,6 @@
-"use client";
+"use client"
 
-import { useEffect } from "react";
+import { useEffect } from "react"
 
 /**
  * Global error tracking for unhandled client-side errors
@@ -9,7 +9,7 @@ export function useErrorTracking() {
   useEffect(() => {
     // Track unhandled errors
     const handleError = (event: ErrorEvent) => {
-      event.preventDefault();
+      event.preventDefault()
 
       fetch("/api/errors", {
         method: "POST",
@@ -29,17 +29,17 @@ export function useErrorTracking() {
           },
         }),
       }).catch((err) => {
-        console.error("Failed to log error:", err);
-      });
-    };
+        console.error("Failed to log error:", err)
+      })
+    }
 
     // Track unhandled promise rejections
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      event.preventDefault();
+      event.preventDefault()
 
-      const error = event.reason;
-      const message = error instanceof Error ? error.message : String(error);
-      const stack = error instanceof Error ? error.stack : undefined;
+      const error = event.reason
+      const message = error instanceof Error ? error.message : String(error)
+      const stack = error instanceof Error ? error.stack : undefined
 
       fetch("/api/errors", {
         method: "POST",
@@ -57,21 +57,18 @@ export function useErrorTracking() {
           },
         }),
       }).catch((err) => {
-        console.error("Failed to log promise rejection:", err);
-      });
-    };
+        console.error("Failed to log promise rejection:", err)
+      })
+    }
 
-    window.addEventListener("error", handleError);
-    window.addEventListener("unhandledrejection", handleUnhandledRejection);
+    window.addEventListener("error", handleError)
+    window.addEventListener("unhandledrejection", handleUnhandledRejection)
 
     return () => {
-      window.removeEventListener("error", handleError);
-      window.removeEventListener(
-        "unhandledrejection",
-        handleUnhandledRejection,
-      );
-    };
-  }, []);
+      window.removeEventListener("error", handleError)
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection)
+    }
+  }, [])
 }
 
 /**
@@ -80,8 +77,8 @@ export function useErrorTracking() {
 export function ErrorTrackingProvider({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
-  useErrorTracking();
-  return <>{children}</>;
+  useErrorTracking()
+  return <>{children}</>
 }

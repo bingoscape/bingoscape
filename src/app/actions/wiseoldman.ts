@@ -1,7 +1,7 @@
 "use server"
 
 import { WOMClient } from "@wise-old-man/utils"
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger"
 
 // Initialize WiseOldMan client with optional API key for higher rate limits
 const womClient = new WOMClient({
@@ -14,7 +14,10 @@ export interface WOMPlayerData {
   ehb: number
   combatLevel: number
   totalLevel: number
-  skills: Record<string, { level: number; experience: number; rank: number; ehp: number }>
+  skills: Record<
+    string,
+    { level: number; experience: number; rank: number; ehp: number }
+  >
   bosses: Record<string, { kills: number; rank: number; ehb: number }>
 }
 
@@ -29,7 +32,7 @@ export interface FetchWOMDataResult {
  * Returns EHP, EHB, combat level, total level, skills, and boss KC
  */
 export async function fetchPlayerDataFromWOM(
-  runescapeName: string,
+  runescapeName: string
 ): Promise<FetchWOMDataResult> {
   if (!runescapeName || runescapeName.trim() === "") {
     return {
@@ -40,20 +43,26 @@ export async function fetchPlayerDataFromWOM(
 
   try {
     // Fetch player details from WiseOldMan
-    const player = await womClient.players.getPlayerDetails(runescapeName.trim())
+    const player = await womClient.players.getPlayerDetails(
+      runescapeName.trim()
+    )
 
     // Check if player has latest snapshot data
     if (!player.latestSnapshot?.data) {
       return {
         success: false,
-        error: "Player data not available. Try updating the player on WiseOldMan first.",
+        error:
+          "Player data not available. Try updating the player on WiseOldMan first.",
       }
     }
 
     const snapshot = player.latestSnapshot.data
 
     // Extract skills data
-    const skills: Record<string, { level: number; experience: number; rank: number; ehp: number }> = {}
+    const skills: Record<
+      string,
+      { level: number; experience: number; rank: number; ehp: number }
+    > = {}
     if (snapshot.skills) {
       for (const [skillName, skillData] of Object.entries(snapshot.skills)) {
         skills[skillName] = {
@@ -66,7 +75,8 @@ export async function fetchPlayerDataFromWOM(
     }
 
     // Extract bosses data (filter out entries with -1 kills)
-    const bosses: Record<string, { kills: number; rank: number; ehb: number }> = {}
+    const bosses: Record<string, { kills: number; rank: number; ehb: number }> =
+      {}
     if (snapshot.bosses) {
       for (const [bossName, bossData] of Object.entries(snapshot.bosses)) {
         if (bossData.kills > 0) {
@@ -79,7 +89,10 @@ export async function fetchPlayerDataFromWOM(
       }
     }
 
-    logger.debug({ runescapeName, action: "fetchPlayerDataFromWOM" }, "Successfully fetched player data from WiseOldMan")
+    logger.debug(
+      { runescapeName, action: "fetchPlayerDataFromWOM" },
+      "Successfully fetched player data from WiseOldMan"
+    )
     return {
       success: true,
       data: {
@@ -92,20 +105,36 @@ export async function fetchPlayerDataFromWOM(
       },
     }
   } catch (error) {
-    logger.error({ error, runescapeName, action: "fetchPlayerDataFromWOM" }, "Error fetching WiseOldMan data")
+    logger.error(
+      { error, runescapeName, action: "fetchPlayerDataFromWOM" },
+      "Error fetching WiseOldMan data"
+    )
 
     // Handle specific error cases
     if (error instanceof Error) {
-      if (error.message.includes("404") || error.message.includes("not found")) {
-        logger.warn({ runescapeName, action: "fetchPlayerDataFromWOM" }, "Player not found on WiseOldMan")
+      if (
+        error.message.includes("404") ||
+        error.message.includes("not found")
+      ) {
+        logger.warn(
+          { runescapeName, action: "fetchPlayerDataFromWOM" },
+          "Player not found on WiseOldMan"
+        )
         return {
           success: false,
-          error: "Player not found on WiseOldMan. They may need to be tracked first at wiseoldman.net",
+          error:
+            "Player not found on WiseOldMan. They may need to be tracked first at wiseoldman.net",
         }
       }
 
-      if (error.message.includes("429") || error.message.includes("rate limit")) {
-        logger.warn({ runescapeName, action: "fetchPlayerDataFromWOM" }, "WiseOldMan API rate limit exceeded")
+      if (
+        error.message.includes("429") ||
+        error.message.includes("rate limit")
+      ) {
+        logger.warn(
+          { runescapeName, action: "fetchPlayerDataFromWOM" },
+          "WiseOldMan API rate limit exceeded"
+        )
         return {
           success: false,
           error: "Rate limit exceeded. Please try again in a few minutes.",
@@ -115,7 +144,8 @@ export async function fetchPlayerDataFromWOM(
 
     return {
       success: false,
-      error: "Failed to fetch player data from WiseOldMan. Please try again later.",
+      error:
+        "Failed to fetch player data from WiseOldMan. Please try again later.",
     }
   }
 }
@@ -124,7 +154,9 @@ export async function fetchPlayerDataFromWOM(
  * Trigger a player update on WiseOldMan (pulls fresh data from OSRS hiscores)
  * Note: This should be used sparingly due to rate limits
  */
-export async function updatePlayerOnWOM(runescapeName: string): Promise<FetchWOMDataResult> {
+export async function updatePlayerOnWOM(
+  runescapeName: string
+): Promise<FetchWOMDataResult> {
   if (!runescapeName || runescapeName.trim() === "") {
     return {
       success: false,
@@ -142,11 +174,17 @@ export async function updatePlayerOnWOM(runescapeName: string): Promise<FetchWOM
     // Fetch the updated data
     const updatedData = await fetchPlayerDataFromWOM(runescapeName)
     if (updatedData.success) {
-      logger.info({ runescapeName, action: "updatePlayerOnWOM" }, "Successfully updated player on WiseOldMan")
+      logger.info(
+        { runescapeName, action: "updatePlayerOnWOM" },
+        "Successfully updated player on WiseOldMan"
+      )
     }
     return updatedData
   } catch (error) {
-    logger.error({ error, runescapeName, action: "updatePlayerOnWOM" }, "Error updating WiseOldMan data")
+    logger.error(
+      { error, runescapeName, action: "updatePlayerOnWOM" },
+      "Error updating WiseOldMan data"
+    )
 
     return {
       success: false,
@@ -168,7 +206,8 @@ export async function fetchCompetitionFromWOM(
   competitionId: number
 ): Promise<FetchWOMCompetitionResult> {
   try {
-    const competition = await womClient.competitions.getCompetitionDetails(competitionId)
+    const competition =
+      await womClient.competitions.getCompetitionDetails(competitionId)
     return {
       success: true,
       data: competition,

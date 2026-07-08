@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation"
 import { getServerAuthSession } from "@/server/auth"
-import { getEventById } from "@/app/actions/events"
+
 import type { UUID } from "crypto"
 import { TeamManagement } from "@/components/team-management"
 import { TeamDisplay } from "@/components/team-display"
 import { getCurrentTeamForUser } from "@/app/actions/team"
 import { EventBingosClient } from "@/components/event-bingos-client"
+import { getEventById } from "@/server/queries/events"
 
 export default async function EventBingosPage(props: {
   params: Promise<{ id: UUID }>
@@ -18,7 +19,7 @@ export default async function EventBingosPage(props: {
 
   const [data, currentTeam] = await Promise.all([
     getEventById(params.id),
-    getCurrentTeamForUser(params.id)
+    getCurrentTeamForUser(params.id),
   ])
 
   if (!data) {

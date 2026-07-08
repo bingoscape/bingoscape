@@ -1,9 +1,10 @@
 import Link from "next/link"
-import { type getEvents as getEventsType } from "@/app/actions/events"
+
 import { EventDisplay } from "./events-display"
 import { Button } from "@/components/ui/button"
 import { CreateEventButton } from "./create-event-button"
 import { Plus, TrendingUp, Users, Trophy } from "lucide-react"
+import { type getEvents as getEventsType } from "@/server/queries/events"
 
 interface EventListProps {
   userId: string
@@ -69,8 +70,13 @@ export default function EventList({ userId, initialEvents }: EventListProps) {
         {hasEvents && (
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <div className="flex items-center gap-1.5 rounded-full border border-border/50 bg-card/40 px-3 py-1.5 backdrop-blur-sm transition-colors hover:bg-card/60">
-              <TrendingUp aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
-              <span className="font-semibold text-foreground">{allEvents.length}</span>
+              <TrendingUp
+                aria-hidden="true"
+                className="h-4 w-4 text-muted-foreground"
+              />
+              <span className="font-semibold text-foreground">
+                {allEvents.length}
+              </span>
               <span className="text-muted-foreground">Total</span>
             </div>
             <div className="flex items-center gap-1.5 rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1.5 backdrop-blur-sm transition-colors hover:bg-green-500/20">
@@ -108,7 +114,6 @@ export default function EventList({ userId, initialEvents }: EventListProps) {
       <div className={hasEvents ? "" : "mx-auto max-w-6xl"}>
         <EventDisplay initialEvents={allEvents} />
       </div>
-
     </div>
   )
 }

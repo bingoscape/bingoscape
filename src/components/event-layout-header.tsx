@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { getServerAuthSession } from "@/server/auth"
 import {
-  getEventById,
   calculateEventPrizePool,
   isRegistrationOpen,
   getPendingRegistrationCount,
@@ -29,6 +28,7 @@ import { EventHeaderActions } from "@/components/event-header-actions"
 import AlertBanner from "@/components/ui/alert-banner"
 import { EventRulesSheet } from "@/components/event-rules-sheet"
 import { EventTimeDisplay } from "@/components/event-time-display"
+import { getEventById } from "@/server/queries/events"
 
 export async function EventLayoutHeader({ eventId }: { eventId: string }) {
   const session = await getServerAuthSession()
@@ -48,7 +48,7 @@ export async function EventLayoutHeader({ eventId }: { eventId: string }) {
     const regOpenStatus = await isRegistrationOpen(eventId)
 
     return (
-      <Card className="mx-auto max-w-2xl mb-8">
+      <Card className="mx-auto mb-8 max-w-2xl">
         <CardHeader>
           <CardTitle>Event Access Restricted</CardTitle>
           <CardDescription>
@@ -89,15 +89,15 @@ export async function EventLayoutHeader({ eventId }: { eventId: string }) {
     prizePoolData,
     registrationStatus,
     pendingRegistrationsCount,
-    rules
+    rules,
   ] = await Promise.all([
     getUserClans(),
     calculateEventPrizePool(eventId),
     isRegistrationOpen(eventId),
     getPendingRegistrationCount(eventId),
-    getEventRules(eventId)
+    getEventRules(eventId),
   ])
-  
+
   const prizePool = prizePoolData.totalPrizePool
   const isAdminOrManagement = userRole === "admin" || userRole === "management"
   const isAdmin = userRole === "admin"
@@ -155,9 +155,17 @@ export async function EventLayoutHeader({ eventId }: { eventId: string }) {
                   </span>
                 )}
               </div>
-              <div className="mt-4 mb-2 flex flex-col gap-0.5 border-l-2 border-primary/20 pl-3">
-                <EventTimeDisplay date={startDate} label="Start" eventTz={event.timezone || "UTC"} />
-                <EventTimeDisplay date={endDate} label="End" eventTz={event.timezone || "UTC"} />
+              <div className="mb-2 mt-4 flex flex-col gap-0.5 border-l-2 border-primary/20 pl-3">
+                <EventTimeDisplay
+                  date={startDate}
+                  label="Start"
+                  eventTz={event.timezone || "UTC"}
+                />
+                <EventTimeDisplay
+                  date={endDate}
+                  label="End"
+                  eventTz={event.timezone || "UTC"}
+                />
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Badge variant="outline" className="text-xs">

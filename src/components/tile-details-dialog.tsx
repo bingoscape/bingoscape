@@ -42,8 +42,16 @@ interface TileDetailsDialogProps {
   onImageChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   onImageSubmit: (onBehalfOfUserId?: string) => void
   onFullSizeImageView: (src: string, alt: string) => void
-  onTeamTileSubmissionStatusUpdate: (teamTileSubmissionId: string | undefined, newStatus: "approved" | "needs_review") => void
-  onSubmissionStatusUpdate: (submissionId: string, newStatus: "pending" | "approved" | "needs_review", goalId?: string | null, submissionValue?: number | null) => void
+  onTeamTileSubmissionStatusUpdate: (
+    teamTileSubmissionId: string | undefined,
+    newStatus: "approved" | "needs_review"
+  ) => void
+  onSubmissionStatusUpdate: (
+    submissionId: string,
+    newStatus: "pending" | "approved" | "needs_review",
+    goalId?: string | null,
+    submissionValue?: number | null
+  ) => void
   onDeleteSubmission: (submissionId: string) => void
   selectableUsers: SelectableUser[]
   selectedUserId: string | undefined
@@ -183,7 +191,9 @@ export function TileDetailsDialog({
               onImageChange={onImageChange}
               onImageSubmit={onImageSubmit}
               onFullSizeImageView={onFullSizeImageView}
-              onTeamTileSubmissionStatusUpdate={onTeamTileSubmissionStatusUpdate}
+              onTeamTileSubmissionStatusUpdate={
+                onTeamTileSubmissionStatusUpdate
+              }
               onSubmissionStatusUpdate={onSubmissionStatusUpdate}
               onDeleteSubmission={onDeleteSubmission}
               selectableUsers={selectableUsers}

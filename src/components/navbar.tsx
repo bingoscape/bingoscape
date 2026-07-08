@@ -35,7 +35,7 @@ import { NotificationBell } from "./notification-bell"
 import { cn } from "@/lib/utils"
 
 interface NavbarProps {
-  isSuperAdminUser?: boolean;
+  isSuperAdminUser?: boolean
 }
 
 export function Navbar({ isSuperAdminUser = false }: NavbarProps) {

@@ -9,18 +9,18 @@ receivers:
   prometheus:
     config:
       scrape_configs:
-        - job_name: 'nextjs-app'
+        - job_name: "nextjs-app"
           scrape_interval: 15s
           static_configs:
-            - targets: ['app:3000']
-          metrics_path: '/api/metrics'
-        - job_name: 'postgres-exporter'
+            - targets: ["app:3000"]
+          metrics_path: "/api/metrics"
+        - job_name: "postgres-exporter"
           scrape_interval: 15s
           static_configs:
-            - targets: ['postgres-exporter:9187']
+            - targets: ["postgres-exporter:9187"]
 
   filelog/docker:
-    include: [ "/var/lib/docker/containers/*/*.log" ]
+    include: ["/var/lib/docker/containers/*/*.log"]
     start_at: end
     include_file_path: true
     include_file_name: false
@@ -29,7 +29,7 @@ receivers:
         id: docker_json_parser
         timestamp:
           parse_from: attributes.time
-          layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+          layout: "%Y-%m-%dT%H:%M:%S.%LZ"
       - type: move
         from: attributes.log
         to: body

@@ -5,7 +5,12 @@ import { notifications, eventParticipants } from "@/server/db/schema"
 import { eq, and, desc, or } from "drizzle-orm"
 import { events, teams, tiles } from "@/server/db/schema"
 
-export async function createNotification(eventId: string, tileId: string, teamId: string, message: string) {
+export async function createNotification(
+  eventId: string,
+  tileId: string,
+  teamId: string,
+  message: string
+) {
   // Get all admin and management users for the event
   const usersToNotify = await db
     .select({ userId: eventParticipants.userId })
@@ -13,8 +18,11 @@ export async function createNotification(eventId: string, tileId: string, teamId
     .where(
       and(
         eq(eventParticipants.eventId, eventId),
-        or(eq(eventParticipants.role, "admin"), eq(eventParticipants.role, "management")),
-      ),
+        or(
+          eq(eventParticipants.role, "admin"),
+          eq(eventParticipants.role, "management")
+        )
+      )
     )
 
   // Create notifications for each admin/management user
@@ -52,5 +60,8 @@ export async function getNotifications(userId: string, limit = 10) {
 }
 
 export async function markNotificationAsRead(notificationId: string) {
-  await db.update(notifications).set({ isRead: true }).where(eq(notifications.id, notificationId))
+  await db
+    .update(notifications)
+    .set({ isRead: true })
+    .where(eq(notifications.id, notificationId))
 }

@@ -48,6 +48,7 @@ The RuneLite plugin API provides endpoints specifically designed for the OSRS ga
 ### Authentication Endpoints
 
 #### Validate API Key
+
 ```http
 POST /api/runelite/auth
 Content-Type: application/json
@@ -58,6 +59,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "valid": true,
@@ -73,12 +75,14 @@ Content-Type: application/json
 ### Event Management
 
 #### Get User Events
+
 ```http
 GET /api/runelite/events
 Authorization: Bearer bsn_your_api_key_here
 ```
 
 **Response:**
+
 ```json
 [
   {
@@ -110,12 +114,14 @@ Authorization: Bearer bsn_your_api_key_here
 ### Bingo Data
 
 #### Get Bingo Details
+
 ```http
 GET /api/runelite/bingos/{bingoId}
 Authorization: Bearer bsn_your_api_key_here
 ```
 
 **Response:**
+
 ```json
 {
   "id": "bingo-uuid",
@@ -137,7 +143,7 @@ Authorization: Bearer bsn_your_api_key_here
       "isHidden": false,
       "goals": [
         {
-          "id": "goal-uuid", 
+          "id": "goal-uuid",
           "description": "Kill Zulrah",
           "targetValue": 1
         }
@@ -152,12 +158,14 @@ Authorization: Bearer bsn_your_api_key_here
 ### Submission Management
 
 #### Get Tile Submissions
+
 ```http
 GET /api/runelite/tiles/{tileId}/submissions
 Authorization: Bearer bsn_your_api_key_here
 ```
 
 **Response:**
+
 ```json
 {
   "teamId": "team-uuid",
@@ -181,6 +189,7 @@ Authorization: Bearer bsn_your_api_key_here
 ```
 
 #### Submit Screenshot
+
 ```http
 POST /api/runelite/tiles/{tileId}/submissions
 Authorization: Bearer bsn_your_api_key_here
@@ -190,6 +199,7 @@ image: <file>
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -209,6 +219,7 @@ image: <file>
 ### API Documentation Endpoint
 
 #### Get API Documentation
+
 ```http
 GET /api/runelite/docs
 ```
@@ -222,6 +233,7 @@ The web application primarily uses Server Actions for data mutations, but includ
 ### File Uploads
 
 #### Upload Static Files
+
 ```http
 GET /api/uploads/{...path}
 ```
@@ -231,6 +243,7 @@ Serves uploaded images and files with proper content types and caching headers.
 ### Authentication
 
 #### NextAuth Endpoints
+
 ```http
 GET/POST /api/auth/{...nextauth}
 ```
@@ -240,6 +253,7 @@ Handles OAuth flows, session management, and authentication callbacks.
 ### Administrative
 
 #### Super Admin Check
+
 ```http
 GET /api/super-admin/check
 Authorization: Session-based
@@ -248,6 +262,7 @@ Authorization: Session-based
 Validates super admin permissions for administrative features.
 
 #### System Health
+
 ```http
 GET /api/uptime
 ```
@@ -331,14 +346,16 @@ All API endpoints return consistent error responses:
 Server Actions return result objects with success/error status:
 
 ```typescript
-type ActionResult<T> = {
-  success: true
-  data: T
-} | {
-  success: false
-  error: string
-  details?: Record<string, string>
-}
+type ActionResult<T> =
+  | {
+      success: true
+      data: T
+    }
+  | {
+      success: false
+      error: string
+      details?: Record<string, string>
+    }
 ```
 
 ## Rate Limiting
@@ -355,19 +372,19 @@ Currently, no explicit rate limiting is implemented, but it's recommended for pr
 
 ```javascript
 // Initialize plugin with API key
-const apiKey = 'bsn_your_api_key_here'
-const baseUrl = 'https://bingoscape.com/api/runelite'
+const apiKey = "bsn_your_api_key_here"
+const baseUrl = "https://bingoscape.com/api/runelite"
 
 // Validate API key
 async function validateKey() {
   const response = await fetch(`${baseUrl}/auth`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json'
+      "Content-Type": "application/json",
     },
-    body: JSON.stringify({ apiKey })
+    body: JSON.stringify({ apiKey }),
   })
-  
+
   const result = await response.json()
   return result.valid
 }
@@ -376,26 +393,26 @@ async function validateKey() {
 async function getUserEvents() {
   const response = await fetch(`${baseUrl}/events`, {
     headers: {
-      'Authorization': `Bearer ${apiKey}`
-    }
+      Authorization: `Bearer ${apiKey}`,
+    },
   })
-  
+
   return await response.json()
 }
 
 // Submit screenshot
 async function submitScreenshot(tileId, imageFile) {
   const formData = new FormData()
-  formData.append('image', imageFile)
-  
+  formData.append("image", imageFile)
+
   const response = await fetch(`${baseUrl}/tiles/${tileId}/submissions`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Authorization': `Bearer ${apiKey}`
+      Authorization: `Bearer ${apiKey}`,
     },
-    body: formData
+    body: formData,
   })
-  
+
   return await response.json()
 }
 ```
@@ -411,10 +428,10 @@ import { useToast } from "@/hooks/use-toast"
 
 export function CreateBingoForm({ eventId }: { eventId: string }) {
   const { toast } = useToast()
-  
+
   async function handleSubmit(formData: FormData) {
     const result = await createBingo(formData)
-    
+
     if (result.success) {
       toast({
         title: "Success",
@@ -428,7 +445,7 @@ export function CreateBingoForm({ eventId }: { eventId: string }) {
       })
     }
   }
-  
+
   return (
     <form action={handleSubmit}>
       <input name="title" placeholder="Bingo Title" required />
@@ -458,14 +475,14 @@ export async function getBingoWithTiles(bingoId: string) {
               submissions: {
                 with: {
                   image: true,
-                  user: true
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+                  user: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   })
 }
 ```
@@ -473,6 +490,7 @@ export async function getBingoWithTiles(bingoId: string) {
 ## Support
 
 For API support and questions:
+
 - **GitHub Issues**: [Report API bugs](https://github.com/bingoscape/bingoscape-next/issues)
 - **Discord**: [Developer community](https://discord.gg/bingoscape)
 - **Email**: support@bingoscape.com

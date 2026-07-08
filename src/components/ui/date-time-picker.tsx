@@ -55,13 +55,13 @@ export function DateTimePicker({
           selected={date}
           onSelect={(newDate) => {
             if (newDate) {
-               const current = date ? new Date(date) : new Date();
-               newDate.setHours(current.getHours());
-               newDate.setMinutes(current.getMinutes());
-               newDate.setSeconds(current.getSeconds());
-               setDate(newDate);
+              const current = date ? new Date(date) : new Date()
+              newDate.setHours(current.getHours())
+              newDate.setMinutes(current.getMinutes())
+              newDate.setSeconds(current.getSeconds())
+              setDate(newDate)
             } else {
-               setDate(undefined);
+              setDate(undefined)
             }
           }}
           fromDate={fromDate}
@@ -76,7 +76,7 @@ export function DateTimePicker({
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden"
             >
-              <div className="p-3 border-t border-border">
+              <div className="border-t border-border p-3">
                 <TimePicker date={date} setDate={setDate} />
               </div>
             </motion.div>

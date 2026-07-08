@@ -105,8 +105,6 @@ services:
     profiles:
       - tools # Only run when explicitly specified
 
-
-
   # PostgreSQL Exporter - Database metrics
   postgres-exporter:
     image: quay.io/prometheuscommunity/postgres-exporter:latest

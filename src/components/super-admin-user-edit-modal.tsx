@@ -3,7 +3,13 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,7 +28,9 @@ interface SuperAdminUserEditModalProps {
   user: User
 }
 
-export function SuperAdminUserEditModal({ user }: SuperAdminUserEditModalProps) {
+export function SuperAdminUserEditModal({
+  user,
+}: SuperAdminUserEditModalProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -64,7 +72,7 @@ export function SuperAdminUserEditModal({ user }: SuperAdminUserEditModalProps) 
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          <Edit className="h-4 w-4 mr-2" />
+          <Edit className="mr-2 h-4 w-4" />
           Edit User
         </Button>
       </DialogTrigger>
@@ -78,7 +86,9 @@ export function SuperAdminUserEditModal({ user }: SuperAdminUserEditModalProps) 
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               placeholder="User's display name"
             />
           </div>
@@ -88,7 +98,9 @@ export function SuperAdminUserEditModal({ user }: SuperAdminUserEditModalProps) 
               id="email"
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
               placeholder="user@example.com"
             />
           </div>
@@ -97,12 +109,18 @@ export function SuperAdminUserEditModal({ user }: SuperAdminUserEditModalProps) 
             <Input
               id="runescapeName"
               value={formData.runescapeName}
-              onChange={(e) => setFormData({ ...formData, runescapeName: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, runescapeName: e.target.value })
+              }
               placeholder="RuneScape username"
             />
           </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>

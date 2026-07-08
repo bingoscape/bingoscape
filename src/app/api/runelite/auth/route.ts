@@ -1,5 +1,4 @@
- 
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger"
 import { NextResponse } from "next/server"
 import { db } from "@/server/db"
 import { apiKeys, users } from "@/server/db/schema"
@@ -34,7 +33,10 @@ export async function POST(req: Request) {
     }
 
     // Update the last used timestamp
-    await db.update(apiKeys).set({ lastUsed: new Date() }).where(eq(apiKeys.key, apiKey))
+    await db
+      .update(apiKeys)
+      .set({ lastUsed: new Date() })
+      .where(eq(apiKeys.key, apiKey))
 
     // Get user information
     const user = await db.query.users.findFirst({
@@ -64,10 +66,15 @@ export async function POST(req: Request) {
     logger.error({ error }, "Error verifying API key:", error)
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ valid: false, error: "Invalid request data" }, { status: 400 })
+      return NextResponse.json(
+        { valid: false, error: "Invalid request data" },
+        { status: 400 }
+      )
     }
 
-    return NextResponse.json({ valid: false, error: "Failed to verify API key" }, { status: 500 })
+    return NextResponse.json(
+      { valid: false, error: "Failed to verify API key" },
+      { status: 500 }
+    )
   }
 }
-

@@ -48,13 +48,17 @@ interface BingoPatternData {
 }
 
 const TABS = [
-  { id: 'general', label: 'General Details', icon: Info },
-  { id: 'visibility', label: 'Visibility & State', icon: Eye },
-  { id: 'patterns', label: 'Pattern Bonuses', icon: Grid3X3 },
-];
+  { id: "general", label: "General Details", icon: Info },
+  { id: "visibility", label: "Visibility & State", icon: Eye },
+  { id: "patterns", label: "Pattern Bonuses", icon: Grid3X3 },
+]
 
-export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) {
-  const [activeTab, setActiveTab] = useState('general')
+export function EditBingoModal({
+  bingo,
+  isOpen,
+  onClose,
+}: EditBingoModalProps) {
+  const [activeTab, setActiveTab] = useState("general")
   const [formData, setFormData] = useState({
     title: bingo.title,
     description: bingo.description ?? "",
@@ -123,7 +127,9 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
     })
   }, [bingo])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
@@ -151,29 +157,37 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
 
       const result = await updateBingo(bingo.id, updateData)
       if (result.success) {
-        toast({ title: "Success", description: "Bingo board updated successfully" })
+        toast({
+          title: "Success",
+          description: "Bingo board updated successfully",
+        })
         onClose()
       } else {
         throw new Error(result.error)
       }
     } catch (error) {
       console.error(error)
-      toast({ title: "Error", description: "Failed to update bingo board", variant: "destructive" })
+      toast({
+        title: "Error",
+        description: "Failed to update bingo board",
+        variant: "destructive",
+      })
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const visibleTabs = TABS.filter(tab => {
-    if (tab.id === 'patterns' && patternData?.bingoType === 'progression') return false;
-    return true;
-  });
+  const visibleTabs = TABS.filter((tab) => {
+    if (tab.id === "patterns" && patternData?.bingoType === "progression")
+      return false
+    return true
+  })
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl p-0 overflow-hidden flex h-[600px] border-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <DialogContent className="flex h-[600px] max-w-4xl overflow-hidden border-0 bg-background/95 p-0 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         {/* Sidebar Navigation */}
-        <div className="w-64 bg-muted/40 border-r flex flex-col p-4">
+        <div className="flex w-64 flex-col border-r bg-muted/40 p-4">
           <DialogHeader className="mb-6 text-left">
             <DialogTitle>Edit Board</DialogTitle>
             <DialogDescription className="text-xs">
@@ -181,31 +195,31 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-1">
-            {visibleTabs.map(tab => {
-              const Icon = tab.icon;
+            {visibleTabs.map((tab) => {
+              const Icon = tab.icon
               return (
                 <button
                   type="button"
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors text-left",
-                    activeTab === tab.id 
-                      ? "bg-primary/10 text-primary font-medium" 
-                      : "hover:bg-muted text-muted-foreground"
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
+                    activeTab === tab.id
+                      ? "bg-primary/10 font-medium text-primary"
+                      : "text-muted-foreground hover:bg-muted"
                   )}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="h-4 w-4" />
                   {tab.label}
                 </button>
-              );
+              )
             })}
           </div>
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 flex flex-col relative overflow-hidden bg-background/50">
-          <div className="flex-1 overflow-y-auto p-8 relative">
+        <div className="relative flex flex-1 flex-col overflow-hidden bg-background/50">
+          <div className="relative flex-1 overflow-y-auto p-8">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
@@ -215,16 +229,23 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
                 transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
-                {activeTab === 'general' && (
+                {activeTab === "general" && (
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-lg font-medium">General Details</h3>
-                      <p className="text-sm text-muted-foreground">Basic details about your board.</p>
+                      <p className="text-sm text-muted-foreground">
+                        Basic details about your board.
+                      </p>
                     </div>
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="title">Title</Label>
-                        <Input id="title" name="title" value={formData.title} onChange={handleChange} />
+                        <Input
+                          id="title"
+                          name="title"
+                          value={formData.title}
+                          onChange={handleChange}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="description">Description</Label>
@@ -251,86 +272,119 @@ export function EditBingoModal({ bingo, isOpen, onClose }: EditBingoModalProps) 
                   </div>
                 )}
 
-                {activeTab === 'visibility' && (
+                {activeTab === "visibility" && (
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-lg font-medium">Visibility & State</h3>
-                      <p className="text-sm text-muted-foreground">Control who can see and interact with this board.</p>
+                      <h3 className="text-lg font-medium">
+                        Visibility & State
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Control who can see and interact with this board.
+                      </p>
                     </div>
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between rounded-xl border p-4 bg-muted/10">
+                      <div className="flex items-center justify-between rounded-xl border bg-muted/10 p-4">
                         <div className="space-y-1">
-                          <Label htmlFor="visible" className="text-base flex items-center gap-2">
-                            <Eye className="w-4 h-4 text-muted-foreground" />
+                          <Label
+                            htmlFor="visible"
+                            className="flex items-center gap-2 text-base"
+                          >
+                            <Eye className="h-4 w-4 text-muted-foreground" />
                             Visible to Participants
                           </Label>
                           <p className="text-sm text-muted-foreground">
-                            When enabled, participants can view the board and submit tiles.
+                            When enabled, participants can view the board and
+                            submit tiles.
                           </p>
                         </div>
                         <Switch
                           id="visible"
                           checked={formData.visible}
-                          onCheckedChange={(checked: boolean) => handleSwitchChange("visible", checked)}
+                          onCheckedChange={(checked: boolean) =>
+                            handleSwitchChange("visible", checked)
+                          }
                         />
                       </div>
-                      
-                      <div className="flex items-center justify-between rounded-xl border border-destructive/20 p-4 bg-destructive/5">
+
+                      <div className="flex items-center justify-between rounded-xl border border-destructive/20 bg-destructive/5 p-4">
                         <div className="space-y-1">
-                          <Label htmlFor="locked" className="text-base flex items-center gap-2 text-destructive">
-                            <Lock className="w-4 h-4" />
+                          <Label
+                            htmlFor="locked"
+                            className="flex items-center gap-2 text-base text-destructive"
+                          >
+                            <Lock className="h-4 w-4" />
                             Locked (Prevent Submissions)
                           </Label>
                           <p className="text-sm text-muted-foreground">
-                            When enabled, no new submissions can be made. Board is frozen.
+                            When enabled, no new submissions can be made. Board
+                            is frozen.
                           </p>
                         </div>
                         <Switch
                           id="locked"
                           checked={formData.locked}
-                          onCheckedChange={(checked: boolean) => handleSwitchChange("locked", checked)}
+                          onCheckedChange={(checked: boolean) =>
+                            handleSwitchChange("locked", checked)
+                          }
                         />
                       </div>
                     </div>
                   </div>
                 )}
 
-                {activeTab === 'patterns' && patternData?.bingoType === "standard" && (
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-lg font-medium">Pattern Bonuses</h3>
-                        <p className="text-sm text-muted-foreground">Extra XP for completing specific patterns.</p>
+                {activeTab === "patterns" &&
+                  patternData?.bingoType === "standard" && (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-lg font-medium">
+                            Pattern Bonuses
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            Extra XP for completing specific patterns.
+                          </p>
+                        </div>
+                        {isLoadingPattern && (
+                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        )}
                       </div>
-                      {isLoadingPattern && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
-                    </div>
 
-                    {!isLoadingPattern && (
-                      <div className="border rounded-xl p-6 bg-background/80 backdrop-blur-xl shadow-sm">
-                        <PatternBonusSchematicEditor
-                          rows={patternData.rows}
-                          columns={patternData.columns}
-                          rowBonuses={rowBonuses}
-                          columnBonuses={columnBonuses}
-                          mainDiagonalBonus={mainDiagonalBonus}
-                          antiDiagonalBonus={antiDiagonalBonus}
-                          completeBoardBonus={completeBoardBonus}
-                          onRowBonusChange={(index, value) => setRowBonuses(prev => ({ ...prev, [index]: value }))}
-                          onColumnBonusChange={(index, value) => setColumnBonuses(prev => ({ ...prev, [index]: value }))}
-                          onMainDiagonalChange={setMainDiagonalBonus}
-                          onAntiDiagonalChange={setAntiDiagonalBonus}
-                          onCompleteBoardChange={setCompleteBoardBonus}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
+                      {!isLoadingPattern && (
+                        <div className="rounded-xl border bg-background/80 p-6 shadow-sm backdrop-blur-xl">
+                          <PatternBonusSchematicEditor
+                            rows={patternData.rows}
+                            columns={patternData.columns}
+                            rowBonuses={rowBonuses}
+                            columnBonuses={columnBonuses}
+                            mainDiagonalBonus={mainDiagonalBonus}
+                            antiDiagonalBonus={antiDiagonalBonus}
+                            completeBoardBonus={completeBoardBonus}
+                            onRowBonusChange={(index, value) =>
+                              setRowBonuses((prev) => ({
+                                ...prev,
+                                [index]: value,
+                              }))
+                            }
+                            onColumnBonusChange={(index, value) =>
+                              setColumnBonuses((prev) => ({
+                                ...prev,
+                                [index]: value,
+                              }))
+                            }
+                            onMainDiagonalChange={setMainDiagonalBonus}
+                            onAntiDiagonalChange={setAntiDiagonalBonus}
+                            onCompleteBoardChange={setCompleteBoardBonus}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
               </motion.div>
             </AnimatePresence>
           </div>
 
           {/* Fixed Footer */}
-          <div className="p-4 border-t bg-background flex justify-end gap-2 relative z-10">
+          <div className="relative z-10 flex justify-end gap-2 border-t bg-background p-4">
             <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>

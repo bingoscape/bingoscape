@@ -9,7 +9,7 @@ import { revalidatePath } from "next/cache"
 
 const schema = z.object({
   name: z.string(),
-  description: z.string()
+  description: z.string(),
 })
 
 export const createClan = authActionClient
@@ -21,10 +21,7 @@ export const createClan = authActionClient
           .select()
           .from(clanMembers)
           .where(
-            and(
-              eq(clanMembers.userId, user.id),
-              eq(clanMembers.isMain, true)
-            )
+            and(eq(clanMembers.userId, user.id), eq(clanMembers.isMain, true))
           )
           .limit(1)
 
@@ -52,6 +49,9 @@ export const createClan = authActionClient
       revalidatePath("/clans")
       return { success: true as const, clan: newClan }
     } catch (error) {
-      return { success: false as const, error: error instanceof Error ? error.message : "Failed to create clan" }
+      return {
+        success: false as const,
+        error: error instanceof Error ? error.message : "Failed to create clan",
+      }
     }
   })

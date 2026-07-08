@@ -7,7 +7,7 @@ import { clans, clanMembers, events, users } from "@/server/db/schema"
 import { and, eq, sql } from "drizzle-orm"
 
 const schema = z.object({
-  clanId: z.string()
+  clanId: z.string(),
 })
 
 export const getClanDetails = authActionClient
@@ -22,7 +22,10 @@ export const getClanDetails = authActionClient
       })
 
       if (!userMembership) {
-        return { success: false as const, error: "You are not a member of this clan" }
+        return {
+          success: false as const,
+          error: "You are not a member of this clan",
+        }
       }
 
       const clanDetailsQuery = await db
@@ -62,17 +65,21 @@ export const getClanDetails = authActionClient
         },
       })
 
-      return { 
-        success: true as const, 
+      return {
+        success: true as const,
         clanDetails: {
           ...clanDetails,
           memberCount: memberCountQuery[0]?.count ?? 0,
           eventCount: eventCountQuery[0]?.count ?? 0,
           userMembership,
           owner,
-        }
+        },
       }
     } catch (error) {
-      return { success: false as const, error: error instanceof Error ? error.message : "Failed to get clan details" }
+      return {
+        success: false as const,
+        error:
+          error instanceof Error ? error.message : "Failed to get clan details",
+      }
     }
   })

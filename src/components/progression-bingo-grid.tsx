@@ -6,11 +6,30 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Lock, ArrowDown, Check, Clock, AlertTriangle, Edit2, Plus, Trash2, GripVertical, Save, X, Zap, EyeOff, CheckCircle2 } from "lucide-react"
+import {
+  Lock,
+  ArrowDown,
+  Check,
+  Clock,
+  AlertTriangle,
+  Edit2,
+  Plus,
+  Trash2,
+  GripVertical,
+  Save,
+  X,
+  Zap,
+  EyeOff,
+  CheckCircle2,
+} from "lucide-react"
 import type { Tile } from "@/app/actions/events"
 import { cn } from "@/lib/utils"
 import { toast } from "@/hooks/use-toast"
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card"
 import { Progress } from "@/components/ui/progress"
 import Markdown from "react-markdown"
 import {
@@ -25,7 +44,12 @@ import {
   DragOverlay,
   useDroppable,
 } from "@dnd-kit/core"
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable"
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import {
@@ -88,7 +112,14 @@ function SortableTile({
   const [editingField, setEditingField] = useState<string | null>(null)
   const [tempValue, setTempValue] = useState<string>("")
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: tile.id,
     data: {
       type: "tile",
@@ -129,20 +160,30 @@ function SortableTile({
   }
 
   // Get current team's submission for this tile
-  const currentTeamSubmission = currentTeamId ? tile.teamTileSubmissions?.find(tts => tts.teamId === currentTeamId) : undefined
+  const currentTeamSubmission = currentTeamId
+    ? tile.teamTileSubmissions?.find((tts) => tts.teamId === currentTeamId)
+    : undefined
 
   // Render status icon function (similar to BingoTile)
-  const renderStatusIcon = (status: "approved" | "needs_review" | "pending" | undefined) => {
+  const renderStatusIcon = (
+    status: "approved" | "needs_review" | "pending" | undefined
+  ) => {
     const iconMap = {
-      approved: <div className="bg-green-500 text-white rounded-full w-7 h-7 flex items-center justify-center shadow-lg ring-2 ring-green-200 dark:ring-green-800 transition-all duration-300">
-        <span className="text-sm font-bold">✓</span>
-      </div>,
-      needs_review: <div className="bg-yellow-500 text-white rounded-full w-7 h-7 flex items-center justify-center shadow-lg ring-2 ring-yellow-200 dark:ring-yellow-800 transition-all duration-300">
-        <span className="text-sm font-bold">!</span>
-      </div>,
-      pending: <div className="bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center shadow-lg ring-2 ring-blue-200 dark:ring-blue-800 transition-all duration-300">
-        <span className="text-sm font-bold">⏳</span>
-      </div>,
+      approved: (
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-white shadow-lg ring-2 ring-green-200 transition-all duration-300 dark:ring-green-800">
+          <span className="text-sm font-bold">✓</span>
+        </div>
+      ),
+      needs_review: (
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-yellow-500 text-white shadow-lg ring-2 ring-yellow-200 transition-all duration-300 dark:ring-yellow-800">
+          <span className="text-sm font-bold">!</span>
+        </div>
+      ),
+      pending: (
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg ring-2 ring-blue-200 transition-all duration-300 dark:ring-blue-800">
+          <span className="text-sm font-bold">⏳</span>
+        </div>
+      ),
     }
     return status ? iconMap[status] : null
   }
@@ -159,356 +200,450 @@ function SortableTile({
           className={cn(
             "relative overflow-hidden transition-all duration-200",
             // Fixed size for all tiles with proper spacing
-            "w-44 h-auto min-h-[180px] max-w-44",
-            isClickable ? "cursor-pointer hover:shadow-lg hover:scale-105" : "cursor-not-allowed",
-            tileStatus === "completed" && "ring-2 ring-green-500 bg-green-50 dark:bg-green-950/20",
-            tileStatus === "pending" && "ring-2 ring-yellow-500 bg-yellow-50 dark:bg-yellow-950/20",
-            tileStatus === "review" && "ring-2 ring-orange-500 bg-orange-50 dark:bg-orange-950/20",
+            "h-auto min-h-[180px] w-44 max-w-44",
+            isClickable
+              ? "cursor-pointer hover:scale-105 hover:shadow-lg"
+              : "cursor-not-allowed",
+            tileStatus === "completed" &&
+              "bg-green-50 ring-2 ring-green-500 dark:bg-green-950/20",
+            tileStatus === "pending" &&
+              "bg-yellow-50 ring-2 ring-yellow-500 dark:bg-yellow-950/20",
+            tileStatus === "review" &&
+              "bg-orange-50 ring-2 ring-orange-500 dark:bg-orange-950/20",
             isLocked && !isEditing && "bg-muted/50 text-muted-foreground",
             isEditing && "border-primary/50",
-            isEditing && isLocked && "border-orange-300 bg-orange-50/30 dark:bg-orange-950/10",
-            isDragging && "shadow-lg ring-2 ring-primary/20",
+            isEditing &&
+              isLocked &&
+              "border-orange-300 bg-orange-50/30 dark:bg-orange-950/10",
+            isDragging && "shadow-lg ring-2 ring-primary/20"
           )}
           onClick={() => isClickable && onTileClick(tile)}
         >
-      {/* Drag Handle */}
-      {isEditing && (
-        <div
-          className="absolute top-2 left-2 cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100 transition-opacity z-10"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
-        </div>
-      )}
-
-      {/* Delete Button */}
-      {isEditing && (
-        <Button
-          onClick={(e) => {
-            e.stopPropagation()
-            if (confirm("Are you sure you want to delete this tile?")) {
-              onDeleteTile(tile.id)
-            }
-          }}
-          size="sm"
-          variant="destructive"
-          className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 hover:opacity-100 transition-opacity z-10"
-        >
-          <Trash2 className="h-3 w-3" />
-        </Button>
-      )}
-
-      {/* Tile Header Image with fixed aspect ratio */}
-      {tile.headerImage && (
-        <div className="w-full h-28 overflow-hidden">
-          <Image
-            src={tile.headerImage || "/placeholder.svg"}
-            alt={tile.title}
-            width={176}
-            height={112}
-            className={cn("w-full h-full object-contain", isLocked && !isEditing && "grayscale")}
-          />
-        </div>
-      )}
-
-      <div className={cn("p-3 space-y-2", isEditing && "pt-8")}>
-        {/* Tile Title */}
-        <div className="space-y-1">
-          {editingField === "title" ? (
-            <div className="flex items-center gap-1">
-              <Input
-                value={tempValue}
-                onChange={(e) => setTempValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSave("title")
-                  if (e.key === "Escape") handleCancel()
-                }}
-                className="h-7 text-sm"
-                autoFocus
-                onClick={(e) => e.stopPropagation()}
-              />
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 w-7 p-0"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleSave("title")
-                }}
-              >
-                <Save className="h-3 w-3" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 w-7 p-0"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleCancel()
-                }}
-              >
-                <X className="h-3 w-3" />
-              </Button>
+          {/* Drag Handle */}
+          {isEditing && (
+            <div
+              className="absolute left-2 top-2 z-10 cursor-grab opacity-50 transition-opacity hover:opacity-100 active:cursor-grabbing"
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical className="h-4 w-4 text-muted-foreground" />
             </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <h4
+          )}
+
+          {/* Delete Button */}
+          {isEditing && (
+            <Button
+              onClick={(e) => {
+                e.stopPropagation()
+                if (confirm("Are you sure you want to delete this tile?")) {
+                  onDeleteTile(tile.id)
+                }
+              }}
+              size="sm"
+              variant="destructive"
+              className="absolute right-2 top-2 z-10 h-6 w-6 p-0 opacity-0 transition-opacity hover:opacity-100"
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          )}
+
+          {/* Tile Header Image with fixed aspect ratio */}
+          {tile.headerImage && (
+            <div className="h-28 w-full overflow-hidden">
+              <Image
+                src={tile.headerImage || "/placeholder.svg"}
+                alt={tile.title}
+                width={176}
+                height={112}
                 className={cn(
-                  "font-semibold text-sm line-clamp-2 flex-1",
-                  isLocked && !isEditing && "text-muted-foreground",
+                  "h-full w-full object-contain",
+                  isLocked && !isEditing && "grayscale"
                 )}
-              >
+              />
+            </div>
+          )}
+
+          <div className={cn("space-y-2 p-3", isEditing && "pt-8")}>
+            {/* Tile Title */}
+            <div className="space-y-1">
+              {editingField === "title" ? (
+                <div className="flex items-center gap-1">
+                  <Input
+                    value={tempValue}
+                    onChange={(e) => setTempValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSave("title")
+                      if (e.key === "Escape") handleCancel()
+                    }}
+                    className="h-7 text-sm"
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleSave("title")
+                    }}
+                  >
+                    <Save className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleCancel()
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <h4
+                    className={cn(
+                      "line-clamp-2 flex-1 text-sm font-semibold",
+                      isLocked && !isEditing && "text-muted-foreground"
+                    )}
+                  >
+                    {tile.isHidden ? "Hidden Tile" : tile.title}
+                  </h4>
+                  {isEditing && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="ml-2 h-6 w-6 p-0 opacity-0 transition-opacity hover:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleFieldEdit("title", tile.title)
+                      }}
+                    >
+                      <Edit2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Tile Status and Weight */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                {tileStatus === "completed" && (
+                  <>
+                    <Check className="h-3 w-3 text-green-600" />
+                    <span className="text-xs text-green-600">Complete</span>
+                  </>
+                )}
+                {tileStatus === "pending" && (
+                  <>
+                    <Clock className="h-3 w-3 text-yellow-600" />
+                    <span className="text-xs text-yellow-600">Pending</span>
+                  </>
+                )}
+                {tileStatus === "review" && (
+                  <>
+                    <AlertTriangle className="h-3 w-3 text-orange-600" />
+                    <span className="text-xs text-orange-600">Review</span>
+                  </>
+                )}
+                {tileStatus === "available" && !isLocked && (
+                  <span className="text-xs text-muted-foreground">
+                    Available
+                  </span>
+                )}
+                {isLocked && (
+                  <>
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                      Locked
+                    </span>
+                  </>
+                )}
+              </div>
+
+              {/* Tile Weight */}
+              {editingField === "weight" ? (
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={tempValue}
+                    onChange={(e) => setTempValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSave("weight")
+                      if (e.key === "Escape") handleCancel()
+                    }}
+                    className="h-6 w-16 text-xs"
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <span className="text-xs text-muted-foreground">XP</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleSave("weight")
+                    }}
+                  >
+                    <Save className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleCancel()
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-xs",
+                      isEditing && "cursor-pointer hover:bg-muted"
+                    )}
+                    onClick={(e) => {
+                      if (isEditing) {
+                        e.stopPropagation()
+                        handleFieldEdit("weight", tile.weight)
+                      }
+                    }}
+                  >
+                    {tile.weight} XP
+                  </Badge>
+                  {isEditing && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-4 w-4 p-0 opacity-50 transition-opacity hover:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleFieldEdit("weight", tile.weight)
+                      }}
+                    >
+                      <Edit2 className="h-2 w-2" />
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+      </HoverCardTrigger>
+      {shouldShowHoverCard && (
+        <HoverCardContent
+          side="right"
+          align="start"
+          className="w-80 max-w-[90vw] p-4"
+        >
+          <div className="space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <h4 className="flex-1 break-words text-base font-semibold leading-tight">
                 {tile.isHidden ? "Hidden Tile" : tile.title}
               </h4>
-              {isEditing && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 w-6 p-0 ml-2 opacity-0 hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleFieldEdit("title", tile.title)
-                  }}
-                >
-                  <Edit2 className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Tile Status and Weight */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            {tileStatus === "completed" && (
-              <>
-                <Check className="h-3 w-3 text-green-600" />
-                <span className="text-xs text-green-600">Complete</span>
-              </>
-            )}
-            {tileStatus === "pending" && (
-              <>
-                <Clock className="h-3 w-3 text-yellow-600" />
-                <span className="text-xs text-yellow-600">Pending</span>
-              </>
-            )}
-            {tileStatus === "review" && (
-              <>
-                <AlertTriangle className="h-3 w-3 text-orange-600" />
-                <span className="text-xs text-orange-600">Review</span>
-              </>
-            )}
-            {tileStatus === "available" && !isLocked && (
-              <span className="text-xs text-muted-foreground">Available</span>
-            )}
-            {isLocked && (
-              <>
-                <Lock className="h-3 w-3 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Locked</span>
-              </>
-            )}
-          </div>
-
-          {/* Tile Weight */}
-          {editingField === "weight" ? (
-            <div className="flex items-center gap-1">
-              <Input
-                type="number"
-                min="1"
-                max="100"
-                value={tempValue}
-                onChange={(e) => setTempValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSave("weight")
-                  if (e.key === "Escape") handleCancel()
-                }}
-                className="h-6 w-16 text-xs"
-                autoFocus
-                onClick={(e) => e.stopPropagation()}
-              />
-              <span className="text-xs text-muted-foreground">XP</span>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 w-6 p-0"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleSave("weight")
-                }}
-              >
-                <Save className="h-3 w-3" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 w-6 p-0"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleCancel()
-                }}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1">
-              <Badge
-                variant="outline"
-                className={cn("text-xs", isEditing && "cursor-pointer hover:bg-muted")}
-                onClick={(e) => {
-                  if (isEditing) {
-                    e.stopPropagation()
-                    handleFieldEdit("weight", tile.weight)
-                  }
-                }}
-              >
-                {tile.weight} XP
-              </Badge>
-              {isEditing && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-4 w-4 p-0 opacity-50 hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleFieldEdit("weight", tile.weight)
-                  }}
-                >
-                  <Edit2 className="h-2 w-2" />
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </Card>
-    </HoverCardTrigger>
-    {shouldShowHoverCard && (
-      <HoverCardContent side="right" align="start" className="w-80 max-w-[90vw] p-4">
-        <div className="space-y-3">
-          <div className="flex items-start justify-between gap-2">
-            <h4 className="font-semibold text-base flex-1 leading-tight break-words">{tile.isHidden ? "Hidden Tile" : tile.title}</h4>
-            <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 rounded-full flex-shrink-0">
-              <Zap className="h-3.5 w-3.5 text-amber-500" />
-              <span className="text-xs font-medium">{tile.weight} XP</span>
-            </div>
-          </div>
-
-          {currentTeamSubmission && (
-            <div className="flex items-center gap-2 p-2 bg-secondary/30 rounded-lg">
-              {renderStatusIcon(currentTeamSubmission.status)}
-              <span className="text-sm font-medium capitalize">{currentTeamSubmission.status?.replace("_", " ")}</span>
-            </div>
-          )}
-
-          {tile.description && !tile.isHidden && (
-            <div className="text-sm text-muted-foreground prose prose-sm max-w-none dark:prose-invert">
-              <Markdown
-                components={{
-                  p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed break-words">{children}</p>,
-                  strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
-                  em: ({ children }) => <em className="italic">{children}</em>,
-                  ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
-                  ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
-                  li: ({ children }) => <li className="text-sm break-words">{children}</li>,
-                  h1: ({ children }) => <h1 className="text-base font-semibold mb-1 text-foreground">{children}</h1>,
-                  h2: ({ children }) => <h2 className="text-sm font-semibold mb-1 text-foreground">{children}</h2>,
-                  h3: ({ children }) => <h3 className="text-sm font-medium mb-1 text-foreground">{children}</h3>,
-                  a: ({ children, href }) => (
-                    <a href={href} className="text-primary hover:text-primary/80 underline break-all" target="_blank" rel="noopener noreferrer">
-                      {children}
-                    </a>
-                  ),
-                }}
-              >
-                {tile.description.length > 200 ? `${tile.description.substring(0, 200)}...` : tile.description}
-              </Markdown>
-            </div>
-          )}
-
-          {tile.goals && tile.goals.length > 0 && !tile.isHidden && (
-            <div className="pt-1">
-              <h5 className="text-xs font-semibold mb-2">Goals:</h5>
-              <div className="text-xs space-y-2">
-                {tile.goals.map((goal, idx) => {
-                  // Calculate progress for current team if available
-                  const teamSubmissions = currentTeamSubmission?.submissions.filter(sub => sub.goalId === goal.id) ?? []
-                  const approvedProgress = teamSubmissions
-                    .filter(sub => sub.status === "approved")
-                    .reduce((sum, sub) => sum + (sub.submissionValue ?? 0), 0)
-                  const totalProgress = teamSubmissions
-                    .reduce((sum, sub) => sum + (sub.submissionValue ?? 0), 0)
-
-                  const approvedPercentage = goal.targetValue > 0 ? Math.min(100, (approvedProgress / goal.targetValue) * 100) : 0
-                  const isCompleted = approvedProgress >= goal.targetValue
-
-                  return (
-                    <div key={idx} className="p-2 bg-muted/30 rounded-lg space-y-1">
-                      <div className="flex justify-between items-start gap-2">
-                        <span className="text-muted-foreground flex-1 line-clamp-2 break-words leading-tight">{goal.description}</span>
-                        <span className="font-medium text-foreground text-right flex-shrink-0">
-                          Target: {goal.targetValue}
-                        </span>
-                      </div>
-
-                      {currentTeamSubmission && (
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1 min-w-[60px]">
-                              <CheckCircle2 className="h-3 w-3 text-green-500" />
-                              <span className="text-[10px] text-muted-foreground">Progress</span>
-                            </div>
-                            <Progress
-                              value={approvedPercentage}
-                              className="h-2 flex-1 bg-muted"
-                            />
-                            <span className="text-[10px] font-medium min-w-[40px] text-right">
-                              {approvedProgress}/{goal.targetValue}
-                            </span>
-                          </div>
-
-                          {isCompleted && (
-                            <div className="flex items-center gap-1">
-                              <CheckCircle2 className="h-3 w-3 text-green-500" />
-                              <span className="text-[10px] text-green-600 font-medium">Completed!</span>
-                            </div>
-                          )}
-
-                          {totalProgress > approvedProgress && (
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-1 min-w-[60px]">
-                                <Clock className="h-3 w-3 text-yellow-500" />
-                                <span className="text-[10px] text-muted-foreground">Pending</span>
-                              </div>
-                              <Progress
-                                value={goal.targetValue > 0 ? Math.min(100, (totalProgress / goal.targetValue) * 100) : 0}
-                                className="h-2 flex-1 bg-muted"
-                              />
-                              <span className="text-[10px] font-medium min-w-[40px] text-right">
-                                {totalProgress}/{goal.targetValue}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
+              <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-1 dark:bg-amber-900/30">
+                <Zap className="h-3.5 w-3.5 text-amber-500" />
+                <span className="text-xs font-medium">{tile.weight} XP</span>
               </div>
             </div>
-          )}
 
-          {tile.isHidden && (
-            <div className="mt-2 text-xs bg-secondary p-1.5 rounded flex items-center gap-1.5">
-              <EyeOff className="h-3.5 w-3.5" />
-              <span className="font-medium">Hidden tile</span>
-            </div>
-          )}
-        </div>
-      </HoverCardContent>
-    )}
-  </HoverCard>
+            {currentTeamSubmission && (
+              <div className="flex items-center gap-2 rounded-lg bg-secondary/30 p-2">
+                {renderStatusIcon(currentTeamSubmission.status)}
+                <span className="text-sm font-medium capitalize">
+                  {currentTeamSubmission.status?.replace("_", " ")}
+                </span>
+              </div>
+            )}
+
+            {tile.description && !tile.isHidden && (
+              <div className="prose prose-sm max-w-none text-sm text-muted-foreground dark:prose-invert">
+                <Markdown
+                  components={{
+                    p: ({ children }) => (
+                      <p className="mb-2 break-words leading-relaxed last:mb-0">
+                        {children}
+                      </p>
+                    ),
+                    strong: ({ children }) => (
+                      <strong className="font-semibold text-foreground">
+                        {children}
+                      </strong>
+                    ),
+                    em: ({ children }) => (
+                      <em className="italic">{children}</em>
+                    ),
+                    ul: ({ children }) => (
+                      <ul className="my-2 list-inside list-disc space-y-1">
+                        {children}
+                      </ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol className="my-2 list-inside list-decimal space-y-1">
+                        {children}
+                      </ol>
+                    ),
+                    li: ({ children }) => (
+                      <li className="break-words text-sm">{children}</li>
+                    ),
+                    h1: ({ children }) => (
+                      <h1 className="mb-1 text-base font-semibold text-foreground">
+                        {children}
+                      </h1>
+                    ),
+                    h2: ({ children }) => (
+                      <h2 className="mb-1 text-sm font-semibold text-foreground">
+                        {children}
+                      </h2>
+                    ),
+                    h3: ({ children }) => (
+                      <h3 className="mb-1 text-sm font-medium text-foreground">
+                        {children}
+                      </h3>
+                    ),
+                    a: ({ children, href }) => (
+                      <a
+                        href={href}
+                        className="break-all text-primary underline hover:text-primary/80"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {children}
+                      </a>
+                    ),
+                  }}
+                >
+                  {tile.description.length > 200
+                    ? `${tile.description.substring(0, 200)}...`
+                    : tile.description}
+                </Markdown>
+              </div>
+            )}
+
+            {tile.goals && tile.goals.length > 0 && !tile.isHidden && (
+              <div className="pt-1">
+                <h5 className="mb-2 text-xs font-semibold">Goals:</h5>
+                <div className="space-y-2 text-xs">
+                  {tile.goals.map((goal, idx) => {
+                    // Calculate progress for current team if available
+                    const teamSubmissions =
+                      currentTeamSubmission?.submissions.filter(
+                        (sub) => sub.goalId === goal.id
+                      ) ?? []
+                    const approvedProgress = teamSubmissions
+                      .filter((sub) => sub.status === "approved")
+                      .reduce((sum, sub) => sum + (sub.submissionValue ?? 0), 0)
+                    const totalProgress = teamSubmissions.reduce(
+                      (sum, sub) => sum + (sub.submissionValue ?? 0),
+                      0
+                    )
+
+                    const approvedPercentage =
+                      goal.targetValue > 0
+                        ? Math.min(
+                            100,
+                            (approvedProgress / goal.targetValue) * 100
+                          )
+                        : 0
+                    const isCompleted = approvedProgress >= goal.targetValue
+
+                    return (
+                      <div
+                        key={idx}
+                        className="space-y-1 rounded-lg bg-muted/30 p-2"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="line-clamp-2 flex-1 break-words leading-tight text-muted-foreground">
+                            {goal.description}
+                          </span>
+                          <span className="flex-shrink-0 text-right font-medium text-foreground">
+                            Target: {goal.targetValue}
+                          </span>
+                        </div>
+
+                        {currentTeamSubmission && (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <div className="flex min-w-[60px] items-center gap-1">
+                                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                <span className="text-[10px] text-muted-foreground">
+                                  Progress
+                                </span>
+                              </div>
+                              <Progress
+                                value={approvedPercentage}
+                                className="h-2 flex-1 bg-muted"
+                              />
+                              <span className="min-w-[40px] text-right text-[10px] font-medium">
+                                {approvedProgress}/{goal.targetValue}
+                              </span>
+                            </div>
+
+                            {isCompleted && (
+                              <div className="flex items-center gap-1">
+                                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                <span className="text-[10px] font-medium text-green-600">
+                                  Completed!
+                                </span>
+                              </div>
+                            )}
+
+                            {totalProgress > approvedProgress && (
+                              <div className="flex items-center gap-2">
+                                <div className="flex min-w-[60px] items-center gap-1">
+                                  <Clock className="h-3 w-3 text-yellow-500" />
+                                  <span className="text-[10px] text-muted-foreground">
+                                    Pending
+                                  </span>
+                                </div>
+                                <Progress
+                                  value={
+                                    goal.targetValue > 0
+                                      ? Math.min(
+                                          100,
+                                          (totalProgress / goal.targetValue) *
+                                            100
+                                        )
+                                      : 0
+                                  }
+                                  className="h-2 flex-1 bg-muted"
+                                />
+                                <span className="min-w-[40px] text-right text-[10px] font-medium">
+                                  {totalProgress}/{goal.targetValue}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {tile.isHidden && (
+              <div className="mt-2 flex items-center gap-1.5 rounded bg-secondary p-1.5 text-xs">
+                <EyeOff className="h-3.5 w-3.5" />
+                <span className="font-medium">Hidden tile</span>
+              </div>
+            )}
+          </div>
+        </HoverCardContent>
+      )}
+    </HoverCard>
   )
 }
 
@@ -533,12 +668,15 @@ function DroppableTierHeader({
   return (
     <div
       ref={setNodeRef}
-      className={cn("transition-all duration-200 relative", isEditing && isOver && "transform scale-[1.02]")}
+      className={cn(
+        "relative transition-all duration-200",
+        isEditing && isOver && "scale-[1.02] transform"
+      )}
     >
       {/* Drop indicator */}
       {isEditing && isOver && (
-        <div className="absolute inset-0 bg-primary/10 border-2 border-primary border-dashed rounded-lg z-10 flex items-center justify-center">
-          <div className="bg-primary text-primary-foreground px-3 py-1 rounded text-sm font-medium">
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/10">
+          <div className="rounded bg-primary px-3 py-1 text-sm font-medium text-primary-foreground">
             Drop tile here to move to Tier {tier + 1}
           </div>
         </div>
@@ -562,7 +700,9 @@ export function ProgressionBingoGrid({
   const [isEditing, setIsEditing] = useState(isEditMode)
   const [localTiles, setLocalTiles] = useState<Tile[]>(tiles)
   const [draggedTile, setDraggedTile] = useState<Tile | null>(null)
-  const [localTierXpRequirements, setLocalTierXpRequirements] = useState<Record<number, number>>({})
+  const [localTierXpRequirements, setLocalTierXpRequirements] = useState<
+    Record<number, number>
+  >({})
 
   // Sync isEditing with parent's edit mode
   React.useEffect(() => {
@@ -589,7 +729,7 @@ export function ProgressionBingoGrid({
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    })
   )
 
   // Group tiles by tier using local tiles for immediate updates
@@ -603,14 +743,25 @@ export function ProgressionBingoGrid({
         acc[tierKey].push(tile)
         return acc
       },
-      {} as Record<number, Tile[]>,
+      {} as Record<number, Tile[]>
     )
 
     // Find the maximum tier number to ensure all tiers are represented
-    const maxTierFromTiles = Math.max(...localTiles.map((tile) => tile.tier ?? 0), -1)
+    const maxTierFromTiles = Math.max(
+      ...localTiles.map((tile) => tile.tier ?? 0),
+      -1
+    )
     const maxTierFromProgress = Math.max(...tierProgress.map((p) => p.tier), -1)
-    const maxTierFromXpReqs = Math.max(...tierXpRequirements.map((req) => req.tier), -1)
-    const maxTier = Math.max(maxTierFromTiles, maxTierFromProgress, maxTierFromXpReqs, 0)
+    const maxTierFromXpReqs = Math.max(
+      ...tierXpRequirements.map((req) => req.tier),
+      -1
+    )
+    const maxTier = Math.max(
+      maxTierFromTiles,
+      maxTierFromProgress,
+      maxTierFromXpReqs,
+      0
+    )
 
     // Create tier data for all tiers from 0 to maxTier, even if they're empty
     const result: TierData[] = []
@@ -631,7 +782,9 @@ export function ProgressionBingoGrid({
   const getTileStatus = (tile: Tile) => {
     if (!currentTeamId) return "locked"
 
-    const submission = tile.teamTileSubmissions?.find((tts) => tts.teamId === currentTeamId)
+    const submission = tile.teamTileSubmissions?.find(
+      (tts) => tts.teamId === currentTeamId
+    )
 
     if (submission?.status === "approved") return "completed"
     if (submission?.status === "pending") return "pending"
@@ -640,11 +793,17 @@ export function ProgressionBingoGrid({
   }
 
   const getTierCompletionStatus = (tierTiles: Tile[]) => {
-    if (!currentTeamId) return { completedXP: 0, totalXP: tierTiles.reduce((sum, tile) => sum + tile.weight, 0) }
+    if (!currentTeamId)
+      return {
+        completedXP: 0,
+        totalXP: tierTiles.reduce((sum, tile) => sum + tile.weight, 0),
+      }
 
     const completedXP = tierTiles
       .filter((tile) => {
-        const submission = tile.teamTileSubmissions?.find((tts) => tts.teamId === currentTeamId)
+        const submission = tile.teamTileSubmissions?.find(
+          (tts) => tts.teamId === currentTeamId
+        )
         return submission?.status === "approved"
       })
       .reduce((sum, tile) => sum + tile.weight, 0)
@@ -659,7 +818,10 @@ export function ProgressionBingoGrid({
     return tierData
       .filter((td) => td.tier < targetTier)
       .reduce((total, tierInfo) => {
-        return total + tierInfo.tiles.reduce((tierTotal, tile) => tierTotal + tile.weight, 0)
+        return (
+          total +
+          tierInfo.tiles.reduce((tierTotal, tile) => tierTotal + tile.weight, 0)
+        )
       }, 0)
   }
 
@@ -702,7 +864,10 @@ export function ProgressionBingoGrid({
       }
     }
     // If dropping on a tier header or different tier, move to that tier
-    else if (over.data?.current?.type === "tier" || (overTile && activeTile.tier !== overTile.tier)) {
+    else if (
+      over.data?.current?.type === "tier" ||
+      (overTile && activeTile.tier !== overTile.tier)
+    ) {
       const targetTier = (over.data?.current?.tier as number) ?? overTile?.tier
 
       if (targetTier !== undefined && targetTier !== activeTile.tier) {
@@ -710,7 +875,11 @@ export function ProgressionBingoGrid({
           await updateTileTier(activeTile.id, targetTier)
 
           // Update local state
-          setLocalTiles((prev) => prev.map((t) => (t.id === activeTile.id ? { ...t, tier: targetTier } : t)))
+          setLocalTiles((prev) =>
+            prev.map((t) =>
+              t.id === activeTile.id ? { ...t, tier: targetTier } : t
+            )
+          )
 
           onTilesUpdated?.()
           toast({
@@ -721,7 +890,8 @@ export function ProgressionBingoGrid({
           console.error("Error moving tile:", error)
           toast({
             title: "Error",
-            description: error instanceof Error ? error.message : "Failed to move tile",
+            description:
+              error instanceof Error ? error.message : "Failed to move tile",
             variant: "destructive",
           })
         }
@@ -734,7 +904,11 @@ export function ProgressionBingoGrid({
       await updateTile(tileId, updates)
 
       // Update local state
-      setLocalTiles((prev) => prev.map((tile) => (tile.id === tileId ? { ...tile, ...updates } : tile)))
+      setLocalTiles((prev) =>
+        prev.map((tile) =>
+          tile.id === tileId ? { ...tile, ...updates } : tile
+        )
+      )
 
       onTilesUpdated?.()
       toast({
@@ -745,7 +919,8 @@ export function ProgressionBingoGrid({
       console.error("Error updating tile:", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update tile",
+        description:
+          error instanceof Error ? error.message : "Failed to update tile",
         variant: "destructive",
       })
     }
@@ -767,7 +942,8 @@ export function ProgressionBingoGrid({
       console.error("Error deleting tile:", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete tile",
+        description:
+          error instanceof Error ? error.message : "Failed to delete tile",
         variant: "destructive",
       })
     }
@@ -784,7 +960,9 @@ export function ProgressionBingoGrid({
           await updateTileTier(lastTile.id, tier)
           // Update the tile's tier in our local copy
           lastTile = { ...lastTile, tier }
-          newTiles = newTiles.map((t) => (t.id === lastTile!.id ? lastTile! : t))
+          newTiles = newTiles.map((t) =>
+            t.id === lastTile!.id ? lastTile! : t
+          )
         }
 
         // Immediately update local state for instant UI feedback
@@ -802,13 +980,17 @@ export function ProgressionBingoGrid({
       console.error("Error adding tile:", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to add tile",
+        description:
+          error instanceof Error ? error.message : "Failed to add tile",
         variant: "destructive",
       })
     }
   }
 
-  const handleUpdateXpRequirement = async (tier: number, xpRequired: number) => {
+  const handleUpdateXpRequirement = async (
+    tier: number,
+    xpRequired: number
+  ) => {
     const maxAllowedXP = getTotalPrecedingXP(tier + 1)
 
     if (xpRequired > maxAllowedXP) {
@@ -837,7 +1019,10 @@ export function ProgressionBingoGrid({
       console.error("Error updating XP requirement:", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update XP requirement",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to update XP requirement",
         variant: "destructive",
       })
     }
@@ -846,7 +1031,7 @@ export function ProgressionBingoGrid({
   const handleCreateNewTier = async () => {
     try {
       const result = await createNewTier(bingoId)
-      if (result.success && 'createdTile' in result && result.createdTile) {
+      if (result.success && "createdTile" in result && result.createdTile) {
         // Immediately update local state with the new tile
         setLocalTiles((prev) => [...prev, result.createdTile as Tile])
 
@@ -856,13 +1041,17 @@ export function ProgressionBingoGrid({
           description: `Tier ${result.newTier + 1} has been created`,
         })
       } else {
-        throw new Error(String((result as {error?: string}).error) || 'Unknown error occurred')
+        throw new Error(
+          String((result as { error?: string }).error) ||
+            "Unknown error occurred"
+        )
       }
     } catch (error) {
       console.error("Error creating new tier:", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create new tier",
+        description:
+          error instanceof Error ? error.message : "Failed to create new tier",
         variant: "destructive",
       })
     }
@@ -871,7 +1060,7 @@ export function ProgressionBingoGrid({
   const handleDeleteTier = async (tierToDelete: number) => {
     if (
       !confirm(
-        `Are you sure you want to delete Tier ${tierToDelete + 1}? This will permanently delete all tiles in this tier and renumber higher tiers.`,
+        `Are you sure you want to delete Tier ${tierToDelete + 1}? This will permanently delete all tiles in this tier and renumber higher tiers.`
       )
     ) {
       return
@@ -879,15 +1068,23 @@ export function ProgressionBingoGrid({
 
     try {
       const result = await deleteTier(bingoId, tierToDelete)
-      if (result.success && 'deletedTileIds' in result && 'updatedTiles' in result) {
+      if (
+        result.success &&
+        "deletedTileIds" in result &&
+        "updatedTiles" in result
+      ) {
         // Remove deleted tiles and update tier numbers for remaining tiles
         setLocalTiles((prev) => {
           // Remove deleted tiles
-          let updatedTiles = prev.filter((tile) => !result.deletedTileIds?.includes(tile.id))
+          let updatedTiles = prev.filter(
+            (tile) => !result.deletedTileIds?.includes(tile.id)
+          )
 
           // Update tier numbers for tiles that were shifted
           updatedTiles = updatedTiles.map((tile) => {
-            const updatedTile = result.updatedTiles?.find((ut) => ut.id === tile.id)
+            const updatedTile = result.updatedTiles?.find(
+              (ut) => ut.id === tile.id
+            )
             if (updatedTile) {
               return { ...tile, tier: updatedTile.tier }
             }
@@ -902,7 +1099,7 @@ export function ProgressionBingoGrid({
           const updated = { ...prev }
           // Remove the deleted tier's XP requirement
           delete updated[tierToDelete]
-          
+
           // Shift higher tier XP requirements down by one tier
           const newReqs: Record<number, number> = {}
           Object.entries(updated).forEach(([tier, xpReq]) => {
@@ -913,7 +1110,7 @@ export function ProgressionBingoGrid({
               newReqs[tierNum] = xpReq
             }
           })
-          
+
           return newReqs
         })
 
@@ -923,13 +1120,17 @@ export function ProgressionBingoGrid({
           description: `Tier ${tierToDelete + 1} has been deleted and higher tiers have been renumbered`,
         })
       } else {
-        throw new Error(String((result as {error?: string}).error) || 'Failed to delete tier')
+        throw new Error(
+          String((result as { error?: string }).error) ||
+            "Failed to delete tier"
+        )
       }
     } catch (error) {
       console.error("Error deleting tier:", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete tier",
+        description:
+          error instanceof Error ? error.message : "Failed to delete tier",
         variant: "destructive",
       })
     }
@@ -967,44 +1168,65 @@ export function ProgressionBingoGrid({
               <DroppableTierHeader tier={tierInfo.tier} isEditing={isEditing}>
                 <Card
                   className={cn(
-                    "p-4 bg-muted/50 border-l-4 border-l-primary/50 transition-all duration-200",
+                    "border-l-4 border-l-primary/50 bg-muted/50 p-4 transition-all duration-200",
                     isEditing &&
-                    "border-l-primary border-2 border-dashed hover:bg-primary/5 hover:border-primary cursor-pointer",
+                      "cursor-pointer border-2 border-dashed border-l-primary hover:border-primary hover:bg-primary/5"
                   )}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div
                         className={cn(
-                          "flex items-center justify-center w-10 h-10 rounded-full font-bold text-lg border-2",
+                          "flex h-10 w-10 items-center justify-center rounded-full border-2 text-lg font-bold",
                           tierInfo.isUnlocked
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-muted text-muted-foreground border-muted-foreground/30",
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-muted-foreground/30 bg-muted text-muted-foreground"
                         )}
                       >
-                        {tierInfo.isUnlocked ? tierInfo.tier + 1 : <Lock className="h-4 w-4" />}
+                        {tierInfo.isUnlocked ? (
+                          tierInfo.tier + 1
+                        ) : (
+                          <Lock className="h-4 w-4" />
+                        )}
                       </div>
 
                       <div>
                         <h3 className="text-lg font-semibold">
                           Tier {tierInfo.tier + 1}
-                          {!tierInfo.isUnlocked && !isEditing && <span className="text-muted-foreground"> (Locked)</span>}
-                          {!tierInfo.isUnlocked && isEditing && <span className="text-orange-600"> (Locked - Editing)</span>}
+                          {!tierInfo.isUnlocked && !isEditing && (
+                            <span className="text-muted-foreground">
+                              {" "}
+                              (Locked)
+                            </span>
+                          )}
+                          {!tierInfo.isUnlocked && isEditing && (
+                            <span className="text-orange-600">
+                              {" "}
+                              (Locked - Editing)
+                            </span>
+                          )}
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                          {completionStatus.completedXP}/{completionStatus.totalXP} XP completed
+                          {completionStatus.completedXP}/
+                          {completionStatus.totalXP} XP completed
                           {(() => {
                             const xpReq =
                               localTierXpRequirements[tierInfo.tier] ??
-                              tierXpRequirements.find((req) => req.tier === tierInfo.tier)?.xpRequired ??
+                              tierXpRequirements.find(
+                                (req) => req.tier === tierInfo.tier
+                              )?.xpRequired ??
                               5
-                            return tierInfo.tier < Math.max(...tierData.map((td) => td.tier))
+                            return tierInfo.tier <
+                              Math.max(...tierData.map((td) => td.tier))
                               ? ` (${xpReq} XP required to unlock next tier)`
                               : ""
                           })()}
                           {tierInfo.unlockedAt && (
                             <span className="ml-2">
-                              • Unlocked {new Date(tierInfo.unlockedAt).toLocaleDateString()}
+                              • Unlocked{" "}
+                              {new Date(
+                                tierInfo.unlockedAt
+                              ).toLocaleDateString()}
                             </span>
                           )}
                         </p>
@@ -1039,51 +1261,69 @@ export function ProgressionBingoGrid({
                         </>
                       )}
 
-                      <Badge variant={tierInfo.isUnlocked ? "default" : "secondary"}>
+                      <Badge
+                        variant={tierInfo.isUnlocked ? "default" : "secondary"}
+                      >
                         {tierInfo.isUnlocked ? "Unlocked" : "Locked"}
                       </Badge>
-                      {completionStatus.completedXP === completionStatus.totalXP && completionStatus.totalXP > 0 && (
-                        <Badge variant="outline" className="text-green-600 border-green-600">
-                          <Check className="h-3 w-3 mr-1" />
-                          Complete
-                        </Badge>
-                      )}
+                      {completionStatus.completedXP ===
+                        completionStatus.totalXP &&
+                        completionStatus.totalXP > 0 && (
+                          <Badge
+                            variant="outline"
+                            className="border-green-600 text-green-600"
+                          >
+                            <Check className="mr-1 h-3 w-3" />
+                            Complete
+                          </Badge>
+                        )}
                     </div>
                   </div>
 
                   {/* XP Requirement Editor */}
-                  {isEditing && tierInfo.tier < Math.max(...tierData.map((td) => td.tier)) && (
-                    <div className="mt-3 pt-3 border-t">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">XP to unlock Tier {tierInfo.tier + 2}:</span>
-                        <Input
-                          type="number"
-                          min="1"
-                          max={getTotalPrecedingXP(tierInfo.tier + 1)}
-                          value={
-                            localTierXpRequirements[tierInfo.tier] ??
-                            tierXpRequirements.find((req) => req.tier === tierInfo.tier)?.xpRequired ??
-                            5
-                          }
-                          onChange={(e) => {
-                            const newValue = Number(e.target.value)
-                            if (newValue > 0) {
-                              void handleUpdateXpRequirement(tierInfo.tier, newValue)
+                  {isEditing &&
+                    tierInfo.tier <
+                      Math.max(...tierData.map((td) => td.tier)) && (
+                      <div className="mt-3 border-t pt-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">
+                            XP to unlock Tier {tierInfo.tier + 2}:
+                          </span>
+                          <Input
+                            type="number"
+                            min="1"
+                            max={getTotalPrecedingXP(tierInfo.tier + 1)}
+                            value={
+                              localTierXpRequirements[tierInfo.tier] ??
+                              tierXpRequirements.find(
+                                (req) => req.tier === tierInfo.tier
+                              )?.xpRequired ??
+                              5
                             }
-                          }}
-                          className="w-20 h-7"
-                          title={`Maximum XP: ${getTotalPrecedingXP(tierInfo.tier + 1)} (total XP from preceding tiers)`}
-                        />
+                            onChange={(e) => {
+                              const newValue = Number(e.target.value)
+                              if (newValue > 0) {
+                                void handleUpdateXpRequirement(
+                                  tierInfo.tier,
+                                  newValue
+                                )
+                              }
+                            }}
+                            className="h-7 w-20"
+                            title={`Maximum XP: ${getTotalPrecedingXP(tierInfo.tier + 1)} (total XP from preceding tiers)`}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </Card>
               </DroppableTierHeader>
 
               {/* Tier Tiles Grid - Show if unlocked, tier 0, or in edit mode */}
               {(tierInfo.isUnlocked || tierInfo.tier === 0 || isEditing) && (
                 <SortableContext
-                  items={tierInfo.tiles.filter((tile) => !tile.isHidden || isEditing).map((tile) => tile.id)}
+                  items={tierInfo.tiles
+                    .filter((tile) => !tile.isHidden || isEditing)
+                    .map((tile) => tile.id)}
                   strategy={verticalListSortingStrategy}
                 >
                   <div
@@ -1093,7 +1333,7 @@ export function ProgressionBingoGrid({
                       "p-6",
                       // Use negative margin approach for consistent spacing
                       "-m-3",
-                      !tierInfo.isUnlocked && !isEditing && "opacity-50",
+                      !tierInfo.isUnlocked && !isEditing && "opacity-50"
                     )}
                   >
                     {tierInfo.tiles
@@ -1118,9 +1358,12 @@ export function ProgressionBingoGrid({
 
               {/* Locked tier placeholder - Only show if not in edit mode */}
               {!tierInfo.isUnlocked && tierInfo.tier !== 0 && !isEditing && (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Lock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Complete more tiles in Tier {tierInfo.tier} to unlock these tiles</p>
+                <div className="py-12 text-center text-muted-foreground">
+                  <Lock className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                  <p className="text-sm">
+                    Complete more tiles in Tier {tierInfo.tier} to unlock these
+                    tiles
+                  </p>
                 </div>
               )}
 
@@ -1128,9 +1371,9 @@ export function ProgressionBingoGrid({
               {tierIndex < tierData.length - 1 && (
                 <div className="flex justify-center py-4">
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <div className="w-px h-4 bg-border"></div>
+                    <div className="h-4 w-px bg-border"></div>
                     <ArrowDown className="h-5 w-5" />
-                    <div className="w-px h-4 bg-border"></div>
+                    <div className="h-4 w-px bg-border"></div>
                   </div>
                 </div>
               )}
@@ -1144,7 +1387,7 @@ export function ProgressionBingoGrid({
             <Button
               onClick={handleCreateNewTier}
               variant="outline"
-              className="gap-2 border-dashed border-2 hover:border-primary hover:bg-primary/5 transition-all bg-transparent"
+              className="gap-2 border-2 border-dashed bg-transparent transition-all hover:border-primary hover:bg-primary/5"
             >
               <Plus className="h-4 w-4" />
               Add New Tier
@@ -1156,7 +1399,7 @@ export function ProgressionBingoGrid({
       {/* Drag Overlay */}
       <DragOverlay>
         {draggedTile && (
-          <Card className="opacity-75 transform rotate-3 shadow-xl">
+          <Card className="rotate-3 transform opacity-75 shadow-xl">
             {draggedTile.headerImage && (
               <div className="aspect-square overflow-hidden">
                 <Image
@@ -1164,15 +1407,15 @@ export function ProgressionBingoGrid({
                   alt={draggedTile.title}
                   width={200}
                   height={200}
-                  className="w-full h-full object-cover"
+                  className="h-full w-full object-cover"
                 />
               </div>
             )}
             <div className="p-3">
-              <h4 className="font-semibold text-sm line-clamp-2">
+              <h4 className="line-clamp-2 text-sm font-semibold">
                 {draggedTile.isHidden ? "Hidden Tile" : draggedTile.title}
               </h4>
-              <Badge variant="outline" className="text-xs mt-2">
+              <Badge variant="outline" className="mt-2 text-xs">
                 {draggedTile.weight} XP
               </Badge>
             </div>

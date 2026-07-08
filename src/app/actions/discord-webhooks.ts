@@ -1,7 +1,7 @@
 "use server"
 
 import { getServerAuthSession } from "@/server/auth"
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger"
 import { db } from "@/server/db"
 import { discordWebhooks, eventParticipants, events } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
@@ -19,7 +19,9 @@ export interface DiscordWebhook {
   updatedAt: Date
 }
 
-export async function getDiscordWebhooks(eventId: string): Promise<DiscordWebhook[]> {
+export async function getDiscordWebhooks(
+  eventId: string
+): Promise<DiscordWebhook[]> {
   const session = await getServerAuthSession()
   if (!session?.user) {
     throw new Error("Not authenticated")
@@ -30,9 +32,9 @@ export async function getDiscordWebhooks(eventId: string): Promise<DiscordWebhoo
     where: eq(events.id, eventId),
     with: {
       eventParticipants: {
-        where: eq(eventParticipants.userId, session.user.id)
-      }
-    }
+        where: eq(eventParticipants.userId, session.user.id),
+      },
+    },
   })
 
   if (!event) {
@@ -40,7 +42,8 @@ export async function getDiscordWebhooks(eventId: string): Promise<DiscordWebhoo
   }
 
   const userParticipant = event.eventParticipants[0]
-  const hasPermission = event.creatorId === session.user.id ||
+  const hasPermission =
+    event.creatorId === session.user.id ||
     userParticipant?.role === "admin" ||
     userParticipant?.role === "management"
 
@@ -50,7 +53,7 @@ export async function getDiscordWebhooks(eventId: string): Promise<DiscordWebhoo
 
   const webhooks = await db.query.discordWebhooks.findMany({
     where: eq(discordWebhooks.eventId, eventId),
-    orderBy: [discordWebhooks.createdAt]
+    orderBy: [discordWebhooks.createdAt],
   })
 
   return webhooks
@@ -68,14 +71,17 @@ export async function createDiscordWebhook(
 
   try {
     // Validate webhook URL format
-    if (!webhookUrl.includes('discord.com/api/webhooks/')) {
+    if (!webhookUrl.includes("discord.com/api/webhooks/")) {
       return { success: false, error: "Invalid Discord webhook URL" }
     }
 
     // Test the webhook first
     const testResult = await testDiscordWebhook(webhookUrl)
     if (!testResult) {
-      logger.warn({ eventId, action: "createDiscordWebhook" }, "Webhook test failed during creation")
+      logger.warn(
+        { eventId, action: "createDiscordWebhook" },
+        "Webhook test failed during creation"
+      )
       return { success: false, error: `Webhook test failed` }
     }
 
@@ -84,9 +90,9 @@ export async function createDiscordWebhook(
       where: eq(events.id, eventId),
       with: {
         eventParticipants: {
-          where: eq(eventParticipants.userId, session.user.id)
-        }
-      }
+          where: eq(eventParticipants.userId, session.user.id),
+        },
+      },
     })
 
     if (!event) {
@@ -94,7 +100,8 @@ export async function createDiscordWebhook(
     }
 
     const userParticipant = event.eventParticipants[0]
-    const hasPermission = event.creatorId === session.user.id ||
+    const hasPermission =
+      event.creatorId === session.user.id ||
       userParticipant?.role === "admin" ||
       userParticipant?.role === "management"
 
@@ -103,21 +110,30 @@ export async function createDiscordWebhook(
     }
 
     // Create the webhook
-    const [webhook] = await db.insert(discordWebhooks).values({
-      eventId,
-      name,
-      webhookUrl,
-      createdBy: session.user.id,
-      isActive: true
-    }).returning()
+    const [webhook] = await db
+      .insert(discordWebhooks)
+      .values({
+        eventId,
+        name,
+        webhookUrl,
+        createdBy: session.user.id,
+        isActive: true,
+      })
+      .returning()
 
     revalidatePath(`/events/${eventId}`)
 
-    logger.info({ eventId, webhookId: webhook!.id, action: "createDiscordWebhook" }, "Discord webhook created successfully")
+    logger.info(
+      { eventId, webhookId: webhook!.id, action: "createDiscordWebhook" },
+      "Discord webhook created successfully"
+    )
 
     return { success: true, webhook: webhook! }
   } catch (error) {
-    logger.error({ error, eventId, action: "createDiscordWebhook" }, "Error creating Discord webhook")
+    logger.error(
+      { error, eventId, action: "createDiscordWebhook" },
+      "Error creating Discord webhook"
+    )
     return { success: false, error: "Failed to create webhook" }
   }
 }
@@ -139,11 +155,11 @@ export async function updateDiscordWebhook(
         event: {
           with: {
             eventParticipants: {
-              where: eq(eventParticipants.userId, session.user.id)
-            }
-          }
-        }
-      }
+              where: eq(eventParticipants.userId, session.user.id),
+            },
+          },
+        },
+      },
     })
 
     if (!webhook) {
@@ -151,7 +167,8 @@ export async function updateDiscordWebhook(
     }
 
     const userParticipant = webhook.event.eventParticipants[0]
-    const hasPermission = webhook.event.creatorId === session.user.id ||
+    const hasPermission =
+      webhook.event.creatorId === session.user.id ||
       userParticipant?.role === "admin" ||
       userParticipant?.role === "management"
 
@@ -161,37 +178,49 @@ export async function updateDiscordWebhook(
 
     // If updating webhook URL, test it first
     if (updates.webhookUrl && updates.webhookUrl !== webhook.webhookUrl) {
-      if (!updates.webhookUrl.includes('discord.com/api/webhooks/')) {
+      if (!updates.webhookUrl.includes("discord.com/api/webhooks/")) {
         return { success: false, error: "Invalid Discord webhook URL" }
       }
 
       const testResult = await testDiscordWebhook(updates.webhookUrl)
       if (!testResult) {
-        logger.warn({ webhookId, action: "updateDiscordWebhook" }, "Webhook test failed during update")
+        logger.warn(
+          { webhookId, action: "updateDiscordWebhook" },
+          "Webhook test failed during update"
+        )
         return { success: false, error: `Webhook test failed` }
       }
     }
 
     // Update the webhook
-    await db.update(discordWebhooks)
+    await db
+      .update(discordWebhooks)
       .set({
         ...updates,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       })
       .where(eq(discordWebhooks.id, webhookId))
 
     revalidatePath(`/events/${webhook.eventId}`)
 
-    logger.info({ webhookId, eventId: webhook.eventId, action: "updateDiscordWebhook" }, "Discord webhook updated successfully")
+    logger.info(
+      { webhookId, eventId: webhook.eventId, action: "updateDiscordWebhook" },
+      "Discord webhook updated successfully"
+    )
 
     return { success: true }
   } catch (error) {
-    logger.error({ error, webhookId, action: "updateDiscordWebhook" }, "Error updating Discord webhook")
+    logger.error(
+      { error, webhookId, action: "updateDiscordWebhook" },
+      "Error updating Discord webhook"
+    )
     return { success: false, error: "Failed to update webhook" }
   }
 }
 
-export async function deleteDiscordWebhook(webhookId: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteDiscordWebhook(
+  webhookId: string
+): Promise<{ success: boolean; error?: string }> {
   const session = await getServerAuthSession()
   if (!session?.user) {
     return { success: false, error: "Not authenticated" }
@@ -205,11 +234,11 @@ export async function deleteDiscordWebhook(webhookId: string): Promise<{ success
         event: {
           with: {
             eventParticipants: {
-              where: eq(eventParticipants.userId, session.user.id)
-            }
-          }
-        }
-      }
+              where: eq(eventParticipants.userId, session.user.id),
+            },
+          },
+        },
+      },
     })
 
     if (!webhook) {
@@ -217,7 +246,8 @@ export async function deleteDiscordWebhook(webhookId: string): Promise<{ success
     }
 
     const userParticipant = webhook.event.eventParticipants[0]
-    const hasPermission = webhook.event.creatorId === session.user.id ||
+    const hasPermission =
+      webhook.event.creatorId === session.user.id ||
       userParticipant?.role === "admin" ||
       userParticipant?.role === "management"
 
@@ -230,16 +260,24 @@ export async function deleteDiscordWebhook(webhookId: string): Promise<{ success
 
     revalidatePath(`/events/${webhook.eventId}`)
 
-    logger.info({ webhookId, eventId: webhook.eventId, action: "deleteDiscordWebhook" }, "Discord webhook deleted successfully")
+    logger.info(
+      { webhookId, eventId: webhook.eventId, action: "deleteDiscordWebhook" },
+      "Discord webhook deleted successfully"
+    )
 
     return { success: true }
   } catch (error) {
-    logger.error({ error, webhookId, action: "deleteDiscordWebhook" }, "Error deleting Discord webhook")
+    logger.error(
+      { error, webhookId, action: "deleteDiscordWebhook" },
+      "Error deleting Discord webhook"
+    )
     return { success: false, error: "Failed to delete webhook" }
   }
 }
 
-export async function testWebhook(webhookId: string): Promise<{ success: boolean; error?: string }> {
+export async function testWebhook(
+  webhookId: string
+): Promise<{ success: boolean; error?: string }> {
   const session = await getServerAuthSession()
   if (!session?.user) {
     return { success: false, error: "Not authenticated" }
@@ -247,7 +285,7 @@ export async function testWebhook(webhookId: string): Promise<{ success: boolean
 
   try {
     const webhook = await db.query.discordWebhooks.findFirst({
-      where: eq(discordWebhooks.id, webhookId)
+      where: eq(discordWebhooks.id, webhookId),
     })
 
     if (!webhook) {
@@ -258,12 +296,18 @@ export async function testWebhook(webhookId: string): Promise<{ success: boolean
     if (!success) {
       logger.warn({ webhookId, action: "testWebhook" }, "Webhook test failed")
     } else {
-      logger.info({ webhookId, action: "testWebhook" }, "Webhook test succeeded")
+      logger.info(
+        { webhookId, action: "testWebhook" },
+        "Webhook test succeeded"
+      )
     }
 
     return { success, error: "Failed to test webhook" }
   } catch (error) {
-    logger.error({ error, webhookId, action: "testWebhook" }, "Error testing webhook")
+    logger.error(
+      { error, webhookId, action: "testWebhook" },
+      "Error testing webhook"
+    )
     return { success: false, error: "Failed to test webhook" }
   }
 }

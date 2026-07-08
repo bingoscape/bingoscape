@@ -63,7 +63,13 @@ export async function updatePlayerMetadata(
     ehb?: number | null
     combatLevel?: number | null
     totalLevel?: number | null
-    skillLevel?: "beginner" | "intermediate" | "advanced" | "expert" | "pvmgod" | null
+    skillLevel?:
+      | "beginner"
+      | "intermediate"
+      | "advanced"
+      | "expert"
+      | "pvmgod"
+      | null
     timezone?: string | null
     dailyHoursAvailable?: number | null
     notes?: string | null
@@ -84,8 +90,13 @@ export async function updatePlayerMetadata(
     ),
   })
 
-  if (!participant || (participant.role !== "management" && participant.role !== "admin")) {
-    throw new Error("Unauthorized: You must be a management user for this event")
+  if (
+    !participant ||
+    (participant.role !== "management" && participant.role !== "admin")
+  ) {
+    throw new Error(
+      "Unauthorized: You must be a management user for this event"
+    )
   }
 
   // Check if metadata already exists
@@ -99,7 +110,7 @@ export async function updatePlayerMetadata(
   let result
   if (existing) {
     // Update existing metadata
-    [result] = await db
+    ;[result] = await db
       .update(playerMetadata)
       .set({
         ...data,
@@ -109,7 +120,7 @@ export async function updatePlayerMetadata(
       .returning()
   } else {
     // Create new metadata
-    [result] = await db
+    ;[result] = await db
       .insert(playerMetadata)
       .values({
         userId,
@@ -131,7 +142,13 @@ export async function updatePlayerMetadata(
 export async function updateOwnPlayerMetadata(
   eventId: string,
   data: {
-    skillLevel?: "beginner" | "intermediate" | "advanced" | "expert" | "pvmgod" | null
+    skillLevel?:
+      | "beginner"
+      | "intermediate"
+      | "advanced"
+      | "expert"
+      | "pvmgod"
+      | null
     timezone?: string | null
     dailyHoursAvailable?: number | null
   }
@@ -172,7 +189,7 @@ export async function updateOwnPlayerMetadata(
   let result
   if (existing) {
     // Update existing metadata
-    [result] = await db
+    ;[result] = await db
       .update(playerMetadata)
       .set({
         ...allowedData,
@@ -182,7 +199,7 @@ export async function updateOwnPlayerMetadata(
       .returning()
   } else {
     // Create new metadata
-    [result] = await db
+    ;[result] = await db
       .insert(playerMetadata)
       .values({
         userId: session.user.id,
@@ -214,8 +231,13 @@ export async function deletePlayerMetadata(userId: string, eventId: string) {
     ),
   })
 
-  if (!participant || (participant.role !== "management" && participant.role !== "admin")) {
-    throw new Error("Unauthorized: You must be a management user for this event")
+  if (
+    !participant ||
+    (participant.role !== "management" && participant.role !== "admin")
+  ) {
+    throw new Error(
+      "Unauthorized: You must be a management user for this event"
+    )
   }
 
   await db
@@ -275,8 +297,13 @@ export async function fetchWOMDataForPlayer(
     ),
   })
 
-  if (!participant || (participant.role !== "management" && participant.role !== "admin")) {
-    throw new Error("Unauthorized: You must be a management user for this event")
+  if (
+    !participant ||
+    (participant.role !== "management" && participant.role !== "admin")
+  ) {
+    throw new Error(
+      "Unauthorized: You must be a management user for this event"
+    )
   }
 
   // Fetch from WiseOldMan

@@ -154,7 +154,11 @@ export const registrationStatusEnum = pgEnum("registration_status", [
 ])
 export const bingoTypeEnum = pgEnum("bingo_type", ["standard", "progression"])
 export const gameTypeEnum = pgEnum("game_type", ["osrs", "rs3"])
-export const logicalOperatorEnum = pgEnum("logical_operator", ["AND", "OR", "SUM"])
+export const logicalOperatorEnum = pgEnum("logical_operator", [
+  "AND",
+  "OR",
+  "SUM",
+])
 export const goalTypeEnum = pgEnum("goal_type", ["generic", "item", "metric"])
 export const skillLevelEnum = pgEnum("skill_level", [
   "beginner",
@@ -211,8 +215,14 @@ export const events = createTable("events", {
   id: uuid("id").defaultRandom().primaryKey(),
   title: varchar("name", { length: 255 }).notNull(),
   description: varchar("description", { length: 1000 }),
-  startDate: timestamp("start_date", { mode: "date", withTimezone: true }).notNull(),
-  endDate: timestamp("end_date", { mode: "date", withTimezone: true }).notNull(),
+  startDate: timestamp("start_date", {
+    mode: "date",
+    withTimezone: true,
+  }).notNull(),
+  endDate: timestamp("end_date", {
+    mode: "date",
+    withTimezone: true,
+  }).notNull(),
   registrationDeadline: timestamp("registration_deadline", {
     mode: "date",
     withTimezone: true,
@@ -333,7 +343,10 @@ export const bingos = createTable("bingos", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   locked: boolean("locked").default(false).notNull(),
   visible: boolean("visible").default(false).notNull(),
-  scheduledUnlockDate: timestamp("scheduled_unlock_date", { mode: "date", withTimezone: true }),
+  scheduledUnlockDate: timestamp("scheduled_unlock_date", {
+    mode: "date",
+    withTimezone: true,
+  }),
   womCompetitionId: integer("wom_competition_id"),
   womVerificationCode: varchar("wom_verification_code", { length: 255 }),
 })

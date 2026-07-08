@@ -3,12 +3,17 @@
 import { authenticatedAction as authActionClient } from "@/lib/safe-action"
 import { z } from "zod"
 import { db } from "@/server/db"
-import { clanMembers, users, events, eventParticipants } from "@/server/db/schema"
+import {
+  clanMembers,
+  users,
+  events,
+  eventParticipants,
+} from "@/server/db/schema"
 import { and, eq, sql } from "drizzle-orm"
 import { getUserRole } from "../events"
 
 const schema = z.object({
-  eventId: z.string()
+  eventId: z.string(),
 })
 
 export const getClanMembersForEvent = authActionClient
@@ -17,7 +22,10 @@ export const getClanMembersForEvent = authActionClient
     try {
       const userRole = await getUserRole(eventId)
       if (!userRole || !["admin", "management"].includes(userRole)) {
-        return { success: false as const, error: "Not authorized to manage event participants" }
+        return {
+          success: false as const,
+          error: "Not authorized to manage event participants",
+        }
       }
 
       const event = await db.query.events.findFirst({
@@ -33,7 +41,10 @@ export const getClanMembersForEvent = authActionClient
       }
 
       if (!event.clanId) {
-        return { success: false as const, error: "Event is not associated with a clan" }
+        return {
+          success: false as const,
+          error: "Event is not associated with a clan",
+        }
       }
 
       const availableMembers = await db
@@ -68,6 +79,12 @@ export const getClanMembersForEvent = authActionClient
 
       return { success: true as const, availableMembers }
     } catch (error) {
-      return { success: false as const, error: error instanceof Error ? error.message : "Failed to get clan members for event" }
+      return {
+        success: false as const,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to get clan members for event",
+      }
     }
   })

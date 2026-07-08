@@ -1,11 +1,7 @@
 {
   "title": "Application Health & Reliability Dashboard",
   "description": "Monitor the stability, responsiveness, and error rates of the Next.js application.",
-  "tags": [
-    "application",
-    "bingoscape",
-    "health"
-  ],
+  "tags": ["application", "bingoscape", "health"],
   "variables": {},
   "widgets": [
     {

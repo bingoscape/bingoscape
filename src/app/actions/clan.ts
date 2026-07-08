@@ -1,5 +1,9 @@
 "use server"
 
+import { eq, and, count, sql } from "drizzle-orm"
+import { nanoid } from "nanoid"
+import { revalidatePath } from "next/cache"
+
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
 import {
@@ -10,113 +14,140 @@ import {
   clanInvites,
   eventParticipants,
 } from "@/server/db/schema"
-import { eq, and, count, sql } from "drizzle-orm"
-import { type EventData, getTotalBuyInsForEvent, getUserRole } from "./events"
-import { nanoid } from "nanoid"
-import { revalidatePath } from "next/cache"
+import { getTotalBuyInsForEvent, getUserRole } from "./events"
+
+import type { EventData } from "./events"
 
 export async function createClan(name: string, description: string) {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
-    throw new Error("You must be logged in to create a clan")
+    return { success: false, error: "You must be logged in to create a clan" }
   }
 
-  const newClan = await db.transaction(async (tx) => {
-    // Check if user already has a main clan
-    const existingMainClan = await tx
-      .select()
-      .from(clanMembers)
-      .where(
-        and(
-          eq(clanMembers.userId, session.user.id),
-          eq(clanMembers.isMain, true)
+  try {
+    const newClan = await db.transaction(async (tx) => {
+      // Check if user already has a main clan
+      const existingMainClan = await tx
+        .select()
+        .from(clanMembers)
+        .where(
+          and(
+            eq(clanMembers.userId, session.user.id),
+            eq(clanMembers.isMain, true)
+          )
         )
-      )
-      .limit(1)
+        .limit(1)
 
-    // First clan created by user is automatically their main clan
-    const isFirstClan = existingMainClan.length === 0
+      // First clan created by user is automatically their main clan
+      const isFirstClan = existingMainClan.length === 0
 
-    const [clan] = await tx
-      .insert(clans)
-      .values({
-        name,
-        description,
-        ownerId: session.user.id,
+      const [clan] = await tx
+        .insert(clans)
+        .values({
+          name,
+          description,
+          ownerId: session.user.id,
+        })
+        .returning()
+
+      await tx.insert(clanMembers).values({
+        clanId: clan!.id,
+        userId: session.user.id,
+        isMain: isFirstClan,
+        role: "admin",
       })
-      .returning()
 
-    await tx.insert(clanMembers).values({
-      clanId: clan!.id,
-      userId: session.user.id,
-      isMain: isFirstClan,
-      role: "admin",
+      return clan
     })
 
-    return clan
-  })
-
-  revalidatePath("/clans")
-  return newClan
+    revalidatePath("/clans")
+    revalidatePath("/")
+    return { success: true, clan: newClan }
+  } catch (error) {
+    return { success: false, error: "Failed to create clan" }
+  }
 }
 
 export async function joinClan(clanId: string, isMain = false) {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
-    throw new Error("You must be logged in to join a clan")
+    return { success: false, error: "You must be logged in to join a clan" }
   }
 
-  if (isMain) {
-    const existingMainClan = await db
-      .select()
-      .from(clanMembers)
-      .where(
-        and(
-          eq(clanMembers.userId, session.user.id),
-          eq(clanMembers.isMain, true)
-        )
-      )
-      .limit(1)
+  try {
+    await db.transaction(async (tx) => {
+      if (isMain) {
+        const existingMainClan = await tx
+          .select()
+          .from(clanMembers)
+          .where(
+            and(
+              eq(clanMembers.userId, session.user.id),
+              eq(clanMembers.isMain, true)
+            )
+          )
+          .limit(1)
 
-    if (existingMainClan.length > 0) {
-      throw new Error("You already have a main clan")
+        if (existingMainClan.length > 0) {
+          throw new Error("You already have a main clan")
+        }
+      }
+
+      await tx.insert(clanMembers).values({
+        clanId,
+        userId: session.user.id,
+        isMain,
+      })
+    })
+
+    revalidatePath("/")
+    revalidatePath(`/clans/${clanId}`)
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to join clan",
     }
   }
-
-  await db.insert(clanMembers).values({
-    clanId,
-    userId: session.user.id,
-    isMain,
-  })
-
-  return { success: true }
 }
 
 export async function leaveClan(clanId: string) {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
-    throw new Error("You must be logged in to leave a clan")
+    return { success: false, error: "You must be logged in to leave a clan" }
   }
 
-  const clan = await db
-    .select()
-    .from(clans)
-    .where(eq(clans.id, clanId))
-    .limit(1)
-  if (clan[0]!.ownerId === session.user.id) {
-    throw new Error("Clan owner cannot leave the clan")
+  try {
+    await db.transaction(async (tx) => {
+      const clan = await tx
+        .select()
+        .from(clans)
+        .where(eq(clans.id, clanId))
+        .limit(1)
+
+      if (!clan[0] || clan[0].ownerId === session.user.id) {
+        throw new Error("Clan owner cannot leave the clan")
+      }
+
+      await tx
+        .delete(clanMembers)
+        .where(
+          and(
+            eq(clanMembers.clanId, clanId),
+            eq(clanMembers.userId, session.user.id)
+          )
+        )
+    })
+
+    revalidatePath("/")
+    revalidatePath(`/clans/${clanId}`)
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to leave clan",
+    }
   }
-
-  await db
-    .delete(clanMembers)
-    .where(
-      and(
-        eq(clanMembers.clanId, clanId),
-        eq(clanMembers.userId, session.user.id)
-      )
-    )
-
-  return { success: true }
 }
 
 export async function getUserClans() {
@@ -178,7 +209,9 @@ export async function getClanEvents(clanId: string): Promise<EventData[]> {
     return {
       event: {
         ...event,
-        role: (event.creatorId === session.user.id ? "admin" : "participant") as import("./events").EventRole,
+        role: (event.creatorId === session.user.id
+          ? "admin"
+          : "participant") as import("./events").EventRole,
       },
       totalPrizePool,
     }

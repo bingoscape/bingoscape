@@ -4,7 +4,7 @@
 import { useEffect, useState, use } from "react"
 import { notFound, useRouter } from "next/navigation"
 import BingoGridWrapper from "@/components/bingo-grid-wrapper"
-import { getEventById, getUserRole } from "@/app/actions/events"
+import { getUserRole } from "@/app/actions/events"
 import { getTeamsByEventId, getCurrentTeamForUser } from "@/app/actions/team"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { UUID } from "crypto"
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft, RefreshCw, FileJson } from "lucide-react"
 import type { Bingo } from "@/app/actions/events"
 import { cn } from "@/lib/utils"
+import { getEventById } from "@/server/queries/events"
 
 export function BingoDetailClient({
   eventId,
@@ -25,31 +26,32 @@ export function BingoDetailClient({
   userRoleData,
   bingo,
 }: {
-  eventId: string;
-  bingoId: string;
-  eventData: any;
-  teamsData: any[];
-  currentTeamData: any;
-  userRoleData: "participant" | "management" | "admin";
-  bingo: any;
+  eventId: string
+  bingoId: string
+  eventData: any
+  teamsData: any[]
+  currentTeamData: any
+  userRoleData: "participant" | "management" | "admin"
+  bingo: any
 }) {
   const router = useRouter()
   const [refreshKey, setRefreshKey] = useState(0)
-  
+
   // Set initial selected team based on user role
-  const initialSelectedTeamId = (userRoleData === "admin" || userRoleData === "management") 
-    ? (currentTeamData?.id || teamsData[0]?.id)
-    : currentTeamData?.id;
+  const initialSelectedTeamId =
+    userRoleData === "admin" || userRoleData === "management"
+      ? currentTeamData?.id || teamsData[0]?.id
+      : currentTeamData?.id
 
-  const [selectedTeamId, setSelectedTeamId] = useState<string | undefined>(initialSelectedTeamId)
+  const [selectedTeamId, setSelectedTeamId] = useState<string | undefined>(
+    initialSelectedTeamId
+  )
   const [importExportModalOpen, setImportExportModalOpen] = useState(false)
-  
-  const data = eventData;
-  const teams = teamsData;
-  const currentTeam = currentTeamData;
-  const userRole = userRoleData;
 
-  
+  const data = eventData
+  const teams = teamsData
+  const currentTeam = currentTeamData
+  const userRole = userRoleData
 
   const handleRefresh = () => {
     setRefreshKey((prev) => prev + 1)
@@ -66,8 +68,6 @@ export function BingoDetailClient({
 
   // Determine which team ID to use for the bingo grid
   const effectiveTeamId = isAdminOrManagement ? selectedTeamId : currentTeam?.id
-
-  
 
   if (!data || !bingo) {
     return <div className="container mx-auto px-4 py-8">Bingo not found</div>

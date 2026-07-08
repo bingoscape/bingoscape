@@ -1,12 +1,7 @@
 "use server"
 
- 
- 
- 
- 
-
 import { db } from "@/server/db"
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger"
 import { goalGroups, goals, teamGoalProgress } from "@/server/db/schema"
 import { eq, and, isNull, inArray } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
@@ -26,25 +21,27 @@ export interface GoalGroup {
 export interface GoalTreeNode {
   type: "group" | "goal"
   id: string
-  data: GoalGroup | {
-    id: string
-    tileId: string
-    parentGroupId: string | null
-    description: string
-    targetValue: number
-    goalType?: "generic" | "item" | "metric"
-    orderIndex: number
-    itemGoal?: {
-      id: string
-      goalId: string
-      itemId: number
-      baseName: string
-      exactVariant: string | null
-      imageUrl: string
-      createdAt: Date
-      updatedAt: Date
-    } | null
-  }
+  data:
+    | GoalGroup
+    | {
+        id: string
+        tileId: string
+        parentGroupId: string | null
+        description: string
+        targetValue: number
+        goalType?: "generic" | "item" | "metric"
+        orderIndex: number
+        itemGoal?: {
+          id: string
+          goalId: string
+          itemId: number
+          baseName: string
+          exactVariant: string | null
+          imageUrl: string
+          createdAt: Date
+          updatedAt: Date
+        } | null
+      }
   children?: GoalTreeNode[]
 }
 
@@ -55,7 +52,7 @@ export async function createGoalGroup(
   tileId: string,
   logicalOperator: "AND" | "OR" | "SUM",
   parentGroupId?: string | null,
-  minRequiredGoals = 1,
+  minRequiredGoals = 1
 ) {
   try {
     // Get the next order index for this parent
@@ -185,7 +182,11 @@ export async function deleteGoalGroup(groupId: string) {
 /**
  * Move a goal to a different group (or root level)
  */
-export async function moveGoalToGroup(goalId: string, targetGroupId: string | null, orderIndex?: number) {
+export async function moveGoalToGroup(
+  goalId: string,
+  targetGroupId: string | null,
+  orderIndex?: number
+) {
   try {
     const updateData: {
       parentGroupId: string | null
@@ -214,13 +215,20 @@ export async function moveGoalToGroup(goalId: string, targetGroupId: string | nu
 /**
  * Move a group to a different parent group (or root level)
  */
-export async function moveGroupToGroup(groupId: string, targetGroupId: string | null, orderIndex?: number) {
+export async function moveGroupToGroup(
+  groupId: string,
+  targetGroupId: string | null,
+  orderIndex?: number
+) {
   try {
     // Prevent circular references
     if (targetGroupId) {
       const isCircular = await checkCircularReference(groupId, targetGroupId)
       if (isCircular) {
-        return { success: false, error: "Cannot create circular group reference" }
+        return {
+          success: false,
+          error: "Cannot create circular group reference",
+        }
       }
     }
 
@@ -237,7 +245,10 @@ export async function moveGroupToGroup(groupId: string, targetGroupId: string | 
       updateData.orderIndex = orderIndex
     }
 
-    await db.update(goalGroups).set(updateData).where(eq(goalGroups.id, groupId))
+    await db
+      .update(goalGroups)
+      .set(updateData)
+      .where(eq(goalGroups.id, groupId))
 
     revalidatePath("/events/[id]/bingos/[bingoId]", "page")
 
@@ -251,7 +262,10 @@ export async function moveGroupToGroup(groupId: string, targetGroupId: string | 
 /**
  * Check if moving a group would create a circular reference
  */
-async function checkCircularReference(groupId: string, targetGroupId: string): Promise<boolean> {
+async function checkCircularReference(
+  groupId: string,
+  targetGroupId: string
+): Promise<boolean> {
   let currentId: string | null = targetGroupId
 
   while (currentId) {
@@ -273,15 +287,21 @@ async function checkCircularReference(groupId: string, targetGroupId: string): P
  * Reorder goals/groups within the same parent
  */
 export async function reorderItems(
-  items: Array<{ id: string; type: "goal" | "group"; orderIndex: number }>,
+  items: Array<{ id: string; type: "goal" | "group"; orderIndex: number }>
 ) {
   try {
     await db.transaction(async (tx) => {
       for (const item of items) {
         if (item.type === "goal") {
-          await tx.update(goals).set({ orderIndex: item.orderIndex }).where(eq(goals.id, item.id))
+          await tx
+            .update(goals)
+            .set({ orderIndex: item.orderIndex })
+            .where(eq(goals.id, item.id))
         } else {
-          await tx.update(goalGroups).set({ orderIndex: item.orderIndex }).where(eq(goalGroups.id, item.id))
+          await tx
+            .update(goalGroups)
+            .set({ orderIndex: item.orderIndex })
+            .where(eq(goalGroups.id, item.id))
         }
       }
     })
@@ -300,7 +320,7 @@ export async function reorderItems(
  */
 export async function moveMultipleItems(
   items: Array<{ id: string; type: "goal" | "group" }>,
-  targetParentId: string | null,
+  targetParentId: string | null
 ) {
   try {
     let successCount = 0
@@ -323,9 +343,14 @@ export async function moveMultipleItems(
           } else {
             // Move group - check for circular reference first
             if (targetParentId) {
-              const isCircular = await checkCircularReference(item.id, targetParentId)
+              const isCircular = await checkCircularReference(
+                item.id,
+                targetParentId
+              )
               if (isCircular) {
-                errors.push(`Cannot move group ${item.id} - would create circular reference`)
+                errors.push(
+                  `Cannot move group ${item.id} - would create circular reference`
+                )
                 failCount++
                 continue
               }
@@ -447,7 +472,10 @@ export async function getGoalTreeWithProgress(tileId: string, teamId: string) {
     const goalIds = tileGoals.map((g) => g.id)
 
     const teamProgressData = await db.query.teamGoalProgress.findMany({
-      where: and(eq(teamGoalProgress.teamId, teamId), inArray(teamGoalProgress.goalId, goalIds)),
+      where: and(
+        eq(teamGoalProgress.teamId, teamId),
+        inArray(teamGoalProgress.goalId, goalIds)
+      ),
     })
 
     // Build progress map with completion status

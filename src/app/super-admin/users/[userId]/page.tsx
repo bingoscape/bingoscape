@@ -15,7 +15,7 @@ interface PageProps {
 }
 
 export default async function UserDetailsPage(props: PageProps) {
-  const params = await props.params;
+  const params = await props.params
   const userDetails = await getUserDetails(params.userId)
   const { user, clans, participatingEvents, createdEvents } = userDetails
 
@@ -25,13 +25,15 @@ export default async function UserDetailsPage(props: PageProps) {
         <div className="flex items-center gap-4">
           <Link href="/super-admin/users">
             <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
+              <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Users
             </Button>
           </Link>
           <div>
             <h2 className="text-3xl font-bold tracking-tight">User Details</h2>
-            <p className="text-muted-foreground">Detailed information about {user.name ?? user.email}</p>
+            <p className="text-muted-foreground">
+              Detailed information about {user.name ?? user.email}
+            </p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -52,22 +54,30 @@ export default async function UserDetailsPage(props: PageProps) {
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
                 <AvatarImage src={user.image ?? ""} />
-                <AvatarFallback>{user.name?.charAt(0) ?? user.email?.charAt(0) ?? "U"}</AvatarFallback>
+                <AvatarFallback>
+                  {user.name?.charAt(0) ?? user.email?.charAt(0) ?? "U"}
+                </AvatarFallback>
               </Avatar>
               <div>
                 <h3 className="font-semibold">{user.name ?? "No name set"}</h3>
                 <p className="text-sm text-muted-foreground">{user.email}</p>
-                {user.runescapeName && <p className="text-sm text-muted-foreground">RSN: {user.runescapeName}</p>}
+                {user.runescapeName && (
+                  <p className="text-sm text-muted-foreground">
+                    RSN: {user.runescapeName}
+                  </p>
+                )}
               </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">User ID:</span>
-                <span className="text-sm font-mono">{user.id}</span>
+                <span className="font-mono text-sm">{user.id}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Email Verified:</span>
+                <span className="text-sm text-muted-foreground">
+                  Email Verified:
+                </span>
                 <Badge variant={user.emailVerified ? "default" : "secondary"}>
                   {user.emailVerified ? "Yes" : "No"}
                 </Badge>
@@ -77,11 +87,15 @@ export default async function UserDetailsPage(props: PageProps) {
                 <span className="text-sm">{clans.length}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Events Created:</span>
+                <span className="text-sm text-muted-foreground">
+                  Events Created:
+                </span>
                 <span className="text-sm">{createdEvents.length}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Events Participating:</span>
+                <span className="text-sm text-muted-foreground">
+                  Events Participating:
+                </span>
                 <span className="text-sm">{participatingEvents.length}</span>
               </div>
             </div>
@@ -97,23 +111,27 @@ export default async function UserDetailsPage(props: PageProps) {
           </CardHeader>
           <CardContent>
             {clans.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Not a member of any clans</p>
+              <p className="text-sm text-muted-foreground">
+                Not a member of any clans
+              </p>
             ) : (
               <div className="space-y-3">
                 {clans.map((membership) => (
-                  <div key={membership.clan.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div
+                    key={membership.clan.id}
+                    className="flex items-center justify-between rounded-lg border p-3"
+                  >
                     <div>
-                      <Link href={`/super-admin/clans/${membership.clan.id}`} className="font-medium hover:underline">
+                      <Link
+                        href={`/super-admin/clans/${membership.clan.id}`}
+                        className="font-medium hover:underline"
+                      >
                         {membership.clan.name}
                       </Link>
-                      <div className="flex gap-2 mt-1">
-                        <Badge variant="outline">
-                          {membership.role}
-                        </Badge>
+                      <div className="mt-1 flex gap-2">
+                        <Badge variant="outline">{membership.role}</Badge>
                         {membership.isMain && (
-                          <Badge variant="default">
-                            Main Clan
-                          </Badge>
+                          <Badge variant="default">Main Clan</Badge>
                         )}
                       </div>
                     </div>
@@ -142,14 +160,18 @@ export default async function UserDetailsPage(props: PageProps) {
             ) : (
               <div className="space-y-3">
                 {createdEvents.slice(0, 5).map((event) => (
-                  <div key={event.id} className="p-3 border rounded-lg">
-                    <Link href={`/super-admin/events/${event.id}`} className="font-medium hover:underline">
+                  <div key={event.id} className="rounded-lg border p-3">
+                    <Link
+                      href={`/super-admin/events/${event.id}`}
+                      className="font-medium hover:underline"
+                    >
                       {event.title}
                     </Link>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(event.startDate).toLocaleDateString()} - {new Date(event.endDate).toLocaleDateString()}
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {new Date(event.startDate).toLocaleDateString()} -{" "}
+                      {new Date(event.endDate).toLocaleDateString()}
                     </p>
-                    <div className="flex gap-2 mt-2">
+                    <div className="mt-2 flex gap-2">
                       <Badge variant={event.locked ? "destructive" : "default"}>
                         {event.locked ? "Locked" : "Open"}
                       </Badge>
@@ -160,7 +182,9 @@ export default async function UserDetailsPage(props: PageProps) {
                   </div>
                 ))}
                 {createdEvents.length > 5 && (
-                  <p className="text-sm text-muted-foreground">And {createdEvents.length - 5} more...</p>
+                  <p className="text-sm text-muted-foreground">
+                    And {createdEvents.length - 5} more...
+                  </p>
                 )}
               </div>
             )}
@@ -176,33 +200,47 @@ export default async function UserDetailsPage(props: PageProps) {
           </CardHeader>
           <CardContent>
             {participatingEvents.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Not participating in any events</p>
+              <p className="text-sm text-muted-foreground">
+                Not participating in any events
+              </p>
             ) : (
               <div className="space-y-3">
                 {participatingEvents.slice(0, 5).map((participation) => (
-                  <div key={participation.event.id} className="p-3 border rounded-lg">
+                  <div
+                    key={participation.event.id}
+                    className="rounded-lg border p-3"
+                  >
                     <Link
                       href={`/super-admin/events/${participation.event.id}`}
                       className="font-medium hover:underline"
                     >
                       {participation.event.title}
                     </Link>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(participation.event.startDate).toLocaleDateString()} -{" "}
-                      {new Date(participation.event.endDate).toLocaleDateString()}
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {new Date(
+                        participation.event.startDate
+                      ).toLocaleDateString()}{" "}
+                      -{" "}
+                      {new Date(
+                        participation.event.endDate
+                      ).toLocaleDateString()}
                     </p>
-                    <div className="flex gap-2 mt-2">
-                      <Badge variant="outline">
-                        {participation.role}
-                      </Badge>
-                      <Badge variant={participation.event.locked ? "destructive" : "default"}>
+                    <div className="mt-2 flex gap-2">
+                      <Badge variant="outline">{participation.role}</Badge>
+                      <Badge
+                        variant={
+                          participation.event.locked ? "destructive" : "default"
+                        }
+                      >
                         {participation.event.locked ? "Locked" : "Open"}
                       </Badge>
                     </div>
                   </div>
                 ))}
                 {participatingEvents.length > 5 && (
-                  <p className="text-sm text-muted-foreground">And {participatingEvents.length - 5} more...</p>
+                  <p className="text-sm text-muted-foreground">
+                    And {participatingEvents.length - 5} more...
+                  </p>
                 )}
               </div>
             )}

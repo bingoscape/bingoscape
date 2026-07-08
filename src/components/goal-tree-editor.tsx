@@ -73,7 +73,13 @@ import {
 } from "@/components/ui/dialog"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { OsrsItemSearch } from "./osrs-item-search"
-import { createItemGoal, updateGoal, updateItemGoal, createMetricGoal, updateMetricGoal } from "@/app/actions/bingo"
+import {
+  createItemGoal,
+  updateGoal,
+  updateItemGoal,
+  createMetricGoal,
+  updateMetricGoal,
+} from "@/app/actions/bingo"
 import { parseItemName } from "osrs-item-data"
 import type { OsrsItem } from "@/types/osrs-items"
 import { cn } from "@/lib/utils"
@@ -115,16 +121,24 @@ export function GoalTreeEditor({
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showNewGroupDialog, setShowNewGroupDialog] = useState(false)
-  const [newGroupOperator, setNewGroupOperator] = useState<"AND" | "OR" | "SUM">("AND")
+  const [newGroupOperator, setNewGroupOperator] = useState<
+    "AND" | "OR" | "SUM"
+  >("AND")
   const [newGroupMinRequired, setNewGroupMinRequired] = useState<number>(1)
-  const [goalType, setGoalType] = useState<"generic" | "item" | "metric">("generic")
+  const [goalType, setGoalType] = useState<"generic" | "item" | "metric">(
+    "generic"
+  )
   const [selectedItems, setSelectedItems] = useState<OsrsItem[]>([])
   const [itemGoalTargetValue, setItemGoalTargetValue] = useState<number>(1)
   const [isCreatingBulk, setIsCreatingBulk] = useState(false)
-  
+
   // Metric goal state
-  const [metricProvider, setMetricProvider] = useState<"wiseoldman" | "templeosrs">("wiseoldman")
-  const [metricType, setMetricType] = useState<"skill" | "boss" | "activity">("skill")
+  const [metricProvider, setMetricProvider] = useState<
+    "wiseoldman" | "templeosrs"
+  >("wiseoldman")
+  const [metricType, setMetricType] = useState<"skill" | "boss" | "activity">(
+    "skill"
+  )
   const [metricName, setMetricName] = useState("")
   const [metricTargetValue, setMetricTargetValue] = useState<number>(1)
 
@@ -247,10 +261,14 @@ export function GoalTreeEditor({
   }
   const handleAddMetricGoal = async () => {
     if (!metricName.trim()) {
-      toast({ title: "Error", description: "Please specify a metric name", variant: "destructive" })
+      toast({
+        title: "Error",
+        description: "Please specify a metric name",
+        variant: "destructive",
+      })
       return
     }
-    
+
     const result = await createMetricGoal(
       tileId,
       metricType,
@@ -258,15 +276,22 @@ export function GoalTreeEditor({
       metricTargetValue,
       `${metricName} (${metricType})`
     )
-    
+
     if (result.success) {
-      toast({ title: "Metric goal created", description: "Successfully created a new metric goal." })
+      toast({
+        title: "Metric goal created",
+        description: "Successfully created a new metric goal.",
+      })
       setMetricName("")
       setMetricTargetValue(1)
       setGoalType("generic")
       onRefresh()
     } else {
-      toast({ title: "Error", description: result.error || "Failed to create metric goal", variant: "destructive" })
+      toast({
+        title: "Error",
+        description: result.error || "Failed to create metric goal",
+        variant: "destructive",
+      })
     }
   }
 
@@ -302,8 +327,14 @@ export function GoalTreeEditor({
         node.children &&
         expandedGroups.has(node.id)
       ) {
-        const groupOperator = (node.data as any)?.logicalOperator as "AND" | "OR" | "SUM"
-        return [flatNode, ...flattenTree(node.children, node.id, groupOperator, depth + 1)]
+        const groupOperator = (node.data as any)?.logicalOperator as
+          | "AND"
+          | "OR"
+          | "SUM"
+        return [
+          flatNode,
+          ...flattenTree(node.children, node.id, groupOperator, depth + 1),
+        ]
       }
 
       return flatNode
@@ -655,7 +686,10 @@ export function GoalTreeEditor({
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="metric" id="tree-metric" />
-                    <Label htmlFor="tree-metric" className="flex cursor-pointer items-center gap-1 font-normal">
+                    <Label
+                      htmlFor="tree-metric"
+                      className="flex cursor-pointer items-center gap-1 font-normal"
+                    >
                       <BarChart2 className="h-4 w-4" />
                       OSRS Metric
                     </Label>
@@ -698,7 +732,8 @@ export function GoalTreeEditor({
                         className="mt-1"
                       />
                       <p className="mt-1 text-[10px] text-muted-foreground">
-                        Note: In a SUM group, this target is illustrative and does not cap contributions.
+                        Note: In a SUM group, this target is illustrative and
+                        does not cap contributions.
                       </p>
                     </div>
                   </div>
@@ -760,7 +795,9 @@ export function GoalTreeEditor({
                         className="mt-1"
                       />
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Number of times this item must be obtained. In a SUM group, this target is illustrative and does not cap contributions.
+                        Number of times this item must be obtained. In a SUM
+                        group, this target is illustrative and does not cap
+                        contributions.
                       </p>
                     </div>
                   </div>
@@ -784,17 +821,22 @@ export function GoalTreeEditor({
                   </Button>
                 </>
               )}
-              
+
               {/* Metric Goal Form */}
               {goalType === "metric" && (
                 <>
                   <div className="space-y-4">
                     <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Metric Type</Label>
-                      <Select value={metricType} onValueChange={(v: any) => {
-                        setMetricType(v)
-                        setMetricName("")
-                      }}>
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        Metric Type
+                      </Label>
+                      <Select
+                        value={metricType}
+                        onValueChange={(v: any) => {
+                          setMetricType(v)
+                          setMetricName("")
+                        }}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select type" />
                         </SelectTrigger>
@@ -806,55 +848,92 @@ export function GoalTreeEditor({
                       </Select>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Metric Name</Label>
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        Metric Name
+                      </Label>
                       <Select value={metricName} onValueChange={setMetricName}>
                         <SelectTrigger className="mt-1">
                           <SelectValue placeholder="Select metric" />
                         </SelectTrigger>
                         <SelectContent className="max-h-[300px]">
-                          {metricType === "skill" && SKILLS.map(m => (
-                            <SelectItem key={m} value={m}>
-                              <div className="flex items-center gap-2">
-                                <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <span>{getMetricName(m)}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                          {metricType === "boss" && BOSSES.map(m => (
-                            <SelectItem key={m} value={m}>
-                              <div className="flex items-center gap-2">
-                                <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <span>{getMetricName(m)}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                          {metricType === "activity" && ACTIVITIES.map(m => (
-                            <SelectItem key={m} value={m}>
-                              <div className="flex items-center gap-2">
-                                <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                <span>{getMetricName(m)}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
+                          {metricType === "skill" &&
+                            SKILLS.map((m) => (
+                              <SelectItem key={m} value={m}>
+                                <div className="flex items-center gap-2">
+                                  <img
+                                    src={getWikiIconUrl(m)}
+                                    alt={m}
+                                    className="h-4 w-4 object-contain"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = "none"
+                                    }}
+                                  />
+                                  <span>{getMetricName(m)}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          {metricType === "boss" &&
+                            BOSSES.map((m) => (
+                              <SelectItem key={m} value={m}>
+                                <div className="flex items-center gap-2">
+                                  <img
+                                    src={getWikiIconUrl(m)}
+                                    alt={m}
+                                    className="h-4 w-4 object-contain"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = "none"
+                                    }}
+                                  />
+                                  <span>{getMetricName(m)}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          {metricType === "activity" &&
+                            ACTIVITIES.map((m) => (
+                              <SelectItem key={m} value={m}>
+                                <div className="flex items-center gap-2">
+                                  <img
+                                    src={getWikiIconUrl(m)}
+                                    alt={m}
+                                    className="h-4 w-4 object-contain"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = "none"
+                                    }}
+                                  />
+                                  <span>{getMetricName(m)}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Target XP/KC/Score</Label>
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        Target XP/KC/Score
+                      </Label>
                       <Input
                         type="number"
                         value={metricTargetValue}
-                        onChange={(e) => setMetricTargetValue(Number.parseInt(e.target.value) || 1)}
+                        onChange={(e) =>
+                          setMetricTargetValue(
+                            Number.parseInt(e.target.value) || 1
+                          )
+                        }
                         placeholder="1"
                         min="1"
                         className="mt-1"
                       />
                       <p className="mt-1 text-[10px] text-muted-foreground">
-                        Note: In a SUM group, this target is illustrative and does not cap contributions.
+                        Note: In a SUM group, this target is illustrative and
+                        does not cap contributions.
                       </p>
                     </div>
                   </div>
-                  <Button onClick={handleAddMetricGoal} disabled={!metricName.trim()} className="w-full">
+                  <Button
+                    onClick={handleAddMetricGoal}
+                    disabled={!metricName.trim()}
+                    className="w-full"
+                  >
                     <BarChart2 className="mr-2 h-4 w-4" />
                     Add Metric Goal
                   </Button>
@@ -899,24 +978,34 @@ export function GoalTreeEditor({
                 {newGroupOperator === "AND"
                   ? "All goals in this group must be completed"
                   : newGroupOperator === "SUM"
-                  ? "Progress from all goals is pooled"
-                  : `At least ${newGroupMinRequired} goal${newGroupMinRequired !== 1 ? "s" : ""} in this group must be completed`}
+                    ? "Progress from all goals is pooled"
+                    : `At least ${newGroupMinRequired} goal${newGroupMinRequired !== 1 ? "s" : ""} in this group must be completed`}
               </p>
             </div>
             {(newGroupOperator === "OR" || newGroupOperator === "SUM") && (
-              <div className="flex flex-col gap-1 mt-2">
+              <div className="mt-2 flex flex-col gap-1">
                 <div className="flex items-center gap-2">
-                  <Label className="text-xs shrink-0">{newGroupOperator === "SUM" ? "Target Sum:" : "Min Goals Required:"}</Label>
+                  <Label className="shrink-0 text-xs">
+                    {newGroupOperator === "SUM"
+                      ? "Target Sum:"
+                      : "Min Goals Required:"}
+                  </Label>
                   <Input
                     type="number"
                     min="1"
                     className="h-8 w-20"
                     value={newGroupMinRequired}
-                    onChange={(e) => setNewGroupMinRequired(Math.max(1, Number.parseInt(e.target.value) || 1))}
+                    onChange={(e) =>
+                      setNewGroupMinRequired(
+                        Math.max(1, Number.parseInt(e.target.value) || 1)
+                      )
+                    }
                   />
                 </div>
                 <p className="text-[10px] text-muted-foreground">
-                  {newGroupOperator === "SUM" ? "The total numerical progress required across all children" : "How many goals must be completed for this OR group to be satisfied"}
+                  {newGroupOperator === "SUM"
+                    ? "The total numerical progress required across all children"
+                    : "How many goals must be completed for this OR group to be satisfied"}
                 </p>
               </div>
             )}
@@ -1222,8 +1311,14 @@ function TreeNode({
             groupData.logicalOperator === "SUM"
               ? "border-indigo-500/30 bg-indigo-500/10 dark:bg-indigo-950/20"
               : "border-blue-500/30 bg-blue-500/10",
-            isOver && (groupData.logicalOperator === "SUM" ? "border-2 border-indigo-500 bg-indigo-500/20" : "border-2 border-blue-500 bg-blue-500/20"),
-            isSelected && (groupData.logicalOperator === "SUM" ? "border-2 border-indigo-600 shadow-md" : "border-2 border-blue-600 shadow-md")
+            isOver &&
+              (groupData.logicalOperator === "SUM"
+                ? "border-2 border-indigo-500 bg-indigo-500/20"
+                : "border-2 border-blue-500 bg-blue-500/20"),
+            isSelected &&
+              (groupData.logicalOperator === "SUM"
+                ? "border-2 border-indigo-600 shadow-md"
+                : "border-2 border-blue-600 shadow-md")
           )}
           onClick={(e) => onNodeClick(node.id, e)}
         >
@@ -1231,7 +1326,14 @@ function TreeNode({
             <div className="flex items-center justify-between">
               {isEditingGroupName ? (
                 <div className="flex flex-1 items-center gap-2">
-                  <Layers className={cn("h-4 w-4", groupData.logicalOperator === "SUM" ? "text-indigo-500" : "text-blue-500")} />
+                  <Layers
+                    className={cn(
+                      "h-4 w-4",
+                      groupData.logicalOperator === "SUM"
+                        ? "text-indigo-500"
+                        : "text-blue-500"
+                    )}
+                  />
                   <Input
                     value={editGroupName}
                     onChange={(e) => setEditGroupName(e.target.value)}
@@ -1282,7 +1384,14 @@ function TreeNode({
                         <ChevronRight className="h-4 w-4" />
                       )}
                     </Button>
-                    <Layers className={cn("h-4 w-4", groupData.logicalOperator === "SUM" ? "text-indigo-500" : "text-blue-500")} />
+                    <Layers
+                      className={cn(
+                        "h-4 w-4",
+                        groupData.logicalOperator === "SUM"
+                          ? "text-indigo-500"
+                          : "text-blue-500"
+                      )}
+                    />
                     <span className="font-medium">
                       {(groupData.name as string | null) || "Group"}
                     </span>
@@ -1326,7 +1435,8 @@ function TreeNode({
                         {groupData.logicalOperator}
                       </Badge>
                     )}
-                    {(groupData.logicalOperator === "OR" || groupData.logicalOperator === "SUM") && (
+                    {(groupData.logicalOperator === "OR" ||
+                      groupData.logicalOperator === "SUM") && (
                       <>
                         {isEditingMinRequired ? (
                           <div className="flex items-center gap-1">
@@ -1384,7 +1494,10 @@ function TreeNode({
                         ) : (
                           <div className="flex items-center gap-1">
                             <Badge variant="outline" className="text-xs">
-                              {groupData.logicalOperator === "SUM" ? "Target:" : "Min:"} {(groupData.minRequiredGoals as number) || 1}
+                              {groupData.logicalOperator === "SUM"
+                                ? "Target:"
+                                : "Min:"}{" "}
+                              {(groupData.minRequiredGoals as number) || 1}
                             </Badge>
                             {hasSufficientRights && (
                               <Button
@@ -1472,10 +1585,13 @@ function TreeNode({
                 <div className="space-y-3">
                   <div>
                     <Label className="text-xs">Metric Type</Label>
-                    <Select value={editMetricType} onValueChange={(v) => {
-                      setEditMetricType(v)
-                      setEditMetricName("")
-                    }}>
+                    <Select
+                      value={editMetricType}
+                      onValueChange={(v) => {
+                        setEditMetricType(v)
+                        setEditMetricName("")
+                      }}
+                    >
                       <SelectTrigger className="h-8 text-sm">
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
@@ -1488,35 +1604,62 @@ function TreeNode({
                   </div>
                   <div>
                     <Label className="text-xs">Metric Name</Label>
-                    <Select value={editMetricName} onValueChange={setEditMetricName}>
+                    <Select
+                      value={editMetricName}
+                      onValueChange={setEditMetricName}
+                    >
                       <SelectTrigger className="mt-1 h-8 text-sm">
                         <SelectValue placeholder="Select metric" />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
-                        {editMetricType === "skill" && SKILLS.map(m => (
-                          <SelectItem key={m} value={m}>
-                            <div className="flex items-center gap-2">
-                              <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                              <span>{getMetricName(m)}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                        {editMetricType === "boss" && BOSSES.map(m => (
-                          <SelectItem key={m} value={m}>
-                            <div className="flex items-center gap-2">
-                              <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                              <span>{getMetricName(m)}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                        {editMetricType === "activity" && ACTIVITIES.map(m => (
-                          <SelectItem key={m} value={m}>
-                            <div className="flex items-center gap-2">
-                              <img src={getWikiIconUrl(m)} alt={m} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                              <span>{getMetricName(m)}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
+                        {editMetricType === "skill" &&
+                          SKILLS.map((m) => (
+                            <SelectItem key={m} value={m}>
+                              <div className="flex items-center gap-2">
+                                <img
+                                  src={getWikiIconUrl(m)}
+                                  alt={m}
+                                  className="h-4 w-4 object-contain"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none"
+                                  }}
+                                />
+                                <span>{getMetricName(m)}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        {editMetricType === "boss" &&
+                          BOSSES.map((m) => (
+                            <SelectItem key={m} value={m}>
+                              <div className="flex items-center gap-2">
+                                <img
+                                  src={getWikiIconUrl(m)}
+                                  alt={m}
+                                  className="h-4 w-4 object-contain"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none"
+                                  }}
+                                />
+                                <span>{getMetricName(m)}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        {editMetricType === "activity" &&
+                          ACTIVITIES.map((m) => (
+                            <SelectItem key={m} value={m}>
+                              <div className="flex items-center gap-2">
+                                <img
+                                  src={getWikiIconUrl(m)}
+                                  alt={m}
+                                  className="h-4 w-4 object-contain"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none"
+                                  }}
+                                />
+                                <span>{getMetricName(m)}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1545,7 +1688,8 @@ function TreeNode({
                 />
                 {node.parentOperator === "SUM" && (
                   <p className="mt-1 text-[10px] text-muted-foreground">
-                    Note: In a SUM group, this target is illustrative and does not cap contributions.
+                    Note: In a SUM group, this target is illustrative and does
+                    not cap contributions.
                   </p>
                 )}
               </div>
@@ -1607,7 +1751,10 @@ function TreeNode({
                 ) : isMetricGoal ? (
                   <>
                     <BarChart2 className="h-4 w-4 flex-shrink-0 text-blue-500" />
-                    <Badge variant="secondary" className="flex-shrink-0 text-xs">
+                    <Badge
+                      variant="secondary"
+                      className="flex-shrink-0 text-xs"
+                    >
                       Metric ({goalData.metricGoal.metricType})
                     </Badge>
                   </>

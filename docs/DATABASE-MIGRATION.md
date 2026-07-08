@@ -38,6 +38,7 @@ pg_dump -U postgres --clean --if-exists --no-owner --no-privileges bingoscape | 
 **Output**: Creates compressed backup file at `~/db-backups/bingoscape-backup-TIMESTAMP.sql.gz`
 
 **Verify backup**:
+
 ```bash
 # Check file exists and has reasonable size
 ls -lh ~/db-backups/
@@ -51,12 +52,14 @@ gunzip -t ~/db-backups/bingoscape-backup-*.sql.gz  # Test integrity
 Choose one of these methods:
 
 #### Method A: Direct SCP Transfer
+
 ```bash
 # From old server to new server
 scp ~/db-backups/bingoscape-backup-*.sql.gz user@new-server:~/bingoscape/backups/
 ```
 
 #### Method B: Via Local Machine
+
 ```bash
 # Download from old server
 scp user@old-server:~/db-backups/bingoscape-backup-*.sql.gz ./
@@ -66,6 +69,7 @@ scp ./bingoscape-backup-*.sql.gz user@new-server:~/bingoscape/backups/
 ```
 
 #### Method C: Using rsync (for large databases)
+
 ```bash
 rsync -avz --progress \
   ~/db-backups/bingoscape-backup-*.sql.gz \
@@ -108,6 +112,7 @@ ls -lh backups/
 ```
 
 **What the script does**:
+
 1. Stops the application container (to prevent connections during import)
 2. Imports backup into PostgreSQL Docker container
 3. Restarts application container
@@ -148,6 +153,7 @@ curl -I https://your-domain.com
 ### Import Fails with "database does not exist"
 
 **Solution**: Create the database first:
+
 ```bash
 docker compose exec postgres psql -U postgres -c "CREATE DATABASE bingoscape;"
 ./scripts/import-db.sh backups/bingoscape-backup-*.sql.gz
@@ -156,6 +162,7 @@ docker compose exec postgres psql -U postgres -c "CREATE DATABASE bingoscape;"
 ### Import Fails with Permission Errors
 
 **Solution**: Ensure `.env` file has correct database credentials:
+
 ```bash
 cat .env | grep DB_
 # Should show DB_USER=postgres and DB_NAME=bingoscape
@@ -164,6 +171,7 @@ cat .env | grep DB_
 ### "No space left on device"
 
 **Solution**: Check disk space and clean up:
+
 ```bash
 df -h
 docker system prune -a  # Clean up unused Docker data
@@ -172,6 +180,7 @@ docker system prune -a  # Clean up unused Docker data
 ### Application Won't Start After Import
 
 **Solution**: Check for migration issues:
+
 ```bash
 # View detailed logs
 docker compose logs app
@@ -186,6 +195,7 @@ docker compose run --rm migrate
 ### Backup File Corrupted
 
 **Solution**: Verify integrity and re-create:
+
 ```bash
 # Test backup file
 gunzip -t backups/bingoscape-backup-*.sql.gz
@@ -200,6 +210,7 @@ gunzip -t backups/bingoscape-backup-*.sql.gz
 If migration fails and you need to rollback:
 
 ### On New Server:
+
 ```bash
 # Stop containers
 docker compose down
@@ -231,17 +242,20 @@ docker compose up -d
 ## Best Practices
 
 ### Before Migration
+
 1. **Announce downtime** to users
 2. **Test migration** on a staging environment first
 3. **Backup new server's database** before import (if it has data)
 4. **Document old server credentials** for reference
 
 ### During Migration
+
 1. **Monitor import progress** - large databases take time
 2. **Keep backup file** until migration is verified
 3. **Don't delete old database** immediately
 
 ### After Migration
+
 1. **Keep old server running** for 24-48 hours as fallback
 2. **Monitor application logs** for unexpected errors
 3. **Backup new database** immediately after successful migration
@@ -259,6 +273,7 @@ Import time estimates based on database size:
 - **> 10 GB**: 1+ hours
 
 **Progress monitoring**:
+
 ```bash
 # Watch import progress in real-time
 docker compose logs -f postgres
@@ -271,12 +286,14 @@ docker compose logs -f postgres
 If scripts don't work, you can migrate manually:
 
 ### Backup (old server):
+
 ```bash
 pg_dump -U postgres bingoscape > /tmp/backup.sql
 gzip /tmp/backup.sql
 ```
 
 ### Import (new server):
+
 ```bash
 gunzip -c backup.sql.gz | docker compose exec -T postgres psql -U postgres -d bingoscape
 ```

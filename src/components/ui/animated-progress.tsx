@@ -11,8 +11,21 @@ interface AnimatedProgressProps extends React.HTMLAttributes<HTMLDivElement> {
   duration?: number
 }
 
-const AnimatedProgress = React.forwardRef<HTMLDivElement, AnimatedProgressProps>(
-  ({ className, value = 0, indicatorClassName, animate = true, duration = 1000, ...props }, ref) => {
+const AnimatedProgress = React.forwardRef<
+  HTMLDivElement,
+  AnimatedProgressProps
+>(
+  (
+    {
+      className,
+      value = 0,
+      indicatorClassName,
+      animate = true,
+      duration = 1000,
+      ...props
+    },
+    ref
+  ) => {
     const [animatedValue, setAnimatedValue] = React.useState(0)
 
     React.useEffect(() => {
@@ -24,7 +37,7 @@ const AnimatedProgress = React.forwardRef<HTMLDivElement, AnimatedProgressProps>
         const animateProgress = () => {
           const elapsed = Date.now() - startTime
           const progress = Math.min(1, elapsed / duration)
-          
+
           // Use easing function for smooth animation
           const eased = 1 - Math.pow(1 - progress, 3)
           const currentValue = startValue + (endValue - startValue) * eased

@@ -97,12 +97,8 @@
           "name": "bingoscape-next_account_user_id_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_account",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -110,10 +106,7 @@
       "compositePrimaryKeys": {
         "bingoscape-next_account_provider_provider_account_id_pk": {
           "name": "bingoscape-next_account_provider_provider_account_id_pk",
-          "columns": [
-            "provider",
-            "provider_account_id"
-          ]
+          "columns": ["provider", "provider_account_id"]
         }
       },
       "uniqueConstraints": {}
@@ -173,12 +166,8 @@
           "name": "bingoscape-next_api_keys_user_id_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_api_keys",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -188,9 +177,7 @@
         "bingoscape-next_api_keys_key_unique": {
           "name": "bingoscape-next_api_keys_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "key"
-          ]
+          "columns": ["key"]
         }
       }
     },
@@ -288,12 +275,8 @@
           "name": "bingoscape-next_bingo_templates_creator_id_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_bingo_templates",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "creator_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["creator_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -301,12 +284,8 @@
           "name": "bingoscape-next_bingo_templates_original_bingo_id_bingoscape-next_bingos_id_fk",
           "tableFrom": "bingoscape-next_bingo_templates",
           "tableTo": "bingoscape-next_bingos",
-          "columnsFrom": [
-            "original_bingo_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["original_bingo_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -432,12 +411,8 @@
           "name": "bingoscape-next_bingos_event_id_bingoscape-next_events_id_fk",
           "tableFrom": "bingoscape-next_bingos",
           "tableTo": "bingoscape-next_events",
-          "columnsFrom": [
-            "event_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -527,12 +502,8 @@
           "name": "bingoscape-next_clan_invites_clan_id_bingoscape-next_clans_id_fk",
           "tableFrom": "bingoscape-next_clan_invites",
           "tableTo": "bingoscape-next_clans",
-          "columnsFrom": [
-            "clan_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["clan_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -540,12 +511,8 @@
           "name": "bingoscape-next_clan_invites_created_by_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_clan_invites",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -555,9 +522,7 @@
         "bingoscape-next_clan_invites_invite_code_unique": {
           "name": "bingoscape-next_clan_invites_invite_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "invite_code"
-          ]
+          "columns": ["invite_code"]
         }
       }
     },
@@ -629,12 +594,8 @@
           "name": "bingoscape-next_clan_members_clan_id_bingoscape-next_clans_id_fk",
           "tableFrom": "bingoscape-next_clan_members",
           "tableTo": "bingoscape-next_clans",
-          "columnsFrom": [
-            "clan_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["clan_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -642,12 +603,8 @@
           "name": "bingoscape-next_clan_members_user_id_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_clan_members",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -705,12 +662,8 @@
           "name": "bingoscape-next_clans_owner_id_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_clans",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -791,12 +744,8 @@
           "name": "bingoscape-next_column_bonuses_bingo_id_bingoscape-next_bingos_id_fk",
           "tableFrom": "bingoscape-next_column_bonuses",
           "tableTo": "bingoscape-next_bingos",
-          "columnsFrom": [
-            "bingo_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["bingo_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -867,12 +816,8 @@
           "name": "bingoscape-next_discord_webhooks_event_id_bingoscape-next_events_id_fk",
           "tableFrom": "bingoscape-next_discord_webhooks",
           "tableTo": "bingoscape-next_events",
-          "columnsFrom": [
-            "event_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -880,12 +825,8 @@
           "name": "bingoscape-next_discord_webhooks_created_by_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_discord_webhooks",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -937,12 +878,8 @@
           "name": "bingoscape-next_event_buy_ins_event_participant_id_bingoscape-next_event_participants_id_fk",
           "tableFrom": "bingoscape-next_event_buy_ins",
           "tableTo": "bingoscape-next_event_participants",
-          "columnsFrom": [
-            "event_participant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["event_participant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1000,12 +937,8 @@
           "name": "bingoscape-next_event_donations_event_participant_id_bingoscape-next_event_participants_id_fk",
           "tableFrom": "bingoscape-next_event_donations",
           "tableTo": "bingoscape-next_event_participants",
-          "columnsFrom": [
-            "event_participant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["event_participant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1056,12 +989,8 @@
           "name": "bingoscape-next_event_invites_event_id_bingoscape-next_events_id_fk",
           "tableFrom": "bingoscape-next_event_invites",
           "tableTo": "bingoscape-next_events",
-          "columnsFrom": [
-            "event_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1071,9 +1000,7 @@
         "bingoscape-next_event_invites_invite_code_unique": {
           "name": "bingoscape-next_event_invites_invite_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "invite_code"
-          ]
+          "columns": ["invite_code"]
         }
       }
     },
@@ -1129,12 +1056,8 @@
           "name": "bingoscape-next_event_participants_event_id_bingoscape-next_events_id_fk",
           "tableFrom": "bingoscape-next_event_participants",
           "tableTo": "bingoscape-next_events",
-          "columnsFrom": [
-            "event_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1142,12 +1065,8 @@
           "name": "bingoscape-next_event_participants_user_id_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_event_participants",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1237,12 +1156,8 @@
           "name": "bingoscape-next_event_registration_requests_event_id_bingoscape-next_events_id_fk",
           "tableFrom": "bingoscape-next_event_registration_requests",
           "tableTo": "bingoscape-next_events",
-          "columnsFrom": [
-            "event_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1250,12 +1165,8 @@
           "name": "bingoscape-next_event_registration_requests_user_id_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_event_registration_requests",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1263,12 +1174,8 @@
           "name": "bingoscape-next_event_registration_requests_reviewed_by_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_event_registration_requests",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "reviewed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reviewed_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1385,12 +1292,8 @@
           "name": "bingoscape-next_events_creator_id_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_events",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "creator_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["creator_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1398,12 +1301,8 @@
           "name": "bingoscape-next_events_clan_id_bingoscape-next_clans_id_fk",
           "tableFrom": "bingoscape-next_events",
           "tableTo": "bingoscape-next_clans",
-          "columnsFrom": [
-            "clan_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["clan_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1482,12 +1381,8 @@
           "name": "bingoscape-next_goal_groups_tile_id_bingoscape-next_tiles_id_fk",
           "tableFrom": "bingoscape-next_goal_groups",
           "tableTo": "bingoscape-next_tiles",
-          "columnsFrom": [
-            "tile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tile_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1495,12 +1390,8 @@
           "name": "bingoscape-next_goal_groups_parent_group_id_bingoscape-next_goal_groups_id_fk",
           "tableFrom": "bingoscape-next_goal_groups",
           "tableTo": "bingoscape-next_goal_groups",
-          "columnsFrom": [
-            "parent_group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["parent_group_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1558,12 +1449,8 @@
           "name": "bingoscape-next_goal_values_goal_id_bingoscape-next_goals_id_fk",
           "tableFrom": "bingoscape-next_goal_values",
           "tableTo": "bingoscape-next_goals",
-          "columnsFrom": [
-            "goal_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["goal_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1642,12 +1529,8 @@
           "name": "bingoscape-next_goals_tile_id_bingoscape-next_tiles_id_fk",
           "tableFrom": "bingoscape-next_goals",
           "tableTo": "bingoscape-next_tiles",
-          "columnsFrom": [
-            "tile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tile_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1655,12 +1538,8 @@
           "name": "bingoscape-next_goals_parent_group_id_bingoscape-next_goal_groups_id_fk",
           "tableFrom": "bingoscape-next_goals",
           "tableTo": "bingoscape-next_goal_groups",
-          "columnsFrom": [
-            "parent_group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["parent_group_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1767,12 +1646,8 @@
           "name": "bingoscape-next_item_goals_goal_id_bingoscape-next_goals_id_fk",
           "tableFrom": "bingoscape-next_item_goals",
           "tableTo": "bingoscape-next_goals",
-          "columnsFrom": [
-            "goal_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["goal_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1782,9 +1657,7 @@
         "bingoscape-next_item_goals_goal_id_unique": {
           "name": "bingoscape-next_item_goals_goal_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "goal_id"
-          ]
+          "columns": ["goal_id"]
         }
       }
     },
@@ -1850,12 +1723,8 @@
           "name": "bingoscape-next_notifications_user_id_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_notifications",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1863,12 +1732,8 @@
           "name": "bingoscape-next_notifications_event_id_bingoscape-next_events_id_fk",
           "tableFrom": "bingoscape-next_notifications",
           "tableTo": "bingoscape-next_events",
-          "columnsFrom": [
-            "event_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1876,12 +1741,8 @@
           "name": "bingoscape-next_notifications_tile_id_bingoscape-next_tiles_id_fk",
           "tableFrom": "bingoscape-next_notifications",
           "tableTo": "bingoscape-next_tiles",
-          "columnsFrom": [
-            "tile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tile_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1889,12 +1750,8 @@
           "name": "bingoscape-next_notifications_team_id_bingoscape-next_teams_id_fk",
           "tableFrom": "bingoscape-next_notifications",
           "tableTo": "bingoscape-next_teams",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2022,12 +1879,8 @@
           "name": "bingoscape-next_player_metadata_user_id_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_player_metadata",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2035,12 +1888,8 @@
           "name": "bingoscape-next_player_metadata_event_id_bingoscape-next_events_id_fk",
           "tableFrom": "bingoscape-next_player_metadata",
           "tableTo": "bingoscape-next_events",
-          "columnsFrom": [
-            "event_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2121,12 +1970,8 @@
           "name": "bingoscape-next_row_bonuses_bingo_id_bingoscape-next_bingos_id_fk",
           "tableFrom": "bingoscape-next_row_bonuses",
           "tableTo": "bingoscape-next_bingos",
-          "columnsFrom": [
-            "bingo_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["bingo_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2179,12 +2024,8 @@
           "name": "bingoscape-next_session_user_id_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_session",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2242,12 +2083,8 @@
           "name": "bingoscape-next_submission_comments_submission_id_bingoscape-next_submissions_id_fk",
           "tableFrom": "bingoscape-next_submission_comments",
           "tableTo": "bingoscape-next_submissions",
-          "columnsFrom": [
-            "submission_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["submission_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2255,12 +2092,8 @@
           "name": "bingoscape-next_submission_comments_author_id_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_submission_comments",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "author_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["author_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2418,12 +2251,8 @@
           "name": "bingoscape-next_submissions_team_tile_submission_id_bingoscape-next_team_tile_submissions_id_fk",
           "tableFrom": "bingoscape-next_submissions",
           "tableTo": "bingoscape-next_team_tile_submissions",
-          "columnsFrom": [
-            "team_tile_submission_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_tile_submission_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2431,12 +2260,8 @@
           "name": "bingoscape-next_submissions_image_id_bingoscape-next_images_id_fk",
           "tableFrom": "bingoscape-next_submissions",
           "tableTo": "bingoscape-next_images",
-          "columnsFrom": [
-            "image_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["image_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2444,12 +2269,8 @@
           "name": "bingoscape-next_submissions_goal_id_bingoscape-next_goals_id_fk",
           "tableFrom": "bingoscape-next_submissions",
           "tableTo": "bingoscape-next_goals",
-          "columnsFrom": [
-            "goal_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["goal_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -2457,12 +2278,8 @@
           "name": "bingoscape-next_submissions_submitted_by_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_submissions",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "submitted_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["submitted_by"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2470,12 +2287,8 @@
           "name": "bingoscape-next_submissions_reviewed_by_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_submissions",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "reviewed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reviewed_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2549,12 +2362,8 @@
           "name": "bingoscape-next_team_goal_progress_team_id_bingoscape-next_teams_id_fk",
           "tableFrom": "bingoscape-next_team_goal_progress",
           "tableTo": "bingoscape-next_teams",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2562,12 +2371,8 @@
           "name": "bingoscape-next_team_goal_progress_goal_id_bingoscape-next_goals_id_fk",
           "tableFrom": "bingoscape-next_team_goal_progress",
           "tableTo": "bingoscape-next_goals",
-          "columnsFrom": [
-            "goal_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["goal_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2626,12 +2431,8 @@
           "name": "bingoscape-next_team_members_team_id_bingoscape-next_teams_id_fk",
           "tableFrom": "bingoscape-next_team_members",
           "tableTo": "bingoscape-next_teams",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2639,12 +2440,8 @@
           "name": "bingoscape-next_team_members_user_id_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_team_members",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2736,12 +2533,8 @@
           "name": "bingoscape-next_team_tier_progress_team_id_bingoscape-next_teams_id_fk",
           "tableFrom": "bingoscape-next_team_tier_progress",
           "tableTo": "bingoscape-next_teams",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2749,12 +2542,8 @@
           "name": "bingoscape-next_team_tier_progress_bingo_id_bingoscape-next_bingos_id_fk",
           "tableFrom": "bingoscape-next_team_tier_progress",
           "tableTo": "bingoscape-next_bingos",
-          "columnsFrom": [
-            "bingo_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["bingo_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2842,12 +2631,8 @@
           "name": "bingoscape-next_team_tile_submissions_tile_id_bingoscape-next_tiles_id_fk",
           "tableFrom": "bingoscape-next_team_tile_submissions",
           "tableTo": "bingoscape-next_tiles",
-          "columnsFrom": [
-            "tile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tile_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2855,12 +2640,8 @@
           "name": "bingoscape-next_team_tile_submissions_team_id_bingoscape-next_teams_id_fk",
           "tableFrom": "bingoscape-next_team_tile_submissions",
           "tableTo": "bingoscape-next_teams",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2868,12 +2649,8 @@
           "name": "bingoscape-next_team_tile_submissions_reviewed_by_bingoscape-next_user_id_fk",
           "tableFrom": "bingoscape-next_team_tile_submissions",
           "tableTo": "bingoscape-next_user",
-          "columnsFrom": [
-            "reviewed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reviewed_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2925,12 +2702,8 @@
           "name": "bingoscape-next_teams_event_id_bingoscape-next_events_id_fk",
           "tableFrom": "bingoscape-next_teams",
           "tableTo": "bingoscape-next_events",
-          "columnsFrom": [
-            "event_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3011,12 +2784,8 @@
           "name": "bingoscape-next_tier_xp_requirements_bingo_id_bingoscape-next_bingos_id_fk",
           "tableFrom": "bingoscape-next_tier_xp_requirements",
           "tableTo": "bingoscape-next_bingos",
-          "columnsFrom": [
-            "bingo_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["bingo_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3106,12 +2875,8 @@
           "name": "bingoscape-next_tiles_bingo_id_bingoscape-next_bingos_id_fk",
           "tableFrom": "bingoscape-next_tiles",
           "tableTo": "bingoscape-next_bingos",
-          "columnsFrom": [
-            "bingo_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["bingo_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3207,10 +2972,7 @@
       "compositePrimaryKeys": {
         "bingoscape-next_verification_token_identifier_token_pk": {
           "name": "bingoscape-next_verification_token_identifier_token_pk",
-          "columns": [
-            "identifier",
-            "token"
-          ]
+          "columns": ["identifier", "token"]
         }
       },
       "uniqueConstraints": {}
@@ -3220,83 +2982,47 @@
     "public.bingo_type": {
       "name": "bingo_type",
       "schema": "public",
-      "values": [
-        "standard",
-        "progression"
-      ]
+      "values": ["standard", "progression"]
     },
     "public.clan_role": {
       "name": "clan_role",
       "schema": "public",
-      "values": [
-        "admin",
-        "management",
-        "member",
-        "guest"
-      ]
+      "values": ["admin", "management", "member", "guest"]
     },
     "public.event_role": {
       "name": "event_role",
       "schema": "public",
-      "values": [
-        "admin",
-        "management",
-        "participant"
-      ]
+      "values": ["admin", "management", "participant"]
     },
     "public.goal_type": {
       "name": "goal_type",
       "schema": "public",
-      "values": [
-        "generic",
-        "item"
-      ]
+      "values": ["generic", "item"]
     },
     "public.logical_operator": {
       "name": "logical_operator",
       "schema": "public",
-      "values": [
-        "AND",
-        "OR"
-      ]
+      "values": ["AND", "OR"]
     },
     "public.registration_status": {
       "name": "registration_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "approved",
-        "rejected"
-      ]
+      "values": ["pending", "approved", "rejected"]
     },
     "public.skill_level": {
       "name": "skill_level",
       "schema": "public",
-      "values": [
-        "beginner",
-        "intermediate",
-        "advanced",
-        "expert",
-        "pvmgod"
-      ]
+      "values": ["beginner", "intermediate", "advanced", "expert", "pvmgod"]
     },
     "public.submission_status": {
       "name": "submission_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "approved",
-        "needs_review"
-      ]
+      "values": ["pending", "approved", "needs_review"]
     },
     "public.user_role": {
       "name": "user_role",
       "schema": "public",
-      "values": [
-        "user",
-        "admin",
-        "management"
-      ]
+      "values": ["user", "admin", "management"]
     }
   },
   "schemas": {},

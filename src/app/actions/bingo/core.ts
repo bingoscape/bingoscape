@@ -1,7 +1,13 @@
 "use server"
 
 import { db } from "@/server/db"
-import { bingos, tiles, rowBonuses, columnBonuses, events } from "@/server/db/schema"
+import {
+  bingos,
+  tiles,
+  rowBonuses,
+  columnBonuses,
+  events,
+} from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
@@ -24,7 +30,7 @@ const createBingoSchema = z.object({
   completeBoardBonus: z.number().optional().default(0),
   scheduledUnlockDate: z.string().optional().nullable(),
   rowBonuses: z.record(z.string(), z.number()).optional(),
-  columnBonuses: z.record(z.string(), z.number()).optional()
+  columnBonuses: z.record(z.string(), z.number()).optional(),
 })
 
 export const createBingo = actionClient
@@ -39,7 +45,9 @@ export const createBingo = actionClient
         return { success: false, error: "Event not found" }
       }
 
-      const scheduledUnlockDate = data.scheduledUnlockDate ? new Date(data.scheduledUnlockDate) : null
+      const scheduledUnlockDate = data.scheduledUnlockDate
+        ? new Date(data.scheduledUnlockDate)
+        : null
 
       const newBingo = await db
         .insert(bingos)
@@ -52,9 +60,12 @@ export const createBingo = actionClient
           columns: data.columns,
           bingoType: data.bingoType,
           tiersUnlockRequirement: data.tiersUnlockRequirement,
-          mainDiagonalBonusXP: data.rows === data.columns ? data.mainDiagonalBonus : 0,
-          antiDiagonalBonusXP: data.rows === data.columns ? data.antiDiagonalBonus : 0,
-          completeBoardBonusXP: data.bingoType === "standard" ? data.completeBoardBonus : 0,
+          mainDiagonalBonusXP:
+            data.rows === data.columns ? data.mainDiagonalBonus : 0,
+          antiDiagonalBonusXP:
+            data.rows === data.columns ? data.antiDiagonalBonus : 0,
+          completeBoardBonusXP:
+            data.bingoType === "standard" ? data.completeBoardBonus : 0,
           scheduledUnlockDate,
           locked: true,
           visible: false,
@@ -73,7 +84,10 @@ export const createBingo = actionClient
           weight: 1,
           isHidden: false,
           index: idx,
-          tier: data.bingoType === "progression" ? Math.floor(idx / data.columns) : 0,
+          tier:
+            data.bingoType === "progression"
+              ? Math.floor(idx / data.columns)
+              : 0,
         })
       }
 
@@ -107,7 +121,10 @@ export const createBingo = actionClient
         await initializeTierXpRequirements(bingoId, data.tiersUnlockRequirement)
       }
 
-      logger.info({ eventId: data.eventId, bingoId, action: "createBingo" }, "Bingo created successfully")
+      logger.info(
+        { eventId: data.eventId, bingoId, action: "createBingo" },
+        "Bingo created successfully"
+      )
       return { success: true }
     } catch (error) {
       logger.error({ error, action: "createBingo" }, "Error creating bingo")
@@ -116,7 +133,7 @@ export const createBingo = actionClient
   })
 
 const deleteBingoSchema = z.object({
-  bingoId: z.string().uuid()
+  bingoId: z.string().uuid(),
 })
 
 export const deleteBingo = actionClient
@@ -143,13 +160,15 @@ const updateBingoSchema = z.object({
   codephrase: z.string(),
   bingoType: z.enum(["standard", "progression"]).optional(),
   tiersUnlockRequirement: z.number().optional(),
-  patternBonuses: z.object({
-    rowBonuses: z.record(z.string(), z.number()).optional(),
-    columnBonuses: z.record(z.string(), z.number()).optional(),
-    mainDiagonalBonus: z.number().optional(),
-    antiDiagonalBonus: z.number().optional(),
-    completeBoardBonus: z.number().optional()
-  }).optional()
+  patternBonuses: z
+    .object({
+      rowBonuses: z.record(z.string(), z.number()).optional(),
+      columnBonuses: z.record(z.string(), z.number()).optional(),
+      mainDiagonalBonus: z.number().optional(),
+      antiDiagonalBonus: z.number().optional(),
+      completeBoardBonus: z.number().optional(),
+    })
+    .optional(),
 })
 
 export const updateBingo = actionClient
@@ -167,46 +186,75 @@ export const updateBingo = actionClient
         }
 
         if (data.bingoType !== undefined) updateData.bingoType = data.bingoType
-        if (data.tiersUnlockRequirement !== undefined) updateData.tiersUnlockRequirement = data.tiersUnlockRequirement
-        
-        if (data.patternBonuses?.mainDiagonalBonus !== undefined) updateData.mainDiagonalBonusXP = data.patternBonuses.mainDiagonalBonus
-        if (data.patternBonuses?.antiDiagonalBonus !== undefined) updateData.antiDiagonalBonusXP = data.patternBonuses.antiDiagonalBonus
-        if (data.patternBonuses?.completeBoardBonus !== undefined) updateData.completeBoardBonusXP = data.patternBonuses.completeBoardBonus
+        if (data.tiersUnlockRequirement !== undefined)
+          updateData.tiersUnlockRequirement = data.tiersUnlockRequirement
+
+        if (data.patternBonuses?.mainDiagonalBonus !== undefined)
+          updateData.mainDiagonalBonusXP = data.patternBonuses.mainDiagonalBonus
+        if (data.patternBonuses?.antiDiagonalBonus !== undefined)
+          updateData.antiDiagonalBonusXP = data.patternBonuses.antiDiagonalBonus
+        if (data.patternBonuses?.completeBoardBonus !== undefined)
+          updateData.completeBoardBonusXP =
+            data.patternBonuses.completeBoardBonus
 
         await tx.update(bingos).set(updateData).where(eq(bingos.id, bingoId))
 
         if (data.patternBonuses?.rowBonuses) {
-          for (const [rowIndexStr, bonusXP] of Object.entries(data.patternBonuses.rowBonuses)) {
+          for (const [rowIndexStr, bonusXP] of Object.entries(
+            data.patternBonuses.rowBonuses
+          )) {
             const rowIndex = parseInt(rowIndexStr)
             const existingBonus = await tx.query.rowBonuses.findFirst({
-              where: and(eq(rowBonuses.bingoId, bingoId), eq(rowBonuses.rowIndex, rowIndex)),
+              where: and(
+                eq(rowBonuses.bingoId, bingoId),
+                eq(rowBonuses.rowIndex, rowIndex)
+              ),
             })
             if (bonusXP > 0) {
               if (existingBonus) {
-                await tx.update(rowBonuses).set({ bonusXP, updatedAt: new Date() }).where(eq(rowBonuses.id, existingBonus.id))
+                await tx
+                  .update(rowBonuses)
+                  .set({ bonusXP, updatedAt: new Date() })
+                  .where(eq(rowBonuses.id, existingBonus.id))
               } else {
-                await tx.insert(rowBonuses).values({ bingoId, rowIndex, bonusXP })
+                await tx
+                  .insert(rowBonuses)
+                  .values({ bingoId, rowIndex, bonusXP })
               }
             } else if (existingBonus) {
-              await tx.delete(rowBonuses).where(eq(rowBonuses.id, existingBonus.id))
+              await tx
+                .delete(rowBonuses)
+                .where(eq(rowBonuses.id, existingBonus.id))
             }
           }
         }
 
         if (data.patternBonuses?.columnBonuses) {
-          for (const [columnIndexStr, bonusXP] of Object.entries(data.patternBonuses.columnBonuses)) {
+          for (const [columnIndexStr, bonusXP] of Object.entries(
+            data.patternBonuses.columnBonuses
+          )) {
             const columnIndex = parseInt(columnIndexStr)
             const existingBonus = await tx.query.columnBonuses.findFirst({
-              where: and(eq(columnBonuses.bingoId, bingoId), eq(columnBonuses.columnIndex, columnIndex)),
+              where: and(
+                eq(columnBonuses.bingoId, bingoId),
+                eq(columnBonuses.columnIndex, columnIndex)
+              ),
             })
             if (bonusXP > 0) {
               if (existingBonus) {
-                await tx.update(columnBonuses).set({ bonusXP, updatedAt: new Date() }).where(eq(columnBonuses.id, existingBonus.id))
+                await tx
+                  .update(columnBonuses)
+                  .set({ bonusXP, updatedAt: new Date() })
+                  .where(eq(columnBonuses.id, existingBonus.id))
               } else {
-                await tx.insert(columnBonuses).values({ bingoId, columnIndex, bonusXP })
+                await tx
+                  .insert(columnBonuses)
+                  .values({ bingoId, columnIndex, bonusXP })
               }
             } else if (existingBonus) {
-              await tx.delete(columnBonuses).where(eq(columnBonuses.id, existingBonus.id))
+              await tx
+                .delete(columnBonuses)
+                .where(eq(columnBonuses.id, existingBonus.id))
             }
           }
         }
@@ -223,7 +271,7 @@ export const updateBingo = actionClient
   })
 
 const getBingoWithPatternBonusesSchema = z.object({
-  bingoId: z.string().uuid()
+  bingoId: z.string().uuid(),
 })
 
 export const getBingoWithPatternBonuses = actionClient

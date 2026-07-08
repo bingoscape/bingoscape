@@ -1,28 +1,37 @@
-import { logs, LogRecord } from '@opentelemetry/api-logs';
-import { LoggerProvider, BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
-import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http';
-import { resourceFromAttributes } from '@opentelemetry/resources';
-import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
-import type { LogEntry } from './logger';
+import { logs, LogRecord } from "@opentelemetry/api-logs"
+import {
+  LoggerProvider,
+  BatchLogRecordProcessor,
+} from "@opentelemetry/sdk-logs"
+import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http"
+import { resourceFromAttributes } from "@opentelemetry/resources"
+import {
+  ATTR_SERVICE_NAME,
+  ATTR_SERVICE_VERSION,
+} from "@opentelemetry/semantic-conventions"
+import type { LogEntry } from "./logger"
 
-let isInitialized = false;
-let loggerProvider: LoggerProvider | null = null;
+let isInitialized = false
+let loggerProvider: LoggerProvider | null = null
 
-const LOG_EXPORT_URL = process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
-  ?? (process.env.OTEL_EXPORTER_OTLP_ENDPOINT ? `${process.env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/logs` : 'http://localhost:4318/v1/logs');
+const LOG_EXPORT_URL =
+  process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT ??
+  (process.env.OTEL_EXPORTER_OTLP_ENDPOINT
+    ? `${process.env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/logs`
+    : "http://localhost:4318/v1/logs")
 
 function createLoggerProvider() {
   const resource = resourceFromAttributes({
-    [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME ?? 'bingoscape-next',
-    [ATTR_SERVICE_VERSION]: process.env.npm_package_version ?? '1.0.0',
-  });
+    [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME ?? "bingoscape-next",
+    [ATTR_SERVICE_VERSION]: process.env.npm_package_version ?? "1.0.0",
+  })
 
   const exporter = new OTLPLogExporter({
     url: LOG_EXPORT_URL,
     headers: process.env.SIGNOZ_INGESTION_KEY
       ? { "signoz-ingestion-key": process.env.SIGNOZ_INGESTION_KEY }
       : undefined,
-  });
+  })
 
   const batchProcessor = new BatchLogRecordProcessor({
     exporter,
@@ -30,57 +39,62 @@ function createLoggerProvider() {
     scheduledDelayMillis: 5000,
     exportTimeoutMillis: 30000,
     maxQueueSize: 1000,
-  });
+  })
 
   return new LoggerProvider({
     resource,
     processors: [batchProcessor],
-  });
+  })
 }
 
 export function initializeLogsExporter() {
-  if (typeof window !== 'undefined' || isInitialized) {
-    return;
+  if (typeof window !== "undefined" || isInitialized) {
+    return
   }
 
-  loggerProvider = createLoggerProvider();
-  logs.setGlobalLoggerProvider(loggerProvider);
-  isInitialized = true;
-  console.log('✅ OpenTelemetry logs exporter initialized');
+  loggerProvider = createLoggerProvider()
+  logs.setGlobalLoggerProvider(loggerProvider)
+  isInitialized = true
+  console.log("✅ OpenTelemetry logs exporter initialized")
 }
 
-function getSeverityNumber(level: LogEntry['level']): number {
+function getSeverityNumber(level: LogEntry["level"]): number {
   switch (level) {
-    case 'debug': return 5;
-    case 'info': return 9;
-    case 'warn': return 13;
-    case 'error': return 17;
-    default: return 9;
+    case "debug":
+      return 5
+    case "info":
+      return 9
+    case "warn":
+      return 13
+    case "error":
+      return 17
+    default:
+      return 9
   }
 }
 
 export function exportLogEntry(entry: LogEntry) {
-  if (typeof window !== 'undefined') return;
+  if (typeof window !== "undefined") return
   if (!isInitialized) {
-    initializeLogsExporter();
+    initializeLogsExporter()
   }
-  if (!loggerProvider) return;
+  if (!loggerProvider) return
 
   const logger = loggerProvider.getLogger(
-    process.env.OTEL_SERVICE_NAME ?? 'bingoscape-next'
-  );
+    process.env.OTEL_SERVICE_NAME ?? "bingoscape-next"
+  )
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const attributes: Record<string, any> = {
     ...entry.context,
-    'log.level': entry.level,
-    'service.name': process.env.OTEL_SERVICE_NAME ?? 'bingoscape-next',
-  };
+    "log.level": entry.level,
+    "service.name": process.env.OTEL_SERVICE_NAME ?? "bingoscape-next",
+  }
 
   if (entry.error) {
-    attributes['error.name'] = entry.error.name;
-    attributes['error.message'] = entry.error.message;
-    attributes['error.stack'] = entry.error.stack;
+    attributes["error.name"] = entry.error.name
+    attributes["error.message"] = entry.error.message
+    attributes["error.stack"] = entry.error.stack
   }
 
   const logRecord: LogRecord = {
@@ -90,11 +104,11 @@ export function exportLogEntry(entry: LogEntry) {
     severityNumber: getSeverityNumber(entry.level),
     severityText: entry.level.toUpperCase(),
     attributes,
-  };
+  }
 
-  logger.emit(logRecord);
+  logger.emit(logRecord)
 }
 
 export function shutdownLogsExporter() {
-  return loggerProvider?.shutdown() ?? Promise.resolve();
+  return loggerProvider?.shutdown() ?? Promise.resolve()
 }

@@ -1,4 +1,3 @@
- 
 "use client"
 
 import { useEffect, useState } from "react"
@@ -27,18 +26,24 @@ export default function StatusPage() {
         const status = await getUserRegistrationStatus(eventId)
         setRegistrationData(status)
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch registration status")
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to fetch registration status"
+        )
       } finally {
         setLoading(false)
       }
     }
 
-    fetchRegistrationStatus().then(() => console.log("Registration status fetched")).catch(err => console.error(err))
+    fetchRegistrationStatus()
+      .then(() => console.log("Registration status fetched"))
+      .catch((err) => console.error(err))
   }, [eventId])
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-[50vh]">
+      <div className="flex h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" role="status" />
       </div>
     )
@@ -62,7 +67,9 @@ export default function StatusPage() {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>No Registration Found</AlertTitle>
-          <AlertDescription>You have not registered for this event yet.</AlertDescription>
+          <AlertDescription>
+            You have not registered for this event yet.
+          </AlertDescription>
         </Alert>
       </div>
     )
@@ -80,4 +87,3 @@ export default function StatusPage() {
     </div>
   )
 }
-

@@ -1,6 +1,4 @@
- 
-import { logger } from "@/lib/logger";
- 
+import { logger } from "@/lib/logger"
 
 import { NextResponse } from "next/server"
 import { db } from "@/server/db"
@@ -143,8 +141,13 @@ export async function POST(req: Request) {
             db
               .select()
               .from(teamMembers)
-              .where(and(eq(teamMembers.teamId, teams.id), eq(teamMembers.userId, userId))),
-          ),
+              .where(
+                and(
+                  eq(teamMembers.teamId, teams.id),
+                  eq(teamMembers.userId, userId)
+                )
+              )
+          )
         ),
       columns: {
         id: true,
@@ -201,7 +204,10 @@ export async function POST(req: Request) {
     for (const item of items) {
       for (const itemGoal of allItemGoals) {
         // Check if item matches the goal's base name
-        const matchResult = await doesItemMatchBaseName(item.itemName, itemGoal.baseName)
+        const matchResult = await doesItemMatchBaseName(
+          item.itemName,
+          itemGoal.baseName
+        )
 
         if (!matchResult.success || !matchResult.matches) {
           continue
@@ -218,7 +224,7 @@ export async function POST(req: Request) {
           const existingProgress = await db.query.teamGoalProgress.findFirst({
             where: and(
               eq(teamGoalProgress.goalId, itemGoal.goalId),
-              eq(teamGoalProgress.teamId, team.id),
+              eq(teamGoalProgress.teamId, team.id)
             ),
           })
 
@@ -301,7 +307,7 @@ export async function POST(req: Request) {
           error: "Invalid request data",
           details: error.errors,
         },
-        { status: 400 },
+        { status: 400 }
       )
     }
 
@@ -310,7 +316,7 @@ export async function POST(req: Request) {
         success: false,
         error: "Failed to check items",
       },
-      { status: 500 },
+      { status: 500 }
     )
   }
 }

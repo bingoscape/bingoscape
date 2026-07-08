@@ -195,7 +195,7 @@
 }
 
 .comment-submitting::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
@@ -209,8 +209,8 @@
 }
 
 @keyframes spin {
-  to { 
-    transform: rotate(360deg); 
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -223,16 +223,16 @@
     border-left: none;
     border-right: none;
   }
-  
+
   .comment-actions {
     flex-direction: column-reverse;
   }
-  
+
   .comment-actions .btn {
     width: 100%;
     justify-content: center;
   }
-  
+
   .comment-input {
     min-height: 60px;
   }
@@ -242,7 +242,7 @@
   .comment-section {
     padding: 14px;
   }
-  
+
   .comment-actions {
     justify-content: flex-end;
   }

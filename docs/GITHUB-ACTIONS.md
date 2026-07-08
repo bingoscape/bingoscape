@@ -3,6 +3,7 @@
 This document describes the GitHub Actions workflows for automated testing, building, and deploying the Bingoscape Next application.
 
 ## Table of Contents
+
 - [Overview](#overview)
 - [Workflows](#workflows)
   - [CI/CD Pipeline](#cicd-pipeline)
@@ -46,11 +47,13 @@ Automatically builds and pushes Docker images to GitHub Container Registry (GHCR
 #### Jobs
 
 ##### 1. Lint and Test (`lint-and-test`)
+
 - Runs ESLint on codebase
 - Performs TypeScript type checking
 - Optional: Runs unit tests (uncomment when available)
 
 ##### 2. Build and Push (`build-and-push`)
+
 - Sets up Docker Buildx for multi-platform builds
 - Logs into GHCR using `GITHUB_TOKEN`
 - Extracts metadata for Docker tags and labels
@@ -59,6 +62,7 @@ Automatically builds and pushes Docker images to GitHub Container Registry (GHCR
 - Generates build attestation for security
 
 ##### 3. Build Summary (`build-summary`)
+
 - Posts summary to GitHub Actions run page
 - Shows image details and pull command
 
@@ -66,12 +70,12 @@ Automatically builds and pushes Docker images to GitHub Container Registry (GHCR
 
 Images are automatically tagged based on the trigger:
 
-| Trigger | Tags Generated |
-|---------|---------------|
+| Trigger        | Tags Generated                 |
+| -------------- | ------------------------------ |
 | Push to `main` | `main`, `latest`, `main-<sha>` |
-| Push to branch | `<branch>`, `<branch>-<sha>` |
-| Tag `v1.2.3` | `v1.2.3`, `1.2`, `1`, `latest` |
-| PR #42 | `pr-42` |
+| Push to branch | `<branch>`, `<branch>-<sha>`   |
+| Tag `v1.2.3`   | `v1.2.3`, `1.2`, `1`, `latest` |
+| PR #42         | `pr-42`                        |
 
 #### Environment Variables
 
@@ -100,18 +104,20 @@ Runs database migrations on production or staging environments.
 
 #### Inputs
 
-| Input | Description | Required | Type |
-|-------|-------------|----------|------|
-| `environment` | Target environment (production/staging) | Yes | Choice |
-| `confirm` | Type "MIGRATE" to confirm | Yes | String |
+| Input         | Description                             | Required | Type   |
+| ------------- | --------------------------------------- | -------- | ------ |
+| `environment` | Target environment (production/staging) | Yes      | Choice |
+| `confirm`     | Type "MIGRATE" to confirm               | Yes      | String |
 
 #### Jobs
 
 ##### 1. Validate (`validate`)
+
 - Ensures user typed "MIGRATE" correctly
 - Prevents accidental migrations
 
 ##### 2. Migrate (`migrate`)
+
 - Connects to server via SSH
 - Navigates to application directory
 - Pulls latest Docker images
@@ -120,6 +126,7 @@ Runs database migrations on production or staging environments.
 - Lists database tables
 
 ##### 3. Notify (`notify`)
+
 - Reports migration status
 - Posts summary to GitHub Actions
 
@@ -146,14 +153,15 @@ Deploys the application to production or staging environments with automatic .en
 
 #### Inputs
 
-| Input | Description | Required | Type |
-|-------|-------------|----------|------|
-| `environment` | Target environment (production/staging) | Yes | Choice |
-| `image_tag` | Docker image tag to deploy (e.g., main, v1.2.3) | Yes | String |
+| Input         | Description                                     | Required | Type   |
+| ------------- | ----------------------------------------------- | -------- | ------ |
+| `environment` | Target environment (production/staging)         | Yes      | Choice |
+| `image_tag`   | Docker image tag to deploy (e.g., main, v1.2.3) | Yes      | String |
 
 #### Jobs
 
 ##### 1. Deploy (`deploy`)
+
 - Copies docker-compose.yml and production nginx config to server
   - `nginx.conf` - Main nginx configuration
   - `default-ssl.conf.example` → `default.conf` - SSL configuration (automatically activated)
@@ -161,7 +169,7 @@ Deploys the application to production or staging environments with automatic .en
 - Creates uploads directory with proper permissions
 - Backs up existing .env file with timestamp
 - **Generates new .env file from GitHub Secrets**:
-  - Database configuration (DB_*)
+  - Database configuration (DB\_\*)
   - NextAuth configuration
   - OAuth providers (Discord, GitHub, Google)
   - Admin emails
@@ -176,6 +184,7 @@ Deploys the application to production or staging environments with automatic .en
 - Cleans up temporary files
 
 ##### 2. Notify (`notify`)
+
 - Reports deployment status
 - Posts deployment summary
 
@@ -196,23 +205,29 @@ Deploys the application to production or staging environments with automatic .en
 The deployment workflow automatically generates the `.env` file from the following GitHub Secrets:
 
 **Database Configuration:**
+
 - `DB_PASSWORD`, `DB_NAME`, `DB_USER`, `DB_HOST`, `DB_PORT`
 
 **Authentication:**
+
 - `NEXTAUTH_SECRET`, `NEXTAUTH_URL`
 
 **OAuth Providers:**
+
 - `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`
 - `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` (optional)
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (optional)
 
 **Application:**
+
 - `SUPER_ADMIN_EMAILS`
 
 **Monitoring:**
+
 - `SENTRY_AUTH_TOKEN`, `SENTRY_DSN` (optional)
 
 **SSL:**
+
 - `CERTBOT_EMAIL` (optional)
 
 See [GITHUB-SECRETS.md](./GITHUB-SECRETS.md) for complete secret configuration guide.
@@ -228,9 +243,11 @@ Configure the following secrets in your GitHub repository:
 **Settings → Secrets and variables → Actions → New repository secret**
 
 #### Required for CI/CD:
+
 - `GITHUB_TOKEN` - Automatically provided by GitHub (no setup needed)
 
 #### Required for Migrations:
+
 - `SSH_HOST` - Production server hostname/IP
 - `SSH_USER` - SSH username
 - `SSH_PORT` - SSH port (usually 22)
@@ -241,6 +258,7 @@ Configure the following secrets in your GitHub repository:
 ### 2. GitHub Container Registry (GHCR)
 
 GHCR is automatically available for all GitHub repositories. Images are published to:
+
 ```
 ghcr.io/OWNER/REPOSITORY
 ```
@@ -258,10 +276,12 @@ Create environments for deployment protection:
 **Settings → Environments → New environment**
 
 Create environments:
+
 - `production`
 - `staging`
 
 Configure protection rules:
+
 - Required reviewers (recommended for production)
 - Wait timer
 - Deployment branches (restrict to main)
@@ -279,6 +299,7 @@ chmod 600 ~/.ssh/authorized_keys
 ```
 
 Generate SSH key pair for GitHub Actions:
+
 ```bash
 ssh-keygen -t ed25519 -C "github-actions" -f github_actions_key
 ```
@@ -321,6 +342,7 @@ git push origin v1.2.3
 ```
 
 This creates multiple tags:
+
 - `v1.2.3`
 - `1.2`
 - `1`
@@ -365,6 +387,7 @@ Same as production, but select `staging` environment.
 7. Monitor the deployment logs
 
 **The workflow will:**
+
 - Create application directory (if it doesn't exist)
 - Copy docker-compose.yml and nginx configuration
 - Create uploads directory with proper permissions
@@ -433,6 +456,7 @@ services:
 ```
 
 Then pull and restart:
+
 ```bash
 docker compose pull app
 docker compose up -d app
@@ -445,11 +469,13 @@ docker compose up -d app
 ### Image Push Fails - Permission Denied
 
 **Error:**
+
 ```
 Error: denied: permission_denied: write_package
 ```
 
 **Solution:**
+
 1. Go to repository **Settings** → **Actions** → **General**
 2. Scroll to "Workflow permissions"
 3. Select "Read and write permissions"
@@ -458,11 +484,13 @@ Error: denied: permission_denied: write_package
 ### SSH Connection Fails
 
 **Error:**
+
 ```
 Error: ssh: connect to host X.X.X.X port 22: Connection refused
 ```
 
 **Solutions:**
+
 1. Verify `SSH_HOST` secret is correct
 2. Verify `SSH_PORT` secret (default: 22)
 3. Check firewall allows connections from GitHub IPs
@@ -471,11 +499,13 @@ Error: ssh: connect to host X.X.X.X port 22: Connection refused
 ### Migration Fails - Database Connection
 
 **Error:**
+
 ```
 PostgresError: password authentication failed
 ```
 
 **Solutions:**
+
 1. Verify `.env` file exists on server
 2. Check `DATABASE_URL` is correct
 3. Verify PostgreSQL container is running:
@@ -490,12 +520,14 @@ PostgresError: password authentication failed
 ### Build Fails - Lint Errors
 
 **Error:**
+
 ```
 Error: ESLint found 5 errors
 ```
 
 **Solution:**
 Fix linting errors locally before pushing:
+
 ```bash
 npm run lint
 npm run lint -- --fix  # Auto-fix if possible
@@ -504,12 +536,14 @@ npm run lint -- --fix  # Auto-fix if possible
 ### Build Fails - Type Errors
 
 **Error:**
+
 ```
 Error: TypeScript compilation failed
 ```
 
 **Solution:**
 Fix type errors locally:
+
 ```bash
 npx tsc --noEmit
 ```
@@ -517,11 +551,13 @@ npx tsc --noEmit
 ### Docker Build Timeout
 
 **Error:**
+
 ```
 Error: buildx build failed: context deadline exceeded
 ```
 
 **Solutions:**
+
 1. Check if dependencies are downloading slowly
 2. Optimize Dockerfile layer caching
 3. Use multi-stage builds efficiently
@@ -530,11 +566,13 @@ Error: buildx build failed: context deadline exceeded
 ### Image Too Large
 
 **Warning:**
+
 ```
 Warning: Image size is 2.5GB
 ```
 
 **Solutions:**
+
 1. Use `.dockerignore` to exclude unnecessary files
 2. Use multi-stage builds
 3. Remove unnecessary dependencies
@@ -547,6 +585,7 @@ Warning: Image size is 2.5GB
 ### 1. Semantic Versioning
 
 Use semantic versioning for releases:
+
 - `v1.0.0` - Major version (breaking changes)
 - `v1.1.0` - Minor version (new features)
 - `v1.1.1` - Patch version (bug fixes)
@@ -554,6 +593,7 @@ Use semantic versioning for releases:
 ### 2. Branch Protection
 
 Enable branch protection for `main`:
+
 - Require pull request reviews
 - Require status checks (lint/test) to pass
 - Require branches to be up to date

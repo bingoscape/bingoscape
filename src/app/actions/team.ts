@@ -1,8 +1,14 @@
 "use server"
 import { getServerAuthSession } from "@/server/auth"
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger"
 import { db } from "@/server/db"
-import { teams, teamMembers, eventParticipants, users, playerMetadata } from "@/server/db/schema"
+import {
+  teams,
+  teamMembers,
+  eventParticipants,
+  users,
+  playerMetadata,
+} from "@/server/db/schema"
 import { eq, and, not, exists } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getUserRole } from "./events"
@@ -15,16 +21,19 @@ export async function createTeam(eventId: string, name: string) {
     }
     const [team] = await db.insert(teams).values({ eventId, name }).returning()
     revalidatePath(`/events/${eventId}`)
-    
+
     if (team) {
-      logger.info({
-        eventId,
-        teamId: team.id,
-        teamName: name,
-        action: "createTeam"
-      }, "Team created successfully")
+      logger.info(
+        {
+          eventId,
+          teamId: team.id,
+          teamName: name,
+          action: "createTeam",
+        },
+        "Team created successfully"
+      )
     }
-    
+
     return { success: true, data: team }
   } catch (error) {
     logger.error({ error }, "Error creating team", error)
@@ -46,17 +55,15 @@ export async function getTeamsByEventId(eventId: string) {
 
   // Fetch metadata status for all team members
   const metadataRecords = await db.query.playerMetadata.findMany({
-    where: and(
-      eq(playerMetadata.eventId, eventId)
-    ),
+    where: and(eq(playerMetadata.eventId, eventId)),
   })
 
-  const metadataMap = new Map(metadataRecords.map(m => [m.userId, m]))
+  const metadataMap = new Map(metadataRecords.map((m) => [m.userId, m]))
 
   // Add hasMetadata flag to team members
-  const teamsWithMetadata = eventTeams.map(team => ({
+  const teamsWithMetadata = eventTeams.map((team) => ({
     ...team,
-    teamMembers: team.teamMembers.map(member => {
+    teamMembers: team.teamMembers.map((member) => {
       const metadata = metadataMap.get(member.user.id)
       return {
         ...member,
@@ -78,25 +85,31 @@ export async function addUserToTeam(teamId: string, userId: string) {
       where: eq(teams.id, teamId),
       with: { event: true },
     })
-    
+
     if (!teamInfo) {
       return { success: false, error: "Team not found" }
     }
-    
+
     const role = await getUserRole(teamInfo.eventId)
     if (role !== "admin" && role !== "management") {
       return { success: false, error: "Unauthorized" }
     }
 
-    const [member] = await db.insert(teamMembers).values({ teamId, userId }).returning()
+    const [member] = await db
+      .insert(teamMembers)
+      .values({ teamId, userId })
+      .returning()
     revalidatePath(`/events/${teamInfo.event.id}`)
-    logger.info({
-      eventId: teamInfo.event.id,
-      teamId,
-      userId,
-      action: "addUserToTeam"
-    }, "User added to team successfully")
-    
+    logger.info(
+      {
+        eventId: teamInfo.event.id,
+        teamId,
+        userId,
+        action: "addUserToTeam",
+      },
+      "User added to team successfully"
+    )
+
     return { success: true, data: member }
   } catch (error) {
     logger.error({ error }, "Error adding user to team", error)
@@ -110,25 +123,32 @@ export async function removeUserFromTeam(teamId: string, userId: string) {
       where: eq(teams.id, teamId),
       with: { event: true },
     })
-    
+
     if (!teamInfo) {
       return { success: false, error: "Team not found" }
     }
-    
+
     const role = await getUserRole(teamInfo.eventId)
     if (role !== "admin" && role !== "management") {
       return { success: false, error: "Unauthorized" }
     }
 
-    await db.delete(teamMembers).where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId)))
+    await db
+      .delete(teamMembers)
+      .where(
+        and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId))
+      )
     revalidatePath(`/events/${teamInfo.event.id}`)
-    logger.info({
-      eventId: teamInfo.event.id,
-      teamId,
-      userId,
-      action: "removeUserFromTeam"
-    }, "User removed from team successfully")
-    
+    logger.info(
+      {
+        eventId: teamInfo.event.id,
+        teamId,
+        userId,
+        action: "removeUserFromTeam",
+      },
+      "User removed from team successfully"
+    )
+
     return { success: true }
   } catch (error) {
     logger.error({ error }, "Error removing user from team", error)
@@ -142,11 +162,11 @@ export async function deleteTeam(teamId: string) {
       where: eq(teams.id, teamId),
       with: { event: true },
     })
-    
+
     if (!teamInfo) {
       return { success: false, error: "Team not found" }
     }
-    
+
     const role = await getUserRole(teamInfo.eventId)
     if (role !== "admin" && role !== "management") {
       return { success: false, error: "Unauthorized" }
@@ -154,14 +174,17 @@ export async function deleteTeam(teamId: string) {
 
     await db.delete(teamMembers).where(eq(teamMembers.teamId, teamId))
     await db.delete(teams).where(eq(teams.id, teamId))
-    
+
     revalidatePath(`/events/${teamInfo.event.id}`)
-    logger.info({
-      eventId: teamInfo.event.id,
-      teamId,
-      action: "deleteTeam"
-    }, "Team deleted successfully")
-    
+    logger.info(
+      {
+        eventId: teamInfo.event.id,
+        teamId,
+        action: "deleteTeam",
+      },
+      "Team deleted successfully"
+    )
+
     return { success: true }
   } catch (error) {
     logger.error({ error }, "Error deleting team", error)
@@ -188,10 +211,15 @@ export async function getEventParticipants(eventId: string) {
               .select()
               .from(teamMembers)
               .innerJoin(teams, eq(teams.id, teamMembers.teamId))
-              .where(and(eq(teamMembers.userId, users.id), eq(teams.eventId, eventId))),
-          ),
-        ),
-      ),
+              .where(
+                and(
+                  eq(teamMembers.userId, users.id),
+                  eq(teams.eventId, eventId)
+                )
+              )
+          )
+        )
+      )
     )
 
   // Fetch metadata status for all participants
@@ -199,10 +227,10 @@ export async function getEventParticipants(eventId: string) {
     where: eq(playerMetadata.eventId, eventId),
   })
 
-  const metadataMap = new Map(metadataRecords.map(m => [m.userId, m]))
+  const metadataMap = new Map(metadataRecords.map((m) => [m.userId, m]))
 
   // Add hasMetadata flag to participants
-  const participantsWithMetadata = participants.map(participant => {
+  const participantsWithMetadata = participants.map((participant) => {
     const metadata = metadataMap.get(participant.id)
     return {
       ...participant,
@@ -220,17 +248,21 @@ export async function updateTeamName(teamId: string, newName: string) {
       where: eq(teams.id, teamId),
       with: { event: true },
     })
-    
+
     if (!teamInfo) {
       return { success: false, error: "Team not found" }
     }
-    
+
     const role = await getUserRole(teamInfo.eventId)
     if (role !== "admin" && role !== "management") {
       return { success: false, error: "Unauthorized" }
     }
 
-    const [updatedTeam] = await db.update(teams).set({ name: newName }).where(eq(teams.id, teamId)).returning()
+    const [updatedTeam] = await db
+      .update(teams)
+      .set({ name: newName })
+      .where(eq(teams.id, teamId))
+      .returning()
 
     if (updatedTeam) {
       revalidatePath(`/events/${updatedTeam.eventId}`)
@@ -244,17 +276,21 @@ export async function updateTeamName(teamId: string, newName: string) {
   }
 }
 
-export async function updateTeamMember(teamId: string, userId: string, isLeader: boolean) {
+export async function updateTeamMember(
+  teamId: string,
+  userId: string,
+  isLeader: boolean
+) {
   try {
     const teamInfo = await db.query.teams.findFirst({
       where: eq(teams.id, teamId),
       with: { event: true },
     })
-    
+
     if (!teamInfo) {
       return { success: false, error: "Team not found" }
     }
-    
+
     const role = await getUserRole(teamInfo.eventId)
     if (role !== "admin" && role !== "management") {
       return { success: false, error: "Unauthorized" }
@@ -263,7 +299,9 @@ export async function updateTeamMember(teamId: string, userId: string, isLeader:
     const [updatedMember] = await db
       .update(teamMembers)
       .set({ isLeader })
-      .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId)))
+      .where(
+        and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId))
+      )
       .returning()
 
     revalidatePath(`/events/${teamInfo.event.id}`)
@@ -277,8 +315,8 @@ export async function updateTeamMember(teamId: string, userId: string, isLeader:
 export async function getCurrentTeamForUser(eventId: string) {
   try {
     const session = await getServerAuthSession()
-    if (!session?.user) return null;
-    
+    if (!session?.user) return null
+
     const userId = session.user.id
     const result = await db
       .select({
@@ -287,8 +325,19 @@ export async function getCurrentTeamForUser(eventId: string) {
       })
       .from(eventParticipants)
       .innerJoin(teams, eq(teams.eventId, eventParticipants.eventId))
-      .innerJoin(teamMembers, and(eq(teamMembers.teamId, teams.id), eq(teamMembers.userId, eventParticipants.userId)))
-      .where(and(eq(eventParticipants.userId, userId), eq(eventParticipants.eventId, eventId)))
+      .innerJoin(
+        teamMembers,
+        and(
+          eq(teamMembers.teamId, teams.id),
+          eq(teamMembers.userId, eventParticipants.userId)
+        )
+      )
+      .where(
+        and(
+          eq(eventParticipants.userId, userId),
+          eq(eventParticipants.eventId, eventId)
+        )
+      )
       .limit(1)
       .execute()
 
@@ -306,7 +355,11 @@ export async function getCurrentTeamForUser(eventId: string) {
   }
 }
 
-export async function assignParticipantToTeam(eventId: string, userId: string, teamId: string) {
+export async function assignParticipantToTeam(
+  eventId: string,
+  userId: string,
+  teamId: string
+) {
   try {
     const role = await getUserRole(eventId)
     if (role !== "admin" && role !== "management") {
@@ -323,7 +376,9 @@ export async function assignParticipantToTeam(eventId: string, userId: string, t
       })
 
       if (existingTeamMember && existingTeamMember.team.eventId === eventId) {
-        await tx.delete(teamMembers).where(eq(teamMembers.id, existingTeamMember.id))
+        await tx
+          .delete(teamMembers)
+          .where(eq(teamMembers.id, existingTeamMember.id))
       }
 
       // Then, add the user to the new team
@@ -343,13 +398,13 @@ export async function assignParticipantToTeam(eventId: string, userId: string, t
           isLeader: false,
         })
       }
-    });
+    })
 
     // Revalidate the participants page to reflect the changes
     revalidatePath(`/events/${eventId}/participants`)
     // Also revalidate the event page
     revalidatePath(`/events/${eventId}`)
-    
+
     return { success: true }
   } catch (error) {
     logger.error({ error }, "Error assigning participant to team:", error)

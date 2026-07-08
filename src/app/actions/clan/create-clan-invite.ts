@@ -27,18 +27,27 @@ export const createClanInvite = authActionClient
       })
 
       if (!membership || !["admin", "management"].includes(membership.role)) {
-        return { success: false as const, error: "Not authorized to create invites" }
+        return {
+          success: false as const,
+          error: "Not authorized to create invites",
+        }
       }
 
       const activeInviteCount = await db
         .select({ count: count() })
         .from(clanInvites)
         .where(
-          and(eq(clanInvites.clanId, params.clanId), eq(clanInvites.isActive, true))
+          and(
+            eq(clanInvites.clanId, params.clanId),
+            eq(clanInvites.isActive, true)
+          )
         )
 
       if (activeInviteCount[0]!.count >= 50) {
-        return { success: false as const, error: "Maximum active invite limit reached (50)" }
+        return {
+          success: false as const,
+          error: "Maximum active invite limit reached (50)",
+        }
       }
 
       const inviteCode = nanoid(10)
@@ -63,6 +72,12 @@ export const createClanInvite = authActionClient
 
       return { success: true as const, invite }
     } catch (error) {
-      return { success: false as const, error: error instanceof Error ? error.message : "Failed to create clan invite" }
+      return {
+        success: false as const,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to create clan invite",
+      }
     }
   })

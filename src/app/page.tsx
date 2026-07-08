@@ -2,14 +2,15 @@ import EventList from "@/components/eventlist"
 import TemplatePreviewWithTooltip from "@/components/template-preview-with-tooltip"
 import getTemplateBoard from "@/lib/getTemplateBoard"
 import { getServerAuthSession } from "@/server/auth"
-import { getEvents } from "@/app/actions/events"
+
 import Link from "next/link"
 
 import { Suspense } from "react"
+import { getEvents } from "@/server/queries/events"
 
 async function LoggedInDashboard({ userId }: { userId: string }) {
   const events = await getEvents(userId)
-  
+
   return (
     <div className="space-y-8">
       <EventList userId={userId} initialEvents={events} />
@@ -24,7 +25,13 @@ export default async function HomePage() {
     <div className="min-h-screen bg-background text-foreground">
       <main className="container mx-auto px-4 py-8">
         {session ? (
-          <Suspense fallback={<div className="flex h-64 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div></div>}>
+          <Suspense
+            fallback={
+              <div className="flex h-64 items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
+              </div>
+            }
+          >
             <LoggedInDashboard userId={session.user.id} />
           </Suspense>
         ) : (

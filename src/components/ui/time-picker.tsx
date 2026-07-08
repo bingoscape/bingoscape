@@ -1,43 +1,49 @@
-"use client";
+"use client"
 
-import * as React from "react";
-import { Clock } from "lucide-react";
-import { Label } from "@/components/ui/label";
-import { TimePickerInput } from "./time-picker-input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import * as React from "react"
+import { Clock } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { TimePickerInput } from "./time-picker-input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface TimePickerProps {
-  date: Date | undefined;
-  setDate: (date: Date | undefined) => void;
+  date: Date | undefined
+  setDate: (date: Date | undefined) => void
 }
 
 export function TimePicker({ date, setDate }: TimePickerProps) {
-  const minuteRef = React.useRef<HTMLInputElement>(null);
-  const hourRef = React.useRef<HTMLInputElement>(null);
-  
+  const minuteRef = React.useRef<HTMLInputElement>(null)
+  const hourRef = React.useRef<HTMLInputElement>(null)
+
   const period = React.useMemo(() => {
-      if (!date) return "AM";
-      return date.getHours() >= 12 ? "PM" : "AM";
-  }, [date]);
+    if (!date) return "AM"
+    return date.getHours() >= 12 ? "PM" : "AM"
+  }, [date])
 
   const setPeriod = (newPeriod: "AM" | "PM") => {
-      if (!date) {
-          const d = new Date();
-          d.setHours(newPeriod === "PM" ? 12 : 0);
-          d.setMinutes(0);
-          d.setSeconds(0);
-          setDate(d);
-          return;
-      }
-      const d = new Date(date);
-      const h = d.getHours();
-      if (newPeriod === "PM" && h < 12) {
-          d.setHours(h + 12);
-      } else if (newPeriod === "AM" && h >= 12) {
-          d.setHours(h - 12);
-      }
-      setDate(d);
-  };
+    if (!date) {
+      const d = new Date()
+      d.setHours(newPeriod === "PM" ? 12 : 0)
+      d.setMinutes(0)
+      d.setSeconds(0)
+      setDate(d)
+      return
+    }
+    const d = new Date(date)
+    const h = d.getHours()
+    if (newPeriod === "PM" && h < 12) {
+      d.setHours(h + 12)
+    } else if (newPeriod === "AM" && h >= 12) {
+      d.setHours(h - 12)
+    }
+    setDate(d)
+  }
 
   return (
     <div className="flex items-end gap-2">
@@ -70,7 +76,10 @@ export function TimePicker({ date, setDate }: TimePickerProps) {
         <Label htmlFor="period" className="text-xs text-muted-foreground">
           AM/PM
         </Label>
-        <Select value={period} onValueChange={(val: "AM" | "PM") => setPeriod(val)}>
+        <Select
+          value={period}
+          onValueChange={(val: "AM" | "PM") => setPeriod(val)}
+        >
           <SelectTrigger className="w-[65px] focus:bg-accent focus:text-accent-foreground">
             <SelectValue />
           </SelectTrigger>
@@ -84,5 +93,5 @@ export function TimePicker({ date, setDate }: TimePickerProps) {
         <Clock className="ml-2 h-4 w-4 text-muted-foreground" />
       </div>
     </div>
-  );
+  )
 }

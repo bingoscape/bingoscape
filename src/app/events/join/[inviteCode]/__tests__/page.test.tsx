@@ -1,5 +1,3 @@
- 
-
 import { render, screen, waitFor } from "@testing-library/react"
 import JoinEventPage from "../page"
 import { useRouter } from "next/navigation"
@@ -35,48 +33,72 @@ describe("JoinEventPage", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-      ; (useRouter as jest.Mock).mockReturnValue(mockRouter)
-      ; (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: jest.fn().mockResolvedValue({
-          id: "event-123",
-          title: "Test Event",
-        }),
-      })
+    ;(useRouter as jest.Mock).mockReturnValue(mockRouter)
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        id: "event-123",
+        title: "Test Event",
+      }),
+    })
   })
 
   it("redirects to login if user is not authenticated", () => {
-    ; (useSession as jest.Mock).mockReturnValue({
+    ;(useSession as jest.Mock).mockReturnValue({
       data: null,
       status: "unauthenticated",
     })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" } as unknown as Promise<{ inviteCode: string }>} />)
+    render(
+      <JoinEventPage
+        params={
+          { inviteCode: "invite-123" } as unknown as Promise<{
+            inviteCode: string
+          }>
+        }
+      />
+    )
 
     expect(screen.getByText("Redirecting to login...")).toBeInTheDocument()
   })
 
   it("shows loading state while checking authentication", () => {
-    ; (useSession as jest.Mock).mockReturnValue({
+    ;(useSession as jest.Mock).mockReturnValue({
       data: null,
       status: "loading",
     })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" } as unknown as Promise<{ inviteCode: string }>} />)
+    render(
+      <JoinEventPage
+        params={
+          { inviteCode: "invite-123" } as unknown as Promise<{
+            inviteCode: string
+          }>
+        }
+      />
+    )
 
     expect(screen.getByRole("status")).toBeInTheDocument() // Loader component
   })
 
   it("redirects to event page if user is already approved", async () => {
-    ; (useSession as jest.Mock).mockReturnValue({
+    ;(useSession as jest.Mock).mockReturnValue({
       data: { user: { id: "user-123" } },
       status: "authenticated",
     })
-      ; (getUserRegistrationStatus as jest.Mock).mockResolvedValue({
-        status: "approved",
-      })
+    ;(getUserRegistrationStatus as jest.Mock).mockResolvedValue({
+      status: "approved",
+    })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" } as unknown as Promise<{ inviteCode: string }>} />)
+    render(
+      <JoinEventPage
+        params={
+          { inviteCode: "invite-123" } as unknown as Promise<{
+            inviteCode: string
+          }>
+        }
+      />
+    )
 
     await waitFor(() => {
       expect(mockRouter.push).toHaveBeenCalledWith("/events/event-123")
@@ -84,16 +106,24 @@ describe("JoinEventPage", () => {
   })
 
   it("shows registration status if user has pending registration", async () => {
-    ; (useSession as jest.Mock).mockReturnValue({
+    ;(useSession as jest.Mock).mockReturnValue({
       data: { user: { id: "user-123" } },
       status: "authenticated",
     })
-      ; (getUserRegistrationStatus as jest.Mock).mockResolvedValue({
-        status: "pending",
-        message: "Please approve me",
-      })
+    ;(getUserRegistrationStatus as jest.Mock).mockResolvedValue({
+      status: "pending",
+      message: "Please approve me",
+    })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" } as unknown as Promise<{ inviteCode: string }>} />)
+    render(
+      <JoinEventPage
+        params={
+          { inviteCode: "invite-123" } as unknown as Promise<{
+            inviteCode: string
+          }>
+        }
+      />
+    )
 
     await waitFor(() => {
       expect(screen.getByText("Registration Status")).toBeInTheDocument()
@@ -102,17 +132,25 @@ describe("JoinEventPage", () => {
   })
 
   it("shows registration status if user has rejected registration", async () => {
-    ; (useSession as jest.Mock).mockReturnValue({
+    ;(useSession as jest.Mock).mockReturnValue({
       data: { user: { id: "user-123" } },
       status: "authenticated",
     })
-      ; (getUserRegistrationStatus as jest.Mock).mockResolvedValue({
-        status: "rejected",
-        message: "Please approve me",
-        responseMessage: "Sorry, the event is full",
-      })
+    ;(getUserRegistrationStatus as jest.Mock).mockResolvedValue({
+      status: "rejected",
+      message: "Please approve me",
+      responseMessage: "Sorry, the event is full",
+    })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" } as unknown as Promise<{ inviteCode: string }>} />)
+    render(
+      <JoinEventPage
+        params={
+          { inviteCode: "invite-123" } as unknown as Promise<{
+            inviteCode: string
+          }>
+        }
+      />
+    )
 
     await waitFor(() => {
       expect(screen.getByText("Registration Status")).toBeInTheDocument()
@@ -122,20 +160,31 @@ describe("JoinEventPage", () => {
   })
 
   it("shows join button if user has no registration", async () => {
-    ; (useSession as jest.Mock).mockReturnValue({
+    ;(useSession as jest.Mock).mockReturnValue({
       data: { user: { id: "user-123" } },
       status: "authenticated",
     })
-      ; (getUserRegistrationStatus as jest.Mock).mockResolvedValue({
-        status: "not_requested",
-      })
+    ;(getUserRegistrationStatus as jest.Mock).mockResolvedValue({
+      status: "not_requested",
+    })
 
-    render(<JoinEventPage params={{ inviteCode: "invite-123" } as unknown as Promise<{ inviteCode: string }>} />)
+    render(
+      <JoinEventPage
+        params={
+          { inviteCode: "invite-123" } as unknown as Promise<{
+            inviteCode: string
+          }>
+        }
+      />
+    )
 
     await waitFor(() => {
-      expect(screen.getByText("You've been invited to join Test Event!")).toBeInTheDocument()
-      expect(screen.getByRole("button", { name: "Join Event" })).toBeInTheDocument()
+      expect(
+        screen.getByText("You've been invited to join Test Event!")
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: "Join Event" })
+      ).toBeInTheDocument()
     })
   })
 })
-

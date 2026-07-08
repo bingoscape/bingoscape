@@ -133,38 +133,38 @@ Alerts are configured in `prometheus/alerts/app-alerts.yml`
 ### How to Use Logger
 
 ```typescript
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger"
 
 // Info logging
-logger.info({ userId: "123", eventId: "abc" }, "Event created successfully");
+logger.info({ userId: "123", eventId: "abc" }, "Event created successfully")
 
 // Error logging
-logger.error({ error, userId: "123" }, "Failed to create event");
+logger.error({ error, userId: "123" }, "Failed to create event")
 
 // With duration tracking
-import { withLogging } from "@/lib/logger";
+import { withLogging } from "@/lib/logger"
 
 const result = await withLogging(async () => createEvent(data), {
   operation: "createEvent",
   userId: session.user.id,
-});
+})
 ```
 
 ### How to Track Metrics
 
 ```typescript
-import { eventsCreated, trackError, trackDbQuery } from "@/lib/metrics";
+import { eventsCreated, trackError, trackDbQuery } from "@/lib/metrics"
 
 // Increment counters
-eventsCreated.inc();
+eventsCreated.inc()
 
 // Track errors
-trackError("validation", "/api/events");
+trackError("validation", "/api/events")
 
 // Track database queries
-const start = Date.now();
-await db.query(/* ... */);
-trackDbQuery("select", Date.now() - start);
+const start = Date.now()
+await db.query(/* ... */)
+trackDbQuery("select", Date.now() - start)
 ```
 
 ### Client-Side Error Tracking

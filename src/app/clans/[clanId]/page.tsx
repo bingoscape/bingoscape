@@ -13,32 +13,35 @@ export default async function ClanDetailPage(props: {
     redirect("/login")
   }
 
-  let clanDetails;
-  let members;
+  let clanDetails
+  let members
 
   try {
     const data = await Promise.all([
       getClanDetails(clanId),
-      getClanMembers(clanId)
+      getClanMembers(clanId),
     ])
-    clanDetails = data[0];
-    members = data[1];
+    clanDetails = data[0]
+    members = data[1]
 
     if (!clanDetails) {
       notFound()
     }
   } catch (error) {
-    if (error instanceof Error && error.message === "You are not a member of this clan") {
+    if (
+      error instanceof Error &&
+      error.message === "You are not a member of this clan"
+    ) {
       notFound()
     }
     throw error
   }
 
   return (
-    <ClanDetailClient 
-      initialClanDetails={clanDetails} 
-      initialMembers={members} 
-      clanId={clanId} 
+    <ClanDetailClient
+      initialClanDetails={clanDetails}
+      initialMembers={members}
+      clanId={clanId}
     />
   )
 }

@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/server/db"
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger"
 import { bingoTemplates } from "@/server/db/schema"
 import { eq, desc, like, and, or, sql } from "drizzle-orm"
 import { getServerAuthSession } from "@/server/auth"
@@ -40,7 +40,7 @@ export async function saveBingoAsTemplate(
     tags: string
     isPublic: boolean
     previewImage?: string
-  },
+  }
 ) {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
@@ -75,7 +75,10 @@ export async function saveBingoAsTemplate(
     return { success: true, templateId: template?.id }
   } catch (error) {
     logger.error({ error }, "Error saving template:", error)
-    return { success: false, error: error instanceof Error ? error.message : "Failed to save template" }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to save template",
+    }
   }
 }
 
@@ -89,7 +92,7 @@ export async function getPublicTemplates(
     size?: string
     limit?: number
     offset?: number
-  } = {},
+  } = {}
 ): Promise<{ templates: BingoTemplate[]; total: number }> {
   const { search, category, size, limit = 12, offset = 0 } = options
 
@@ -102,8 +105,8 @@ export async function getPublicTemplates(
         or(
           like(bingoTemplates.title, `%${search}%`),
           like(bingoTemplates.description, `%${search}%`),
-          like(bingoTemplates.tags, `%${search}%`),
-        )!,
+          like(bingoTemplates.tags, `%${search}%`)
+        )!
       )
     }
 
@@ -117,7 +120,7 @@ export async function getPublicTemplates(
       if (!!rows && !!columns && !isNaN(rows) && !isNaN(columns)) {
         conditions.push(
           sql`json_extract(${bingoTemplates.templateData}, '$.metadata.rows') = ${rows} AND
-              json_extract(${bingoTemplates.templateData}, '$.metadata.columns') = ${columns}`,
+              json_extract(${bingoTemplates.templateData}, '$.metadata.columns') = ${columns}`
         )
       }
     }
@@ -126,7 +129,7 @@ export async function getPublicTemplates(
     const result = await db
       .select({ count: sql<number>`count(*)` })
       .from(bingoTemplates)
-      .where(and(...conditions));
+      .where(and(...conditions))
 
     const count = result[0]?.count ?? 0
 
@@ -167,7 +170,9 @@ export async function getPublicTemplates(
 /**
  * Get a template by ID
  */
-export async function getTemplateById(templateId: string): Promise<BingoTemplate | null> {
+export async function getTemplateById(
+  templateId: string
+): Promise<BingoTemplate | null> {
   try {
     const template = await db.query.bingoTemplates.findFirst({
       where: eq(bingoTemplates.id, templateId),
@@ -254,7 +259,10 @@ export async function deleteTemplate(templateId: string) {
     }
 
     if (template.creatorId !== session.user.id) {
-      return { success: false, error: "You don't have permission to delete this template" }
+      return {
+        success: false,
+        error: "You don't have permission to delete this template",
+      }
     }
 
     await db.delete(bingoTemplates).where(eq(bingoTemplates.id, templateId))
@@ -290,7 +298,9 @@ export async function incrementTemplateDownloadCount(templateId: string) {
 /**
  * Get template data for import
  */
-export async function getTemplateData(templateId: string): Promise<ExportedBingo | { error: string }> {
+export async function getTemplateData(
+  templateId: string
+): Promise<ExportedBingo | { error: string }> {
   try {
     const template = await db.query.bingoTemplates.findFirst({
       where: eq(bingoTemplates.id, templateId),
@@ -322,12 +332,19 @@ export async function getTemplateCategories(): Promise<string[]> {
     const categories = await db
       .select({ category: bingoTemplates.category })
       .from(bingoTemplates)
-      .where(and(eq(bingoTemplates.isPublic, true), sql`${bingoTemplates.category} IS NOT NULL`))
+      .where(
+        and(
+          eq(bingoTemplates.isPublic, true),
+          sql`${bingoTemplates.category} IS NOT NULL`
+        )
+      )
       .groupBy(bingoTemplates.category)
       .orderBy(desc(sql`count(*)`))
       .limit(10)
 
-    return categories.map((c) => c.category).filter((c): c is string => c !== null)
+    return categories
+      .map((c) => c.category)
+      .filter((c): c is string => c !== null)
   } catch (error) {
     logger.error({ error }, "Error fetching categories:", error)
     return []
@@ -348,17 +365,18 @@ export async function getTemplateSizes(): Promise<string[]> {
       .where(eq(bingoTemplates.isPublic, true))
       .groupBy(
         sql`json_extract(${bingoTemplates.templateData}, '$.metadata.rows')`,
-        sql`json_extract(${bingoTemplates.templateData}, '$.metadata.columns')`,
+        sql`json_extract(${bingoTemplates.templateData}, '$.metadata.columns')`
       )
       .orderBy(
         sql`json_extract(${bingoTemplates.templateData}, '$.metadata.rows')`,
-        sql`json_extract(${bingoTemplates.templateData}, '$.metadata.columns')`,
+        sql`json_extract(${bingoTemplates.templateData}, '$.metadata.columns')`
       )
 
-    return sizes.map((s) => `${s.rows}x${s.columns}`).filter((size) => size.includes("x")) // Filter out any invalid sizes
+    return sizes
+      .map((s) => `${s.rows}x${s.columns}`)
+      .filter((size) => size.includes("x")) // Filter out any invalid sizes
   } catch (error) {
     logger.error({ error }, "Error fetching sizes:", error)
     return []
   }
 }
-

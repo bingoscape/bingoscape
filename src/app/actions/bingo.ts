@@ -283,9 +283,11 @@ export async function createBingo(formData: FormData) {
     parseInt((formData.get("antiDiagonalBonus") as string) || "0") || 0
   const completeBoardBonus =
     parseInt((formData.get("completeBoardBonus") as string) || "0") || 0
-    
+
   const scheduledUnlockDateStr = formData.get("scheduledUnlockDate") as string
-  const scheduledUnlockDate = scheduledUnlockDateStr ? new Date(scheduledUnlockDateStr) : null
+  const scheduledUnlockDate = scheduledUnlockDateStr
+    ? new Date(scheduledUnlockDateStr)
+    : null
 
   try {
     await db.transaction(async (tx) => {
@@ -302,7 +304,8 @@ export async function createBingo(formData: FormData) {
           tiersUnlockRequirement,
           mainDiagonalBonusXP: rows === columns ? mainDiagonalBonus : 0,
           antiDiagonalBonusXP: rows === columns ? antiDiagonalBonus : 0,
-          completeBoardBonusXP: bingoType === "standard" ? completeBoardBonus : 0,
+          completeBoardBonusXP:
+            bingoType === "standard" ? completeBoardBonus : 0,
           scheduledUnlockDate,
           locked: true,
           visible: false,
@@ -330,7 +333,9 @@ export async function createBingo(formData: FormData) {
       if (bingoType === "standard") {
         const rowBonusValues = []
         for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
-          const bonusXP = parseInt((formData.get(`rowBonus-${rowIndex}`) as string) || "0") || 0
+          const bonusXP =
+            parseInt((formData.get(`rowBonus-${rowIndex}`) as string) || "0") ||
+            0
           if (bonusXP > 0) {
             rowBonusValues.push({ bingoId, rowIndex, bonusXP })
           }
@@ -341,7 +346,10 @@ export async function createBingo(formData: FormData) {
 
         const columnBonusValues = []
         for (let columnIndex = 0; columnIndex < columns; columnIndex++) {
-          const bonusXP = parseInt((formData.get(`columnBonus-${columnIndex}`) as string) || "0") || 0
+          const bonusXP =
+            parseInt(
+              (formData.get(`columnBonus-${columnIndex}`) as string) || "0"
+            ) || 0
           if (bonusXP > 0) {
             columnBonusValues.push({ bingoId, columnIndex, bonusXP })
           }
@@ -365,14 +373,17 @@ export async function createBingo(formData: FormData) {
         }
       }
 
-      logger.info({
-        eventId,
-        bingoId,
-        bingoType,
-        rows,
-        columns,
-        action: "createBingo"
-      }, "Bingo created successfully")
+      logger.info(
+        {
+          eventId,
+          bingoId,
+          bingoType,
+          rows,
+          columns,
+          action: "createBingo",
+        },
+        "Bingo created successfully"
+      )
     })
 
     return { success: true }
@@ -542,7 +553,7 @@ export async function createMetricGoal(
 ) {
   try {
     const goalDescription = description || `${metricName} (${metricType})`
-    
+
     // Create the goal first
     const [newGoal] = await db
       .insert(goals)
@@ -584,7 +595,7 @@ export async function updateMetricGoal(
 ) {
   try {
     const goalDescription = description || `${metricName} (${metricType})`
-    
+
     // Update the base goal
     await db
       .update(goals)
@@ -1116,19 +1127,25 @@ export async function submitImage(formData: FormData) {
     // Revalidate the bingo page
     revalidatePath("/bingo")
 
-    logger.info({
-      submissionId: newSubmission?.submission?.id,
-      tileId,
-      teamId: effectiveTeamId,
-      submitterId: session.user.id,
-      targetUserId: targetUser.id,
-      action: "submitImage"
-    }, "Image submitted successfully")
+    logger.info(
+      {
+        submissionId: newSubmission?.submission?.id,
+        tileId,
+        teamId: effectiveTeamId,
+        submitterId: session.user.id,
+        targetUserId: targetUser.id,
+        action: "submitImage",
+      },
+      "Image submitted successfully"
+    )
 
     return { success: true, submission: newSubmission.submission }
   } catch (error) {
     const catchTileId = formData.get("tileId") as string | null
-    logger.error({ error, tileId: catchTileId, action: "submitImage" }, "Error submitting image")
+    logger.error(
+      { error, tileId: catchTileId, action: "submitImage" },
+      "Error submitting image"
+    )
     return { success: false, error: (error as Error).message }
   }
 }
@@ -1267,16 +1284,22 @@ export async function updateSubmissionStatus(
     // Revalidate the submissions page
     revalidatePath("/bingo")
 
-    logger.info({
-      submissionId,
-      newStatus,
-      reviewerId: session.user.id,
-      action: "updateSubmissionStatus"
-    }, "Submission status updated")
+    logger.info(
+      {
+        submissionId,
+        newStatus,
+        reviewerId: session.user.id,
+        action: "updateSubmissionStatus",
+      },
+      "Submission status updated"
+    )
 
     return { success: true, submission: updatedSubmission }
   } catch (error) {
-    logger.error({ error, submissionId, action: "updateSubmissionStatus" }, "Error updating submission status")
+    logger.error(
+      { error, submissionId, action: "updateSubmissionStatus" },
+      "Error updating submission status"
+    )
     return { success: false, error: "Failed to update submission status" }
   }
 }
@@ -1335,16 +1358,22 @@ export async function updateTeamTileSubmissionStatus(
     // Revalidate the submissions page
     revalidatePath("/bingo")
 
-    logger.info({
-      teamTileSubmissionId,
-      newStatus,
-      reviewerId: session.user.id,
-      action: "updateTeamTileSubmissionStatus"
-    }, "Team tile submission status updated")
+    logger.info(
+      {
+        teamTileSubmissionId,
+        newStatus,
+        reviewerId: session.user.id,
+        action: "updateTeamTileSubmissionStatus",
+      },
+      "Team tile submission status updated"
+    )
 
     return { success: true, teamTileSubmission: updatedTeamTileSubmission }
   } catch (error) {
-    logger.error({ error, teamTileSubmissionId, action: "updateTeamTileSubmissionStatus" }, "Error updating team tile submission status")
+    logger.error(
+      { error, teamTileSubmissionId, action: "updateTeamTileSubmissionStatus" },
+      "Error updating team tile submission status"
+    )
     return {
       success: false,
       error: "Failed to update team tile submission status",
@@ -1497,17 +1526,23 @@ export async function updateSubmissionStatusWithComment(
       // Revalidate the submissions page
       revalidatePath("/bingo")
 
-      logger.info({
-        submissionId,
-        newStatus,
-        reviewerId: session.user.id,
-        action: "updateSubmissionStatusWithComment"
-      }, "Submission status with comment updated")
+      logger.info(
+        {
+          submissionId,
+          newStatus,
+          reviewerId: session.user.id,
+          action: "updateSubmissionStatusWithComment",
+        },
+        "Submission status with comment updated"
+      )
 
       return { success: true, submission: updatedSubmission }
     })
   } catch (error) {
-    logger.error({ error, submissionId, action: "updateSubmissionStatusWithComment" }, "Error updating submission status with comment")
+    logger.error(
+      { error, submissionId, action: "updateSubmissionStatusWithComment" },
+      "Error updating submission status with comment"
+    )
     return { success: false, error: "Failed to update submission status" }
   }
 }

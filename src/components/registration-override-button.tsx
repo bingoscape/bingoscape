@@ -12,7 +12,10 @@ interface RegistrationOverrideButtonProps {
   reason: string
 }
 
-export function RegistrationOverrideButton({ eventId, reason }: RegistrationOverrideButtonProps) {
+export function RegistrationOverrideButton({
+  eventId,
+  reason,
+}: RegistrationOverrideButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
@@ -28,7 +31,8 @@ export function RegistrationOverrideButton({ eventId, reason }: RegistrationOver
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to join event",
+        description:
+          error instanceof Error ? error.message : "Failed to join event",
         variant: "destructive",
       })
     } finally {
@@ -37,13 +41,17 @@ export function RegistrationOverrideButton({ eventId, reason }: RegistrationOver
   }
 
   return (
-    <div className="mt-4 p-4 border rounded-md bg-muted/50">
-      <p className="text-sm text-muted-foreground mb-2">{reason}</p>
-      <Button onClick={handleOverride} disabled={isLoading} variant="outline" className="w-full">
-        <LockOpen className="h-4 w-4 mr-2" />
+    <div className="mt-4 rounded-md border bg-muted/50 p-4">
+      <p className="mb-2 text-sm text-muted-foreground">{reason}</p>
+      <Button
+        onClick={handleOverride}
+        disabled={isLoading}
+        variant="outline"
+        className="w-full"
+      >
+        <LockOpen className="mr-2 h-4 w-4" />
         {isLoading ? "Processing..." : "Override and Join Anyway (Admin Only)"}
       </Button>
     </div>
   )
 }
-

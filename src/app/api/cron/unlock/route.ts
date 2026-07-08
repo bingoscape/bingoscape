@@ -23,13 +23,10 @@ export async function GET(request: Request) {
     const eventIdsToUnlock: string[] = []
 
     // 4. Find bingos to unlock based on their own scheduled date OR event start date if null
-    
+
     // Get currently unlocked events (including the ones we just unlocked)
     const unlockedEvents = await db.query.events.findMany({
-      where: and(
-        eq(events.locked, false),
-        lte(events.startDate, now)
-      ),
+      where: and(eq(events.locked, false), lte(events.startDate, now)),
       columns: {
         id: true,
       },
@@ -42,8 +39,11 @@ export async function GET(request: Request) {
         or(eq(bingos.locked, true), eq(bingos.visible, false)),
         or(
           lte(bingos.scheduledUnlockDate, now),
-          unlockedEventIds.length > 0 
-            ? and(isNull(bingos.scheduledUnlockDate), inArray(bingos.eventId, unlockedEventIds))
+          unlockedEventIds.length > 0
+            ? and(
+                isNull(bingos.scheduledUnlockDate),
+                inArray(bingos.eventId, unlockedEventIds)
+              )
             : undefined
         )
       ),
@@ -65,8 +65,14 @@ export async function GET(request: Request) {
         })
         .where(inArray(bingos.id, bingoIdsToUnlock))
     }
-    
-    logger.info({ eventsUnlocked: eventIdsToUnlock.length, bingosUnlocked: bingoIdsToUnlock.length }, "Cron unlock completed successfully")
+
+    logger.info(
+      {
+        eventsUnlocked: eventIdsToUnlock.length,
+        bingosUnlocked: bingoIdsToUnlock.length,
+      },
+      "Cron unlock completed successfully"
+    )
 
     return NextResponse.json({
       success: true,
@@ -74,7 +80,7 @@ export async function GET(request: Request) {
       bingosUnlocked: bingoIdsToUnlock.length,
     })
   } catch (error) {
-      logger.error({ error }, "Error in cron unlock route")
-      return new NextResponse("Internal Server Error", { status: 500 })
+    logger.error({ error }, "Error in cron unlock route")
+    return new NextResponse("Internal Server Error", { status: 500 })
   }
 }

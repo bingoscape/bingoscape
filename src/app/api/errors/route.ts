@@ -1,15 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
-import { logger } from "@/lib/logger";
-import { clientErrorsTotal } from "@/lib/metrics";
+import { NextRequest, NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
+import { clientErrorsTotal } from "@/lib/metrics"
 
 interface ClientError {
-  message: string;
-  stack?: string;
-  url: string;
-  userAgent: string;
-  timestamp: number;
-  userId?: string;
-  metadata?: Record<string, unknown>;
+  message: string
+  stack?: string
+  url: string
+  userAgent: string
+  timestamp: number
+  userId?: string
+  metadata?: Record<string, unknown>
 }
 
 /**
@@ -18,14 +18,14 @@ interface ClientError {
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as ClientError;
+    const body = (await request.json()) as ClientError
 
     // Validate required fields
     if (!body.message || !body.url || !body.timestamp) {
       return NextResponse.json(
         { error: "Missing required fields: message, url, timestamp" },
-        { status: 400 },
-      );
+        { status: 400 }
+      )
     }
 
     // Extract error type from message
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
           : body.message.includes("NetworkError") ||
               body.message.includes("Failed to fetch")
             ? "NetworkError"
-            : "UnknownError";
+            : "UnknownError"
 
     // Log the client error with structured data
     logger.error(
@@ -55,17 +55,17 @@ export async function POST(request: NextRequest) {
         metadata: body.metadata,
         errorType,
       },
-      `Client error: ${body.message}`,
-    );
+      `Client error: ${body.message}`
+    )
 
     // Track metrics
-    clientErrorsTotal.inc({ error_type: errorType });
+    clientErrorsTotal.inc({ error_type: errorType })
 
     // Return success with no content
-    return new NextResponse(null, { status: 204 });
+    return new NextResponse(null, { status: 204 })
   } catch (error) {
-    logger.error({ error }, "Failed to log client error");
+    logger.error({ error }, "Failed to log client error")
 
-    return NextResponse.json({ error: "Failed to log error" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to log error" }, { status: 500 })
   }
 }

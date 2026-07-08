@@ -8,7 +8,7 @@ import { and, eq } from "drizzle-orm"
 
 const schema = z.object({
   inviteId: z.string(),
-  label: z.string()
+  label: z.string(),
 })
 
 export const updateClanInviteLabel = authActionClient
@@ -32,7 +32,10 @@ export const updateClanInviteLabel = authActionClient
       })
 
       if (!membership || !["admin", "management"].includes(membership.role)) {
-        return { success: false as const, error: "Not authorized to update invites" }
+        return {
+          success: false as const,
+          error: "Not authorized to update invites",
+        }
       }
 
       await db
@@ -45,6 +48,12 @@ export const updateClanInviteLabel = authActionClient
 
       return { success: true as const }
     } catch (error) {
-      return { success: false as const, error: error instanceof Error ? error.message : "Failed to update clan invite label" }
+      return {
+        success: false as const,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to update clan invite label",
+      }
     }
   })

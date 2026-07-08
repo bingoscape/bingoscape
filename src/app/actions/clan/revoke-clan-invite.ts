@@ -7,7 +7,7 @@ import { clanMembers, clanInvites } from "@/server/db/schema"
 import { and, eq } from "drizzle-orm"
 
 const schema = z.object({
-  inviteId: z.string()
+  inviteId: z.string(),
 })
 
 export const revokeClanInvite = authActionClient
@@ -31,7 +31,10 @@ export const revokeClanInvite = authActionClient
       })
 
       if (!membership || !["admin", "management"].includes(membership.role)) {
-        return { success: false as const, error: "Not authorized to revoke invites" }
+        return {
+          success: false as const,
+          error: "Not authorized to revoke invites",
+        }
       }
 
       await db
@@ -44,6 +47,12 @@ export const revokeClanInvite = authActionClient
 
       return { success: true as const }
     } catch (error) {
-      return { success: false as const, error: error instanceof Error ? error.message : "Failed to revoke clan invite" }
+      return {
+        success: false as const,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to revoke clan invite",
+      }
     }
   })

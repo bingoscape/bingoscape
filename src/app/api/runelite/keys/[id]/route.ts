@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server"
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger"
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
 import { apiKeys } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
 
 // Delete an API key
-export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+export async function DELETE(
+  req: Request,
+  props: { params: Promise<{ id: string }> }
+) {
+  const params = await props.params
   const session = await getServerAuthSession()
 
   if (!session?.user) {
@@ -30,7 +33,9 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
     return NextResponse.json({ success: true })
   } catch (error) {
     logger.error({ error }, "Error deleting API key")
-    return NextResponse.json({ error: "Failed to delete API key" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Failed to delete API key" },
+      { status: 500 }
+    )
   }
 }
-

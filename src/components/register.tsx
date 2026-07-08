@@ -66,7 +66,7 @@ export function RegisterCard() {
       <form onSubmit={handleSubmit}>
         <CardContent className="grid gap-4">
           {error && (
-            <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md">
+            <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
               {error}
             </div>
           )}
@@ -122,7 +122,8 @@ export function RegisterCard() {
 
           <div className="grid gap-2">
             <Label htmlFor="runescapeName">
-              RuneScape Name <span className="text-muted-foreground">(Optional)</span>
+              RuneScape Name{" "}
+              <span className="text-muted-foreground">(Optional)</span>
             </Label>
             <Input
               id="runescapeName"
@@ -144,7 +145,7 @@ export function RegisterCard() {
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? "Creating account..." : "Create Account"}
           </Button>
-          <p className="text-sm text-muted-foreground text-center">
+          <p className="text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link href="/sign-in" className="text-primary hover:underline">
               Sign in

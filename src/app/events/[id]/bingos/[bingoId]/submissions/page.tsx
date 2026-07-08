@@ -1,9 +1,9 @@
 /* eslint-disable */
 "use client"
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
-import { getEventById, getUserRole } from "@/app/actions/events"
+import { getUserRole } from "@/app/actions/events"
 import { getTeamsByEventId } from "@/app/actions/team"
 import {
   getAllSubmissionsForTeam,
@@ -16,7 +16,13 @@ import {
 import { getBingoById } from "@/app/actions/getBingoById"
 import { type TeamTileSubmission } from "@/app/actions/events"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -43,9 +49,25 @@ import {
   User,
 } from "lucide-react"
 import { FullSizeImageDialog } from "@/components/full-size-image-dialog"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,28 +81,44 @@ import {
 } from "@/components/ui/alert-dialog"
 import { InlineGoalAssignment } from "@/components/inline-goal-assignment"
 import { getGoalValues } from "@/app/actions/goals"
+import { getEventById } from "@/server/queries/events"
 
-export default function BingoSubmissionsPage(props: { params: Promise<{ id: string; bingoId: string }> }) {
-  const params = use(props.params);
+export default function BingoSubmissionsPage(props: {
+  params: Promise<{ id: string; bingoId: string }>
+}) {
+  const params = use(props.params)
   const { id: eventId, bingoId } = params
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [bingo, setBingo] = useState<BingoData | null>(null)
   const [teams, setTeams] = useState<any[]>([])
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([])
-  const [userRole, setUserRole] = useState<"participant" | "management" | "admin" | null>(null)
+  const [userRole, setUserRole] = useState<
+    "participant" | "management" | "admin" | null
+  >(null)
   const [tiles, setTiles] = useState<TileData[]>([])
-  const [tileSubmissions, setTileSubmissions] = useState<Record<string, TeamTileSubmission[]>>({})
-  const [fullSizeImage, setFullSizeImage] = useState<{ src: string; alt: string } | null>(null)
+  const [tileSubmissions, setTileSubmissions] = useState<
+    Record<string, TeamTileSubmission[]>
+  >({})
+  const [fullSizeImage, setFullSizeImage] = useState<{
+    src: string
+    alt: string
+  } | null>(null)
   const [statusFilters, setStatusFilters] = useState<string[]>(["pending"])
   const [searchQuery, setSearchQuery] = useState("")
   const [refreshKey, setRefreshKey] = useState(0)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [teamsPopoverOpen, setTeamsPopoverOpen] = useState(false)
   const [statusPopoverOpen, setStatusPopoverOpen] = useState(false)
-  const [expandedGoalForms, setExpandedGoalForms] = useState<Set<string>>(new Set())
-  const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(null)
-  const [goalValuesCache, setGoalValuesCache] = useState<Record<string, any[]>>({})
+  const [expandedGoalForms, setExpandedGoalForms] = useState<Set<string>>(
+    new Set()
+  )
+  const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(
+    null
+  )
+  const [goalValuesCache, setGoalValuesCache] = useState<Record<string, any[]>>(
+    {}
+  )
 
   // Update the statusOptions array to remove "declined" and use new names
   const statusOptions = [
@@ -93,12 +131,13 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
     const fetchData = async () => {
       try {
         setLoading(true)
-        const [eventData, teamsData, userRoleData, bingoData] = await Promise.all([
-          getEventById(eventId),
-          getTeamsByEventId(eventId),
-          getUserRole(eventId),
-          getBingoById(bingoId),
-        ])
+        const [eventData, teamsData, userRoleData, bingoData] =
+          await Promise.all([
+            getEventById(eventId),
+            getTeamsByEventId(eventId),
+            getUserRole(eventId),
+            getBingoById(bingoId),
+          ])
 
         if (!eventData || !bingoData) {
           router.push(`/events/${eventId}`)
@@ -121,9 +160,7 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
       }
     }
 
-    fetchData()
-      
-      .catch((error) => console.error("Error fetching data:", error))
+    fetchData().catch((error) => console.error("Error fetching data:", error))
   }, [eventId, bingoId, router, refreshKey])
 
   useEffect(() => {
@@ -137,7 +174,10 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
 
         await Promise.all(
           selectedTeamIds.map(async (teamId) => {
-            const teamSubmissions = await getAllSubmissionsForTeam(bingoId, teamId)
+            const teamSubmissions = await getAllSubmissionsForTeam(
+              bingoId,
+              teamId
+            )
 
             // Merge the submissions into the allSubmissions object
             Object.keys(teamSubmissions).forEach((tileId) => {
@@ -149,7 +189,7 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
               const submissionsForTile = teamSubmissions[tileId] || []
               allSubmissions[tileId].push(...submissionsForTile)
             })
-          }),
+          })
         )
 
         setTileSubmissions(allSubmissions)
@@ -165,9 +205,9 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
       }
     }
 
-    fetchSubmissions()
-      
-      .catch((error) => console.error("Error fetching submissions:", error))
+    fetchSubmissions().catch((error) =>
+      console.error("Error fetching submissions:", error)
+    )
   }, [bingoId, selectedTeamIds, refreshKey])
 
   const toggleTeamSelection = (teamId: string) => {
@@ -209,17 +249,22 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
   // Update handleTileStatusUpdate function to use new status names
   const handleTileStatusUpdate = async (
     teamTileSubmissionId: string,
-    newStatus: "approved" | "needs_review", // removed "declined"
+    newStatus: "approved" | "needs_review" // removed "declined"
   ) => {
     try {
-      const result = await updateTeamTileSubmissionStatus(teamTileSubmissionId, newStatus)
+      const result = await updateTeamTileSubmissionStatus(
+        teamTileSubmissionId,
+        newStatus
+      )
       if (result.success) {
         // Update local state
         const updatedSubmissions = { ...tileSubmissions }
 
         Object.keys(updatedSubmissions).forEach((tileId) => {
           updatedSubmissions[tileId] = updatedSubmissions[tileId]!.map((sub) =>
-            sub.id === teamTileSubmissionId ? { ...sub, status: newStatus } : sub,
+            sub.id === teamTileSubmissionId
+              ? { ...sub, status: newStatus }
+              : sub
           )
         })
 
@@ -246,21 +291,29 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
   const handleSubmissionStatusUpdate = async (
     submissionId: string,
     newStatus: "approved" | "needs_review" | "pending",
-    goalId?: string | null,
+    goalId?: string | null
   ) => {
     try {
-      const result = await updateSubmissionStatus(submissionId, newStatus, goalId)
+      const result = await updateSubmissionStatus(
+        submissionId,
+        newStatus,
+        goalId
+      )
       if (result.success) {
         // Update local state
         const updatedSubmissions = { ...tileSubmissions }
 
         Object.keys(updatedSubmissions).forEach((tileId) => {
-          updatedSubmissions[tileId] = updatedSubmissions[tileId]!.map((teamSub) => ({
-            ...teamSub,
-            submissions: teamSub.submissions.map((sub) =>
-              sub.id === submissionId ? { ...sub, status: newStatus, goalId: goalId ?? sub.goalId } : sub,
-            ),
-          }))
+          updatedSubmissions[tileId] = updatedSubmissions[tileId]!.map(
+            (teamSub) => ({
+              ...teamSub,
+              submissions: teamSub.submissions.map((sub) =>
+                sub.id === submissionId
+                  ? { ...sub, status: newStatus, goalId: goalId ?? sub.goalId }
+                  : sub
+              ),
+            })
+          )
         })
 
         setTileSubmissions(updatedSubmissions)
@@ -303,7 +356,9 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
           description: "The submission has been successfully deleted.",
         })
       } else {
-        throw new Error((result as { error: string }).error ?? "Failed to delete submission")
+        throw new Error(
+          (result as { error: string }).error ?? "Failed to delete submission"
+        )
       }
     } catch (error) {
       console.error("Error deleting submission:", error)
@@ -329,7 +384,11 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
   }
 
   // Handle inline goal assignment
-  const handleInlineGoalAssignment = async (submissionId: string, goalId: string | null, value: number | null) => {
+  const handleInlineGoalAssignment = async (
+    submissionId: string,
+    goalId: string | null,
+    value: number | null
+  ) => {
     try {
       // Find the current submission to get its status
       let currentStatus = "pending"
@@ -349,7 +408,7 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
         submissionId,
         currentStatus as "approved" | "needs_review" | "pending",
         goalId,
-        value,
+        value
       )
 
       if (result.success) {
@@ -357,12 +416,16 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
         const updatedSubmissions = { ...tileSubmissions }
 
         Object.keys(updatedSubmissions).forEach((tileId) => {
-          updatedSubmissions[tileId] = updatedSubmissions[tileId]!.map((teamSub) => ({
-            ...teamSub,
-            submissions: teamSub.submissions.map((sub) =>
-              sub.id === submissionId ? { ...sub, goalId, submissionValue: value } : sub,
-            ),
-          }))
+          updatedSubmissions[tileId] = updatedSubmissions[tileId]!.map(
+            (teamSub) => ({
+              ...teamSub,
+              submissions: teamSub.submissions.map((sub) =>
+                sub.id === submissionId
+                  ? { ...sub, goalId, submissionValue: value }
+                  : sub
+              ),
+            })
+          )
         })
 
         setTileSubmissions(updatedSubmissions)
@@ -417,10 +480,15 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
   }
 
   // Add this helper function to find the goal description
-  const getGoalDescription = (goalId: string | null | undefined, tileId: string) => {
+  const getGoalDescription = (
+    goalId: string | null | undefined,
+    tileId: string
+  ) => {
     if (!goalId) return null
     const goals = getTileGoals(tileId)
-    return goals.find((goal) => goal.id === goalId)?.description || "Unknown Goal"
+    return (
+      goals.find((goal) => goal.id === goalId)?.description || "Unknown Goal"
+    )
   }
 
   const handleRefresh = () => {
@@ -433,21 +501,21 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
       case "approved":
         return (
           <Badge className="bg-green-500 text-white">
-            <Check className="h-3 w-3 mr-1" />
+            <Check className="mr-1 h-3 w-3" />
             Approved
           </Badge>
         )
       case "needs_review":
         return (
           <Badge className="bg-yellow-500 text-white">
-            <AlertTriangle className="h-3 w-3 mr-1" />
+            <AlertTriangle className="mr-1 h-3 w-3" />
             Needs Review
           </Badge>
         )
       default:
         return (
           <Badge className="bg-blue-500 text-white">
-            <Clock className="h-3 w-3 mr-1" />
+            <Clock className="mr-1 h-3 w-3" />
             Pending
           </Badge>
         )
@@ -468,8 +536,9 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
     return tileSubmissionsArray.some((submission) => {
       const teamMatches = selectedTeamIds.includes(submission.teamId)
       const teamStatusMatches = statusFilters.includes(submission.status)
-      const hasIndividualSubmissions = submission.submissions.some((individualSub) =>
-        statusFilters.includes(individualSub.status || "pending"),
+      const hasIndividualSubmissions = submission.submissions.some(
+        (individualSub) =>
+          statusFilters.includes(individualSub.status || "pending")
       )
 
       return teamMatches && (teamStatusMatches || hasIndividualSubmissions)
@@ -481,15 +550,19 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
 
     return submissions.filter((submission) => {
       // Filter by selected teams
-      if (selectedTeamIds.length > 0 && !selectedTeamIds.includes(submission.teamId)) {
+      if (
+        selectedTeamIds.length > 0 &&
+        !selectedTeamIds.includes(submission.teamId)
+      ) {
         return false
       }
 
       // Filter by selected statuses (either team status or individual submission status)
       if (statusFilters.length > 0) {
         const teamStatusMatches = statusFilters.includes(submission.status)
-        const hasMatchingIndividualSubmissions = submission.submissions.some((individualSub) =>
-          statusFilters.includes(individualSub.status || "pending"),
+        const hasMatchingIndividualSubmissions = submission.submissions.some(
+          (individualSub) =>
+            statusFilters.includes(individualSub.status || "pending")
         )
 
         if (!teamStatusMatches && !hasMatchingIndividualSubmissions) {
@@ -502,7 +575,10 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
         const tile = tiles.find((t) => t.id === tileId)
         const tileTitle = tile?.title?.toLowerCase() || ""
         const tileContent = tile?.description?.toLowerCase() || ""
-        return tileTitle.includes(searchQuery.toLowerCase()) || tileContent.includes(searchQuery.toLowerCase())
+        return (
+          tileTitle.includes(searchQuery.toLowerCase()) ||
+          tileContent.includes(searchQuery.toLowerCase())
+        )
       }
 
       return true
@@ -512,9 +588,9 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
   if (loading && !bingo) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <Skeleton className="h-8 w-64 mb-4" />
-        <Skeleton className="h-6 w-full mb-6" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Skeleton className="mb-4 h-8 w-64" />
+        <Skeleton className="mb-6 h-6 w-full" />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {Array(6)
             .fill(0)
             .map((_, i) => (
@@ -530,22 +606,33 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
   return (
     <div className="container mx-auto px-4 py-4">
       <div className="flex flex-col space-y-4">
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => router.push(`/events/${eventId}`)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push(`/events/${eventId}`)}
+            >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold">{bingo?.title} - Tile Submissions</h1>
+            <h1 className="text-2xl font-bold">
+              {bingo?.title} - Tile Submissions
+            </h1>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={handleRefresh} title="Refresh">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleRefresh}
+              title="Refresh"
+            >
               <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between bg-muted/30 p-4 rounded-lg">
-          <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+        <div className="flex flex-col items-start justify-between gap-4 rounded-lg bg-muted/30 p-4 md:flex-row md:items-center">
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
             {/* Teams Multi-select */}
             <Popover open={teamsPopoverOpen} onOpenChange={setTeamsPopoverOpen}>
               <PopoverTrigger asChild>
@@ -553,7 +640,7 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
                   variant="outline"
                   role="combobox"
                   aria-expanded={teamsPopoverOpen}
-                  className="w-full md:w-[250px] justify-between bg-transparent"
+                  className="w-full justify-between bg-transparent md:w-[250px]"
                 >
                   <div className="flex items-center gap-1 truncate">
                     <span>
@@ -578,11 +665,21 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
                   <CommandList>
                     <CommandEmpty>No teams found.</CommandEmpty>
                     <CommandGroup>
-                      <div className="p-2 flex items-center justify-between border-b">
-                        <Button variant="ghost" size="sm" onClick={selectAllTeams} className="h-8">
+                      <div className="flex items-center justify-between border-b p-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={selectAllTeams}
+                          className="h-8"
+                        >
                           Select All
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={clearTeamSelection} className="h-8">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearTeamSelection}
+                          className="h-8"
+                        >
                           Clear
                         </Button>
                       </div>
@@ -607,21 +704,26 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
             </Popover>
 
             {/* Status Multi-select */}
-            <Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
+            <Popover
+              open={statusPopoverOpen}
+              onOpenChange={setStatusPopoverOpen}
+            >
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   role="combobox"
                   aria-expanded={statusPopoverOpen}
-                  className="w-full md:w-[250px] justify-between bg-transparent"
+                  className="w-full justify-between bg-transparent md:w-[250px]"
                 >
                   <div className="flex items-center gap-1 truncate">
-                    <Filter className="h-4 w-4 mr-1" />
+                    <Filter className="mr-1 h-4 w-4" />
                     <span>
                       {statusFilters.length === 0
                         ? "Filter by Status"
                         : statusFilters.length === 1
-                          ? statusOptions.find((s) => s.value === statusFilters[0])?.label
+                          ? statusOptions.find(
+                              (s) => s.value === statusFilters[0]
+                            )?.label
                           : `${statusFilters.length} statuses selected`}
                     </span>
                     {statusFilters.length > 0 && (
@@ -637,11 +739,21 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
                 <Command>
                   <CommandList>
                     <CommandGroup>
-                      <div className="p-2 flex items-center justify-between border-b">
-                        <Button variant="ghost" size="sm" onClick={selectAllStatuses} className="h-8">
+                      <div className="flex items-center justify-between border-b p-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={selectAllStatuses}
+                          className="h-8"
+                        >
                           Select All
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={clearStatusSelection} className="h-8">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearStatusSelection}
+                          className="h-8"
+                        >
                           Clear
                         </Button>
                       </div>
@@ -666,31 +778,35 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
             </Popover>
           </div>
 
-          <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="flex w-full items-center gap-2 md:w-auto">
             <div className="relative flex-1 md:flex-none">
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
               <Input
                 placeholder="Search tiles..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 w-full md:w-[250px]"
+                className="w-full pl-8 md:w-[250px]"
               />
             </div>
-            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "grid" | "list")} className="w-auto">
+            <Tabs
+              value={viewMode}
+              onValueChange={(value) => setViewMode(value as "grid" | "list")}
+              className="w-auto"
+            >
               <TabsList className="h-9">
                 <TabsTrigger value="grid" className="px-3">
-                  <div className="grid grid-cols-2 gap-0.5 h-4 w-4">
-                    <div className="bg-current rounded-sm"></div>
-                    <div className="bg-current rounded-sm"></div>
-                    <div className="bg-current rounded-sm"></div>
-                    <div className="bg-current rounded-sm"></div>
+                  <div className="grid h-4 w-4 grid-cols-2 gap-0.5">
+                    <div className="rounded-sm bg-current"></div>
+                    <div className="rounded-sm bg-current"></div>
+                    <div className="rounded-sm bg-current"></div>
+                    <div className="rounded-sm bg-current"></div>
                   </div>
                 </TabsTrigger>
                 <TabsTrigger value="list" className="px-3">
-                  <div className="flex flex-col gap-0.5 h-4 w-4 justify-center">
-                    <div className="h-0.5 bg-current rounded-sm"></div>
-                    <div className="h-0.5 bg-current rounded-sm"></div>
-                    <div className="h-0.5 bg-current rounded-sm"></div>
+                  <div className="flex h-4 w-4 flex-col justify-center gap-0.5">
+                    <div className="h-0.5 rounded-sm bg-current"></div>
+                    <div className="h-0.5 rounded-sm bg-current"></div>
+                    <div className="h-0.5 rounded-sm bg-current"></div>
                   </div>
                 </TabsTrigger>
               </TabsList>
@@ -699,9 +815,9 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
         </div>
 
         {selectedTeamIds.length > 0 && (
-          <div className="bg-muted/20 p-3 rounded-md flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 rounded-md bg-muted/20 p-3">
             <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20">
                 <Award className="h-3 w-3" />
               </div>
               <span className="font-medium">
@@ -710,13 +826,17 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
                   : `${selectedTeamIds.length} teams selected`}
               </span>
             </div>
-            <Separator orientation="vertical" className="h-6 hidden sm:block" />
+            <Separator orientation="vertical" className="hidden h-6 sm:block" />
             <div className="text-sm text-muted-foreground">
-              {filteredTiles.length} {filteredTiles.length === 1 ? "tile" : "tiles"} with submissions
+              {filteredTiles.length}{" "}
+              {filteredTiles.length === 1 ? "tile" : "tiles"} with submissions
             </div>
             {statusFilters.length > 0 && (
               <>
-                <Separator orientation="vertical" className="h-6 hidden sm:block" />
+                <Separator
+                  orientation="vertical"
+                  className="hidden h-6 sm:block"
+                />
                 <div className="flex flex-wrap gap-1">
                   {statusFilters.map((status) => (
                     <Badge key={status} variant="outline" className="text-xs">
@@ -730,9 +850,11 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
         )}
 
         {selectedTeamIds.length === 0 ? (
-          <div className="text-center py-8">Please select a team to view submissions</div>
+          <div className="py-8 text-center">
+            Please select a team to view submissions
+          </div>
         ) : loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {Array(6)
               .fill(0)
               .map((_, i) => (
@@ -740,7 +862,9 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
               ))}
           </div>
         ) : filteredTiles.length === 0 ? (
-          <div className="text-center py-8">No submissions found for the selected teams and statuses</div>
+          <div className="py-8 text-center">
+            No submissions found for the selected teams and statuses
+          </div>
         ) : (
           <div className="space-y-6">
             {filteredTiles.map((tile) => {
@@ -750,10 +874,10 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
               return (
                 <Card key={tile.id} className="overflow-hidden">
                   <CardHeader className="bg-muted/30 pb-2">
-                    <div className="flex justify-between items-start">
+                    <div className="flex items-start justify-between">
                       <div>
                         <CardTitle className="text-lg">{tile.title}</CardTitle>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="mt-1 flex items-center gap-2">
                           {tile.weight && (
                             <div className="flex items-center gap-1 text-sm">
                               <Award className="h-3.5 w-3.5" />
@@ -763,27 +887,38 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
                         </div>
                       </div>
                       <Badge variant="outline" className="font-normal">
-                        {submissions.length} submission{submissions.length !== 1 ? "s" : ""}
+                        {submissions.length} submission
+                        {submissions.length !== 1 ? "s" : ""}
                       </Badge>
                     </div>
                     {tile.description && (
-                      <CardDescription className="mt-2 line-clamp-2">{tile.description}</CardDescription>
+                      <CardDescription className="mt-2 line-clamp-2">
+                        {tile.description}
+                      </CardDescription>
                     )}
                   </CardHeader>
                   <CardContent className="p-4">
                     {submissions.map((teamSubmission) => (
-                      <div key={teamSubmission.id} className="border rounded-lg overflow-hidden mb-4 last:mb-0">
+                      <div
+                        key={teamSubmission.id}
+                        className="mb-4 overflow-hidden rounded-lg border last:mb-0"
+                      >
                         <div className="bg-muted/30 p-4">
-                          <div className="flex justify-between items-center">
+                          <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <div
                                 className="h-3 w-3 rounded-full"
                                 style={{
-                                  backgroundColor: `hsl(${(teamSubmission.team?.name?.charCodeAt(0) * 10) % 360 || 0
-                                    }, 70%, 50%)`,
+                                  backgroundColor: `hsl(${
+                                    (teamSubmission.team?.name?.charCodeAt(0) *
+                                      10) %
+                                      360 || 0
+                                  }, 70%, 50%)`,
                                 }}
                               />
-                              <h3 className="font-medium">{getTeamName(teamSubmission.teamId)}</h3>
+                              <h3 className="font-medium">
+                                {getTeamName(teamSubmission.teamId)}
+                              </h3>
                               {getStatusBadge(teamSubmission.status)}
                             </div>
                             {isAdminOrManagement && (
@@ -791,21 +926,35 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                  onClick={() => handleTileStatusUpdate(teamSubmission.id, "approved")}
-                                  disabled={teamSubmission.status === "approved"}
+                                  className="h-8 text-green-600 hover:bg-green-50 hover:text-green-700"
+                                  onClick={() =>
+                                    handleTileStatusUpdate(
+                                      teamSubmission.id,
+                                      "approved"
+                                    )
+                                  }
+                                  disabled={
+                                    teamSubmission.status === "approved"
+                                  }
                                 >
-                                  <Check className="h-4 w-4 mr-1" />
+                                  <Check className="mr-1 h-4 w-4" />
                                   Approve
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-8 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
-                                  onClick={() => handleTileStatusUpdate(teamSubmission.id, "needs_review")}
-                                  disabled={teamSubmission.status === "needs_review"}
+                                  className="h-8 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
+                                  onClick={() =>
+                                    handleTileStatusUpdate(
+                                      teamSubmission.id,
+                                      "needs_review"
+                                    )
+                                  }
+                                  disabled={
+                                    teamSubmission.status === "needs_review"
+                                  }
                                 >
-                                  <AlertTriangle className="h-4 w-4 mr-1" />
+                                  <AlertTriangle className="mr-1 h-4 w-4" />
                                   Needs Review
                                 </Button>
                               </div>
@@ -814,14 +963,20 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
                         </div>
 
                         {teamSubmission.submissions.length > 0 ? (
-                          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 md:grid-cols-3">
                             {teamSubmission.submissions.map((submission) => (
-                              <div key={submission.id} className="border rounded-md overflow-hidden">
+                              <div
+                                key={submission.id}
+                                className="overflow-hidden rounded-md border"
+                              >
                                 <div className="relative aspect-video">
                                   <img
-                                    src={submission.image.path || "/placeholder.svg"}
+                                    src={
+                                      submission.image.path ||
+                                      "/placeholder.svg"
+                                    }
                                     alt={`Submission by ${submission.user?.name || "Unknown"}`}
-                                    className="w-full h-full object-cover cursor-pointer"
+                                    className="h-full w-full cursor-pointer object-cover"
                                     onClick={() =>
                                       setFullSizeImage({
                                         src: submission.image.path,
@@ -830,44 +985,60 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
                                     }
                                   />
                                 </div>
-                                <div className="p-3 space-y-2">
-                                  <div className="flex justify-between items-center">
-                                    <div className="text-sm font-medium truncate">
-                                      {submission.user?.name || submission.user?.runescapeName || "Unknown"}
+                                <div className="space-y-2 p-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="truncate text-sm font-medium">
+                                      {submission.user?.name ||
+                                        submission.user?.runescapeName ||
+                                        "Unknown"}
                                     </div>
-                                    {getStatusBadge(submission.status || "pending")}
+                                    {getStatusBadge(
+                                      submission.status || "pending"
+                                    )}
                                   </div>
                                   <div className="text-xs text-muted-foreground">
-                                    {new Date(submission.createdAt).toLocaleString()}
+                                    {new Date(
+                                      submission.createdAt
+                                    ).toLocaleString()}
                                   </div>
 
                                   {/* Auto-submission metadata */}
                                   {submission.isAutoSubmission && (
-                                    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-md p-2 space-y-1">
+                                    <div className="space-y-1 rounded-md border border-blue-200 bg-blue-50 p-2 dark:border-blue-800 dark:bg-blue-950/30">
                                       <div className="flex items-center gap-1 text-xs font-medium text-blue-700 dark:text-blue-300">
                                         <Zap className="h-3 w-3" />
                                         Auto-Submitted
                                       </div>
                                       {submission.sourceName && (
                                         <div className="text-xs text-muted-foreground">
-                                          <span className="font-medium">Source:</span> {submission.sourceName}
-                                          {submission.sourceNpcId && ` (NPC #${submission.sourceNpcId})`}
+                                          <span className="font-medium">
+                                            Source:
+                                          </span>{" "}
+                                          {submission.sourceName}
+                                          {submission.sourceNpcId &&
+                                            ` (NPC #${submission.sourceNpcId})`}
                                         </div>
                                       )}
                                       {submission.sourceItemId && (
                                         <div className="text-xs text-muted-foreground">
-                                          <span className="font-medium">Item:</span> #{submission.sourceItemId}
+                                          <span className="font-medium">
+                                            Item:
+                                          </span>{" "}
+                                          #{submission.sourceItemId}
                                         </div>
                                       )}
                                       {submission.pluginAccountName && (
-                                        <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                           <User className="h-3 w-3" />
                                           {submission.pluginAccountName}
                                         </div>
                                       )}
                                       {submission.sourceType && (
                                         <div className="text-xs text-muted-foreground">
-                                          <span className="font-medium">Type:</span> {submission.sourceType}
+                                          <span className="font-medium">
+                                            Type:
+                                          </span>{" "}
+                                          {submission.sourceType}
                                         </div>
                                       )}
                                     </div>
@@ -879,32 +1050,53 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
                                     currentGoalId={submission.goalId}
                                     currentValue={submission.submissionValue}
                                     goals={getTileGoals(tile.id)}
-                                    goalValues={goalValuesCache[submission.goalId || ""] || []}
+                                    goalValues={
+                                      goalValuesCache[
+                                        submission.goalId || ""
+                                      ] || []
+                                    }
                                     onAssign={(goalId, value) =>
-                                      handleInlineGoalAssignment(submission.id, goalId, value)
+                                      handleInlineGoalAssignment(
+                                        submission.id,
+                                        goalId,
+                                        value
+                                      )
                                     }
                                     hasSufficientRights={isAdminOrManagement}
-                                    isExpanded={expandedGoalForms.has(submission.id)}
-                                    onToggle={() => toggleGoalForm(submission.id)}
+                                    isExpanded={expandedGoalForms.has(
+                                      submission.id
+                                    )}
+                                    onToggle={() =>
+                                      toggleGoalForm(submission.id)
+                                    }
                                   />
                                 </div>
 
                                 {isAdminOrManagement && (
-                                  <div className="flex justify-end gap-1 mt-2 pt-2 border-t">
+                                  <div className="mt-2 flex justify-end gap-1 border-t pt-2">
                                     <TooltipProvider>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <Button
                                             variant="ghost"
                                             size="sm"
-                                            className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                            onClick={() => handleSubmissionStatusUpdate(submission.id, "approved")}
-                                            disabled={submission.status === "approved"}
+                                            className="h-8 w-8 p-0 text-green-600 hover:bg-green-50 hover:text-green-700"
+                                            onClick={() =>
+                                              handleSubmissionStatusUpdate(
+                                                submission.id,
+                                                "approved"
+                                              )
+                                            }
+                                            disabled={
+                                              submission.status === "approved"
+                                            }
                                           >
                                             <Check className="h-4 w-4" />
                                           </Button>
                                         </TooltipTrigger>
-                                        <TooltipContent>Approve Submission</TooltipContent>
+                                        <TooltipContent>
+                                          Approve Submission
+                                        </TooltipContent>
                                       </Tooltip>
                                     </TooltipProvider>
 
@@ -914,20 +1106,34 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
                                           <Button
                                             variant="ghost"
                                             size="sm"
-                                            className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
-                                            onClick={() => handleSubmissionStatusUpdate(submission.id, "needs_review")}
-                                            disabled={submission.status === "needs_review"}
+                                            className="h-8 w-8 p-0 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
+                                            onClick={() =>
+                                              handleSubmissionStatusUpdate(
+                                                submission.id,
+                                                "needs_review"
+                                              )
+                                            }
+                                            disabled={
+                                              submission.status ===
+                                              "needs_review"
+                                            }
                                           >
                                             <AlertTriangle className="h-4 w-4" />
                                           </Button>
                                         </TooltipTrigger>
-                                        <TooltipContent>Mark as Needs Review</TooltipContent>
+                                        <TooltipContent>
+                                          Mark as Needs Review
+                                        </TooltipContent>
                                       </Tooltip>
                                     </TooltipProvider>
 
                                     <AlertDialog
-                                      open={submissionToDelete === submission.id}
-                                      onOpenChange={(open) => !open && setSubmissionToDelete(null)}
+                                      open={
+                                        submissionToDelete === submission.id
+                                      }
+                                      onOpenChange={(open) =>
+                                        !open && setSubmissionToDelete(null)
+                                      }
                                     >
                                       <TooltipProvider>
                                         <Tooltip>
@@ -936,29 +1142,42 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
                                               <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                onClick={() => setSubmissionToDelete(submission.id)}
+                                                className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                                onClick={() =>
+                                                  setSubmissionToDelete(
+                                                    submission.id
+                                                  )
+                                                }
                                               >
                                                 <X className="h-4 w-4" />
                                               </Button>
                                             </AlertDialogTrigger>
                                           </TooltipTrigger>
-                                          <TooltipContent>Delete Submission</TooltipContent>
+                                          <TooltipContent>
+                                            Delete Submission
+                                          </TooltipContent>
                                         </Tooltip>
                                       </TooltipProvider>
                                       <AlertDialogContent>
                                         <AlertDialogHeader>
-                                          <AlertDialogTitle>Delete Submission</AlertDialogTitle>
+                                          <AlertDialogTitle>
+                                            Delete Submission
+                                          </AlertDialogTitle>
                                           <AlertDialogDescription>
-                                            Are you sure you want to delete this submission? This action cannot be
+                                            Are you sure you want to delete this
+                                            submission? This action cannot be
                                             undone.
                                           </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
-                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogCancel>
+                                            Cancel
+                                          </AlertDialogCancel>
                                           <AlertDialogAction
                                             onClick={() => {
-                                              handleDeleteSubmission(submission.id)
+                                              handleDeleteSubmission(
+                                                submission.id
+                                              )
                                               setSubmissionToDelete(null)
                                             }}
                                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -974,7 +1193,9 @@ export default function BingoSubmissionsPage(props: { params: Promise<{ id: stri
                             ))}
                           </div>
                         ) : (
-                          <div className="p-4 text-center text-muted-foreground">No submissions yet</div>
+                          <div className="p-4 text-center text-muted-foreground">
+                            No submissions yet
+                          </div>
                         )}
                       </div>
                     ))}

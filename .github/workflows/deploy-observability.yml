@@ -28,12 +28,12 @@ jobs:
           script: |
             set -e
             echo "🚀 Starting SigNoz deployment..."
-            
+
             # Create a directory for signoz
             OBSERVABILITY_DIR=~/signoz
             mkdir -p "$OBSERVABILITY_DIR"
             cd "$OBSERVABILITY_DIR"
-            
+
             # Stop existing bingoscape containers if they exist, to free up ports
             # Ensure the old clickhouse, frontend, etc. are stopped.
             if [ -d ~/bingoscape ]; then
@@ -47,10 +47,10 @@ jobs:
               echo "⚙️ Installing foundryctl..."
               curl -fsSL https://signoz.io/foundry.sh | bash
             fi
-            
+
             # Add foundryctl to PATH if needed
             export PATH="$HOME/.local/bin:$HOME/.foundry/bin:$PATH"
-            
+
             # Create casting.yaml
             echo "📝 Generating casting.yaml..."
             cat > casting.yaml << 'EOF'
@@ -63,11 +63,11 @@ jobs:
                 flavor: compose
                 mode: docker
             EOF
-            
+
             # Run foundryctl cast
             echo "▶️ Deploying SigNoz..."
             foundryctl cast -f casting.yaml
-            
+
             echo "✅ SigNoz deployment completed successfully!"
 
       - name: Post deployment summary

@@ -86,13 +86,13 @@ export function ClanDetailClient({
   initialMembers: ClanMember[]
 }) {
   const [members, setMembers] = useState<ClanMember[]>(initialMembers)
-  const [clanDetails, setClanDetails] = useState<ClanDetails | null>(initialClanDetails)
+  const [clanDetails, setClanDetails] = useState<ClanDetails | null>(
+    initialClanDetails
+  )
   const [isLoading, setIsLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState<string>("all")
   const { status } = useSession()
-
-  
 
   const handleRoleUpdate = async (memberId: string, newRole: Role) => {
     try {
@@ -320,7 +320,9 @@ export function ClanDetailClient({
                       alt={clanDetails.owner?.runescapeName ?? ""}
                     />
                     <AvatarFallback className="text-xs">
-                      {clanDetails.owner?.runescapeName?.slice(0, 2).toUpperCase() ?? "??"}
+                      {clanDetails.owner?.runescapeName
+                        ?.slice(0, 2)
+                        .toUpperCase() ?? "??"}
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-sm font-semibold">

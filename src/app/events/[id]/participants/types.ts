@@ -15,7 +15,13 @@ export interface Team {
   name: string
 }
 
-export type SortField = "name" | "role" | "team" | "buyIn" | "donations" | "status"
+export type SortField =
+  | "name"
+  | "role"
+  | "team"
+  | "buyIn"
+  | "donations"
+  | "status"
 export type SortDirection = "asc" | "desc"
 
 export interface EventPermissions {

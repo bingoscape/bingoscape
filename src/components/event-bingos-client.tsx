@@ -19,7 +19,14 @@ import { QuickSubmissionButton } from "@/components/quick-submission-button"
 import { QuickSubmissionModal } from "@/components/quick-submission-modal"
 import Link from "next/link"
 import { TrackerSettingsModal } from "@/components/tracker-settings-modal"
-import { ListFilter, ChevronLeft, ChevronRight, Edit, Link as LinkIcon, Lock } from "lucide-react"
+import {
+  ListFilter,
+  ChevronLeft,
+  ChevronRight,
+  Edit,
+  Link as LinkIcon,
+  Lock,
+} from "lucide-react"
 import type { UUID } from "crypto"
 import { useRouter } from "next/navigation"
 import { EventTimeDisplay } from "./event-time-display"
@@ -49,7 +56,8 @@ export function EventBingosClient({
   const [editBingoModalOpen, setEditBingoModalOpen] = useState(false)
   const [quickSubmissionModalOpen, setQuickSubmissionModalOpen] =
     useState(false)
-  const [trackerSettingsModalOpen, setTrackerSettingsModalOpen] = useState(false)
+  const [trackerSettingsModalOpen, setTrackerSettingsModalOpen] =
+    useState(false)
 
   // Determine which team's data to show
   const effectiveTeamId = isAdminOrManagement ? selectedTeamId : currentTeam?.id
@@ -57,43 +65,47 @@ export function EventBingosClient({
   // Filter bingos based on user role and visibility
   const visibleBingos =
     event.bingos?.filter(
-      (bingo: any) => isAdminOrManagement || bingo.visible === true || bingo.locked === true
+      (bingo: any) =>
+        isAdminOrManagement || bingo.visible === true || bingo.locked === true
     ) ?? []
 
   // Get current bingo based on index
   const currentBingo = visibleBingos[currentBingoIndex]
 
   // Calculate completion statistics for each bingo
-  const getBingoStats = useCallback((bingo: any) => {
-    if (!bingo?.tiles || !effectiveTeamId) {
-      return {
+  const getBingoStats = useCallback(
+    (bingo: any) => {
+      if (!bingo?.tiles || !effectiveTeamId) {
+        return {
+          completed: 0,
+          pending: 0,
+          needsReview: 0,
+          total: bingo?.tiles?.length || 0,
+        }
+      }
+
+      const stats = {
         completed: 0,
         pending: 0,
         needsReview: 0,
-        total: bingo?.tiles?.length || 0,
+        total: bingo.tiles.length,
       }
-    }
 
-    const stats = {
-      completed: 0,
-      pending: 0,
-      needsReview: 0,
-      total: bingo.tiles.length,
-    }
+      bingo.tiles.forEach((tile: any) => {
+        const teamSubmission = tile.teamTileSubmissions?.find(
+          (tts: any) => tts.teamId === effectiveTeamId
+        )
+        if (teamSubmission) {
+          if (teamSubmission.status === "approved") stats.completed++
+          else if (teamSubmission.status === "pending") stats.pending++
+          else if (teamSubmission.status === "needs_review") stats.needsReview++
+        }
+      })
 
-    bingo.tiles.forEach((tile: any) => {
-      const teamSubmission = tile.teamTileSubmissions?.find(
-        (tts: any) => tts.teamId === effectiveTeamId
-      )
-      if (teamSubmission) {
-        if (teamSubmission.status === "approved") stats.completed++
-        else if (teamSubmission.status === "pending") stats.pending++
-        else if (teamSubmission.status === "needs_review") stats.needsReview++
-      }
-    })
-
-    return stats
-  }, [effectiveTeamId])
+      return stats
+    },
+    [effectiveTeamId]
+  )
 
   const currentBingoStats = useMemo(() => {
     return currentBingo ? getBingoStats(currentBingo) : null
@@ -113,8 +125,13 @@ export function EventBingosClient({
     }
   }
 
-  const isUpcoming = currentBingo && currentBingo.locked && !currentBingo.visible
-  const unlockDate = currentBingo ? (currentBingo.scheduledUnlockDate ? new Date(currentBingo.scheduledUnlockDate) : new Date(event.startDate)) : null
+  const isUpcoming =
+    currentBingo && currentBingo.locked && !currentBingo.visible
+  const unlockDate = currentBingo
+    ? currentBingo.scheduledUnlockDate
+      ? new Date(currentBingo.scheduledUnlockDate)
+      : new Date(event.startDate)
+    : null
 
   return (
     <>
@@ -262,8 +279,8 @@ export function EventBingosClient({
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="icon"
                         title="Tracker Settings"
                         onClick={() => setTrackerSettingsModalOpen(true)}
@@ -282,26 +299,31 @@ export function EventBingosClient({
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-4 relative">
+          <CardContent className="relative p-4">
             {isUpcoming && !isAdminOrManagement ? (
-              <div className="flex flex-col items-center justify-center p-12 text-center rounded-lg border border-muted/40 bg-muted/20 min-h-[300px]">
-                <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mb-4">
+              <div className="flex min-h-[300px] flex-col items-center justify-center rounded-lg border border-muted/40 bg-muted/20 p-12 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
                   <Lock className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">Board Locked</h3>
-                <p className="text-muted-foreground mb-4 max-w-md">
-                  This bingo board is currently locked and will become available at:
+                <h3 className="mb-2 text-xl font-bold">Board Locked</h3>
+                <p className="mb-4 max-w-md text-muted-foreground">
+                  This bingo board is currently locked and will become available
+                  at:
                 </p>
                 {unlockDate && (
-                  <div className="bg-background rounded-md px-4 py-3 border font-medium text-lg">
-                    <EventTimeDisplay date={unlockDate} label="Unlocks" eventTz={event.timezone || "UTC"} />
+                  <div className="rounded-md border bg-background px-4 py-3 text-lg font-medium">
+                    <EventTimeDisplay
+                      date={unlockDate}
+                      label="Unlocks"
+                      eventTz={event.timezone || "UTC"}
+                    />
                   </div>
                 )}
               </div>
             ) : (
               <div className="relative rounded-lg border border-muted/40 bg-muted/20 p-2">
                 {isUpcoming && isAdminOrManagement && (
-                  <div className="absolute top-4 right-4 z-10 bg-black/80 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20 backdrop-blur-sm">
+                  <div className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-full border border-white/20 bg-black/80 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-sm">
                     <Lock className="h-3 w-3" />
                     Upcoming (Locked)
                   </div>

@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation"
-import { getEventById, getUserRole } from "@/app/actions/events"
+import { getUserRole } from "@/app/actions/events"
 import { getTeamsByEventId, getCurrentTeamForUser } from "@/app/actions/team"
 import type { UUID } from "crypto"
 import { BingoDetailClient } from "./bingo-detail-client"
 import type { Bingo } from "@/app/actions/events"
+import { getEventById } from "@/server/queries/events"
 
 export default async function BingoDetailPage(props: {
   params: Promise<{ id: UUID; bingoId: string }>
@@ -22,15 +23,13 @@ export default async function BingoDetailPage(props: {
     notFound()
   }
 
-  const bingo = eventData.event.bingos!.find(
-    (b: Bingo) => b.id == bingoId
-  )
+  const bingo = eventData.event.bingos!.find((b: Bingo) => b.id == bingoId)
   if (!bingo) {
     notFound()
   }
 
   return (
-    <BingoDetailClient 
+    <BingoDetailClient
       eventId={eventId}
       bingoId={bingoId}
       eventData={eventData}

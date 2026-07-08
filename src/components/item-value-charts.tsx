@@ -1,9 +1,29 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart"
-import { Bar, BarChart, Pie, PieChart, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from "recharts"
-import type { TeamItemStats, UserItemStats } from "@/app/actions/item-statistics"
+import {
+  Bar,
+  BarChart,
+  Pie,
+  PieChart,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+} from "recharts"
+import type {
+  TeamItemStats,
+  UserItemStats,
+} from "@/app/actions/item-statistics"
 import { formatGPValue } from "@/lib/format-gp"
 
 interface ItemValueChartsProps {
@@ -11,9 +31,21 @@ interface ItemValueChartsProps {
   userStats: UserItemStats[]
 }
 
-const COLORS = ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4", "#ec4899", "#f97316"]
+const COLORS = [
+  "#10b981",
+  "#3b82f6",
+  "#8b5cf6",
+  "#f59e0b",
+  "#ef4444",
+  "#06b6d4",
+  "#ec4899",
+  "#f97316",
+]
 
-export function ItemValueCharts({ teamStats, userStats }: ItemValueChartsProps) {
+export function ItemValueCharts({
+  teamStats,
+  userStats,
+}: ItemValueChartsProps) {
   // Prepare data for team value distribution (pie chart)
   const teamPieData = teamStats.map((team, index) => ({
     name: team.teamName,
@@ -60,7 +92,9 @@ export function ItemValueCharts({ teamStats, userStats }: ItemValueChartsProps) 
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  label={({ name, percent }) =>
+                    `${name} (${(percent * 100).toFixed(0)}%)`
+                  }
                   outerRadius={80}
                   dataKey="value"
                 >
@@ -71,16 +105,26 @@ export function ItemValueCharts({ teamStats, userStats }: ItemValueChartsProps) 
                 <ChartTooltip
                   content={({ active, payload }) => {
                     if (active && payload?.[0]) {
-                      const data = payload[0].payload as { name: string; value: number; fill: string }
+                      const data = payload[0].payload as {
+                        name: string
+                        value: number
+                        fill: string
+                      }
                       return (
                         <div className="rounded-lg border bg-background p-2 shadow-sm">
                           <div className="grid gap-2">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-sm font-medium">{data.name}</span>
+                              <span className="text-sm font-medium">
+                                {data.name}
+                              </span>
                             </div>
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs text-muted-foreground">Value:</span>
-                              <span className="text-sm font-bold">{formatGPValue(data.value)} GP</span>
+                              <span className="text-xs text-muted-foreground">
+                                Value:
+                              </span>
+                              <span className="text-sm font-bold">
+                                {formatGPValue(data.value)} GP
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -114,25 +158,42 @@ export function ItemValueCharts({ teamStats, userStats }: ItemValueChartsProps) 
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={topUsersData} layout="horizontal">
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" tickFormatter={(value: number) => formatGPValue(value)} />
+                <XAxis
+                  type="number"
+                  tickFormatter={(value: number) => formatGPValue(value)}
+                />
                 <YAxis type="category" dataKey="name" width={100} />
                 <ChartTooltip
                   content={({ active, payload }) => {
                     if (active && payload?.[0]) {
-                      const data = payload[0].payload as { name: string; value: number; submissions: number }
+                      const data = payload[0].payload as {
+                        name: string
+                        value: number
+                        submissions: number
+                      }
                       return (
                         <div className="rounded-lg border bg-background p-2 shadow-sm">
                           <div className="grid gap-2">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-sm font-medium">{data.name}</span>
+                              <span className="text-sm font-medium">
+                                {data.name}
+                              </span>
                             </div>
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs text-muted-foreground">Value:</span>
-                              <span className="text-sm font-bold">{formatGPValue(data.value)} GP</span>
+                              <span className="text-xs text-muted-foreground">
+                                Value:
+                              </span>
+                              <span className="text-sm font-bold">
+                                {formatGPValue(data.value)} GP
+                              </span>
                             </div>
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs text-muted-foreground">Submissions:</span>
-                              <span className="text-sm">{data.submissions}</span>
+                              <span className="text-xs text-muted-foreground">
+                                Submissions:
+                              </span>
+                              <span className="text-sm">
+                                {data.submissions}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -141,7 +202,11 @@ export function ItemValueCharts({ teamStats, userStats }: ItemValueChartsProps) 
                     return null
                   }}
                 />
-                <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                <Bar
+                  dataKey="value"
+                  fill="hsl(var(--primary))"
+                  radius={[0, 4, 4, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </ChartContainer>
@@ -152,7 +217,9 @@ export function ItemValueCharts({ teamStats, userStats }: ItemValueChartsProps) 
       <Card className="md:col-span-2">
         <CardHeader>
           <CardTitle>Team Comparison</CardTitle>
-          <CardDescription>Total value and average per user by team</CardDescription>
+          <CardDescription>
+            Total value and average per user by team
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer
@@ -172,24 +239,40 @@ export function ItemValueCharts({ teamStats, userStats }: ItemValueChartsProps) 
               <BarChart data={teamBarData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
-                <YAxis tickFormatter={(value: number) => formatGPValue(value)} />
+                <YAxis
+                  tickFormatter={(value: number) => formatGPValue(value)}
+                />
                 <ChartTooltip
                   content={({ active, payload }) => {
                     if (active && payload?.[0]) {
-                      const data = payload[0].payload as { name: string; totalValue: number; avgPerUser: number }
+                      const data = payload[0].payload as {
+                        name: string
+                        totalValue: number
+                        avgPerUser: number
+                      }
                       return (
                         <div className="rounded-lg border bg-background p-2 shadow-sm">
                           <div className="grid gap-2">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-sm font-medium">{data.name}</span>
+                              <span className="text-sm font-medium">
+                                {data.name}
+                              </span>
                             </div>
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs text-muted-foreground">Total Value:</span>
-                              <span className="text-sm font-bold">{formatGPValue(data.totalValue)} GP</span>
+                              <span className="text-xs text-muted-foreground">
+                                Total Value:
+                              </span>
+                              <span className="text-sm font-bold">
+                                {formatGPValue(data.totalValue)} GP
+                              </span>
                             </div>
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs text-muted-foreground">Avg per User:</span>
-                              <span className="text-sm">{formatGPValue(data.avgPerUser)} GP</span>
+                              <span className="text-xs text-muted-foreground">
+                                Avg per User:
+                              </span>
+                              <span className="text-sm">
+                                {formatGPValue(data.avgPerUser)} GP
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -199,8 +282,18 @@ export function ItemValueCharts({ teamStats, userStats }: ItemValueChartsProps) 
                   }}
                 />
                 <Legend />
-                <Bar dataKey="totalValue" name="Total Value" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="avgPerUser" name="Avg per User" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="totalValue"
+                  name="Total Value"
+                  fill="hsl(var(--chart-1))"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar
+                  dataKey="avgPerUser"
+                  name="Avg per User"
+                  fill="hsl(var(--chart-2))"
+                  radius={[4, 4, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </ChartContainer>

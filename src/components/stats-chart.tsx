@@ -2,7 +2,15 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { TeamPoints } from "@/app/actions/stats"
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js"
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js"
 import { Bar } from "react-chartjs-2"
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
@@ -28,8 +36,7 @@ export function StatsChart({ data, totalPossibleXP, title }: StatsChartProps) {
       tooltip: {
         callbacks: {
           /* eslint-disable  @typescript-eslint/no-explicit-any */
-           
-           
+
           label: (context: any) => `XP: ${Math.round(context.parsed.y)}`,
         },
       },
@@ -47,7 +54,7 @@ export function StatsChart({ data, totalPossibleXP, title }: StatsChartProps) {
             if (typeof value === "number") {
               return Math.round(value)
             }
-            return value;
+            return value
           },
         },
       },
@@ -67,13 +74,13 @@ export function StatsChart({ data, totalPossibleXP, title }: StatsChartProps) {
   }
 
   return (
-    <Card className="w-full h-full">
+    <Card className="h-full w-full">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
       <CardContent className="h-[300px]">
         {data.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex h-full items-center justify-center">
             <p className="text-muted-foreground">No data available</p>
           </div>
         ) : (
@@ -83,5 +90,3 @@ export function StatsChart({ data, totalPossibleXP, title }: StatsChartProps) {
     </Card>
   )
 }
-
-

@@ -1,12 +1,18 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { toast } from "@/hooks/use-toast"
-import { type GenerateInviteResponse } from '@/app/api/clans/[clanId]/invite/route'
+import { type GenerateInviteResponse } from "@/app/api/clans/[clanId]/invite/route"
 import {
   Dialog,
   DialogContent,
@@ -26,15 +32,15 @@ interface InviteFormData {
 }
 
 export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
-  const [inviteLink, setInviteLink] = useState('')
+  const [inviteLink, setInviteLink] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [formData, setFormData] = useState<InviteFormData>({
-    label: '',
-    expiresInDays: '0', // Default to permanent
-    customDays: '',
-    maxUses: '0', // Default to unlimited
-    customMaxUses: '',
+    label: "",
+    expiresInDays: "0", // Default to permanent
+    customDays: "",
+    maxUses: "0", // Default to unlimited
+    customMaxUses: "",
   })
 
   const generateInvite = async () => {
@@ -42,22 +48,22 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
     try {
       // Calculate actual values
       let expiresInDays: number | null = null
-      if (formData.expiresInDays === 'custom') {
+      if (formData.expiresInDays === "custom") {
         expiresInDays = parseInt(formData.customDays) || null
-      } else if (formData.expiresInDays !== '0') {
+      } else if (formData.expiresInDays !== "0") {
         expiresInDays = parseInt(formData.expiresInDays)
       }
 
       let maxUses: number | null = null
-      if (formData.maxUses === 'custom') {
+      if (formData.maxUses === "custom") {
         maxUses = parseInt(formData.customMaxUses) || null
-      } else if (formData.maxUses !== '0') {
+      } else if (formData.maxUses !== "0") {
         maxUses = parseInt(formData.maxUses)
       }
 
       const response = await fetch(`/api/clans/${clanId}/invite`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           label: formData.label || undefined,
           expiresInDays,
@@ -65,9 +71,11 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
         }),
       })
 
-      const data = await response.json() as GenerateInviteResponse | { error: string }
+      const data = (await response.json()) as
+        | GenerateInviteResponse
+        | { error: string }
 
-      if (response.ok && 'inviteCode' in data) {
+      if (response.ok && "inviteCode" in data) {
         const link = `${window.location.origin}/clans/join?code=${data.inviteCode}`
         setInviteLink(link)
         toast({
@@ -75,12 +83,17 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
           description: "The invite link has been created successfully.",
         })
       } else {
-        throw new Error('error' in data ? data.error : "Failed to generate invite")
+        throw new Error(
+          "error" in data ? data.error : "Failed to generate invite"
+        )
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate invite link",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to generate invite link",
         variant: "destructive",
       })
     } finally {
@@ -98,20 +111,23 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
 
   const resetForm = () => {
     setFormData({
-      label: '',
-      expiresInDays: '0',
-      customDays: '',
-      maxUses: '0',
-      customMaxUses: '',
+      label: "",
+      expiresInDays: "0",
+      customDays: "",
+      maxUses: "0",
+      customMaxUses: "",
     })
-    setInviteLink('')
+    setInviteLink("")
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      setIsOpen(open)
-      if (!open) resetForm()
-    }}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open)
+        if (!open) resetForm()
+      }}
+    >
       <DialogTrigger asChild>
         <Button variant="outline">
           <Link className="mr-2 h-4 w-4" />
@@ -122,7 +138,8 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
         <DialogHeader>
           <DialogTitle>Generate Clan Invite Link</DialogTitle>
           <DialogDescription>
-            Create a customizable invite link for this clan. Configure expiration and usage limits.
+            Create a customizable invite link for this clan. Configure
+            expiration and usage limits.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -133,7 +150,9 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
               id="label"
               placeholder="e.g., Discord Recruitment, Friends"
               value={formData.label}
-              onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, label: e.target.value })
+              }
               maxLength={100}
             />
           </div>
@@ -143,7 +162,9 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
             <Label htmlFor="expiration">Expiration</Label>
             <Select
               value={formData.expiresInDays}
-              onValueChange={(value) => setFormData({ ...formData, expiresInDays: value })}
+              onValueChange={(value) =>
+                setFormData({ ...formData, expiresInDays: value })
+              }
             >
               <SelectTrigger id="expiration">
                 <SelectValue placeholder="Select expiration" />
@@ -159,7 +180,7 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
           </div>
 
           {/* Custom Days Input */}
-          {formData.expiresInDays === 'custom' && (
+          {formData.expiresInDays === "custom" && (
             <div className="space-y-2">
               <Label htmlFor="customDays">Custom Days</Label>
               <Input
@@ -169,7 +190,9 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
                 max="365"
                 placeholder="Enter days (1-365)"
                 value={formData.customDays}
-                onChange={(e) => setFormData({ ...formData, customDays: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, customDays: e.target.value })
+                }
               />
             </div>
           )}
@@ -179,7 +202,9 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
             <Label htmlFor="maxUses">Usage Limit</Label>
             <Select
               value={formData.maxUses}
-              onValueChange={(value) => setFormData({ ...formData, maxUses: value })}
+              onValueChange={(value) =>
+                setFormData({ ...formData, maxUses: value })
+              }
             >
               <SelectTrigger id="maxUses">
                 <SelectValue placeholder="Select usage limit" />
@@ -195,7 +220,7 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
           </div>
 
           {/* Custom Max Uses Input */}
-          {formData.maxUses === 'custom' && (
+          {formData.maxUses === "custom" && (
             <div className="space-y-2">
               <Label htmlFor="customMaxUses">Custom Usage Limit</Label>
               <Input
@@ -205,13 +230,19 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
                 max="10000"
                 placeholder="Enter max uses (1-10000)"
                 value={formData.customMaxUses}
-                onChange={(e) => setFormData({ ...formData, customMaxUses: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, customMaxUses: e.target.value })
+                }
               />
             </div>
           )}
 
           {/* Generate Button */}
-          <Button onClick={generateInvite} disabled={isLoading} className="w-full">
+          <Button
+            onClick={generateInvite}
+            disabled={isLoading}
+            className="w-full"
+          >
             {isLoading ? "Generating..." : "Generate Invite Link"}
           </Button>
 
