@@ -270,11 +270,15 @@ export function AutoTeamGeneratorModal({
           simulatedAnnealing: { ...saConfig, skillLevelMapping: activeSkillMapping },
         })
 
+        if (!result.success || !result.data) {
+          throw new Error(result.error || "Failed to generate balanced teams")
+        }
+
         await onTeamsGenerated()
 
         toast({
           title: "Balanced teams generated",
-          description: `Successfully created ${result.teamsCreated} balanced teams with ${result.participantsAssigned} participants. Balance score: ${result.objectiveScore.toFixed(3)} (lower is better)`,
+          description: `Successfully created ${result.data.teamsCreated} balanced teams with ${result.data.participantsAssigned} participants. Balance score: ${result.data.objectiveScore.toFixed(3)} (lower is better)`,
         })
       } else {
         // Use random generation (existing logic)
@@ -290,15 +294,21 @@ export function AutoTeamGeneratorModal({
         const createdTeams: string[] = []
         for (let i = 0; i < numberOfTeams; i++) {
           const teamName = `${teamNamePrefix} ${existingTeams.length + i + 1}`
-          const team = await createTeam(eventId, teamName)
-          createdTeams.push(team!.id)
+          const teamRes = await createTeam(eventId, teamName)
+          if (!teamRes?.success || !teamRes.data) {
+            throw new Error(teamRes?.error || "Failed to create team")
+          }
+          createdTeams.push(teamRes.data.id)
         }
 
         for (let i = 0; i < shuffledParticipants.length; i++) {
           const teamIndex = generationMethod === "teamSize" ? Math.floor(i / teamSize) : i % numberOfTeams
 
           if (teamIndex < createdTeams.length) {
-            await addUserToTeam(createdTeams[teamIndex]!, shuffledParticipants[i]!.id)
+            const addRes = await addUserToTeam(createdTeams[teamIndex]!, shuffledParticipants[i]!.id)
+            if (!addRes?.success) {
+              throw new Error(addRes?.error || "Failed to add user to team")
+            }
           }
         }
 

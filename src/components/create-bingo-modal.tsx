@@ -155,7 +155,11 @@ export function CreateBingoModal({
     }
 
     try {
-      await createBingo(formData)
+      const result = await createBingo(formData)
+      if (!result.success) {
+        setError(result.error || "Failed to create bingo")
+        return
+      }
       onClose()
       router.refresh()
     } catch (error) {

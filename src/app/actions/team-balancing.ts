@@ -3,7 +3,7 @@
 import { getServerAuthSession } from "@/server/auth"
 import { logger } from "@/lib/logger";
 import { db } from "@/server/db"
-import { teams, eventParticipants } from "@/server/db/schema"
+import { teams, eventParticipants, teamMembers } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getEventParticipantMetadata, calculateMetadataCoverage } from "./player-metadata"
@@ -649,7 +649,7 @@ export async function generateBalancedTeams(
 ) {
   const session = await getServerAuthSession()
   if (!session?.user?.id) {
-    throw new Error("Unauthorized: You must be logged in")
+    return { success: false, error: "Unauthorized: You must be logged in" }
   }
 
   // Check management rights
@@ -661,7 +661,7 @@ export async function generateBalancedTeams(
   })
 
   if (!participant || (participant.role !== "management" && participant.role !== "admin")) {
-    throw new Error("Unauthorized: You must be a management user for this event")
+    return { success: false, error: "Unauthorized: You must be a management user for this event" }
   }
 
   // Get all event participants
@@ -701,7 +701,7 @@ export async function generateBalancedTeams(
   )
 
   if (unassignedParticipants.length === 0) {
-    throw new Error("No unassigned participants to assign to teams")
+    return { success: false, error: "No unassigned participants to assign to teams" }
   }
 
   // Get metadata for all participants
@@ -757,45 +757,59 @@ export async function generateBalancedTeams(
   // Run simulated annealing optimization
   const optimizedAssignment = simulatedAnnealing(playerFeatures, numberOfTeams, saConfig)
 
-  // Create teams in database
-  const createdTeams: string[] = []
-  for (let i = 0; i < numberOfTeams; i++) {
-    const teamName = `${config.teamNamePrefix} ${existingTeams.length + i + 1}`
-    const team = await createTeam(eventId, teamName)
-    if (!team) {
-      throw new Error(`Failed to create team: ${teamName}`)
+  // Execute bulk inserts inside a transaction
+  try {
+    await db.transaction(async (tx) => {
+      // 1. Prepare and insert teams
+      const teamInsertData = Array.from({ length: numberOfTeams }).map((_, i) => ({
+        eventId,
+        name: `${config.teamNamePrefix} ${existingTeams.length + i + 1}`,
+      }))
+      
+      const createdTeams = await tx.insert(teams).values(teamInsertData).returning({ id: teams.id })
+      
+      // 2. Prepare team members
+      const teamMemberInsertData: { teamId: string, userId: string, isLeader: boolean }[] = []
+      for (let teamIdx = 0; teamIdx < optimizedAssignment.teams.length; teamIdx++) {
+        const teamUsers = optimizedAssignment.teams[teamIdx]!
+        const teamId = createdTeams[teamIdx]!.id
+        
+        for (const userId of teamUsers) {
+          teamMemberInsertData.push({ teamId, userId, isLeader: false })
+        }
+      }
+      
+      // 3. Insert all team members
+      if (teamMemberInsertData.length > 0) {
+        await tx.insert(teamMembers).values(teamMemberInsertData)
+      }
+    })
+    
+    revalidatePath(`/events/${eventId}`)
+
+    logger.info({
+      eventId,
+      action: "generateBalancedTeams",
+      teamsCreated: numberOfTeams,
+      participantsAssigned: unassignedParticipants.length,
+      objectiveScore: optimizedAssignment.objective,
+      saConfig: {
+        iterations: saConfig.iterations,
+        varianceWeights: saConfig.varianceWeights
+      }
+    }, "Balanced teams generated successfully")
+
+    return {
+      success: true,
+      data: {
+        teamsCreated: numberOfTeams,
+        participantsAssigned: unassignedParticipants.length,
+        objectiveScore: optimizedAssignment.objective,
+      }
     }
-    createdTeams.push(team.id)
-  }
-
-  // Assign players to teams based on optimized assignment
-  for (let teamIdx = 0; teamIdx < optimizedAssignment.teams.length; teamIdx++) {
-    const team = optimizedAssignment.teams[teamIdx]!
-    const teamId = createdTeams[teamIdx]!
-
-    for (const userId of team) {
-      await addUserToTeam(teamId, userId)
-    }
-  }
-
-  revalidatePath(`/events/${eventId}`)
-
-  logger.info({
-    eventId,
-    action: "generateBalancedTeams",
-    teamsCreated: numberOfTeams,
-    participantsAssigned: unassignedParticipants.length,
-    objectiveScore: optimizedAssignment.objective,
-    saConfig: {
-      iterations: saConfig.iterations,
-      varianceWeights: saConfig.varianceWeights
-    }
-  }, "Balanced teams generated successfully")
-
-  return {
-    teamsCreated: numberOfTeams,
-    participantsAssigned: unassignedParticipants.length,
-    objectiveScore: optimizedAssignment.objective,
+  } catch (error) {
+    logger.error({ error }, "Error in generateBalancedTeams")
+    return { success: false, error: "Failed to generate balanced teams" }
   }
 }
 

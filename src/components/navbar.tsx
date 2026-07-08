@@ -23,7 +23,7 @@ import {
   Zap,
 } from "lucide-react"
 import { usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import {
   Sheet,
   SheetContent,
@@ -34,23 +34,14 @@ import ModeToggle from "./mode-toggle"
 import { NotificationBell } from "./notification-bell"
 import { cn } from "@/lib/utils"
 
-export function Navbar() {
+interface NavbarProps {
+  isSuperAdminUser?: boolean;
+}
+
+export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
   const { data: session, status } = useSession()
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
-  const [isSuperAdminUser, setIsSuperAdminUser] = useState(false)
-
-  useEffect(() => {
-    if (session?.user?.email) {
-      // Check if user is super admin
-      fetch("/api/super-admin/check")
-        .then((res) => res.json())
-        .then((data: { isSuperAdmin: boolean }) =>
-          setIsSuperAdminUser(data.isSuperAdmin)
-        )
-        .catch(() => setIsSuperAdminUser(false))
-    }
-  }, [session?.user?.email])
 
   const navItems = [
     { href: "/", label: "Home", icon: Home },

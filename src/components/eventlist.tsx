@@ -1,12 +1,8 @@
-"use client"
-
-import { useState } from "react"
 import Link from "next/link"
-import { CreateEventModal } from "./create-event-modal"
 import { type getEvents as getEventsType } from "@/app/actions/events"
 import { EventDisplay } from "./events-display"
 import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation"
+import { CreateEventButton } from "./create-event-button"
 import { Plus, TrendingUp, Users, Trophy } from "lucide-react"
 
 interface EventListProps {
@@ -15,14 +11,7 @@ interface EventListProps {
 }
 
 export default function EventList({ userId, initialEvents }: EventListProps) {
-  const router = useRouter()
-  const [createModalOpen, setCreateModalOpen] = useState(false)
   const allEvents = initialEvents
-
-  const handleEventCreated = async () => {
-    // Trigger a refetch of Server Components
-    router.refresh()
-  }
 
   const hasEvents = allEvents.length > 0
 
@@ -66,14 +55,7 @@ export default function EventList({ userId, initialEvents }: EventListProps) {
           </div>
           <div className="hidden h-6 w-px bg-border sm:block"></div>
           <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              className="bg-primary text-primary-foreground shadow-sm transition-all hover:bg-primary/90"
-              onClick={() => setCreateModalOpen(true)}
-            >
-              <Plus className="mr-1.5 h-4 w-4" />
-              New Event
-            </Button>
+            <CreateEventButton />
             <Button variant="outline" size="sm" asChild>
               <Link href="/templates">
                 <Users aria-hidden="true" className="mr-1.5 h-4 w-4" />
@@ -127,12 +109,6 @@ export default function EventList({ userId, initialEvents }: EventListProps) {
         <EventDisplay initialEvents={allEvents} />
       </div>
 
-      {/* Create Event Modal */}
-      <CreateEventModal
-        isOpen={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onEventCreated={handleEventCreated}
-      />
     </div>
   )
 }

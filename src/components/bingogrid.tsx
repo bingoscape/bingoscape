@@ -47,6 +47,7 @@ import { GoalsTab } from "./goals-tab"
 import { SubmissionsTab } from "./submissions-tab"
 import { FullSizeImageDialog } from "./full-size-image-dialog"
 import { StatsDialog } from "./stats-dialog"
+import { TileDetailsDialog } from "./tile-details-dialog"
 import { BarChart, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSession } from "next-auth/react"
@@ -231,7 +232,7 @@ export default function BingoGrid({
     }
   }, [isDialogOpen, currentTeamId, bingo.eventId])
 
-  const handleTileClick = async (tile: Tile) => {
+  const handleTileClick = useCallback(async (tile: Tile) => {
     // Check if tile is locked due to progression (but allow if user has management rights)
     if (
       bingo.bingoType === "progression" &&
@@ -267,9 +268,9 @@ export default function BingoGrid({
         variant: "destructive",
       })
     }
-  }
+  }, [bingo.bingoType, isLayoutLocked, unlockedTiers])
 
-  const handleTogglePlaceholder = async (tile: Tile) => {
+  const handleTogglePlaceholder = useCallback(async (tile: Tile) => {
     if (isLayoutLocked) {
       toast({
         title: "Layout locked",
@@ -299,9 +300,9 @@ export default function BingoGrid({
         variant: "destructive",
       })
     }
-  }
+  }, [isLayoutLocked, onTileUpdated])
 
-  const handleTileUpdate = async () => {
+  const handleTileUpdate = useCallback(async () => {
     if (selectedTile && editedTile) {
       const result = await updateTile(selectedTile.id, editedTile)
       if (result.success) {
@@ -326,13 +327,13 @@ export default function BingoGrid({
         })
       }
     }
-  }
+  }, [selectedTile, editedTile, onTileUpdated])
 
-  const handleEditorChange = (content: string) => {
+  const handleEditorChange = useCallback((content: string) => {
     setEditedTile((prev) => ({ ...prev, description: content }))
-  }
+  }, [])
 
-  const handleAddGoal = async () => {
+  const handleAddGoal = useCallback(async () => {
     if (selectedTile && newGoal.description && newGoal.targetValue != null) {
       const result = await addGoal(selectedTile.id, newGoal as Goal)
       if (result.success && result.goal) {
@@ -377,9 +378,9 @@ export default function BingoGrid({
         })
       }
     }
-  }
+  }, [selectedTile, newGoal, teams])
 
-  const handleDeleteGoal = async (goalId: string) => {
+  const handleDeleteGoal = useCallback(async (goalId: string) => {
     if (selectedTile) {
       const result = await deleteGoal(goalId)
       if (result.success) {
@@ -407,9 +408,9 @@ export default function BingoGrid({
         })
       }
     }
-  }
+  }, [selectedTile])
 
-  const handleProgressUpdate = async (
+  const handleProgressUpdate = useCallback(async (
     goalId: string,
     teamId: string,
     newValue: number
@@ -448,14 +449,14 @@ export default function BingoGrid({
         variant: "destructive",
       })
     }
-  }
+  }, [])
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
       setSelectedImage(file)
     }
-  }
+  }, [])
 
   const refreshSubmissions = async (tileId: string) => {
     try {
@@ -486,7 +487,7 @@ export default function BingoGrid({
     }
   }
 
-  const handleImageSubmit = async (onBehalfOfUserId?: string) => {
+  const handleImageSubmit = useCallback(async (onBehalfOfUserId?: string) => {
     // Prevent concurrent uploads
     if (isUploadingImage) {
       return
@@ -545,7 +546,7 @@ export default function BingoGrid({
       // Always reset uploading state
       setIsUploadingImage(false)
     }
-  }
+  }, [isUploadingImage, bingo.locked, selectedTile, selectedImage, pastedImage, currentTeamId])
 
   const handlePaste = useCallback(
     (event: ClipboardEvent) => {
@@ -619,7 +620,7 @@ export default function BingoGrid({
     }
   }, [isDialogOpen])
 
-  const handleTeamTileSubmissionStatusUpdate = async (
+  const handleTeamTileSubmissionStatusUpdate = useCallback(async (
     teamTileSubmissionId: string | undefined,
     newStatus: "approved" | "needs_review"
   ) => {
@@ -684,9 +685,9 @@ export default function BingoGrid({
         variant: "destructive",
       })
     }
-  }
+  }, [selectedTile])
 
-  const handleDeleteSubmission = async (submissionId: string) => {
+  const handleDeleteSubmission = useCallback(async (submissionId: string) => {
     if (!selectedTile) return
 
     try {
@@ -748,9 +749,9 @@ export default function BingoGrid({
         variant: "destructive",
       })
     }
-  }
+  }, [selectedTile])
 
-  const handleDeleteTile = async (tileId: string) => {
+  const handleDeleteTile = useCallback(async (tileId: string) => {
     if (isLayoutLocked) {
       toast({
         title: "Layout locked",
@@ -783,10 +784,10 @@ export default function BingoGrid({
         variant: "destructive",
       })
     }
-  }
+  }, [isLayoutLocked, bingo.id])
 
   // Updated to handle goal assignment with proper typing including value and weight
-  const handleSubmissionStatusUpdate = async (
+  const handleSubmissionStatusUpdate = useCallback(async (
     submissionId: string,
     newStatus: "pending" | "approved" | "needs_review",
     goalId?: string | null,
@@ -909,7 +910,7 @@ export default function BingoGrid({
         variant: "destructive",
       })
     }
-  }
+  }, [selectedTile, session.data?.user?.id])
 
   return (
     <div className="space-y-4">
@@ -951,123 +952,40 @@ export default function BingoGrid({
         />
       )}
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="modal-content flex h-[90vh] w-[95vw] max-w-[1400px] flex-col overflow-hidden border-border bg-background">
-          <DialogHeader className="border-b border-border pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <DialogTitle className="text-2xl font-bold text-foreground">
-                  {selectedTile?.title}
-                </DialogTitle>
-                <div className="flex items-center gap-2 rounded-full border border-yellow-500/30 bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 px-3 py-1.5">
-                  <Zap className="h-4 w-4 text-yellow-500" />
-                  <span className="font-semibold text-yellow-500">
-                    {selectedTile?.weight} XP
-                  </span>
-                </div>
-              </div>
-            </div>
-            <DialogDescription className="mt-2 text-sm text-muted-foreground">
-              Manage tile details, goals, and submissions for your bingo event
-            </DialogDescription>
-          </DialogHeader>
-          <Tabs defaultValue="details" className="flex flex-1 flex-col">
-            <TabsList className="mb-4 grid h-14 w-full grid-cols-3 rounded-lg border border-border bg-muted/50 p-1">
-              <TabsTrigger
-                value="details"
-                className="rounded-md font-medium text-muted-foreground transition-all duration-200 hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                  <span>Tile Details</span>
-                </div>
-              </TabsTrigger>
-              <TabsTrigger
-                value="goals"
-                className="rounded-md font-medium text-muted-foreground transition-all duration-200 hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                  <span>Goals</span>
-                </div>
-              </TabsTrigger>
-              <TabsTrigger
-                value="submissions"
-                className="rounded-md font-medium text-muted-foreground transition-all duration-200 hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-purple-500"></div>
-                  <span>Submissions</span>
-                </div>
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent
-              value="details"
-              className="tab-content flex-1 space-y-6 overflow-y-auto"
-            >
-              <TileDetailsTab
-                selectedTile={selectedTile}
-                editedTile={editedTile}
-                userRole={userRole}
-                teams={teams}
-                eventId={bingo.eventId}
-                gameType={gameType}
-                isProgressionBingo={bingo.bingoType === "progression"}
-                onEditTile={(field, value) =>
-                  setEditedTile({ ...editedTile, [field]: value })
-                }
-                onUpdateTile={handleTileUpdate}
-                onEditorChange={handleEditorChange}
-                onUpdateProgress={handleProgressUpdate}
-              />
-            </TabsContent>
-            <TabsContent
-              value="goals"
-              className="tab-content flex-1 space-y-6 overflow-y-auto"
-            >
-              <GoalsTab
-                selectedTile={selectedTile}
-                newGoal={newGoal}
-                hasSufficientRights={hasSufficientRights()}
-                onDeleteGoal={handleDeleteGoal}
-                onAddGoal={handleAddGoal}
-                onNewGoalChange={(field, value) =>
-                  setNewGoal({ ...newGoal, [field]: value })
-                }
-              />
-            </TabsContent>
-            <TabsContent
-              value="submissions"
-              className="tab-content flex-1 space-y-6 overflow-y-auto"
-            >
-              <SubmissionsTab
-                teamTileSubmissions={selectedTile?.teamTileSubmissions || []}
-                selectedTile={selectedTile}
-                currentTeamId={currentTeamId}
-                teams={teams}
-                hasSufficientRights={hasSufficientRights()}
-                selectedImage={selectedImage}
-                pastedImage={pastedImage}
-                isSubmissionsLocked={bingo.locked}
-                isUploadingImage={isUploadingImage}
-                onImageChange={handleImageChange}
-                onImageSubmit={handleImageSubmit}
-                onFullSizeImageView={(src, alt) =>
-                  setFullSizeImage({ src, alt })
-                }
-                onTeamTileSubmissionStatusUpdate={
-                  handleTeamTileSubmissionStatusUpdate
-                }
-                onSubmissionStatusUpdate={handleSubmissionStatusUpdate}
-                onDeleteSubmission={handleDeleteSubmission}
-                selectableUsers={selectableUsers}
-                selectedUserId={selectedUserId}
-                onUserSelect={setSelectedUserId}
-              />
-            </TabsContent>
-          </Tabs>
-        </DialogContent>
-      </Dialog>
+      <TileDetailsDialog
+        isOpen={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        selectedTile={selectedTile}
+        editedTile={editedTile}
+        userRole={userRole}
+        teams={teams}
+        eventId={bingo.eventId}
+        gameType={gameType}
+        isProgressionBingo={bingo.bingoType === "progression"}
+        onEditTile={(field, value) => setEditedTile({ ...editedTile, [field]: value })}
+        onUpdateTile={handleTileUpdate}
+        onEditorChange={handleEditorChange}
+        onUpdateProgress={handleProgressUpdate}
+        newGoal={newGoal}
+        hasSufficientRights={hasSufficientRights()}
+        onDeleteGoal={handleDeleteGoal}
+        onAddGoal={handleAddGoal}
+        onNewGoalChange={(field, value) => setNewGoal({ ...newGoal, [field]: value })}
+        currentTeamId={currentTeamId}
+        selectedImage={selectedImage}
+        pastedImage={pastedImage}
+        isSubmissionsLocked={bingo.locked || false}
+        isUploadingImage={isUploadingImage}
+        onImageChange={handleImageChange}
+        onImageSubmit={handleImageSubmit}
+        onFullSizeImageView={(src, alt) => setFullSizeImage({ src, alt })}
+        onTeamTileSubmissionStatusUpdate={handleTeamTileSubmissionStatusUpdate}
+        onSubmissionStatusUpdate={handleSubmissionStatusUpdate}
+        onDeleteSubmission={handleDeleteSubmission}
+        selectableUsers={selectableUsers}
+        selectedUserId={selectedUserId}
+        onUserSelect={setSelectedUserId}
+      />
 
       <FullSizeImageDialog
         isOpen={!!fullSizeImage}

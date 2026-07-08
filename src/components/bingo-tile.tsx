@@ -26,7 +26,7 @@ interface BingoTileProps {
   isLoading?: boolean
 }
 
-export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, currentTeamId, isLocked, isLoading = false }: BingoTileProps) {
+export const BingoTile = React.memo(function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, currentTeamId, isLocked, isLoading = false }: BingoTileProps) {
   const isManagement = userRole === "management" || userRole === "admin"
 
   // Goal tree data state for hovercard
@@ -300,5 +300,4 @@ export function BingoTile({ tile, onClick, onTogglePlaceholder, userRole, curren
       )}
     </HoverCard>
   )
-}
-
+})

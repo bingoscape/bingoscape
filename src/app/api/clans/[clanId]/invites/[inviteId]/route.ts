@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
-import { updateClanInviteLabel, deleteClanInvite, revokeClanInvite } from '@/app/actions/clan'
+import { updateClanInviteLabel } from '@/app/actions/clan/update-clan-invite-label'
+import { deleteClanInvite } from '@/app/actions/clan/delete-clan-invite'
+import { revokeClanInvite } from '@/app/actions/clan/revoke-clan-invite'
 
 // PATCH - Update invite label
 export async function PATCH(
@@ -9,7 +11,11 @@ export async function PATCH(
     const params = await props.params;
     try {
         const { label } = await req.json() as { label: string }
-        await updateClanInviteLabel(params.inviteId, label)
+        const result = await updateClanInviteLabel({ inviteId: params.inviteId, label })
+        
+        if (result?.serverError) return NextResponse.json({ error: result.serverError }, { status: 500 })
+        if (!result?.data?.success) return NextResponse.json({ error: result?.data?.error ?? "Failed to update invite" }, { status: 400 })
+        
         return NextResponse.json({ success: true })
     } catch (error) {
         return NextResponse.json(
@@ -26,7 +32,11 @@ export async function DELETE(
 ) {
     const params = await props.params;
     try {
-        await deleteClanInvite(params.inviteId)
+        const result = await deleteClanInvite({ inviteId: params.inviteId })
+        
+        if (result?.serverError) return NextResponse.json({ error: result.serverError }, { status: 500 })
+        if (!result?.data?.success) return NextResponse.json({ error: result?.data?.error ?? "Failed to delete invite" }, { status: 400 })
+
         return NextResponse.json({ success: true })
     } catch (error) {
         return NextResponse.json(
@@ -47,7 +57,11 @@ export async function POST(
 
     if (action === 'revoke') {
         try {
-            await revokeClanInvite(params.inviteId)
+            const result = await revokeClanInvite({ inviteId: params.inviteId })
+            
+            if (result?.serverError) return NextResponse.json({ error: result.serverError }, { status: 500 })
+            if (!result?.data?.success) return NextResponse.json({ error: result?.data?.error ?? "Failed to revoke invite" }, { status: 400 })
+
             return NextResponse.json({ success: true })
         } catch (error) {
             return NextResponse.json(

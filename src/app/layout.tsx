@@ -1,4 +1,5 @@
 import { Navbar } from "@/components/navbar";
+import { isSuperAdmin } from "@/lib/super-admin";
 import { RunescapeLinkPrompt } from "@/components/runescape-link-prompt";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
@@ -17,15 +18,17 @@ export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const isSuperAdminUser = await isSuperAdmin();
+
   return (
     <html lang="en" className={noto.className} suppressHydrationWarning>
       <AuthProvider>
         <body>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <Navbar />
+            <Navbar isSuperAdminUser={isSuperAdminUser} />
             <RunescapeLinkPrompt />
             {children}
             <Toaster />

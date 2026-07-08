@@ -1,6 +1,3 @@
-"use client"
-
-import { useMemo } from "react"
 import type { EventData } from "@/app/actions/events"
 import { EventCard } from "@/components/event-card"
 import { Calendar, Clock, Archive } from "lucide-react"
@@ -35,7 +32,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
     )
   }
 
-  const { active, upcoming, past } = useMemo(() => categorizeEvents(events), [events])
+  const { active, upcoming, past } = categorizeEvents(events)
 
   if (events.length === 0) {
     return (
@@ -75,7 +72,6 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
                 eventData={ed}
                 isParticipant={true}
                 status="active"
-                onJoin={() => {}}
               />
             ))}
           </div>
@@ -98,7 +94,6 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
                 eventData={ed}
                 isParticipant={true}
                 status="upcoming"
-                onJoin={() => {}}
               />
             ))}
           </div>
@@ -121,7 +116,6 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
                 eventData={ed}
                 isParticipant={true}
                 status="past"
-                onJoin={() => {}}
               />
             ))}
           </div>

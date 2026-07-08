@@ -1,7 +1,7 @@
 /* eslint-disable */
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback, useMemo } from "react"
 import {
   Card,
   CardContent,
@@ -64,7 +64,7 @@ export function EventBingosClient({
   const currentBingo = visibleBingos[currentBingoIndex]
 
   // Calculate completion statistics for each bingo
-  const getBingoStats = (bingo: any) => {
+  const getBingoStats = useCallback((bingo: any) => {
     if (!bingo?.tiles || !effectiveTeamId) {
       return {
         completed: 0,
@@ -93,7 +93,11 @@ export function EventBingosClient({
     })
 
     return stats
-  }
+  }, [effectiveTeamId])
+
+  const currentBingoStats = useMemo(() => {
+    return currentBingo ? getBingoStats(currentBingo) : null
+  }, [currentBingo, getBingoStats])
 
   const nextBingo = () => {
     if (visibleBingos.length > 1) {
@@ -187,8 +191,8 @@ export function EventBingosClient({
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-muted-foreground">
                       {Math.round(
-                        (getBingoStats(currentBingo).completed /
-                          getBingoStats(currentBingo).total) *
+                        (currentBingoStats!.completed /
+                          currentBingoStats!.total) *
                           100
                       ) || 0}
                       %
@@ -197,7 +201,7 @@ export function EventBingosClient({
                       <div
                         className="h-full bg-gradient-to-r from-green-500 to-green-600 transition-all duration-300"
                         style={{
-                          width: `${Math.round((getBingoStats(currentBingo).completed / getBingoStats(currentBingo).total) * 100) || 0}%`,
+                          width: `${Math.round((currentBingoStats!.completed / currentBingoStats!.total) * 100) || 0}%`,
                         }}
                       />
                     </div>
@@ -214,32 +218,32 @@ export function EventBingosClient({
                     <div className="flex items-center gap-1">
                       <div className="h-2 w-2 rounded-full bg-green-500"></div>
                       <span className="font-medium text-green-600 dark:text-green-400">
-                        {getBingoStats(currentBingo).completed} completed
+                        {currentBingoStats!.completed} completed
                       </span>
                     </div>
-                    {getBingoStats(currentBingo).pending > 0 && (
+                    {currentBingoStats!.pending > 0 && (
                       <div className="flex items-center gap-1">
                         <div className="h-2 w-2 rounded-full bg-blue-500"></div>
                         <span className="font-medium text-blue-600 dark:text-blue-400">
-                          {getBingoStats(currentBingo).pending} pending
+                          {currentBingoStats!.pending} pending
                         </span>
                       </div>
                     )}
-                    {getBingoStats(currentBingo).needsReview > 0 && (
+                    {currentBingoStats!.needsReview > 0 && (
                       <div className="flex items-center gap-1">
                         <div className="h-2 w-2 rounded-full bg-yellow-500"></div>
                         <span className="font-medium text-yellow-600 dark:text-yellow-400">
-                          {getBingoStats(currentBingo).needsReview} review
+                          {currentBingoStats!.needsReview} review
                         </span>
                       </div>
                     )}
                     <div className="flex items-center gap-1">
                       <div className="h-2 w-2 rounded-full bg-muted-foreground"></div>
                       <span className="font-medium text-muted-foreground">
-                        {getBingoStats(currentBingo).total -
-                          getBingoStats(currentBingo).completed -
-                          getBingoStats(currentBingo).pending -
-                          getBingoStats(currentBingo).needsReview}{" "}
+                        {currentBingoStats!.total -
+                          currentBingoStats!.completed -
+                          currentBingoStats!.pending -
+                          currentBingoStats!.needsReview}{" "}
                         remaining
                       </span>
                     </div>

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerAuthSession } from '@/server/auth'
-import { createClanInvite } from '@/app/actions/clan'
+import { createClanInvite } from '@/app/actions/clan/create-clan-invite'
 
 export interface GenerateInviteRequest {
     label?: string
@@ -37,16 +37,22 @@ export async function POST(req: Request, props: { params: Promise<{ clanId: stri
     }
 
     try {
-        const invite = await createClanInvite({
+        const result = await createClanInvite({
             clanId,
             label: body.label,
             expiresInDays: body.expiresInDays === 0 ? null : body.expiresInDays ?? 7, // Default to 7 days for backward compatibility
             maxUses: body.maxUses,
         })
 
-        if (!invite) {
-            throw new Error("Failed to create invite")
+        if (result?.serverError) {
+            return NextResponse.json({ error: result.serverError }, { status: 500 })
         }
+        
+        if (!result?.data?.success) {
+            return NextResponse.json({ error: result?.data?.error ?? "Failed to create invite" }, { status: 400 })
+        }
+
+        const invite = result.data.invite!
 
         return NextResponse.json({
             inviteCode: invite.inviteCode,

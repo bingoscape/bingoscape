@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo } from 'react'
 import { BingoTile } from './bingo-tile'
 import type { Tile, EventRole } from '@/app/actions/events'
 
@@ -15,7 +15,7 @@ interface BingoGridLayoutProps {
   loadingTileId?: string
 }
 
-export const BingoGridLayout = React.forwardRef<HTMLDivElement, BingoGridLayoutProps>(
+export const BingoGridLayout = memo(React.forwardRef<HTMLDivElement, BingoGridLayoutProps>(
   ({ tiles, columns, rows, userRole, currentTeamId, onTileClick, onTogglePlaceholder, isLocked, highlightedTiles, loadingTileId }, ref) => {
     return (
       <div
@@ -38,8 +38,8 @@ export const BingoGridLayout = React.forwardRef<HTMLDivElement, BingoGridLayoutP
           >
             <BingoTile
               tile={tile}
-              onClick={() => onTileClick(tile)}
-              onTogglePlaceholder={() => onTogglePlaceholder(tile)}
+              onClick={onTileClick}
+              onTogglePlaceholder={onTogglePlaceholder}
               userRole={userRole}
               currentTeamId={currentTeamId}
               isLocked={isLocked}
@@ -50,6 +50,6 @@ export const BingoGridLayout = React.forwardRef<HTMLDivElement, BingoGridLayoutP
       </div>
     )
   }
-)
+))
 
 BingoGridLayout.displayName = 'BingoGridLayout'

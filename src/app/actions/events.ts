@@ -34,7 +34,8 @@ import {
 } from "@/server/db/schema"
 import { eq, and, asc, sum, sql, desc, inArray } from "drizzle-orm"
 import { nanoid } from "nanoid"
-import { revalidatePath } from "next/cache"
+import { unstable_cache, revalidatePath } from "next/cache"
+import { cache } from "react"
 import type { GoalValue } from "./goals"
 import { logger } from "@/lib/logger"
 
@@ -414,7 +415,7 @@ export async function getUserRole(eventId: string): Promise<EventRole | null> {
 }
 
 // Modify the getEventById function to handle non-participants
-export async function getEventById(
+export const getEventById = cache(async function getEventById(
   eventId: string
 ): Promise<GetEventByIdResult | null> {
   const event = await db.query.events.findFirst({
@@ -461,7 +462,7 @@ export async function getEventById(
     event,
     userRole,
   }
-}
+})
 
 export async function assignEventToClan(eventId: string, clanId: string) {
   const session = await getServerAuthSession()
