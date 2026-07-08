@@ -313,6 +313,31 @@ export async function updateMemberRole(
   memberId: string,
   newRole: "admin" | "management" | "member" | "guest"
 ) {
+  const session = await getServerAuthSession()
+  if (!session?.user) throw new Error("Unauthorized")
+
+  // Only existing clan admins may change member roles.
+  const callerMembership = await db.query.clanMembers.findFirst({
+    where: and(
+      eq(clanMembers.clanId, clanId),
+      eq(clanMembers.userId, session.user.id)
+    ),
+  })
+  if (!callerMembership || callerMembership.role !== "admin") {
+    throw new Error("Only clan admins can change member roles")
+  }
+
+  // Prevent the only admin from demoting themselves.
+  if (memberId === session.user.id && newRole !== "admin") {
+    const adminCount = await db
+      .select({ count: count() })
+      .from(clanMembers)
+      .where(and(eq(clanMembers.clanId, clanId), eq(clanMembers.role, "admin")))
+    if ((adminCount[0]?.count ?? 0) <= 1) {
+      throw new Error("Cannot demote the only clan admin")
+    }
+  }
+
   await db
     .update(clanMembers)
     .set({ role: newRole })

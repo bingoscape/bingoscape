@@ -1259,6 +1259,23 @@ export async function updateSubmissionStatus(
       throw new Error("Not authenticated")
     }
 
+    // H4 fix: derive the event from the submission record itself, never trust
+    // a caller-supplied eventId.  Verify the caller is admin/management.
+    const submissionRecord = await db.query.submissions.findFirst({
+      where: eq(submissions.id, submissionId),
+      with: {
+        teamTileSubmission: {
+          with: { tile: { with: { bingo: { columns: { eventId: true } } } } },
+        },
+      },
+    })
+    if (!submissionRecord) throw new Error("Submission not found")
+    const eventId = submissionRecord.teamTileSubmission.tile.bingo.eventId
+    const callerRole = await getUserRole(eventId)
+    if (callerRole !== "admin" && callerRole !== "management") {
+      throw new Error("Forbidden: admin or management role required")
+    }
+
     logger.info(
       { submissionId, newStatus, goalId, submissionValue },
       "Updating submission status"
@@ -1489,6 +1506,22 @@ export async function updateSubmissionStatusWithComment(
     const session = await getServerAuthSession()
     if (!session) {
       throw new Error("Not authenticated")
+    }
+
+    // H4 fix: derive the event from the submission record itself, verify role.
+    const submissionRecord = await db.query.submissions.findFirst({
+      where: eq(submissions.id, submissionId),
+      with: {
+        teamTileSubmission: {
+          with: { tile: { with: { bingo: { columns: { eventId: true } } } } },
+        },
+      },
+    })
+    if (!submissionRecord) throw new Error("Submission not found")
+    const eventId = submissionRecord.teamTileSubmission.tile.bingo.eventId
+    const callerRole = await getUserRole(eventId)
+    if (callerRole !== "admin" && callerRole !== "management") {
+      throw new Error("Forbidden: admin or management role required")
     }
 
     logger.info(

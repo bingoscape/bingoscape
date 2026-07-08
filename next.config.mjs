@@ -27,14 +27,18 @@ const config = {
     return config
   },
   images: {
-    dangerouslyAllowSVG: true,
+    // dangerouslyAllowSVG removed (H7): SVG files with embedded JS could be
+    // served through the optimizer.  Only raster formats are needed.
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**",
-        pathname: "**",
-        port: "",
-      },
+      // Discord OAuth profile pictures
+      { protocol: "https", hostname: "cdn.discordapp.com" },
+      { protocol: "https", hostname: "avatars.discordapp.com" },
+      // GitHub OAuth profile pictures
+      { protocol: "https", hostname: "avatars.githubusercontent.com" },
+      // Old School RuneScape wiki images (tile header images, frog images, etc.)
+      { protocol: "https", hostname: "oldschool.runescape.wiki" },
+      // RuneScape 3 wiki images
+      { protocol: "https", hostname: "runescape.wiki" },
     ],
   },
   async rewrites() {

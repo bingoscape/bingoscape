@@ -193,6 +193,30 @@ export async function POST(
       )
     }
 
+    // H5: Validate file type and size before writing to disk.
+    const ALLOWED_MIME_TYPES = [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ]
+    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
+    if (!ALLOWED_MIME_TYPES.includes(image.type)) {
+      return NextResponse.json(
+        {
+          error:
+            "Invalid file type. Only JPEG, PNG, GIF and WebP are accepted.",
+        },
+        { status: 400 }
+      )
+    }
+    if (image.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: "File too large. Maximum size is 10 MB." },
+        { status: 400 }
+      )
+    }
+
     // Ensure the upload directory exists
     await ensureUploadDir()
 

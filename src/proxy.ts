@@ -1,13 +1,22 @@
-import { NextResponse } from "next/server"
+import { getToken } from "next-auth/jwt"
+import { NextRequest, NextResponse } from "next/server"
 
-export function proxy() {
+const PROTECTED = ["/events", "/clans", "/profile", "/super-admin", "/templates"]
+
+export async function proxy(request: NextRequest) {
   const startTime = Date.now()
-  // Clone the request to allow reading the body if needed
+  const pathname = request.nextUrl.pathname
+  const isProtected = PROTECTED.some((p) => pathname.startsWith(p))
+  if (isProtected) {
+    const token = await getToken({ req: request })
+    if (!token) {
+      const signIn = new URL("/sign-in", request.url)
+      signIn.searchParams.set("callbackUrl", pathname)
+      return NextResponse.redirect(signIn)
+    }
+  }
   const response = NextResponse.next()
-
-  // Add timing header
   response.headers.set("X-Response-Time", `${Date.now() - startTime}ms`)
-
   return response
 }
 
@@ -24,3 +33,4 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 }
+

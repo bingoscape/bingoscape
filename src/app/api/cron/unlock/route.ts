@@ -12,7 +12,8 @@ export async function GET(request: Request) {
     const authHeader = request.headers.get("authorization")
     const cronSecret = process.env.CRON_SECRET
 
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    // Fail-closed: reject if secret is not configured OR token doesn't match.
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       logger.warn("Unauthorized attempt to access cron unlock route")
       return new NextResponse("Unauthorized", { status: 401 })
     }
