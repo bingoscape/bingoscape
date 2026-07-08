@@ -1,21 +1,15 @@
 /* eslint-disable */
 "use client"
 
-import { useEffect, useState, use } from "react"
-import { notFound, useRouter } from "next/navigation"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import BingoGridWrapper from "@/components/bingo-grid-wrapper"
-import { getUserRole } from "@/app/actions/events"
-import { getTeamsByEventId, getCurrentTeamForUser } from "@/app/actions/team"
-import { Skeleton } from "@/components/ui/skeleton"
-import type { UUID } from "crypto"
 import { TeamSelector } from "@/components/team-selector"
 import { BingoImportExportModal } from "@/components/bingo-import-export-modal"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, RefreshCw, FileJson } from "lucide-react"
-import type { Bingo } from "@/app/actions/events"
 import { cn } from "@/lib/utils"
-import { getEventById } from "@/server/queries/events"
 
 export function BingoDetailClient({
   eventId,
@@ -72,13 +66,6 @@ export function BingoDetailClient({
   if (!data || !bingo) {
     return <div className="container mx-auto px-4 py-8">Bingo not found</div>
   }
-
-  const breadcrumbItems = [
-    { label: "Home", href: "/" },
-    { label: "Events", href: "/events" },
-    { label: data.event.title, href: `/events/${eventId}` },
-    { label: bingo.title, href: `/events/${eventId}/bingos/${bingoId}` },
-  ]
 
   return (
     <div className="container mx-auto px-4 py-4">

@@ -2,7 +2,6 @@
 
 import Image from "next/image"
 
-import * as React from "react"
 import { useState, useEffect } from "react"
 import { Search, Loader2, CheckSquare, Square, X } from "lucide-react"
 import {

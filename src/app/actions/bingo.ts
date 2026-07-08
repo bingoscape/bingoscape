@@ -41,7 +41,6 @@ import {
 import { discordWebhooks } from "@/server/db/schema"
 import { sql } from "drizzle-orm"
 import { logger } from "@/lib/logger"
-import { trackError, trackDbQuery } from "@/lib/metrics"
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
 
@@ -397,12 +396,12 @@ export async function deleteBingo(bingoId: string) {
   try {
     await db.transaction(async (tx) => {
       // Delete all tiles associated with the bingo
-      const tilesDeleted = await tx
+      await tx
         .delete(tiles)
         .where(eq(tiles.bingoId, bingoId))
 
       // Delete the bingo itself
-      const bingosDeleted = await tx
+      await tx
         .delete(bingos)
         .where(eq(bingos.id, bingoId))
       // console.table(tilesDeleted, bingosDeleted);
@@ -1690,7 +1689,7 @@ export async function deleteTile(tileId: string, bingoId: string) {
       }
 
       // Update bingo dimensions
-      const [bingo] = await tx
+      await tx
         .select()
         .from(bingos)
         .where(eq(bingos.id, bingoId))
@@ -1724,7 +1723,7 @@ export async function addTile(bingoId: string): Promise<AddRowOrColumnResult> {
       const totalTiles = bingo.rows * bingo.columns + 1
 
       // Create new tile
-      const [newTile] = await tx
+      await tx
         .insert(tiles)
         .values({
           bingoId,

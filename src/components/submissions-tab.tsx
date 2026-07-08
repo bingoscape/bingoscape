@@ -12,16 +12,8 @@ import {
   Check,
   AlertTriangle,
   X,
-  Upload,
   Clock,
-  CheckCircle2,
-  Link,
   Users,
-  Hash,
-  Search,
-  Star,
-  ChevronsUpDown,
-  Loader2,
   Zap,
   User,
 } from "lucide-react"
@@ -37,18 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command"
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,7 +48,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { InlineGoalAssignment } from "@/components/inline-goal-assignment"
-import { getGoalValues } from "@/app/actions/goals"
 import { toast } from "@/hooks/use-toast"
 
 interface SubmissionsTabProps {
@@ -125,7 +105,7 @@ export function SubmissionsTab({
   const [expandedGoalForms, setExpandedGoalForms] = useState<Set<string>>(
     new Set()
   )
-  const [goalValuesCache, setGoalValuesCache] = useState<Record<string, any[]>>(
+  const [goalValuesCache, _] = useState<Record<string, any[]>>(
     {}
   )
 
@@ -189,10 +169,7 @@ export function SubmissionsTab({
   }
 
   const currentTeam = teams.find((team) => team.id === currentTeamId)
-  const currentTeamSubmission = teamTileSubmissions?.find(
-    (sub) => sub.teamId === currentTeamId
-  )
-
+  
   // If user is not part of a team and doesn't have sufficient rights, show empty state
   if (!hasSufficientRights && !currentTeamId) {
     return (

@@ -30,11 +30,6 @@ export default async function SuperAdminEventsPage(props: PageProps) {
     return now < startDate
   })
 
-  const _pastEvents = eventsData.events.filter((event) => {
-    const endDate = new Date(event.endDate)
-    return now > endDate
-  })
-
   return (
     <div className="space-y-8">
       {/* Hero Section */}

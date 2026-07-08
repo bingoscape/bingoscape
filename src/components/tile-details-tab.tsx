@@ -11,11 +11,8 @@ import type React from "react"
 import Image from "next/image"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { ForwardRefEditor } from "./forward-ref-editor"
 import type { Tile, Team } from "@/app/actions/events"
-import { Progress } from "@/components/ui/progress"
-import { AnimatedProgress } from "@/components/ui/animated-progress"
 import {
   Pencil,
   X,
@@ -23,11 +20,6 @@ import {
   EyeOff,
   Search,
   ExternalLink,
-  CheckCircle2,
-  Clock,
-  Network,
-  List,
-  Package,
   RefreshCw,
 } from "lucide-react"
 import Markdown from "react-markdown"
@@ -42,12 +34,6 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import getRandomFrog from "@/lib/getRandomFrog"
 import { GoalProgressTree } from "./goal-progress-tree"
 import { getGoalTreeWithProgress } from "@/app/actions/goal-groups"
@@ -82,11 +68,6 @@ interface WikiImage {
   title: string
   url: string
   thumbnail: string
-}
-
-interface GoalProgress {
-  approved: number
-  total: number
 }
 
 function isValidImageUrl(url: string): boolean {
@@ -545,9 +526,7 @@ export function TileDetailsTab({
 function TileProgress({
   selectedTile,
   teams,
-  onUpdateProgress,
   userRole,
-  eventId,
 }: {
   selectedTile: Tile | null
   teams: Team[]

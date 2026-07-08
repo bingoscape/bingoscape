@@ -59,8 +59,6 @@ export function PatternCompletionTab({ data }: PatternCompletionTabProps) {
     )
   }
 
-  const _selectedTeam = selectedBoard.teams[selectedTeamIndex]
-
   return (
     <div className="space-y-4">
       {/* Board Selection Tabs */}

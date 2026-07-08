@@ -41,10 +41,7 @@ import {
   Filter,
   CircleCheck,
   Circle,
-  Link,
   X,
-  CheckCircle2,
-  Hash,
   Zap,
   User,
 } from "lucide-react"
@@ -80,7 +77,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { InlineGoalAssignment } from "@/components/inline-goal-assignment"
-import { getGoalValues } from "@/app/actions/goals"
 import { getEventById } from "@/server/queries/events"
 
 export default function BingoSubmissionsPage(props: {
@@ -116,7 +112,7 @@ export default function BingoSubmissionsPage(props: {
   const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(
     null
   )
-  const [goalValuesCache, setGoalValuesCache] = useState<Record<string, any[]>>(
+  const [goalValuesCache, _setGoalValuesCache] = useState<Record<string, any[]>>(
     {}
   )
 
@@ -456,18 +452,6 @@ export default function BingoSubmissionsPage(props: {
     }
   }
 
-  // Load goal values for a specific goal
-  const loadGoalValues = async (goalId: string, tileId: string) => {
-    if (!goalValuesCache[goalId]) {
-      try {
-        const values = await getGoalValues(goalId)
-        setGoalValuesCache((prev) => ({ ...prev, [goalId]: values }))
-      } catch (error) {
-        console.error("Failed to load goal values:", error)
-      }
-    }
-  }
-
   // Add this helper function to find a tile by ID
   const findTileById = (tileId: string) => {
     return tiles.find((tile) => tile.id === tileId)
@@ -477,18 +461,6 @@ export default function BingoSubmissionsPage(props: {
   const getTileGoals = (tileId: string) => {
     const tile = findTileById(tileId)
     return tile?.goals || []
-  }
-
-  // Add this helper function to find the goal description
-  const getGoalDescription = (
-    goalId: string | null | undefined,
-    tileId: string
-  ) => {
-    if (!goalId) return null
-    const goals = getTileGoals(tileId)
-    return (
-      goals.find((goal) => goal.id === goalId)?.description || "Unknown Goal"
-    )
   }
 
   const handleRefresh = () => {

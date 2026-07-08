@@ -76,18 +76,6 @@ export const BingoTile = React.memo(function BingoTile({
     }
   }, [isHoverCardOpen, tile.id, tile.goals, currentTeamId, goalTreeData])
 
-  const _submissionCounts = React.useMemo(() => {
-    if (!isManagement || !tile.teamTileSubmissions) return null
-
-    return tile.teamTileSubmissions.reduce(
-      (acc, tts) => {
-        acc[tts.status]++
-        return acc
-      },
-      { approved: 0, pending: 0, needs_review: 0 }
-    )
-  }, [isManagement, tile.teamTileSubmissions])
-
   const currentTeamSubmission = React.useMemo(() => {
     if (!currentTeamId || !tile.teamTileSubmissions) return null
     return tile.teamTileSubmissions.find((tts) => tts.teamId === currentTeamId)
@@ -152,23 +140,6 @@ export const BingoTile = React.memo(function BingoTile({
     } else if (!tile.isHidden || !isLocked) {
       onClick(tile)
     }
-  }
-
-  // Format description for tooltip - strip markdown and limit length
-  const _formatDescription = (description: string | undefined) => {
-    if (!description) return "No description available"
-
-    // Strip basic markdown formatting
-    const strippedMarkdown = description
-      .replace(/\*\*(.*?)\*\*/g, "$1") // Bold
-      .replace(/\*(.*?)\*/g, "$1") // Italic
-      .replace(/\[(.*?)\]$$(.*?)$$/g, "$1") // Links
-      .replace(/#{1,6}\s(.*)/g, "$1") // Headers
-
-    // Limit length and add ellipsis if needed
-    return strippedMarkdown.length > 150
-      ? strippedMarkdown.substring(0, 150) + "..."
-      : strippedMarkdown
   }
 
   // Only show hover card if tile is not hidden or if user has management rights
