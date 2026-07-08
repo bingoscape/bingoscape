@@ -27,7 +27,6 @@ import { calculateMetadataCoverage } from "@/app/actions/player-metadata"
 import { SA_PRESETS, estimateRuntime } from "@/lib/simulated-annealing-config"
 import {
   Loader2,
-  Users,
   Sparkles,
   Shuffle,
   Info,

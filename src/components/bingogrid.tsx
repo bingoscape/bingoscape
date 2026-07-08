@@ -4,13 +4,6 @@
 import type React from "react"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
 import { toast } from "@/hooks/use-toast"
 import {
   updateTile,
@@ -20,7 +13,6 @@ import {
   updateGoalProgress,
   submitImage,
   updateTeamTileSubmissionStatus,
-  deleteTile,
   deleteSubmission,
   updateSubmissionStatus,
   getTierXpRequirements,
@@ -30,7 +22,6 @@ import {
 import { getSubmissions } from "@/app/actions/getSubmissions"
 import "@mdxeditor/editor/style.css"
 import "@/styles/modal-animations.css"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type {
   Bingo,
   Tile,
@@ -42,13 +33,10 @@ import type {
 import Sortable, { type SortableEvent } from "sortablejs"
 import { BingoGridLayout } from "./bingo-grid-layout"
 import { ProgressionBingoGrid } from "./progression-bingo-grid"
-import { TileDetailsTab } from "./tile-details-tab"
-import { GoalsTab } from "./goals-tab"
-import { SubmissionsTab } from "./submissions-tab"
 import { FullSizeImageDialog } from "./full-size-image-dialog"
 import { StatsDialog } from "./stats-dialog"
 import { TileDetailsDialog } from "./tile-details-dialog"
-import { BarChart, Zap } from "lucide-react"
+import { BarChart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSession } from "next-auth/react"
 import {
@@ -780,47 +768,6 @@ export default function BingoGrid({
     [selectedTile]
   )
 
-  const handleDeleteTile = useCallback(
-    async (tileId: string) => {
-      if (isLayoutLocked) {
-        toast({
-          title: "Layout locked",
-          description:
-            "The bingo board layout is currently locked for editing.",
-        })
-        return
-      }
-
-      const confirmDelete = window.confirm(
-        "Are you sure you want to delete this tile?"
-      )
-      if (!confirmDelete) return
-
-      try {
-        const result = await deleteTile(tileId, bingo.id)
-        if (result.success) {
-          setTiles((prevTiles) =>
-            prevTiles.filter((tile) => tile.id !== tileId)
-          )
-          toast({
-            title: "Tile deleted",
-            description: "The tile has been successfully deleted.",
-          })
-        } else {
-          throw new Error(result.error)
-        }
-      } catch (error) {
-        console.error("Error deleting tile:", error)
-        toast({
-          title: "Error",
-          description: "Failed to delete tile",
-          variant: "destructive",
-        })
-      }
-    },
-    [isLayoutLocked, bingo.id]
-  )
-
   // Updated to handle goal assignment with proper typing including value and weight
   const handleSubmissionStatusUpdate = useCallback(
     async (
@@ -1039,8 +986,6 @@ export default function BingoGrid({
       <StatsDialog
         isOpen={isStatsDialogOpen}
         onOpenChange={setIsStatsDialogOpen}
-        userRole={userRole}
-        currentTeamId={currentTeamId}
         teams={teams}
         bingoId={bingo.id}
       />

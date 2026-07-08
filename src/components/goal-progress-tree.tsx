@@ -86,7 +86,6 @@ export function GoalProgressTree({
     parentGroupTarget = 0
   ): ProgressNode => {
     if (node.type === "goal") {
-      const _goalData = node.data as any
       const progress = teamProgress.find((p) => p.goalId === node.id)
       return {
         ...node,

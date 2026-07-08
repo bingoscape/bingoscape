@@ -37,7 +37,7 @@ export default function JoinEventPage(props: {
     responseMessage?: string
   } | null>(null)
   const router = useRouter()
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const { inviteCode } = params
 
   useEffect(() => {

@@ -16,12 +16,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import {
-  UserIcon,
   CalendarIcon,
   Users,
   Crown,
-  Shield,
-  UserPlus,
   Link as LinkIcon,
   BowArrow,
 } from "lucide-react"
@@ -87,9 +84,8 @@ export function ClanDetailClient({
   const [clanDetails, _setClanDetails] = useState<ClanDetails | null>(
     initialClanDetails
   )
+
   const [isLoading, _setIsLoading] = useState(false)
-  const [searchTerm, _setSearchTerm] = useState("")
-  const [roleFilter, _setRoleFilter] = useState<string>("all")
   const { status } = useSession()
 
   const handleRoleUpdate = async (memberId: string, newRole: Role) => {
@@ -167,44 +163,6 @@ export function ClanDetailClient({
     { label: "Clans", href: "/clans" },
     { label: clanDetails.name, href: `/clans/${clanDetails.id}` },
   ]
-
-  const _filteredMembers = members.filter((member) => {
-    const matchesSearch =
-      member.name?.toLowerCase().includes(searchTerm.toLowerCase()) ??
-      member.runescapeName?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesRole = roleFilter === "all" || member.role === roleFilter
-    return matchesSearch && matchesRole
-  })
-
-  const _getRoleIcon = (role: Role) => {
-    switch (role) {
-      case "admin":
-        return Crown
-      case "management":
-        return Shield
-      case "member":
-        return UserIcon
-      case "guest":
-        return UserPlus
-      default:
-        return UserIcon
-    }
-  }
-
-  const _getRoleColor = (role: Role) => {
-    switch (role) {
-      case "admin":
-        return "text-red-500"
-      case "management":
-        return "text-blue-500"
-      case "member":
-        return "text-green-500"
-      case "guest":
-        return "text-gray-500"
-      default:
-        return "text-gray-500"
-    }
-  }
 
   return (
     <div className="container mx-auto space-y-6 py-10">

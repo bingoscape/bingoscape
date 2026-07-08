@@ -49,7 +49,7 @@ import {
 } from "lucide-react"
 import type { Team } from "@/app/actions/events"
 import { getAllTeamPointsAndTotal } from "@/app/actions/stats"
-import type { StatsData, TeamUserSubmissions } from "@/app/actions/stats"
+import type { StatsData } from "@/app/actions/stats"
 import { getCompletedPatterns } from "@/app/actions/pattern-completion"
 import type { PatternCompletionResult } from "@/app/actions/pattern-completion"
 import { BonusXPBreakdown } from "./bonus-xp-breakdown"
@@ -59,8 +59,6 @@ import { getBingoById } from "@/app/actions/getBingoById"
 interface StatsDialogProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
-  userRole: string
-  currentTeamId?: string
   teams: Team[]
   bingoId: string
 }
@@ -68,8 +66,6 @@ interface StatsDialogProps {
 export function StatsDialog({
   isOpen,
   onOpenChange,
-  userRole,
-  currentTeamId,
   teams,
   bingoId,
 }: StatsDialogProps) {
@@ -180,39 +176,6 @@ export function StatsDialog({
         ),
       }
     }) || []
-
-  // Create a config for each team's pie chart
-  const createTeamPieConfig = (team: TeamUserSubmissions) => {
-    const config: Record<string, any> = {
-      imageCount: {
-        label: "Images",
-      },
-    }
-
-    // Add colors for each user
-    team.users.forEach((user, index) => {
-      const colorIndex = (index % 5) + 1 // Use 5 chart colors
-      config[user.userId] = {
-        label: user.runescapeName || user.name,
-        color: `hsl(var(--chart-${colorIndex}))`,
-      }
-    })
-
-    return config
-  }
-
-  // Prepare data for each team's pie chart
-  const prepareTeamPieData = (team: TeamUserSubmissions) => {
-    return team.users.map((user, index) => {
-      // Assign fill color based on user ID
-      const colorIndex = (index % 5) + 1 // Use 5 chart colors
-      return {
-        ...user,
-        fill: `var(--color-${user.userId})`,
-        name: user.runescapeName || user.name,
-      }
-    })
-  }
 
   // Chart configurations
   const xpChartConfig = {
@@ -481,7 +444,6 @@ export function StatsDialog({
                               />
                               <Pie
                                 data={team.users.map((user, index) => {
-                                  const colorIndex = (index % 5) + 1
                                   return {
                                     ...user,
                                     name: user.runescapeName || user.name,
@@ -815,10 +777,6 @@ export function StatsDialog({
                       const teamPatterns = patternData.get(team.id)
                       if (!teamPatterns || !bingoInfo) return null
 
-                      // Get completed tile indices for this team
-                      const teamTiles = statsData?.teamPoints.find(
-                        (tp) => tp.teamId === team.id
-                      )
                       const completedTileIndices = new Set<number>()
 
                       // We need to fetch the actual completed tiles, but for now we'll show the pattern data

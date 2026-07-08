@@ -29,15 +29,6 @@ export interface PatternCompletionResult {
 }
 
 /**
- * Convert a tile index to its row and column position
- */
-function _getTilePosition(index: number, columns: number): TilePosition {
-  const row = Math.floor(index / columns)
-  const col = index % columns
-  return { row, col }
-}
-
-/**
  * Get all tile indices for a specific row
  */
 function getRowIndices(

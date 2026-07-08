@@ -23,7 +23,6 @@ import {
   Trash2,
   UserPlus,
   UserMinus,
-  Shield,
   ShieldOff,
   Users,
   Shuffle,
@@ -982,7 +981,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
     runescapeName: string | null
   } | null>(null)
   const [statistics, setStatistics] = useState<EventTeamStatistics | null>(null)
-  const [statisticsLoading, setStatisticsLoading] = useState(false)
+  const [_, setStatisticsLoading] = useState(false)
 
   // Get unassigned participants, sorted by skill level (descending)
   const unassignedParticipants = useMemo(() => {
@@ -1188,7 +1187,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
 
     // Extract data from the active and over elements
     const activeData = active.data.current
-    const overId = over.id as string
+
     const overData = over.data.current
 
     // Handle dropping a team member onto a team
