@@ -4,7 +4,7 @@ import { getServerAuthSession } from "@/server/auth"
 import { logger } from "@/lib/logger"
 import { db } from "@/server/db"
 import { discordWebhooks, eventParticipants, events } from "@/server/db/schema"
-import { eq, and } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { testDiscordWebhook } from "@/lib/discord-webhook"
 

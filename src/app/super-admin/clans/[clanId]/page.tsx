@@ -35,7 +35,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
   try {
     clan = await getClanDetails(params.clanId)
     memberActivity = await getClanMemberActivity(params.clanId)
-  } catch (error) {
+  } catch {
     notFound()
   }
 

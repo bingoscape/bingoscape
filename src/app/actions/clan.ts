@@ -63,7 +63,7 @@ export async function createClan(name: string, description: string) {
     revalidatePath("/clans")
     revalidatePath("/")
     return { success: true, clan: newClan }
-  } catch (error) {
+  } catch (_error) {
     return { success: false, error: "Failed to create clan" }
   }
 }

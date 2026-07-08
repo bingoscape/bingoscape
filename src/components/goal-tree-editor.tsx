@@ -133,7 +133,7 @@ export function GoalTreeEditor({
   const [isCreatingBulk, setIsCreatingBulk] = useState(false)
 
   // Metric goal state
-  const [metricProvider, setMetricProvider] = useState<
+  const [_metricProvider, _setMetricProvider] = useState<
     "wiseoldman" | "templeosrs"
   >("wiseoldman")
   const [metricType, setMetricType] = useState<"skill" | "boss" | "activity">(
@@ -860,14 +860,17 @@ export function GoalTreeEditor({
                             SKILLS.map((m) => (
                               <SelectItem key={m} value={m}>
                                 <div className="flex items-center gap-2">
-                                  <img
-                                    src={getWikiIconUrl(m)}
-                                    alt={m}
-                                    className="h-4 w-4 object-contain"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = "none"
-                                    }}
-                                  />
+                                  <div className="relative h-4 w-4 shrink-0">
+                                    <Image
+                                      fill
+                                      src={getWikiIconUrl(m)}
+                                      alt={m}
+                                      className="object-cover"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = "none"
+                                      }}
+                                    />
+                                  </div>
                                   <span>{getMetricName(m)}</span>
                                 </div>
                               </SelectItem>
@@ -876,14 +879,17 @@ export function GoalTreeEditor({
                             BOSSES.map((m) => (
                               <SelectItem key={m} value={m}>
                                 <div className="flex items-center gap-2">
-                                  <img
-                                    src={getWikiIconUrl(m)}
-                                    alt={m}
-                                    className="h-4 w-4 object-contain"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = "none"
-                                    }}
-                                  />
+                                  <div className="relative h-4 w-4 shrink-0">
+                                    <Image
+                                      fill
+                                      src={getWikiIconUrl(m)}
+                                      alt={m}
+                                      className="object-cover"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = "none"
+                                      }}
+                                    />
+                                  </div>
                                   <span>{getMetricName(m)}</span>
                                 </div>
                               </SelectItem>
@@ -892,14 +898,17 @@ export function GoalTreeEditor({
                             ACTIVITIES.map((m) => (
                               <SelectItem key={m} value={m}>
                                 <div className="flex items-center gap-2">
-                                  <img
-                                    src={getWikiIconUrl(m)}
-                                    alt={m}
-                                    className="h-4 w-4 object-contain"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = "none"
-                                    }}
-                                  />
+                                  <div className="relative h-4 w-4 shrink-0">
+                                    <Image
+                                      fill
+                                      src={getWikiIconUrl(m)}
+                                      alt={m}
+                                      className="object-cover"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = "none"
+                                      }}
+                                    />
+                                  </div>
                                   <span>{getMetricName(m)}</span>
                                 </div>
                               </SelectItem>
@@ -1616,14 +1625,17 @@ function TreeNode({
                           SKILLS.map((m) => (
                             <SelectItem key={m} value={m}>
                               <div className="flex items-center gap-2">
-                                <img
-                                  src={getWikiIconUrl(m)}
-                                  alt={m}
-                                  className="h-4 w-4 object-contain"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = "none"
-                                  }}
-                                />
+                                <div className="relative h-4 w-4 shrink-0">
+                                  <Image
+                                    fill
+                                    src={getWikiIconUrl(m)}
+                                    alt={m}
+                                    className="object-cover"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = "none"
+                                    }}
+                                  />
+                                </div>
                                 <span>{getMetricName(m)}</span>
                               </div>
                             </SelectItem>
@@ -1632,14 +1644,17 @@ function TreeNode({
                           BOSSES.map((m) => (
                             <SelectItem key={m} value={m}>
                               <div className="flex items-center gap-2">
-                                <img
-                                  src={getWikiIconUrl(m)}
-                                  alt={m}
-                                  className="h-4 w-4 object-contain"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = "none"
-                                  }}
-                                />
+                                <div className="relative h-4 w-4 shrink-0">
+                                  <Image
+                                    fill
+                                    src={getWikiIconUrl(m)}
+                                    alt={m}
+                                    className="object-cover"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = "none"
+                                    }}
+                                  />
+                                </div>
                                 <span>{getMetricName(m)}</span>
                               </div>
                             </SelectItem>
@@ -1648,14 +1663,17 @@ function TreeNode({
                           ACTIVITIES.map((m) => (
                             <SelectItem key={m} value={m}>
                               <div className="flex items-center gap-2">
-                                <img
-                                  src={getWikiIconUrl(m)}
-                                  alt={m}
-                                  className="h-4 w-4 object-contain"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = "none"
-                                  }}
-                                />
+                                <div className="relative h-4 w-4 shrink-0">
+                                  <Image
+                                    fill
+                                    src={getWikiIconUrl(m)}
+                                    alt={m}
+                                    className="object-cover"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = "none"
+                                    }}
+                                  />
+                                </div>
                                 <span>{getMetricName(m)}</span>
                               </div>
                             </SelectItem>

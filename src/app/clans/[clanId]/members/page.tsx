@@ -57,7 +57,7 @@ export default function ClanMembersPage(props: {
   const [members, setMembers] = useState<ClanMember[]>([])
   const [clanDetails, setClanDetails] = useState<ClanDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const { data: session, status } = useSession()
+  const { data: _session, status } = useSession()
   const router = useRouter()
 
   useEffect(() => {
@@ -112,7 +112,7 @@ export default function ClanMembersPage(props: {
         title: "Role Updated",
         description: `The member's role has been successfully updated to ${newRole}.`,
       })
-    } catch (_) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to update member's role. Please try again.",

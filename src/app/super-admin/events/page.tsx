@@ -1,7 +1,7 @@
 import { getAllEvents } from "@/app/actions/super-admin"
 import { SuperAdminEventsTable } from "@/components/super-admin-events-table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Calendar, Clock, CheckCircle, XCircle, TrendingUp } from "lucide-react"
+import { Calendar, Clock, CheckCircle, TrendingUp } from "lucide-react"
 
 interface PageProps {
   searchParams: Promise<{
@@ -30,7 +30,7 @@ export default async function SuperAdminEventsPage(props: PageProps) {
     return now < startDate
   })
 
-  const pastEvents = eventsData.events.filter((event) => {
+  const _pastEvents = eventsData.events.filter((event) => {
     const endDate = new Date(event.endDate)
     return now > endDate
   })

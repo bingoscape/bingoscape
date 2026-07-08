@@ -382,7 +382,7 @@ export async function getAllTeamPointsAndTotal(
       let totalContributionScore = 0
 
       // Calculate totals
-      for (const [tileId, tileData] of userMap.entries()) {
+      for (const [_tileId, tileData] of userMap.entries()) {
         totalUserImages += tileData.images
         totalUserTiles += 1
         totalUserXP += tileData.xp

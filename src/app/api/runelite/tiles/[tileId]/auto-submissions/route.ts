@@ -9,7 +9,6 @@ import {
   images,
   teamMembers,
   discordWebhooks,
-  goals,
   teamGoalProgress,
 } from "@/server/db/schema"
 import { eq, and, sql } from "drizzle-orm"

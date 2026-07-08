@@ -222,8 +222,8 @@ export async function getEventTeamStatistics(
   // Calculate balance metrics across teams
   const balance = calculateBalanceMetrics(teamStats)
 
-  // Calculate overall coverage metrics
-  const coverage = calculateCoverageMetrics(eventTeams, eventId)
+  // Get player metadata for coverage metrics
+  const coverage = await calculateCoverageMetrics(eventTeams)
 
   return {
     teams: teamStats,
@@ -415,8 +415,7 @@ function normalizeVariance(variance: number, values: number[]): number {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 async function calculateCoverageMetrics(
-  eventTeams: any[],
-  _eventId: string
+  eventTeams: any[]
 ): Promise<CoverageMetrics> {
   // Get all participants for the event
   const allMembers = eventTeams.flatMap((team) => team.teamMembers)

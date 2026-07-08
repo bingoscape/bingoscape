@@ -89,7 +89,7 @@ export function SuperAdminEventEditModal({
       })
 
       setOpen(false)
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update event. Please try again.",

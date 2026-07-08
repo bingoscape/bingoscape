@@ -385,7 +385,7 @@ export async function validateImportData(
     }
 
     return { valid: true }
-  } catch (error) {
+  } catch (_error) {
     return { valid: false, error: "Error validating import data" }
   }
 }

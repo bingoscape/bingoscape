@@ -46,7 +46,7 @@ export function SuperAdminEventDeleteModal({
 
       setOpen(false)
       router.push("/super-admin/events")
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to delete event. Please try again.",

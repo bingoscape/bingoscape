@@ -52,9 +52,7 @@ interface RegistrationsTabProps {
 }
 
 export function RegistrationsTab({
-  requests: initialRequests,
-  eventId,
-  onRequestsChange,
+  requests: initialRequests,  onRequestsChange,
 }: RegistrationsTabProps) {
   const [requests, setRequests] =
     useState<RegistrationRequest[]>(initialRequests)

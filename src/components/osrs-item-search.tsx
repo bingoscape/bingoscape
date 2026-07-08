@@ -1,5 +1,7 @@
 "use client"
 
+import Image from "next/image"
+
 import * as React from "react"
 import { useState, useEffect } from "react"
 import { Search, Loader2, CheckSquare, Square, X } from "lucide-react"
@@ -150,11 +152,14 @@ export function OsrsItemSearch({
             </div>
           ) : selectedItem && !multiSelect ? (
             <div className="flex items-center gap-2">
-              <img
-                src={selectedItem.imageUrl}
-                alt={selectedItem.name}
-                className="h-6 w-6 object-contain"
-              />
+              <div className="relative h-6 w-6 shrink-0">
+                <Image
+                  fill
+                  src={selectedItem.imageUrl}
+                  alt={selectedItem.name}
+                  className="object-cover"
+                />
+              </div>
               <span className="truncate">{selectedItem.name}</span>
             </div>
           ) : (
@@ -211,11 +216,14 @@ export function OsrsItemSearch({
                           ) : (
                             <Square className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
                           ))}
-                        <img
-                          src={item.imageUrl}
-                          alt={item.name}
-                          className="h-8 w-8 flex-shrink-0 object-contain"
-                        />
+                        <div className="relative h-8 w-8 shrink-0">
+                          <Image
+                            fill
+                            src={item.imageUrl}
+                            alt={item.name}
+                            className="object-cover"
+                          />
+                        </div>
                         <div className="flex min-w-0 flex-1 flex-col">
                           <span className="truncate font-medium">
                             {item.name}
@@ -314,11 +322,14 @@ export function OsrsItemSearchCompact({
     <div
       className={cn("flex items-center gap-2 rounded-md border p-2", className)}
     >
-      <img
-        src={selectedItem.imageUrl}
-        alt={selectedItem.name}
-        className="h-8 w-8 object-contain"
-      />
+      <div className="relative h-8 w-8 shrink-0">
+        <Image
+          fill
+          src={selectedItem.imageUrl}
+          alt={selectedItem.name}
+          className="object-cover"
+        />
+      </div>
       <div className="min-w-0 flex-1">
         <div className="truncate font-medium">{selectedItem.name}</div>
         {selectedItem.variant && (

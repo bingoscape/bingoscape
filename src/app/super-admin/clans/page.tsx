@@ -1,7 +1,7 @@
 import { getAllClans } from "@/app/actions/super-admin"
 import { SuperAdminClansTable } from "@/components/super-admin-clans-table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Shield, Users, Lock, Globe, TrendingUp } from "lucide-react"
+import { Shield, Lock, Globe, TrendingUp } from "lucide-react"
 
 interface PageProps {
   searchParams: Promise<{

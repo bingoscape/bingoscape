@@ -19,7 +19,6 @@ interface ClanEventsClientProps {
 
 export default function ClanEventsClient({
   initialEvents,
-  clanId,
 }: ClanEventsClientProps) {
   const [clanEvents, setClanEvents] = useState<EventData[]>(initialEvents)
   const [registrationStatuses, setRegistrationStatuses] = useState<

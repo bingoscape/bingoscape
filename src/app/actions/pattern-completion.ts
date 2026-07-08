@@ -5,10 +5,8 @@ import {
   tiles,
   teamTileSubmissions,
   bingos,
-  rowBonuses,
-  columnBonuses,
 } from "@/server/db/schema"
-import { eq, and, sql, inArray } from "drizzle-orm"
+import { eq, and, inArray } from "drizzle-orm"
 
 export interface TilePosition {
   row: number
@@ -33,7 +31,7 @@ export interface PatternCompletionResult {
 /**
  * Convert a tile index to its row and column position
  */
-function getTilePosition(index: number, columns: number): TilePosition {
+function _getTilePosition(index: number, columns: number): TilePosition {
   const row = Math.floor(index / columns)
   const col = index % columns
   return { row, col }

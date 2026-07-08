@@ -76,7 +76,7 @@ export const BingoTile = React.memo(function BingoTile({
     }
   }, [isHoverCardOpen, tile.id, tile.goals, currentTeamId, goalTreeData])
 
-  const submissionCounts = React.useMemo(() => {
+  const _submissionCounts = React.useMemo(() => {
     if (!isManagement || !tile.teamTileSubmissions) return null
 
     return tile.teamTileSubmissions.reduce(
@@ -155,7 +155,7 @@ export const BingoTile = React.memo(function BingoTile({
   }
 
   // Format description for tooltip - strip markdown and limit length
-  const formatDescription = (description: string | undefined) => {
+  const _formatDescription = (description: string | undefined) => {
     if (!description) return "No description available"
 
     // Strip basic markdown formatting

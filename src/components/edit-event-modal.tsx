@@ -127,7 +127,7 @@ export function EditEventModal({
         description: "Your event has been updated successfully.",
       })
       onClose()
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update event. Please try again.",

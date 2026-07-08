@@ -50,9 +50,7 @@ interface RegistrationRequestsTableProps {
 }
 
 export function RegistrationRequestsTable({
-  requests: initialRequests,
-  eventId,
-}: RegistrationRequestsTableProps) {
+  requests: initialRequests,}: RegistrationRequestsTableProps) {
   const [requests, setRequests] =
     useState<RegistrationRequest[]>(initialRequests)
   const [filter, setFilter] = useState<

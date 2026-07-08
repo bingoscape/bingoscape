@@ -1,5 +1,7 @@
 "use client"
 
+import Image from "next/image"
+
 import React, { useState, useEffect } from "react"
 import {
   Dialog,
@@ -381,11 +383,14 @@ export function TierManagementModal({
                             <CardContent className="p-3">
                               <div className="flex items-start gap-3">
                                 {tile.headerImage && (
-                                  <img
-                                    src={tile.headerImage}
-                                    alt={tile.title}
-                                    className="h-12 w-12 rounded object-cover"
-                                  />
+                                  <div className="relative h-12 w-12 shrink-0">
+                                    <Image
+                                      fill
+                                      src={tile.headerImage}
+                                      alt={tile.title}
+                                      className="rounded object-cover"
+                                    />
+                                  </div>
                                 )}
                                 <div className="min-w-0 flex-1">
                                   <h4 className="truncate text-sm font-medium">
@@ -491,11 +496,14 @@ export function TierManagementModal({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           {selectedTile.headerImage && (
-                            <img
-                              src={selectedTile.headerImage || getRandomFrog()}
-                              alt={selectedTile.title}
-                              className="h-16 w-16 rounded object-cover"
-                            />
+                            <div className="relative h-16 w-16 shrink-0">
+                              <Image
+                                fill
+                                src={selectedTile.headerImage || getRandomFrog()}
+                                alt={selectedTile.title}
+                                className="rounded object-cover"
+                              />
+                            </div>
                           )}
                           <div>
                             <h4 className="font-medium">

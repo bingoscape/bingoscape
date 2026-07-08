@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -19,20 +18,13 @@ import {
   Users,
   CalendarIcon,
   Trophy,
-  ShieldAlert,
-  FileText,
   CheckCircle2,
   XCircle,
   Clock3,
-  Check,
   AlertTriangle,
   Star,
-  MapPin,
   Settings,
-  ArrowRight,
 } from "lucide-react"
-import { format } from "date-fns"
-import { formatInTimeZone } from "date-fns-tz"
 import { Badge } from "@/components/ui/badge"
 import { useState } from "react"
 import { Textarea } from "@/components/ui/textarea"
@@ -68,7 +60,7 @@ export function EventCard({
     : null
 
   const eventTz = eventData.event.timezone || "UTC"
-  const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const _localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
 
   const isRegistrationClosed =
     !!registrationDeadline && new Date() > registrationDeadline

@@ -13,9 +13,7 @@ interface SubmissionCommentProps {
 }
 
 export function SubmissionCommentDisplay({
-  comments,
-  submissionId,
-  canViewComments = true,
+  comments,  canViewComments = true,
 }: SubmissionCommentProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
         "Cache-Control": "public, max-age=31536000, immutable",
       },
     })
-  } catch (_) {
+  } catch {
     return new NextResponse("File not found", { status: 404 })
   }
 }

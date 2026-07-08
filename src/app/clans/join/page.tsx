@@ -19,7 +19,7 @@ import { useSession, signIn } from "next-auth/react"
 function JoinClanContent({ inviteCode }: { inviteCode: string | null }) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const { data: session, status } = useSession()
+  const { data: _session, status } = useSession()
 
   useEffect(() => {
     if (!inviteCode) {

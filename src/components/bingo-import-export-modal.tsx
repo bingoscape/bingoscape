@@ -11,7 +11,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
@@ -81,7 +80,7 @@ export function BingoImportExportModal({
       try {
         jsonData = JSON.parse(fileContent)
         setImportProgress(75)
-      } catch (error) {
+      } catch (_error) {
         setValidationResult({ valid: false, error: "Invalid JSON format" })
         setImportProgress(0)
         return
@@ -91,7 +90,7 @@ export function BingoImportExportModal({
       const validation = await validateImportData(jsonData)
       setValidationResult(validation)
       setImportProgress(validation.valid ? 100 : 0)
-    } catch (error) {
+    } catch (_error) {
       setValidationResult({ valid: false, error: "Error reading file" })
       setImportProgress(0)
     }

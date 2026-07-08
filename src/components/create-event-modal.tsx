@@ -29,7 +29,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  CalendarIcon,
   Info,
   ArrowRight,
   ArrowLeft,
@@ -41,7 +40,6 @@ import {
 import { format, differenceInDays, addDays } from "date-fns"
 import { fromZonedTime } from "date-fns-tz"
 import { cn } from "@/lib/utils"
-import type { DateRange } from "react-day-picker"
 
 interface CreateEventModalProps {
   isOpen: boolean
@@ -247,7 +245,7 @@ export function CreateEventModal({
           variant: "destructive",
         })
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to create event. Please try again.",

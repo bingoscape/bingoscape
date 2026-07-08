@@ -57,6 +57,7 @@ export function AddClanMembersDialog({
       setSelectedMembers(new Set())
       setSearchTerm("")
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, eventId])
 
   const loadMembers = async () => {

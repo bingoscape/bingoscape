@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Loader2, Info, Eye, Grid3X3, ArrowUpRight, Lock } from "lucide-react"
+import { Loader2, Info, Eye, Grid3X3, Lock } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { PatternBonusSchematicEditor } from "./pattern-bonus-schematic-editor"

@@ -61,7 +61,7 @@ export function DiscordWebhookManagement({
       if (result) {
         setWebhooks(result)
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to load Discord webhooks",
@@ -80,6 +80,7 @@ export function DiscordWebhookManagement({
           console.error("Error loading webhooks:", error)
         })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   const handleCreateWebhook = async () => {
@@ -118,7 +119,7 @@ export function DiscordWebhookManagement({
           variant: "destructive",
         })
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to create Discord webhook",
@@ -149,7 +150,7 @@ export function DiscordWebhookManagement({
           variant: "destructive",
         })
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update webhook",
@@ -180,7 +181,7 @@ export function DiscordWebhookManagement({
           variant: "destructive",
         })
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to delete webhook",
@@ -204,7 +205,7 @@ export function DiscordWebhookManagement({
           variant: "destructive",
         })
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to test webhook",

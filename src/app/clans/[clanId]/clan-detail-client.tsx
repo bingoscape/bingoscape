@@ -1,8 +1,6 @@
 "use client"
 
-import { notFound, useRouter } from "next/navigation"
 import {
-  getClanDetails,
   getClanMembers,
   updateMemberRole,
 } from "@/app/actions/clan"
@@ -38,7 +36,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { useSession } from "next-auth/react"
-import { useState, useEffect, use } from "react"
+import { useState } from "react"
 import { toast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Breadcrumbs } from "@/components/breadcrumbs"
@@ -86,12 +84,12 @@ export function ClanDetailClient({
   initialMembers: ClanMember[]
 }) {
   const [members, setMembers] = useState<ClanMember[]>(initialMembers)
-  const [clanDetails, setClanDetails] = useState<ClanDetails | null>(
+  const [clanDetails, _setClanDetails] = useState<ClanDetails | null>(
     initialClanDetails
   )
-  const [isLoading, setIsLoading] = useState(false)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [roleFilter, setRoleFilter] = useState<string>("all")
+  const [isLoading, _setIsLoading] = useState(false)
+  const [searchTerm, _setSearchTerm] = useState("")
+  const [roleFilter, _setRoleFilter] = useState<string>("all")
   const { status } = useSession()
 
   const handleRoleUpdate = async (memberId: string, newRole: Role) => {
@@ -103,7 +101,7 @@ export function ClanDetailClient({
         title: "Role Updated",
         description: `The member's role has been successfully updated to ${newRole}.`,
       })
-    } catch (_) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to update member's role. Please try again.",
@@ -170,7 +168,7 @@ export function ClanDetailClient({
     { label: clanDetails.name, href: `/clans/${clanDetails.id}` },
   ]
 
-  const filteredMembers = members.filter((member) => {
+  const _filteredMembers = members.filter((member) => {
     const matchesSearch =
       member.name?.toLowerCase().includes(searchTerm.toLowerCase()) ??
       member.runescapeName?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -178,7 +176,7 @@ export function ClanDetailClient({
     return matchesSearch && matchesRole
   })
 
-  const getRoleIcon = (role: Role) => {
+  const _getRoleIcon = (role: Role) => {
     switch (role) {
       case "admin":
         return Crown
@@ -193,7 +191,7 @@ export function ClanDetailClient({
     }
   }
 
-  const getRoleColor = (role: Role) => {
+  const _getRoleColor = (role: Role) => {
     switch (role) {
       case "admin":
         return "text-red-500"

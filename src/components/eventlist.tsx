@@ -3,7 +3,7 @@ import Link from "next/link"
 import { EventDisplay } from "./events-display"
 import { Button } from "@/components/ui/button"
 import { CreateEventButton } from "./create-event-button"
-import { Plus, TrendingUp, Users, Trophy } from "lucide-react"
+import { TrendingUp, Users, Trophy } from "lucide-react"
 import { type getEvents as getEventsType } from "@/server/queries/events"
 
 interface EventListProps {
@@ -11,7 +11,7 @@ interface EventListProps {
   initialEvents: Awaited<ReturnType<typeof getEventsType>>
 }
 
-export default function EventList({ userId, initialEvents }: EventListProps) {
+export default function EventList({ initialEvents }: EventListProps) {
   const allEvents = initialEvents
 
   const hasEvents = allEvents.length > 0

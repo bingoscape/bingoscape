@@ -10,7 +10,6 @@ import {
   getEventParticipantMetadata,
   calculateMetadataCoverage,
 } from "./player-metadata"
-import { createTeam, addUserToTeam } from "./team"
 import {
   SA_STANDARD_CONFIG,
   SA_FORMULAS,

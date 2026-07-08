@@ -20,9 +20,7 @@ interface TemplatePreviewGridProps {
 }
 
 export function TemplatePreviewGrid({
-  templateData,
-  title,
-  className,
+  templateData,  className,
   isDetailView = false,
 }: TemplatePreviewGridProps) {
   const [parsedData, setParsedData] = useState<ExportedBingo | null>(null)

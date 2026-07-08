@@ -162,7 +162,7 @@ export async function POST(
     const relativePath = path.join("/uploads", filename).replace(/\\/g, "/")
 
     // Create or update the submission in the database
-    const result = await db.transaction(async (tx) => {
+    await db.transaction(async (tx) => {
       // Get or create teamTileSubmission
       const [teamTileSubmission] = await tx
         .insert(teamTileSubmissions)

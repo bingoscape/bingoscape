@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/server/auth"
 import { db } from "@/server/db"
 import { submissionComments, submissions, users } from "@/server/db/schema"
-import { eq, and, desc } from "drizzle-orm"
+import { eq, desc } from "drizzle-orm"
 import { z } from "zod"
 
 const createCommentSchema = z.object({

@@ -190,7 +190,7 @@ export default function BingoGridWrapper({
           : bingo.tiles.filter((_, index) => (index + 1) % bingo.columns === 0)
       setHighlightedTiles(tilesToHighlight.map((tile) => tile.index))
     },
-    [bingo.tiles, bingo]
+    [bingo]
   )
 
   const clearHighlightedTiles = useCallback(() => {

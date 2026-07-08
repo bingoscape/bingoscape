@@ -47,7 +47,7 @@ export function SuperAdminUserDeleteModal({
 
       setOpen(false)
       router.push("/super-admin/users")
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to delete user. Please try again.",

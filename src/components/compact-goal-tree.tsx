@@ -1,5 +1,7 @@
 "use client"
 
+import Image from "next/image"
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Badge } from "@/components/ui/badge"
@@ -73,7 +75,7 @@ export function CompactGoalTree({
     parentGroupTarget = 0
   ): ProgressNode => {
     if (node.type === "goal") {
-      const goalData = node.data as any
+      const _goalData = node.data as any
       const progress = teamProgress.find((p) => p.goalId === node.id)
       return {
         ...node,
@@ -282,11 +284,14 @@ function CompactTreeNode({
             <div className="flex shrink-0 items-center gap-1">
               {isItemGoal && itemGoal ? (
                 <>
-                  <img
-                    src={itemGoal.imageUrl}
-                    alt={itemGoal.baseName}
-                    className="h-4 w-4 object-contain"
-                  />
+                  <div className="relative h-4 w-4 shrink-0">
+                    <Image
+                      fill
+                      src={itemGoal.imageUrl}
+                      alt={itemGoal.baseName}
+                      className="object-cover"
+                    />
+                  </div>
                   <Badge variant="secondary" className="h-3 px-0.5 text-[10px]">
                     <Package className="h-2.5 w-2.5" />
                   </Badge>
@@ -294,14 +299,17 @@ function CompactTreeNode({
               ) : isMetricGoal && metricGoal ? (
                 <>
                   {metricGoal.metricName ? (
-                    <img
-                      src={getWikiIconUrl(metricGoal.metricName)}
-                      alt={metricGoal.metricName}
-                      className="h-4 w-4 object-contain"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none"
-                      }}
-                    />
+                    <div className="relative h-4 w-4 shrink-0">
+                      <Image
+                        fill
+                        src={getWikiIconUrl(metricGoal.metricName)}
+                        alt={metricGoal.metricName}
+                        className="object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none"
+                        }}
+                      />
+                    </div>
                   ) : (
                     <BarChart2 className="h-3 w-3 text-blue-500" />
                   )}

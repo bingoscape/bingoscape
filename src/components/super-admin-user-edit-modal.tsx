@@ -57,7 +57,7 @@ export function SuperAdminUserEditModal({
       })
 
       setOpen(false)
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update user. Please try again.",

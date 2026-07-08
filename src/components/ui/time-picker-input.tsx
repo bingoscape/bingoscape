@@ -23,7 +23,7 @@ export const TimePickerInput = React.forwardRef<
   (
     {
       className,
-      type = "tel",
+      type: _type = "tel",
       date,
       setDate,
       picker,

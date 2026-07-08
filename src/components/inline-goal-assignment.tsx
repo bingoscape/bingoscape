@@ -1,5 +1,7 @@
 "use client"
 
+import Image from "next/image"
+
 import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -211,11 +213,14 @@ export function InlineGoalAssignment({
                     <div className="flex w-full items-center justify-between gap-2">
                       <div className="flex min-w-0 flex-1 items-center gap-2">
                         {isItemGoal && itemGoal && (
-                          <img
-                            src={itemGoal.imageUrl}
-                            alt={itemGoal.baseName}
-                            className="h-5 w-5 flex-shrink-0 object-contain"
-                          />
+                          <div className="relative h-5 w-5 shrink-0">
+                            <Image
+                              fill
+                              src={itemGoal.imageUrl}
+                              alt={itemGoal.baseName}
+                              className="object-cover"
+                            />
+                          </div>
                         )}
                         <span className="truncate font-medium">
                           {goal.description}
@@ -373,11 +378,14 @@ export function InlineGoalAssignment({
         <div className="group flex cursor-pointer items-center gap-1 rounded bg-blue-500/20 p-1.5 text-xs transition-colors hover:bg-blue-500/30">
           <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-blue-500" />
           {isItemGoal && itemGoal && (
-            <img
-              src={itemGoal.imageUrl}
-              alt={itemGoal.baseName}
-              className="h-5 w-5 shrink-0 object-contain"
-            />
+            <div className="relative h-5 w-5 shrink-0">
+              <Image
+                fill
+                src={itemGoal.imageUrl}
+                alt={itemGoal.baseName}
+                className="object-cover"
+              />
+            </div>
           )}
           <span className="truncate font-medium text-blue-500">
             {currentGoal?.description ?? "Goal"}
@@ -428,11 +436,14 @@ export function InlineGoalAssignment({
         <div className="flex items-center gap-1 rounded bg-blue-500/20 p-1.5 text-xs">
           <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-blue-500" />
           {isItemGoal && itemGoal && (
-            <img
-              src={itemGoal.imageUrl}
-              alt={itemGoal.baseName}
-              className="h-5 w-5 shrink-0 object-contain"
-            />
+            <div className="relative h-5 w-5 shrink-0">
+              <Image
+                fill
+                src={itemGoal.imageUrl}
+                alt={itemGoal.baseName}
+                className="object-cover"
+              />
+            </div>
           )}
           <span className="truncate font-medium text-blue-500">
             {currentGoal?.description ?? "Goal"}

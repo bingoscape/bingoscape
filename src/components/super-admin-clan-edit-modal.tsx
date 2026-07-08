@@ -83,7 +83,7 @@ export function SuperAdminClanEditModal({
       })
 
       setOpen(false)
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update clan. Please try again.",

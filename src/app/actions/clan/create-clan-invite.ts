@@ -6,7 +6,6 @@ import { db } from "@/server/db"
 import { clanMembers, clanInvites } from "@/server/db/schema"
 import { and, eq, count } from "drizzle-orm"
 import { nanoid } from "nanoid"
-import type { CreateClanInviteParams } from "@/types/clan"
 
 const schema = z.object({
   clanId: z.string(),

@@ -14,7 +14,7 @@ import { PublicBingoGrid } from "@/components/public-bingo-grid"
 // Generate metadata for SEO
 export async function generateMetadata(
   props: { params: Promise<{ id: string; bingoId: string }> },
-  parent: ResolvingMetadata
+  _parent: ResolvingMetadata
 ): Promise<Metadata> {
   const params = await props.params
   const event = await getPublicEvent(params.id)

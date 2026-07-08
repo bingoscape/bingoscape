@@ -1,7 +1,7 @@
 // Production drizzle config - uses environment variables directly
 // This avoids TypeScript path alias issues in production
 
-export default {
+const config = {
   schema: "./src/server/db/schema.ts",
   dialect: "postgresql",
   dbCredentials: {
@@ -9,3 +9,5 @@ export default {
   },
   tablesFilter: ["bingoscape-next_*"],
 }
+
+export default config

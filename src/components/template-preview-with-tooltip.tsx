@@ -21,9 +21,7 @@ interface TemplatePreviewWithTooltipProps {
 }
 
 export default function TemplatePreviewWithTooltip({
-  templateData,
-  title,
-  className,
+  templateData,  className,
   isDetailView = false,
   fixedTooltipIndex = 9,
 }: TemplatePreviewWithTooltipProps) {

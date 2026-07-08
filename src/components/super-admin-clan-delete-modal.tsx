@@ -46,7 +46,7 @@ export function SuperAdminClanDeleteModal({
 
       setOpen(false)
       router.push("/super-admin/clans")
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to delete clan. Please try again.",

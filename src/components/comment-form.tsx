@@ -13,7 +13,6 @@ interface CommentFormProps {
 }
 
 export function CommentForm({
-  submissionId,
   onSubmit,
   onCancel,
   isLoading = false,

@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Image from "next/image"
 import { getMiniBoardTiles } from "@/app/actions/events"
-import { Lock, Check } from "lucide-react"
+import { Lock, } from "lucide-react"
 
 interface MiniBoardProps {
   bingoId: string
@@ -42,7 +43,7 @@ export function MiniBoard({
           setTiles(data as MiniTile[])
           setLoading(false)
         }
-      } catch (error) {
+      } catch (_error) {
         if (mounted) setLoading(false)
       }
     }
@@ -112,10 +113,11 @@ export function MiniBoard({
               ?
             </div>
           ) : tile.headerImage ? (
-            <img
+            <Image
+              fill
               src={tile.headerImage}
               alt={tile.title}
-              className={`absolute inset-0 h-full w-full object-contain p-0.5 ${tile.isCompleted ? "saturate-110 brightness-110" : "opacity-90"}`}
+              className={`object-cover p-0.5 ${tile.isCompleted ? "saturate-110 brightness-110" : "opacity-90"}`}
             />
           ) : (
             <div

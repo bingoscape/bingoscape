@@ -152,7 +152,7 @@ export function TeamBalancePreview({
           <p className="text-sm font-medium">Team Strength Distribution</p>
           {metrics.teams
             .sort((a, b) => b.averageScore - a.averageScore)
-            .map((team, index) => {
+            .map((team, _index) => {
               const scorePercentage = team.averageScore * 100
               const deviation =
                 ((team.averageScore - metrics.overallAverage) /

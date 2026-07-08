@@ -2,10 +2,10 @@
 
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
-import { playerMetadata, eventParticipants, events } from "@/server/db/schema"
+import { playerMetadata, eventParticipants } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
-import { fetchPlayerDataFromWOM, type WOMPlayerData } from "./wiseoldman"
+import { fetchPlayerDataFromWOM } from "./wiseoldman"
 
 /**
  * Get player metadata for a specific user in a specific event

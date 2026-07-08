@@ -907,8 +907,8 @@ export async function getEventItemStatistics(
  */
 function calculateDailyValueTimeline(
   submissions: ItemValueSubmission[],
-  eventStartDate: Date | null,
-  eventEndDate: Date | null
+  _eventStartDate: Date | null,
+  _eventEndDate: Date | null
 ): DailyValueData[] {
   if (submissions.length === 0) return []
 

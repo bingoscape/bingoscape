@@ -59,7 +59,7 @@ export function PatternCompletionTab({ data }: PatternCompletionTabProps) {
     )
   }
 
-  const selectedTeam = selectedBoard.teams[selectedTeamIndex]
+  const _selectedTeam = selectedBoard.teams[selectedTeamIndex]
 
   return (
     <div className="space-y-4">

@@ -356,7 +356,7 @@ export function getPopularTimezones(
   return POPULAR_TIMEZONES.map((timezone) => {
     // Find region for this timezone
     const region =
-      Object.entries(TIMEZONE_DATA).find(([_, timezones]) =>
+      Object.entries(TIMEZONE_DATA).find(([, timezones]) =>
         timezones.includes(timezone)
       )?.[0] ?? "Other"
 

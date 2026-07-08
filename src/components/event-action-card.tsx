@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { type LucideIcon, ChevronRight, ExternalLink } from "lucide-react"
 import { type ReactNode } from "react"

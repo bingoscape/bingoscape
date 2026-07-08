@@ -43,13 +43,11 @@ export const BingoGridLayout = memo(
           role="grid"
           aria-label={`Bingo grid with ${columns} columns and ${rows} rows`}
         >
-          {tiles.map((tile, index) => (
+          {tiles.map((tile, _index) => (
             <div
               key={tile.id}
               className={`relative ${highlightedTiles.includes(tile.index) ? "ring-2 ring-red-500" : ""}`}
               role="gridcell"
-              aria-posinset={index + 1}
-              aria-setsize={tiles.length}
             >
               <BingoTile
                 tile={tile}

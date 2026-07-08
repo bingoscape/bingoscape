@@ -2,8 +2,7 @@
 
 import { eq, and, asc, sum, sql, desc, inArray } from "drizzle-orm"
 import { nanoid } from "nanoid"
-import { unstable_cache, revalidatePath } from "next/cache"
-import { cache } from "react"
+import { revalidatePath } from "next/cache"
 import { getEventById } from "@/server/queries/events"
 
 import { getServerAuthSession } from "@/server/auth"

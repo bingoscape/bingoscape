@@ -37,7 +37,7 @@ export default function EventParticipantsPage(props: {
   const [loading, setLoading] = useState(true)
   const [minimumBuyIn, setMinimumBuyIn] = useState(0)
   const [eventName, setEventName] = useState("")
-  const [eventCreatorId, setEventCreatorId] = useState<string>("")
+  const [_eventCreatorId, setEventCreatorId] = useState<string>("")
   const [clanId, setClanId] = useState<string | null>(null)
   const { data } = useSession()
   const [currentUserRole, setCurrentUserRole] = useState<

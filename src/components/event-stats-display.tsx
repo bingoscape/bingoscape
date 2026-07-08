@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Trophy, Target, BarChart3, Users } from "lucide-react"
+import { Target, BarChart3, Users } from "lucide-react"
 import type { EventStatsData } from "@/app/actions/stats"
 import type { EventRole } from "@/app/actions/events"
 import type { ItemStatistics } from "@/app/actions/item-statistics"
@@ -25,7 +25,6 @@ interface EventStatsDisplayProps {
 export function EventStatsDisplay({
   eventStats,
   eventTitle,
-  userRole,
   itemStatistics,
   patternCompletionData,
 }: EventStatsDisplayProps) {

@@ -1,7 +1,7 @@
 import { getAllUsers } from "@/app/actions/super-admin"
 import { SuperAdminUsersTable } from "@/components/super-admin-users-table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, UserCheck, UserX, TrendingUp } from "lucide-react"
+import { Users, UserCheck, TrendingUp } from "lucide-react"
 
 interface PageProps {
   searchParams: Promise<{

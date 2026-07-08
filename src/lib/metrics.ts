@@ -126,7 +126,7 @@ export function normalizeRoute(path: string): string {
       // Replace numeric IDs
       .replace(/\/\d+/g, "/:id")
       // Replace username patterns
-      .replace(/\/[a-zA-Z0-9_-]+(?=\/|$)/g, (match, offset, string) => {
+      .replace(/\/[a-zA-Z0-9_-]+(?=\/|$)/g, (match) => {
         // Don't replace known static segments
         const staticSegments = [
           "api",

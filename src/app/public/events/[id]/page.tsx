@@ -18,13 +18,12 @@ import {
 } from "@/app/actions/public-events"
 import Link from "next/link"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
-import type { Metadata, ResolvingMetadata } from "next"
+import type { Metadata } from "next"
 import { PublicBingoGrid } from "@/components/public-bingo-grid"
 
 // Generate metadata for SEO
 export async function generateMetadata(
-  props: { params: Promise<{ id: string }> },
-  _parent: ResolvingMetadata
+  props: { params: Promise<{ id: string }> }
 ): Promise<Metadata> {
   const params = await props.params
   const event = await getPublicEvent(params.id)

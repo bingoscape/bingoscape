@@ -101,7 +101,7 @@ export function ClanInvitesManagement({ clanId }: ClanInvitesManagementProps) {
         description: "Invite has been revoked",
       })
       await fetchInvites()
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to revoke invite",
@@ -129,7 +129,7 @@ export function ClanInvitesManagement({ clanId }: ClanInvitesManagementProps) {
         description: "Invite has been deleted",
       })
       await fetchInvites()
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to delete invite",
@@ -163,7 +163,7 @@ export function ClanInvitesManagement({ clanId }: ClanInvitesManagementProps) {
       setEditingInvite(null)
       setEditLabel("")
       await fetchInvites()
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update label",

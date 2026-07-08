@@ -1,6 +1,5 @@
 import { notFound, redirect } from "next/navigation"
-import { events, bingos, tiles } from "@/server/db/schema"
-import { eq } from "drizzle-orm"
+import { bingos, tiles } from "@/server/db/schema"
 import {
   Card,
   CardContent,
@@ -15,7 +14,6 @@ import { Button } from "@/components/ui/button"
 import { db } from "@/server/db"
 import { getServerAuthSession } from "@/server/auth"
 import { type UUID } from "crypto"
-import { getUserRole } from "@/app/actions/events"
 import getRandomFrog from "@/lib/getRandomFrog"
 import { getEventById } from "@/server/queries/events"
 

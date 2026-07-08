@@ -3,7 +3,7 @@
 import { authenticatedAction as authActionClient } from "@/lib/safe-action"
 import { z } from "zod"
 import { db } from "@/server/db"
-import { clans, clanMembers, clanInvites } from "@/server/db/schema"
+import { clanMembers, clanInvites } from "@/server/db/schema"
 import { and, eq } from "drizzle-orm"
 
 const schema = z.object({

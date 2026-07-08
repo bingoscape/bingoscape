@@ -5,9 +5,8 @@ import {
   eventParticipants,
   events,
   teamMembers,
-  bingos,
 } from "@/server/db/schema"
-import { eq, and } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { validateApiKey } from "@/lib/api-auth"
 import { formatBingoData } from "@/lib/bingo-formatter"
 
