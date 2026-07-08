@@ -412,8 +412,7 @@ export function EventCard({
           (!isParticipant &&
             (isRegistrationClosed ?? eventData.event.locked)) ? (
           <div className="flex w-full gap-3">
-            {!isParticipant &&
-              !isRegistrationClosed &&
+            {!isRegistrationClosed &&
               !eventData.event.locked && (
                 <>
                   {eventData.event.requiresApproval ? (
@@ -468,8 +467,7 @@ export function EventCard({
                 </>
               )}
 
-            {!isParticipant &&
-              (isRegistrationClosed ?? eventData.event.locked) && (
+            {(isRegistrationClosed ?? eventData.event.locked) && (
                 <Button
                   disabled
                   className="opacity-50"
