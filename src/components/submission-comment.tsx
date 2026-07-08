@@ -48,7 +48,7 @@ export function SubmissionCommentDisplay({
       {/* Expanded comments */}
       {isExpanded && (
         <div
-          className={`comment-section ${isExpanded ? "expanded" : "collapsed"}`}
+          className="comment-section expanded"
           role="region"
           aria-label="Review comments"
         >

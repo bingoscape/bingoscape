@@ -1,6 +1,5 @@
 import Image from "next/image"
 import { cn } from "@/lib/utils"
-import getRandomFrog from "@/lib/getRandomFrog"
 
 interface TemplatePreviewProps {
   previewImage: string | null
@@ -22,7 +21,7 @@ export function TemplatePreview({
     >
       {previewImage ? (
         <Image
-          src={previewImage || getRandomFrog()}
+          src={previewImage}
           alt={`Preview of ${title}`}
           fill
           className="object-cover"

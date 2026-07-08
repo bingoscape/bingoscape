@@ -227,7 +227,7 @@ export function TileDetailsTab({
           <div className="relative aspect-square w-full md:w-1/3">
             {isEditing && imagePreview && isValidImage ? (
               <Image
-                src={imagePreview || getRandomFrog()}
+                src={imagePreview}
                 alt="Header image preview"
                 fill
                 className="rounded-md object-contain"

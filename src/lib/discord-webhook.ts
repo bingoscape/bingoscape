@@ -96,7 +96,6 @@ export async function testDiscordWebhook(webhookUrl: string): Promise<boolean> {
     timestamp: new Date().toISOString(),
   }
 
-  debugger
   return sendDiscordWebhook(webhookUrl, { embeds: [testEmbed] })
 }
 
@@ -132,7 +131,7 @@ export function createSubmissionEmbed(data: SubmissionEmbedData): DiscordEmbed {
   } = data
 
   // Convert HSL color to hex
-  const colorRegex = /hsl$$(\d+),\s*(\d+)%,\s*(\d+)%$$/
+  const colorRegex = /hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/
   const colorMatch = colorRegex.exec(teamColor)
   let hexColor = 0x7289da // Default Discord blue
 

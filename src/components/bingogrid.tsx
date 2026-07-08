@@ -621,7 +621,7 @@ export default function BingoGrid({
       }
 
       // Handle Escape key to close modal
-      if (event.key === "Escape" && isDialogOpen) {
+      if (event.key === "Escape") {
         setIsDialogOpen(false)
       }
     }
