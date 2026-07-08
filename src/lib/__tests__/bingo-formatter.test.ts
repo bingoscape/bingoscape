@@ -22,12 +22,30 @@ describe("calculateGroupProgress", () => {
         minRequiredGoals: 10,
         orderIndex: 0,
         children: [
-          { type: "goal", id: "goal-1", targetValue: 5, description: "Goal 1", orderIndex: 0, goalType: "generic" },
-          { type: "goal", id: "goal-2", targetValue: 5, description: "Goal 2", orderIndex: 1, goalType: "generic" }
-        ]
+          {
+            type: "goal",
+            id: "goal-1",
+            targetValue: 5,
+            description: "Goal 1",
+            orderIndex: 0,
+            goalType: "generic",
+          },
+          {
+            type: "goal",
+            id: "goal-2",
+            targetValue: 5,
+            description: "Goal 2",
+            orderIndex: 1,
+            goalType: "generic",
+          },
+        ],
       }
 
-      const result = calculateGroupProgress(groupNode, allGoals, teamProgressMap)
+      const result = calculateGroupProgress(
+        groupNode,
+        allGoals,
+        teamProgressMap
+      )
       expect(result.completedCount).toBe(7)
       expect(result.totalCount).toBe(10)
       expect(result.isComplete).toBe(false)
@@ -45,12 +63,30 @@ describe("calculateGroupProgress", () => {
         minRequiredGoals: 10,
         orderIndex: 0,
         children: [
-          { type: "goal", id: "goal-1", targetValue: 5, description: "Goal 1", orderIndex: 0, goalType: "generic" },
-          { type: "goal", id: "goal-2", targetValue: 5, description: "Goal 2", orderIndex: 1, goalType: "generic" }
-        ]
+          {
+            type: "goal",
+            id: "goal-1",
+            targetValue: 5,
+            description: "Goal 1",
+            orderIndex: 0,
+            goalType: "generic",
+          },
+          {
+            type: "goal",
+            id: "goal-2",
+            targetValue: 5,
+            description: "Goal 2",
+            orderIndex: 1,
+            goalType: "generic",
+          },
+        ],
       }
 
-      const result = calculateGroupProgress(groupNode, allGoals, teamProgressMap)
+      const result = calculateGroupProgress(
+        groupNode,
+        allGoals,
+        teamProgressMap
+      )
       expect(result.completedCount).toBe(10)
       expect(result.totalCount).toBe(10)
       expect(result.isComplete).toBe(true)
@@ -77,9 +113,23 @@ describe("calculateGroupProgress", () => {
             minRequiredGoals: 2,
             orderIndex: 0,
             children: [
-              { type: "goal", id: "goal-1", targetValue: 1, description: "", orderIndex: 0, goalType: "generic" },
-              { type: "goal", id: "goal-2", targetValue: 1, description: "", orderIndex: 1, goalType: "generic" }
-            ]
+              {
+                type: "goal",
+                id: "goal-1",
+                targetValue: 1,
+                description: "",
+                orderIndex: 0,
+                goalType: "generic",
+              },
+              {
+                type: "goal",
+                id: "goal-2",
+                targetValue: 1,
+                description: "",
+                orderIndex: 1,
+                goalType: "generic",
+              },
+            ],
           },
           {
             type: "group",
@@ -89,14 +139,32 @@ describe("calculateGroupProgress", () => {
             minRequiredGoals: 1,
             orderIndex: 1,
             children: [
-              { type: "goal", id: "goal-3", targetValue: 1, description: "", orderIndex: 0, goalType: "generic" },
-              { type: "goal", id: "goal-4", targetValue: 1, description: "", orderIndex: 1, goalType: "generic" }
-            ]
-          }
-        ]
+              {
+                type: "goal",
+                id: "goal-3",
+                targetValue: 1,
+                description: "",
+                orderIndex: 0,
+                goalType: "generic",
+              },
+              {
+                type: "goal",
+                id: "goal-4",
+                targetValue: 1,
+                description: "",
+                orderIndex: 1,
+                goalType: "generic",
+              },
+            ],
+          },
+        ],
       }
 
-      const result = calculateGroupProgress(groupNode, allGoals, teamProgressMap)
+      const result = calculateGroupProgress(
+        groupNode,
+        allGoals,
+        teamProgressMap
+      )
       expect(result.completedCount).toBe(2)
       expect(result.totalCount).toBe(2)
       expect(result.isComplete).toBe(true)
@@ -110,10 +178,14 @@ describe("calculateGroupProgress", () => {
         logicalOperator: "SUM",
         minRequiredGoals: 5,
         orderIndex: 0,
-        children: []
+        children: [],
       }
-      
-      const result = calculateGroupProgress(groupNode, allGoals, teamProgressMap)
+
+      const result = calculateGroupProgress(
+        groupNode,
+        allGoals,
+        teamProgressMap
+      )
       expect(result.completedCount).toBe(0)
       expect(result.totalCount).toBe(5)
       expect(result.isComplete).toBe(false)
@@ -132,12 +204,30 @@ describe("calculateGroupProgress", () => {
         minRequiredGoals: 0,
         orderIndex: 0,
         children: [
-          { type: "goal", id: "goal-1", targetValue: 1, description: "", orderIndex: 0, goalType: "generic" },
-          { type: "goal", id: "goal-2", targetValue: 1, description: "", orderIndex: 1, goalType: "generic" }
-        ]
+          {
+            type: "goal",
+            id: "goal-1",
+            targetValue: 1,
+            description: "",
+            orderIndex: 0,
+            goalType: "generic",
+          },
+          {
+            type: "goal",
+            id: "goal-2",
+            targetValue: 1,
+            description: "",
+            orderIndex: 1,
+            goalType: "generic",
+          },
+        ],
       }
 
-      const result = calculateGroupProgress(groupNode, allGoals, teamProgressMap)
+      const result = calculateGroupProgress(
+        groupNode,
+        allGoals,
+        teamProgressMap
+      )
       expect(result.completedCount).toBe(1)
       expect(result.totalCount).toBe(2)
       expect(result.isComplete).toBe(false)

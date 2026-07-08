@@ -21,12 +21,25 @@ import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { GPInput } from "@/components/ui/gp-input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CalendarIcon, Info, ArrowRight, ArrowLeft, Swords, Shield, Rocket, CheckCircle2 } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Info,
+  ArrowRight,
+  ArrowLeft,
+  Swords,
+  Shield,
+  Rocket,
+  CheckCircle2,
+} from "lucide-react"
 import { format, differenceInDays, addDays } from "date-fns"
 import { fromZonedTime } from "date-fns-tz"
 import { cn } from "@/lib/utils"
-import type { DateRange } from "react-day-picker"
 
 interface CreateEventModalProps {
   isOpen: boolean
@@ -74,7 +87,9 @@ export function CreateEventModal({
   const [gameType, setGameType] = useState<"osrs" | "rs3">("osrs")
   const [startDate, setStartDate] = useState<Date | undefined>(undefined)
   const [endDate, setEndDate] = useState<Date | undefined>(undefined)
-  const [registrationDeadline, setRegistrationDeadline] = useState<Date | undefined>(undefined)
+  const [registrationDeadline, setRegistrationDeadline] = useState<
+    Date | undefined
+  >(undefined)
   const [minimumBuyIn, setMinimumBuyIn] = useState(0)
   const [basePrizePool, setBasePrizePool] = useState(0)
   const [timezone, setTimezone] = useState<string>(
@@ -132,7 +147,8 @@ export function CreateEventModal({
       }
       if (registrationDeadline && startDate) {
         if (registrationDeadline >= startDate) {
-          newErrors.registrationDeadline = "Registration deadline must be before event start date"
+          newErrors.registrationDeadline =
+            "Registration deadline must be before event start date"
           isValid = false
         }
       }
@@ -173,12 +189,27 @@ export function CreateEventModal({
     formData.append("title", title.trim())
     formData.append("description", description.trim())
     formData.append("gameType", gameType)
-    formData.append("startDate", fromZonedTime(format(startDate, "yyyy-MM-dd'T'HH:mm:ss"), timezone).toISOString())
-    formData.append("endDate", fromZonedTime(format(endDate, "yyyy-MM-dd'T'HH:mm:ss"), timezone).toISOString())
+    formData.append(
+      "startDate",
+      fromZonedTime(
+        format(startDate, "yyyy-MM-dd'T'HH:mm:ss"),
+        timezone
+      ).toISOString()
+    )
+    formData.append(
+      "endDate",
+      fromZonedTime(
+        format(endDate, "yyyy-MM-dd'T'HH:mm:ss"),
+        timezone
+      ).toISOString()
+    )
     if (registrationDeadline) {
       formData.append(
         "registrationDeadline",
-        fromZonedTime(format(registrationDeadline, "yyyy-MM-dd'T'HH:mm:ss"), timezone).toISOString()
+        fromZonedTime(
+          format(registrationDeadline, "yyyy-MM-dd'T'HH:mm:ss"),
+          timezone
+        ).toISOString()
       )
     }
     formData.append("timezone", timezone)
@@ -189,7 +220,10 @@ export function CreateEventModal({
     try {
       const result = await createEvent(formData)
       if (result.success) {
-        toast({ title: "Event created", description: "Your event has been created successfully." })
+        toast({
+          title: "Event created",
+          description: "Your event has been created successfully.",
+        })
         setTitle("")
         setDescription("")
         setGameType("osrs")
@@ -204,10 +238,19 @@ export function CreateEventModal({
         if (onEventCreated) await onEventCreated()
         router.refresh()
       } else {
-        toast({ title: "Error", description: result.error ?? "Failed to create event. Please try again.", variant: "destructive" })
+        toast({
+          title: "Error",
+          description:
+            result.error ?? "Failed to create event. Please try again.",
+          variant: "destructive",
+        })
       }
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to create event. Please try again.", variant: "destructive" })
+    } catch (_error) {
+      toast({
+        title: "Error",
+        description: "Failed to create event. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -218,21 +261,23 @@ export function CreateEventModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] sm:max-w-[600px] overflow-hidden flex flex-col">
+      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Create New Event</DialogTitle>
           <DialogDescription>
-            Step {step} of {totalSteps}: {
-              step === 1 ? "Identity & Theme" :
-              step === 2 ? "Scheduling & Time" :
-              step === 3 ? "Financials & Rules" :
-              "Review & Launch"
-            }
+            Step {step} of {totalSteps}:{" "}
+            {step === 1
+              ? "Identity & Theme"
+              : step === 2
+                ? "Scheduling & Time"
+                : step === 3
+                  ? "Financials & Rules"
+                  : "Review & Launch"}
           </DialogDescription>
         </DialogHeader>
 
         {/* Progress bar */}
-        <div className="w-full bg-muted h-2 rounded-full overflow-hidden my-4 relative">
+        <div className="relative my-4 h-2 w-full overflow-hidden rounded-full bg-muted">
           <motion.div
             className="h-full bg-primary"
             initial={{ width: "25%" }}
@@ -241,7 +286,7 @@ export function CreateEventModal({
           />
         </div>
 
-        <div className="flex-1 relative min-h-[350px]">
+        <div className="relative min-h-[350px] flex-1">
           <AnimatePresence initial={false} custom={direction} mode="wait">
             <motion.div
               key={step}
@@ -251,12 +296,14 @@ export function CreateEventModal({
               animate="center"
               exit="exit"
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="absolute inset-0 overflow-y-auto px-1 py-2 space-y-6"
+              className="absolute inset-0 space-y-6 overflow-y-auto px-1 py-2"
             >
               {step === 1 && (
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="title">Event Title <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="title">
+                      Event Title <span className="text-destructive">*</span>
+                    </Label>
                     <Input
                       id="title"
                       value={title}
@@ -265,7 +312,9 @@ export function CreateEventModal({
                       maxLength={100}
                       className={cn(errors.title && "border-destructive")}
                     />
-                    {errors.title && <p className="text-sm text-destructive">{errors.title}</p>}
+                    {errors.title && (
+                      <p className="text-sm text-destructive">{errors.title}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -282,43 +331,69 @@ export function CreateEventModal({
                   </div>
 
                   <div className="space-y-3">
-                    <Label>Game Type <span className="text-destructive">*</span></Label>
+                    <Label>
+                      Game Type <span className="text-destructive">*</span>
+                    </Label>
                     <div className="grid grid-cols-2 gap-4">
                       <motion.div
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         className={cn(
-                          "border-2 rounded-xl p-4 cursor-pointer transition-colors relative overflow-hidden group",
-                          gameType === 'osrs' ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                          "group relative cursor-pointer overflow-hidden rounded-xl border-2 p-4 transition-colors",
+                          gameType === "osrs"
+                            ? "border-primary bg-primary/10"
+                            : "border-border hover:border-primary/50"
                         )}
-                        onClick={() => setGameType('osrs')}
+                        onClick={() => setGameType("osrs")}
                       >
-                        {gameType === 'osrs' && (
-                          <div className="absolute top-2 right-2 text-primary">
-                            <CheckCircle2 className="w-5 h-5" />
+                        {gameType === "osrs" && (
+                          <div className="absolute right-2 top-2 text-primary">
+                            <CheckCircle2 className="h-5 w-5" />
                           </div>
                         )}
-                        <Swords className={cn("w-8 h-8 mb-3", gameType === 'osrs' ? "text-primary" : "text-muted-foreground")} />
-                        <h4 className="font-semibold text-sm">Old School RuneScape</h4>
-                        <p className="text-xs text-muted-foreground mt-1">The classic 2007 experience</p>
+                        <Swords
+                          className={cn(
+                            "mb-3 h-8 w-8",
+                            gameType === "osrs"
+                              ? "text-primary"
+                              : "text-muted-foreground"
+                          )}
+                        />
+                        <h4 className="text-sm font-semibold">
+                          Old School RuneScape
+                        </h4>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          The classic 2007 experience
+                        </p>
                       </motion.div>
                       <motion.div
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         className={cn(
-                          "border-2 rounded-xl p-4 cursor-pointer transition-colors relative overflow-hidden group",
-                          gameType === 'rs3' ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                          "group relative cursor-pointer overflow-hidden rounded-xl border-2 p-4 transition-colors",
+                          gameType === "rs3"
+                            ? "border-primary bg-primary/10"
+                            : "border-border hover:border-primary/50"
                         )}
-                        onClick={() => setGameType('rs3')}
+                        onClick={() => setGameType("rs3")}
                       >
-                        {gameType === 'rs3' && (
-                          <div className="absolute top-2 right-2 text-primary">
-                            <CheckCircle2 className="w-5 h-5" />
+                        {gameType === "rs3" && (
+                          <div className="absolute right-2 top-2 text-primary">
+                            <CheckCircle2 className="h-5 w-5" />
                           </div>
                         )}
-                        <Shield className={cn("w-8 h-8 mb-3", gameType === 'rs3' ? "text-primary" : "text-muted-foreground")} />
-                        <h4 className="font-semibold text-sm">RuneScape 3</h4>
-                        <p className="text-xs text-muted-foreground mt-1">The modern evolution</p>
+                        <Shield
+                          className={cn(
+                            "mb-3 h-8 w-8",
+                            gameType === "rs3"
+                              ? "text-primary"
+                              : "text-muted-foreground"
+                          )}
+                        />
+                        <h4 className="text-sm font-semibold">RuneScape 3</h4>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          The modern evolution
+                        </p>
                       </motion.div>
                     </div>
                   </div>
@@ -335,7 +410,9 @@ export function CreateEventModal({
                       </SelectTrigger>
                       <SelectContent>
                         {Intl.supportedValuesOf("timeZone").map((tz) => (
-                          <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                          <SelectItem key={tz} value={tz}>
+                            {tz}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -343,7 +420,9 @@ export function CreateEventModal({
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Start Date <span className="text-destructive">*</span></Label>
+                      <Label>
+                        Start Date <span className="text-destructive">*</span>
+                      </Label>
                       <DateTimePicker
                         date={startDate}
                         setDate={setStartDate}
@@ -352,7 +431,9 @@ export function CreateEventModal({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>End Date <span className="text-destructive">*</span></Label>
+                      <Label>
+                        End Date <span className="text-destructive">*</span>
+                      </Label>
                       <DateTimePicker
                         date={endDate}
                         setDate={setEndDate}
@@ -361,7 +442,7 @@ export function CreateEventModal({
                       />
                     </div>
                   </div>
-                  
+
                   {eventDuration && !errors.startDate && !errors.endDate && (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Info className="h-3.5 w-3.5" />
@@ -370,7 +451,9 @@ export function CreateEventModal({
                   )}
 
                   <div className="space-y-2">
-                    <Label htmlFor="registrationDeadline">Registration Deadline</Label>
+                    <Label htmlFor="registrationDeadline">
+                      Registration Deadline
+                    </Label>
                     <DateTimePicker
                       date={registrationDeadline}
                       setDate={setRegistrationDeadline}
@@ -379,7 +462,11 @@ export function CreateEventModal({
                       placeholder="Optional: Set registration cutoff"
                       error={errors.registrationDeadline}
                     />
-                    {errors.registrationDeadline && <p className="text-sm text-destructive">{errors.registrationDeadline}</p>}
+                    {errors.registrationDeadline && (
+                      <p className="text-sm text-destructive">
+                        {errors.registrationDeadline}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -394,7 +481,9 @@ export function CreateEventModal({
                       onChange={setMinimumBuyIn}
                       error={errors.minimumBuyIn}
                     />
-                    <p className="text-xs text-muted-foreground">Minimum gold required to participate</p>
+                    <p className="text-xs text-muted-foreground">
+                      Minimum gold required to participate
+                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -405,18 +494,25 @@ export function CreateEventModal({
                       onChange={setBasePrizePool}
                       error={errors.basePrizePool}
                     />
-                    <p className="text-xs text-muted-foreground">Starting prize pool before entry fees</p>
+                    <p className="text-xs text-muted-foreground">
+                      Starting prize pool before entry fees
+                    </p>
                   </div>
 
-                  <div className="flex items-start space-x-3 rounded-xl border p-4 bg-muted/20">
+                  <div className="flex items-start space-x-3 rounded-xl border bg-muted/20 p-4">
                     <Checkbox
                       id="requiresApproval"
                       checked={requiresApproval}
-                      onCheckedChange={(checked) => setRequiresApproval(!!checked)}
+                      onCheckedChange={(checked) =>
+                        setRequiresApproval(!!checked)
+                      }
                       className="mt-0.5"
                     />
                     <div className="space-y-1">
-                      <label htmlFor="requiresApproval" className="cursor-pointer text-sm font-medium leading-none">
+                      <label
+                        htmlFor="requiresApproval"
+                        className="cursor-pointer text-sm font-medium leading-none"
+                      >
                         Require Admin Approval
                       </label>
                       <p className="text-xs text-muted-foreground">
@@ -429,42 +525,67 @@ export function CreateEventModal({
 
               {step === 4 && (
                 <div className="space-y-6">
-                  <div className="bg-muted/30 p-6 rounded-xl border space-y-4">
-                    <h3 className="font-semibold text-lg">{title || "Untitled Event"}</h3>
-                    
+                  <div className="space-y-4 rounded-xl border bg-muted/30 p-6">
+                    <h3 className="text-lg font-semibold">
+                      {title || "Untitled Event"}
+                    </h3>
+
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <p className="text-muted-foreground text-xs mb-1">Game Type</p>
+                        <p className="mb-1 text-xs text-muted-foreground">
+                          Game Type
+                        </p>
                         <div className="flex items-center gap-2 font-medium">
-                          {gameType === 'osrs' ? <Swords className="w-4 h-4 text-primary" /> : <Shield className="w-4 h-4 text-primary" />}
-                          {gameType === 'osrs' ? 'Old School RuneScape' : 'RuneScape 3'}
+                          {gameType === "osrs" ? (
+                            <Swords className="h-4 w-4 text-primary" />
+                          ) : (
+                            <Shield className="h-4 w-4 text-primary" />
+                          )}
+                          {gameType === "osrs"
+                            ? "Old School RuneScape"
+                            : "RuneScape 3"}
                         </div>
                       </div>
-                      
+
                       <div>
-                        <p className="text-muted-foreground text-xs mb-1">Schedule</p>
+                        <p className="mb-1 text-xs text-muted-foreground">
+                          Schedule
+                        </p>
                         <p className="font-medium">
-                          {startDate ? format(startDate, "MMM d, yyyy h:mm a") : "TBD"} - {endDate ? format(endDate, "MMM d, yyyy h:mm a") : "TBD"}
+                          {startDate
+                            ? format(startDate, "MMM d, yyyy h:mm a")
+                            : "TBD"}{" "}
+                          -{" "}
+                          {endDate
+                            ? format(endDate, "MMM d, yyyy h:mm a")
+                            : "TBD"}
                         </p>
                       </div>
 
                       <div>
-                        <p className="text-muted-foreground text-xs mb-1">Buy-In</p>
-                        <p className="font-medium text-yellow-500 flex items-center gap-1">
+                        <p className="mb-1 text-xs text-muted-foreground">
+                          Buy-In
+                        </p>
+                        <p className="flex items-center gap-1 font-medium text-yellow-500">
                           {minimumBuyIn.toLocaleString()} GP
                         </p>
                       </div>
 
                       <div>
-                        <p className="text-muted-foreground text-xs mb-1">Approval</p>
-                        <p className="font-medium">{requiresApproval ? "Required" : "Open"}</p>
+                        <p className="mb-1 text-xs text-muted-foreground">
+                          Approval
+                        </p>
+                        <p className="font-medium">
+                          {requiresApproval ? "Required" : "Open"}
+                        </p>
                       </div>
                     </div>
                   </div>
 
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">
-                      Ready to launch your event? You can always edit these settings later.
+                      Ready to launch your event? You can always edit these
+                      settings later.
                     </p>
                   </div>
                 </div>
@@ -473,7 +594,7 @@ export function CreateEventModal({
           </AnimatePresence>
         </div>
 
-        <DialogFooter className="mt-8 flex items-center sm:justify-between w-full">
+        <DialogFooter className="mt-8 flex w-full items-center sm:justify-between">
           <Button
             type="button"
             variant="ghost"
@@ -481,22 +602,32 @@ export function CreateEventModal({
             disabled={isSubmitting}
             className="flex items-center gap-2"
           >
-            {step === 1 ? "Cancel" : <><ArrowLeft className="w-4 h-4" /> Back</>}
+            {step === 1 ? (
+              "Cancel"
+            ) : (
+              <>
+                <ArrowLeft className="h-4 w-4" /> Back
+              </>
+            )}
           </Button>
 
           {step < totalSteps ? (
-            <Button type="button" onClick={handleNext} className="flex items-center gap-2">
-              Next Step <ArrowRight className="w-4 h-4" />
+            <Button
+              type="button"
+              onClick={handleNext}
+              className="flex items-center gap-2"
+            >
+              Next Step <ArrowRight className="h-4 w-4" />
             </Button>
           ) : (
             <Button
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+              className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {isSubmitting ? "Launching..." : "Launch Event"}
-              {!isSubmitting && <Rocket className="w-4 h-4" />}
+              {!isSubmitting && <Rocket className="h-4 w-4" />}
             </Button>
           )}
         </DialogFooter>

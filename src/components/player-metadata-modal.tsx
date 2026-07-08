@@ -35,8 +35,25 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { toast } from "@/hooks/use-toast"
-import { getPlayerMetadata, updatePlayerMetadata, updateOwnPlayerMetadata, fetchWOMDataForPlayer } from "@/app/actions/player-metadata"
-import { Loader2, User, Download, Check, ChevronsUpDown, Lock, Sprout, Sword, Shield, Target, Crown } from "lucide-react"
+import {
+  getPlayerMetadata,
+  updatePlayerMetadata,
+  updateOwnPlayerMetadata,
+  fetchWOMDataForPlayer,
+} from "@/app/actions/player-metadata"
+import {
+  Loader2,
+  User,
+  Download,
+  Check,
+  ChevronsUpDown,
+  Lock,
+  Sprout,
+  Sword,
+  Shield,
+  Target,
+  Crown,
+} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -147,20 +164,38 @@ export function PlayerMetadataModal({
           dailyHoursAvailable: formData.dailyHoursAvailable
             ? parseFloat(formData.dailyHoursAvailable)
             : null,
-          skillLevel: (formData.skillLevel as "beginner" | "intermediate" | "advanced" | "expert" | "pvmgod" | null) || null,
+          skillLevel:
+            (formData.skillLevel as
+              | "beginner"
+              | "intermediate"
+              | "advanced"
+              | "expert"
+              | "pvmgod"
+              | null) || null,
         })
       } else {
         // Use admin action (all fields)
         await updatePlayerMetadata(userId, eventId, {
           ehp: formData.ehp ? parseFloat(formData.ehp) : null,
           ehb: formData.ehb ? parseFloat(formData.ehb) : null,
-          combatLevel: formData.combatLevel ? parseInt(formData.combatLevel) : null,
-          totalLevel: formData.totalLevel ? parseInt(formData.totalLevel) : null,
+          combatLevel: formData.combatLevel
+            ? parseInt(formData.combatLevel)
+            : null,
+          totalLevel: formData.totalLevel
+            ? parseInt(formData.totalLevel)
+            : null,
           timezone: formData.timezone || null,
           dailyHoursAvailable: formData.dailyHoursAvailable
             ? parseFloat(formData.dailyHoursAvailable)
             : null,
-          skillLevel: (formData.skillLevel as "beginner" | "intermediate" | "advanced" | "expert" | "pvmgod" | null) || null,
+          skillLevel:
+            (formData.skillLevel as
+              | "beginner"
+              | "intermediate"
+              | "advanced"
+              | "expert"
+              | "pvmgod"
+              | null) || null,
           notes: formData.notes || null,
           womPlayerData: formData.womPlayerData || null,
           lastFetchedFromWOM: lastFetched,
@@ -178,7 +213,8 @@ export function PlayerMetadataModal({
       console.error("Error saving metadata:", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save metadata",
+        description:
+          error instanceof Error ? error.message : "Failed to save metadata",
         variant: "destructive",
       })
     } finally {
@@ -227,7 +263,10 @@ export function PlayerMetadataModal({
       console.error("Error fetching WOM data:", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to fetch player data",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch player data",
         variant: "destructive",
       })
     } finally {
@@ -269,8 +308,10 @@ export function PlayerMetadataModal({
             {isSelfEditing && (
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950">
                 <p className="text-sm text-blue-900 dark:text-blue-100">
-                  <Lock className="inline h-4 w-4 mr-1" />
-                  You can edit your timezone and availability. WiseOldMan stats (EHP, EHB, Combat, Total Level) are managed by event administrators.
+                  <Lock className="mr-1 inline h-4 w-4" />
+                  You can edit your timezone and availability. WiseOldMan stats
+                  (EHP, EHB, Combat, Total Level) are managed by event
+                  administrators.
                 </p>
               </div>
             )}
@@ -288,7 +329,8 @@ export function PlayerMetadataModal({
                     </p>
                     {lastFetched && (
                       <p className="text-xs text-muted-foreground">
-                        Last fetched: {formatDistanceToNow(lastFetched, { addSuffix: true })}
+                        Last fetched:{" "}
+                        {formatDistanceToNow(lastFetched, { addSuffix: true })}
                       </p>
                     )}
                   </div>
@@ -320,7 +362,12 @@ export function PlayerMetadataModal({
               <div className="space-y-2">
                 <Label htmlFor="ehp" className="flex items-center gap-2">
                   EHP (Efficient Hours Played)
-                  {isSelfEditing && <Badge variant="secondary" className="text-xs"><Lock className="h-3 w-3 mr-1" />Admin Only</Badge>}
+                  {isSelfEditing && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Lock className="mr-1 h-3 w-3" />
+                      Admin Only
+                    </Badge>
+                  )}
                 </Label>
                 <Input
                   id="ehp"
@@ -339,7 +386,12 @@ export function PlayerMetadataModal({
               <div className="space-y-2">
                 <Label htmlFor="ehb" className="flex items-center gap-2">
                   EHB (Efficient Hours Bossed)
-                  {isSelfEditing && <Badge variant="secondary" className="text-xs"><Lock className="h-3 w-3 mr-1" />Admin Only</Badge>}
+                  {isSelfEditing && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Lock className="mr-1 h-3 w-3" />
+                      Admin Only
+                    </Badge>
+                  )}
                 </Label>
                 <Input
                   id="ehb"
@@ -359,16 +411,26 @@ export function PlayerMetadataModal({
             {/* Combat & Total Level Section - Read-only for self-editing */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="combatLevel" className="flex items-center gap-2">
+                <Label
+                  htmlFor="combatLevel"
+                  className="flex items-center gap-2"
+                >
                   Combat Level
-                  {isSelfEditing && <Badge variant="secondary" className="text-xs"><Lock className="h-3 w-3 mr-1" />Admin Only</Badge>}
+                  {isSelfEditing && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Lock className="mr-1 h-3 w-3" />
+                      Admin Only
+                    </Badge>
+                  )}
                 </Label>
                 <Input
                   id="combatLevel"
                   type="text"
                   placeholder="3"
                   value={formData.combatLevel}
-                  onChange={(e) => handleNumberInput("combatLevel", e.target.value)}
+                  onChange={(e) =>
+                    handleNumberInput("combatLevel", e.target.value)
+                  }
                   disabled={isSelfEditing}
                   className={isSelfEditing ? "bg-muted" : ""}
                 />
@@ -380,14 +442,21 @@ export function PlayerMetadataModal({
               <div className="space-y-2">
                 <Label htmlFor="totalLevel" className="flex items-center gap-2">
                   Total Level
-                  {isSelfEditing && <Badge variant="secondary" className="text-xs"><Lock className="h-3 w-3 mr-1" />Admin Only</Badge>}
+                  {isSelfEditing && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Lock className="mr-1 h-3 w-3" />
+                      Admin Only
+                    </Badge>
+                  )}
                 </Label>
                 <Input
                   id="totalLevel"
                   type="text"
                   placeholder="32"
                   value={formData.totalLevel}
-                  onChange={(e) => handleNumberInput("totalLevel", e.target.value)}
+                  onChange={(e) =>
+                    handleNumberInput("totalLevel", e.target.value)
+                  }
                   disabled={isSelfEditing}
                   className={isSelfEditing ? "bg-muted" : ""}
                 />
@@ -409,16 +478,18 @@ export function PlayerMetadataModal({
                     aria-expanded={timezoneOpen}
                     className="w-full justify-between"
                   >
-                    {formData.timezone ? (
-                      (() => {
-                        // Find the selected timezone to display its label and offset
-                        const selectedTz = [...popularTimezones, ...timezonesByRegion.flatMap(r => r.timezones)]
-                          .find(tz => tz.value === formData.timezone)
-                        return selectedTz ? `${selectedTz.label} (${selectedTz.offset})` : formData.timezone
-                      })()
-                    ) : (
-                      "Select timezone..."
-                    )}
+                    {formData.timezone
+                      ? (() => {
+                          // Find the selected timezone to display its label and offset
+                          const selectedTz = [
+                            ...popularTimezones,
+                            ...timezonesByRegion.flatMap((r) => r.timezones),
+                          ].find((tz) => tz.value === formData.timezone)
+                          return selectedTz
+                            ? `${selectedTz.label} (${selectedTz.offset})`
+                            : formData.timezone
+                        })()
+                      : "Select timezone..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -435,18 +506,25 @@ export function PlayerMetadataModal({
                             key={tz.value}
                             value={`${tz.label} ${tz.value} ${tz.offset}`}
                             onSelect={() => {
-                              setFormData((prev) => ({ ...prev, timezone: tz.value }))
+                              setFormData((prev) => ({
+                                ...prev,
+                                timezone: tz.value,
+                              }))
                               setTimezoneOpen(false)
                             }}
                           >
                             <Check
                               className={cn(
                                 "mr-2 h-4 w-4",
-                                formData.timezone === tz.value ? "opacity-100" : "opacity-0"
+                                formData.timezone === tz.value
+                                  ? "opacity-100"
+                                  : "opacity-0"
                               )}
                             />
                             <span className="flex-1">{tz.label}</span>
-                            <span className="text-xs text-muted-foreground">{tz.offset}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {tz.offset}
+                            </span>
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -461,18 +539,25 @@ export function PlayerMetadataModal({
                               key={tz.value}
                               value={`${tz.label} ${tz.value} ${tz.offset}`}
                               onSelect={() => {
-                                setFormData((prev) => ({ ...prev, timezone: tz.value }))
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  timezone: tz.value,
+                                }))
                                 setTimezoneOpen(false)
                               }}
                             >
                               <Check
                                 className={cn(
                                   "mr-2 h-4 w-4",
-                                  formData.timezone === tz.value ? "opacity-100" : "opacity-0"
+                                  formData.timezone === tz.value
+                                    ? "opacity-100"
+                                    : "opacity-0"
                                 )}
                               />
                               <span className="flex-1">{tz.label}</span>
-                              <span className="text-xs text-muted-foreground">{tz.offset}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {tz.offset}
+                              </span>
                             </CommandItem>
                           ))}
                         </CommandGroup>
@@ -488,22 +573,46 @@ export function PlayerMetadataModal({
 
             {/* Skill Level */}
             <div className="space-y-2">
-              <Label htmlFor="skillLevel">
-                Perceived Skill Level
-              </Label>
+              <Label htmlFor="skillLevel">Perceived Skill Level</Label>
               <Select
                 value={formData.skillLevel}
-                onValueChange={(value) => setFormData((prev) => ({ ...prev, skillLevel: value }))}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({ ...prev, skillLevel: value }))
+                }
               >
                 <SelectTrigger id="skillLevel">
                   <SelectValue placeholder="Select a skill level" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="beginner"><span className="flex items-center"><Sprout className="w-4 h-4 mr-2 text-green-500" /> Beginner</span></SelectItem>
-                  <SelectItem value="intermediate"><span className="flex items-center"><Sword className="w-4 h-4 mr-2 text-blue-500" /> Intermediate</span></SelectItem>
-                  <SelectItem value="advanced"><span className="flex items-center"><Shield className="w-4 h-4 mr-2 text-purple-500" /> Advanced</span></SelectItem>
-                  <SelectItem value="expert"><span className="flex items-center"><Target className="w-4 h-4 mr-2 text-red-500" /> Expert</span></SelectItem>
-                  <SelectItem value="pvmgod"><span className="flex items-center"><Crown className="w-4 h-4 mr-2 text-yellow-500" /> God-tier PVMer</span></SelectItem>
+                  <SelectItem value="beginner">
+                    <span className="flex items-center">
+                      <Sprout className="mr-2 h-4 w-4 text-green-500" />{" "}
+                      Beginner
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="intermediate">
+                    <span className="flex items-center">
+                      <Sword className="mr-2 h-4 w-4 text-blue-500" />{" "}
+                      Intermediate
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="advanced">
+                    <span className="flex items-center">
+                      <Shield className="mr-2 h-4 w-4 text-purple-500" />{" "}
+                      Advanced
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="expert">
+                    <span className="flex items-center">
+                      <Target className="mr-2 h-4 w-4 text-red-500" /> Expert
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="pvmgod">
+                    <span className="flex items-center">
+                      <Crown className="mr-2 h-4 w-4 text-yellow-500" />{" "}
+                      God-tier PVMer
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
@@ -513,9 +622,7 @@ export function PlayerMetadataModal({
 
             {/* Daily Hours */}
             <div className="space-y-2">
-              <Label htmlFor="dailyHours">
-                Daily Hours Available
-              </Label>
+              <Label htmlFor="dailyHours">Daily Hours Available</Label>
               <Input
                 id="dailyHours"
                 type="text"

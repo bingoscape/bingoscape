@@ -1,4 +1,4 @@
-'use server'
+"use server"
 
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
@@ -11,7 +11,8 @@ export async function linkRunescapeAccount(runescapeName: string) {
     throw new Error("Not authenticated")
   }
 
-  await db.update(users)
+  await db
+    .update(users)
     .set({ runescapeName })
     .where(eq(users.id, session.user.id))
 

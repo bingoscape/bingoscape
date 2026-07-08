@@ -1,9 +1,15 @@
- 
 "use client"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
@@ -52,7 +58,9 @@ export default function ApiKeysPage() {
   const [isDeletingKey, setIsDeletingKey] = useState(false)
 
   useEffect(() => {
-    fetchApiKeys().then(() => console.log("fetched keys")).catch((err) => console.error(err))
+    fetchApiKeys()
+      .then(() => console.log("fetched keys"))
+      .catch((err) => console.error(err))
   }, [])
 
   const fetchApiKeys = async () => {
@@ -158,7 +166,10 @@ export default function ApiKeysPage() {
   }
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => console.log("Copied to clipboard")).catch(err => console.error(err))
+    navigator.clipboard
+      .writeText(text)
+      .then(() => console.log("Copied to clipboard"))
+      .catch((err) => console.error(err))
     toast({
       title: "Copied",
       description: "API key copied to clipboard",
@@ -167,7 +178,7 @@ export default function ApiKeysPage() {
 
   return (
     <div className="container mx-auto py-10">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-3xl font-bold">API Keys</h1>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -180,7 +191,8 @@ export default function ApiKeysPage() {
             <DialogHeader>
               <DialogTitle>Create New API Key</DialogTitle>
               <DialogDescription>
-                API keys allow RuneLite plugins to access your Bingoscape account. Keep your keys secure.
+                API keys allow RuneLite plugins to access your Bingoscape
+                account. Keep your keys secure.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -217,13 +229,17 @@ export default function ApiKeysPage() {
           <CardHeader>
             <CardTitle className="text-green-500">API Key Created</CardTitle>
             <CardDescription>
-              This is your new API key. Make sure to copy it now as you won&apos;t be able to see it again.
+              This is your new API key. Make sure to copy it now as you
+              won&apos;t be able to see it again.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
               <Input value={newlyCreatedKey} readOnly className="font-mono" />
-              <Button size="icon" onClick={() => copyToClipboard(newlyCreatedKey)}>
+              <Button
+                size="icon"
+                onClick={() => copyToClipboard(newlyCreatedKey)}
+              >
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
@@ -238,8 +254,8 @@ export default function ApiKeysPage() {
 
       <div className="grid gap-6">
         {loading ? (
-          <div className="text-center py-10">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <div className="py-10 text-center">
+            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
             <p className="mt-4">Loading API keys...</p>
           </div>
         ) : apiKeys.length === 0 ? (
@@ -247,7 +263,8 @@ export default function ApiKeysPage() {
             <CardHeader>
               <CardTitle>No API Keys</CardTitle>
               <CardDescription>
-                You haven&apos;t created any API keys yet. Create one to use with the RuneLite plugin.
+                You haven&apos;t created any API keys yet. Create one to use
+                with the RuneLite plugin.
               </CardDescription>
             </CardHeader>
             <CardFooter>
@@ -261,13 +278,15 @@ export default function ApiKeysPage() {
           apiKeys.map((key) => (
             <Card key={key.id}>
               <CardHeader>
-                <div className="flex justify-between items-start">
+                <div className="flex items-start justify-between">
                   <div>
                     <CardTitle className="flex items-center">
                       <Key className="mr-2 h-5 w-5" />
                       {key.name}
                     </CardTitle>
-                    {key.description && <CardDescription>{key.description}</CardDescription>}
+                    {key.description && (
+                      <CardDescription>{key.description}</CardDescription>
+                    )}
                   </div>
                   <AlertDialog
                     open={isDeleteDialogOpen && keyToDelete === key.id}
@@ -290,8 +309,9 @@ export default function ApiKeysPage() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete API Key</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Are you sure you want to delete this API key? This action cannot be undone and any
-                          applications using this key will no longer work.
+                          Are you sure you want to delete this API key? This
+                          action cannot be undone and any applications using
+                          this key will no longer work.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -310,15 +330,23 @@ export default function ApiKeysPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-sm text-muted-foreground">
-                  <div className="flex items-center mb-1">
-                    <span className="font-medium mr-2">Created:</span>
-                    <span>{formatDistanceToNow(new Date(key.createdAt), { addSuffix: true })}</span>
+                  <div className="mb-1 flex items-center">
+                    <span className="mr-2 font-medium">Created:</span>
+                    <span>
+                      {formatDistanceToNow(new Date(key.createdAt), {
+                        addSuffix: true,
+                      })}
+                    </span>
                   </div>
                   {key.lastUsed && (
                     <div className="flex items-center">
                       <Clock className="mr-2 h-4 w-4" />
-                      <span className="font-medium mr-2">Last used:</span>
-                      <span>{formatDistanceToNow(new Date(key.lastUsed), { addSuffix: true })}</span>
+                      <span className="mr-2 font-medium">Last used:</span>
+                      <span>
+                        {formatDistanceToNow(new Date(key.lastUsed), {
+                          addSuffix: true,
+                        })}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -330,4 +358,3 @@ export default function ApiKeysPage() {
     </div>
   )
 }
-

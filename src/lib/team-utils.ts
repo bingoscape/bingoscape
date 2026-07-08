@@ -18,12 +18,14 @@ export async function getTeamForUserInEvent(userId: string, eventId: string) {
         isLeader: teamMembers.isLeader,
       })
       .from(teams)
-      .innerJoin(teamMembers, and(eq(teamMembers.teamId, teams.id), eq(teamMembers.userId, userId)))
+      .innerJoin(
+        teamMembers,
+        and(eq(teamMembers.teamId, teams.id), eq(teamMembers.userId, userId))
+      )
       .where(eq(teams.eventId, eventId))
       .limit(1)
 
-
-    console.log(result);
+    console.log(result)
 
     // If no results found, return null
     if (result.length === 0) {
@@ -37,4 +39,3 @@ export async function getTeamForUserInEvent(userId: string, eventId: string) {
     return null
   }
 }
-

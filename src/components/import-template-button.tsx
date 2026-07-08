@@ -11,7 +11,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
@@ -24,7 +30,9 @@ interface ImportTemplateButtonProps {
   templateId: string
 }
 
-export function ImportTemplateButton({ templateId }: ImportTemplateButtonProps) {
+export function ImportTemplateButton({
+  templateId,
+}: ImportTemplateButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [events, setEvents] = useState<Array<{ id: string; title: string }>>([])
@@ -34,7 +42,9 @@ export function ImportTemplateButton({ templateId }: ImportTemplateButtonProps) 
   const loadEvents = async () => {
     try {
       const eventsData = await getUserCreatedEvents()
-      setEvents(eventsData.map((e) => ({ id: e.event.id, title: e.event.title })))
+      setEvents(
+        eventsData.map((e) => ({ id: e.event.id, title: e.event.title }))
+      )
     } catch (error) {
       console.error("Error loading events:", error)
       toast({
@@ -86,7 +96,8 @@ export function ImportTemplateButton({ templateId }: ImportTemplateButtonProps) 
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to import template",
+        description:
+          error instanceof Error ? error.message : "Failed to import template",
         variant: "destructive",
       })
     } finally {
@@ -97,7 +108,9 @@ export function ImportTemplateButton({ templateId }: ImportTemplateButtonProps) 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
     if (open) {
-      loadEvents().then(() => console.log("Events loaded")).catch((error) => console.error("Error loading events:", error))
+      loadEvents()
+        .then(() => console.log("Events loaded"))
+        .catch((error) => console.error("Error loading events:", error))
     }
   }
 
@@ -112,7 +125,9 @@ export function ImportTemplateButton({ templateId }: ImportTemplateButtonProps) 
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Import Template</DialogTitle>
-          <DialogDescription>Select an event to import this template into</DialogDescription>
+          <DialogDescription>
+            Select an event to import this template into
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
@@ -132,7 +147,10 @@ export function ImportTemplateButton({ templateId }: ImportTemplateButtonProps) 
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={handleImport} disabled={isLoading || !selectedEventId}>
+          <Button
+            onClick={handleImport}
+            disabled={isLoading || !selectedEventId}
+          >
             {isLoading ? "Importing..." : "Import Template"}
           </Button>
         </DialogFooter>
@@ -140,4 +158,3 @@ export function ImportTemplateButton({ templateId }: ImportTemplateButtonProps) 
     </Dialog>
   )
 }
-

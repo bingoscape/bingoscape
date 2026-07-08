@@ -4,10 +4,23 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, ChevronLeft, ChevronRight, Users, Calendar } from "lucide-react"
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Users,
+  Calendar,
+} from "lucide-react"
 import Link from "next/link"
 import { SuperAdminClanEditModal } from "./super-admin-clan-edit-modal"
 import { SuperAdminClanDeleteModal } from "./super-admin-clan-delete-modal"
@@ -49,7 +62,7 @@ export function SuperAdminClansTable({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    const params = new URLSearchParams(searchParams ?? '')
+    const params = new URLSearchParams(searchParams ?? "")
     if (search) {
       params.set("search", search)
     } else {
@@ -60,7 +73,7 @@ export function SuperAdminClansTable({
   }
 
   const handlePageChange = (page: number) => {
-    const params = new URLSearchParams(searchParams ?? '')
+    const params = new URLSearchParams(searchParams ?? "")
     params.set("page", page.toString())
     router.push(`/super-admin/clans?${params.toString()}`)
   }
@@ -69,7 +82,7 @@ export function SuperAdminClansTable({
     <div className="space-y-4">
       <form onSubmit={handleSearch} className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
           <Input
             placeholder="Search clans by name or description..."
             value={search}
@@ -99,16 +112,25 @@ export function SuperAdminClansTable({
                   <div>
                     <div className="font-medium">{clan.name}</div>
                     {clan.description && (
-                      <div className="text-sm text-muted-foreground line-clamp-1">{clan.description}</div>
+                      <div className="line-clamp-1 text-sm text-muted-foreground">
+                        {clan.description}
+                      </div>
                     )}
                   </div>
                 </TableCell>
                 <TableCell>
                   {clan.owner ? (
-                    <Link href={`/super-admin/users/${clan.owner.id}`} className="hover:underline">
-                      <div className="font-medium">{clan.owner.name ?? clan.owner.email}</div>
+                    <Link
+                      href={`/super-admin/users/${clan.owner.id}`}
+                      className="hover:underline"
+                    >
+                      <div className="font-medium">
+                        {clan.owner.name ?? clan.owner.email}
+                      </div>
                       {clan.owner.runescapeName && (
-                        <div className="text-sm text-muted-foreground">{clan.owner.runescapeName}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {clan.owner.runescapeName}
+                        </div>
                       )}
                     </Link>
                   ) : (
@@ -128,7 +150,9 @@ export function SuperAdminClansTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="text-sm">{new Date(clan.createdAt).toLocaleDateString()}</div>
+                  <div className="text-sm">
+                    {new Date(clan.createdAt).toLocaleDateString()}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
@@ -150,7 +174,8 @@ export function SuperAdminClansTable({
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Showing {(currentPage - 1) * 50 + 1} to {Math.min(currentPage * 50, totalCount)} of {totalCount} clans
+            Showing {(currentPage - 1) * 50 + 1} to{" "}
+            {Math.min(currentPage * 50, totalCount)} of {totalCount} clans
           </div>
           <div className="flex items-center gap-2">
             <Button

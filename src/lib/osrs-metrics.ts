@@ -72,16 +72,16 @@ export function getMetricName(metric: string): string {
     zulrah: "Zulrah",
     ehp: "Efficient Hours Played (EHP)",
     ehb: "Efficient Hours Bossing (EHB)",
-    league_points: "League Points"
-  };
+    league_points: "League Points",
+  }
 
-  if (customNames[metric]) return customNames[metric];
+  if (customNames[metric]) return customNames[metric]
 
   // Fallback: "abyssal_sire" -> "Abyssal Sire"
   return metric
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
+    .join(" ")
 }
 
 export function getWikiIconUrl(metric: string): string {
@@ -143,7 +143,7 @@ export function getWikiIconUrl(metric: string): string {
     wintertodt: "Wintertodt.png",
     zalcano: "Zalcano.png",
     zulrah: "Zulrah.png",
-    
+
     // Activities
     league_points: "League_Points_icon.png",
     bounty_hunter_hunter: "Bounty_Hunter_icon.png",
@@ -159,28 +159,28 @@ export function getWikiIconUrl(metric: string): string {
     pvp_arena_rank: "PvP_Arena_icon.png",
     soul_wars_zeal: "Soul_Wars_icon.png",
     rifts_closed: "Guardians_of_the_Rift_icon.png",
-    
+
     // EHP/EHB (Use general icons)
     ehp: "Stats_icon.png",
     ehb: "Combat_icon.png",
-    overall: "Stats_icon.png"
-  };
+    overall: "Stats_icon.png",
+  }
 
   if (wikiImageMap[metric]) {
-    return `https://oldschool.runescape.wiki/images/${wikiImageMap[metric]}`;
+    return `https://oldschool.runescape.wiki/images/${wikiImageMap[metric]}`
   }
 
   // Auto-resolve skills (e.g., woodcutting -> Woodcutting_icon.png)
   if ((SKILLS as readonly string[]).includes(metric)) {
-    const capitalized = metric.charAt(0).toUpperCase() + metric.slice(1);
-    return `https://oldschool.runescape.wiki/images/${capitalized}_icon.png`;
+    const capitalized = metric.charAt(0).toUpperCase() + metric.slice(1)
+    return `https://oldschool.runescape.wiki/images/${capitalized}_icon.png`
   }
 
   // Fallback string manipulation
   const pretty = metric
     .split("_")
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-    .join("_");
-    
-  return `https://oldschool.runescape.wiki/images/${pretty}.png`;
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join("_")
+
+  return `https://oldschool.runescape.wiki/images/${pretty}.png`
 }

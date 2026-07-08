@@ -4,7 +4,14 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -45,7 +52,7 @@ export function SuperAdminUsersTable({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    const params = new URLSearchParams(searchParams ?? '')
+    const params = new URLSearchParams(searchParams ?? "")
     if (search) {
       params.set("search", search)
     } else {
@@ -56,7 +63,7 @@ export function SuperAdminUsersTable({
   }
 
   const handlePageChange = (page: number) => {
-    const params = new URLSearchParams(searchParams ?? '')
+    const params = new URLSearchParams(searchParams ?? "")
     params.set("page", page.toString())
     router.push(`/super-admin/users?${params.toString()}`)
   }
@@ -65,7 +72,7 @@ export function SuperAdminUsersTable({
     <div className="space-y-4">
       <form onSubmit={handleSearch} className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
           <Input
             placeholder="Search users by name, email, or RuneScape name..."
             value={search}
@@ -94,16 +101,26 @@ export function SuperAdminUsersTable({
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user.image ?? getRandomFrog()} />
-                      <AvatarFallback>{user.name?.charAt(0) ?? user.email?.charAt(0) ?? "U"}</AvatarFallback>
+                      <AvatarFallback>
+                        {user.name?.charAt(0) ?? user.email?.charAt(0) ?? "U"}
+                      </AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-medium">{user.name ?? "No name set"}</div>
-                      <div className="text-sm text-muted-foreground font-mono">{user.id.slice(0, 8)}...</div>
+                      <div className="font-medium">
+                        {user.name ?? "No name set"}
+                      </div>
+                      <div className="font-mono text-sm text-muted-foreground">
+                        {user.id.slice(0, 8)}...
+                      </div>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>{user.email}</TableCell>
-                <TableCell>{user.runescapeName ?? <span className="text-muted-foreground">Not set</span>}</TableCell>
+                <TableCell>
+                  {user.runescapeName ?? (
+                    <span className="text-muted-foreground">Not set</span>
+                  )}
+                </TableCell>
                 <TableCell>
                   <Badge variant={user.emailVerified ? "default" : "secondary"}>
                     {user.emailVerified ? "Verified" : "Unverified"}
@@ -129,7 +146,8 @@ export function SuperAdminUsersTable({
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Showing {(currentPage - 1) * 50 + 1} to {Math.min(currentPage * 50, totalCount)} of {totalCount} users
+            Showing {(currentPage - 1) * 50 + 1} to{" "}
+            {Math.min(currentPage * 50, totalCount)} of {totalCount} users
           </div>
           <div className="flex items-center gap-2">
             <Button

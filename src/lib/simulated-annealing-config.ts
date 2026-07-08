@@ -51,7 +51,7 @@ export interface SAStandardConfig {
      * Formula: T(k) = T₀ * (T_f / T₀)^(k / N)
      * @default "exponential"
      */
-    coolingSchedule: 'exponential'
+    coolingSchedule: "exponential"
 
     /**
      * Random seed for reproducibility (optional)
@@ -166,7 +166,7 @@ export const SA_STANDARD_CONFIG: SAStandardConfig = {
     initialTemperature: 1.0,
     finalTemperature: 0.0001,
     iterations: 20000,
-    coolingSchedule: 'exponential',
+    coolingSchedule: "exponential",
     randomSeed: undefined, // Random by default
   },
   moves: {
@@ -176,11 +176,11 @@ export const SA_STANDARD_CONFIG: SAStandardConfig = {
   weights: {
     // Normalized weights (sum to 1.0)
     // Team size is now enforced as a hard constraint (not a weight)
-    timezoneVariance: 0.20,      // 20%
-    averageEHP: 0.20,            // 20%
-    averageEHB: 0.20,            // 20%
-    averageDailyHours: 0.20,     // 20%
-    skillLevel: 0.20,            // 20%
+    timezoneVariance: 0.2, // 20%
+    averageEHP: 0.2, // 20%
+    averageEHB: 0.2, // 20%
+    averageDailyHours: 0.2, // 20%
+    skillLevel: 0.2, // 20%
   },
   termination: {
     minTemperature: 0.0001,
@@ -195,7 +195,10 @@ export const SA_STANDARD_CONFIG: SAStandardConfig = {
  * These presets adjust iteration counts and termination criteria
  * based on the expected number of participants and teams
  */
-export const SA_PRESETS: Record<'small' | 'medium' | 'large', SAStandardConfig> = {
+export const SA_PRESETS: Record<
+  "small" | "medium" | "large",
+  SAStandardConfig
+> = {
   /**
    * Small event preset (50-100 participants, 2-5 teams)
    *
@@ -206,8 +209,8 @@ export const SA_PRESETS: Record<'small' | 'medium' | 'large', SAStandardConfig> 
     annealing: {
       initialTemperature: 1.0,
       finalTemperature: 0.0001,
-      iterations: 10000,  // Reduced for faster execution
-      coolingSchedule: 'exponential',
+      iterations: 10000, // Reduced for faster execution
+      coolingSchedule: "exponential",
       randomSeed: undefined,
     },
     moves: {
@@ -215,16 +218,16 @@ export const SA_PRESETS: Record<'small' | 'medium' | 'large', SAStandardConfig> 
       moveProbability: 0.3,
     },
     weights: {
-      timezoneVariance: 0.20,
-      averageEHP: 0.20,
-      averageEHB: 0.20,
-      averageDailyHours: 0.20,
-      skillLevel: 0.20,
+      timezoneVariance: 0.2,
+      averageEHP: 0.2,
+      averageEHB: 0.2,
+      averageDailyHours: 0.2,
+      skillLevel: 0.2,
     },
     termination: {
       minTemperature: 0.0001,
       maxIterations: 10000,
-      stagnationLimit: 2500,  // Reduced proportionally
+      stagnationLimit: 2500, // Reduced proportionally
     },
   },
 
@@ -248,8 +251,8 @@ export const SA_PRESETS: Record<'small' | 'medium' | 'large', SAStandardConfig> 
     annealing: {
       initialTemperature: 1.0,
       finalTemperature: 0.0001,
-      iterations: 30000,  // Increased for better convergence
-      coolingSchedule: 'exponential',
+      iterations: 30000, // Increased for better convergence
+      coolingSchedule: "exponential",
       randomSeed: undefined,
     },
     moves: {
@@ -257,16 +260,16 @@ export const SA_PRESETS: Record<'small' | 'medium' | 'large', SAStandardConfig> 
       moveProbability: 0.3,
     },
     weights: {
-      timezoneVariance: 0.20,
-      averageEHP: 0.20,
-      averageEHB: 0.20,
-      averageDailyHours: 0.20,
-      skillLevel: 0.20,
+      timezoneVariance: 0.2,
+      averageEHP: 0.2,
+      averageEHB: 0.2,
+      averageDailyHours: 0.2,
+      skillLevel: 0.2,
     },
     termination: {
       minTemperature: 0.0001,
       maxIterations: 30000,
-      stagnationLimit: 7500,  // Increased proportionally
+      stagnationLimit: 7500, // Increased proportionally
     },
   },
 }
@@ -277,7 +280,9 @@ export const SA_PRESETS: Record<'small' | 'medium' | 'large', SAStandardConfig> 
  * @param size - Event size category
  * @returns Configuration for the specified event size
  */
-export function getPresetConfig(size: 'small' | 'medium' | 'large'): SAStandardConfig {
+export function getPresetConfig(
+  size: "small" | "medium" | "large"
+): SAStandardConfig {
   return { ...SA_PRESETS[size] }
 }
 
@@ -309,55 +314,61 @@ export function estimateRuntime(iterations: number): number {
  * @param config - Configuration to validate
  * @returns Validation result with errors if any
  */
-export function validateConfig(config: SAStandardConfig): { valid: boolean; errors: string[] } {
+export function validateConfig(config: SAStandardConfig): {
+  valid: boolean
+  errors: string[]
+} {
   const errors: string[] = []
 
   // Temperature validation
   if (config.annealing.initialTemperature <= 0) {
-    errors.push('Initial temperature must be positive')
+    errors.push("Initial temperature must be positive")
   }
   if (config.annealing.finalTemperature <= 0) {
-    errors.push('Final temperature must be positive')
+    errors.push("Final temperature must be positive")
   }
-  if (config.annealing.finalTemperature >= config.annealing.initialTemperature) {
-    errors.push('Final temperature must be less than initial temperature')
+  if (
+    config.annealing.finalTemperature >= config.annealing.initialTemperature
+  ) {
+    errors.push("Final temperature must be less than initial temperature")
   }
 
   // Iteration validation
   if (config.annealing.iterations <= 0) {
-    errors.push('Iterations must be positive')
+    errors.push("Iterations must be positive")
   }
   if (config.annealing.iterations > 100000) {
-    errors.push('Iterations exceeds reasonable limit (100,000)')
+    errors.push("Iterations exceeds reasonable limit (100,000)")
   }
 
   // Move probability validation
   if (config.moves.swapProbability < 0 || config.moves.swapProbability > 1) {
-    errors.push('Swap probability must be between 0 and 1')
+    errors.push("Swap probability must be between 0 and 1")
   }
   if (config.moves.moveProbability < 0 || config.moves.moveProbability > 1) {
-    errors.push('Move probability must be between 0 and 1')
+    errors.push("Move probability must be between 0 and 1")
   }
-  const totalProbability = config.moves.swapProbability + config.moves.moveProbability
+  const totalProbability =
+    config.moves.swapProbability + config.moves.moveProbability
   if (Math.abs(totalProbability - 1.0) > 0.001) {
-    errors.push('Move probabilities must sum to 1.0')
+    errors.push("Move probabilities must sum to 1.0")
   }
 
   // Weight validation
   if (config.weights.timezoneVariance < 0) {
-    errors.push('Timezone variance weight must be non-negative')
+    errors.push("Timezone variance weight must be non-negative")
   }
   if (config.weights.averageEHP < 0) {
-    errors.push('EHP weight must be non-negative')
+    errors.push("EHP weight must be non-negative")
   }
   if (config.weights.averageEHB < 0) {
-    errors.push('EHB weight must be non-negative')
+    errors.push("EHB weight must be non-negative")
   }
   if (config.weights.averageDailyHours < 0) {
-    errors.push('Daily hours weight must be non-negative')
+    errors.push("Daily hours weight must be non-negative")
   }
   if (config.weights.skillLevel < 0) {
-    errors.push('Skill level weight must be non-negative')
+    errors.push("Skill level weight must be non-negative")
   }
 
   // Weight sum validation - must sum to 1.0 (with small tolerance for floating point)
@@ -375,10 +386,10 @@ export function validateConfig(config: SAStandardConfig): { valid: boolean; erro
   // Termination validation
   if (config.termination.stagnationLimit !== undefined) {
     if (config.termination.stagnationLimit <= 0) {
-      errors.push('Stagnation limit must be positive')
+      errors.push("Stagnation limit must be positive")
     }
     if (config.termination.stagnationLimit > config.annealing.iterations) {
-      errors.push('Stagnation limit cannot exceed total iterations')
+      errors.push("Stagnation limit cannot exceed total iterations")
     }
   }
 
@@ -403,7 +414,12 @@ export const SA_FORMULAS = {
    * - k = current iteration
    * - N = total iterations
    */
-  exponentialCooling: (T0: number, Tf: number, k: number, N: number): number => {
+  exponentialCooling: (
+    T0: number,
+    Tf: number,
+    k: number,
+    N: number
+  ): number => {
     return T0 * Math.pow(Tf / T0, k / N)
   },
 

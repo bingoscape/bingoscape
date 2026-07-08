@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger"
 import { isSuperAdmin } from "@/lib/super-admin"
 
 export async function GET() {

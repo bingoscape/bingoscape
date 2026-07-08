@@ -19,13 +19,40 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "@/hooks/use-toast"
 import { createTeam, addUserToTeam } from "@/app/actions/team"
-import { canUseBalancedGeneration, generateBalancedTeams } from "@/app/actions/team-balancing"
+import {
+  canUseBalancedGeneration,
+  generateBalancedTeams,
+} from "@/app/actions/team-balancing"
 import { calculateMetadataCoverage } from "@/app/actions/player-metadata"
 import { SA_PRESETS, estimateRuntime } from "@/lib/simulated-annealing-config"
-import { Loader2, Users, Sparkles, Shuffle, Info, ChevronDown, ChevronUp, HelpCircle } from "lucide-react"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Loader2,
+  Users,
+  Sparkles,
+  Shuffle,
+  Info,
+  ChevronDown,
+  ChevronUp,
+  HelpCircle,
+} from "lucide-react"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 type Participant = {
   id: string
@@ -57,21 +84,27 @@ export function AutoTeamGeneratorModal({
   existingTeams,
   onTeamsGenerated,
 }: AutoTeamGeneratorModalProps) {
-  const [generationMethod, setGenerationMethod] = useState<"teamSize" | "teamCount">("teamSize")
+  const [generationMethod, setGenerationMethod] = useState<
+    "teamSize" | "teamCount"
+  >("teamSize")
   const [teamSize, setTeamSize] = useState(5)
   const [teamCount, setTeamCount] = useState(2)
   const [teamNamePrefix, setTeamNamePrefix] = useState("Team")
   const [isGenerating, setIsGenerating] = useState(false)
 
   // Balanced generation state
-  const [generationMode, setGenerationMode] = useState<"random" | "balanced">("random")
+  const [generationMode, setGenerationMode] = useState<"random" | "balanced">(
+    "random"
+  )
   const [canUseBalanced, setCanUseBalanced] = useState(false)
   const [metadataCoverage, setMetadataCoverage] = useState(0)
   const [loadingCoverage, setLoadingCoverage] = useState(false)
 
   // Simulated Annealing configuration
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
-  const [configPreset, setConfigPreset] = useState<'small' | 'medium' | 'large' | 'custom'>('medium')
+  const [configPreset, setConfigPreset] = useState<
+    "small" | "medium" | "large" | "custom"
+  >("medium")
   const [saConfig, setSaConfig] = useState({
     // Annealing schedule
     iterations: 20000,
@@ -85,11 +118,11 @@ export function AutoTeamGeneratorModal({
     // Variance weights (normalized to sum to 1.0)
     // Note: Team size is now enforced as a hard constraint
     varianceWeights: {
-      timezone: 0.20,      // 20%
-      ehp: 0.20,           // 20%
-      ehb: 0.20,           // 20%
-      dailyHours: 0.20,    // 20%
-      skillLevel: 0.20,    // 20%
+      timezone: 0.2, // 20%
+      ehp: 0.2, // 20%
+      ehb: 0.2, // 20%
+      dailyHours: 0.2, // 20%
+      skillLevel: 0.2, // 20%
     },
 
     // Move operators
@@ -100,7 +133,9 @@ export function AutoTeamGeneratorModal({
   })
 
   // Skill Mapping State
-  const [skillMappingStrategy, setSkillMappingStrategy] = useState<"linear" | "exponential" | "fibonacci" | "custom">("linear")
+  const [skillMappingStrategy, setSkillMappingStrategy] = useState<
+    "linear" | "exponential" | "fibonacci" | "custom"
+  >("linear")
   const [customSkillMapping, setCustomSkillMapping] = useState({
     beginner: 1,
     intermediate: 2,
@@ -110,9 +145,11 @@ export function AutoTeamGeneratorModal({
   })
 
   // Helper: Handle preset change
-  const handlePresetChange = (preset: 'small' | 'medium' | 'large' | 'custom') => {
+  const handlePresetChange = (
+    preset: "small" | "medium" | "large" | "custom"
+  ) => {
     setConfigPreset(preset)
-    if (preset !== 'custom') {
+    if (preset !== "custom") {
       const presetConfig = SA_PRESETS[preset]
       setSaConfig({
         iterations: presetConfig.annealing.iterations,
@@ -146,15 +183,20 @@ export function AutoTeamGeneratorModal({
     const clampedValue = Math.max(0, Math.min(1, newValue))
 
     // Calculate sum of other weights
-    const otherKeys = Object.keys(currentWeights).filter(k => k !== changedKey) as Array<keyof typeof currentWeights>
-    const otherSum = otherKeys.reduce((sum, key) => sum + currentWeights[key], 0)
+    const otherKeys = Object.keys(currentWeights).filter(
+      (k) => k !== changedKey
+    ) as Array<keyof typeof currentWeights>
+    const otherSum = otherKeys.reduce(
+      (sum, key) => sum + currentWeights[key],
+      0
+    )
 
     // If other weights sum to zero, distribute remaining equally
     if (otherSum === 0) {
       const remaining = 1.0 - clampedValue
       const perWeight = remaining / otherKeys.length
       const newWeights = { ...currentWeights }
-      otherKeys.forEach(key => {
+      otherKeys.forEach((key) => {
         newWeights[key] = perWeight
       })
       newWeights[changedKey] = clampedValue
@@ -166,7 +208,7 @@ export function AutoTeamGeneratorModal({
     const scaleFactor = remaining / otherSum
 
     const newWeights = { ...currentWeights }
-    otherKeys.forEach(key => {
+    otherKeys.forEach((key) => {
       newWeights[key] = currentWeights[key] * scaleFactor
     })
     newWeights[changedKey] = clampedValue
@@ -176,20 +218,26 @@ export function AutoTeamGeneratorModal({
 
   // Helper: Update config value (automatically sets preset to custom)
   const updateConfig = (path: string, value: any) => {
-    setConfigPreset('custom')
+    setConfigPreset("custom")
 
     // Special handling for variance weights to maintain sum = 1.0
-    if (path.startsWith('varianceWeights.')) {
-      const weightKey = path.split('.')[1] as keyof typeof saConfig.varianceWeights
+    if (path.startsWith("varianceWeights.")) {
+      const weightKey = path.split(
+        "."
+      )[1] as keyof typeof saConfig.varianceWeights
       setSaConfig((prev) => ({
         ...prev,
-        varianceWeights: normalizeWeights(prev.varianceWeights, weightKey, value),
+        varianceWeights: normalizeWeights(
+          prev.varianceWeights,
+          weightKey,
+          value
+        ),
       }))
       return
     }
 
     setSaConfig((prev) => {
-      const keys = path.split('.')
+      const keys = path.split(".")
       if (keys.length === 1) {
         return { ...prev, [keys[0]!]: value }
       } else if (keys.length === 2) {
@@ -235,7 +283,10 @@ export function AutoTeamGeneratorModal({
 
   // Get unassigned participants
   const unassignedParticipants = participants.filter(
-    (p) => !existingTeams.some((team) => team.teamMembers.some((m) => m.user.id === p.id)),
+    (p) =>
+      !existingTeams.some((team) =>
+        team.teamMembers.some((m) => m.user.id === p.id)
+      )
   )
 
   const handleGenerate = async () => {
@@ -255,10 +306,32 @@ export function AutoTeamGeneratorModal({
         // Use balanced generation algorithm with simulated annealing
         const activeSkillMapping = (() => {
           switch (skillMappingStrategy) {
-            case "linear": return { beginner: 1, intermediate: 2, advanced: 3, expert: 4, pvmgod: 5 }
-            case "exponential": return { beginner: 1, intermediate: 2, advanced: 4, expert: 8, pvmgod: 16 }
-            case "fibonacci": return { beginner: 1, intermediate: 2, advanced: 3, expert: 5, pvmgod: 8 }
-            case "custom": return customSkillMapping
+            case "linear":
+              return {
+                beginner: 1,
+                intermediate: 2,
+                advanced: 3,
+                expert: 4,
+                pvmgod: 5,
+              }
+            case "exponential":
+              return {
+                beginner: 1,
+                intermediate: 2,
+                advanced: 4,
+                expert: 8,
+                pvmgod: 16,
+              }
+            case "fibonacci":
+              return {
+                beginner: 1,
+                intermediate: 2,
+                advanced: 3,
+                expert: 5,
+                pvmgod: 8,
+              }
+            case "custom":
+              return customSkillMapping
           }
         })()
 
@@ -267,18 +340,27 @@ export function AutoTeamGeneratorModal({
           teamSize: generationMethod === "teamSize" ? teamSize : undefined,
           teamCount: generationMethod === "teamCount" ? teamCount : undefined,
           teamNamePrefix,
-          simulatedAnnealing: { ...saConfig, skillLevelMapping: activeSkillMapping },
+          simulatedAnnealing: {
+            ...saConfig,
+            skillLevelMapping: activeSkillMapping,
+          },
         })
+
+        if (!result.success || !result.data) {
+          throw new Error(result.error || "Failed to generate balanced teams")
+        }
 
         await onTeamsGenerated()
 
         toast({
           title: "Balanced teams generated",
-          description: `Successfully created ${result.teamsCreated} balanced teams with ${result.participantsAssigned} participants. Balance score: ${result.objectiveScore.toFixed(3)} (lower is better)`,
+          description: `Successfully created ${result.data.teamsCreated} balanced teams with ${result.data.participantsAssigned} participants. Balance score: ${result.data.objectiveScore.toFixed(3)} (lower is better)`,
         })
       } else {
         // Use random generation (existing logic)
-        const shuffledParticipants = [...unassignedParticipants].sort(() => Math.random() - 0.5)
+        const shuffledParticipants = [...unassignedParticipants].sort(
+          () => Math.random() - 0.5
+        )
 
         let numberOfTeams = 0
         if (generationMethod === "teamSize") {
@@ -290,15 +372,27 @@ export function AutoTeamGeneratorModal({
         const createdTeams: string[] = []
         for (let i = 0; i < numberOfTeams; i++) {
           const teamName = `${teamNamePrefix} ${existingTeams.length + i + 1}`
-          const team = await createTeam(eventId, teamName)
-          createdTeams.push(team!.id)
+          const teamRes = await createTeam(eventId, teamName)
+          if (!teamRes?.success || !teamRes.data) {
+            throw new Error(teamRes?.error || "Failed to create team")
+          }
+          createdTeams.push(teamRes.data.id)
         }
 
         for (let i = 0; i < shuffledParticipants.length; i++) {
-          const teamIndex = generationMethod === "teamSize" ? Math.floor(i / teamSize) : i % numberOfTeams
+          const teamIndex =
+            generationMethod === "teamSize"
+              ? Math.floor(i / teamSize)
+              : i % numberOfTeams
 
           if (teamIndex < createdTeams.length) {
-            await addUserToTeam(createdTeams[teamIndex]!, shuffledParticipants[i]!.id)
+            const addRes = await addUserToTeam(
+              createdTeams[teamIndex]!,
+              shuffledParticipants[i]!.id
+            )
+            if (!addRes?.success) {
+              throw new Error(addRes?.error || "Failed to add user to team")
+            }
           }
         }
 
@@ -314,7 +408,10 @@ export function AutoTeamGeneratorModal({
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate teams. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to generate teams. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -324,21 +421,31 @@ export function AutoTeamGeneratorModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Auto-Generate Teams</DialogTitle>
           <DialogDescription>
-            Automatically create and assign participants to teams using random or balanced algorithms.
+            Automatically create and assign participants to teams using random
+            or balanced algorithms.
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={generationMode} onValueChange={(value) => setGenerationMode(value as "random" | "balanced")}>
+        <Tabs
+          value={generationMode}
+          onValueChange={(value) =>
+            setGenerationMode(value as "random" | "balanced")
+          }
+        >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="random" className="flex items-center gap-2">
               <Shuffle className="h-4 w-4" />
               Random
             </TabsTrigger>
-            <TabsTrigger value="balanced" disabled={!canUseBalanced} className="flex items-center gap-2">
+            <TabsTrigger
+              value="balanced"
+              disabled={!canUseBalanced}
+              className="flex items-center gap-2"
+            >
               <Sparkles className="h-4 w-4" />
               Balanced
               {canUseBalanced && (
@@ -355,34 +462,39 @@ export function AutoTeamGeneratorModal({
               <Loader2 className="h-4 w-4 animate-spin" />
               Checking data coverage...
             </div>
-          ) : !canUseBalanced && (
-            <div className="mt-4 flex items-start gap-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-950">
-              <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
-                  Balanced mode unavailable
-                </p>
-                <p className="text-xs text-yellow-700 dark:text-yellow-300">
-                  Only {metadataCoverage}% of participants have metadata. At least 50% required for balanced generation.
-                </p>
+          ) : (
+            !canUseBalanced && (
+              <div className="mt-4 flex items-start gap-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-950">
+                <Info className="mt-0.5 h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                <div>
+                  <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
+                    Balanced mode unavailable
+                  </p>
+                  <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                    Only {metadataCoverage}% of participants have metadata. At
+                    least 50% required for balanced generation.
+                  </p>
+                </div>
               </div>
-            </div>
+            )
           )}
 
-          <TabsContent value="random" className="space-y-4 mt-4">
+          <TabsContent value="random" className="mt-4 space-y-4">
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950">
               <p className="text-sm text-blue-900 dark:text-blue-100">
-                <Shuffle className="inline h-4 w-4 mr-1" />
-                Random mode shuffles participants and distributes them evenly across teams.
+                <Shuffle className="mr-1 inline h-4 w-4" />
+                Random mode shuffles participants and distributes them evenly
+                across teams.
               </p>
             </div>
           </TabsContent>
 
-          <TabsContent value="balanced" className="space-y-4 mt-4">
+          <TabsContent value="balanced" className="mt-4 space-y-4">
             <div className="rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-800 dark:bg-green-950">
               <p className="text-sm text-green-900 dark:text-green-100">
-                <Sparkles className="inline h-4 w-4 mr-1" />
-                Balanced mode uses simulated annealing optimization with player metadata to create well-balanced teams.
+                <Sparkles className="mr-1 inline h-4 w-4" />
+                Balanced mode uses simulated annealing optimization with player
+                metadata to create well-balanced teams.
               </p>
             </div>
 
@@ -394,33 +506,49 @@ export function AutoTeamGeneratorModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="small">Small Event (50-100 participants)</SelectItem>
-                  <SelectItem value="medium">Medium Event (100-200 participants) - Recommended</SelectItem>
-                  <SelectItem value="large">Large Event (200+ participants)</SelectItem>
+                  <SelectItem value="small">
+                    Small Event (50-100 participants)
+                  </SelectItem>
+                  <SelectItem value="medium">
+                    Medium Event (100-200 participants) - Recommended
+                  </SelectItem>
+                  <SelectItem value="large">
+                    Large Event (200+ participants)
+                  </SelectItem>
                   <SelectItem value="custom">Custom Configuration</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Presets automatically configure all optimization parameters for your event size.
+                Presets automatically configure all optimization parameters for
+                your event size.
               </p>
             </div>
 
             {/* Advanced Settings - Comprehensive */}
-            <Collapsible open={showAdvancedSettings} onOpenChange={setShowAdvancedSettings}>
+            <Collapsible
+              open={showAdvancedSettings}
+              onOpenChange={setShowAdvancedSettings}
+            >
               <CollapsibleTrigger asChild>
                 <Button variant="outline" className="w-full justify-between">
                   <span className="flex items-center gap-2">
                     <Sparkles className="h-4 w-4" />
-                    Advanced Settings{configPreset === 'custom' && ' (Custom)'}
+                    Advanced Settings{configPreset === "custom" && " (Custom)"}
                   </span>
-                  {showAdvancedSettings ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  {showAdvancedSettings ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
                 </Button>
               </CollapsibleTrigger>
 
               <CollapsibleContent className="mt-4 space-y-4">
                 {/* Annealing Schedule */}
                 <div className="space-y-3 rounded-lg border p-4">
-                  <Label className="text-base font-semibold">Annealing Schedule</Label>
+                  <Label className="text-base font-semibold">
+                    Annealing Schedule
+                  </Label>
 
                   {/* Iterations */}
                   <div className="space-y-2">
@@ -430,22 +558,29 @@ export function AutoTeamGeneratorModal({
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
-                              Number of optimization iterations. More iterations = better balance but longer runtime.
+                              Number of optimization iterations. More iterations
+                              = better balance but longer runtime.
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{saConfig.iterations.toLocaleString()}</span>
-                        <Badge variant="secondary" className="text-xs">~{estimateRuntime(saConfig.iterations)}s</Badge>
+                        <span className="text-sm font-medium">
+                          {saConfig.iterations.toLocaleString()}
+                        </span>
+                        <Badge variant="secondary" className="text-xs">
+                          ~{estimateRuntime(saConfig.iterations)}s
+                        </Badge>
                       </div>
                     </div>
                     <Slider
                       value={[saConfig.iterations]}
-                      onValueChange={([value]) => updateConfig('iterations', value!)}
+                      onValueChange={([value]) =>
+                        updateConfig("iterations", value!)
+                      }
                       min={1000}
                       max={50000}
                       step={1000}
@@ -460,19 +595,24 @@ export function AutoTeamGeneratorModal({
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
-                              Starting exploration level. Higher = more exploration early.
+                              Starting exploration level. Higher = more
+                              exploration early.
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </div>
-                      <span className="text-sm font-medium">{saConfig.initialTemperature.toFixed(1)}</span>
+                      <span className="text-sm font-medium">
+                        {saConfig.initialTemperature.toFixed(1)}
+                      </span>
                     </div>
                     <Slider
                       value={[saConfig.initialTemperature * 10]}
-                      onValueChange={([value]) => updateConfig('initialTemperature', value! / 10)}
+                      onValueChange={([value]) =>
+                        updateConfig("initialTemperature", value! / 10)
+                      }
                       min={1}
                       max={20}
                       step={1}
@@ -487,19 +627,24 @@ export function AutoTeamGeneratorModal({
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
-                              Ending precision. Lower = finer adjustments at the end.
+                              Ending precision. Lower = finer adjustments at the
+                              end.
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </div>
-                      <span className="text-sm font-medium">{saConfig.finalTemperature.toFixed(4)}</span>
+                      <span className="text-sm font-medium">
+                        {saConfig.finalTemperature.toFixed(4)}
+                      </span>
                     </div>
                     <Slider
                       value={[saConfig.finalTemperature * 10000]}
-                      onValueChange={([value]) => updateConfig('finalTemperature', value! / 10000)}
+                      onValueChange={([value]) =>
+                        updateConfig("finalTemperature", value! / 10000)
+                      }
                       min={1}
                       max={100}
                       step={1}
@@ -509,7 +654,9 @@ export function AutoTeamGeneratorModal({
 
                 {/* Termination Criteria */}
                 <div className="space-y-3 rounded-lg border p-4">
-                  <Label className="text-base font-semibold">Termination Criteria</Label>
+                  <Label className="text-base font-semibold">
+                    Termination Criteria
+                  </Label>
 
                   {/* Random Seed */}
                   <div className="space-y-2">
@@ -518,10 +665,11 @@ export function AutoTeamGeneratorModal({
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                            <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
-                            Set a number for reproducible results. Same seed = same teams.
+                            Set a number for reproducible results. Same seed =
+                            same teams.
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -529,8 +677,13 @@ export function AutoTeamGeneratorModal({
                     <Input
                       type="number"
                       placeholder="e.g., 12345 (leave empty for random)"
-                      value={saConfig.randomSeed ?? ''}
-                      onChange={(e) => updateConfig('randomSeed', e.target.value ? parseInt(e.target.value) : undefined)}
+                      value={saConfig.randomSeed ?? ""}
+                      onChange={(e) =>
+                        updateConfig(
+                          "randomSeed",
+                          e.target.value ? parseInt(e.target.value) : undefined
+                        )
+                      }
                     />
                   </div>
 
@@ -542,19 +695,24 @@ export function AutoTeamGeneratorModal({
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
-                              Stop early if no improvement for this many iterations. Saves time.
+                              Stop early if no improvement for this many
+                              iterations. Saves time.
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </div>
-                      <span className="text-sm font-medium">{saConfig.stagnationLimit}</span>
+                      <span className="text-sm font-medium">
+                        {saConfig.stagnationLimit}
+                      </span>
                     </div>
                     <Slider
                       value={[saConfig.stagnationLimit]}
-                      onValueChange={([value]) => updateConfig('stagnationLimit', value!)}
+                      onValueChange={([value]) =>
+                        updateConfig("stagnationLimit", value!)
+                      }
                       min={1000}
                       max={10000}
                       step={500}
@@ -564,38 +722,75 @@ export function AutoTeamGeneratorModal({
 
                 {/* Variance Weights */}
                 <div className="space-y-3 rounded-lg border p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <Label className="text-base font-semibold">Variance Weights</Label>
+                  <div className="mb-4 flex items-center justify-between">
+                    <Label className="text-base font-semibold">
+                      Variance Weights
+                    </Label>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                          <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
                         </TooltipTrigger>
                         <TooltipContent className="max-w-xs">
-                          Controls how much each metric contributes to team balance optimization.
+                          Controls how much each metric contributes to team
+                          balance optimization.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
 
                   {/* Visual Balance Bar */}
-                  <div className="w-full h-3 flex rounded-full overflow-hidden mb-6">
-                    <div className="bg-blue-500" style={{ width: `${saConfig.varianceWeights.timezone * 100}%` }} title="Timezone" />
-                    <div className="bg-green-500" style={{ width: `${saConfig.varianceWeights.ehp * 100}%` }} title="EHP" />
-                    <div className="bg-purple-500" style={{ width: `${saConfig.varianceWeights.ehb * 100}%` }} title="EHB" />
-                    <div className="bg-yellow-500" style={{ width: `${saConfig.varianceWeights.dailyHours * 100}%` }} title="Daily Hours" />
-                    <div className="bg-red-500" style={{ width: `${saConfig.varianceWeights.skillLevel * 100}%` }} title="Skill Level" />
+                  <div className="mb-6 flex h-3 w-full overflow-hidden rounded-full">
+                    <div
+                      className="bg-blue-500"
+                      style={{
+                        width: `${saConfig.varianceWeights.timezone * 100}%`,
+                      }}
+                      title="Timezone"
+                    />
+                    <div
+                      className="bg-green-500"
+                      style={{
+                        width: `${saConfig.varianceWeights.ehp * 100}%`,
+                      }}
+                      title="EHP"
+                    />
+                    <div
+                      className="bg-purple-500"
+                      style={{
+                        width: `${saConfig.varianceWeights.ehb * 100}%`,
+                      }}
+                      title="EHB"
+                    />
+                    <div
+                      className="bg-yellow-500"
+                      style={{
+                        width: `${saConfig.varianceWeights.dailyHours * 100}%`,
+                      }}
+                      title="Daily Hours"
+                    />
+                    <div
+                      className="bg-red-500"
+                      style={{
+                        width: `${saConfig.varianceWeights.skillLevel * 100}%`,
+                      }}
+                      title="Skill Level"
+                    />
                   </div>
 
                   {/* Timezone Variance Weight */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm">Timezone Balance</Label>
-                      <span className="text-sm font-medium">{(saConfig.varianceWeights.timezone * 100).toFixed(1)}%</span>
+                      <span className="text-sm font-medium">
+                        {(saConfig.varianceWeights.timezone * 100).toFixed(1)}%
+                      </span>
                     </div>
                     <Slider
                       value={[saConfig.varianceWeights.timezone * 100]}
-                      onValueChange={([value]) => updateConfig('varianceWeights.timezone', value! / 100)}
+                      onValueChange={([value]) =>
+                        updateConfig("varianceWeights.timezone", value! / 100)
+                      }
                       min={0}
                       max={100}
                       step={1}
@@ -606,11 +801,15 @@ export function AutoTeamGeneratorModal({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm">EHP Balance</Label>
-                      <span className="text-sm font-medium">{(saConfig.varianceWeights.ehp * 100).toFixed(1)}%</span>
+                      <span className="text-sm font-medium">
+                        {(saConfig.varianceWeights.ehp * 100).toFixed(1)}%
+                      </span>
                     </div>
                     <Slider
                       value={[saConfig.varianceWeights.ehp * 100]}
-                      onValueChange={([value]) => updateConfig('varianceWeights.ehp', value! / 100)}
+                      onValueChange={([value]) =>
+                        updateConfig("varianceWeights.ehp", value! / 100)
+                      }
                       min={0}
                       max={100}
                       step={1}
@@ -621,11 +820,15 @@ export function AutoTeamGeneratorModal({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm">EHB Balance</Label>
-                      <span className="text-sm font-medium">{(saConfig.varianceWeights.ehb * 100).toFixed(1)}%</span>
+                      <span className="text-sm font-medium">
+                        {(saConfig.varianceWeights.ehb * 100).toFixed(1)}%
+                      </span>
                     </div>
                     <Slider
                       value={[saConfig.varianceWeights.ehb * 100]}
-                      onValueChange={([value]) => updateConfig('varianceWeights.ehb', value! / 100)}
+                      onValueChange={([value]) =>
+                        updateConfig("varianceWeights.ehb", value! / 100)
+                      }
                       min={0}
                       max={100}
                       step={1}
@@ -636,11 +839,16 @@ export function AutoTeamGeneratorModal({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm">Daily Hours Balance</Label>
-                      <span className="text-sm font-medium">{(saConfig.varianceWeights.dailyHours * 100).toFixed(1)}%</span>
+                      <span className="text-sm font-medium">
+                        {(saConfig.varianceWeights.dailyHours * 100).toFixed(1)}
+                        %
+                      </span>
                     </div>
                     <Slider
                       value={[saConfig.varianceWeights.dailyHours * 100]}
-                      onValueChange={([value]) => updateConfig('varianceWeights.dailyHours', value! / 100)}
+                      onValueChange={([value]) =>
+                        updateConfig("varianceWeights.dailyHours", value! / 100)
+                      }
                       min={0}
                       max={100}
                       step={1}
@@ -651,11 +859,16 @@ export function AutoTeamGeneratorModal({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm">Skill Level Balance</Label>
-                      <span className="text-sm font-medium">{(saConfig.varianceWeights.skillLevel * 100).toFixed(1)}%</span>
+                      <span className="text-sm font-medium">
+                        {(saConfig.varianceWeights.skillLevel * 100).toFixed(1)}
+                        %
+                      </span>
                     </div>
                     <Slider
                       value={[saConfig.varianceWeights.skillLevel * 100]}
-                      onValueChange={([value]) => updateConfig('varianceWeights.skillLevel', value! / 100)}
+                      onValueChange={([value]) =>
+                        updateConfig("varianceWeights.skillLevel", value! / 100)
+                      }
                       min={0}
                       max={100}
                       step={1}
@@ -665,62 +878,125 @@ export function AutoTeamGeneratorModal({
                   {/* Team Size Balance Note */}
                   <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
                     <p className="font-medium">Team Size Balance</p>
-                    <p className="mt-1">Team size is automatically balanced as a hard constraint. Focus on optimizing skill and timezone balance.</p>
+                    <p className="mt-1">
+                      Team size is automatically balanced as a hard constraint.
+                      Focus on optimizing skill and timezone balance.
+                    </p>
                   </div>
                 </div>
 
-                <p className="text-xs text-muted-foreground mt-2">
-                  Weights must sum to 100%. Changing one weight proportionally adjusts others.
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Weights must sum to 100%. Changing one weight proportionally
+                  adjusts others.
                 </p>
 
                 {/* Categorical Skill Mapping Strategy */}
                 <div className="space-y-3 rounded-lg border p-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-base font-semibold">Skill Level Mapping Strategy</Label>
+                    <Label className="text-base font-semibold">
+                      Skill Level Mapping Strategy
+                    </Label>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                          <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
                         </TooltipTrigger>
                         <TooltipContent className="max-w-xs">
-                          Determines the numerical gap between different categorical skill levels during optimization.
+                          Determines the numerical gap between different
+                          categorical skill levels during optimization.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
-                  <Select value={skillMappingStrategy} onValueChange={(value) => setSkillMappingStrategy(value as any)}>
+                  <Select
+                    value={skillMappingStrategy}
+                    onValueChange={(value) =>
+                      setSkillMappingStrategy(value as any)
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="linear">Linear [1, 2, 3, 4, 5]</SelectItem>
-                      <SelectItem value="exponential">Exponential [1, 2, 4, 8, 16]</SelectItem>
-                      <SelectItem value="fibonacci">Fibonacci [1, 2, 3, 5, 8]</SelectItem>
+                      <SelectItem value="linear">
+                        Linear [1, 2, 3, 4, 5]
+                      </SelectItem>
+                      <SelectItem value="exponential">
+                        Exponential [1, 2, 4, 8, 16]
+                      </SelectItem>
+                      <SelectItem value="fibonacci">
+                        Fibonacci [1, 2, 3, 5, 8]
+                      </SelectItem>
                       <SelectItem value="custom">Custom</SelectItem>
                     </SelectContent>
                   </Select>
 
                   {skillMappingStrategy === "custom" && (
-                    <div className="grid grid-cols-5 gap-2 mt-2">
+                    <div className="mt-2 grid grid-cols-5 gap-2">
                       <div className="space-y-1 text-center">
                         <Label className="text-xs">Beginner</Label>
-                        <Input type="number" value={customSkillMapping.beginner} onChange={(e) => setCustomSkillMapping(p => ({ ...p, beginner: Number(e.target.value) }))} />
+                        <Input
+                          type="number"
+                          value={customSkillMapping.beginner}
+                          onChange={(e) =>
+                            setCustomSkillMapping((p) => ({
+                              ...p,
+                              beginner: Number(e.target.value),
+                            }))
+                          }
+                        />
                       </div>
                       <div className="space-y-1 text-center">
                         <Label className="text-xs">Interm.</Label>
-                        <Input type="number" value={customSkillMapping.intermediate} onChange={(e) => setCustomSkillMapping(p => ({ ...p, intermediate: Number(e.target.value) }))} />
+                        <Input
+                          type="number"
+                          value={customSkillMapping.intermediate}
+                          onChange={(e) =>
+                            setCustomSkillMapping((p) => ({
+                              ...p,
+                              intermediate: Number(e.target.value),
+                            }))
+                          }
+                        />
                       </div>
                       <div className="space-y-1 text-center">
                         <Label className="text-xs">Advanced</Label>
-                        <Input type="number" value={customSkillMapping.advanced} onChange={(e) => setCustomSkillMapping(p => ({ ...p, advanced: Number(e.target.value) }))} />
+                        <Input
+                          type="number"
+                          value={customSkillMapping.advanced}
+                          onChange={(e) =>
+                            setCustomSkillMapping((p) => ({
+                              ...p,
+                              advanced: Number(e.target.value),
+                            }))
+                          }
+                        />
                       </div>
                       <div className="space-y-1 text-center">
                         <Label className="text-xs">Expert</Label>
-                        <Input type="number" value={customSkillMapping.expert} onChange={(e) => setCustomSkillMapping(p => ({ ...p, expert: Number(e.target.value) }))} />
+                        <Input
+                          type="number"
+                          value={customSkillMapping.expert}
+                          onChange={(e) =>
+                            setCustomSkillMapping((p) => ({
+                              ...p,
+                              expert: Number(e.target.value),
+                            }))
+                          }
+                        />
                       </div>
                       <div className="space-y-1 text-center">
                         <Label className="text-xs">God-tier</Label>
-                        <Input type="number" value={customSkillMapping.pvmgod} onChange={(e) => setCustomSkillMapping(p => ({ ...p, pvmgod: Number(e.target.value) }))} />
+                        <Input
+                          type="number"
+                          value={customSkillMapping.pvmgod}
+                          onChange={(e) =>
+                            setCustomSkillMapping((p) => ({
+                              ...p,
+                              pvmgod: Number(e.target.value),
+                            }))
+                          }
+                        />
                       </div>
                     </div>
                   )}
@@ -729,14 +1005,17 @@ export function AutoTeamGeneratorModal({
                 {/* Move Operators */}
                 <div className="space-y-3 rounded-lg border p-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-base font-semibold">Move Operators</Label>
+                    <Label className="text-base font-semibold">
+                      Move Operators
+                    </Label>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                          <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
                         </TooltipTrigger>
                         <TooltipContent className="max-w-xs">
-                          Probabilities of different move types during optimization.
+                          Probabilities of different move types during
+                          optimization.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -746,14 +1025,16 @@ export function AutoTeamGeneratorModal({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm">Swap Probability</Label>
-                      <span className="text-sm font-medium">{saConfig.moves.swapProbability.toFixed(2)}</span>
+                      <span className="text-sm font-medium">
+                        {saConfig.moves.swapProbability.toFixed(2)}
+                      </span>
                     </div>
                     <Slider
                       value={[saConfig.moves.swapProbability * 100]}
                       onValueChange={([value]) => {
                         const swapProb = value! / 100
-                        updateConfig('moves.swapProbability', swapProb)
-                        updateConfig('moves.moveProbability', 1 - swapProb)
+                        updateConfig("moves.swapProbability", swapProb)
+                        updateConfig("moves.moveProbability", 1 - swapProb)
                       }}
                       min={0}
                       max={100}
@@ -767,8 +1048,12 @@ export function AutoTeamGeneratorModal({
                   {/* Move Probability (auto-calculated) */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-sm text-muted-foreground">Move Probability (auto)</Label>
-                      <span className="text-sm font-medium text-muted-foreground">{saConfig.moves.moveProbability.toFixed(2)}</span>
+                      <Label className="text-sm text-muted-foreground">
+                        Move Probability (auto)
+                      </Label>
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {saConfig.moves.moveProbability.toFixed(2)}
+                      </span>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Move one participant to another team
@@ -785,12 +1070,16 @@ export function AutoTeamGeneratorModal({
             <Label>Generation Method</Label>
             <RadioGroup
               value={generationMethod}
-              onValueChange={(value) => setGenerationMethod(value as "teamSize" | "teamCount")}
+              onValueChange={(value) =>
+                setGenerationMethod(value as "teamSize" | "teamCount")
+              }
               className="flex flex-col space-y-1"
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="teamSize" id="teamSize" />
-                <Label htmlFor="teamSize">By Team Size (members per team)</Label>
+                <Label htmlFor="teamSize">
+                  By Team Size (members per team)
+                </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="teamCount" id="teamCount" />
@@ -807,10 +1096,13 @@ export function AutoTeamGeneratorModal({
                 type="number"
                 min={1}
                 value={teamSize}
-                onChange={(e) => setTeamSize(Number.parseInt(e.target.value) || 1)}
+                onChange={(e) =>
+                  setTeamSize(Number.parseInt(e.target.value) || 1)
+                }
               />
               <p className="text-sm text-muted-foreground">
-                This will create approximately {Math.ceil(unassignedParticipants.length / teamSize)} teams
+                This will create approximately{" "}
+                {Math.ceil(unassignedParticipants.length / teamSize)} teams
               </p>
             </div>
           ) : (
@@ -821,10 +1113,13 @@ export function AutoTeamGeneratorModal({
                 type="number"
                 min={1}
                 value={teamCount}
-                onChange={(e) => setTeamCount(Number.parseInt(e.target.value) || 1)}
+                onChange={(e) =>
+                  setTeamCount(Number.parseInt(e.target.value) || 1)
+                }
               />
               <p className="text-sm text-muted-foreground">
-                Each team will have approximately {Math.ceil(unassignedParticipants.length / teamCount)} members
+                Each team will have approximately{" "}
+                {Math.ceil(unassignedParticipants.length / teamCount)} members
               </p>
             </div>
           )}
@@ -838,14 +1133,16 @@ export function AutoTeamGeneratorModal({
               placeholder="Team"
             />
             <p className="text-sm text-muted-foreground">
-              Teams will be named like: {teamNamePrefix} 1, {teamNamePrefix} 2, etc.
+              Teams will be named like: {teamNamePrefix} 1, {teamNamePrefix} 2,
+              etc.
             </p>
           </div>
 
-          <div className="bg-secondary/30 p-3 rounded-md">
+          <div className="rounded-md bg-secondary/30 p-3">
             <p className="text-sm font-medium">Summary</p>
             <p className="text-sm">
-              {unassignedParticipants.length} unassigned participants will be distributed into
+              {unassignedParticipants.length} unassigned participants will be
+              distributed into
               {generationMethod === "teamSize"
                 ? ` ${Math.ceil(unassignedParticipants.length / teamSize)} teams of ${teamSize} members each`
                 : ` ${teamCount} teams with approximately ${Math.ceil(unassignedParticipants.length / teamCount)} members each`}
@@ -858,7 +1155,10 @@ export function AutoTeamGeneratorModal({
           <Button variant="outline" onClick={onClose} disabled={isGenerating}>
             Cancel
           </Button>
-          <Button onClick={handleGenerate} disabled={isGenerating || unassignedParticipants.length === 0}>
+          <Button
+            onClick={handleGenerate}
+            disabled={isGenerating || unassignedParticipants.length === 0}
+          >
             {isGenerating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -871,7 +1171,8 @@ export function AutoTeamGeneratorModal({
                 ) : (
                   <Shuffle className="mr-2 h-4 w-4" />
                 )}
-                Generate {generationMode === "balanced" ? "Balanced" : "Random"} Teams
+                Generate {generationMode === "balanced" ? "Balanced" : "Random"}{" "}
+                Teams
               </>
             )}
           </Button>
@@ -880,4 +1181,3 @@ export function AutoTeamGeneratorModal({
     </Dialog>
   )
 }
-

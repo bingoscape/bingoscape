@@ -8,7 +8,6 @@ import { toast } from "@/hooks/use-toast"
 import { Loader2, Edit, UserPlus } from "lucide-react"
 import {
   getEventParticipants,
-  getEventById,
   getRegistrationRequests,
   getPendingRegistrationCount,
 } from "@/app/actions/events"
@@ -24,6 +23,7 @@ import { ParticipantsTab } from "@/components/participants-tab"
 import { RegistrationsTab } from "@/components/registrations-tab"
 import type { Participant, Team } from "./types"
 import type { RegistrationRequest } from "@/app/actions/events"
+import { getEventById } from "@/server/queries/events"
 
 export default function EventParticipantsPage(props: {
   params: Promise<{ id: UUID }>
@@ -37,7 +37,7 @@ export default function EventParticipantsPage(props: {
   const [loading, setLoading] = useState(true)
   const [minimumBuyIn, setMinimumBuyIn] = useState(0)
   const [eventName, setEventName] = useState("")
-  const [eventCreatorId, setEventCreatorId] = useState<string>("")
+  const [_eventCreatorId, setEventCreatorId] = useState<string>("")
   const [clanId, setClanId] = useState<string | null>(null)
   const { data } = useSession()
   const [currentUserRole, setCurrentUserRole] = useState<

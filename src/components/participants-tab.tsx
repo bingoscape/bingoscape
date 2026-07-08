@@ -49,7 +49,6 @@ import {
   getEventParticipants,
 } from "@/app/actions/events"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
-import type { UUID } from "crypto"
 import {
   AlertDialog,
   AlertDialogAction,

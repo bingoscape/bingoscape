@@ -1,12 +1,12 @@
-'use client'
+"use client"
 
-import { trace } from '@opentelemetry/api'
-import type { LogContext } from '@/lib/logger'
+import { trace } from "@opentelemetry/api"
+import type { LogContext } from "@/lib/logger"
 
 // A simplified LogEntry type for the browser
 interface BrowserLogEntry {
   timestamp: string
-  level: 'debug' | 'info' | 'warn' | 'error'
+  level: "debug" | "info" | "warn" | "error"
   message: string
   context: LogContext
   error?: {
@@ -22,12 +22,12 @@ class BrowserLogger {
   private sessionId = this.generateSessionId()
 
   constructor() {
-    if (typeof window === 'undefined') return
+    if (typeof window === "undefined") return
     this.setupGlobalErrorHandlers()
     setInterval(() => this.flush(), this.flushInterval)
     // Optional: Also flush when the page is hidden
-    window.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') {
+    window.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
         this.flush()
       }
     })
@@ -35,8 +35,9 @@ class BrowserLogger {
 
   private generateSessionId() {
     return (
-      'session_' +
-      (Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15))
+      "session_" +
+      (Math.random().toString(36).substring(2, 15) +
+        Math.random().toString(36).substring(2, 15))
     )
   }
 
@@ -48,8 +49,8 @@ class BrowserLogger {
     const span = trace.getActiveSpan()
     const ctx = span?.spanContext()
     return {
-      traceId: ctx?.traceId ?? 'no-trace',
-      spanId: ctx?.spanId ?? 'no-span',
+      traceId: ctx?.traceId ?? "no-trace",
+      spanId: ctx?.spanId ?? "no-span",
       sessionId: this.getSessionId(),
       url: window.location.href,
       userAgent: navigator.userAgent,
@@ -58,12 +59,12 @@ class BrowserLogger {
   }
 
   private log(
-    level: 'debug' | 'info' | 'warn' | 'error',
+    level: "debug" | "info" | "warn" | "error",
     message: string,
     context?: LogContext,
     error?: Error
   ) {
-    if (typeof window === 'undefined') return
+    if (typeof window === "undefined") return
 
     const entry: BrowserLogEntry = {
       timestamp: new Date().toISOString(),
@@ -81,7 +82,7 @@ class BrowserLogger {
     }
 
     // Also log to console in development
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       console[level](message, entry)
     }
 
@@ -89,7 +90,7 @@ class BrowserLogger {
   }
 
   private flush() {
-    if (typeof window === 'undefined' || this.logs.length === 0) {
+    if (typeof window === "undefined" || this.logs.length === 0) {
       return
     }
 
@@ -102,21 +103,21 @@ class BrowserLogger {
     try {
       if (navigator.sendBeacon) {
         const blob = new Blob([JSON.stringify(logsToSend)], {
-          type: 'application/json',
+          type: "application/json",
         })
-        navigator.sendBeacon('/api/logs', blob)
+        navigator.sendBeacon("/api/logs", blob)
       } else {
-        fetch('/api/logs', {
-          method: 'POST',
+        fetch("/api/logs", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(logsToSend),
           keepalive: true, // Important for reliability
         })
       }
     } catch (error) {
-      console.error('Failed to send browser logs', error)
+      console.error("Failed to send browser logs", error)
       // If sending fails, put logs back in the queue
       this.logs = logsToSend.concat(this.logs)
     }
@@ -124,34 +125,38 @@ class BrowserLogger {
 
   // --- Public API ---
   info(message: string, context?: LogContext) {
-    this.log('info', message, context)
+    this.log("info", message, context)
   }
   debug(message: string, context?: LogContext) {
-    this.log('debug', message, context)
+    this.log("debug", message, context)
   }
   warn(message: string, context?: LogContext) {
-    this.log('warn', message, context)
+    this.log("warn", message, context)
   }
   error(message: string, error: Error, context?: LogContext) {
-    this.log('error', message, context, error)
+    this.log("error", message, context, error)
   }
 
   private setupGlobalErrorHandlers() {
     window.onerror = (message, source, lineno, colno, error) => {
-      this.error(`Unhandled error: ${message}`, error || new Error(message as string), {
-        source: 'window.onerror',
-        sourceFile: source,
-        line: lineno,
-        column: colno,
-      })
+      this.error(
+        `Unhandled error: ${message}`,
+        error || new Error(message as string),
+        {
+          source: "window.onerror",
+          sourceFile: source,
+          line: lineno,
+          column: colno,
+        }
+      )
     }
 
     window.onunhandledrejection = (event) => {
       this.error(
-        'Unhandled promise rejection',
-        event.reason || new Error('Unknown rejection reason'),
+        "Unhandled promise rejection",
+        event.reason || new Error("Unknown rejection reason"),
         {
-          source: 'window.onunhandledrejection',
+          source: "window.onunhandledrejection",
         }
       )
     }

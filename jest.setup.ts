@@ -12,4 +12,3 @@ jest.mock("next/navigation", () => ({
   usePathname: jest.fn(() => ""),
   useSearchParams: jest.fn(() => ({ get: () => null })),
 }))
-

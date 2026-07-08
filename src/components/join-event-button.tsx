@@ -20,7 +20,12 @@ interface JoinEventButtonProps {
   className?: string
 }
 
-export function JoinEventButton({ eventId, registrationStatus, requiresApproval, className }: JoinEventButtonProps) {
+export function JoinEventButton({
+  eventId,
+  registrationStatus,
+  requiresApproval,
+  className,
+}: JoinEventButtonProps) {
   const [isJoining, setIsJoining] = useState(false)
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [requestMessage, setRequestMessage] = useState("")
@@ -38,7 +43,8 @@ export function JoinEventButton({ eventId, registrationStatus, requiresApproval,
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to join event",
+        description:
+          error instanceof Error ? error.message : "Failed to join event",
         variant: "destructive",
       })
     } finally {
@@ -59,7 +65,8 @@ export function JoinEventButton({ eventId, registrationStatus, requiresApproval,
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit request",
+        description:
+          error instanceof Error ? error.message : "Failed to submit request",
         variant: "destructive",
       })
     } finally {
@@ -71,7 +78,9 @@ export function JoinEventButton({ eventId, registrationStatus, requiresApproval,
     if (requiresApproval) {
       setShowRequestForm(true)
     } else {
-      handleJoinEvent(false).then(() => console.log("Join event request sent")).catch(err => console.error(err))
+      handleJoinEvent(false)
+        .then(() => console.log("Join event request sent"))
+        .catch((err) => console.error(err))
     }
   }
 
@@ -85,11 +94,17 @@ export function JoinEventButton({ eventId, registrationStatus, requiresApproval,
           className="h-24"
         />
         <div className="flex justify-end space-x-2">
-          <Button variant="outline" onClick={() => setShowRequestForm(false)} disabled={isJoining}>
+          <Button
+            variant="outline"
+            onClick={() => setShowRequestForm(false)}
+            disabled={isJoining}
+          >
             Cancel
           </Button>
           <Button onClick={handleRequestSubmit} disabled={isJoining}>
-            {isJoining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {isJoining ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
             {isJoining ? "Submitting..." : "Submit Request"}
           </Button>
         </div>
@@ -102,8 +117,14 @@ export function JoinEventButton({ eventId, registrationStatus, requiresApproval,
       <div className="space-y-2">
         <p className="text-sm text-destructive">{registrationStatus.reason}</p>
         {registrationStatus.canOverride && (
-          <Button onClick={() => handleJoinEvent(true)} disabled={isJoining} className={className}>
-            {isJoining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          <Button
+            onClick={() => handleJoinEvent(true)}
+            disabled={isJoining}
+            className={className}
+          >
+            {isJoining ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
             {isJoining ? "Joining..." : "Override and Join Event"}
           </Button>
         )}
@@ -112,10 +133,17 @@ export function JoinEventButton({ eventId, registrationStatus, requiresApproval,
   }
 
   return (
-    <Button onClick={handleJoinClick} disabled={isJoining} className={className}>
+    <Button
+      onClick={handleJoinClick}
+      disabled={isJoining}
+      className={className}
+    >
       {isJoining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-      {isJoining ? "Processing..." : requiresApproval ? "Request to Join Event" : "Join Event"}
+      {isJoining
+        ? "Processing..."
+        : requiresApproval
+          ? "Request to Join Event"
+          : "Join Event"}
     </Button>
   )
 }
-

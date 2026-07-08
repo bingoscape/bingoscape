@@ -48,7 +48,7 @@ describe("EventCard Component", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-      ; (useRouter as jest.Mock).mockReturnValue(mockRouter)
+    ;(useRouter as jest.Mock).mockReturnValue(mockRouter)
   })
 
   it("renders event details correctly", () => {
@@ -70,7 +70,9 @@ describe("EventCard Component", () => {
   it("does not show Join button when user is a participant", () => {
     render(<EventCard eventData={mockEventData} isParticipant={true} />)
 
-    expect(screen.queryByRole("button", { name: "Join" })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Join" })
+    ).not.toBeInTheDocument()
   })
 
   it("shows Request to Join button when event requires approval", () => {
@@ -84,7 +86,9 @@ describe("EventCard Component", () => {
 
     render(<EventCard eventData={eventWithApproval} isParticipant={false} />)
 
-    expect(screen.getByRole("button", { name: "Request to Join" })).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Request to Join" })
+    ).toBeInTheDocument()
     expect(screen.getByText("Requires approval to join")).toBeInTheDocument()
   })
 
@@ -101,8 +105,12 @@ describe("EventCard Component", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Request to Join" }))
 
-    expect(screen.getByPlaceholderText(/Why do you want to join this event/)).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Submit Request" })).toBeInTheDocument()
+    expect(
+      screen.getByPlaceholderText(/Why do you want to join this event/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Submit Request" })
+    ).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument()
   })
 
@@ -114,7 +122,7 @@ describe("EventCard Component", () => {
         requiresApproval: true,
       },
     }
-      ; (requestToJoinEvent as jest.Mock).mockResolvedValue({})
+    ;(requestToJoinEvent as jest.Mock).mockResolvedValue({})
 
     render(<EventCard eventData={eventWithApproval} isParticipant={false} />)
 
@@ -122,15 +130,21 @@ describe("EventCard Component", () => {
     fireEvent.click(screen.getByRole("button", { name: "Request to Join" }))
 
     // Enter message
-    fireEvent.change(screen.getByPlaceholderText(/Why do you want to join this event/), {
-      target: { value: "I'm excited to join!" },
-    })
+    fireEvent.change(
+      screen.getByPlaceholderText(/Why do you want to join this event/),
+      {
+        target: { value: "I'm excited to join!" },
+      }
+    )
 
     // Submit form
     fireEvent.click(screen.getByRole("button", { name: "Submit Request" }))
 
     await waitFor(() => {
-      expect(requestToJoinEvent).toHaveBeenCalledWith("event-123", "I'm excited to join!")
+      expect(requestToJoinEvent).toHaveBeenCalledWith(
+        "event-123",
+        "I'm excited to join!"
+      )
       expect(toast).toHaveBeenCalledWith({
         title: "Request submitted",
         description: "Your registration request has been submitted for review.",
@@ -153,11 +167,23 @@ describe("EventCard Component", () => {
       },
     }
 
-    render(<EventCard eventData={eventWithApproval} isParticipant={false} registrationStatus={registrationStatus} />)
+    render(
+      <EventCard
+        eventData={eventWithApproval}
+        isParticipant={false}
+        registrationStatus={registrationStatus}
+      />
+    )
 
-    expect(screen.getByText("Registration pending approval")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "View Status" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Request to Join" })).not.toBeInTheDocument()
+    expect(
+      screen.getByText("Registration pending approval")
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "View Status" })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Request to Join" })
+    ).not.toBeInTheDocument()
   })
 
   it("shows View Status button when registration is rejected", () => {
@@ -175,12 +201,24 @@ describe("EventCard Component", () => {
       },
     }
 
-    render(<EventCard eventData={eventWithApproval} isParticipant={false} registrationStatus={registrationStatus} />)
+    render(
+      <EventCard
+        eventData={eventWithApproval}
+        isParticipant={false}
+        registrationStatus={registrationStatus}
+      />
+    )
 
     expect(screen.getByText("Registration rejected")).toBeInTheDocument()
-    expect(screen.getByText("Reason: Sorry, the event is full")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "View Status" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Request to Join" })).not.toBeInTheDocument()
+    expect(
+      screen.getByText("Reason: Sorry, the event is full")
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "View Status" })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Request to Join" })
+    ).not.toBeInTheDocument()
   })
 
   it("shows Closed button when registration is closed", () => {
@@ -199,4 +237,3 @@ describe("EventCard Component", () => {
     expect(screen.getByRole("button", { name: "Closed" })).toBeDisabled()
   })
 })
-

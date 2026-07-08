@@ -3,8 +3,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Globe, TrendingUp, Target, Scale, CheckCircle2, AlertTriangle } from "lucide-react"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
+  Globe,
+  TrendingUp,
+  Target,
+  Scale,
+  CheckCircle2,
+  AlertTriangle,
+} from "lucide-react"
 import type { TeamStatistics } from "@/app/actions/team-statistics"
 
 type Team = {
@@ -35,9 +47,15 @@ export function TeamComparisonView({
   eventAvgEHB,
 }: TeamComparisonViewProps) {
   // Calculate max values for progress bar scaling
-  const maxEHP = Math.max(...Object.values(teamStats).map((s) => s.averageEHP ?? 0))
-  const maxEHB = Math.max(...Object.values(teamStats).map((s) => s.averageEHB ?? 0))
-  const maxTZVariance = Math.max(...Object.values(teamStats).map((s) => s.timezoneHourVariance))
+  const maxEHP = Math.max(
+    ...Object.values(teamStats).map((s) => s.averageEHP ?? 0)
+  )
+  const maxEHB = Math.max(
+    ...Object.values(teamStats).map((s) => s.averageEHB ?? 0)
+  )
+  const maxTZVariance = Math.max(
+    ...Object.values(teamStats).map((s) => s.timezoneHourVariance)
+  )
 
   const getBalanceVariant = (value: number, avg: number) => {
     const deviation = Math.abs(value - avg) / avg
@@ -52,34 +70,46 @@ export function TeamComparisonView({
     // Metadata coverage check
     if (stats.metadataCoverage < 75) {
       const missingCount = stats.memberCount - stats.membersWithMetadata
-      recommendations.push(`${missingCount} member${missingCount !== 1 ? "s" : ""} missing metadata`)
+      recommendations.push(
+        `${missingCount} member${missingCount !== 1 ? "s" : ""} missing metadata`
+      )
     }
 
     // Timezone variance check
     if (stats.timezoneHourVariance > 5) {
-      recommendations.push(`High timezone spread (±${stats.timezoneHourVariance.toFixed(1)}h) may affect coordination`)
+      recommendations.push(
+        `High timezone spread (±${stats.timezoneHourVariance.toFixed(1)}h) may affect coordination`
+      )
     }
 
     // Balance checks
     if (eventAvgEHP && stats.averageEHP !== null) {
-      const ehpDeviation = Math.abs(stats.averageEHP - eventAvgEHP) / eventAvgEHP
+      const ehpDeviation =
+        Math.abs(stats.averageEHP - eventAvgEHP) / eventAvgEHP
       if (ehpDeviation > 0.2) {
         const direction = stats.averageEHP > eventAvgEHP ? "above" : "below"
-        recommendations.push(`EHP ${direction} event average by ${(ehpDeviation * 100).toFixed(0)}%`)
+        recommendations.push(
+          `EHP ${direction} event average by ${(ehpDeviation * 100).toFixed(0)}%`
+        )
       }
     }
 
     if (eventAvgEHB && stats.averageEHB !== null) {
-      const ehbDeviation = Math.abs(stats.averageEHB - eventAvgEHB) / eventAvgEHB
+      const ehbDeviation =
+        Math.abs(stats.averageEHB - eventAvgEHB) / eventAvgEHB
       if (ehbDeviation > 0.2) {
         const direction = stats.averageEHB > eventAvgEHB ? "above" : "below"
-        recommendations.push(`EHB ${direction} event average by ${(ehbDeviation * 100).toFixed(0)}%`)
+        recommendations.push(
+          `EHB ${direction} event average by ${(ehbDeviation * 100).toFixed(0)}%`
+        )
       }
     }
 
     // Team size check
     if (team.teamMembers.length < 5) {
-      recommendations.push(`Small team size (${team.teamMembers.length} members)`)
+      recommendations.push(
+        `Small team size (${team.teamMembers.length} members)`
+      )
     }
 
     return recommendations
@@ -90,7 +120,7 @@ export function TeamComparisonView({
       {/* Comparison Legend */}
       <Card className="bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5">
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
             <Scale className="h-5 w-5" />
             Team Balance Comparison
           </CardTitle>
@@ -114,11 +144,11 @@ export function TeamComparisonView({
       </Card>
 
       {/* Stat Comparison Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* EHP Comparison */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
               <TrendingUp className="h-4 w-4 text-blue-600" />
               Average EHP Comparison
             </CardTitle>
@@ -128,13 +158,16 @@ export function TeamComparisonView({
               const stats = teamStats[team.id]
               if (!stats?.averageEHP) return null
 
-              const percentage = maxEHP > 0 ? (stats.averageEHP / maxEHP) * 100 : 0
-              const variant = eventAvgEHP ? getBalanceVariant(stats.averageEHP, eventAvgEHP) : "secondary"
+              const percentage =
+                maxEHP > 0 ? (stats.averageEHP / maxEHP) * 100 : 0
+              const variant = eventAvgEHP
+                ? getBalanceVariant(stats.averageEHP, eventAvgEHP)
+                : "secondary"
 
               return (
                 <div key={team.id} className="space-y-1">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium truncate">{team.name}</span>
+                    <span className="truncate font-medium">{team.name}</span>
                     <Badge variant={variant} className="ml-2">
                       {stats.averageEHP.toFixed(0)}
                     </Badge>
@@ -144,8 +177,9 @@ export function TeamComparisonView({
               )
             })}
             {eventAvgEHP && (
-              <div className="pt-2 mt-2 border-t text-sm text-muted-foreground">
-                Event Average: <span className="font-semibold">{eventAvgEHP.toFixed(0)}</span>
+              <div className="mt-2 border-t pt-2 text-sm text-muted-foreground">
+                Event Average:{" "}
+                <span className="font-semibold">{eventAvgEHP.toFixed(0)}</span>
               </div>
             )}
           </CardContent>
@@ -154,7 +188,7 @@ export function TeamComparisonView({
         {/* EHB Comparison */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
               <Target className="h-4 w-4 text-red-600" />
               Average EHB Comparison
             </CardTitle>
@@ -164,13 +198,16 @@ export function TeamComparisonView({
               const stats = teamStats[team.id]
               if (!stats?.averageEHB) return null
 
-              const percentage = maxEHB > 0 ? (stats.averageEHB / maxEHB) * 100 : 0
-              const variant = eventAvgEHB ? getBalanceVariant(stats.averageEHB, eventAvgEHB) : "secondary"
+              const percentage =
+                maxEHB > 0 ? (stats.averageEHB / maxEHB) * 100 : 0
+              const variant = eventAvgEHB
+                ? getBalanceVariant(stats.averageEHB, eventAvgEHB)
+                : "secondary"
 
               return (
                 <div key={team.id} className="space-y-1">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium truncate">{team.name}</span>
+                    <span className="truncate font-medium">{team.name}</span>
                     <Badge variant={variant} className="ml-2">
                       {stats.averageEHB.toFixed(0)}
                     </Badge>
@@ -180,8 +217,9 @@ export function TeamComparisonView({
               )
             })}
             {eventAvgEHB && (
-              <div className="pt-2 mt-2 border-t text-sm text-muted-foreground">
-                Event Average: <span className="font-semibold">{eventAvgEHB.toFixed(0)}</span>
+              <div className="mt-2 border-t pt-2 text-sm text-muted-foreground">
+                Event Average:{" "}
+                <span className="font-semibold">{eventAvgEHB.toFixed(0)}</span>
               </div>
             )}
           </CardContent>
@@ -190,7 +228,7 @@ export function TeamComparisonView({
         {/* Timezone Variance Comparison */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
               <Globe className="h-4 w-4 text-purple-600" />
               Timezone Variance
             </CardTitle>
@@ -200,18 +238,21 @@ export function TeamComparisonView({
               const stats = teamStats[team.id]
               if (!stats) return null
 
-              const percentage = maxTZVariance > 0 ? (stats.timezoneHourVariance / maxTZVariance) * 100 : 0
+              const percentage =
+                maxTZVariance > 0
+                  ? (stats.timezoneHourVariance / maxTZVariance) * 100
+                  : 0
               const variant =
                 stats.timezoneHourVariance === 0
                   ? "default"
                   : stats.timezoneHourVariance <= 3
-                  ? "secondary"
-                  : "destructive"
+                    ? "secondary"
+                    : "destructive"
 
               return (
                 <div key={team.id} className="space-y-1">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium truncate">{team.name}</span>
+                    <span className="truncate font-medium">{team.name}</span>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -222,7 +263,9 @@ export function TeamComparisonView({
                           </Badge>
                         </TooltipTrigger>
                         <TooltipContent>
-                          {stats.timezoneDistribution.map((tz) => `${tz.timezone} (${tz.count})`).join(", ")}
+                          {stats.timezoneDistribution
+                            .map((tz) => `${tz.timezone} (${tz.count})`)
+                            .join(", ")}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -231,7 +274,7 @@ export function TeamComparisonView({
                 </div>
               )
             })}
-            <div className="pt-2 mt-2 border-t text-xs text-muted-foreground">
+            <div className="mt-2 border-t pt-2 text-xs text-muted-foreground">
               Lower variance = better coordination
             </div>
           </CardContent>
@@ -240,7 +283,7 @@ export function TeamComparisonView({
         {/* Metadata Coverage Comparison */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               Metadata Coverage
             </CardTitle>
@@ -251,12 +294,16 @@ export function TeamComparisonView({
               if (!stats) return null
 
               const variant =
-                stats.metadataCoverage >= 75 ? "default" : stats.metadataCoverage >= 50 ? "secondary" : "destructive"
+                stats.metadataCoverage >= 75
+                  ? "default"
+                  : stats.metadataCoverage >= 50
+                    ? "secondary"
+                    : "destructive"
 
               return (
                 <div key={team.id} className="space-y-1">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium truncate">{team.name}</span>
+                    <span className="truncate font-medium">{team.name}</span>
                     <Badge variant={variant} className="ml-2">
                       {stats.metadataCoverage.toFixed(0)}%
                     </Badge>
@@ -268,7 +315,9 @@ export function TeamComparisonView({
                 </div>
               )
             })}
-            <div className="pt-2 mt-2 border-t text-xs text-muted-foreground">Target: 75%+ coverage</div>
+            <div className="mt-2 border-t pt-2 text-xs text-muted-foreground">
+              Target: 75%+ coverage
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -276,7 +325,7 @@ export function TeamComparisonView({
       {/* Recommendations Section */}
       <Card className="border-orange-500/30 bg-orange-500/5">
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2 text-orange-700 dark:text-orange-400">
+          <CardTitle className="flex items-center gap-2 text-base text-orange-700 dark:text-orange-400">
             <AlertTriangle className="h-4 w-4" />
             Recommendations & Action Items
           </CardTitle>
@@ -291,10 +340,15 @@ export function TeamComparisonView({
 
               if (recommendations.length === 0) {
                 return (
-                  <div key={team.id} className="flex items-start gap-3 p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <div
+                    key={team.id}
+                    className="flex items-start gap-3 rounded-lg border border-green-500/20 bg-green-500/10 p-3"
+                  >
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
                     <div>
-                      <div className="font-semibold text-green-700 dark:text-green-400">{team.name}</div>
+                      <div className="font-semibold text-green-700 dark:text-green-400">
+                        {team.name}
+                      </div>
                       <div className="text-sm text-green-600 dark:text-green-500">
                         Team is well-balanced with no action items
                       </div>
@@ -304,14 +358,17 @@ export function TeamComparisonView({
               }
 
               return (
-                <div key={team.id} className="flex items-start gap-3 p-3 bg-background rounded-lg border">
-                  <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                <div
+                  key={team.id}
+                  className="flex items-start gap-3 rounded-lg border bg-background p-3"
+                >
+                  <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
                   <div className="flex-1">
-                    <div className="font-semibold mb-1">{team.name}</div>
-                    <ul className="text-sm space-y-1 text-muted-foreground">
+                    <div className="mb-1 font-semibold">{team.name}</div>
+                    <ul className="space-y-1 text-sm text-muted-foreground">
                       {recommendations.map((rec, idx) => (
                         <li key={idx} className="flex items-start gap-2">
-                          <span className="text-orange-500 mt-0.5">•</span>
+                          <span className="mt-0.5 text-orange-500">•</span>
                           <span>{rec}</span>
                         </li>
                       ))}

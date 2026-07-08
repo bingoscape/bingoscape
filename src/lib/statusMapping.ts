@@ -1,5 +1,7 @@
 // TODO: this should be removed after changing the state in the runelite plugin
-export function mapStatus(status: "pending" | "approved" | "needs_review"): "pending" | "accepted" | "requires_interaction" | "not_submitted" {
+export function mapStatus(
+  status: "pending" | "approved" | "needs_review"
+): "pending" | "accepted" | "requires_interaction" | "not_submitted" {
   switch (status) {
     case "pending":
       return "pending"

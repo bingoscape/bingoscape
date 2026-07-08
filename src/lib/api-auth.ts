@@ -1,4 +1,3 @@
- 
 import { db } from "@/server/db"
 import { apiKeys } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
@@ -35,13 +34,15 @@ export async function validateApiKey(req: Request): Promise<string | null> {
       .where(eq(apiKeys.key, apiKey))
       .limit(1)
 
-
     if (!key) {
       return null
     }
 
     // Update the last used timestamp
-    await db.update(apiKeys).set({ lastUsed: new Date() }).where(eq(apiKeys.key, apiKey))
+    await db
+      .update(apiKeys)
+      .set({ lastUsed: new Date() })
+      .where(eq(apiKeys.key, apiKey))
 
     return key.userId
   } catch (error) {
@@ -49,4 +50,3 @@ export async function validateApiKey(req: Request): Promise<string | null> {
     return null
   }
 }
-

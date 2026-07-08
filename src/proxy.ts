@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
 
-export function proxy(request: NextRequest) {
+export function proxy() {
   const startTime = Date.now()
   // Clone the request to allow reading the body if needed
   const response = NextResponse.next()

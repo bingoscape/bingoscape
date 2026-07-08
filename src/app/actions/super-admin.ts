@@ -39,23 +39,27 @@ export async function getAllUsers(page = 1, limit = 50, search = "") {
   const offset = (page - 1) * limit
 
   const baseQuery = async (filters: SQL[]) => {
-    return await db.select({
-      id: users.id,
-      name: users.name,
-      email: users.email,
-      runescapeName: users.runescapeName,
-      image: users.image,
-      emailVerified: users.emailVerified,
-    }).from(users)
+    return await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        runescapeName: users.runescapeName,
+        image: users.image,
+        emailVerified: users.emailVerified,
+      })
+      .from(users)
       .where(and(...filters))
-      .orderBy(desc(users.emailVerified)).limit(limit).offset(offset)
+      .orderBy(desc(users.emailVerified))
+      .limit(limit)
+      .offset(offset)
   }
 
   const filters: SQL[] = []
 
   if (search) {
     filters.push(
-      sql`${users.name} ILIKE ${`%${search}%`} OR ${users.email} ILIKE ${`%${search}%`} OR ${users.runescapeName} ILIKE ${`%${search}%`}`,
+      sql`${users.name} ILIKE ${`%${search}%`} OR ${users.email} ILIKE ${`%${search}%`} OR ${users.runescapeName} ILIKE ${`%${search}%`}`
     )
   }
 
@@ -64,11 +68,16 @@ export async function getAllUsers(page = 1, limit = 50, search = "") {
   const countFilters: SQL[] = []
   // Get total count for pagination
   const countQuery = async (filters: SQL[]) => {
-    return db.select({ count: count() }).from(users).where(and(...filters))
+    return db
+      .select({ count: count() })
+      .from(users)
+      .where(and(...filters))
   }
 
   if (search) {
-    countFilters.push(sql`${users.name} ILIKE ${`%${search}%`} OR ${users.email} ILIKE ${`%${search}%`} OR ${users.runescapeName} ILIKE ${`%${search}%`}`)
+    countFilters.push(
+      sql`${users.name} ILIKE ${`%${search}%`} OR ${users.email} ILIKE ${`%${search}%`} OR ${users.runescapeName} ILIKE ${`%${search}%`}`
+    )
   }
 
   const [totalCount] = await countQuery(countFilters)
@@ -113,25 +122,34 @@ export async function getAllClans(page = 1, limit = 50, search = "") {
       })
       .from(clans)
       .leftJoin(users, eq(clans.ownerId, users.id))
-      .orderBy(desc(clans.createdAt)).limit(limit).offset(offset)
+      .orderBy(desc(clans.createdAt))
+      .limit(limit)
+      .offset(offset)
       .where(and(...filters))
   }
 
   const filters: SQL[] = []
 
   if (search) {
-
-    filters.push(sql`${clans.name} ILIKE ${`%${search}%`} OR ${clans.description} ILIKE ${`%${search}%`}`)
+    filters.push(
+      sql`${clans.name} ILIKE ${`%${search}%`} OR ${clans.description} ILIKE ${`%${search}%`}`
+    )
   }
 
   const clansData = await baseQuery(filters)
 
   // Get total count for pagination
-  const countQuery = async (filters: SQL[]) => await db.select({ count: count() }).from(clans).where(and(...filters))
+  const countQuery = async (filters: SQL[]) =>
+    await db
+      .select({ count: count() })
+      .from(clans)
+      .where(and(...filters))
 
   const countFilters: SQL[] = []
   if (search) {
-    countFilters.push(sql`${clans.name} ILIKE ${`%${search}%`} OR ${clans.description} ILIKE ${`%${search}%`}`)
+    countFilters.push(
+      sql`${clans.name} ILIKE ${`%${search}%`} OR ${clans.description} ILIKE ${`%${search}%`}`
+    )
   }
 
   const [totalCount] = await countQuery(countFilters)
@@ -149,51 +167,62 @@ export async function getAllEvents(page = 1, limit = 50, search = "") {
 
   const offset = (page - 1) * limit
 
-  const baseQuery = async (filters: SQL[]) => await db
-    .select({
-      id: events.id,
-      title: events.title,
-      description: events.description,
-      startDate: events.startDate,
-      endDate: events.endDate,
-      createdAt: events.createdAt,
-      locked: events.locked,
-      public: events.public,
-      creator: {
-        id: users.id,
-        name: users.name,
-        email: users.email,
-        runescapeName: users.runescapeName,
-      },
-      clan: {
-        id: clans.id,
-        name: clans.name,
-      },
-      participantCount: sql<number>`(
+  const baseQuery = async (filters: SQL[]) =>
+    await db
+      .select({
+        id: events.id,
+        title: events.title,
+        description: events.description,
+        startDate: events.startDate,
+        endDate: events.endDate,
+        createdAt: events.createdAt,
+        locked: events.locked,
+        public: events.public,
+        creator: {
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          runescapeName: users.runescapeName,
+        },
+        clan: {
+          id: clans.id,
+          name: clans.name,
+        },
+        participantCount: sql<number>`(
         SELECT COUNT(*)
         FROM ${eventParticipants}
         WHERE ${eventParticipants.eventId} = ${events.id}
       )`.as("participantCount"),
-    })
-    .from(events)
-    .leftJoin(users, eq(events.creatorId, users.id))
-    .leftJoin(clans, eq(events.clanId, clans.id))
-    .orderBy(desc(events.createdAt)).limit(limit).offset(offset)
-    .where(and(...filters))
+      })
+      .from(events)
+      .leftJoin(users, eq(events.creatorId, users.id))
+      .leftJoin(clans, eq(events.clanId, clans.id))
+      .orderBy(desc(events.createdAt))
+      .limit(limit)
+      .offset(offset)
+      .where(and(...filters))
 
   const filters: SQL[] = []
   if (search) {
-    filters.push(sql`${events.title} ILIKE ${`%${search}%`} OR ${events.description} ILIKE ${`%${search}%`}`)
+    filters.push(
+      sql`${events.title} ILIKE ${`%${search}%`} OR ${events.description} ILIKE ${`%${search}%`}`
+    )
   }
 
   const eventsData = await baseQuery(filters)
 
   // Get total count for pagination
-  const countQuery = async (filters: SQL[]) => db.select({ count: count() }).from(events).where(and(...filters))
+  const countQuery = async (filters: SQL[]) =>
+    db
+      .select({ count: count() })
+      .from(events)
+      .where(and(...filters))
 
   const countFilters: SQL[] = []
   if (search) {
-    countFilters.push(sql`${events.title} ILIKE ${`%${search}%`} OR ${events.description} ILIKE ${`%${search}%`}`)
+    countFilters.push(
+      sql`${events.title} ILIKE ${`%${search}%`} OR ${events.description} ILIKE ${`%${search}%`}`
+    )
   }
 
   const [totalCount] = await countQuery(countFilters)
@@ -288,8 +317,10 @@ export async function getClanMemberActivity(clanId: string) {
   const activity = await db
     .select({
       userId: users.id,
-      submissionCount: sql<number>`COUNT(DISTINCT ${submissions.id})`.as('submissionCount'),
-      lastSeen: sql<Date | null>`MAX(${sessions.expires})`.as('lastSeen'),
+      submissionCount: sql<number>`COUNT(DISTINCT ${submissions.id})`.as(
+        "submissionCount"
+      ),
+      lastSeen: sql<Date | null>`MAX(${sessions.expires})`.as("lastSeen"),
     })
     .from(clanMembers)
     .innerJoin(users, eq(clanMembers.userId, users.id))
@@ -341,7 +372,7 @@ export async function updateUser(
     name?: string | null
     email?: string | null
     runescapeName?: string | null
-  },
+  }
 ) {
   await requireSuperAdmin()
 
@@ -379,7 +410,7 @@ export async function updateClan(
     name?: string
     description?: string | null
     ownerId?: string | null
-  },
+  }
 ) {
   await requireSuperAdmin()
 
@@ -407,18 +438,28 @@ export async function deleteClan(clanId: string) {
 export async function removeClanMember(clanId: string, userId: string) {
   await requireSuperAdmin()
 
-  await db.delete(clanMembers).where(sql`${clanMembers.clanId} = ${clanId} AND ${clanMembers.userId} = ${userId}`)
+  await db
+    .delete(clanMembers)
+    .where(
+      sql`${clanMembers.clanId} = ${clanId} AND ${clanMembers.userId} = ${userId}`
+    )
 
   revalidatePath(`/super-admin/clans/${clanId}`)
 }
 
-export async function updateClanMemberRole(clanId: string, userId: string, role: "admin" | "management" | "member" | "guest" | undefined) {
+export async function updateClanMemberRole(
+  clanId: string,
+  userId: string,
+  role: "admin" | "management" | "member" | "guest" | undefined
+) {
   await requireSuperAdmin()
 
   await db
     .update(clanMembers)
     .set({ role })
-    .where(sql`${clanMembers.clanId} = ${clanId} AND ${clanMembers.userId} = ${userId}`)
+    .where(
+      sql`${clanMembers.clanId} = ${clanId} AND ${clanMembers.userId} = ${userId}`
+    )
 
   revalidatePath(`/super-admin/clans/${clanId}`)
 }
@@ -434,7 +475,7 @@ export async function updateEvent(
     locked?: boolean
     public?: boolean
     clanId?: string | null
-  },
+  }
 ) {
   await requireSuperAdmin()
 
@@ -455,14 +496,14 @@ export async function deleteEvent(eventId: string) {
         SELECT ${bingos.id} FROM ${bingos}
         WHERE ${bingos.eventId} = ${eventId}
       )
-    )`,
+    )`
   )
 
   await db.delete(tiles).where(
     sql`${tiles.bingoId} IN (
       SELECT ${bingos.id} FROM ${bingos}
       WHERE ${bingos.eventId} = ${eventId}
-    )`,
+    )`
   )
 
   await db.delete(bingos).where(eq(bingos.eventId, eventId))
@@ -470,10 +511,12 @@ export async function deleteEvent(eventId: string) {
     sql`${teamMembers.teamId} IN (
       SELECT ${teams.id} FROM ${teams}
       WHERE ${teams.eventId} = ${eventId}
-    )`,
+    )`
   )
   await db.delete(teams).where(eq(teams.eventId, eventId))
-  await db.delete(eventParticipants).where(eq(eventParticipants.eventId, eventId))
+  await db
+    .delete(eventParticipants)
+    .where(eq(eventParticipants.eventId, eventId))
 
   // Finally delete the event
   await db.delete(events).where(eq(events.id, eventId))
@@ -486,18 +529,26 @@ export async function removeEventParticipant(eventId: string, userId: string) {
 
   await db
     .delete(eventParticipants)
-    .where(sql`${eventParticipants.eventId} = ${eventId} AND ${eventParticipants.userId} = ${userId}`)
+    .where(
+      sql`${eventParticipants.eventId} = ${eventId} AND ${eventParticipants.userId} = ${userId}`
+    )
 
   revalidatePath(`/super-admin/events/${eventId}`)
 }
 
-export async function updateEventParticipantRole(eventId: string, userId: string, role: "admin" | "management" | "participant" | undefined) {
+export async function updateEventParticipantRole(
+  eventId: string,
+  userId: string,
+  role: "admin" | "management" | "participant" | undefined
+) {
   await requireSuperAdmin()
 
   await db
     .update(eventParticipants)
     .set({ role })
-    .where(sql`${eventParticipants.eventId} = ${eventId} AND ${eventParticipants.userId} = ${userId}`)
+    .where(
+      sql`${eventParticipants.eventId} = ${eventId} AND ${eventParticipants.userId} = ${userId}`
+    )
 
   revalidatePath(`/super-admin/events/${eventId}`)
 }

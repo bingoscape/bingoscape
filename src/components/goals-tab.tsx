@@ -9,7 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Trash2, Plus, Network, List, Package, Loader2 } from "lucide-react"
 import type { Tile, Goal } from "@/app/actions/events"
-import { addGoalValue, deleteGoalValue, type GoalValue } from "@/app/actions/goals"
+import {
+  addGoalValue,
+  deleteGoalValue,
+  type GoalValue,
+} from "@/app/actions/goals"
 import { toast } from "@/hooks/use-toast"
 import { GoalTreeEditor } from "./goal-tree-editor"
 import { getGoalTree, type GoalTreeNode } from "@/app/actions/goal-groups"
@@ -39,11 +43,20 @@ export function GoalsTab({
   onNewGoalChange,
   onGoalValuesUpdate,
 }: GoalsTabProps) {
-  const [newGoalValue, setNewGoalValue] = useState({ value: "", description: "" })
-  const [selectedGoalForValue, setSelectedGoalForValue] = useState<string | null>(null)
-  const [goalValuesState, setGoalValuesState] = useState<Record<string, GoalValue[]>>({})
+  const [newGoalValue, setNewGoalValue] = useState({
+    value: "",
+    description: "",
+  })
+  const [selectedGoalForValue, setSelectedGoalForValue] = useState<
+    string | null
+  >(null)
+  const [goalValuesState, setGoalValuesState] = useState<
+    Record<string, GoalValue[]>
+  >({})
   const [goalTree, setGoalTree] = useState<GoalTreeNode[]>([])
-  const [goalType, setGoalType] = useState<"generic" | "item" | "metric">("generic")
+  const [goalType, setGoalType] = useState<"generic" | "item" | "metric">(
+    "generic"
+  )
   const [selectedItems, setSelectedItems] = useState<OsrsItem[]>([])
   const [itemGoalTargetValue, setItemGoalTargetValue] = useState<number>(1)
   const [isCreatingBulk, setIsCreatingBulk] = useState(false)
@@ -77,7 +90,9 @@ export function GoalsTab({
 
     // Create goals for each selected item
     for (const selectedItem of selectedItems) {
-      const itemId = Array.isArray(selectedItem.id) ? selectedItem.id[0]! : selectedItem.id
+      const itemId = Array.isArray(selectedItem.id)
+        ? selectedItem.id[0]!
+        : selectedItem.id
       const parsed = parseItemName(selectedItem.name)
 
       const result = await createItemGoal(
@@ -103,7 +118,7 @@ export function GoalsTab({
     if (failCount === 0) {
       toast({
         title: "Item goals created",
-        description: `Successfully created ${successCount} item goal${successCount !== 1 ? 's' : ''}.`,
+        description: `Successfully created ${successCount} item goal${successCount !== 1 ? "s" : ""}.`,
       })
     } else if (successCount === 0) {
       toast({
@@ -114,7 +129,7 @@ export function GoalsTab({
     } else {
       toast({
         title: "Partially completed",
-        description: `Created ${successCount} goal${successCount !== 1 ? 's' : ''}, ${failCount} failed.`,
+        description: `Created ${successCount} goal${successCount !== 1 ? "s" : ""}, ${failCount} failed.`,
         variant: "default",
       })
     }
@@ -149,7 +164,11 @@ export function GoalsTab({
       return
     }
 
-    const result = await addGoalValue(goalId, Number.parseFloat(newGoalValue.value), newGoalValue.description)
+    const result = await addGoalValue(
+      goalId,
+      Number.parseFloat(newGoalValue.value),
+      newGoalValue.description
+    )
 
     if (result.success && result.goalValue) {
       toast({
@@ -165,7 +184,10 @@ export function GoalsTab({
 
       // Notify parent component if callback provided
       if (onGoalValuesUpdate) {
-        const updatedValues = [...(goalValuesState[goalId] || []), result.goalValue]
+        const updatedValues = [
+          ...(goalValuesState[goalId] || []),
+          result.goalValue,
+        ]
         onGoalValuesUpdate(goalId, updatedValues)
       }
 
@@ -197,7 +219,9 @@ export function GoalsTab({
 
       // Notify parent component if callback provided
       if (onGoalValuesUpdate) {
-        const updatedValues = (goalValuesState[goalId] || []).filter((gv) => gv.id !== goalValueId)
+        const updatedValues = (goalValuesState[goalId] || []).filter(
+          (gv) => gv.id !== goalValueId
+        )
         onGoalValuesUpdate(goalId, updatedValues)
       }
     } else {
@@ -210,8 +234,8 @@ export function GoalsTab({
   }
 
   return (
-    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-4 bg-background text-foreground">
-      <div className="flex justify-between items-center mb-4">
+    <div className="max-h-[60vh] space-y-6 overflow-y-auto bg-background pr-4 text-foreground">
+      <div className="mb-4 flex items-center justify-between">
         <h3 className="text-lg font-semibold">Goals Management</h3>
       </div>
 

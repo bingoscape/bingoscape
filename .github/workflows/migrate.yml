@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to run migration'
+        description: "Environment to run migration"
         required: true
         type: choice
         options:
           - production
           - staging
-        default: 'production'
+        default: "production"
       confirm:
         description: 'Type "MIGRATE" to confirm running migrations'
         required: true

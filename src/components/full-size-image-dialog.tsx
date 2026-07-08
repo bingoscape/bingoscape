@@ -4,7 +4,12 @@ import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
 import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import getRandomFrog from "@/lib/getRandomFrog"
 
@@ -15,7 +20,12 @@ interface FullSizeImageDialogProps {
   imageAlt: string
 }
 
-export function FullSizeImageDialog({ isOpen, onClose, imageSrc, imageAlt }: FullSizeImageDialogProps) {
+export function FullSizeImageDialog({
+  isOpen,
+  onClose,
+  imageSrc,
+  imageAlt,
+}: FullSizeImageDialogProps) {
   const [scale, setScale] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
@@ -78,26 +88,41 @@ export function FullSizeImageDialog({ isOpen, onClose, imageSrc, imageAlt }: Ful
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[90vw] sm:max-h-[90vh] p-0">
+      <DialogContent className="p-0 sm:max-h-[90vh] sm:max-w-[90vw]">
         <DialogHeader className="p-4">
           <DialogTitle>Submission</DialogTitle>
         </DialogHeader>
 
-        <div className="absolute top-4 right-4 z-10 flex gap-2">
-          <Button variant="secondary" size="icon" onClick={zoomIn} aria-label="Zoom in">
+        <div className="absolute right-4 top-4 z-10 flex gap-2">
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={zoomIn}
+            aria-label="Zoom in"
+          >
             <ZoomIn className="h-4 w-4" />
           </Button>
-          <Button variant="secondary" size="icon" onClick={zoomOut} aria-label="Zoom out">
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={zoomOut}
+            aria-label="Zoom out"
+          >
             <ZoomOut className="h-4 w-4" />
           </Button>
-          <Button variant="secondary" size="icon" onClick={resetZoom} aria-label="Reset zoom">
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={resetZoom}
+            aria-label="Reset zoom"
+          >
             <RotateCcw className="h-4 w-4" />
           </Button>
         </div>
 
         <div
           ref={containerRef}
-          className="relative w-full h-full min-h-[60vh] overflow-hidden cursor-move"
+          className="relative h-full min-h-[60vh] w-full cursor-move overflow-hidden"
           onWheel={handleWheel}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
@@ -128,4 +153,3 @@ export function FullSizeImageDialog({ isOpen, onClose, imageSrc, imageAlt }: Ful
     </Dialog>
   )
 }
-

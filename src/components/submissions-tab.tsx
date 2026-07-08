@@ -1,13 +1,13 @@
 /* eslint-disable */
-"use client";
+"use client"
 
-import type React from "react";
+import type React from "react"
 
-import { useState, useEffect } from "react";
-import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
+import { useState, useEffect } from "react"
+import Image from "next/image"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
 import {
   Check,
   AlertTriangle,
@@ -24,31 +24,31 @@ import {
   Loader2,
   Zap,
   User,
-} from "lucide-react";
-import type { Tile, Team, SubmissionComment } from "@/app/actions/events";
-import type { SelectableUser } from "@/app/actions/bingo";
-import { CommentForm } from "@/components/comment-form";
-import { SubmissionCommentDisplay } from "@/components/submission-comment";
-import { SubmissionUploadForm } from "@/components/submission-upload-form";
+} from "lucide-react"
+import type { Tile, Team, SubmissionComment } from "@/app/actions/events"
+import type { SelectableUser } from "@/app/actions/bingo"
+import { CommentForm } from "@/components/comment-form"
+import { SubmissionCommentDisplay } from "@/components/submission-comment"
+import { SubmissionUploadForm } from "@/components/submission-upload-form"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/select"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/components/ui/popover"
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
-} from "@/components/ui/command";
+} from "@/components/ui/command"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,46 +59,46 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "@/components/ui/alert-dialog"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { InlineGoalAssignment } from "@/components/inline-goal-assignment";
-import { getGoalValues } from "@/app/actions/goals";
-import { toast } from "@/hooks/use-toast";
+} from "@/components/ui/tooltip"
+import { InlineGoalAssignment } from "@/components/inline-goal-assignment"
+import { getGoalValues } from "@/app/actions/goals"
+import { toast } from "@/hooks/use-toast"
 
 interface SubmissionsTabProps {
-  selectedTile: Tile | null;
-  currentTeamId: string | undefined;
-  teams: Team[];
-  hasSufficientRights: boolean;
-  selectedImage: File | null;
-  pastedImage: File | null;
-  isSubmissionsLocked: boolean;
-  isUploadingImage: boolean;
-  onImageChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onImageSubmit: (onBehalfOfUserId?: string) => void;
-  onFullSizeImageView: (src: string, alt: string) => void;
+  selectedTile: Tile | null
+  currentTeamId: string | undefined
+  teams: Team[]
+  hasSufficientRights: boolean
+  selectedImage: File | null
+  pastedImage: File | null
+  isSubmissionsLocked: boolean
+  isUploadingImage: boolean
+  onImageChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onImageSubmit: (onBehalfOfUserId?: string) => void
+  onFullSizeImageView: (src: string, alt: string) => void
   onTeamTileSubmissionStatusUpdate: (
     teamTileSubmissionId: string | undefined,
-    newStatus: "approved" | "needs_review",
-  ) => void;
+    newStatus: "approved" | "needs_review"
+  ) => void
   onSubmissionStatusUpdate: (
     submissionId: string,
     newStatus: "pending" | "approved" | "needs_review",
     goalId?: string | null,
-    submissionValue?: number | null,
-  ) => void;
-  onDeleteSubmission: (submissionId: string) => void;
+    submissionValue?: number | null
+  ) => void
+  onDeleteSubmission: (submissionId: string) => void
   // New props for submitting on behalf of another user
-  selectableUsers?: SelectableUser[];
-  selectedUserId?: string;
-  onUserSelect?: (userId: string) => void;
-  teamTileSubmissions: any[]; // Updated from selectedTile
-  isAdminView?: boolean;
+  selectableUsers?: SelectableUser[]
+  selectedUserId?: string
+  onUserSelect?: (userId: string) => void
+  teamTileSubmissions: any[] // Updated from selectedTile
+  isAdminView?: boolean
 }
 
 export function SubmissionsTab({
@@ -123,75 +123,75 @@ export function SubmissionsTab({
   isAdminView,
 }: SubmissionsTabProps) {
   const [expandedGoalForms, setExpandedGoalForms] = useState<Set<string>>(
-    new Set(),
-  );
+    new Set()
+  )
   const [goalValuesCache, setGoalValuesCache] = useState<Record<string, any[]>>(
-    {},
-  );
+    {}
+  )
 
   // Filter out unassigned users before passing to child components
   const assignedUsers =
     selectableUsers?.filter(
-      (user) => user.teamName !== undefined && user.teamName !== null,
-    ) ?? [];
+      (user) => user.teamName !== undefined && user.teamName !== null
+    ) ?? []
   const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(
-    null,
-  );
-  const [statusFilter, setStatusFilter] = useState<string>("pending");
-  const [teamFilter, setTeamFilter] = useState<string>("all");
+    null
+  )
+  const [statusFilter, setStatusFilter] = useState<string>("pending")
+  const [teamFilter, setTeamFilter] = useState<string>("all")
 
   // Filter state
-  const [boardFilter, setBoardFilter] = useState<string>("all");
-  const [tileFilter, setTileFilter] = useState<string>("all");
+  const [boardFilter, setBoardFilter] = useState<string>("all")
+  const [tileFilter, setTileFilter] = useState<string>("all")
 
   // Local state to track real-time status changes
   const [localTileStatuses, setLocalTileStatuses] = useState<
     Record<string, "approved" | "needs_review" | "pending">
-  >({});
+  >({})
   const [localSubmissionStatuses, setLocalSubmissionStatuses] = useState<
     Record<string, "approved" | "needs_review" | "pending">
-  >({});
+  >({})
 
   // Comment-related state
   const [submissionComments, setSubmissionComments] = useState<
     Record<string, SubmissionComment[]>
-  >({});
-  const [showCommentForm, setShowCommentForm] = useState<string | null>(null);
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  >({})
+  const [showCommentForm, setShowCommentForm] = useState<string | null>(null)
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false)
 
   // Toggle expanded state for inline goal assignment
   const toggleGoalForm = (submissionId: string) => {
     setExpandedGoalForms((prev) => {
-      const next = new Set(prev);
+      const next = new Set(prev)
       if (next.has(submissionId)) {
-        next.delete(submissionId);
+        next.delete(submissionId)
       } else {
-        next.add(submissionId);
+        next.add(submissionId)
       }
-      return next;
-    });
-  };
+      return next
+    })
+  }
 
   // Handle inline goal assignment
   const handleInlineGoalAssignment = (
     submissionId: string,
     goalId: string | null,
-    value: number | null,
+    value: number | null
   ) => {
-    onSubmissionStatusUpdate(submissionId, "pending", goalId, value);
+    onSubmissionStatusUpdate(submissionId, "pending", goalId, value)
 
     // Close the expanded form
     setExpandedGoalForms((prev) => {
-      const next = new Set(prev);
-      next.delete(submissionId);
-      return next;
-    });
-  };
+      const next = new Set(prev)
+      next.delete(submissionId)
+      return next
+    })
+  }
 
-  const currentTeam = teams.find((team) => team.id === currentTeamId);
+  const currentTeam = teams.find((team) => team.id === currentTeamId)
   const currentTeamSubmission = teamTileSubmissions?.find(
-    (sub) => sub.teamId === currentTeamId,
-  );
+    (sub) => sub.teamId === currentTeamId
+  )
 
   // If user is not part of a team and doesn't have sufficient rights, show empty state
   if (!hasSufficientRights && !currentTeamId) {
@@ -206,7 +206,7 @@ export function SubmissionsTab({
           bingo tile. Contact an event organizer to join a team.
         </p>
       </div>
-    );
+    )
   }
 
   const getStatusBadge = (status: string) => {
@@ -217,69 +217,69 @@ export function SubmissionsTab({
             <Check className="mr-1 h-3 w-3" />
             Approved
           </Badge>
-        );
+        )
       case "needs_review":
         return (
           <Badge className="border-yellow-200 bg-yellow-100 px-3 py-1 text-yellow-800">
             <AlertTriangle className="mr-1 h-3 w-3" />
             Needs Review
           </Badge>
-        );
+        )
       default:
         return (
           <Badge className="border-blue-200 bg-blue-100 px-3 py-1 text-blue-800">
             <Clock className="mr-1 h-3 w-3" />
             Pending
           </Badge>
-        );
+        )
     }
-  };
+  }
 
   // Enhanced handlers with real-time updates
   const handleTeamTileSubmissionStatusUpdate = async (
     teamTileSubmissionId: string | undefined,
-    newStatus: "approved" | "needs_review",
+    newStatus: "approved" | "needs_review"
   ) => {
-    if (!teamTileSubmissionId) return;
+    if (!teamTileSubmissionId) return
 
     // Optimistically update local state
     setLocalTileStatuses((prev) => ({
       ...prev,
       [teamTileSubmissionId]: newStatus,
-    }));
+    }))
 
     // If approving the tile, also update all submissions in that tile
     if (newStatus === "approved") {
       const teamSubmission = teamTileSubmissions?.find(
-        (ts) => ts.id === teamTileSubmissionId,
-      );
+        (ts) => ts.id === teamTileSubmissionId
+      )
       if (teamSubmission) {
-        const updatedSubmissionStatuses: Record<string, "approved"> = {};
+        const updatedSubmissionStatuses: Record<string, "approved"> = {}
         teamSubmission.submissions.forEach((sub: any) => {
-          updatedSubmissionStatuses[sub.id] = "approved";
-        });
+          updatedSubmissionStatuses[sub.id] = "approved"
+        })
         setLocalSubmissionStatuses((prev) => ({
           ...prev,
           ...updatedSubmissionStatuses,
-        }));
+        }))
       }
     }
 
     // Call the original handler
-    onTeamTileSubmissionStatusUpdate(teamTileSubmissionId, newStatus);
-  };
+    onTeamTileSubmissionStatusUpdate(teamTileSubmissionId, newStatus)
+  }
 
   const handleSubmissionStatusUpdate = async (
     submissionId: string,
     newStatus: "pending" | "approved" | "needs_review",
     goalId?: string | null,
-    submissionValue?: number | null,
+    submissionValue?: number | null
   ) => {
     // Optimistically update local state
     setLocalSubmissionStatuses((prev) => ({
       ...prev,
       [submissionId]: newStatus,
-    }));
+    }))
 
     // If marking submission as needs_review, also update the parent tile
     if (newStatus === "needs_review") {
@@ -290,76 +290,76 @@ export function SubmissionsTab({
             setLocalTileStatuses((prev) => ({
               ...prev,
               [teamSub.id]: "needs_review",
-            }));
+            }))
           }
-        });
-      });
+        })
+      })
     }
 
     // Call the original handler
-    onSubmissionStatusUpdate(submissionId, newStatus, goalId, submissionValue);
-  };
+    onSubmissionStatusUpdate(submissionId, newStatus, goalId, submissionValue)
+  }
 
   // Helper function to get the current status (local override or original)
   const getTileStatus = (
     teamTileSubmissionId: string,
-    originalStatus: string,
+    originalStatus: string
   ) => {
-    return localTileStatuses[teamTileSubmissionId] || originalStatus;
-  };
+    return localTileStatuses[teamTileSubmissionId] || originalStatus
+  }
 
   const getSubmissionStatus = (
     submissionId: string,
-    originalStatus: string,
+    originalStatus: string
   ) => {
-    return localSubmissionStatuses[submissionId] || originalStatus;
-  };
+    return localSubmissionStatuses[submissionId] || originalStatus
+  }
 
   // Comment-related functions
   const loadSubmissionComments = async (submissionId: string) => {
     try {
-      const response = await fetch(`/api/submissions/${submissionId}/comments`);
+      const response = await fetch(`/api/submissions/${submissionId}/comments`)
       if (response.ok) {
-        const comments = await response.json();
+        const comments = await response.json()
         setSubmissionComments((prev) => ({
           ...prev,
           [submissionId]: comments,
-        }));
+        }))
       }
     } catch (error) {
-      console.error("Failed to load comments:", error);
+      console.error("Failed to load comments:", error)
     }
-  };
+  }
 
   const handleNeedsReviewClick = (submissionId: string) => {
     // Only allow reviewers (those with sufficient rights) to add comments
-    if (!hasSufficientRights) return;
+    if (!hasSufficientRights) return
 
     const currentStatus = getSubmissionStatus(
       submissionId,
       teamTileSubmissions
         ?.find((teamSub) =>
-          teamSub.submissions.some((sub: any) => sub.id === submissionId),
+          teamSub.submissions.some((sub: any) => sub.id === submissionId)
         )
         ?.submissions.find((sub: any) => sub.id === submissionId)?.status ||
-        "pending",
-    );
+        "pending"
+    )
 
-    if (currentStatus === "needs_review") return;
+    if (currentStatus === "needs_review") return
 
     // Load existing comments if not already loaded
     if (!submissionComments[submissionId]) {
-      loadSubmissionComments(submissionId);
+      loadSubmissionComments(submissionId)
     }
 
-    setShowCommentForm(submissionId);
-  };
+    setShowCommentForm(submissionId)
+  }
 
   const handleCommentSubmit = async (submissionId: string, comment: string) => {
-    setIsSubmittingComment(true);
+    setIsSubmittingComment(true)
     try {
       // Update status with comment
-      await handleSubmissionStatusUpdate(submissionId, "needs_review");
+      await handleSubmissionStatusUpdate(submissionId, "needs_review")
 
       // Add comment via API
       const response = await fetch(
@@ -368,39 +368,39 @@ export function SubmissionsTab({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ comment }),
-        },
-      );
+        }
+      )
 
       if (response.ok) {
-        const newComment = await response.json();
+        const newComment = await response.json()
         setSubmissionComments((prev) => ({
           ...prev,
           [submissionId]: [newComment, ...(prev[submissionId] || [])],
-        }));
+        }))
 
         toast({
           title: "Review comment added",
           description: "Submission marked as needs review with comment.",
           duration: 3000,
-        });
+        })
       }
     } catch (error) {
-      console.error("Failed to submit comment:", error);
+      console.error("Failed to submit comment:", error)
       toast({
         title: "Error",
         description: "Failed to add comment. Please try again.",
         variant: "destructive",
         duration: 3000,
-      });
+      })
     } finally {
-      setIsSubmittingComment(false);
-      setShowCommentForm(null);
+      setIsSubmittingComment(false)
+      setShowCommentForm(null)
     }
-  };
+  }
 
   const handleCommentCancel = () => {
-    setShowCommentForm(null);
-  };
+    setShowCommentForm(null)
+  }
 
   // Load comments for submissions that have "needs_review" status
   useEffect(() => {
@@ -411,80 +411,90 @@ export function SubmissionsTab({
             submission.status === "needs_review" &&
             !submissionComments[submission.id]
           ) {
-            loadSubmissionComments(submission.id);
+            loadSubmissionComments(submission.id)
           }
-        });
-      });
+        })
+      })
     }
-  }, [teamTileSubmissions, submissionComments]);
+  }, [teamTileSubmissions, submissionComments])
 
   // Filter submissions based on user role and selected filters
   const getFilteredSubmissions = () => {
-    if (!teamTileSubmissions) return [];
+    if (!teamTileSubmissions) return []
 
-    let submissions = teamTileSubmissions;
+    let submissions = teamTileSubmissions
 
     // If user is a normal participant, only show their team's submissions
     if (!hasSufficientRights && currentTeamId) {
       submissions = submissions.filter(
-        (teamSub) => teamSub.teamId === currentTeamId,
-      );
+        (teamSub) => teamSub.teamId === currentTeamId
+      )
     }
 
     // Apply team filter (for admin/management users)
     if (hasSufficientRights && teamFilter !== "all") {
       submissions = submissions.filter(
-        (teamSub) => teamSub.teamId === teamFilter,
-      );
+        (teamSub) => teamSub.teamId === teamFilter
+      )
     }
 
     // Apply Board filter
     if (boardFilter !== "all") {
       submissions = submissions.filter(
-        (teamSub) => teamSub.tile?.bingo?.id === boardFilter || teamSub.tile?.bingoId === boardFilter
-      );
+        (teamSub) =>
+          teamSub.tile?.bingo?.id === boardFilter ||
+          teamSub.tile?.bingoId === boardFilter
+      )
     }
 
     // Apply Tile filter
     if (tileFilter !== "all") {
       submissions = submissions.filter(
-        (teamSub) => teamSub.tile?.id === tileFilter || teamSub.tileId === tileFilter
-      );
+        (teamSub) =>
+          teamSub.tile?.id === tileFilter || teamSub.tileId === tileFilter
+      )
     }
 
     // Apply status filter
     if (statusFilter !== "all") {
       submissions = submissions.filter((teamSub) => {
         // Check team submission status (with local override)
-        const currentTileStatus = getTileStatus(teamSub.id, teamSub.status);
-        if (currentTileStatus === statusFilter) return true;
+        const currentTileStatus = getTileStatus(teamSub.id, teamSub.status)
+        if (currentTileStatus === statusFilter) return true
 
         // Also check individual submission statuses (with local override)
         return teamSub.submissions.some((sub: any) => {
           const currentSubmissionStatus = getSubmissionStatus(
             sub.id,
-            sub.status || "pending",
-          );
-          return currentSubmissionStatus === statusFilter;
-        });
-      });
+            sub.status || "pending"
+          )
+          return currentSubmissionStatus === statusFilter
+        })
+      })
     }
 
-    return submissions;
-  };
+    return submissions
+  }
 
-  const filteredSubmissions = getFilteredSubmissions();
-  
-  const isMetricOnly = selectedTile?.goals?.length ? selectedTile.goals.every((g: any) => g.goalType === 'metric') : false;
+  const filteredSubmissions = getFilteredSubmissions()
+
+  const isMetricOnly = selectedTile?.goals?.length
+    ? selectedTile.goals.every((g: any) => g.goalType === "metric")
+    : false
 
   // Extract unique boards and tiles for filters
-  const uniqueBoards = Array.from(new Set(teamTileSubmissions.map(ts => ts.tile?.bingo?.id).filter(Boolean))).map(id => {
-    return teamTileSubmissions.find(ts => ts.tile?.bingo?.id === id)?.tile?.bingo;
-  });
+  const uniqueBoards = Array.from(
+    new Set(teamTileSubmissions.map((ts) => ts.tile?.bingo?.id).filter(Boolean))
+  ).map((id) => {
+    return teamTileSubmissions.find((ts) => ts.tile?.bingo?.id === id)?.tile
+      ?.bingo
+  })
 
-  const uniqueTiles = Array.from(new Set(teamTileSubmissions.map(ts => ts.tile?.id).filter(Boolean))).map(id => {
-    return teamTileSubmissions.find(ts => ts.tile?.id === id)?.tile;
-  });
+  const uniqueTiles = Array.from(
+    new Set(teamTileSubmissions.map((ts) => ts.tile?.id).filter(Boolean))
+  ).map((id) => {
+    return teamTileSubmissions.find((ts) => ts.tile?.id === id)?.tile
+  })
 
   return (
     <div className="max-h-[60vh] space-y-6 overflow-y-auto bg-background pr-4 text-foreground">
@@ -599,11 +609,18 @@ export function SubmissionsTab({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Tiles</SelectItem>
-                      {uniqueTiles.filter((t: any) => boardFilter === 'all' || t.bingo?.id === boardFilter || t.bingoId === boardFilter).map((tile: any) => (
-                        <SelectItem key={tile.id} value={tile.id}>
-                          {tile.title}
-                        </SelectItem>
-                      ))}
+                      {uniqueTiles
+                        .filter(
+                          (t: any) =>
+                            boardFilter === "all" ||
+                            t.bingo?.id === boardFilter ||
+                            t.bingoId === boardFilter
+                        )
+                        .map((tile: any) => (
+                          <SelectItem key={tile.id} value={tile.id}>
+                            {tile.title}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -655,8 +672,8 @@ export function SubmissionsTab({
             filteredSubmissions.map((teamSubmission) => {
               const currentTileStatus = getTileStatus(
                 teamSubmission.id,
-                teamSubmission.status,
-              );
+                teamSubmission.status
+              )
 
               return (
                 <div
@@ -675,8 +692,9 @@ export function SubmissionsTab({
                         <h3 className="font-semibold text-foreground">
                           {teamSubmission.team.name}
                           {isAdminView && teamSubmission.tile && (
-                            <span className="text-muted-foreground ml-2 font-normal text-sm">
-                              ({teamSubmission.tile.bingo?.title} - {teamSubmission.tile.title})
+                            <span className="ml-2 text-sm font-normal text-muted-foreground">
+                              ({teamSubmission.tile.bingo?.title} -{" "}
+                              {teamSubmission.tile.title})
                             </span>
                           )}
                         </h3>
@@ -691,7 +709,7 @@ export function SubmissionsTab({
                             onClick={() =>
                               handleTeamTileSubmissionStatusUpdate(
                                 teamSubmission.id,
-                                "approved",
+                                "approved"
                               )
                             }
                             disabled={currentTileStatus === "approved"}
@@ -706,7 +724,7 @@ export function SubmissionsTab({
                             onClick={() =>
                               handleTeamTileSubmissionStatusUpdate(
                                 teamSubmission.id,
-                                "needs_review",
+                                "needs_review"
                               )
                             }
                             disabled={currentTileStatus === "needs_review"}
@@ -724,18 +742,18 @@ export function SubmissionsTab({
                       {teamSubmission.submissions
                         .filter((submission: any) => {
                           // Apply status filter to individual submissions (with local override)
-                          if (statusFilter === "all") return true;
+                          if (statusFilter === "all") return true
                           const currentSubmissionStatus = getSubmissionStatus(
                             submission.id,
-                            submission.status || "pending",
-                          );
-                          return currentSubmissionStatus === statusFilter;
+                            submission.status || "pending"
+                          )
+                          return currentSubmissionStatus === statusFilter
                         })
                         .map((submission: any) => {
                           const currentSubmissionStatus = getSubmissionStatus(
                             submission.id,
-                            submission.status || "pending",
-                          );
+                            submission.status || "pending"
+                          )
 
                           return (
                             <div
@@ -753,7 +771,7 @@ export function SubmissionsTab({
                                   onClick={() =>
                                     onFullSizeImageView(
                                       submission.image.path,
-                                      `Submission by ${submission.user.runescapeName || "Unknown"}`,
+                                      `Submission by ${submission.user.runescapeName || "Unknown"}`
                                     )
                                   }
                                 />
@@ -772,7 +790,7 @@ export function SubmissionsTab({
                                     </div>
                                     <div className="mt-1 text-xs text-muted-foreground">
                                       {new Date(
-                                        submission.createdAt,
+                                        submission.createdAt
                                       ).toLocaleString()}
                                     </div>
                                   </div>
@@ -863,7 +881,11 @@ export function SubmissionsTab({
                                   submissionId={submission.id}
                                   currentGoalId={submission.goalId}
                                   currentValue={submission.submissionValue}
-                                  goals={teamSubmission.tile?.goals || selectedTile?.goals || []}
+                                  goals={
+                                    teamSubmission.tile?.goals ||
+                                    selectedTile?.goals ||
+                                    []
+                                  }
                                   goalValues={
                                     goalValuesCache[submission.goalId || ""] ||
                                     []
@@ -872,12 +894,12 @@ export function SubmissionsTab({
                                     handleInlineGoalAssignment(
                                       submission.id,
                                       goalId,
-                                      value,
+                                      value
                                     )
                                   }
                                   hasSufficientRights={hasSufficientRights}
                                   isExpanded={expandedGoalForms.has(
-                                    submission.id,
+                                    submission.id
                                   )}
                                   onToggle={() => toggleGoalForm(submission.id)}
                                 />
@@ -894,7 +916,7 @@ export function SubmissionsTab({
                                             onClick={() =>
                                               handleSubmissionStatusUpdate(
                                                 submission.id,
-                                                "approved",
+                                                "approved"
                                               )
                                             }
                                             disabled={
@@ -920,7 +942,7 @@ export function SubmissionsTab({
                                             className="h-8 w-8 p-0 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
                                             onClick={() =>
                                               handleNeedsReviewClick(
-                                                submission.id,
+                                                submission.id
                                               )
                                             }
                                             disabled={
@@ -955,7 +977,7 @@ export function SubmissionsTab({
                                                 className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
                                                 onClick={() =>
                                                   setSubmissionToDelete(
-                                                    submission.id,
+                                                    submission.id
                                                   )
                                                 }
                                               >
@@ -985,8 +1007,8 @@ export function SubmissionsTab({
                                           </AlertDialogCancel>
                                           <AlertDialogAction
                                             onClick={() => {
-                                              onDeleteSubmission(submission.id);
-                                              setSubmissionToDelete(null);
+                                              onDeleteSubmission(submission.id)
+                                              setSubmissionToDelete(null)
                                             }}
                                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                           >
@@ -1006,7 +1028,7 @@ export function SubmissionsTab({
                                       onSubmit={(comment) =>
                                         handleCommentSubmit(
                                           submission.id,
-                                          comment,
+                                          comment
                                         )
                                       }
                                       onCancel={handleCommentCancel}
@@ -1024,7 +1046,7 @@ export function SubmissionsTab({
                                 />
                               </div>
                             </div>
-                          );
+                          )
                         })}
                     </div>
                   ) : (
@@ -1033,7 +1055,7 @@ export function SubmissionsTab({
                     </div>
                   )}
                 </div>
-              );
+              )
             })
           ) : (
             <div className="rounded-lg bg-muted/30 py-8 text-center">
@@ -1047,5 +1069,5 @@ export function SubmissionsTab({
         </div>
       </div>
     </div>
-  );
+  )
 }

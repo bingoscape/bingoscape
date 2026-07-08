@@ -1,28 +1,28 @@
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import {
   getServerSession,
   type DefaultSession,
   type NextAuthOptions,
-} from "next-auth";
-import { type Adapter } from "next-auth/adapters";
-import CredentialsProvider from "next-auth/providers/credentials";
-import DiscordProvider from "next-auth/providers/discord";
-import GithubProvider from "next-auth/providers/github";
-import GoogleProvider from "next-auth/providers/google";
-import { eq } from "drizzle-orm";
-import { ZodError } from "zod";
+} from "next-auth"
+import { type Adapter } from "next-auth/adapters"
+import CredentialsProvider from "next-auth/providers/credentials"
+import DiscordProvider from "next-auth/providers/discord"
+import GithubProvider from "next-auth/providers/github"
+import GoogleProvider from "next-auth/providers/google"
+import { eq } from "drizzle-orm"
+import { ZodError } from "zod"
 
-import { signInSchema } from "@/lib/validation/auth";
-import { verifyPassword } from "@/lib/password";
+import { signInSchema } from "@/lib/validation/auth"
+import { verifyPassword } from "@/lib/password"
 
-import { env } from "@/env";
-import { db } from "@/server/db";
+import { env } from "@/env"
+import { db } from "@/server/db"
 import {
   accounts,
   sessions,
   users,
   verificationTokens,
-} from "@/server/db/schema";
+} from "@/server/db/schema"
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -33,15 +33,15 @@ import {
 declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
-      id: string;
+      id: string
       runescapeName: string
       // ...other properties
       // role: UserRole;
-    } & DefaultSession["user"];
+    } & DefaultSession["user"]
   }
 
   interface User {
-    runescapeName: string;
+    runescapeName: string
     // ...other properties
     // role: UserRole;
   }
@@ -50,8 +50,8 @@ declare module "next-auth" {
 // Extend JWT type to include custom fields
 declare module "next-auth/jwt" {
   interface JWT {
-    id: string;
-    runescapeName: string;
+    id: string
+    runescapeName: string
   }
 }
 
@@ -71,7 +71,6 @@ export const authOptions: NextAuthOptions = {
       }
       // Update session
       if (trigger === "update" && updateSession) {
-         
         token.runescapeName = updateSession.runescapeName
       }
       return token
@@ -101,13 +100,18 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        username: { label: "Username", type: "text", placeholder: "your_username" },
+        username: {
+          label: "Username",
+          type: "text",
+          placeholder: "your_username",
+        },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         try {
           // Validate credentials with Zod
-          const { username, password } = await signInSchema.parseAsync(credentials)
+          const { username, password } =
+            await signInSchema.parseAsync(credentials)
 
           // Query database for user by username (case-insensitive)
           const [user] = await db
@@ -176,11 +180,11 @@ export const authOptions: NextAuthOptions = {
         ]
       : []),
   ],
-};
+}
 
 /**
  * Wrapper for `getServerSession` so that you don't need to import the `authOptions` in every file.
  *
  * @see https://next-auth.js.org/configuration/nextjs
  */
-export const getServerAuthSession = () => getServerSession(authOptions);
+export const getServerAuthSession = () => getServerSession(authOptions)

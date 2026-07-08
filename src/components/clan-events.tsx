@@ -2,7 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { EventCard } from "@/components/event-card"
-import { joinEvent, type EventData, type EventParticipant, getUserRegistrationStatus } from "@/app/actions/events"
+import {
+  joinEvent,
+  type EventData,
+  type EventParticipant,
+  getUserRegistrationStatus,
+} from "@/app/actions/events"
 import { toast } from "@/hooks/use-toast"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
@@ -12,7 +17,9 @@ interface ClanEventsClientProps {
   clanId: string
 }
 
-export default function ClanEventsClient({ initialEvents, clanId }: ClanEventsClientProps) {
+export default function ClanEventsClient({
+  initialEvents,
+}: ClanEventsClientProps) {
   const [clanEvents, setClanEvents] = useState<EventData[]>(initialEvents)
   const [registrationStatuses, setRegistrationStatuses] = useState<
     Record<
@@ -32,18 +39,24 @@ export default function ClanEventsClient({ initialEvents, clanId }: ClanEventsCl
     if (!session?.user?.id) return
 
     const fetchRegistrationStatuses = async () => {
-      const statuses: Record<string, {
-        status: "not_requested" | "pending" | "approved" | "rejected"
-        message?: string
-        responseMessage?: string
-      }> = {}
+      const statuses: Record<
+        string,
+        {
+          status: "not_requested" | "pending" | "approved" | "rejected"
+          message?: string
+          responseMessage?: string
+        }
+      > = {}
 
       for (const eventData of clanEvents) {
         try {
           const status = await getUserRegistrationStatus(eventData.event.id)
           statuses[eventData.event.id] = status
         } catch (error) {
-          console.error(`Error fetching registration status for event ${eventData.event.id}:`, error)
+          console.error(
+            `Error fetching registration status for event ${eventData.event.id}:`,
+            error
+          )
         }
       }
 
@@ -52,7 +65,9 @@ export default function ClanEventsClient({ initialEvents, clanId }: ClanEventsCl
 
     fetchRegistrationStatuses()
       .then(() => console.log("Fetched registration statuses"))
-      .catch((error) => console.error("Failed to fetch registration statuses:", error))
+      .catch((error) =>
+        console.error("Failed to fetch registration statuses:", error)
+      )
   }, [clanEvents, session?.user?.id])
 
   const handleJoinEvent = async (eventId: string) => {
@@ -74,7 +89,10 @@ export default function ClanEventsClient({ initialEvents, clanId }: ClanEventsCl
           // If already approved, redirect to event page
           router.push(`/events/${eventId}`)
           return
-        } else if (currentStatus.status === "pending" || currentStatus.status === "rejected") {
+        } else if (
+          currentStatus.status === "pending" ||
+          currentStatus.status === "rejected"
+        ) {
           // If pending or rejected, redirect to status page
           router.push(`/events/${eventId}/status`)
           return
@@ -89,23 +107,23 @@ export default function ClanEventsClient({ initialEvents, clanId }: ClanEventsCl
         prevEvents.map((eventData) =>
           eventData.event.id === eventId
             ? {
-              ...eventData,
-              event: {
-                ...eventData.event,
-                eventParticipants: [
-                  ...(eventData.event.eventParticipants ?? []),
-                  {
-                    eventId: eventId,
-                    userId: session.user.id,
-                    role: "participant",
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                  } as EventParticipant,
-                ],
-              },
-            }
-            : eventData,
-        ),
+                ...eventData,
+                event: {
+                  ...eventData.event,
+                  eventParticipants: [
+                    ...(eventData.event.eventParticipants ?? []),
+                    {
+                      eventId: eventId,
+                      userId: session.user.id,
+                      role: "participant",
+                      createdAt: new Date(),
+                      updatedAt: new Date(),
+                    } as EventParticipant,
+                  ],
+                },
+              }
+            : eventData
+        )
       )
 
       toast({
@@ -118,14 +136,17 @@ export default function ClanEventsClient({ initialEvents, clanId }: ClanEventsCl
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to join the event.",
+        description:
+          error instanceof Error ? error.message : "Failed to join the event.",
         variant: "destructive",
       })
     }
   }
 
   const isParticipant = (eventData: EventData) => {
-    return eventData.event.eventParticipants?.some((participant) => participant.userId === session?.user?.id)
+    return eventData.event.eventParticipants?.some(
+      (participant) => participant.userId === session?.user?.id
+    )
   }
 
   const categorizeEvents = (events: EventData[]) => {
@@ -143,7 +164,11 @@ export default function ClanEventsClient({ initialEvents, clanId }: ClanEventsCl
         }
         return acc
       },
-      { running: [], upcoming: [], past: [] } as { running: EventData[]; upcoming: EventData[]; past: EventData[] },
+      { running: [], upcoming: [], past: [] } as {
+        running: EventData[]
+        upcoming: EventData[]
+        past: EventData[]
+      }
     )
   }
 
@@ -152,58 +177,68 @@ export default function ClanEventsClient({ initialEvents, clanId }: ClanEventsCl
   return (
     <div className="space-y-10">
       {clanEvents.length === 0 ? (
-        <p className="text-muted-foreground">No events have been created for this clan yet.</p>
+        <p className="text-muted-foreground">
+          No events have been created for this clan yet.
+        </p>
       ) : (
         <>
           <section>
-            <h2 className="text-2xl font-semibold mb-4">Running Events</h2>
+            <h2 className="mb-4 text-2xl font-semibold">Running Events</h2>
             {running.length === 0 ? (
-              <p className="text-muted-foreground">No events are currently running.</p>
+              <p className="text-muted-foreground">
+                No events are currently running.
+              </p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {running.map((eventData) => (
                   <EventCard
                     key={eventData.event.id}
                     eventData={eventData}
                     onJoin={() => handleJoinEvent(eventData.event.id)}
                     isParticipant={isParticipant(eventData) ?? false}
-                    registrationStatus={registrationStatuses[eventData.event.id]}
+                    registrationStatus={
+                      registrationStatuses[eventData.event.id]
+                    }
                   />
                 ))}
               </div>
             )}
           </section>
           <section>
-            <h2 className="text-2xl font-semibold mb-4">Upcoming Events</h2>
+            <h2 className="mb-4 text-2xl font-semibold">Upcoming Events</h2>
             {upcoming.length === 0 ? (
               <p className="text-muted-foreground">No upcoming events.</p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {upcoming.map((eventData) => (
                   <EventCard
                     key={eventData.event.id}
                     eventData={eventData}
                     onJoin={() => handleJoinEvent(eventData.event.id)}
                     isParticipant={isParticipant(eventData) ?? false}
-                    registrationStatus={registrationStatuses[eventData.event.id]}
+                    registrationStatus={
+                      registrationStatuses[eventData.event.id]
+                    }
                   />
                 ))}
               </div>
             )}
           </section>
           <section>
-            <h2 className="text-2xl font-semibold mb-4">Past Events</h2>
+            <h2 className="mb-4 text-2xl font-semibold">Past Events</h2>
             {past.length === 0 ? (
               <p className="text-muted-foreground">No past events.</p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {past.map((eventData) => (
                   <EventCard
                     key={eventData.event.id}
                     eventData={eventData}
                     onJoin={() => handleJoinEvent(eventData.event.id)}
                     isParticipant={isParticipant(eventData) ?? false}
-                    registrationStatus={registrationStatuses[eventData.event.id]}
+                    registrationStatus={
+                      registrationStatuses[eventData.event.id]
+                    }
                   />
                 ))}
               </div>
@@ -214,4 +249,3 @@ export default function ClanEventsClient({ initialEvents, clanId }: ClanEventsCl
     </div>
   )
 }
-

@@ -123,6 +123,7 @@ docker compose version
 ```
 
 **Expected Output:**
+
 ```
 Docker version 27.x.x
 Docker Compose version v2.x.x
@@ -146,6 +147,7 @@ sudo ufw status
 ```
 
 **Expected Output:**
+
 ```
 Status: active
 
@@ -161,6 +163,7 @@ To                         Action      From
 For better security, create a dedicated deployment user.
 
 **Quick Setup:**
+
 ```bash
 # Create deployment user
 sudo adduser deploy
@@ -224,6 +227,7 @@ If successful, you should be logged into your server.
 GHCR is automatically available for all GitHub repositories. No setup needed!
 
 Images will be published to:
+
 ```
 ghcr.io/YOUR-USERNAME/YOUR-REPO
 ```
@@ -236,34 +240,34 @@ Add the following secrets:
 
 #### Required Secrets
 
-| Secret Name | Description | How to Get |
-|-------------|-------------|------------|
-| `SSH_HOST` | Your server IP or domain | `your-server.com` or `192.168.1.100` |
-| `SSH_USER` | SSH username | `deploy` (or your username) |
-| `SSH_PORT` | SSH port | `22` (default) |
-| `SSH_PRIVATE_KEY` | Private SSH key | Copy from `~/.ssh/github_actions` on server |
-| `DB_PASSWORD` | PostgreSQL password | Generate: `openssl rand -base64 24` |
-| `DB_NAME` | Database name | `bingoscapenext` |
-| `DB_USER` | Database username | `bingoscapenext` |
-| `DB_HOST` | Database host (Docker) | `bingoscapedb` |
-| `DB_PORT` | Database port | `5432` |
-| `NEXTAUTH_SECRET` | NextAuth encryption key | Generate: `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | Your production URL | `https://your-domain.com` |
-| `DISCORD_CLIENT_ID` | Discord OAuth Client ID | [See OAuth Setup](#oauth-provider-setup) |
-| `DISCORD_CLIENT_SECRET` | Discord OAuth Secret | [See OAuth Setup](#oauth-provider-setup) |
-| `SUPER_ADMIN_EMAILS` | Admin email addresses | `admin@example.com,admin2@example.com` |
+| Secret Name             | Description              | How to Get                                  |
+| ----------------------- | ------------------------ | ------------------------------------------- |
+| `SSH_HOST`              | Your server IP or domain | `your-server.com` or `192.168.1.100`        |
+| `SSH_USER`              | SSH username             | `deploy` (or your username)                 |
+| `SSH_PORT`              | SSH port                 | `22` (default)                              |
+| `SSH_PRIVATE_KEY`       | Private SSH key          | Copy from `~/.ssh/github_actions` on server |
+| `DB_PASSWORD`           | PostgreSQL password      | Generate: `openssl rand -base64 24`         |
+| `DB_NAME`               | Database name            | `bingoscapenext`                            |
+| `DB_USER`               | Database username        | `bingoscapenext`                            |
+| `DB_HOST`               | Database host (Docker)   | `bingoscapedb`                              |
+| `DB_PORT`               | Database port            | `5432`                                      |
+| `NEXTAUTH_SECRET`       | NextAuth encryption key  | Generate: `openssl rand -base64 32`         |
+| `NEXTAUTH_URL`          | Your production URL      | `https://your-domain.com`                   |
+| `DISCORD_CLIENT_ID`     | Discord OAuth Client ID  | [See OAuth Setup](#oauth-provider-setup)    |
+| `DISCORD_CLIENT_SECRET` | Discord OAuth Secret     | [See OAuth Setup](#oauth-provider-setup)    |
+| `SUPER_ADMIN_EMAILS`    | Admin email addresses    | `admin@example.com,admin2@example.com`      |
 
 #### Optional Secrets
 
-| Secret Name | Description | Required For |
-|-------------|-------------|--------------|
-| `GITHUB_CLIENT_ID` | GitHub OAuth | GitHub login (optional) |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth | GitHub login (optional) |
-| `GOOGLE_CLIENT_ID` | Google OAuth | Google login (optional) |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth | Google login (optional) |
-| `SENTRY_AUTH_TOKEN` | Sentry monitoring | Error tracking (optional) |
-| `SENTRY_DSN` | Sentry DSN | Error tracking (optional) |
-| `CERTBOT_EMAIL` | SSL notifications | Let's Encrypt certificates |
+| Secret Name            | Description       | Required For               |
+| ---------------------- | ----------------- | -------------------------- |
+| `GITHUB_CLIENT_ID`     | GitHub OAuth      | GitHub login (optional)    |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth      | GitHub login (optional)    |
+| `GOOGLE_CLIENT_ID`     | Google OAuth      | Google login (optional)    |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth      | Google login (optional)    |
+| `SENTRY_AUTH_TOKEN`    | Sentry monitoring | Error tracking (optional)  |
+| `SENTRY_DSN`           | Sentry DSN        | Error tracking (optional)  |
+| `CERTBOT_EMAIL`        | SSL notifications | Let's Encrypt certificates |
 
 ### Step 3: Generate Required Secrets
 
@@ -386,6 +390,7 @@ dig +short your-domain.com
 ```
 
 Or use online tools:
+
 - [DNS Checker](https://dnschecker.org/)
 - [What's My DNS](https://www.whatsmydns.net/)
 
@@ -403,6 +408,7 @@ git push origin main
 ```
 
 GitHub Actions will automatically:
+
 1. Run linter and tests
 2. Build Docker image
 3. Push to GHCR at `ghcr.io/YOUR-USERNAME/YOUR-REPO:main`
@@ -416,6 +422,7 @@ GitHub Actions will automatically:
 5. Click **Run workflow**
 
 **Monitor the build:**
+
 - Go to **Actions** tab
 - Click on the running workflow
 - Wait for all jobs to complete (green checkmark)
@@ -433,6 +440,7 @@ Once the image is built and pushed to GHCR:
 5. Click **Run workflow**
 
 **The deployment will:**
+
 - Create application directory on server
 - Copy docker-compose.yml and nginx configuration
 - Generate .env file from GitHub Secrets
@@ -450,6 +458,7 @@ Watch the deployment logs in real-time:
 3. Watch each step complete
 
 **Look for these success indicators:**
+
 - ✅ Configuration files copied
 - ✅ .env file generated
 - ✅ Docker image pulled
@@ -470,6 +479,7 @@ After first deployment, initialize the database:
 5. Click **Run workflow**
 
 **Monitor migration:**
+
 - Watch workflow logs
 - Look for "Migration completed successfully"
 - Verify database tables were created
@@ -504,6 +514,7 @@ docker compose logs nginx --tail 20
 #### Check via Browser
 
 **Without SSL (temporary):**
+
 ```
 http://your-domain.com
 ```
@@ -566,11 +577,13 @@ docker compose logs nginx
 ### Verify SSL
 
 Visit your site with HTTPS:
+
 ```
 https://your-domain.com
 ```
 
 You should see:
+
 - 🔒 Secure connection (padlock icon)
 - Valid certificate
 - Automatic redirect from HTTP to HTTPS
@@ -738,6 +751,7 @@ Image tag: v1.2.2  # Previous working version
 ```
 
 Or use commit SHA:
+
 ```bash
 Image tag: main-a1b2c3d  # Specific commit
 ```
@@ -785,6 +799,7 @@ docker system prune -a
 **Problem:** GitHub Actions can't connect to your server.
 
 **Solution:**
+
 1. Verify `SSH_HOST`, `SSH_USER`, `SSH_PORT` in GitHub Secrets
 2. Check firewall allows port 22:
    ```bash
@@ -801,6 +816,7 @@ docker system prune -a
 **Problem:** Can't pull image from GHCR.
 
 **Solution:**
+
 1. Verify `GITHUB_TOKEN` has correct permissions:
    - Go to **Settings** → **Actions** → **General**
    - Select "Read and write permissions"
@@ -813,6 +829,7 @@ docker system prune -a
 **Problem:** Application doesn't respond after deployment.
 
 **Solution:**
+
 ```bash
 # SSH into server
 ssh deploy@your-server-ip
@@ -837,6 +854,7 @@ docker compose logs app --tail 100
 **Problem:** Nginx can't reach the application.
 
 **Solution:**
+
 ```bash
 # Check if app container is running
 docker compose ps app
@@ -856,6 +874,7 @@ docker compose exec nginx nginx -t
 **Problem:** Nginx isn't running or ports aren't open.
 
 **Solution:**
+
 ```bash
 # Check nginx status
 docker compose ps nginx
@@ -877,6 +896,7 @@ docker compose restart nginx
 **Problem:** Application can't connect to PostgreSQL.
 
 **Solution:**
+
 ```bash
 # Check postgres status
 docker compose ps postgres
@@ -896,6 +916,7 @@ docker compose exec postgres psql -U bingoscapenext -d bingoscapenext -c "SELECT
 **Problem:** Database migrations won't run.
 
 **Solution:**
+
 ```bash
 # Check postgres is running
 docker compose ps postgres
@@ -916,6 +937,7 @@ docker compose run --rm app npm run db:migrate
 **Problem:** Nginx can't find SSL certificates.
 
 **Solution:**
+
 ```bash
 # Check if certificate files exist
 ls -la ~/bingoscape/nginx/ssl/
@@ -934,6 +956,7 @@ docker compose logs nginx | grep -i ssl
 **Problem:** SSL certificate is older than 90 days.
 
 **Solution:**
+
 ```bash
 # Renew certificates
 sudo certbot renew
@@ -963,6 +986,7 @@ If you encounter issues not covered here:
    - [SSL Setup Guide](./SSL-SETUP.md)
 
 3. **Common Commands:**
+
    ```bash
    # View all container logs
    docker compose logs

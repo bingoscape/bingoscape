@@ -3,7 +3,10 @@
 import { db } from "@/server/db"
 import { bingos, teams, tiles, teamTileSubmissions } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
-import { getCompletedPatterns, type PatternCompletionResult } from "./pattern-completion"
+import {
+  getCompletedPatterns,
+  type PatternCompletionResult,
+} from "./pattern-completion"
 
 export interface TeamPatternData {
   team: {
@@ -33,17 +36,15 @@ export interface EventPatternCompletionData {
 /**
  * Calculate total possible bonus XP for a bingo board
  */
-function calculateTotalPossibleBonusXP(
-  bingo: {
-    rows: number
-    columns: number
-    mainDiagonalBonusXP: number
-    antiDiagonalBonusXP: number
-    completeBoardBonusXP: number
-    rowBonuses: Array<{ bonusXP: number }>
-    columnBonuses: Array<{ bonusXP: number }>
-  }
-): number {
+function calculateTotalPossibleBonusXP(bingo: {
+  rows: number
+  columns: number
+  mainDiagonalBonusXP: number
+  antiDiagonalBonusXP: number
+  completeBoardBonusXP: number
+  rowBonuses: Array<{ bonusXP: number }>
+  columnBonuses: Array<{ bonusXP: number }>
+}): number {
   let total = 0
 
   // Add all row bonuses
@@ -114,9 +115,10 @@ export async function getEventPatternCompletion(
       const patterns = await getCompletedPatterns(bingo.id, team.id)
 
       // Calculate completion percentage
-      const completionPercentage = totalPossibleBonusXP > 0
-        ? Math.round((patterns.totalBonusXP / totalPossibleBonusXP) * 100)
-        : 0
+      const completionPercentage =
+        totalPossibleBonusXP > 0
+          ? Math.round((patterns.totalBonusXP / totalPossibleBonusXP) * 100)
+          : 0
 
       // Fetch completed tile indices for this team
       const completedTiles = await db
@@ -131,7 +133,7 @@ export async function getEventPatternCompletion(
           )
         )
 
-      const completedTileIndices = completedTiles.map(t => t.index)
+      const completedTileIndices = completedTiles.map((t) => t.index)
 
       teamPatterns.push({
         team: {

@@ -3,10 +3,23 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { updateClanMemberRole } from "@/app/actions/super-admin"
 import { useToast } from "@/hooks/use-toast"
 import { Shield, AlertTriangle } from "lucide-react"
@@ -32,10 +45,17 @@ interface SuperAdminMemberRoleModalProps {
   adminCount: number
 }
 
-export function SuperAdminMemberRoleModal({ member, clanId, isOwner, adminCount }: SuperAdminMemberRoleModalProps) {
+export function SuperAdminMemberRoleModal({
+  member,
+  clanId,
+  isOwner,
+  adminCount,
+}: SuperAdminMemberRoleModalProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [newRole, setNewRole] = useState<"admin" | "management" | "member" | "guest">(member.role)
+  const [newRole, setNewRole] = useState<
+    "admin" | "management" | "member" | "guest"
+  >(member.role)
   const { toast } = useToast()
 
   const displayName = member.user.name ?? member.user.email ?? "Unknown User"
@@ -72,7 +92,8 @@ export function SuperAdminMemberRoleModal({ member, clanId, isOwner, adminCount 
     if (isOwner) {
       toast({
         title: "Cannot change owner role",
-        description: "Please transfer ownership first using the Edit Clan modal.",
+        description:
+          "Please transfer ownership first using the Edit Clan modal.",
         variant: "destructive",
       })
       return
@@ -104,7 +125,7 @@ export function SuperAdminMemberRoleModal({ member, clanId, isOwner, adminCount 
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          <Shield className="h-4 w-4 mr-2" />
+          <Shield className="mr-2 h-4 w-4" />
           Change Role
         </Button>
       </DialogTrigger>
@@ -121,16 +142,18 @@ export function SuperAdminMemberRoleModal({ member, clanId, isOwner, adminCount 
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              Cannot change clan owner&apos;s role. Transfer ownership first using the Edit Clan modal.
+              Cannot change clan owner&apos;s role. Transfer ownership first
+              using the Edit Clan modal.
             </AlertDescription>
           </Alert>
         )}
 
         {isLastAdmin && newRole !== "admin" && !isOwner && (
-          <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-800">
+          <Alert className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
             <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
             <AlertDescription className="text-orange-700 dark:text-orange-300">
-              This is the last admin in the clan. Proceeding will leave the clan without any admins.
+              This is the last admin in the clan. Proceeding will leave the clan
+              without any admins.
             </AlertDescription>
           </Alert>
         )}
@@ -139,13 +162,19 @@ export function SuperAdminMemberRoleModal({ member, clanId, isOwner, adminCount 
           <div>
             <Label>Current Role</Label>
             <div className="mt-2">
-              <Badge className={getRoleBadgeColor(member.role)}>{member.role}</Badge>
+              <Badge className={getRoleBadgeColor(member.role)}>
+                {member.role}
+              </Badge>
             </div>
           </div>
 
           <div>
             <Label htmlFor="role">New Role</Label>
-            <Select value={newRole} onValueChange={(value) => setNewRole(value as typeof newRole)} disabled={isOwner}>
+            <Select
+              value={newRole}
+              onValueChange={(value) => setNewRole(value as typeof newRole)}
+              disabled={isOwner}
+            >
               <SelectTrigger id="role" className="mt-2">
                 <SelectValue />
               </SelectTrigger>
@@ -153,25 +182,33 @@ export function SuperAdminMemberRoleModal({ member, clanId, isOwner, adminCount 
                 <SelectItem value="admin">
                   <div className="flex items-center gap-2">
                     <span>Admin</span>
-                    <span className="text-xs text-muted-foreground">(Full control)</span>
+                    <span className="text-xs text-muted-foreground">
+                      (Full control)
+                    </span>
                   </div>
                 </SelectItem>
                 <SelectItem value="management">
                   <div className="flex items-center gap-2">
                     <span>Management</span>
-                    <span className="text-xs text-muted-foreground">(Can manage members)</span>
+                    <span className="text-xs text-muted-foreground">
+                      (Can manage members)
+                    </span>
                   </div>
                 </SelectItem>
                 <SelectItem value="member">
                   <div className="flex items-center gap-2">
                     <span>Member</span>
-                    <span className="text-xs text-muted-foreground">(Regular member)</span>
+                    <span className="text-xs text-muted-foreground">
+                      (Regular member)
+                    </span>
                   </div>
                 </SelectItem>
                 <SelectItem value="guest">
                   <div className="flex items-center gap-2">
                     <span>Guest</span>
-                    <span className="text-xs text-muted-foreground">(Observer only)</span>
+                    <span className="text-xs text-muted-foreground">
+                      (Observer only)
+                    </span>
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -179,17 +216,22 @@ export function SuperAdminMemberRoleModal({ member, clanId, isOwner, adminCount 
           </div>
 
           {roleChanged && !isOwner && (
-            <div className="bg-muted p-3 rounded-lg text-sm">
+            <div className="rounded-lg bg-muted p-3 text-sm">
               <p className="font-medium">Confirm Change:</p>
-              <p className="text-muted-foreground mt-1">
-                Change {displayName}&apos;s role from <span className="font-medium">{member.role}</span> to{" "}
+              <p className="mt-1 text-muted-foreground">
+                Change {displayName}&apos;s role from{" "}
+                <span className="font-medium">{member.role}</span> to{" "}
                 <span className="font-medium">{newRole}</span>
               </p>
             </div>
           )}
 
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={loading || !roleChanged || isOwner}>

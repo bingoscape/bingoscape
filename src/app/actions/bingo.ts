@@ -254,7 +254,7 @@ export async function createBingo(formData: FormData) {
   logger.debug({ formData }, "Create bingo form data")
 
   if (!eventId || !title || !rowsStr || !columnsStr) {
-    throw new Error("Missing required fields")
+    return { success: false, error: "Missing required fields" }
   }
 
   const rows = Number.parseInt(rowsStr)
@@ -264,7 +264,7 @@ export async function createBingo(formData: FormData) {
     : 1
 
   if (isNaN(rows) || isNaN(columns) || rows < 1 || columns < 1) {
-    throw new Error("Invalid rows or columns")
+    return { success: false, error: "Invalid rows or columns" }
   }
 
   // Fetch the event to get its gameType
@@ -273,7 +273,7 @@ export async function createBingo(formData: FormData) {
   })
 
   if (!event) {
-    throw new Error("Event not found")
+    return { success: false, error: "Event not found" }
   }
 
   // Parse pattern bonuses
@@ -283,102 +283,114 @@ export async function createBingo(formData: FormData) {
     parseInt((formData.get("antiDiagonalBonus") as string) || "0") || 0
   const completeBoardBonus =
     parseInt((formData.get("completeBoardBonus") as string) || "0") || 0
-    
+
   const scheduledUnlockDateStr = formData.get("scheduledUnlockDate") as string
-  const scheduledUnlockDate = scheduledUnlockDateStr ? new Date(scheduledUnlockDateStr) : null
+  const scheduledUnlockDate = scheduledUnlockDateStr
+    ? new Date(scheduledUnlockDateStr)
+    : null
 
-  const newBingo = await db
-    .insert(bingos)
-    .values({
-      eventId,
-      title,
-      description: description || "",
-      rows,
-      codephrase,
-      columns,
-      bingoType,
-      tiersUnlockRequirement,
-      mainDiagonalBonusXP: rows === columns ? mainDiagonalBonus : 0,
-      antiDiagonalBonusXP: rows === columns ? antiDiagonalBonus : 0,
-      completeBoardBonusXP: bingoType === "standard" ? completeBoardBonus : 0,
-      scheduledUnlockDate,
-      locked: true,
-      visible: false,
-    })
-    .returning({ id: bingos.id })
+  try {
+    await db.transaction(async (tx) => {
+      const newBingo = await tx
+        .insert(bingos)
+        .values({
+          eventId,
+          title,
+          description: description || "",
+          rows,
+          codephrase,
+          columns,
+          bingoType,
+          tiersUnlockRequirement,
+          mainDiagonalBonusXP: rows === columns ? mainDiagonalBonus : 0,
+          antiDiagonalBonusXP: rows === columns ? antiDiagonalBonus : 0,
+          completeBoardBonusXP:
+            bingoType === "standard" ? completeBoardBonus : 0,
+          scheduledUnlockDate,
+          locked: true,
+          visible: false,
+        })
+        .returning({ id: bingos.id })
 
-  const bingoId = newBingo[0]!.id
+      const bingoId = newBingo[0]!.id
 
-  const tilesToInsert = []
-  for (let idx = 0; idx < rows * columns; idx++) {
-    tilesToInsert.push({
-      bingoId,
-      title: `Tile ${idx + 1}`,
-      headerImage: getRandomFrog(event.gameType),
-      description: `Tile ${idx + 1}`,
-      weight: 1,
-      isHidden: false,
-      index: idx,
-      tier: bingoType === "progression" ? Math.floor(idx / columns) : 0, // Assign tiers based on rows for progression
-    })
-  }
-
-  await db.insert(tiles).values(tilesToInsert)
-
-  // Initialize pattern bonuses for standard bingos
-  if (bingoType === "standard") {
-    // Insert row bonuses
-    const rowBonusValues = []
-    for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
-      const bonusXP =
-        parseInt((formData.get(`rowBonus-${rowIndex}`) as string) || "0") || 0
-      if (bonusXP > 0) {
-        rowBonusValues.push({
+      const tilesToInsert = []
+      for (let idx = 0; idx < rows * columns; idx++) {
+        tilesToInsert.push({
           bingoId,
-          rowIndex,
-          bonusXP,
+          title: `Tile ${idx + 1}`,
+          headerImage: getRandomFrog(event.gameType),
+          description: `Tile ${idx + 1}`,
+          weight: 1,
+          isHidden: false,
+          index: idx,
+          tier: bingoType === "progression" ? Math.floor(idx / columns) : 0,
         })
       }
-    }
-    if (rowBonusValues.length > 0) {
-      await db.insert(rowBonuses).values(rowBonusValues)
-    }
 
-    // Insert column bonuses
-    const columnBonusValues = []
-    for (let columnIndex = 0; columnIndex < columns; columnIndex++) {
-      const bonusXP =
-        parseInt(
-          (formData.get(`columnBonus-${columnIndex}`) as string) || "0"
-        ) || 0
-      if (bonusXP > 0) {
-        columnBonusValues.push({
-          bingoId,
-          columnIndex,
-          bonusXP,
-        })
+      await tx.insert(tiles).values(tilesToInsert)
+
+      if (bingoType === "standard") {
+        const rowBonusValues = []
+        for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+          const bonusXP =
+            parseInt((formData.get(`rowBonus-${rowIndex}`) as string) || "0") ||
+            0
+          if (bonusXP > 0) {
+            rowBonusValues.push({ bingoId, rowIndex, bonusXP })
+          }
+        }
+        if (rowBonusValues.length > 0) {
+          await tx.insert(rowBonuses).values(rowBonusValues)
+        }
+
+        const columnBonusValues = []
+        for (let columnIndex = 0; columnIndex < columns; columnIndex++) {
+          const bonusXP =
+            parseInt(
+              (formData.get(`columnBonus-${columnIndex}`) as string) || "0"
+            ) || 0
+          if (bonusXP > 0) {
+            columnBonusValues.push({ bingoId, columnIndex, bonusXP })
+          }
+        }
+        if (columnBonusValues.length > 0) {
+          await tx.insert(columnBonuses).values(columnBonusValues)
+        }
       }
-    }
-    if (columnBonusValues.length > 0) {
-      await db.insert(columnBonuses).values(columnBonusValues)
-    }
+
+      if (bingoType === "progression") {
+        const tierRequirements = []
+        for (let tier = 0; tier < rows - 1; tier++) {
+          tierRequirements.push({
+            bingoId,
+            tier,
+            xpRequired: tiersUnlockRequirement,
+          })
+        }
+        if (tierRequirements.length > 0) {
+          await tx.insert(tierXpRequirements).values(tierRequirements)
+        }
+      }
+
+      logger.info(
+        {
+          eventId,
+          bingoId,
+          bingoType,
+          rows,
+          columns,
+          action: "createBingo",
+        },
+        "Bingo created successfully"
+      )
+    })
+
+    return { success: true }
+  } catch (error) {
+    logger.error({ error }, "Error creating bingo")
+    return { success: false, error: "Failed to create bingo" }
   }
-
-  // Initialize tier XP requirements for progression bingos
-  if (bingoType === "progression") {
-    await initializeTierXpRequirements(bingoId, tiersUnlockRequirement)
-  }
-
-  logger.info({
-    eventId,
-    bingoId,
-    bingoType,
-    rows,
-    columns,
-    action: "createBingo"
-  }, "Bingo created successfully")
-
-  return { success: true }
 }
 
 export async function deleteBingo(bingoId: string) {
@@ -541,7 +553,7 @@ export async function createMetricGoal(
 ) {
   try {
     const goalDescription = description || `${metricName} (${metricType})`
-    
+
     // Create the goal first
     const [newGoal] = await db
       .insert(goals)
@@ -583,7 +595,7 @@ export async function updateMetricGoal(
 ) {
   try {
     const goalDescription = description || `${metricName} (${metricType})`
-    
+
     // Update the base goal
     await db
       .update(goals)
@@ -1115,19 +1127,25 @@ export async function submitImage(formData: FormData) {
     // Revalidate the bingo page
     revalidatePath("/bingo")
 
-    logger.info({
-      submissionId: newSubmission?.submission?.id,
-      tileId,
-      teamId: effectiveTeamId,
-      submitterId: session.user.id,
-      targetUserId: targetUser.id,
-      action: "submitImage"
-    }, "Image submitted successfully")
+    logger.info(
+      {
+        submissionId: newSubmission?.submission?.id,
+        tileId,
+        teamId: effectiveTeamId,
+        submitterId: session.user.id,
+        targetUserId: targetUser.id,
+        action: "submitImage",
+      },
+      "Image submitted successfully"
+    )
 
     return { success: true, submission: newSubmission.submission }
   } catch (error) {
     const catchTileId = formData.get("tileId") as string | null
-    logger.error({ error, tileId: catchTileId, action: "submitImage" }, "Error submitting image")
+    logger.error(
+      { error, tileId: catchTileId, action: "submitImage" },
+      "Error submitting image"
+    )
     return { success: false, error: (error as Error).message }
   }
 }
@@ -1266,16 +1284,22 @@ export async function updateSubmissionStatus(
     // Revalidate the submissions page
     revalidatePath("/bingo")
 
-    logger.info({
-      submissionId,
-      newStatus,
-      reviewerId: session.user.id,
-      action: "updateSubmissionStatus"
-    }, "Submission status updated")
+    logger.info(
+      {
+        submissionId,
+        newStatus,
+        reviewerId: session.user.id,
+        action: "updateSubmissionStatus",
+      },
+      "Submission status updated"
+    )
 
     return { success: true, submission: updatedSubmission }
   } catch (error) {
-    logger.error({ error, submissionId, action: "updateSubmissionStatus" }, "Error updating submission status")
+    logger.error(
+      { error, submissionId, action: "updateSubmissionStatus" },
+      "Error updating submission status"
+    )
     return { success: false, error: "Failed to update submission status" }
   }
 }
@@ -1334,16 +1358,22 @@ export async function updateTeamTileSubmissionStatus(
     // Revalidate the submissions page
     revalidatePath("/bingo")
 
-    logger.info({
-      teamTileSubmissionId,
-      newStatus,
-      reviewerId: session.user.id,
-      action: "updateTeamTileSubmissionStatus"
-    }, "Team tile submission status updated")
+    logger.info(
+      {
+        teamTileSubmissionId,
+        newStatus,
+        reviewerId: session.user.id,
+        action: "updateTeamTileSubmissionStatus",
+      },
+      "Team tile submission status updated"
+    )
 
     return { success: true, teamTileSubmission: updatedTeamTileSubmission }
   } catch (error) {
-    logger.error({ error, teamTileSubmissionId, action: "updateTeamTileSubmissionStatus" }, "Error updating team tile submission status")
+    logger.error(
+      { error, teamTileSubmissionId, action: "updateTeamTileSubmissionStatus" },
+      "Error updating team tile submission status"
+    )
     return {
       success: false,
       error: "Failed to update team tile submission status",
@@ -1496,17 +1526,23 @@ export async function updateSubmissionStatusWithComment(
       // Revalidate the submissions page
       revalidatePath("/bingo")
 
-      logger.info({
-        submissionId,
-        newStatus,
-        reviewerId: session.user.id,
-        action: "updateSubmissionStatusWithComment"
-      }, "Submission status with comment updated")
+      logger.info(
+        {
+          submissionId,
+          newStatus,
+          reviewerId: session.user.id,
+          action: "updateSubmissionStatusWithComment",
+        },
+        "Submission status with comment updated"
+      )
 
       return { success: true, submission: updatedSubmission }
     })
   } catch (error) {
-    logger.error({ error, submissionId, action: "updateSubmissionStatusWithComment" }, "Error updating submission status with comment")
+    logger.error(
+      { error, submissionId, action: "updateSubmissionStatusWithComment" },
+      "Error updating submission status with comment"
+    )
     return { success: false, error: "Failed to update submission status" }
   }
 }

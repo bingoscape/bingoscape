@@ -1,70 +1,82 @@
-import { NextResponse } from 'next/server'
-import { getServerAuthSession } from '@/server/auth'
-import { createClanInvite } from '@/app/actions/clan'
+import { NextResponse } from "next/server"
+import { getServerAuthSession } from "@/server/auth"
+import { createClanInvite } from "@/app/actions/clan/create-clan-invite"
 
 export interface GenerateInviteRequest {
-    label?: string
-    expiresInDays?: number | null // null = permanent, 0 = same as null
-    maxUses?: number | null // null = unlimited
+  label?: string
+  expiresInDays?: number | null // null = permanent, 0 = same as null
+  maxUses?: number | null // null = unlimited
 }
 
 export interface GenerateInviteResponse {
-    inviteCode: string
-    id: string
-    expiresAt: Date | null
-    maxUses: number | null
-    label: string | null
+  inviteCode: string
+  id: string
+  expiresAt: Date | null
+  maxUses: number | null
+  label: string | null
 }
 
+export async function POST(
+  req: Request,
+  props: { params: Promise<{ clanId: string }> }
+) {
+  const params = await props.params
+  const session = await getServerAuthSession()
 
-export async function POST(req: Request, props: { params: Promise<{ clanId: string }> }) {
-    const params = await props.params;
-    const session = await getServerAuthSession()
+  if (!session || !session.user) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  }
 
-    if (!session || !session.user) {
-        return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  const { clanId } = params
+
+  // Parse request body
+  let body: GenerateInviteRequest = {}
+  try {
+    body = (await req.json()) as GenerateInviteRequest
+  } catch {
+    // If no body provided, use defaults (7 days expiration for backward compatibility)
+    body = { expiresInDays: 7 }
+  }
+
+  try {
+    const result = await createClanInvite({
+      clanId,
+      label: body.label,
+      expiresInDays:
+        body.expiresInDays === 0 ? null : (body.expiresInDays ?? 7), // Default to 7 days for backward compatibility
+      maxUses: body.maxUses,
+    })
+
+    if (result?.serverError) {
+      return NextResponse.json({ error: result.serverError }, { status: 500 })
     }
 
-    const { clanId } = params
-
-    // Parse request body
-    let body: GenerateInviteRequest = {}
-    try {
-        body = await req.json() as GenerateInviteRequest
-    } catch {
-        // If no body provided, use defaults (7 days expiration for backward compatibility)
-        body = { expiresInDays: 7 }
+    if (!result?.data?.success) {
+      return NextResponse.json(
+        { error: result?.data?.error ?? "Failed to create invite" },
+        { status: 400 }
+      )
     }
 
-    try {
-        const invite = await createClanInvite({
-            clanId,
-            label: body.label,
-            expiresInDays: body.expiresInDays === 0 ? null : body.expiresInDays ?? 7, // Default to 7 days for backward compatibility
-            maxUses: body.maxUses,
-        })
+    const invite = result.data.invite!
 
-        if (!invite) {
-            throw new Error("Failed to create invite")
-        }
-
-        return NextResponse.json({
-            inviteCode: invite.inviteCode,
-            id: invite.id,
-            expiresAt: invite.expiresAt,
-            maxUses: invite.maxUses,
-            label: invite.label,
-        })
-    } catch (error) {
-        if (error instanceof Error) {
-            return NextResponse.json(
-                { error: error.message },
-                { status: error.message.includes("authorized") ? 403 : 400 }
-            )
-        }
-        return NextResponse.json(
-            { error: "Failed to generate invite" },
-            { status: 500 }
-        )
+    return NextResponse.json({
+      inviteCode: invite.inviteCode,
+      id: invite.id,
+      expiresAt: invite.expiresAt,
+      maxUses: invite.maxUses,
+      label: invite.label,
+    })
+  } catch (error) {
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message.includes("authorized") ? 403 : 400 }
+      )
     }
+    return NextResponse.json(
+      { error: "Failed to generate invite" },
+      { status: 500 }
+    )
+  }
 }

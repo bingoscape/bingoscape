@@ -36,7 +36,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-6">Your Profile</h1>
+      <h1 className="mb-6 text-3xl font-bold">Your Profile</h1>
       <UpdateRsnForm user={user} />
     </div>
   )

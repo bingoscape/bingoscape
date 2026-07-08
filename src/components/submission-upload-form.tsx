@@ -1,8 +1,8 @@
-"use client";
+"use client"
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -11,24 +11,24 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Upload, Loader2, CheckCircle2, Users, BarChart2 } from "lucide-react";
-import type { SelectableUser } from "@/app/actions/bingo";
+} from "@/components/ui/select"
+import { Upload, Loader2, CheckCircle2, Users, BarChart2 } from "lucide-react"
+import type { SelectableUser } from "@/app/actions/bingo"
 
 interface SubmissionUploadFormProps {
-  teamName: string;
-  selectedImage: File | null;
-  pastedImage: File | null;
-  isUploading: boolean;
-  onImageChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onSubmit: () => void;
-  showTeamHeader?: boolean;
-  disabled?: boolean;
+  teamName: string
+  selectedImage: File | null
+  pastedImage: File | null
+  isUploading: boolean
+  onImageChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onSubmit: () => void
+  showTeamHeader?: boolean
+  disabled?: boolean
   // New props for submitting on behalf of another user
-  selectableUsers?: SelectableUser[];
-  selectedUserId?: string;
-  onUserSelect?: (userId: string) => void;
-  isMetricOnly?: boolean;
+  selectableUsers?: SelectableUser[]
+  selectedUserId?: string
+  onUserSelect?: (userId: string) => void
+  isMetricOnly?: boolean
 }
 
 export function SubmissionUploadForm({
@@ -48,27 +48,27 @@ export function SubmissionUploadForm({
   // Filter out unassigned users before processing
   const assignedUsers =
     selectableUsers?.filter(
-      (user) => user.teamName !== undefined && user.teamName !== null,
-    ) ?? [];
+      (user) => user.teamName !== undefined && user.teamName !== null
+    ) ?? []
 
   // Group users by team for management users (when there are multiple teams)
   const groupedUsers =
     assignedUsers.length > 0
       ? assignedUsers.reduce(
           (groups, user) => {
-            const teamKey = user.teamName!;
+            const teamKey = user.teamName!
             if (!groups[teamKey]) {
-              groups[teamKey] = [];
+              groups[teamKey] = []
             }
-            groups[teamKey].push(user);
-            return groups;
+            groups[teamKey].push(user)
+            return groups
           },
-          {} as Record<string, SelectableUser[]>,
+          {} as Record<string, SelectableUser[]>
         )
-      : {};
+      : {}
 
-  const hasMultipleTeams = Object.keys(groupedUsers).length > 1;
-  const showUserSelection = assignedUsers.length > 1 && onUserSelect;
+  const hasMultipleTeams = Object.keys(groupedUsers).length > 1
+  const showUserSelection = assignedUsers.length > 1 && onUserSelect
 
   return (
     <div className="space-y-4">
@@ -116,7 +116,7 @@ export function SubmissionUploadForm({
                           </SelectItem>
                         ))}
                       </SelectGroup>
-                    ),
+                    )
                   )
                 : // Flat list for team members only (participant view)
                   assignedUsers.map((user) => (
@@ -149,8 +149,9 @@ export function SubmissionUploadForm({
                 <p className="text-sm font-medium text-foreground">
                   Automatic Progress Tracking
                 </p>
-                <p className="text-xs text-muted-foreground max-w-[250px] mx-auto">
-                  This tile&apos;s progress is synced automatically via the configured tracker. Manual submissions are disabled.
+                <p className="mx-auto max-w-[250px] text-xs text-muted-foreground">
+                  This tile&apos;s progress is synced automatically via the
+                  configured tracker. Manual submissions are disabled.
                 </p>
               </div>
             </div>
@@ -158,135 +159,136 @@ export function SubmissionUploadForm({
         ) : (
           <>
             {/* Enhanced drag-and-drop upload area */}
-        <div className="relative">
-          <div
-            className={`rounded-lg border-2 border-dashed p-8 text-center transition-all duration-200 ${
-              disabled
-                ? "scale-[0.98] border-gray-200 bg-gray-50/50"
-                : "scale-100 border-border bg-muted/20 shadow-sm hover:border-muted-foreground hover:bg-muted/30"
-            }`}
-          >
-            <div className="flex flex-col items-center space-y-4">
+            <div className="relative">
               <div
-                className={`rounded-full p-4 transition-colors ${
-                  disabled ? "bg-gray-200" : "bg-blue-500/20"
+                className={`rounded-lg border-2 border-dashed p-8 text-center transition-all duration-200 ${
+                  disabled
+                    ? "scale-[0.98] border-gray-200 bg-gray-50/50"
+                    : "scale-100 border-border bg-muted/20 shadow-sm hover:border-muted-foreground hover:bg-muted/30"
                 }`}
               >
-                <Upload
-                  className={`h-8 w-8 transition-colors ${
-                    disabled ? "text-gray-400" : "text-blue-500"
-                  }`}
-                />
+                <div className="flex flex-col items-center space-y-4">
+                  <div
+                    className={`rounded-full p-4 transition-colors ${
+                      disabled ? "bg-gray-200" : "bg-blue-500/20"
+                    }`}
+                  >
+                    <Upload
+                      className={`h-8 w-8 transition-colors ${
+                        disabled ? "text-gray-400" : "text-blue-500"
+                      }`}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <p
+                      className={`text-sm font-medium ${
+                        disabled ? "text-gray-500" : "text-foreground"
+                      }`}
+                    >
+                      {disabled
+                        ? "Select a tile first"
+                        : "Drag and drop your image here, or click to browse"}
+                    </p>
+                    <p
+                      className={`text-xs ${
+                        disabled ? "text-gray-400" : "text-muted-foreground"
+                      }`}
+                    >
+                      {!disabled && "PNG, JPG, GIF up to 10MB"}
+                      {disabled && (
+                        <span className="flex items-center justify-center gap-1">
+                          <svg
+                            className="h-3 w-3"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M7 11l5-5m0 0l5 5m-5-5v12"
+                            />
+                          </svg>
+                          Choose a tile above to upload images
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <Input
+                    id="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={onImageChange}
+                    disabled={isUploading || disabled}
+                    className={`absolute inset-0 h-full w-full cursor-pointer opacity-0 ${(selectedImage ?? pastedImage ?? (isUploading || disabled)) ? "pointer-events-none" : ""}`}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <p
-                  className={`text-sm font-medium ${
-                    disabled ? "text-gray-500" : "text-foreground"
-                  }`}
-                >
-                  {disabled
-                    ? "Select a tile first"
-                    : "Drag and drop your image here, or click to browse"}
-                </p>
-                <p
-                  className={`text-xs ${
-                    disabled ? "text-gray-400" : "text-muted-foreground"
-                  }`}
-                >
-                  {!disabled && "PNG, JPG, GIF up to 10MB"}
-                  {disabled && (
-                    <span className="flex items-center justify-center gap-1">
-                      <svg
-                        className="h-3 w-3"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M7 11l5-5m0 0l5 5m-5-5v12"
-                        />
-                      </svg>
-                      Choose a tile above to upload images
-                    </span>
-                  )}
-                </p>
-              </div>
-              <Input
-                id="image"
-                type="file"
-                accept="image/*"
-                onChange={onImageChange}
-                disabled={isUploading || disabled}
-                className={`absolute inset-0 h-full w-full cursor-pointer opacity-0 ${(selectedImage ?? pastedImage ?? (isUploading || disabled)) ? "pointer-events-none" : ""}`}
-              />
-            </div>
-          </div>
 
-          {/* Image preview */}
-          {(selectedImage ?? pastedImage) && (
-            <div
-              className={`mt-4 rounded-lg border p-4 ${isUploading ? "border-blue-500 bg-blue-500/20" : "border-green-500 bg-green-500/20"}`}
-            >
-              <div className="flex items-center gap-3">
+              {/* Image preview */}
+              {(selectedImage ?? pastedImage) && (
                 <div
-                  className={`rounded-full p-2 ${isUploading ? "bg-blue-500/30" : "bg-green-500/30"}`}
+                  className={`mt-4 rounded-lg border p-4 ${isUploading ? "border-blue-500 bg-blue-500/20" : "border-green-500 bg-green-500/20"}`}
                 >
-                  {isUploading ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-                  ) : (
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  )}
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`rounded-full p-2 ${isUploading ? "bg-blue-500/30" : "bg-green-500/30"}`}
+                    >
+                      {isUploading ? (
+                        <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                      ) : (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p
+                        className={`text-sm font-medium ${isUploading ? "text-blue-500" : "text-green-500"}`}
+                      >
+                        {isUploading
+                          ? "Uploading image..."
+                          : "Image ready to submit"}
+                      </p>
+                      <p
+                        className={`text-xs ${isUploading ? "text-blue-500/80" : "text-green-500/80"}`}
+                      >
+                        {selectedImage ? selectedImage.name : "Pasted image"}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={onSubmit}
+                      disabled={isUploading}
+                      className="bg-green-500 text-white hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      size="sm"
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="mr-2 h-4 w-4" />
+                          Submit
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p
-                    className={`text-sm font-medium ${isUploading ? "text-blue-500" : "text-green-500"}`}
-                  >
-                    {isUploading
-                      ? "Uploading image..."
-                      : "Image ready to submit"}
-                  </p>
-                  <p
-                    className={`text-xs ${isUploading ? "text-blue-500/80" : "text-green-500/80"}`}
-                  >
-                    {selectedImage ? selectedImage.name : "Pasted image"}
-                  </p>
-                </div>
-                <Button
-                  onClick={onSubmit}
-                  disabled={isUploading}
-                  className="bg-green-500 text-white hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  size="sm"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Submit
-                    </>
-                  )}
-                </Button>
-              </div>
+              )}
             </div>
-          )}
-        </div>
 
-        <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <kbd className="rounded bg-muted px-2 py-1 text-xs">Ctrl</kbd>
-            <span>+</span>
-            <kbd className="rounded bg-muted px-2 py-1 text-xs">V</kbd>
-          </div>
-          <span>to paste an image directly</span>
-        </div>
-        </>)}
+            <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <kbd className="rounded bg-muted px-2 py-1 text-xs">Ctrl</kbd>
+                <span>+</span>
+                <kbd className="rounded bg-muted px-2 py-1 text-xs">V</kbd>
+              </div>
+              <span>to paste an image directly</span>
+            </div>
+          </>
+        )}
       </div>
     </div>
-  );
+  )
 }

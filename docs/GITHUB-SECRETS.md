@@ -18,43 +18,43 @@ These secrets **must** be configured for the deployment pipeline to work.
 
 ### Database Configuration
 
-| Secret Name | Description | Example Value |
-|-------------|-------------|---------------|
-| `DB_PASSWORD` | PostgreSQL database password | `secure_password_123` |
-| `DB_NAME` | PostgreSQL database name | `bingoscapenext` |
-| `DB_USER` | PostgreSQL database username | `bingoscapenext` |
-| `DB_HOST` | PostgreSQL database host (Docker service name) | `bingoscapedb` |
-| `DB_PORT` | PostgreSQL database port | `5432` |
+| Secret Name   | Description                                    | Example Value         |
+| ------------- | ---------------------------------------------- | --------------------- |
+| `DB_PASSWORD` | PostgreSQL database password                   | `secure_password_123` |
+| `DB_NAME`     | PostgreSQL database name                       | `bingoscapenext`      |
+| `DB_USER`     | PostgreSQL database username                   | `bingoscapenext`      |
+| `DB_HOST`     | PostgreSQL database host (Docker service name) | `bingoscapedb`        |
+| `DB_PORT`     | PostgreSQL database port                       | `5432`                |
 
 **Note:** If your password contains `$`, it will be escaped automatically in the generated .env file.
 
 ### Authentication Configuration
 
-| Secret Name | Description | Example Value | How to Generate |
-|-------------|-------------|---------------|-----------------|
-| `NEXTAUTH_SECRET` | NextAuth.js encryption key | `base64-encoded-string` | `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | Application URL | `https://bingoscape.org` | Your domain |
+| Secret Name       | Description                | Example Value            | How to Generate           |
+| ----------------- | -------------------------- | ------------------------ | ------------------------- |
+| `NEXTAUTH_SECRET` | NextAuth.js encryption key | `base64-encoded-string`  | `openssl rand -base64 32` |
+| `NEXTAUTH_URL`    | Application URL            | `https://bingoscape.org` | Your domain               |
 
 ### OAuth Providers (Required)
 
-| Secret Name | Description | Where to Get |
-|-------------|-------------|--------------|
-| `DISCORD_CLIENT_ID` | Discord OAuth Client ID | [Discord Developer Portal](https://discord.com/developers/applications) |
+| Secret Name             | Description                 | Where to Get                                                            |
+| ----------------------- | --------------------------- | ----------------------------------------------------------------------- |
+| `DISCORD_CLIENT_ID`     | Discord OAuth Client ID     | [Discord Developer Portal](https://discord.com/developers/applications) |
 | `DISCORD_CLIENT_SECRET` | Discord OAuth Client Secret | [Discord Developer Portal](https://discord.com/developers/applications) |
 
 ### Application Configuration
 
-| Secret Name | Description | Example Value |
-|-------------|-------------|---------------|
+| Secret Name          | Description                  | Example Value                          |
+| -------------------- | ---------------------------- | -------------------------------------- |
 | `SUPER_ADMIN_EMAILS` | Comma-separated admin emails | `admin@example.com,admin2@example.com` |
 
 ### SSH Access (For Deployments & Migrations)
 
-| Secret Name | Description | Example Value | How to Generate |
-|-------------|-------------|---------------|-----------------|
-| `SSH_HOST` | Production server hostname or IP | `bingoscape.org` or `192.168.1.100` | Your server |
-| `SSH_USER` | SSH username | `deploy` or `ubuntu` | Your server user |
-| `SSH_PORT` | SSH port | `22` | Usually 22 |
+| Secret Name       | Description                        | Example Value                              | How to Generate         |
+| ----------------- | ---------------------------------- | ------------------------------------------ | ----------------------- |
+| `SSH_HOST`        | Production server hostname or IP   | `bingoscape.org` or `192.168.1.100`        | Your server             |
+| `SSH_USER`        | SSH username                       | `deploy` or `ubuntu`                       | Your server user        |
+| `SSH_PORT`        | SSH port                           | `22`                                       | Usually 22              |
 | `SSH_PRIVATE_KEY` | Private SSH key for authentication | `-----BEGIN OPENSSH PRIVATE KEY-----\n...` | `ssh-keygen -t ed25519` |
 
 #### Generating SSH Key Pair
@@ -78,21 +78,19 @@ These secrets are optional but recommended for enhanced functionality.
 
 ### Additional OAuth Providers
 
-| Secret Name | Description | Where to Get |
-|-------------|-------------|--------------|
-| `GITHUB_CLIENT_ID` | GitHub OAuth Client ID (optional) | [GitHub Developer Settings](https://github.com/settings/developers) |
+| Secret Name            | Description                           | Where to Get                                                        |
+| ---------------------- | ------------------------------------- | ------------------------------------------------------------------- |
+| `GITHUB_CLIENT_ID`     | GitHub OAuth Client ID (optional)     | [GitHub Developer Settings](https://github.com/settings/developers) |
 | `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret (optional) | [GitHub Developer Settings](https://github.com/settings/developers) |
-| `GOOGLE_CLIENT_ID` | Google OAuth Client ID (optional) | [Google Cloud Console](https://console.cloud.google.com/) |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret (optional) | [Google Cloud Console](https://console.cloud.google.com/) |
+| `GOOGLE_CLIENT_ID`     | Google OAuth Client ID (optional)     | [Google Cloud Console](https://console.cloud.google.com/)           |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret (optional) | [Google Cloud Console](https://console.cloud.google.com/)           |
 
 **Note:** If you don't configure these, users simply won't see GitHub/Google login options.
 
-
-
 ### SSL Certificate Configuration
 
-| Secret Name | Description | Example Value |
-|-------------|-------------|---------------|
+| Secret Name     | Description                                       | Example Value          |
+| --------------- | ------------------------------------------------- | ---------------------- |
 | `CERTBOT_EMAIL` | Email for Let's Encrypt certificate notifications | `admin@bingoscape.org` |
 
 **Note:** Only needed if you're using the containerized nginx with Let's Encrypt.
@@ -103,12 +101,12 @@ These secrets are optional but recommended for enhanced functionality.
 
 These secrets are automatically provided by GitHub - no configuration needed.
 
-| Secret Name | Description | Usage |
-|-------------|-------------|-------|
-| `GITHUB_TOKEN` | Automatic token for GitHub API | Pushing Docker images to GHCR |
-| `github.actor` | GitHub username triggering workflow | Login to GHCR |
-| `github.repository` | Repository name (owner/repo) | Docker image naming |
-| `github.sha` | Commit SHA | Image tagging |
+| Secret Name         | Description                         | Usage                         |
+| ------------------- | ----------------------------------- | ----------------------------- |
+| `GITHUB_TOKEN`      | Automatic token for GitHub API      | Pushing Docker images to GHCR |
+| `github.actor`      | GitHub username triggering workflow | Login to GHCR                 |
+| `github.repository` | Repository name (owner/repo)        | Docker image naming           |
+| `github.sha`        | Commit SHA                          | Image tagging                 |
 
 ---
 
@@ -117,6 +115,7 @@ These secrets are automatically provided by GitHub - no configuration needed.
 Use this checklist to ensure all required secrets are configured:
 
 ### ✅ Database Secrets
+
 - [ ] `DB_PASSWORD` - Configured with strong password
 - [ ] `DB_NAME` - Set to your database name
 - [ ] `DB_USER` - Set to your database username
@@ -124,18 +123,22 @@ Use this checklist to ensure all required secrets are configured:
 - [ ] `DB_PORT` - Set to `5432`
 
 ### ✅ Authentication Secrets
+
 - [ ] `NEXTAUTH_SECRET` - Generated using `openssl rand -base64 32`
 - [ ] `NEXTAUTH_URL` - Set to your production URL (e.g., `https://bingoscape.org`)
 
 ### ✅ OAuth Secrets (Required)
+
 - [ ] `DISCORD_CLIENT_ID` - From Discord Developer Portal
 - [ ] `DISCORD_CLIENT_SECRET` - From Discord Developer Portal
 - [ ] Discord redirect URL configured: `{NEXTAUTH_URL}/api/auth/callback/discord`
 
 ### ✅ Application Secrets
+
 - [ ] `SUPER_ADMIN_EMAILS` - At least one admin email configured
 
 ### ✅ SSH Secrets (For Deployments)
+
 - [ ] `SSH_HOST` - Production server hostname/IP
 - [ ] `SSH_USER` - SSH username
 - [ ] `SSH_PORT` - SSH port (usually `22`)
@@ -143,6 +146,7 @@ Use this checklist to ensure all required secrets are configured:
 - [ ] Public key added to server's `~/.ssh/authorized_keys`
 
 ### ⚙️ Optional Secrets
+
 - [ ] `GITHUB_CLIENT_ID` - (Optional) For GitHub OAuth
 - [ ] `GITHUB_CLIENT_SECRET` - (Optional) For GitHub OAuth
 - [ ] `GOOGLE_CLIENT_ID` - (Optional) For Google OAuth
@@ -159,11 +163,11 @@ If you're using GitHub Environments (production/staging), you can configure envi
 
 This allows different values for production vs staging:
 
-| Secret | Production Value | Staging Value |
-|--------|-----------------|---------------|
+| Secret         | Production Value         | Staging Value                    |
+| -------------- | ------------------------ | -------------------------------- |
 | `NEXTAUTH_URL` | `https://bingoscape.org` | `https://staging.bingoscape.org` |
-| `DB_NAME` | `bingoscape_prod` | `bingoscape_staging` |
-| `SSH_HOST` | `prod.bingoscape.org` | `staging.bingoscape.org` |
+| `DB_NAME`      | `bingoscape_prod`        | `bingoscape_staging`             |
+| `SSH_HOST`     | `prod.bingoscape.org`    | `staging.bingoscape.org`         |
 
 ---
 
@@ -214,6 +218,7 @@ This allows different values for production vs staging:
 ### 📊 Audit Trail
 
 GitHub automatically logs all secret usage:
+
 - **Settings → Actions → Audit log**
 - Shows who accessed which secrets when
 - Monitor for suspicious activity
@@ -259,6 +264,7 @@ jobs:
 **Error:** `Error: Secret DB_PASSWORD not found`
 
 **Solution:**
+
 1. Verify secret name matches exactly (case-sensitive)
 2. Check if secret is set at repository or environment level
 3. Ensure you're accessing the correct environment
@@ -268,6 +274,7 @@ jobs:
 **Error:** `Permission denied (publickey)`
 
 **Solutions:**
+
 1. Verify private key is complete (including header/footer)
 2. Check public key is in server's `~/.ssh/authorized_keys`
 3. Verify SSH_USER has correct permissions
@@ -279,9 +286,11 @@ jobs:
 
 **Solution:**
 Generate a new secret:
+
 ```bash
 openssl rand -base64 32
 ```
+
 Update the `NEXTAUTH_SECRET` secret in GitHub.
 
 ### Database Connection Failed
@@ -289,6 +298,7 @@ Update the `NEXTAUTH_SECRET` secret in GitHub.
 **Error:** `password authentication failed for user`
 
 **Solution:**
+
 1. Verify `DB_PASSWORD` matches database password
 2. Check `DB_USER` and `DB_NAME` are correct
 3. Ensure `DB_HOST` matches docker-compose service name

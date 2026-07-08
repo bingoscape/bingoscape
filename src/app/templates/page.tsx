@@ -1,4 +1,8 @@
-import { getPublicTemplates, getTemplateCategories, getTemplateSizes } from "@/app/actions/templates"
+import {
+  getPublicTemplates,
+  getTemplateCategories,
+  getTemplateSizes,
+} from "@/app/actions/templates"
 import { TemplateGallery } from "@/components/template-gallery"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { Suspense } from "react"
@@ -6,12 +10,15 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { getServerAuthSession } from "@/server/auth"
 import { CreateTemplateButton } from "@/components/create-template-button"
 
-export default async function TemplatesPage(
-  props: {
-    searchParams: Promise<{ search?: string; category?: string; size?: string; page?: string }>
-  }
-) {
-  const searchParams = await props.searchParams;
+export default async function TemplatesPage(props: {
+  searchParams: Promise<{
+    search?: string
+    category?: string
+    size?: string
+    page?: string
+  }>
+}) {
+  const searchParams = await props.searchParams
   const session = await getServerAuthSession()
   const isAuthenticated = !!session?.user
 
@@ -35,17 +42,18 @@ export default async function TemplatesPage(
 
   return (
     <div className="container mx-auto py-10">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <Breadcrumbs items={breadcrumbItems} />
         {isAuthenticated && <CreateTemplateButton />}
       </div>
 
-      <div className="flex flex-col md:flex-row gap-6">
+      <div className="flex flex-col gap-6 md:flex-row">
         <div className="w-full">
-          <h1 className="text-4xl font-bold mb-6">Bingo Board Templates</h1>
-          <p className="text-lg text-muted-foreground mb-8">
-            Browse and use community-created bingo board templates for your events. Find the perfect template or create
-            your own to share with others.
+          <h1 className="mb-6 text-4xl font-bold">Bingo Board Templates</h1>
+          <p className="mb-8 text-lg text-muted-foreground">
+            Browse and use community-created bingo board templates for your
+            events. Find the perfect template or create your own to share with
+            others.
           </p>
 
           <Suspense fallback={<TemplateGallerySkeleton />}>
@@ -70,12 +78,12 @@ export default async function TemplatesPage(
 function TemplateGallerySkeleton() {
   return (
     <div>
-      <div className="flex gap-4 mb-6">
+      <div className="mb-6 flex gap-4">
         <Skeleton className="h-10 w-40" />
         <Skeleton className="h-10 w-40" />
         <Skeleton className="h-10 w-40" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
           <Skeleton key={i} className="h-[300px] w-full rounded-lg" />
         ))}
@@ -83,4 +91,3 @@ function TemplateGallerySkeleton() {
     </div>
   )
 }
-

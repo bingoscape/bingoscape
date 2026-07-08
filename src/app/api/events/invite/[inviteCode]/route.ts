@@ -1,11 +1,14 @@
 import { db } from "@/server/db"
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger"
 import { eventInvites } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
 
 // Improve error handling in the invite code API
-export async function GET(request: Request, props: { params: Promise<{ inviteCode: string }> }) {
-  const params = await props.params;
+export async function GET(
+  request: Request,
+  props: { params: Promise<{ inviteCode: string }> }
+) {
+  const params = await props.params
   try {
     const { inviteCode } = params
 
@@ -21,7 +24,10 @@ export async function GET(request: Request, props: { params: Promise<{ inviteCod
     }
 
     if (invite.expiresAt && invite.expiresAt < new Date()) {
-      return Response.json({ error: "This invite link has expired" }, { status: 410 })
+      return Response.json(
+        { error: "This invite link has expired" },
+        { status: 410 }
+      )
     }
 
     // Return basic event info without joining
@@ -35,7 +41,9 @@ export async function GET(request: Request, props: { params: Promise<{ inviteCod
     })
   } catch (error) {
     logger.error({ error }, "Error fetching invite")
-    return Response.json({ error: "An error occurred while processing your request" }, { status: 500 })
+    return Response.json(
+      { error: "An error occurred while processing your request" },
+      { status: 500 }
+    )
   }
 }
-

@@ -69,6 +69,7 @@ cp .env.example .env.local
 ### 4. Database Setup
 
 **Option A: Local PostgreSQL**
+
 ```bash
 # Install PostgreSQL locally, then:
 createdb bingoscape-next
@@ -76,6 +77,7 @@ npm run db:migrate
 ```
 
 **Option B: Docker**
+
 ```bash
 # Start PostgreSQL with Docker
 docker-compose up -d
@@ -115,11 +117,13 @@ interface CreateEventData {
   endDate: Date
 }
 
-export async function createEvent(data: CreateEventData): Promise<ActionResult<Event>> {
+export async function createEvent(
+  data: CreateEventData
+): Promise<ActionResult<Event>> {
   // Implementation
 }
 
-// ❌ Bad  
+// ❌ Bad
 export async function createEvent(data: any) {
   // Implementation
 }
@@ -138,6 +142,7 @@ npm run lint
 ```
 
 **Key Rules:**
+
 - 2-space indentation
 - Semicolons required
 - Single quotes for strings
@@ -147,6 +152,7 @@ npm run lint
 ### Component Guidelines
 
 **React Components:**
+
 ```typescript
 // ✅ Good - Proper typing and component structure
 interface BingoTileProps {
@@ -165,26 +171,29 @@ export function BingoTile({ tile, onSubmit, isDisabled = false }: BingoTileProps
 ```
 
 **Server Actions:**
+
 ```typescript
 // ✅ Good - Proper error handling and typing
-export async function createBingo(formData: FormData): Promise<ActionResult<Bingo>> {
+export async function createBingo(
+  formData: FormData
+): Promise<ActionResult<Bingo>> {
   try {
     const validatedData = createBingoSchema.parse({
       title: formData.get("title"),
-      eventId: formData.get("eventId")
+      eventId: formData.get("eventId"),
     })
 
     const [bingo] = await db.insert(bingos).values(validatedData).returning()
-    
+
     revalidatePath(`/events/${validatedData.eventId}`)
     return { success: true, data: bingo }
   } catch (error) {
     console.error("Error creating bingo:", error)
-    
+
     if (error instanceof z.ZodError) {
       return { success: false, error: "Invalid input data" }
     }
-    
+
     return { success: false, error: "Failed to create bingo" }
   }
 }
@@ -193,12 +202,14 @@ export async function createBingo(formData: FormData): Promise<ActionResult<Bing
 ### Database Guidelines
 
 **Schema Changes:**
+
 - Use Drizzle ORM for all database operations
 - Create migrations for schema changes
 - Include relations for complex queries
 - Use proper indexing for performance
 
 **Query Patterns:**
+
 ```typescript
 // ✅ Good - Use relations for complex queries
 const bingo = await db.query.bingos.findFirst({
@@ -208,11 +219,11 @@ const bingo = await db.query.bingos.findFirst({
       with: {
         goals: true,
         teamTileSubmissions: {
-          where: eq(teamTileSubmissions.teamId, teamId)
-        }
-      }
-    }
-  }
+          where: eq(teamTileSubmissions.teamId, teamId),
+        },
+      },
+    },
+  },
 })
 
 // ❌ Bad - Multiple separate queries
@@ -225,11 +236,13 @@ const tiles = await db.select().from(tiles).where(eq(tiles.bingoId, bingoId))
 ### 1. Planning
 
 **For Bug Fixes:**
+
 - Check existing issues to avoid duplicates
 - Create issue if one doesn't exist
 - Discuss approach in issue comments
 
 **For New Features:**
+
 - Open issue or discussion first
 - Wait for maintainer approval before starting
 - Consider breaking changes and backwards compatibility
@@ -279,6 +292,7 @@ chore(deps): update Next.js to version 14.2.4
 ### 4. Pull Request Process
 
 **Before Submitting:**
+
 ```bash
 # Run full test suite
 npm run test
@@ -293,6 +307,7 @@ npm run build
 ```
 
 **PR Requirements:**
+
 - Descriptive title and description
 - Reference related issues (e.g., "Fixes #123")
 - Include screenshots for UI changes
@@ -300,25 +315,31 @@ npm run build
 - Update documentation if needed
 
 **PR Template:**
+
 ```markdown
 ## Description
+
 Brief description of changes and motivation.
 
 ## Type of Change
+
 - [ ] Bug fix (non-breaking change)
 - [ ] New feature (non-breaking change)
 - [ ] Breaking change (fix/feature that causes existing functionality to change)
 - [ ] Documentation update
 
 ## Testing
+
 - [ ] Unit tests pass (`npm run test`)
 - [ ] E2E tests pass (`npm run test:e2e`)
 - [ ] Manual testing completed
 
 ## Screenshots (if applicable)
+
 Add screenshots for UI changes.
 
 ## Related Issues
+
 Fixes #(issue number)
 ```
 
@@ -349,27 +370,28 @@ describe('BingoTile', () => {
     }
 
     render(<BingoTile tile={mockTile} />)
-    
+
     expect(screen.getByText('Kill Zulrah')).toBeInTheDocument()
   })
 })
 ```
 
 **Server Action Tests:**
+
 ```typescript
 // Example server action test
-import { createBingo } from '../bingo'
+import { createBingo } from "../bingo"
 
-describe('createBingo', () => {
-  it('creates bingo with valid data', async () => {
+describe("createBingo", () => {
+  it("creates bingo with valid data", async () => {
     const formData = new FormData()
-    formData.append('title', 'Test Bingo')
-    formData.append('eventId', 'event-1')
+    formData.append("title", "Test Bingo")
+    formData.append("eventId", "event-1")
 
     const result = await createBingo(formData)
-    
+
     expect(result.success).toBe(true)
-    expect(result.data.title).toBe('Test Bingo')
+    expect(result.data.title).toBe("Test Bingo")
   })
 })
 ```
@@ -380,17 +402,17 @@ describe('createBingo', () => {
 
 ```typescript
 // Example E2E test
-import { test, expect } from '@playwright/test'
+import { test, expect } from "@playwright/test"
 
-test('user can create new bingo event', async ({ page }) => {
-  await page.goto('/events')
-  
-  await page.click('text=Create Event')
-  await page.fill('[name="title"]', 'Test Event')
-  await page.fill('[name="description"]', 'Test Description')
+test("user can create new bingo event", async ({ page }) => {
+  await page.goto("/events")
+
+  await page.click("text=Create Event")
+  await page.fill('[name="title"]', "Test Event")
+  await page.fill('[name="description"]', "Test Description")
   await page.click('button[type="submit"]')
-  
-  await expect(page.locator('text=Test Event')).toBeVisible()
+
+  await expect(page.locator("text=Test Event")).toBeVisible()
 })
 ```
 
@@ -437,8 +459,9 @@ npm run db:migrate
 ### When to Update Documentation
 
 **Required Updates:**
+
 - New features or API changes → Update README, API docs
-- Configuration changes → Update .env.example, setup guides  
+- Configuration changes → Update .env.example, setup guides
 - Database changes → Update schema documentation
 - Bug fixes → Update troubleshooting guides
 
@@ -468,16 +491,19 @@ npm run db:migrate
 ### Getting Help
 
 **Stuck on Setup?**
+
 - Check existing issues and discussions
 - Ask in Discord #development channel
 - Create GitHub discussion with setup details
 
 **Need Code Review?**
+
 - Keep PRs focused and reasonably sized
 - Explain complex changes in PR description
 - Be responsive to feedback
 
 **Want to Contribute but Don't Know Where to Start?**
+
 - Check issues labeled `good first issue`
 - Look for `help wanted` labels
 - Ask in Discord what areas need help

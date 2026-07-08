@@ -23,11 +23,14 @@ export async function requireSuperAdmin() {
 
   if (!isAdmin) {
     const session = await getServerAuthSession()
-    logger.warn({
-      userId: session?.user?.id,
-      email: session?.user?.email,
-      action: "requireSuperAdmin"
-    }, "Unauthorized access attempt to super-admin restricted action")
+    logger.warn(
+      {
+        userId: session?.user?.id,
+        email: session?.user?.email,
+        action: "requireSuperAdmin",
+      },
+      "Unauthorized access attempt to super-admin restricted action"
+    )
     throw new Error("Super admin access required")
   }
 }

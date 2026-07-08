@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/hooks/use-toast"
@@ -16,7 +16,13 @@ import {
 } from "@/components/ui/dialog"
 import { Link } from "lucide-react"
 
-export function GenerateEventInviteLink({ eventId, children }: { eventId: UUID, children: React.ReactNode }) {
+export function GenerateEventInviteLink({
+  eventId,
+  children,
+}: {
+  eventId: UUID
+  children: React.ReactNode
+}) {
   const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(false)
 
@@ -44,26 +50,27 @@ export function GenerateEventInviteLink({ eventId, children }: { eventId: UUID, 
 
   const handleCopy = () => {
     if (inviteLink) {
-      navigator.clipboard.writeText(inviteLink)
+      navigator.clipboard
+        .writeText(inviteLink)
         .then(() =>
           toast({
             title: "Copied",
             description: "Invite link copied to clipboard.",
           })
-        ).catch(err => console.error(err))
+        )
+        .catch((err) => console.error(err))
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Generate Invite Link</DialogTitle>
           <DialogDescription>
-            Create an invite link for this event. The link can be shared with others to join the event.
+            Create an invite link for this event. The link can be shared with
+            others to join the event.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">

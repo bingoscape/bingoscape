@@ -3,7 +3,13 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -13,7 +19,13 @@ import Link from "next/link"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { TemplatePreviewGrid } from "./template-preview-grid"
 import { Pagination } from "./ui/pagination"
-import { PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "./ui/pagination"
+import {
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "./ui/pagination"
 import type { BingoTemplate } from "@/app/actions/templates"
 
 interface TemplateGalleryProps {
@@ -47,7 +59,7 @@ export function TemplateGallery({
   const totalPages = Math.ceil(totalTemplates / limit)
 
   const createQueryString = (params: Record<string, string | null>) => {
-    const newParams = new URLSearchParams(searchParams?.toString() ?? '')
+    const newParams = new URLSearchParams(searchParams?.toString() ?? "")
 
     Object.entries(params).forEach(([key, value]) => {
       if (value === null) {
@@ -111,18 +123,18 @@ export function TemplateGallery({
           <Button type="submit">Search</Button>
           {hasFilters && (
             <Button type="button" variant="ghost" onClick={handleClearFilters}>
-              <X className="h-4 w-4 mr-2" />
+              <X className="mr-2 h-4 w-4" />
               Clear
             </Button>
           )}
         </form>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="mb-6 flex flex-col gap-4 md:flex-row">
         {categories.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4 md:mb-0">
-            <div className="flex items-center mr-2">
-              <Tag className="h-4 w-4 mr-1" />
+          <div className="mb-4 flex flex-wrap gap-2 md:mb-0">
+            <div className="mr-2 flex items-center">
+              <Tag className="mr-1 h-4 w-4" />
               <span className="text-sm font-medium">Categories:</span>
             </div>
             {categories.map((category) => (
@@ -140,8 +152,8 @@ export function TemplateGallery({
 
         {sizes.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            <div className="flex items-center mr-2">
-              <Grid className="h-4 w-4 mr-1" />
+            <div className="mr-2 flex items-center">
+              <Grid className="mr-1 h-4 w-4" />
               <span className="text-sm font-medium">Size:</span>
             </div>
             {sizes.map((size) => (
@@ -161,49 +173,68 @@ export function TemplateGallery({
       {hasFilters && (
         <div className="mb-6">
           <p className="text-sm text-muted-foreground">
-            Showing {totalTemplates} {totalTemplates === 1 ? "result" : "results"}
+            Showing {totalTemplates}{" "}
+            {totalTemplates === 1 ? "result" : "results"}
             {currentSearch && <span> for &quot;{currentSearch}&quot;</span>}
-            {currentCategory && <span> in category &quot;{currentCategory}&quot;</span>}
+            {currentCategory && (
+              <span> in category &quot;{currentCategory}&quot;</span>
+            )}
             {currentSize && <span> with size &quot;{currentSize}&quot;</span>}
           </p>
         </div>
       )}
 
       {templates.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 px-4 text-center border rounded-lg">
-          <Grid className="h-20 w-20 text-muted-foreground mb-6" />
-          <h2 className="text-2xl font-semibold mb-4">No templates found</h2>
-          <p className="text-base text-muted-foreground max-w-md">
-            Try adjusting your search or filters to find what you&apos;re looking for.
+        <div className="flex flex-col items-center justify-center rounded-lg border px-4 py-16 text-center">
+          <Grid className="mb-6 h-20 w-20 text-muted-foreground" />
+          <h2 className="mb-4 text-2xl font-semibold">No templates found</h2>
+          <p className="max-w-md text-base text-muted-foreground">
+            Try adjusting your search or filters to find what you&apos;re
+            looking for.
           </p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {templates.map((template) => (
-              <Link key={template.id} href={`/templates/${template.id}`} passHref>
-                <Card className="h-full flex flex-col hover:shadow-md transition-shadow cursor-pointer">
+              <Link
+                key={template.id}
+                href={`/templates/${template.id}`}
+                passHref
+              >
+                <Card className="flex h-full cursor-pointer flex-col transition-shadow hover:shadow-md">
                   <CardHeader className="pb-2">
-                    <CardTitle className="line-clamp-1">{template.title}</CardTitle>
-                    <div className="flex items-center mt-1">
-                      <Avatar className="h-5 w-5 mr-2">
-                        <AvatarImage src={template.creatorImage ?? undefined} alt={template.creatorName ?? ""} />
-                        <AvatarFallback>{template.creatorName?.[0] ?? "U"}</AvatarFallback>
+                    <CardTitle className="line-clamp-1">
+                      {template.title}
+                    </CardTitle>
+                    <div className="mt-1 flex items-center">
+                      <Avatar className="mr-2 h-5 w-5">
+                        <AvatarImage
+                          src={template.creatorImage ?? undefined}
+                          alt={template.creatorName ?? ""}
+                        />
+                        <AvatarFallback>
+                          {template.creatorName?.[0] ?? "U"}
+                        </AvatarFallback>
                       </Avatar>
-                      <span className="text-xs text-muted-foreground">{template.creatorName}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {template.creatorName}
+                      </span>
                     </div>
                   </CardHeader>
                   <CardContent className="flex-grow pb-2">
                     <TemplatePreviewGrid
                       templateData={template.templateData}
                       title={template.title}
-                      className="h-48 mb-2"
+                      className="mb-2 h-48"
                     />
-                    <p className="text-sm text-muted-foreground line-clamp-2 mt-2">{template.description}</p>
+                    <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                      {template.description}
+                    </p>
                   </CardContent>
                   <CardFooter className="pt-2">
                     <div className="flex items-center text-sm text-muted-foreground">
-                      <Download className="h-3.5 w-3.5 mr-1" />
+                      <Download className="mr-1 h-3.5 w-3.5" />
                       <span>{template.downloadCount} downloads</span>
                     </div>
                   </CardFooter>
@@ -250,7 +281,9 @@ export function TemplateGallery({
 
                 {currentPage < totalPages && (
                   <PaginationItem>
-                    <PaginationNext href={`${pathname}?${createQueryString({ page: (currentPage + 1).toString() })}`} />
+                    <PaginationNext
+                      href={`${pathname}?${createQueryString({ page: (currentPage + 1).toString() })}`}
+                    />
                   </PaginationItem>
                 )}
               </PaginationContent>
@@ -261,4 +294,3 @@ export function TemplateGallery({
     </div>
   )
 }
-

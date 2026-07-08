@@ -26,6 +26,7 @@ This guide covers creating a dedicated Linux system user on your Debian/Ubuntu s
 - Have minimal necessary permissions for security
 
 **Recommended User Names:**
+
 - `deploy` - Most common for deployment users
 - `bingoscape` - Application-specific naming
 - `app` - Generic application user
@@ -101,6 +102,7 @@ sudo adduser deploy
 ```
 
 **Example Session:**
+
 ```
 Adding user `deploy' ...
 Adding new group `deploy' (1001) ...
@@ -385,6 +387,7 @@ ls -la
 ```
 
 **Expected Structure:**
+
 ```
 /home/deploy/bingoscape/
 ├── nginx/
@@ -611,23 +614,27 @@ id deploy
 **Solutions:**
 
 1. **Check SSH service is running:**
+
    ```bash
    sudo systemctl status sshd
    ```
 
 2. **Verify user exists:**
+
    ```bash
    id deploy
    getent passwd deploy
    ```
 
 3. **Check authorized_keys permissions:**
+
    ```bash
    ls -la /home/deploy/.ssh/authorized_keys
    # Should be: -rw------- 1 deploy deploy
    ```
 
 4. **Fix permissions if needed:**
+
    ```bash
    sudo chown deploy:deploy /home/deploy/.ssh/authorized_keys
    sudo chmod 600 /home/deploy/.ssh/authorized_keys
@@ -635,6 +642,7 @@ id deploy
    ```
 
 5. **Check SSH logs:**
+
    ```bash
    sudo tail -f /var/log/auth.log
    # Try to connect and watch for errors
@@ -652,22 +660,26 @@ id deploy
 **Solutions:**
 
 1. **Verify docker group:**
+
    ```bash
    groups deploy | grep docker
    ```
 
 2. **Add to docker group:**
+
    ```bash
    sudo usermod -aG docker deploy
    ```
 
 3. **Log out and back in:**
+
    ```bash
    exit
    sudo su - deploy
    ```
 
 4. **Check Docker socket:**
+
    ```bash
    ls -la /var/run/docker.sock
    # Should show: srw-rw---- 1 root docker
@@ -685,17 +697,20 @@ id deploy
 **Solutions:**
 
 1. **Check ownership:**
+
    ```bash
    ls -la /home/deploy/
    # bingoscape should be owned by deploy:deploy
    ```
 
 2. **Fix ownership:**
+
    ```bash
    sudo chown -R deploy:deploy /home/deploy/bingoscape
    ```
 
 3. **Check permissions:**
+
    ```bash
    ls -la /home/deploy/bingoscape
    # Directories should be drwxr-xr-x (755)
@@ -736,29 +751,34 @@ ls -la /home/deploy/bingoscape/uploads/test.txt
 **Solutions:**
 
 1. **Verify private key format:**
+
    ```bash
    cat github_actions_key | head -1
    # Should be: -----BEGIN OPENSSH PRIVATE KEY-----
    ```
 
 2. **Check private key permissions (on local machine):**
+
    ```bash
    chmod 600 github_actions_key
    ```
 
 3. **Test with verbose output:**
+
    ```bash
    ssh -vvv -i github_actions_key deploy@your-server-ip
    # Look for authentication attempts and failures
    ```
 
 4. **Verify public key on server:**
+
    ```bash
    cat /home/deploy/.ssh/authorized_keys
    # Should contain the matching public key
    ```
 
 5. **Regenerate key pair:**
+
    ```bash
    # On server as deploy user
    ssh-keygen -t ed25519 -f ~/.ssh/github_actions_new

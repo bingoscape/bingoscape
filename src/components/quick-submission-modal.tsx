@@ -1,13 +1,13 @@
-"use client";
+"use client"
 
-import { useState, useEffect, useCallback } from "react";
-import { useSession } from "next-auth/react";
+import { useState, useEffect, useCallback } from "react"
+import { useSession } from "next-auth/react"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
 import {
   Select,
   SelectContent,
@@ -16,22 +16,22 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import type { Tile, Team, Bingo } from "@/app/actions/events";
-import type { SelectableUser } from "@/app/actions/bingo";
-import { TileSelectionDropdown } from "@/components/tile-selection-dropdown";
-import { SubmissionUploadForm } from "@/components/submission-upload-form";
-import { toast } from "@/hooks/use-toast";
+} from "@/components/ui/select"
+import type { Tile, Team, Bingo } from "@/app/actions/events"
+import type { SelectableUser } from "@/app/actions/bingo"
+import { TileSelectionDropdown } from "@/components/tile-selection-dropdown"
+import { SubmissionUploadForm } from "@/components/submission-upload-form"
+import { toast } from "@/hooks/use-toast"
 
 interface QuickSubmissionModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  bingo: Bingo;
-  currentTeamId: string;
-  currentTeam: Team | undefined;
-  unlockedTiers?: Set<number>;
-  onSubmissionComplete?: () => void;
-  eventId: string;
+  isOpen: boolean
+  onClose: () => void
+  bingo: Bingo
+  currentTeamId: string
+  currentTeam: Team | undefined
+  unlockedTiers?: Set<number>
+  onSubmissionComplete?: () => void
+  eventId: string
 }
 
 export function QuickSubmissionModal({
@@ -44,168 +44,167 @@ export function QuickSubmissionModal({
   onSubmissionComplete,
   eventId,
 }: QuickSubmissionModalProps) {
-  const [selectedTile, setSelectedTile] = useState<Tile | null>(null);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [pastedImage, setPastedImage] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [selectedTile, setSelectedTile] = useState<Tile | null>(null)
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [pastedImage, setPastedImage] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
   // State for submitting on behalf of another user
-  const [selectableUsers, setSelectableUsers] = useState<SelectableUser[]>([]);
+  const [selectableUsers, setSelectableUsers] = useState<SelectableUser[]>([])
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>(
-    undefined,
-  );
-  const { data: session } = useSession();
+    undefined
+  )
+  const { data: session } = useSession()
 
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
-      setSelectedTile(null);
-      setSelectedImage(null);
-      setPastedImage(null);
-      setIsUploading(false);
-      setSelectableUsers([]);
-      setSelectedUserId(undefined);
+      setSelectedTile(null)
+      setSelectedImage(null)
+      setPastedImage(null)
+      setIsUploading(false)
+      setSelectableUsers([])
+      setSelectedUserId(undefined)
     }
-  }, [isOpen]);
+  }, [isOpen])
 
   // Fetch selectable users when modal opens
   useEffect(() => {
     if (isOpen && currentTeamId && eventId) {
       const fetchUsers = async () => {
         try {
-          const { getSelectableUsersForSubmission } = await import(
-            "@/app/actions/bingo"
-          );
+          const { getSelectableUsersForSubmission } =
+            await import("@/app/actions/bingo")
           const users = await getSelectableUsersForSubmission(
             eventId,
-            currentTeamId,
-          );
-          setSelectableUsers(users);
+            currentTeamId
+          )
+          setSelectableUsers(users)
           // Default to first user (which is the current user)
           if (users.length > 0) {
-            setSelectedUserId(users[0]!.id);
+            setSelectedUserId(users[0]!.id)
           }
         } catch (error) {
-          console.error("Failed to fetch selectable users:", error);
+          console.error("Failed to fetch selectable users:", error)
         }
-      };
-      void fetchUsers();
+      }
+      void fetchUsers()
     }
-  }, [isOpen, currentTeamId, eventId]);
+  }, [isOpen, currentTeamId, eventId])
 
   // Helper function to get target user's team ID
   const getTargetUserTeamId = useCallback(
     (userId: string): string => {
       if (!userId || userId === session?.user?.id) {
-        return currentTeamId;
+        return currentTeamId
       }
 
-      const targetUser = selectableUsers.find((u) => u.id === userId);
-      return targetUser?.teamId ?? currentTeamId;
+      const targetUser = selectableUsers.find((u) => u.id === userId)
+      return targetUser?.teamId ?? currentTeamId
     },
-    [currentTeamId, selectableUsers, session?.user?.id],
-  );
+    [currentTeamId, selectableUsers, session?.user?.id]
+  )
 
   // Handle tile selection
   const handleTileSelect = (tile: Tile) => {
-    setSelectedTile(tile);
-  };
+    setSelectedTile(tile)
+  }
 
   // Handle user selection
   const handleUserSelect = (userId: string) => {
-    setSelectedUserId(userId);
+    setSelectedUserId(userId)
     // Clear selected tile when user changes to force re-evaluation
-    setSelectedTile(null);
-  };
+    setSelectedTile(null)
+  }
 
   // Handle image change
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const file = event.target.files?.[0]
     if (file) {
-      setSelectedImage(file);
-      setPastedImage(null);
+      setSelectedImage(file)
+      setPastedImage(null)
     }
-  };
+  }
 
   // Handle image submit
   const handleImageSubmit = async () => {
-    if (!selectedTile || (!selectedImage && !pastedImage)) return;
+    if (!selectedTile || (!selectedImage && !pastedImage)) return
 
-    setIsUploading(true);
+    setIsUploading(true)
 
     try {
-      const formData = new FormData();
-      formData.append("tileId", selectedTile.id);
-      formData.append("teamId", currentTeamId);
-      formData.append("image", selectedImage ?? pastedImage!);
+      const formData = new FormData()
+      formData.append("tileId", selectedTile.id)
+      formData.append("teamId", currentTeamId)
+      formData.append("image", selectedImage ?? pastedImage!)
 
       // Include onBehalfOfUserId if a different user is selected
       if (selectedUserId) {
-        formData.append("onBehalfOfUserId", selectedUserId);
+        formData.append("onBehalfOfUserId", selectedUserId)
       }
 
-      const { submitImage } = await import("@/app/actions/bingo");
-      await submitImage(formData);
+      const { submitImage } = await import("@/app/actions/bingo")
+      await submitImage(formData)
 
       // Find the selected user's name for the toast message
-      const targetUser = selectableUsers.find((u) => u.id === selectedUserId);
+      const targetUser = selectableUsers.find((u) => u.id === selectedUserId)
       const targetUserName =
-        targetUser?.runescapeName ?? targetUser?.name ?? "the user";
+        targetUser?.runescapeName ?? targetUser?.name ?? "the user"
 
       // Success! Show toast
       toast({
         title: "Submission successful",
         description: `Image has been submitted for "${selectedTile.title}" on behalf of ${targetUserName}`,
         duration: 3000,
-      });
+      })
 
       // Close modal and trigger refresh
-      onClose();
-      onSubmissionComplete?.();
+      onClose()
+      onSubmissionComplete?.()
     } catch (error) {
-      console.error("Failed to submit image:", error);
+      console.error("Failed to submit image:", error)
       toast({
         title: "Submission failed",
         description:
           "There was an error submitting your image. Please try again.",
         variant: "destructive",
         duration: 5000,
-      });
+      })
     } finally {
-      setIsUploading(false);
+      setIsUploading(false)
     }
-  };
+  }
 
   // Handle paste event for images
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
-      if (!isOpen || !selectedTile) return;
+      if (!isOpen || !selectedTile) return
 
-      const items = event.clipboardData?.items;
-      if (!items) return;
+      const items = event.clipboardData?.items
+      if (!items) return
 
       for (const item of items) {
         if (item.type.includes("image")) {
-          const file = item.getAsFile();
+          const file = item.getAsFile()
           if (file) {
-            setPastedImage(file);
-            setSelectedImage(null);
-            event.preventDefault();
+            setPastedImage(file)
+            setSelectedImage(null)
+            event.preventDefault()
           }
         }
       }
-    };
+    }
 
-    document.addEventListener("paste", handlePaste);
-    return () => document.removeEventListener("paste", handlePaste);
-  }, [isOpen, selectedTile]);
+    document.addEventListener("paste", handlePaste)
+    return () => document.removeEventListener("paste", handlePaste)
+  }, [isOpen, selectedTile])
 
   const showUserSelection = (() => {
     const assignedUsers = selectableUsers.filter(
-      (user) => user.teamName !== undefined && user.teamName !== null,
-    );
-    return assignedUsers.length > 1;
-  })();
+      (user) => user.teamName !== undefined && user.teamName !== null
+    )
+    return assignedUsers.length > 1
+  })()
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -230,23 +229,23 @@ export function QuickSubmissionModal({
                     // Filter out unassigned users
                     const assignedUsers = selectableUsers.filter(
                       (user) =>
-                        user.teamName !== undefined && user.teamName !== null,
-                    );
+                        user.teamName !== undefined && user.teamName !== null
+                    )
 
                     const groupedUsers = assignedUsers.reduce(
                       (groups, user) => {
-                        const teamKey = user.teamName!;
+                        const teamKey = user.teamName!
                         if (!groups[teamKey]) {
-                          groups[teamKey] = [];
+                          groups[teamKey] = []
                         }
-                        groups[teamKey].push(user);
-                        return groups;
+                        groups[teamKey].push(user)
+                        return groups
                       },
-                      {} as Record<string, typeof assignedUsers>,
-                    );
+                      {} as Record<string, typeof assignedUsers>
+                    )
 
                     const hasMultipleTeams =
-                      Object.keys(groupedUsers).length > 1;
+                      Object.keys(groupedUsers).length > 1
 
                     return hasMultipleTeams
                       ? Object.entries(groupedUsers).map(
@@ -261,13 +260,13 @@ export function QuickSubmissionModal({
                                 </SelectItem>
                               ))}
                             </SelectGroup>
-                          ),
+                          )
                         )
                       : assignedUsers.map((user) => (
                           <SelectItem key={user.id} value={user.id}>
                             {user.runescapeName ?? user.name ?? "Unknown User"}
                           </SelectItem>
-                        ));
+                        ))
                   })()}
                 </SelectContent>
               </Select>
@@ -310,10 +309,18 @@ export function QuickSubmissionModal({
             onSubmit={handleImageSubmit}
             showTeamHeader={false}
             disabled={!selectedTile}
-            isMetricOnly={!!(selectedTile?.goals && selectedTile.goals.length > 0 && selectedTile.goals.every((g: { goalType?: string }) => g.goalType === "metric"))}
+            isMetricOnly={
+              !!(
+                selectedTile?.goals &&
+                selectedTile.goals.length > 0 &&
+                selectedTile.goals.every(
+                  (g: { goalType?: string }) => g.goalType === "metric"
+                )
+              )
+            }
           />
         </div>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

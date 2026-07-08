@@ -1,6 +1,12 @@
 "use client"
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface Team {
   id: string
@@ -15,7 +21,13 @@ interface TeamSelectorProps {
   onTeamChange: (teamId: string | undefined) => void
 }
 
-export function TeamSelector({ teams, currentTeamId, userRole, selectedTeamId, onTeamChange }: TeamSelectorProps) {
+export function TeamSelector({
+  teams,
+  currentTeamId,
+  userRole,
+  selectedTeamId,
+  onTeamChange,
+}: TeamSelectorProps) {
   const isAdminOrManagement = userRole === "admin" || userRole === "management"
 
   // Only show team selector for admins/management

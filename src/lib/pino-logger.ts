@@ -1,21 +1,20 @@
-
-import pino, { type LoggerOptions } from 'pino'
-import { trace } from '@opentelemetry/api'
-import type { LogContext } from '@/lib/logger'
+import pino, { type LoggerOptions } from "pino"
+import { trace } from "@opentelemetry/api"
+import type { LogContext } from "@/lib/logger"
 
 const createPinoConfig = (
-  environment: string = process.env.NODE_ENV ?? 'development'
+  environment: string = process.env.NODE_ENV ?? "development"
 ): LoggerOptions => ({
-  name: 'nextjs-observability-demo',
-  level: environment === 'production' ? 'info' : 'debug',
+  name: "nextjs-observability-demo",
+  level: environment === "production" ? "info" : "debug",
   timestamp: pino.stdTimeFunctions.isoTime,
   formatters: {
     level: (label) => ({ level: label }),
   },
   // Use pino-pretty in development
-  ...(environment !== 'production' && {
+  ...(environment !== "production" && {
     transport: {
-      target: 'pino-pretty',
+      target: "pino-pretty",
       options: {
         colorize: true,
       },
@@ -35,7 +34,7 @@ const createPinoConfig = (
 export const pinoLogger = pino(createPinoConfig())
 
 export class PinoLogger {
-  constructor(private readonly logger = pinoLogger) { }
+  constructor(private readonly logger = pinoLogger) {}
 
   private enrich(context: LogContext = {}): LogContext {
     const span = trace.getActiveSpan()

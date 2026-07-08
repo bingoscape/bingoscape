@@ -1,10 +1,7 @@
 {
   "title": "Business KPIs Dashboard",
   "description": "Track user engagement, core game loop success, and monetization/financial events.",
-  "tags": [
-    "business",
-    "bingoscape"
-  ],
+  "tags": ["business", "bingoscape"],
   "variables": {},
   "widgets": [
     {

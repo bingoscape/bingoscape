@@ -1,9 +1,14 @@
- 
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger"
 import { getTemplateById } from "@/app/actions/templates"
 import { notFound } from "next/navigation"
 import { Breadcrumbs } from "@/components/breadcrumbs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Download, Calendar, Tag, Grid, Info } from "lucide-react"
@@ -14,8 +19,10 @@ import { getServerAuthSession } from "@/server/auth"
 import type { ExportedBingo } from "@/app/actions/bingo-import-export"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
-export default async function TemplatePage(props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+export default async function TemplatePage(props: {
+  params: Promise<{ id: string }>
+}) {
+  const params = await props.params
   const template = await getTemplateById(params.id)
   const session = await getServerAuthSession()
 
@@ -30,7 +37,9 @@ export default async function TemplatePage(props: { params: Promise<{ id: string
   ]
 
   const tags = template.tags?.split(",").map((tag) => tag.trim()) ?? []
-  const createdAt = formatDistanceToNow(new Date(template.createdAt), { addSuffix: true })
+  const createdAt = formatDistanceToNow(new Date(template.createdAt), {
+    addSuffix: true,
+  })
 
   // Try to parse the template data to extract grid size
   let gridSize = ""
@@ -51,28 +60,37 @@ export default async function TemplatePage(props: { params: Promise<{ id: string
     <div className="container mx-auto py-10">
       <Breadcrumbs items={breadcrumbItems} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
+      <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Card className="mb-6">
             <CardHeader>
-              <div className="flex justify-between items-start">
+              <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-2xl">{template.title}</CardTitle>
                   <CardDescription>
-                    <div className="flex items-center mt-2">
-                      <Avatar className="h-6 w-6 mr-2">
-                        <AvatarImage src={template.creatorImage ?? undefined} alt={template.creatorName ?? ""} />
-                        <AvatarFallback>{template.creatorName?.[0] ?? "U"}</AvatarFallback>
+                    <div className="mt-2 flex items-center">
+                      <Avatar className="mr-2 h-6 w-6">
+                        <AvatarImage
+                          src={template.creatorImage ?? undefined}
+                          alt={template.creatorName ?? ""}
+                        />
+                        <AvatarFallback>
+                          {template.creatorName?.[0] ?? "U"}
+                        </AvatarFallback>
                       </Avatar>
-                      <span className="text-sm">Created by {template.creatorName}</span>
+                      <span className="text-sm">
+                        Created by {template.creatorName}
+                      </span>
                     </div>
                   </CardDescription>
                 </div>
-                {session?.user && <ImportTemplateButton templateId={template.id} />}
+                {session?.user && (
+                  <ImportTemplateButton templateId={template.id} />
+                )}
               </div>
             </CardHeader>
             <CardContent>
-              <div className="prose max-w-none dark:prose-invert mb-6">
+              <div className="prose mb-6 max-w-none dark:prose-invert">
                 <p>{template.description}</p>
               </div>
 
@@ -80,12 +98,17 @@ export default async function TemplatePage(props: { params: Promise<{ id: string
                 <Info className="h-4 w-4" />
                 <AlertTitle>Interactive Preview</AlertTitle>
                 <AlertDescription>
-                  Hover over any tile to see detailed information including XP value, description, and goals.
+                  Hover over any tile to see detailed information including XP
+                  value, description, and goals.
                 </AlertDescription>
               </Alert>
 
               <div className="mt-6">
-                <TemplatePreviewGrid templateData={template.templateData} title={template.title} isDetailView={true} />
+                <TemplatePreviewGrid
+                  templateData={template.templateData}
+                  title={template.title}
+                  isDetailView={true}
+                />
               </div>
             </CardContent>
           </Card>
@@ -98,24 +121,24 @@ export default async function TemplatePage(props: { params: Promise<{ id: string
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center">
-                <Download className="h-4 w-4 mr-2 text-muted-foreground" />
+                <Download className="mr-2 h-4 w-4 text-muted-foreground" />
                 <span>{template.downloadCount} downloads</span>
               </div>
 
               <div className="flex items-center">
-                <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
                 <span>Created {createdAt}</span>
               </div>
 
               {gridSize && (
                 <div className="flex items-center">
-                  <Grid className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <Grid className="mr-2 h-4 w-4 text-muted-foreground" />
                   <span>Size: {gridSize} grid</span>
                 </div>
               )}
 
               {tileCount > 0 && totalXP > 0 && (
-                <div className="bg-secondary/50 p-3 rounded-md space-y-2">
+                <div className="space-y-2 rounded-md bg-secondary/50 p-3">
                   <div className="flex justify-between text-sm">
                     <span>Total Tiles:</span>
                     <span className="font-medium">{tileCount}</span>
@@ -126,15 +149,17 @@ export default async function TemplatePage(props: { params: Promise<{ id: string
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Average XP per Tile:</span>
-                    <span className="font-medium">{(totalXP / tileCount).toFixed(1)} XP</span>
+                    <span className="font-medium">
+                      {(totalXP / tileCount).toFixed(1)} XP
+                    </span>
                   </div>
                 </div>
               )}
 
               {template.category && (
                 <div>
-                  <h4 className="text-sm font-medium mb-2 flex items-center">
-                    <Tag className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <h4 className="mb-2 flex items-center text-sm font-medium">
+                    <Tag className="mr-2 h-4 w-4 text-muted-foreground" />
                     Category
                   </h4>
                   <Badge variant="secondary">{template.category}</Badge>
@@ -143,7 +168,7 @@ export default async function TemplatePage(props: { params: Promise<{ id: string
 
               {tags.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium mb-2">Tags</h4>
+                  <h4 className="mb-2 text-sm font-medium">Tags</h4>
                   <div className="flex flex-wrap gap-2">
                     {tags.map((tag) => (
                       <Badge key={tag} variant="outline">
@@ -160,4 +185,3 @@ export default async function TemplatePage(props: { params: Promise<{ id: string
     </div>
   )
 }
-

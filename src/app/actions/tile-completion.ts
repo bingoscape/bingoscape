@@ -1,13 +1,13 @@
 "use server"
 
- 
- 
- 
- 
-
 import { db } from "@/server/db"
-import { logger } from "@/lib/logger";
-import { goals, goalGroups, teamGoalProgress, teamTileSubmissions } from "@/server/db/schema"
+import { logger } from "@/lib/logger"
+import {
+  goals,
+  goalGroups,
+  teamGoalProgress,
+  teamTileSubmissions,
+} from "@/server/db/schema"
 import { eq, and, isNull } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 
@@ -23,7 +23,10 @@ interface GoalEvaluationNode {
 /**
  * Evaluate if a goal is complete for a team
  */
-async function evaluateGoal(goalId: string, teamId: string): Promise<{ isComplete: boolean, currentValue: number }> {
+async function evaluateGoal(
+  goalId: string,
+  teamId: string
+): Promise<{ isComplete: boolean; currentValue: number }> {
   const goal = await db.query.goals.findFirst({
     where: eq(goals.id, goalId),
   })
@@ -31,19 +34,25 @@ async function evaluateGoal(goalId: string, teamId: string): Promise<{ isComplet
   if (!goal) return { isComplete: false, currentValue: 0 }
 
   const progress = await db.query.teamGoalProgress.findFirst({
-    where: and(eq(teamGoalProgress.goalId, goalId), eq(teamGoalProgress.teamId, teamId)),
+    where: and(
+      eq(teamGoalProgress.goalId, goalId),
+      eq(teamGoalProgress.teamId, teamId)
+    ),
   })
 
   return {
     isComplete: (progress?.currentValue || 0) >= goal.targetValue,
-    currentValue: progress?.currentValue || 0
+    currentValue: progress?.currentValue || 0,
   }
 }
 
 /**
  * Recursively evaluate a goal group
  */
-export async function evaluateGroup(groupId: string, teamId: string): Promise<GoalEvaluationNode> {
+export async function evaluateGroup(
+  groupId: string,
+  teamId: string
+): Promise<GoalEvaluationNode> {
   const group = await db.query.goalGroups.findFirst({
     where: eq(goalGroups.id, groupId),
     with: {
@@ -72,7 +81,10 @@ export async function evaluateGroup(groupId: string, teamId: string): Promise<Go
 
   // Evaluate child goals
   for (const childGoal of group.goals) {
-    const { isComplete, currentValue } = await evaluateGoal(childGoal.id, teamId)
+    const { isComplete, currentValue } = await evaluateGoal(
+      childGoal.id,
+      teamId
+    )
     children.push({
       type: "goal",
       id: childGoal.id,
@@ -85,7 +97,8 @@ export async function evaluateGroup(groupId: string, teamId: string): Promise<Go
   let isComplete = false
   let currentValue = 0
   if (group.logicalOperator === "AND") {
-    isComplete = children.length > 0 && children.every((child) => child.isComplete)
+    isComplete =
+      children.length > 0 && children.every((child) => child.isComplete)
     currentValue = isComplete ? 1 : 0
   } else if (group.logicalOperator === "OR") {
     // OR - check if at least minRequiredGoals are complete
@@ -119,11 +132,17 @@ export async function evaluateGroup(groupId: string, teamId: string): Promise<Go
 /**
  * Evaluate if a tile should be complete based on its goal tree
  */
-export async function evaluateTileCompletion(tileId: string, teamId: string): Promise<boolean> {
+export async function evaluateTileCompletion(
+  tileId: string,
+  teamId: string
+): Promise<boolean> {
   try {
     // Get all root-level groups and goals for this tile
     const rootGroups = await db.query.goalGroups.findMany({
-      where: and(eq(goalGroups.tileId, tileId), isNull(goalGroups.parentGroupId)),
+      where: and(
+        eq(goalGroups.tileId, tileId),
+        isNull(goalGroups.parentGroupId)
+      ),
     })
 
     const rootGoals = await db.query.goals.findMany({
@@ -169,7 +188,10 @@ export async function checkAndAutoCompleteTile(tileId: string, teamId: string) {
   try {
     // Check if tile is already submitted
     const existingSubmission = await db.query.teamTileSubmissions.findFirst({
-      where: and(eq(teamTileSubmissions.tileId, tileId), eq(teamTileSubmissions.teamId, teamId)),
+      where: and(
+        eq(teamTileSubmissions.tileId, tileId),
+        eq(teamTileSubmissions.teamId, teamId)
+      ),
     })
 
     // Evaluate if tile is complete
@@ -234,10 +256,16 @@ export async function checkAndAutoCompleteTile(tileId: string, teamId: string) {
 /**
  * Get detailed evaluation tree for debugging/display
  */
-export async function getDetailedEvaluation(tileId: string, teamId: string): Promise<GoalEvaluationNode[]> {
+export async function getDetailedEvaluation(
+  tileId: string,
+  teamId: string
+): Promise<GoalEvaluationNode[]> {
   try {
     const rootGroups = await db.query.goalGroups.findMany({
-      where: and(eq(goalGroups.tileId, tileId), isNull(goalGroups.parentGroupId)),
+      where: and(
+        eq(goalGroups.tileId, tileId),
+        isNull(goalGroups.parentGroupId)
+      ),
     })
 
     const rootGoals = await db.query.goals.findMany({

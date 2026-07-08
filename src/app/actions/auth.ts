@@ -1,7 +1,7 @@
 "use server"
 
 import { hashPassword } from "@/lib/password"
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logger"
 import { signUpSchema, type SignUpInput } from "@/lib/validation/auth"
 import { db } from "@/server/db"
 import { users } from "@/server/db/schema"

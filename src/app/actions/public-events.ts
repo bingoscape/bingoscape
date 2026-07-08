@@ -1,6 +1,6 @@
-"use server";
+"use server"
 
-import { db } from "@/server/db";
+import { db } from "@/server/db"
 import {
   events,
   bingos,
@@ -8,28 +8,28 @@ import {
   teamTileSubmissions,
   tiles,
   clans,
-} from "@/server/db/schema";
-import { eq, and, count, inArray, asc } from "drizzle-orm";
-import type { UUID } from "crypto";
-import { logger } from "@/lib/logger";
+} from "@/server/db/schema"
+import { eq, and, count, inArray, asc } from "drizzle-orm"
+import type { UUID } from "crypto"
+import { logger } from "@/lib/logger"
 
 export interface PublicEventData {
-  id: string;
-  title: string;
-  description: string | null;
-  startDate: Date;
-  endDate: Date;
-  clanName: string | null;
-  bingoCount: number;
-  basePrizePool: number;
-  minimumBuyIn: number;
+  id: string
+  title: string
+  description: string | null
+  startDate: Date
+  endDate: Date
+  clanName: string | null
+  bingoCount: number
+  basePrizePool: number
+  minimumBuyIn: number
 }
 
 export interface PublicTeamData {
-  id: string;
-  name: string;
-  completedTiles: string[]; // Array of tile IDs that the team has completed
-  inProgressTiles: string[]; // Array of tile IDs that are in progress (pending, requires_interaction, declined)
+  id: string
+  name: string
+  completedTiles: string[] // Array of tile IDs that the team has completed
+  inProgressTiles: string[] // Array of tile IDs that are in progress (pending, requires_interaction, declined)
 }
 
 /**
@@ -37,30 +37,28 @@ export interface PublicTeamData {
  * Only returns events that are marked as public
  */
 export async function getPublicEvent(
-  eventId: string,
+  eventId: string
 ): Promise<PublicEventData | null> {
   try {
     // First get the event
     const eventResult = await db.query.events.findFirst({
       where: and(
         eq(events.id, eventId as UUID),
-        eq(events.public, true), // Only return public events
+        eq(events.public, true) // Only return public events
       ),
-    });
+    })
 
     if (!eventResult) {
-      return null;
+      return null
     }
 
     const bingoCountResult = await db
       .select({ count: count() })
       .from(bingos)
-      .where(
-        and(eq(bingos.eventId, eventId as UUID), eq(bingos.visible, true)),
-      );
+      .where(and(eq(bingos.eventId, eventId as UUID), eq(bingos.visible, true)))
 
-    const bingoCount = bingoCountResult[0]?.count ?? 0;
-    const clanName = await getClanName(eventResult.clanId);
+    const bingoCount = bingoCountResult[0]?.count ?? 0
+    const clanName = await getClanName(eventResult.clanId)
 
     // Format the result
     return {
@@ -73,19 +71,19 @@ export async function getPublicEvent(
       minimumBuyIn: eventResult.minimumBuyIn,
       clanName: clanName,
       bingoCount: Number(bingoCount),
-    };
+    }
   } catch (error) {
-    logger.error({ error }, "Error fetching public event:", error);
-    return null;
+    logger.error({ error }, "Error fetching public event:", error)
+    return null
   }
 }
 
 async function getClanName(clanId: string | null): Promise<string | null> {
-  if (!clanId) return null;
+  if (!clanId) return null
   const clan = await db.query.clans.findFirst({
     where: eq(clans.id, clanId),
-  });
-  return clan?.name ?? null;
+  })
+  return clan?.name ?? null
 }
 
 /**
@@ -106,15 +104,15 @@ export async function getPublicBingos(eventId: string) {
       .where(
         and(
           eq(bingos.eventId, eventId as UUID),
-          eq(bingos.visible, true), // Only return public bingos
-        ),
+          eq(bingos.visible, true) // Only return public bingos
+        )
       )
-      .execute();
+      .execute()
 
-    return result;
+    return result
   } catch (error) {
-    logger.error({ error, eventId }, "Error fetching public bingos");
-    return [];
+    logger.error({ error, eventId }, "Error fetching public bingos")
+    return []
   }
 }
 
@@ -124,7 +122,7 @@ export async function getPublicBingos(eventId: string) {
  */
 export async function getPublicTeams(
   eventId: string,
-  bingoId: string,
+  bingoId: string
 ): Promise<PublicTeamData[]> {
   try {
     const eventTeams = await db.query.teams.findMany({
@@ -133,7 +131,7 @@ export async function getPublicTeams(
         id: true,
         name: true,
       },
-    });
+    })
 
     // Get all tile IDs for this bingo board
     const bingoTiles = await db
@@ -141,11 +139,11 @@ export async function getPublicTeams(
         id: tiles.id,
       })
       .from(tiles)
-      .where(eq(tiles.bingoId, bingoId as UUID));
+      .where(eq(tiles.bingoId, bingoId as UUID))
 
-    const bingoTileIds = bingoTiles.map((tile) => tile.id);
+    const bingoTileIds = bingoTiles.map((tile) => tile.id)
 
-    const result: PublicTeamData[] = [];
+    const result: PublicTeamData[] = []
 
     // For each team, get their completed and in-progress tiles for this specific bingo board
     for (const team of eventTeams) {
@@ -159,9 +157,9 @@ export async function getPublicTeams(
           and(
             eq(teamTileSubmissions.teamId, team.id),
             eq(teamTileSubmissions.status, "approved"),
-            inArray(teamTileSubmissions.tileId, bingoTileIds),
-          ),
-        );
+            inArray(teamTileSubmissions.tileId, bingoTileIds)
+          )
+        )
 
       // Get in-progress tiles (status = "pending", "requires_interaction") for this bingo board
       const inProgressTileSubmissions = await db
@@ -173,26 +171,26 @@ export async function getPublicTeams(
           and(
             eq(teamTileSubmissions.teamId, team.id),
             inArray(teamTileSubmissions.status, ["pending", "needs_review"]),
-            inArray(teamTileSubmissions.tileId, bingoTileIds),
-          ),
-        );
+            inArray(teamTileSubmissions.tileId, bingoTileIds)
+          )
+        )
 
       result.push({
         id: team.id,
         name: team.name,
         completedTiles: completedTileSubmissions.map(
-          (submission) => submission.tileId,
+          (submission) => submission.tileId
         ),
         inProgressTiles: inProgressTileSubmissions.map(
-          (submission) => submission.tileId,
+          (submission) => submission.tileId
         ),
-      });
+      })
     }
 
-    return result;
+    return result
   } catch (error) {
-    logger.error({ error, eventId, bingoId }, "Error fetching public teams");
-    return [];
+    logger.error({ error, eventId, bingoId }, "Error fetching public teams")
+    return []
   }
 }
 
@@ -203,10 +201,10 @@ export async function getPublicBingoDetails(bingoId: string) {
   try {
     const bingo = await db.query.bingos.findFirst({
       where: and(eq(bingos.id, bingoId as UUID), eq(bingos.visible, true)),
-    });
+    })
 
     if (!bingo) {
-      return null;
+      return null
     }
 
     // Get visible tiles with their goals
@@ -216,14 +214,14 @@ export async function getPublicBingoDetails(bingoId: string) {
       with: {
         goals: true,
       },
-    });
+    })
 
     return {
       ...bingo,
       tiles: bingoTiles,
-    };
+    }
   } catch (error) {
-    logger.error({ error, bingoId }, "Error fetching public bingo details");
-    return null;
+    logger.error({ error, bingoId }, "Error fetching public bingo details")
+    return null
   }
 }

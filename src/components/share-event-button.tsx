@@ -21,7 +21,11 @@ interface ShareEventButtonProps {
   isPublic: boolean
 }
 
-export function ShareEventButton({ eventId, eventTitle, isPublic }: ShareEventButtonProps) {
+export function ShareEventButton({
+  eventId,
+  eventTitle,
+  isPublic,
+}: ShareEventButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [publicUrl, setPublicUrl] = useState("")
   const [isMounted, setIsMounted] = useState(false)
@@ -31,7 +35,6 @@ export function ShareEventButton({ eventId, eventTitle, isPublic }: ShareEventBu
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydration pattern for SSR
     setIsMounted(true)
     if (typeof window !== "undefined") {
-       
       setPublicUrl(`${window.location.origin}/public/events/${eventId}`)
     }
   }, [eventId])
@@ -44,7 +47,8 @@ export function ShareEventButton({ eventId, eventTitle, isPublic }: ShareEventBu
       .then(() => {
         toast({
           title: "Link copied",
-          description: "The public event link has been copied to your clipboard.",
+          description:
+            "The public event link has been copied to your clipboard.",
         })
       })
       .catch(() => {
@@ -80,19 +84,22 @@ export function ShareEventButton({ eventId, eventTitle, isPublic }: ShareEventBu
         <DialogHeader>
           <DialogTitle>Share Event</DialogTitle>
           <DialogDescription>
-            Share a public link to this event. Anyone with this link can view the event details.
+            Share a public link to this event. Anyone with this link can view
+            the event details.
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
-          <p className="text-sm font-medium mb-2">Public link for &quot;{eventTitle}&quot;</p>
+          <p className="mb-2 text-sm font-medium">
+            Public link for &quot;{eventTitle}&quot;
+          </p>
           <div className="flex items-center gap-2">
             <Input value={publicUrl} readOnly className="flex-1" />
             <Button variant="outline" size="icon" onClick={handleCopy}>
               <Copy className="h-4 w-4" />
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
+          <p className="mt-2 text-xs text-muted-foreground">
             Note: Only visible bingos will be displayed on the public page.
           </p>
         </div>
@@ -110,4 +117,3 @@ export function ShareEventButton({ eventId, eventTitle, isPublic }: ShareEventBu
     </Dialog>
   )
 }
-

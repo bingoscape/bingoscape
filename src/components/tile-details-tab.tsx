@@ -593,8 +593,13 @@ function TileProgress({
   const router = useRouter()
   const [isSyncing, setIsSyncing] = useState(false)
 
-  const hasMetricGoals = selectedTile?.goals?.some((g: any) => g.goalType === "metric")
-  const canSync = hasMetricGoals && selectedTile?.bingoId && (userRole === "admin" || userRole === "management")
+  const hasMetricGoals = selectedTile?.goals?.some(
+    (g: any) => g.goalType === "metric"
+  )
+  const canSync =
+    hasMetricGoals &&
+    selectedTile?.bingoId &&
+    (userRole === "admin" || userRole === "management")
 
   const handleSync = async () => {
     if (!selectedTile?.bingoId) return
@@ -607,7 +612,8 @@ function TileProgress({
           <span>Syncing Tracker Data...</span>
         </div>
       ),
-      description: "Fetching progress from WiseOldMan. This may take a few seconds.",
+      description:
+        "Fetching progress from WiseOldMan. This may take a few seconds.",
       duration: 60000,
     })
 
@@ -617,7 +623,8 @@ function TileProgress({
         update({
           id,
           title: "Sync complete",
-          description: result.message || "Tracker data synchronized successfully.",
+          description:
+            result.message || "Tracker data synchronized successfully.",
           variant: "default",
           duration: 5000,
         })
@@ -648,7 +655,12 @@ function TileProgress({
     <div className="space-y-6">
       {canSync && (
         <div className="flex justify-end">
-          <Button onClick={handleSync} disabled={isSyncing} variant="outline" size="sm">
+          <Button
+            onClick={handleSync}
+            disabled={isSyncing}
+            variant="outline"
+            size="sm"
+          >
             {isSyncing ? (
               <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
             ) : (

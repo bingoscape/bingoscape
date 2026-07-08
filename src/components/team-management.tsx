@@ -15,6 +15,7 @@ import {
   getEventParticipants,
   updateTeamMember,
   updateTeamName,
+  assignParticipantToTeam,
 } from "@/app/actions/team"
 import { toast } from "@/hooks/use-toast"
 import {
@@ -100,14 +101,21 @@ type Participant = {
 }
 
 function getSkillRingClass(skillLevel?: string | null) {
-  if (!skillLevel) return "ring-2 ring-orange-400 ring-offset-2 ring-offset-background"
+  if (!skillLevel)
+    return "ring-2 ring-orange-400 ring-offset-2 ring-offset-background"
   switch (skillLevel) {
-    case "beginner": return "ring-2 ring-green-500 ring-offset-2 ring-offset-background"
-    case "intermediate": return "ring-2 ring-blue-500 ring-offset-2 ring-offset-background"
-    case "advanced": return "ring-2 ring-purple-500 ring-offset-2 ring-offset-background"
-    case "expert": return "ring-2 ring-red-500 ring-offset-2 ring-offset-background"
-    case "pvmgod": return "ring-2 ring-yellow-500 ring-offset-2 ring-offset-background"
-    default: return "ring-2 ring-orange-400 ring-offset-2 ring-offset-background"
+    case "beginner":
+      return "ring-2 ring-green-500 ring-offset-2 ring-offset-background"
+    case "intermediate":
+      return "ring-2 ring-blue-500 ring-offset-2 ring-offset-background"
+    case "advanced":
+      return "ring-2 ring-purple-500 ring-offset-2 ring-offset-background"
+    case "expert":
+      return "ring-2 ring-red-500 ring-offset-2 ring-offset-background"
+    case "pvmgod":
+      return "ring-2 ring-yellow-500 ring-offset-2 ring-offset-background"
+    default:
+      return "ring-2 ring-orange-400 ring-offset-2 ring-offset-background"
   }
 }
 
@@ -563,19 +571,27 @@ function TeamCard({
               )}
 
               {/* Skill Level Badge */}
-              {teamStats.averageSkillLevel !== null && teamStats.averageSkillLevel !== undefined && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge variant="outline" className="flex items-center gap-1.5 bg-background">
-                        <Crown className="h-3 w-3 text-yellow-500" />
-                        <span className="font-medium">Avg Skill: {teamStats.averageSkillLevel.toFixed(1)}</span>
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent>Average Team Skill Level (1-5)</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
+              {teamStats.averageSkillLevel !== null &&
+                teamStats.averageSkillLevel !== undefined && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge
+                          variant="outline"
+                          className="flex items-center gap-1.5 bg-background"
+                        >
+                          <Crown className="h-3 w-3 text-yellow-500" />
+                          <span className="font-medium">
+                            Avg Skill: {teamStats.averageSkillLevel.toFixed(1)}
+                          </span>
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Average Team Skill Level (1-5)
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
 
               {/* Balance Score */}
               {eventAvgEHP && eventAvgEHB && (
@@ -974,7 +990,13 @@ export function TeamManagement({ eventId }: { eventId: string }) {
       (p) =>
         !teams.some((team) => team.teamMembers.some((m) => m.user.id === p.id))
     )
-    const skillOrder: Record<string, number> = { pvmgod: 5, expert: 4, advanced: 3, intermediate: 2, beginner: 1 }
+    const skillOrder: Record<string, number> = {
+      pvmgod: 5,
+      expert: 4,
+      advanced: 3,
+      intermediate: 2,
+      beginner: 1,
+    }
     return unassigned.sort((a, b) => {
       const aVal = a.skillLevel ? skillOrder[a.skillLevel] || 0 : 0
       const bVal = b.skillLevel ? skillOrder[b.skillLevel] || 0 : 0
@@ -1030,14 +1052,15 @@ export function TeamManagement({ eventId }: { eventId: string }) {
   const handleCreateTeam = async () => {
     if (!newTeamName.trim()) return
     try {
-      await createTeam(eventId, newTeamName)
+      const res = await createTeam(eventId, newTeamName)
+      if (!res?.success) throw new Error(res?.error || "Failed to create team")
       setNewTeamName("")
       await fetchTeamsAndParticipants()
       toast({ title: "Team created successfully" })
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to create team",
+        description: error.message || "Failed to create team",
         variant: "destructive",
       })
     }
@@ -1045,13 +1068,15 @@ export function TeamManagement({ eventId }: { eventId: string }) {
 
   const handleAddUserToTeam = async (teamId: string, userId: string) => {
     try {
-      await addUserToTeam(teamId, userId)
+      const res = await addUserToTeam(teamId, userId)
+      if (!res?.success)
+        throw new Error(res?.error || "Failed to add user to team")
       await fetchTeamsAndParticipants()
       toast({ title: "User added to team" })
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to add user to team",
+        description: error.message || "Failed to add user to team",
         variant: "destructive",
       })
     }
@@ -1059,13 +1084,15 @@ export function TeamManagement({ eventId }: { eventId: string }) {
 
   const handleRemoveUserFromTeam = async (teamId: string, userId: string) => {
     try {
-      await removeUserFromTeam(teamId, userId)
+      const res = await removeUserFromTeam(teamId, userId)
+      if (!res?.success)
+        throw new Error(res?.error || "Failed to remove user from team")
       await fetchTeamsAndParticipants()
       toast({ title: "User removed from team" })
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to remove user from team",
+        description: error.message || "Failed to remove user from team",
         variant: "destructive",
       })
     }
@@ -1075,13 +1102,14 @@ export function TeamManagement({ eventId }: { eventId: string }) {
     if (!confirm("Are you sure you want to delete this team?")) return
 
     try {
-      await deleteTeam(teamId)
+      const res = await deleteTeam(teamId)
+      if (!res?.success) throw new Error(res?.error || "Failed to delete team")
       await fetchTeamsAndParticipants()
       toast({ title: "Team deleted successfully" })
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to delete team",
+        description: error.message || "Failed to delete team",
         variant: "destructive",
       })
     }
@@ -1093,15 +1121,17 @@ export function TeamManagement({ eventId }: { eventId: string }) {
     currentIsLeader: boolean
   ) => {
     try {
-      await updateTeamMember(teamId, userId, !currentIsLeader)
+      const res = await updateTeamMember(teamId, userId, !currentIsLeader)
+      if (!res?.success)
+        throw new Error(res?.error || "Failed to update team leader")
       await fetchTeamsAndParticipants()
       toast({
         title: currentIsLeader ? "Team leader removed" : "Team leader assigned",
       })
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to update team leader",
+        description: error.message || "Failed to update team leader",
         variant: "destructive",
       })
     }
@@ -1129,14 +1159,16 @@ export function TeamManagement({ eventId }: { eventId: string }) {
   const handleSaveTeamName = async (teamId: string) => {
     if (!editedTeamName.trim()) return
     try {
-      await updateTeamName(teamId, editedTeamName)
+      const res = await updateTeamName(teamId, editedTeamName)
+      if (!res?.success)
+        throw new Error(res?.error || "Failed to update team name")
       await fetchTeamsAndParticipants()
       setEditingTeamId(null)
       toast({ title: "Team name updated" })
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to update team name",
+        description: error.message || "Failed to update team name",
         variant: "destructive",
       })
     }
@@ -1170,15 +1202,20 @@ export function TeamManagement({ eventId }: { eventId: string }) {
       }
 
       try {
-        // Remove from current team and add to new team
-        await removeUserFromTeam(activeData.teamId, activeData.member.user.id)
-        await addUserToTeam(targetTeamId, activeData.member.user.id)
+        // Use the proper transaction function instead of sequential add/remove
+        const res = await assignParticipantToTeam(
+          eventId,
+          activeData.member.user.id,
+          targetTeamId
+        )
+        if (!res?.success)
+          throw new Error(res?.error || "Failed to move team member")
         await fetchTeamsAndParticipants()
         toast({ title: "Member moved to new team" })
-      } catch (error) {
+      } catch (error: any) {
         toast({
           title: "Error",
-          description: "Failed to move team member",
+          description: error.message || "Failed to move team member",
           variant: "destructive",
         })
       }
@@ -1188,13 +1225,15 @@ export function TeamManagement({ eventId }: { eventId: string }) {
       const targetTeamId = overData.teamId
 
       try {
-        await addUserToTeam(targetTeamId, activeData.participant.id)
+        const res = await addUserToTeam(targetTeamId, activeData.participant.id)
+        if (!res?.success)
+          throw new Error(res?.error || "Failed to add participant to team")
         await fetchTeamsAndParticipants()
         toast({ title: "Participant added to team" })
-      } catch (error) {
+      } catch (error: any) {
         toast({
           title: "Error",
-          description: "Failed to add participant to team",
+          description: error.message || "Failed to add participant to team",
           variant: "destructive",
         })
       }
@@ -1205,13 +1244,18 @@ export function TeamManagement({ eventId }: { eventId: string }) {
       overData.type === "unassigned-pool"
     ) {
       try {
-        await removeUserFromTeam(activeData.teamId, activeData.member.user.id)
+        const res = await removeUserFromTeam(
+          activeData.teamId,
+          activeData.member.user.id
+        )
+        if (!res?.success)
+          throw new Error(res?.error || "Failed to remove team member")
         await fetchTeamsAndParticipants()
         toast({ title: "Member removed from team" })
-      } catch (error) {
+      } catch (error: any) {
         toast({
           title: "Error",
-          description: "Failed to remove team member",
+          description: error.message || "Failed to remove team member",
           variant: "destructive",
         })
       }

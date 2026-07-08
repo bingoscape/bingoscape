@@ -28,16 +28,14 @@ import {
   getParticipantDonations,
 } from "@/app/actions/events"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
+import { Loader2, Plus, Edit, Trash2, DollarSign, Check, X } from "lucide-react"
 import {
-  Loader2,
-  Plus,
-  Edit,
-  Trash2,
-  DollarSign,
-  Check,
-  X,
-} from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 
 interface Donation {
   id: string
@@ -76,7 +74,10 @@ export function DonationManagementModal({
   const fetchDonations = useCallback(async () => {
     setLoading(true)
     try {
-      const donationsData = await getParticipantDonations(eventId, participantId)
+      const donationsData = await getParticipantDonations(
+        eventId,
+        participantId
+      )
       setDonations(donationsData)
     } catch (error) {
       console.error("Error fetching donations:", error)
@@ -95,7 +96,6 @@ export function DonationManagementModal({
       void fetchDonations()
     }
   }, [isOpen, fetchDonations])
-
 
   const handleAddDonation = async () => {
     if (!newDonation.amount || Number(newDonation.amount) <= 0) {
@@ -128,15 +128,25 @@ export function DonationManagementModal({
       console.error("Error adding donation:", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to add donation",
+        description:
+          error instanceof Error ? error.message : "Failed to add donation",
         variant: "destructive",
       })
     }
   }
 
-  const handleUpdateDonation = async (donation: Donation, amount: number, description: string | null) => {
+  const handleUpdateDonation = async (
+    donation: Donation,
+    amount: number,
+    description: string | null
+  ) => {
     try {
-      await updateParticipantDonation(eventId, donation.id, amount, description ?? "")
+      await updateParticipantDonation(
+        eventId,
+        donation.id,
+        amount,
+        description ?? ""
+      )
 
       setEditingDonation(null)
       await fetchDonations()
@@ -150,7 +160,8 @@ export function DonationManagementModal({
       console.error("Error updating donation:", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update donation",
+        description:
+          error instanceof Error ? error.message : "Failed to update donation",
         variant: "destructive",
       })
     }
@@ -175,17 +186,23 @@ export function DonationManagementModal({
       console.error("Error removing donation:", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to remove donation",
+        description:
+          error instanceof Error ? error.message : "Failed to remove donation",
         variant: "destructive",
       })
     }
   }
 
-  const totalDonations = donations.reduce((sum, donation) => sum + donation.amount, 0)
+  const totalDonations = donations.reduce(
+    (sum, donation) => sum + donation.amount,
+    0
+  )
 
   const EditableDonationRow = ({ donation }: { donation: Donation }) => {
     const [editAmount, setEditAmount] = useState(donation.amount.toString())
-    const [editDescription, setEditDescription] = useState(donation.description ?? "")
+    const [editDescription, setEditDescription] = useState(
+      donation.description ?? ""
+    )
     const [isUpdating, setIsUpdating] = useState(false)
 
     const handleSave = async () => {
@@ -200,7 +217,11 @@ export function DonationManagementModal({
 
       setIsUpdating(true)
       try {
-        await handleUpdateDonation(donation, Number(editAmount), editDescription || null)
+        await handleUpdateDonation(
+          donation,
+          Number(editAmount),
+          editDescription || null
+        )
       } finally {
         setIsUpdating(false)
       }
@@ -238,11 +259,7 @@ export function DonationManagementModal({
         </TableCell>
         <TableCell>
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={isUpdating}
-            >
+            <Button size="sm" onClick={handleSave} disabled={isUpdating}>
               {isUpdating ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -265,7 +282,7 @@ export function DonationManagementModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
@@ -289,14 +306,15 @@ export function DonationManagementModal({
                     {formatRunescapeGold(totalDonations)} GP
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Total from {donations.length} donation{donations.length !== 1 ? 's' : ''}
+                    Total from {donations.length} donation
+                    {donations.length !== 1 ? "s" : ""}
                   </div>
                 </div>
                 <Button
                   onClick={() => setIsAddingDonation(true)}
                   className="bg-green-600 hover:bg-green-700"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="mr-2 h-4 w-4" />
                   Add Donation
                 </Button>
               </div>
@@ -316,16 +334,28 @@ export function DonationManagementModal({
                     <Input
                       type="number"
                       value={newDonation.amount}
-                      onChange={(e) => setNewDonation(prev => ({ ...prev, amount: e.target.value }))}
+                      onChange={(e) =>
+                        setNewDonation((prev) => ({
+                          ...prev,
+                          amount: e.target.value,
+                        }))
+                      }
                       placeholder="Enter amount"
                       min="0"
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Description (Optional)</label>
+                    <label className="text-sm font-medium">
+                      Description (Optional)
+                    </label>
                     <Input
                       value={newDonation.description}
-                      onChange={(e) => setNewDonation(prev => ({ ...prev, description: e.target.value }))}
+                      onChange={(e) =>
+                        setNewDonation((prev) => ({
+                          ...prev,
+                          description: e.target.value,
+                        }))
+                      }
                       placeholder="Optional description"
                     />
                   </div>
@@ -340,9 +370,7 @@ export function DonationManagementModal({
                   >
                     Cancel
                   </Button>
-                  <Button onClick={handleAddDonation}>
-                    Add Donation
-                  </Button>
+                  <Button onClick={handleAddDonation}>Add Donation</Button>
                 </div>
               </CardContent>
             </Card>
@@ -358,11 +386,11 @@ export function DonationManagementModal({
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="flex justify-center items-center py-8">
+                <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
               ) : donations.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="py-8 text-center text-muted-foreground">
                   No donations found for this participant
                 </div>
               ) : (
@@ -378,7 +406,10 @@ export function DonationManagementModal({
                   <TableBody>
                     {donations.map((donation) =>
                       editingDonation?.id === donation.id ? (
-                        <EditableDonationRow key={donation.id} donation={donation} />
+                        <EditableDonationRow
+                          key={donation.id}
+                          donation={donation}
+                        />
                       ) : (
                         <TableRow key={donation.id}>
                           <TableCell className="font-medium">
@@ -386,12 +417,16 @@ export function DonationManagementModal({
                           </TableCell>
                           <TableCell>
                             {donation.description ?? (
-                              <span className="text-muted-foreground italic">No description</span>
+                              <span className="italic text-muted-foreground">
+                                No description
+                              </span>
                             )}
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {new Date(donation.createdAt).toLocaleDateString()}
+                              {new Date(
+                                donation.createdAt
+                              ).toLocaleDateString()}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -406,7 +441,9 @@ export function DonationManagementModal({
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleRemoveDonation(donation.id)}
+                                onClick={() =>
+                                  handleRemoveDonation(donation.id)
+                                }
                                 className="text-destructive hover:text-destructive"
                               >
                                 <Trash2 className="h-4 w-4" />
