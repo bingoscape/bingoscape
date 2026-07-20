@@ -11,8 +11,8 @@ const config = {
 
   experimental: {
     serverActions: {
-      bodySizeLimit: "10mb",
-      proxyBodySizeLimit: "10mb",
+      bodySizeLimit: "25mb",
+      proxyBodySizeLimit: "25mb",
     },
   },
   // Empty turbopack config to indicate we're aware of the Turbopack default

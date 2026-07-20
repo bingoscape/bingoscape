@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import {
   Card,
@@ -16,6 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "@/hooks/use-toast"
 import { updateProfile } from "@/app/actions/profile"
+import { useAction } from "next-safe-action/hooks"
 
 interface User {
   id: string
@@ -26,39 +26,27 @@ interface User {
 }
 
 export function UpdateRsnForm({ user }: { user: User }) {
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
   const { update } = useSession()
+  const [rsn, setRsn] = useState(user.runescapeName ?? "")
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setIsLoading(true)
-    const formData = new FormData(e.currentTarget)
-
-    try {
-      const result = await updateProfile(formData)
-      if (result.success) {
-        const runescapeName = formData.get("runescapeName") as string
-        await update({ runescapeName })
+  const { execute, isExecuting } = useAction(updateProfile, {
+    onSuccess: ({ data }) => {
+      if (data?.success) {
+        update()
         toast({
           title: "Profile updated",
           description: "Your profile has been successfully updated.",
         })
-        router.refresh()
-      } else {
-        throw new Error(result.error ?? "Failed to update profile")
       }
-    } catch (error) {
+    },
+    onError: ({ error }) => {
       toast({
         title: "Error",
-        description:
-          error instanceof Error ? error.message : "An unknown error occurred",
+        description: error.serverError || "Failed to update profile",
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
     }
-  }
+  })
 
   return (
     <Card>
@@ -67,9 +55,12 @@ export function UpdateRsnForm({ user }: { user: User }) {
         <CardDescription>Update your profile information here.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input type="hidden" name="id" value={user.id} />
-
+        <form 
+          action={() => {
+            execute({ id: user.id, runescapeName: rsn })
+          }} 
+          className="space-y-6"
+        >
           <div className="flex items-center space-x-4">
             <Avatar className="h-20 w-20">
               <AvatarImage
@@ -78,19 +69,29 @@ export function UpdateRsnForm({ user }: { user: User }) {
               />
               <AvatarFallback>{user.name?.[0] ?? "U"}</AvatarFallback>
             </Avatar>
+            <div className="text-sm text-muted-foreground">
+              Profile picture is synced with Discord.
+            </div>
           </div>
 
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="runescapeName">RuneScape Name</Label>
             <Input
               id="runescapeName"
               name="runescapeName"
-              defaultValue={user.runescapeName ?? ""}
+              value={rsn}
+              onChange={(e) => setRsn(e.target.value)}
+              placeholder="e.g., Zezima"
+              pattern="^[a-zA-Z0-9 ]{1,12}$"
+              title="Maximum 12 characters, alphanumeric and spaces only"
             />
+            <p className="text-sm text-muted-foreground">
+              Maximum 12 characters, alphanumeric and spaces only.
+            </p>
           </div>
 
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Updating..." : "Update Profile"}
+          <Button type="submit" disabled={isExecuting}>
+            {isExecuting ? "Updating..." : "Update Profile"}
           </Button>
         </form>
       </CardContent>
