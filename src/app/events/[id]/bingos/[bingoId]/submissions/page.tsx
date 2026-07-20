@@ -61,11 +61,11 @@ import {
   CommandList,
 } from "@/components/ui/command"
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -107,9 +107,7 @@ export default function BingoSubmissionsPage(props: {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [teamsPopoverOpen, setTeamsPopoverOpen] = useState(false)
   const [statusPopoverOpen, setStatusPopoverOpen] = useState(false)
-  const [expandedGoalForms, setExpandedGoalForms] = useState<Set<string>>(
-    new Set()
-  )
+
   const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(
     null
   )
@@ -367,18 +365,7 @@ export default function BingoSubmissionsPage(props: {
     }
   }
 
-  // Toggle expanded state for inline goal assignment
-  const toggleGoalForm = (submissionId: string) => {
-    setExpandedGoalForms((prev) => {
-      const next = new Set(prev)
-      if (next.has(submissionId)) {
-        next.delete(submissionId)
-      } else {
-        next.add(submissionId)
-      }
-      return next
-    })
-  }
+
 
   // Handle inline goal assignment
   const handleInlineGoalAssignment = async (
@@ -434,12 +421,7 @@ export default function BingoSubmissionsPage(props: {
             : "Goal has been removed from the submission",
         })
 
-        // Close the expanded form
-        setExpandedGoalForms((prev) => {
-          const next = new Set(prev)
-          next.delete(submissionId)
-          return next
-        })
+
       } else {
         throw new Error(result.error || "Failed to assign goal")
       }
@@ -784,6 +766,19 @@ export default function BingoSubmissionsPage(props: {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+            {(selectedTeamIds.length > 0 || statusFilters.length > 0 || searchQuery !== "") && (
+              <Button
+                variant="ghost"
+                className="h-9 px-3 text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  clearTeamSelection()
+                  clearStatusSelection()
+                  setSearchQuery("")
+                }}
+              >
+                Clear Filters
+              </Button>
+            )}
           </div>
         </div>
 
@@ -895,42 +890,32 @@ export default function BingoSubmissionsPage(props: {
                               {getStatusBadge(teamSubmission.status)}
                             </div>
                             {isAdminOrManagement && (
-                              <div className="flex gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 text-green-600 hover:bg-green-50 hover:text-green-700"
-                                  onClick={() =>
-                                    handleTileStatusUpdate(
-                                      teamSubmission.id,
-                                      "approved"
-                                    )
-                                  }
-                                  disabled={
-                                    teamSubmission.status === "approved"
-                                  }
-                                >
-                                  <Check className="mr-1 h-4 w-4" />
-                                  Approve
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
-                                  onClick={() =>
-                                    handleTileStatusUpdate(
-                                      teamSubmission.id,
-                                      "needs_review"
-                                    )
-                                  }
-                                  disabled={
-                                    teamSubmission.status === "needs_review"
-                                  }
-                                >
-                                  <AlertTriangle className="mr-1 h-4 w-4" />
-                                  Needs Review
-                                </Button>
-                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm" className="h-8">
+                                    Override Status
+                                    <ChevronDown className="ml-2 h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => handleTileStatusUpdate(teamSubmission.id, "approved")}
+                                    disabled={teamSubmission.status === "approved"}
+                                    className="text-green-600 focus:bg-green-50 focus:text-green-700"
+                                  >
+                                    <Check className="mr-2 h-4 w-4" />
+                                    Force Approve Tile
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleTileStatusUpdate(teamSubmission.id, "needs_review")}
+                                    disabled={teamSubmission.status === "needs_review"}
+                                    className="text-yellow-600 focus:bg-yellow-50 focus:text-yellow-700"
+                                  >
+                                    <AlertTriangle className="mr-2 h-4 w-4" />
+                                    Flag Tile for Review
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             )}
                           </div>
                         </div>
@@ -1033,101 +1018,69 @@ export default function BingoSubmissionsPage(props: {
                                       )
                                     }
                                     hasSufficientRights={isAdminOrManagement}
-                                    isExpanded={expandedGoalForms.has(
-                                      submission.id
-                                    )}
-                                    onToggle={() =>
-                                      toggleGoalForm(submission.id)
-                                    }
+
                                   />
                                 </div>
 
                                 {isAdminOrManagement && (
-                                  <div className="mt-2 flex justify-end gap-1 border-t pt-2">
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-8 w-8 p-0 text-green-600 hover:bg-green-50 hover:text-green-700"
-                                            onClick={() =>
-                                              handleSubmissionStatusUpdate(
-                                                submission.id,
-                                                "approved"
-                                              )
-                                            }
-                                            disabled={
-                                              submission.status === "approved"
-                                            }
-                                          >
-                                            <Check className="h-4 w-4" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          Approve Submission
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
+                                  <div className="mt-2 flex flex-wrap justify-end gap-2 border-t pt-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 text-green-600 hover:bg-green-50 hover:text-green-700 border border-transparent hover:border-green-200"
+                                      onClick={() =>
+                                        handleSubmissionStatusUpdate(
+                                          submission.id,
+                                          "approved"
+                                        )
+                                      }
+                                      disabled={
+                                        submission.status === "approved"
+                                      }
+                                    >
+                                      <Check className="mr-1.5 h-4 w-4" />
+                                      Approve
+                                    </Button>
 
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-8 w-8 p-0 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
-                                            onClick={() =>
-                                              handleSubmissionStatusUpdate(
-                                                submission.id,
-                                                "needs_review"
-                                              )
-                                            }
-                                            disabled={
-                                              submission.status ===
-                                              "needs_review"
-                                            }
-                                          >
-                                            <AlertTriangle className="h-4 w-4" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          Mark as Needs Review
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
+                                      onClick={() =>
+                                        handleSubmissionStatusUpdate(
+                                          submission.id,
+                                          "needs_review"
+                                        )
+                                      }
+                                      disabled={
+                                        submission.status === "needs_review"
+                                      }
+                                    >
+                                      <AlertTriangle className="mr-1.5 h-4 w-4" />
+                                      Review
+                                    </Button>
 
                                     <AlertDialog
-                                      open={
-                                        submissionToDelete === submission.id
-                                      }
+                                      open={submissionToDelete === submission.id}
                                       onOpenChange={(open) =>
                                         !open && setSubmissionToDelete(null)
                                       }
                                     >
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <AlertDialogTrigger asChild>
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
-                                                onClick={() =>
-                                                  setSubmissionToDelete(
-                                                    submission.id
-                                                  )
-                                                }
-                                              >
-                                                <X className="h-4 w-4" />
-                                              </Button>
-                                            </AlertDialogTrigger>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            Delete Submission
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
+                                      <AlertDialogTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                          onClick={() =>
+                                            setSubmissionToDelete(
+                                              submission.id
+                                            )
+                                          }
+                                        >
+                                          <X className="mr-1.5 h-4 w-4" />
+                                          Delete
+                                        </Button>
+                                      </AlertDialogTrigger>
                                       <AlertDialogContent>
                                         <AlertDialogHeader>
                                           <AlertDialogTitle>
