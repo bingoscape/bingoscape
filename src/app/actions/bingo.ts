@@ -1324,74 +1324,15 @@ export async function updateSubmissionStatus(
     }
 
     // If submission has a goal assignment, recalculate goal progress
+    const { recalculateGoalProgress } = await import("./goals")
+    const oldGoalId = submissionRecord.goalId
+    const teamId = submissionRecord.teamTileSubmission.teamId
+
+    if (oldGoalId && oldGoalId !== updatedSubmission.goalId) {
+      await recalculateGoalProgress(db, oldGoalId, teamId)
+    }
     if (updatedSubmission.goalId) {
-      // Get the team submission to find the team ID
-      const teamSubmission = await db.query.teamTileSubmissions.findFirst({
-        where: eq(
-          teamTileSubmissions.id,
-          updatedSubmission.teamTileSubmissionId
-        ),
-      })
-
-      if (teamSubmission) {
-        // Recalculate progress from ALL approved submissions for this goal and team
-        const approvedSubmissions = await db
-          .select({
-            submissionValue: submissions.submissionValue,
-          })
-          .from(submissions)
-          .innerJoin(
-            teamTileSubmissions,
-            eq(submissions.teamTileSubmissionId, teamTileSubmissions.id)
-          )
-          .where(
-            and(
-              eq(submissions.goalId, updatedSubmission.goalId),
-              eq(submissions.status, "approved"),
-              eq(teamTileSubmissions.teamId, teamSubmission.teamId)
-            )
-          )
-
-        const totalValue = approvedSubmissions.reduce(
-          (sum, s) => sum + (s.submissionValue || 0),
-          0
-        )
-
-        // Get current goal progress for this team
-        const currentProgress = await db.query.teamGoalProgress.findFirst({
-          where: and(
-            eq(teamGoalProgress.goalId, updatedSubmission.goalId),
-            eq(teamGoalProgress.teamId, teamSubmission.teamId)
-          ),
-        })
-
-        if (currentProgress) {
-          // Update existing progress
-          await db
-            .update(teamGoalProgress)
-            .set({
-              currentValue: totalValue,
-              updatedAt: new Date(),
-            })
-            .where(eq(teamGoalProgress.id, currentProgress.id))
-        } else if (totalValue > 0) {
-          // Create new progress entry only if there's actual progress
-          await db.insert(teamGoalProgress).values({
-            goalId: updatedSubmission.goalId,
-            teamId: teamSubmission.teamId,
-            currentValue: totalValue,
-          })
-        }
-
-        // Check if we need to auto-complete the tile
-        const goal = await db.query.goals.findFirst({
-          where: eq(goals.id, updatedSubmission.goalId),
-        })
-        if (goal) {
-          const { checkAndAutoCompleteTile } = await import("./tile-completion")
-          await checkAndAutoCompleteTile(goal.tileId, teamSubmission.teamId)
-        }
-      }
+      await recalculateGoalProgress(db, updatedSubmission.goalId, teamId)
     }
 
     // Revalidate the submissions page
@@ -1581,75 +1522,15 @@ export async function updateSubmissionStatusWithComment(
       }
 
       // If submission has a goal assignment, recalculate goal progress
+      const { recalculateGoalProgress } = await import("./goals")
+      const oldGoalId = submissionRecord.goalId
+      const teamId = submissionRecord.teamTileSubmission.teamId
+
+      if (oldGoalId && oldGoalId !== updatedSubmission.goalId) {
+        await recalculateGoalProgress(tx, oldGoalId, teamId)
+      }
       if (updatedSubmission.goalId) {
-        // Get the team submission to find the team ID
-        const teamSubmission = await tx.query.teamTileSubmissions.findFirst({
-          where: eq(
-            teamTileSubmissions.id,
-            updatedSubmission.teamTileSubmissionId
-          ),
-        })
-
-        if (teamSubmission) {
-          // Recalculate progress from ALL approved submissions for this goal and team
-          const approvedSubmissions = await tx
-            .select({
-              submissionValue: submissions.submissionValue,
-            })
-            .from(submissions)
-            .innerJoin(
-              teamTileSubmissions,
-              eq(submissions.teamTileSubmissionId, teamTileSubmissions.id)
-            )
-            .where(
-              and(
-                eq(submissions.goalId, updatedSubmission.goalId),
-                eq(submissions.status, "approved"),
-                eq(teamTileSubmissions.teamId, teamSubmission.teamId)
-              )
-            )
-
-          const totalValue = approvedSubmissions.reduce(
-            (sum, s) => sum + (s.submissionValue || 0),
-            0
-          )
-
-          // Get current goal progress for this team
-          const currentProgress = await tx.query.teamGoalProgress.findFirst({
-            where: and(
-              eq(teamGoalProgress.goalId, updatedSubmission.goalId),
-              eq(teamGoalProgress.teamId, teamSubmission.teamId)
-            ),
-          })
-
-          if (currentProgress) {
-            // Update existing progress
-            await tx
-              .update(teamGoalProgress)
-              .set({
-                currentValue: totalValue,
-                updatedAt: new Date(),
-              })
-              .where(eq(teamGoalProgress.id, currentProgress.id))
-          } else if (totalValue > 0) {
-            // Create new progress entry only if there's actual progress
-            await tx.insert(teamGoalProgress).values({
-              goalId: updatedSubmission.goalId,
-              teamId: teamSubmission.teamId,
-              currentValue: totalValue,
-            })
-          }
-
-          // Check if we need to auto-complete the tile
-          const goal = await tx.query.goals.findFirst({
-            where: eq(goals.id, updatedSubmission.goalId),
-          })
-          if (goal) {
-            const { checkAndAutoCompleteTile } =
-              await import("./tile-completion")
-            await checkAndAutoCompleteTile(goal.tileId, teamSubmission.teamId)
-          }
-        }
+        await recalculateGoalProgress(tx, updatedSubmission.goalId, teamId)
       }
 
       // Revalidate the submissions page
@@ -1679,12 +1560,13 @@ export async function updateSubmissionStatusWithComment(
 export async function deleteSubmission(submissionId: string) {
   try {
     return await db.transaction(async (tx) => {
-      // First, get the submission to find the associated image
+      // First, get the submission to find the associated image and goal
       const [submission] = await tx
         .select({
           id: submissions.id,
           imageId: submissions.imageId,
           teamTileSubmissionId: submissions.teamTileSubmissionId,
+          goalId: submissions.goalId,
         })
         .from(submissions)
         .where(eq(submissions.id, submissionId))
@@ -1692,6 +1574,11 @@ export async function deleteSubmission(submissionId: string) {
       if (!submission) {
         throw new Error("Submission not found")
       }
+
+      // Fetch team submission to get the teamId for progress recalculation
+      const teamSubmission = await tx.query.teamTileSubmissions.findFirst({
+        where: eq(teamTileSubmissions.id, submission.teamTileSubmissionId),
+      })
 
       // Get the image path to delete the file
       const [imageRecord] = await tx
@@ -1720,6 +1607,12 @@ export async function deleteSubmission(submissionId: string) {
       // Delete the image record
       if (imageRecord) {
         await tx.delete(images).where(eq(images.id, submission.imageId))
+      }
+
+      // Recalculate goal progress if it had a goal
+      if (submission.goalId && teamSubmission?.teamId) {
+        const { recalculateGoalProgress } = await import("./goals")
+        await recalculateGoalProgress(tx, submission.goalId, teamSubmission.teamId)
       }
 
       // Note: We no longer automatically update the team tile submission status

@@ -103,9 +103,7 @@ export function SubmissionsTab({
   teamTileSubmissions,
   isAdminView,
 }: SubmissionsTabProps) {
-  const [expandedGoalForms, setExpandedGoalForms] = useState<Set<string>>(
-    new Set()
-  )
+
   const [goalValuesCache, _] = useState<Record<string, any[]>>(
     {}
   )
@@ -132,6 +130,8 @@ export function SubmissionsTab({
   const [localSubmissionStatuses, setLocalSubmissionStatuses] = useState<
     Record<string, "approved" | "needs_review" | "pending">
   >({})
+  const [localGoals, setLocalGoals] = useState<Record<string, string | null>>({})
+  const [localValues, setLocalValues] = useState<Record<string, number | null>>({})
 
   // Comment-related state
   const [submissionComments, setSubmissionComments] = useState<
@@ -140,33 +140,14 @@ export function SubmissionsTab({
   const [showCommentForm, setShowCommentForm] = useState<string | null>(null)
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
 
-  // Toggle expanded state for inline goal assignment
-  const toggleGoalForm = (submissionId: string) => {
-    setExpandedGoalForms((prev) => {
-      const next = new Set(prev)
-      if (next.has(submissionId)) {
-        next.delete(submissionId)
-      } else {
-        next.add(submissionId)
-      }
-      return next
-    })
-  }
 
-  // Handle inline goal assignment
+
   const handleInlineGoalAssignment = (
     submissionId: string,
     goalId: string | null,
     value: number | null
   ) => {
     onSubmissionStatusUpdate(submissionId, "pending", goalId, value)
-
-    // Close the expanded form
-    setExpandedGoalForms((prev) => {
-      const next = new Set(prev)
-      next.delete(submissionId)
-      return next
-    })
   }
 
   const currentTeam = teams.find((team) => team.id === currentTeamId)
@@ -259,6 +240,13 @@ export function SubmissionsTab({
       [submissionId]: newStatus,
     }))
 
+    if (goalId !== undefined) {
+      setLocalGoals((prev) => ({ ...prev, [submissionId]: goalId }))
+    }
+    if (submissionValue !== undefined) {
+      setLocalValues((prev) => ({ ...prev, [submissionId]: submissionValue }))
+    }
+
     // If marking submission as needs_review, also update the parent tile
     if (newStatus === "needs_review") {
       // Find the parent tile submission
@@ -291,6 +279,20 @@ export function SubmissionsTab({
     originalStatus: string
   ) => {
     return localSubmissionStatuses[submissionId] || originalStatus
+  }
+
+  const getSubmissionGoal = (
+    submissionId: string,
+    originalGoal: string | null
+  ) => {
+    return submissionId in localGoals ? localGoals[submissionId] : originalGoal
+  }
+
+  const getSubmissionValue = (
+    submissionId: string,
+    originalValue: number | null
+  ) => {
+    return submissionId in localValues ? localValues[submissionId] : originalValue
   }
 
   // Comment-related functions
@@ -855,8 +857,8 @@ export function SubmissionsTab({
                                 {/* Inline Goal Assignment */}
                                 <InlineGoalAssignment
                                   submissionId={submission.id}
-                                  currentGoalId={submission.goalId}
-                                  currentValue={submission.submissionValue}
+                                  currentGoalId={getSubmissionGoal(submission.id, submission.goalId)}
+                                  currentValue={getSubmissionValue(submission.id, submission.submissionValue)}
                                   goals={
                                     teamSubmission.tile?.goals ||
                                     selectedTile?.goals ||
@@ -874,10 +876,6 @@ export function SubmissionsTab({
                                     )
                                   }
                                   hasSufficientRights={hasSufficientRights}
-                                  isExpanded={expandedGoalForms.has(
-                                    submission.id
-                                  )}
-                                  onToggle={() => toggleGoalForm(submission.id)}
                                 />
 
                                 {hasSufficientRights && (
