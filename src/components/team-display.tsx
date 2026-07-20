@@ -17,6 +17,8 @@ type TeamMember = {
     id: string
     name: string | null
     runescapeName: string | null
+    hasOverride?: boolean
+    originalRunescapeName?: string | null
     image: string | null
     skillLevel?: string | null
   }
@@ -32,6 +34,8 @@ type Team = {
 type Participant = {
   id: string
   runescapeName: string
+  hasOverride?: boolean
+  originalRunescapeName?: string
   role: string
   teamId: string | null
   teamName: string | null
@@ -137,7 +141,11 @@ export function TeamDisplay({ eventId }: { eventId: string }) {
               {member.user.runescapeName?.[0] ?? "U"}
             </AvatarFallback>
           </Avatar>
-          <span>{member.user.runescapeName ?? member.user.name}</span>
+          <span>
+            {member.user.hasOverride && member.user.originalRunescapeName
+              ? `${member.user.runescapeName} (${member.user.originalRunescapeName})`
+              : member.user.runescapeName ?? member.user.name}
+          </span>
           {member.isLeader && (
             <Shield
               className="h-4 w-4 text-yellow-500"
@@ -194,7 +202,11 @@ export function TeamDisplay({ eventId }: { eventId: string }) {
               {participant.runescapeName[0] ?? "U"}
             </AvatarFallback>
           </Avatar>
-          <span>{participant.runescapeName}</span>
+          <span>
+            {participant.hasOverride && participant.originalRunescapeName
+              ? `${participant.runescapeName} (${participant.originalRunescapeName})`
+              : participant.runescapeName}
+          </span>
           {participant.skillLevel &&
             (() => {
               const skillInfo = getSkillLevelDetails(participant.skillLevel)

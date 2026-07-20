@@ -71,6 +71,9 @@ export async function getTeamsByEventId(eventId: string) {
           ...member.user,
           hasMetadata: !!metadata,
           skillLevel: metadata?.skillLevel ?? null,
+          runescapeName: metadata?.runescapeNameOverride ?? member.user.runescapeName,
+          hasOverride: !!metadata?.runescapeNameOverride,
+          originalRunescapeName: member.user.runescapeName,
         },
       }
     }),

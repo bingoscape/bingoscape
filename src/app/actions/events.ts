@@ -1228,7 +1228,9 @@ export async function getEventParticipants(eventId: string) {
 
         return {
           id: participant.userId,
-          runescapeName: user?.runescapeName ?? "",
+          runescapeName: metadata?.runescapeNameOverride ?? user?.runescapeName ?? "",
+          hasOverride: !!metadata?.runescapeNameOverride,
+          originalRunescapeName: user?.runescapeName ?? "",
           role: participant.role,
           teamId: t != null ? t.id : null,
           teamName: t != null ? t.name : null,

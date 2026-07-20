@@ -1,0 +1,1 @@
+ALTER TABLE "bingoscape-next_player_metadata" ADD COLUMN "runescape_name_override" varchar(255);

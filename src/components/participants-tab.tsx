@@ -773,6 +773,11 @@ export function ParticipantsTab({
         <TableCell className="font-medium">
           <div className="flex items-center gap-2">
             <span>{participant.runescapeName}</span>
+            {participant.hasOverride && (
+              <Badge variant="outline" className="text-xs">
+                Alt
+              </Badge>
+            )}
           </div>
         </TableCell>
         <TableCell>

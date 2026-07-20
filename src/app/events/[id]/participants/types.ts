@@ -2,6 +2,8 @@
 export interface Participant {
   id: string
   runescapeName: string
+  hasOverride?: boolean
+  originalRunescapeName?: string
   role: "admin" | "management" | "participant"
   teamId: string | null
   teamName: string | null

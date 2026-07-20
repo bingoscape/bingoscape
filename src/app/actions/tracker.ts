@@ -146,7 +146,11 @@ export async function syncTrackerProgress(bingoId: string) {
       where: eq(teams.eventId, eventId),
       with: {
         teamMembers: {
-          with: { user: true },
+          with: { 
+            user: {
+              with: { playerMetadata: true }
+            } 
+          },
         },
       },
     })
@@ -157,9 +161,10 @@ export async function syncTrackerProgress(bingoId: string) {
         const metricName = mGoal.metricGoal?.metricName
         if (!metricName) continue
 
-        const teamRsns = team.teamMembers.map((tm) =>
-          tm.user.runescapeName?.toLowerCase()
-        )
+        const teamRsns = team.teamMembers.map((tm) => {
+          const metadata = tm.user.playerMetadata?.find(pm => pm.eventId === eventId)
+          return (metadata?.runescapeNameOverride || tm.user.runescapeName)?.toLowerCase()
+        })
 
         for (const participation of womComp.participations) {
           if (
@@ -230,7 +235,11 @@ export async function createWiseOldManCompetition(
       where: eq(teams.eventId, bingo.eventId),
       with: {
         teamMembers: {
-          with: { user: true },
+          with: { 
+            user: {
+              with: { playerMetadata: true }
+            } 
+          },
         },
       },
     })
@@ -238,7 +247,10 @@ export async function createWiseOldManCompetition(
     const teamsPayload: { name: string; participants: string[] }[] = []
     for (const team of eventTeams) {
       const participants = team.teamMembers
-        .map((member) => member.user.runescapeName)
+        .map((member) => {
+          const metadata = member.user.playerMetadata?.find(pm => pm.eventId === bingo.eventId)
+          return metadata?.runescapeNameOverride || member.user.runescapeName
+        })
         .filter((name): name is string => name !== null && name !== undefined)
 
       if (participants.length > 0) {
