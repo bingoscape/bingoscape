@@ -22,6 +22,7 @@ import type { SelectableUser } from "@/app/actions/bingo"
 import { CommentForm } from "@/components/comment-form"
 import { SubmissionCommentDisplay } from "@/components/submission-comment"
 import { SubmissionUploadForm } from "@/components/submission-upload-form"
+import { getOptimizedImageUrl } from "@/lib/utils"
 import {
   Select,
   SelectContent,
@@ -739,15 +740,13 @@ export function SubmissionsTab({
                             >
                               <div className="relative aspect-video">
                                 <Image
-                                  src={
-                                    submission.image.path || "/placeholder.svg"
-                                  }
+                                  src={getOptimizedImageUrl(submission.image.path)}
                                   alt={`Submission by ${submission.user.runescapeName || "Unknown"}`}
                                   fill
                                   className="cursor-pointer object-cover transition-opacity hover:opacity-90"
                                   onClick={() =>
                                     onFullSizeImageView(
-                                      submission.image.path,
+                                      getOptimizedImageUrl(submission.image.path),
                                       `Submission by ${submission.user.runescapeName || "Unknown"}`
                                     )
                                   }
