@@ -15,6 +15,7 @@ import {
 } from "@/app/actions/bingo"
 import { getBingoById } from "@/app/actions/getBingoById"
 import { type TeamTileSubmission } from "@/app/actions/events"
+import { getOptimizedImageUrl } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -943,15 +944,12 @@ export default function BingoSubmissionsPage(props: {
                               >
                                 <div className="relative aspect-video">
                                   <img
-                                    src={
-                                      submission.image.path ||
-                                      "/placeholder.svg"
-                                    }
+                                    src={getOptimizedImageUrl(submission.image.path)}
                                     alt={`Submission by ${submission.user?.name || "Unknown"}`}
                                     className="h-full w-full cursor-pointer object-cover"
                                     onClick={() =>
                                       setFullSizeImage({
-                                        src: submission.image.path,
+                                        src: getOptimizedImageUrl(submission.image.path),
                                         alt: `Submission by ${submission.user?.name || "Unknown"}`,
                                       })
                                     }
