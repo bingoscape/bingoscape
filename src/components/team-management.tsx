@@ -78,6 +78,8 @@ type TeamMember = {
     name: string | null
     runescapeName: string | null
     image: string | null
+    hasOverride?: boolean
+    originalRunescapeName?: string | null
     hasMetadata?: boolean
     skillLevel?: string | null
   }
@@ -95,6 +97,8 @@ type Participant = {
   name: string | null
   runescapeName: string | null
   image: string | null
+  hasOverride?: boolean
+  originalRunescapeName?: string | null
   hasMetadata?: boolean
   skillLevel?: string | null
 }
@@ -165,9 +169,13 @@ const PlayerDragOverlay = ({ activeDragData }: { activeDragData: any }) => {
             {participant.name?.[0] ?? "U"}
           </AvatarFallback>
         </Avatar>
-        <span className="font-medium">
-          {participant.runescapeName ?? participant.name}
-        </span>
+        <div className="flex w-full items-center justify-between">
+          <span className="truncate">
+            {participant.hasOverride && participant.originalRunescapeName
+              ? `${participant.runescapeName} (${participant.originalRunescapeName})`
+              : participant.runescapeName ?? participant.name}
+          </span>
+        </div>
       </div>
     )
   }
@@ -239,9 +247,11 @@ function DraggableMember({
               </div>
             )}
           </div>
-          <span className="truncate group-hover:text-primary">
-            {member.user.runescapeName ?? member.user.name}
-          </span>
+          <p className="text-sm font-medium leading-none">
+            {member.user.hasOverride && member.user.originalRunescapeName
+              ? `${member.user.runescapeName} (${member.user.originalRunescapeName})`
+              : member.user.runescapeName ?? member.user.name}
+          </p>
           <User className="h-3 w-3 flex-shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
         </button>
 

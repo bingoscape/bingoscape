@@ -186,6 +186,7 @@ export const playerMetadata = createTable(
     timezone: varchar("timezone", { length: 100 }), // e.g., "America/New_York", "Europe/London"
     dailyHoursAvailable: real("daily_hours_available"), // Planned daily participation time
     notes: text("notes"), // Management notes about the player
+    runescapeNameOverride: varchar("runescape_name_override", { length: 255 }),
     womPlayerData: text("wom_player_data"), // JSON string of full WiseOldMan data (skills, bosses)
     lastFetchedFromWOM: timestamp("last_fetched_from_wom"), // Timestamp of last WOM fetch
     createdAt: timestamp("created_at").defaultNow().notNull(),

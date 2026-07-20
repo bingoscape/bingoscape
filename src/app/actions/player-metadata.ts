@@ -73,6 +73,7 @@ export async function updatePlayerMetadata(
     timezone?: string | null
     dailyHoursAvailable?: number | null
     notes?: string | null
+    runescapeNameOverride?: string | null
     womPlayerData?: string | null
     lastFetchedFromWOM?: Date | null
   }
@@ -151,6 +152,7 @@ export async function updateOwnPlayerMetadata(
       | null
     timezone?: string | null
     dailyHoursAvailable?: number | null
+    runescapeNameOverride?: string | null
   }
 ) {
   const session = await getServerAuthSession()
@@ -176,6 +178,7 @@ export async function updateOwnPlayerMetadata(
     skillLevel: data.skillLevel,
     timezone: data.timezone,
     dailyHoursAvailable: data.dailyHoursAvailable,
+    runescapeNameOverride: data.runescapeNameOverride,
   }
 
   // Check if metadata already exists
@@ -306,8 +309,18 @@ export async function fetchWOMDataForPlayer(
     )
   }
 
+  // Check if user has an override
+  const metadata = await db.query.playerMetadata.findFirst({
+    where: and(
+      eq(playerMetadata.userId, userId),
+      eq(playerMetadata.eventId, eventId)
+    ),
+  })
+  
+  const effectiveName = metadata?.runescapeNameOverride || runescapeName
+
   // Fetch from WiseOldMan
-  const result = await fetchPlayerDataFromWOM(runescapeName)
+  const result = await fetchPlayerDataFromWOM(effectiveName)
 
   return result
 }

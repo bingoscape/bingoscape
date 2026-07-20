@@ -97,6 +97,7 @@ export function PlayerMetadataModal({
     skillLevel: "",
     notes: "",
     womPlayerData: "",
+    runescapeNameOverride: "",
   })
 
   // Load timezone data
@@ -125,6 +126,7 @@ export function PlayerMetadataModal({
           skillLevel: metadata.skillLevel ?? "",
           notes: metadata.notes ?? "",
           womPlayerData: metadata.womPlayerData ?? "",
+          runescapeNameOverride: metadata.runescapeNameOverride ?? "",
         })
         setLastFetched(metadata.lastFetchedFromWOM)
       } else {
@@ -139,6 +141,7 @@ export function PlayerMetadataModal({
           skillLevel: "",
           notes: "",
           womPlayerData: "",
+          runescapeNameOverride: "",
         })
         setLastFetched(null)
       }
@@ -172,6 +175,7 @@ export function PlayerMetadataModal({
               | "expert"
               | "pvmgod"
               | null) || null,
+          runescapeNameOverride: formData.runescapeNameOverride || null,
         })
       } else {
         // Use admin action (all fields)
@@ -198,6 +202,7 @@ export function PlayerMetadataModal({
               | null) || null,
           notes: formData.notes || null,
           womPlayerData: formData.womPlayerData || null,
+          runescapeNameOverride: formData.runescapeNameOverride || null,
           lastFetchedFromWOM: lastFetched,
         })
       }
@@ -234,7 +239,8 @@ export function PlayerMetadataModal({
 
     setFetching(true)
     try {
-      const result = await fetchWOMDataForPlayer(userId, eventId, runescapeName)
+      const targetName = formData.runescapeNameOverride || runescapeName
+      const result = await fetchWOMDataForPlayer(userId, eventId, targetName)
 
       if (result.success && result.data) {
         // Update form with fetched data
@@ -250,7 +256,7 @@ export function PlayerMetadataModal({
 
         toast({
           title: "Success",
-          description: `Fetched data for ${runescapeName} - EHP: ${result.data.ehp.toFixed(1)}, EHB: ${result.data.ehb.toFixed(1)}, Combat: ${result.data.combatLevel}, Total: ${result.data.totalLevel}`,
+          description: `Fetched data for ${targetName} - EHP: ${result.data.ehp.toFixed(1)}, EHB: ${result.data.ehb.toFixed(1)}, Combat: ${result.data.combatLevel}, Total: ${result.data.totalLevel}`,
         })
       } else {
         toast({
@@ -315,6 +321,22 @@ export function PlayerMetadataModal({
                 </p>
               </div>
             )}
+
+            {/* Runescape Name Override */}
+            <div className="space-y-2">
+              <Label htmlFor="runescapeNameOverride">Event RuneScape Name Override</Label>
+              <Input
+                id="runescapeNameOverride"
+                placeholder="Alternative OSRS username"
+                value={formData.runescapeNameOverride}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, runescapeNameOverride: e.target.value }))
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional: Use this if your RuneScape name for this event is different from your global profile.
+              </p>
+            </div>
 
             {/* WiseOldMan Fetch Section - Hidden for self-editing */}
             {!isSelfEditing && (
