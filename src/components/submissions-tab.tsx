@@ -30,7 +30,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,12 +47,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+
 import { InlineGoalAssignment } from "@/components/inline-goal-assignment"
 import { toast } from "@/hooks/use-toast"
 
@@ -511,7 +511,24 @@ export function SubmissionsTab({
 
         {/* Enhanced Filters */}
         <div className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-foreground">Filters</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-foreground">Filters</h3>
+            {(statusFilter !== "all" || boardFilter !== "all" || tileFilter !== "all" || teamFilter !== "all") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setStatusFilter("all")
+                  setBoardFilter("all")
+                  setTileFilter("all")
+                  setTeamFilter("all")
+                }}
+                className="h-8 text-muted-foreground hover:text-foreground"
+              >
+                Clear Filters
+              </Button>
+            )}
+          </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
             <div>
               <Label
@@ -681,38 +698,44 @@ export function SubmissionsTab({
                         {getStatusBadge(currentTileStatus)}
                       </div>
                       {hasSufficientRights && (
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700"
-                            onClick={() =>
-                              handleTeamTileSubmissionStatusUpdate(
-                                teamSubmission.id,
-                                "approved"
-                              )
-                            }
-                            disabled={currentTileStatus === "approved"}
-                          >
-                            <Check className="mr-1 h-4 w-4" />
-                            Approve
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 border-yellow-200 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
-                            onClick={() =>
-                              handleTeamTileSubmissionStatusUpdate(
-                                teamSubmission.id,
-                                "needs_review"
-                              )
-                            }
-                            disabled={currentTileStatus === "needs_review"}
-                          >
-                            <AlertTriangle className="mr-1 h-4 w-4" />
-                            Needs Review
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-8">
+                              Tile Status:{" "}
+                              <span className="ml-1 capitalize text-muted-foreground">
+                                {currentTileStatus.replace("_", " ")}
+                              </span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              className="text-green-600 focus:bg-green-50 focus:text-green-700 cursor-pointer"
+                              onClick={() =>
+                                handleTeamTileSubmissionStatusUpdate(
+                                  teamSubmission.id,
+                                  "approved"
+                                )
+                              }
+                              disabled={currentTileStatus === "approved"}
+                            >
+                              <Check className="mr-2 h-4 w-4" />
+                              Force Approve Tile
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-yellow-600 focus:bg-yellow-50 focus:text-yellow-700 cursor-pointer"
+                              onClick={() =>
+                                handleTeamTileSubmissionStatusUpdate(
+                                  teamSubmission.id,
+                                  "needs_review"
+                                )
+                              }
+                              disabled={currentTileStatus === "needs_review"}
+                            >
+                              <AlertTriangle className="mr-2 h-4 w-4" />
+                              Flag Tile for Review
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                     </div>
                   </div>
@@ -879,59 +902,41 @@ export function SubmissionsTab({
                                 />
 
                                 {hasSufficientRights && (
-                                  <div className="mt-2 flex justify-end gap-1 border-t border-border pt-2">
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-8 w-8 p-0 text-green-600 hover:bg-green-50 hover:text-green-700"
-                                            onClick={() =>
-                                              handleSubmissionStatusUpdate(
-                                                submission.id,
-                                                "approved"
-                                              )
-                                            }
-                                            disabled={
-                                              currentSubmissionStatus ===
-                                              "approved"
-                                            }
-                                          >
-                                            <Check className="h-4 w-4" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          Approve Submission
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
+                                  <div className="mt-2 flex justify-end gap-2 border-t border-border pt-3">
+                                    <Button
+                                      variant={currentSubmissionStatus === "approved" ? "secondary" : "outline"}
+                                      size="sm"
+                                      className={`h-8 ${currentSubmissionStatus !== "approved" ? "border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700" : "bg-green-100 text-green-800 hover:bg-green-200"}`}
+                                      onClick={() =>
+                                        handleSubmissionStatusUpdate(
+                                          submission.id,
+                                          "approved"
+                                        )
+                                      }
+                                      disabled={
+                                        currentSubmissionStatus === "approved"
+                                      }
+                                    >
+                                      <Check className="mr-1.5 h-3.5 w-3.5" />
+                                      Approve
+                                    </Button>
 
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-8 w-8 p-0 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
-                                            onClick={() =>
-                                              handleNeedsReviewClick(
-                                                submission.id
-                                              )
-                                            }
-                                            disabled={
-                                              currentSubmissionStatus ===
-                                              "needs_review"
-                                            }
-                                          >
-                                            <AlertTriangle className="h-4 w-4" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          Mark as Needs Review
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className={`h-8 ${currentSubmissionStatus !== "needs_review" ? "border-yellow-200 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700" : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"}`}
+                                      onClick={() =>
+                                        handleNeedsReviewClick(
+                                          submission.id
+                                        )
+                                      }
+                                      disabled={
+                                        currentSubmissionStatus === "needs_review"
+                                      }
+                                    >
+                                      <AlertTriangle className="mr-1.5 h-3.5 w-3.5" />
+                                      Review
+                                    </Button>
 
                                     <AlertDialog
                                       open={
@@ -941,29 +946,16 @@ export function SubmissionsTab({
                                         !open && setSubmissionToDelete(null)
                                       }
                                     >
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <AlertDialogTrigger asChild>
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
-                                                onClick={() =>
-                                                  setSubmissionToDelete(
-                                                    submission.id
-                                                  )
-                                                }
-                                              >
-                                                <X className="h-4 w-4" />
-                                              </Button>
-                                            </AlertDialogTrigger>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            Delete Submission
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
+                                      <AlertDialogTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                        >
+                                          <X className="mr-1.5 h-3.5 w-3.5" />
+                                          Delete
+                                        </Button>
+                                      </AlertDialogTrigger>
                                       <AlertDialogContent>
                                         <AlertDialogHeader>
                                           <AlertDialogTitle>
