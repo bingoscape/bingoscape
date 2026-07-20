@@ -252,7 +252,6 @@ export async function GET(
                           }}
                         >
                           {tile?.headerImage ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
                             <img
                               src={tile.headerImage}
                               alt={tile.title}
@@ -268,9 +267,9 @@ export async function GET(
                             >
                               {tile
                                 ? tile.title.substring(
-                                    0,
-                                    Math.max(4, Math.floor(tileSize / 12))
-                                  )
+                                  0,
+                                  Math.max(4, Math.floor(tileSize / 12))
+                                )
                                 : "?"}
                             </div>
                           )}
