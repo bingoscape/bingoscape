@@ -12,7 +12,7 @@ import {
 import { PrizePoolDisplay } from "./prize-pool-display"
 import { GameTypeBadge } from "./game-type-badge"
 import { MiniBoard } from "./mini-board"
-import type { EventData } from "@/app/actions/events"
+import { EventData } from "@/app/actions/events"
 import {
   Clock,
   Users,

@@ -6,11 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
 import { Loader2, Edit, UserPlus } from "lucide-react"
-import {
-  getEventParticipants,
-  getRegistrationRequests,
-  getPendingRegistrationCount,
-} from "@/app/actions/events"
+import { getEventParticipants, getRegistrationRequests, getPendingRegistrationCount } from "@/app/actions/events"
 import { getTeamsByEventId } from "@/app/actions/team"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import type { UUID } from "crypto"
@@ -22,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ParticipantsTab } from "@/components/participants-tab"
 import { RegistrationsTab } from "@/components/registrations-tab"
 import type { Participant, Team } from "./types"
-import type { RegistrationRequest } from "@/app/actions/events"
+import { RegistrationRequest } from "@/app/actions/events"
 import { getEventById } from "@/server/queries/events"
 
 export default function EventParticipantsPage(props: {

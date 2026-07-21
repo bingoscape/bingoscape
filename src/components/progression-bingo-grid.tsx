@@ -22,7 +22,7 @@ import {
   EyeOff,
   CheckCircle2,
 } from "lucide-react"
-import type { Tile } from "@/app/actions/events"
+
 import { cn } from "@/lib/utils"
 import { toast } from "@/hooks/use-toast"
 import {
@@ -52,15 +52,8 @@ import {
 } from "@dnd-kit/sortable"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import {
-  addTile,
-  deleteTile,
-  updateTile,
-  updateTileTier,
-  setTierXpRequirement,
-  createNewTier,
-  deleteTier,
-} from "@/app/actions/bingo"
+import { addTile, deleteTile, updateTile, updateTileTier, setTierXpRequirement, createNewTier, deleteTier } from "@/app/actions/bingo"
+import type { Tile } from "@/types/model"
 
 interface ProgressionBingoGridProps {
   tiles: Tile[]

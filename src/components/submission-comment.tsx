@@ -3,8 +3,9 @@
 import { useState } from "react"
 import { MessageCircle, ChevronDown, ChevronUp, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { SubmissionComment } from "@/app/actions/events"
+
 import { formatDistanceToNow } from "date-fns"
+import type { SubmissionComment } from "@/types/model"
 
 interface SubmissionCommentProps {
   comments: SubmissionComment[]

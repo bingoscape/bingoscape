@@ -8,11 +8,7 @@ import {
 } from "@/server/db/schema"
 import { eq, asc, and, inArray } from "drizzle-orm"
 import { mapStatus } from "@/lib/statusMapping"
-import {
-  getProgressionBingoTiles,
-  getTeamTierProgress,
-  getTierXpRequirements,
-} from "@/app/actions/bingo"
+import { getProgressionBingoTiles, getTeamTierProgress, getTierXpRequirements } from "@/app/actions/bingo"
 import type {
   GoalTreeNode,
   GoalNode,

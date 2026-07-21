@@ -10,8 +10,10 @@ import { Zap } from "lucide-react"
 import { TileDetailsTab } from "./tile-details-tab"
 import { GoalsTab } from "./goals-tab"
 import { SubmissionsTab } from "./submissions-tab"
-import type { Tile, Team, EventRole, Goal } from "@/app/actions/events"
-import type { SelectableUser } from "@/app/actions/bingo"
+import { EventRole } from "@/app/actions/events"
+import type { Tile, Team, Goal, SelectableUser } from "@/types/model"
+
+
 
 interface TileDetailsDialogProps {
   isOpen: boolean

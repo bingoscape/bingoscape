@@ -3,7 +3,7 @@ import { db } from "@/server/db"
 import { logger } from "@/lib/logger"
 import { bingos, tiles } from "@/server/db/schema"
 import { eq, asc } from "drizzle-orm"
-import { BingoData } from "./bingo"
+import type { BingoData } from "@/types/model"
 
 export async function getBingoById(bingoId: string): Promise<BingoData | null> {
   try {

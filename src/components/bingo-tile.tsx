@@ -3,7 +3,7 @@
 import React from "react"
 import Image from "next/image"
 import { Zap, EyeOff } from "lucide-react"
-import type { Tile } from "@/app/actions/events"
+import type { Tile } from "@/types/model"
 import {
   HoverCard,
   HoverCardContent,

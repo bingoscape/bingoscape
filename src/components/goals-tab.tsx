@@ -2,9 +2,10 @@
 
 /* eslint-disable */
 import { useState, useEffect } from "react"
-import type { Tile, Goal } from "@/app/actions/events"
+
 import { GoalTreeEditor } from "./goal-tree-editor"
 import { getGoalTree, type GoalTreeNode } from "@/app/actions/goal-groups"
+import type { Tile, Goal } from "@/types/model"
 
 interface GoalsTabProps {
   selectedTile: Tile | null

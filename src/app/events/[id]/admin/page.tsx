@@ -1,10 +1,7 @@
 import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import { getServerAuthSession } from "@/server/auth"
-import {
-  getPendingRegistrationCount,
-  calculateEventPrizePool,
-} from "@/app/actions/events"
+import { getPendingRegistrationCount, calculateEventPrizePool } from "@/app/actions/events"
 import { StatCard, ActionTile } from "./components/dashboard-ui"
 import { Button } from "@/components/ui/button"
 import {

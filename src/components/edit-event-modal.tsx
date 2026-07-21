@@ -37,7 +37,8 @@ import {
 import { format } from "date-fns"
 import { toZonedTime, fromZonedTime } from "date-fns-tz"
 import { cn } from "@/lib/utils"
-import type { Event } from "@/app/actions/events"
+import type { Event } from "@/types/model"
+
 
 interface EditEventModalProps {
   event: Event

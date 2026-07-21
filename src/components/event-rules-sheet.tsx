@@ -15,12 +15,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import {
-  createEventRule,
-  updateEventRule,
-  deleteEventRule,
-} from "@/app/actions/events"
-import type { EventRule } from "@/app/actions/events"
+import { createEventRule, updateEventRule, deleteEventRule } from "@/app/actions/events"
+import { EventRule } from "@/app/actions/events"
 
 interface EventRulesSheetProps {
   eventId: string

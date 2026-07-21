@@ -13,7 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Upload, Loader2, CheckCircle2, Users, BarChart2 } from "lucide-react"
-import type { SelectableUser } from "@/app/actions/bingo"
+import type { SelectableUser } from "@/types/model"
+
 
 interface SubmissionUploadFormProps {
   teamName: string

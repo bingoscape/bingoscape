@@ -38,11 +38,7 @@ import {
   User,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
-import {
-  approveRegistrationRequest,
-  rejectRegistrationRequest,
-  type RegistrationRequest,
-} from "@/app/actions/events"
+import { approveRegistrationRequest, rejectRegistrationRequest, type RegistrationRequest } from "@/app/actions/events"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface RegistrationsTabProps {

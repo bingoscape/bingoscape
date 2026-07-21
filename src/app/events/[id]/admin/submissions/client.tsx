@@ -1,18 +1,15 @@
 "use client"
 
 import { SubmissionsTab } from "@/components/submissions-tab"
-import {
-  updateTeamTileSubmissionStatus,
-  updateSubmissionStatus,
-  deleteSubmission,
-} from "@/app/actions/bingo"
+import { updateTeamTileSubmissionStatus, updateSubmissionStatus, deleteSubmission } from "@/app/actions/bingo"
 import { updateSubmissionGoalAndValue } from "@/app/actions/goals"
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
 import { FullSizeImageDialog } from "@/components/full-size-image-dialog"
+import type { Team } from "@/types/model"
 
-import { Team } from "@/app/actions/events"
+
 
 interface ReviewSubmissionsClientProps {
   teamTileSubmissions: unknown[]

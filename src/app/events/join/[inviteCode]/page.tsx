@@ -5,10 +5,7 @@ import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
-import {
-  joinEventViaInvite,
-  getUserRegistrationStatus,
-} from "@/app/actions/events"
+import { joinEventViaInvite, getUserRegistrationStatus } from "@/app/actions/events"
 import { useSession, signIn } from "next-auth/react"
 import { Loader2 } from "lucide-react"
 import {

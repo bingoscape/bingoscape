@@ -3,8 +3,9 @@ import { getUserRole } from "@/app/actions/events"
 import { getTeamsByEventId, getCurrentTeamForUser } from "@/app/actions/team"
 import type { UUID } from "crypto"
 import { BingoDetailClient } from "./bingo-detail-client"
-import type { Bingo } from "@/app/actions/events"
+
 import { getEventById } from "@/server/queries/events"
+import type { Bingo } from "@/types/model"
 
 export default async function BingoDetailPage(props: {
   params: Promise<{ id: UUID; bingoId: string }>

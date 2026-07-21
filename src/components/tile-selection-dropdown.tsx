@@ -10,8 +10,9 @@ import {
 } from "@/components/ui/command"
 import { Badge } from "@/components/ui/badge"
 import { Check, Clock, AlertTriangle } from "lucide-react"
-import type { Tile } from "@/app/actions/events"
+
 import { ScrollArea } from "@/components/ui/scroll-area"
+import type { Tile } from "@/types/model"
 
 interface TileSelectionDropdownProps {
   tiles: Tile[]

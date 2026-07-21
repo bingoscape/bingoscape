@@ -1,4 +1,4 @@
-import type { EventData } from "@/app/actions/events"
+import { EventData } from "@/app/actions/events"
 import { EventCard } from "@/components/event-card"
 import { Calendar, Clock, Archive } from "lucide-react"
 

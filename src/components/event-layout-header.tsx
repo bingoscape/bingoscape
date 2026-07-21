@@ -9,13 +9,7 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { getServerAuthSession } from "@/server/auth"
-import {
-  calculateEventPrizePool,
-  isRegistrationOpen,
-  getPendingRegistrationCount,
-  getUserRegistrationStatus,
-  getEventRules,
-} from "@/app/actions/events"
+import { calculateEventPrizePool, isRegistrationOpen, getPendingRegistrationCount, getUserRegistrationStatus, getEventRules } from "@/app/actions/events"
 import { getUserClans } from "@/app/actions/clan"
 import Link from "next/link"
 import { Users, Clock, Trophy, ArrowLeft, Lock } from "lucide-react"
