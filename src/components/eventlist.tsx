@@ -50,7 +50,7 @@ export default function EventList({ initialEvents }: EventListProps) {
             <div className="rounded-xl bg-primary/10 p-2 shadow-[0_0_15px_rgba(0,118,255,0.1)]">
               <Trophy aria-hidden="true" className="h-6 w-6 text-primary" />
             </div>
-            <h1 className="bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-2xl font-bold tracking-tight text-transparent">
+            <h1 className="bg-linear-to-br from-foreground to-muted-foreground bg-clip-text text-2xl font-bold tracking-tight text-transparent">
               Events Dashboard
             </h1>
           </div>
@@ -69,7 +69,7 @@ export default function EventList({ initialEvents }: EventListProps) {
         {/* Right: Micro-Stats */}
         {hasEvents && (
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <div className="flex items-center gap-1.5 rounded-full border border-border/50 bg-card/40 px-3 py-1.5 backdrop-blur-sm transition-colors hover:bg-card/60">
+            <div className="flex items-center gap-1.5 rounded-full border border-border/50 bg-card/40 px-3 py-1.5 backdrop-blur-xs transition-colors hover:bg-card/60">
               <TrendingUp
                 aria-hidden="true"
                 className="h-4 w-4 text-muted-foreground"
@@ -79,7 +79,7 @@ export default function EventList({ initialEvents }: EventListProps) {
               </span>
               <span className="text-muted-foreground">Total</span>
             </div>
-            <div className="flex items-center gap-1.5 rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1.5 backdrop-blur-sm transition-colors hover:bg-green-500/20">
+            <div className="flex items-center gap-1.5 rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1.5 backdrop-blur-xs transition-colors hover:bg-green-500/20">
               <div className="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
               <span className="font-semibold text-green-600 dark:text-green-400">
                 {activeEventsCount}
@@ -88,7 +88,7 @@ export default function EventList({ initialEvents }: EventListProps) {
                 Active
               </span>
             </div>
-            <div className="flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 backdrop-blur-sm transition-colors hover:bg-amber-500/20">
+            <div className="flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 backdrop-blur-xs transition-colors hover:bg-amber-500/20">
               <Trophy aria-hidden="true" className="h-4 w-4 text-amber-500" />
               <span className="font-semibold text-amber-600 dark:text-amber-400">
                 {formattedPrizePool}
@@ -97,7 +97,7 @@ export default function EventList({ initialEvents }: EventListProps) {
                 Prize Pool
               </span>
             </div>
-            <div className="flex items-center gap-1.5 rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1.5 backdrop-blur-sm transition-colors hover:bg-purple-500/20">
+            <div className="flex items-center gap-1.5 rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1.5 backdrop-blur-xs transition-colors hover:bg-purple-500/20">
               <Users aria-hidden="true" className="h-4 w-4 text-purple-500" />
               <span className="font-semibold text-purple-600 dark:text-purple-400">
                 {totalBingos}

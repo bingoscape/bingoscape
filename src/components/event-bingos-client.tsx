@@ -216,7 +216,7 @@ export function EventBingosClient({
                     </span>
                     <div className="h-2 w-16 overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-full bg-gradient-to-r from-green-500 to-green-600 transition-all duration-300"
+                        className="h-full bg-linear-to-r from-green-500 to-green-600 transition-all duration-300"
                         style={{
                           width: `${Math.round((currentBingoStats!.completed / currentBingoStats!.total) * 100) || 0}%`,
                         }}
@@ -323,7 +323,7 @@ export function EventBingosClient({
             ) : (
               <div className="relative rounded-lg border border-muted/40 bg-muted/20 p-2">
                 {isUpcoming && isAdminOrManagement && (
-                  <div className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-full border border-white/20 bg-black/80 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-sm">
+                  <div className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-full border border-white/20 bg-black/80 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-xs">
                     <Lock className="h-3 w-3" />
                     Upcoming (Locked)
                   </div>

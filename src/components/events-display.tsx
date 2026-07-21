@@ -43,7 +43,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
               <Calendar className="h-12 w-12 text-primary" />
             </div>
             <div className="space-y-2">
-              <h2 className="bg-gradient-to-br from-foreground via-foreground/90 to-muted-foreground bg-clip-text text-2xl font-bold text-transparent">
+              <h2 className="bg-linear-to-br from-foreground via-foreground/90 to-muted-foreground bg-clip-text text-2xl font-bold text-transparent">
                 No Events Yet
               </h2>
               <p className="text-muted-foreground">
@@ -66,7 +66,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
             <div className="rounded-xl bg-green-500/10 p-2.5 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
               <Clock className="h-6 w-6 text-green-500" aria-hidden="true" />
             </div>
-            <h2 className="bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-3xl font-bold tracking-tight text-transparent">
+            <h2 className="bg-linear-to-br from-foreground to-muted-foreground bg-clip-text text-3xl font-bold tracking-tight text-transparent">
               Live Now
             </h2>
           </div>
@@ -90,7 +90,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
             <div className="rounded-xl bg-blue-500/10 p-2.5 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
               <Calendar className="h-6 w-6 text-blue-500" aria-hidden="true" />
             </div>
-            <h2 className="bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-2xl font-bold tracking-tight text-transparent">
+            <h2 className="bg-linear-to-br from-foreground to-muted-foreground bg-clip-text text-2xl font-bold tracking-tight text-transparent">
               On The Horizon
             </h2>
           </div>
@@ -117,7 +117,7 @@ export function EventDisplay({ initialEvents }: EventDisplayProps) {
                 aria-hidden="true"
               />
             </div>
-            <h2 className="bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-2xl font-bold tracking-tight text-transparent">
+            <h2 className="bg-linear-to-br from-foreground to-muted-foreground bg-clip-text text-2xl font-bold tracking-tight text-transparent">
               The Archive
             </h2>
           </div>

@@ -525,7 +525,7 @@ export function SubmissionsTab({
       <div className="space-y-6 p-4">
         {/* Current team submission form */}
         {!isAdminView && currentTeamId && !isSubmissionsLocked && (
-          <div className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm">
+          <div className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-xs">
             <SubmissionUploadForm
               teamName={currentTeam?.name || "Your Team"}
               selectedImage={selectedImage}
@@ -554,7 +554,7 @@ export function SubmissionsTab({
         )}
 
         {/* Enhanced Filters */}
-        <div className="space-y-4 rounded-lg border border-border bg-card p-4 sm:p-6 shadow-sm">
+        <div className="space-y-4 rounded-lg border border-border bg-card p-4 sm:p-6 shadow-xs">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
               <div className="flex items-center justify-between">
@@ -724,13 +724,13 @@ export function SubmissionsTab({
               return (
                 <div
                   key={teamSubmission.id}
-                  className="overflow-hidden rounded-lg border border-border bg-card shadow-sm"
+                  className="overflow-hidden rounded-lg border border-border bg-card shadow-xs"
                 >
                   <div className="border-b border-border bg-muted/30 p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div
-                          className="h-4 w-4 rounded-full shadow-sm"
+                          className="h-4 w-4 rounded-full shadow-xs"
                           style={{
                             backgroundColor: `hsl(${(teamSubmission.team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`,
                           }}
@@ -820,7 +820,7 @@ export function SubmissionsTab({
                           return (
                             <div
                               key={submission.id}
-                              className="overflow-hidden rounded-md border border-border bg-card shadow-sm transition-shadow hover:shadow-md"
+                              className="overflow-hidden rounded-md border border-border bg-card shadow-xs transition-shadow hover:shadow-md"
                             >
                               <div className="relative aspect-video">
                                 <Image
@@ -963,7 +963,7 @@ export function SubmissionsTab({
                                 {hasSufficientRights && (
                                   <div className="mt-2 flex justify-end gap-2 border-t border-border pt-3">
                                     <Button
-                                      variant={currentSubmissionStatus === "approved" ? "secondary" : "outline"}
+                                      variant={currentSubmissionStatus === "approved" ? "secondary" : "outline-solid"}
                                       size="sm"
                                       className={`h-8 ${currentSubmissionStatus !== "approved" ? "border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700" : "bg-green-100 text-green-800 hover:bg-green-200"}`}
                                       onClick={() =>

@@ -19,7 +19,7 @@ export function CreateEventButton() {
     <>
       <Button
         size="sm"
-        className="bg-primary text-primary-foreground shadow-sm transition-all hover:bg-primary/90"
+        className="bg-primary text-primary-foreground shadow-xs transition-all hover:bg-primary/90"
         onClick={() => setCreateModalOpen(true)}
       >
         <Plus className="mr-1.5 h-4 w-4" />

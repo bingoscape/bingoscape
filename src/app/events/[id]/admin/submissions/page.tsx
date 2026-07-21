@@ -67,7 +67,7 @@ export default async function ReviewSubmissionsPage(props: {
         </div>
       </div>
 
-      <main className="min-h-[60vh] space-y-6 rounded-3xl border bg-gradient-to-br from-slate-50 to-slate-100 p-6 shadow-inner dark:from-slate-900/50 dark:to-slate-900 md:p-8">
+      <main className="min-h-[60vh] space-y-6 rounded-3xl border bg-linear-to-br from-slate-50 to-slate-100 p-6 shadow-inner dark:from-slate-900/50 dark:to-slate-900 md:p-8">
         <ReviewSubmissionsClient
           teamTileSubmissions={teamTileSubmissions}
           teams={teams}

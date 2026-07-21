@@ -295,7 +295,7 @@ export function TierManagementModal({
         </DialogHeader>
 
         <Tabs defaultValue="tiers" className="flex min-h-0 flex-1 flex-col">
-          <TabsList className="grid w-full flex-shrink-0 grid-cols-2">
+          <TabsList className="grid w-full shrink-0 grid-cols-2">
             <TabsTrigger value="tiers">Manage Tiers</TabsTrigger>
             <TabsTrigger value="move">Move Tiles</TabsTrigger>
           </TabsList>

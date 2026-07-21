@@ -137,7 +137,7 @@ export function ItemTimelineCharts({
                           date: string
                         }
                         return (
-                          <div className="rounded-lg border bg-background p-2 shadow-sm">
+                          <div className="rounded-lg border bg-background p-2 shadow-xs">
                             <div className="grid gap-2">
                               <div className="flex items-center justify-between gap-2">
                                 <span className="text-sm font-medium">
@@ -240,7 +240,7 @@ export function ItemTimelineCharts({
                         >
                         const date = data.date as string
                         return (
-                          <div className="rounded-lg border bg-background p-2 shadow-sm">
+                          <div className="rounded-lg border bg-background p-2 shadow-xs">
                             <div className="grid gap-2">
                               <div className="mb-1 text-sm font-medium">
                                 {date}
@@ -339,7 +339,7 @@ export function ItemTimelineCharts({
                         if (active && payload?.[0]) {
                           const data = payload[0].payload as ItemDiversityStats
                           return (
-                            <div className="rounded-lg border bg-background p-2 shadow-sm">
+                            <div className="rounded-lg border bg-background p-2 shadow-xs">
                               <div className="grid gap-2">
                                 <div className="text-sm font-medium">
                                   {data.teamName}
@@ -442,7 +442,7 @@ export function ItemTimelineCharts({
                             date: string
                           }
                           return (
-                            <div className="rounded-lg border bg-background p-2 shadow-sm">
+                            <div className="rounded-lg border bg-background p-2 shadow-xs">
                               <div className="grid gap-2">
                                 <div className="text-sm font-medium">
                                   Date: {data.date}

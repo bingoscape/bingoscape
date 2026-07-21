@@ -170,7 +170,7 @@ export function OsrsItemSearch({
       <PopoverContent className="w-[400px] p-0" align="start">
         <Command
           shouldFilter={false}
-          className="[&_input]:focus:ring-0 [&_input]:focus-visible:ring-0"
+          className="focus:[&_input]:ring-0 focus-visible:[&_input]:ring-0"
         >
           <CommandInput
             placeholder="Search OSRS items..."
@@ -211,9 +211,9 @@ export function OsrsItemSearch({
                       <div className="flex w-full items-center gap-3">
                         {multiSelect &&
                           (selected ? (
-                            <CheckSquare className="h-5 w-5 flex-shrink-0 text-blue-500" />
+                            <CheckSquare className="h-5 w-5 shrink-0 text-blue-500" />
                           ) : (
-                            <Square className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                            <Square className="h-5 w-5 shrink-0 text-muted-foreground" />
                           ))}
                         <div className="relative h-8 w-8 shrink-0">
                           <Image
@@ -233,7 +233,7 @@ export function OsrsItemSearch({
                             </span>
                           )}
                         </div>
-                        <span className="flex-shrink-0 text-xs text-muted-foreground">
+                        <span className="shrink-0 text-xs text-muted-foreground">
                           ID: {itemId}
                         </span>
                       </div>

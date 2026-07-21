@@ -78,7 +78,7 @@ export function EventTimeDisplay({
           </TooltipTrigger>
           <TooltipContent
             side="top"
-            className="flex flex-col gap-1.5 border-border/50 bg-background/95 p-3 shadow-xl backdrop-blur-sm"
+            className="flex flex-col gap-1.5 border-border/50 bg-background/95 p-3 shadow-xl backdrop-blur-xs"
           >
             <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               Official Event Time

@@ -111,7 +111,7 @@ export function BingoDetailClient({
           </div>
         </div>
 
-        <Card className="border-none shadow-sm">
+        <Card className="border-none shadow-xs">
           <CardContent className="p-2 sm:p-4">
             <div
               className={cn(

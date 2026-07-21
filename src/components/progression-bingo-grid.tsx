@@ -443,10 +443,10 @@ function SortableTile({
         >
           <div className="space-y-3">
             <div className="flex items-start justify-between gap-2">
-              <h4 className="flex-1 break-words text-base font-semibold leading-tight">
+              <h4 className="flex-1 wrap-break-word text-base font-semibold leading-tight">
                 {tile.isHidden ? "Hidden Tile" : tile.title}
               </h4>
-              <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-1 dark:bg-amber-900/30">
+              <div className="flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-1 dark:bg-amber-900/30">
                 <Zap className="h-3.5 w-3.5 text-amber-500" />
                 <span className="text-xs font-medium">{tile.weight} XP</span>
               </div>
@@ -466,7 +466,7 @@ function SortableTile({
                 <Markdown
                   components={{
                     p: ({ children }) => (
-                      <p className="mb-2 break-words leading-relaxed last:mb-0">
+                      <p className="mb-2 wrap-break-word leading-relaxed last:mb-0">
                         {children}
                       </p>
                     ),
@@ -489,7 +489,7 @@ function SortableTile({
                       </ol>
                     ),
                     li: ({ children }) => (
-                      <li className="break-words text-sm">{children}</li>
+                      <li className="wrap-break-word text-sm">{children}</li>
                     ),
                     h1: ({ children }) => (
                       <h1 className="mb-1 text-base font-semibold text-foreground">
@@ -558,10 +558,10 @@ function SortableTile({
                         className="space-y-1 rounded-lg bg-muted/30 p-2"
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <span className="line-clamp-2 flex-1 break-words leading-tight text-muted-foreground">
+                          <span className="line-clamp-2 flex-1 wrap-break-word leading-tight text-muted-foreground">
                             {goal.description}
                           </span>
-                          <span className="flex-shrink-0 text-right font-medium text-foreground">
+                          <span className="shrink-0 text-right font-medium text-foreground">
                             Target: {goal.targetValue}
                           </span>
                         </div>
@@ -1142,7 +1142,7 @@ export function ProgressionBingoGrid({
           <div className="flex justify-end">
             <Button
               onClick={() => setIsEditing(!isEditing)}
-              variant={isEditing ? "default" : "outline"}
+              variant={isEditing ? "default" : "outline-solid"}
               className="gap-2"
             >
               <Edit2 className="h-4 w-4" />

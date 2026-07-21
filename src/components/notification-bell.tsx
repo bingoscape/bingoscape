@@ -97,7 +97,7 @@ export function NotificationBell({ userId }: { userId: string }) {
                 )}
                 <div className="flex gap-3 p-3">
                   {/* Tile image placeholder */}
-                  <div className="relative h-24 w-24 flex-shrink-0 border border-[#d9d9d9]">
+                  <div className="relative h-24 w-24 shrink-0 border border-[#d9d9d9]">
                     <Image
                       src={notification.tileImage ?? getRandomFrog()}
                       alt="Tile"
@@ -108,7 +108,7 @@ export function NotificationBell({ userId }: { userId: string }) {
                     />
                   </div>
 
-                  <div className="flex flex-grow flex-col">
+                  <div className="flex grow flex-col">
                     {/* Title: Event + Tile */}
                     <h5
                       className={`text-sm ${notification.isRead ? "font-medium" : "font-bold"}`}

@@ -118,7 +118,7 @@ export function TeamComparisonView({
   return (
     <div className="space-y-6">
       {/* Comparison Legend */}
-      <Card className="bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5">
+      <Card className="bg-linear-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Scale className="h-5 w-5" />
@@ -344,7 +344,7 @@ export function TeamComparisonView({
                     key={team.id}
                     className="flex items-start gap-3 rounded-lg border border-green-500/20 bg-green-500/10 p-3"
                   >
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
                     <div>
                       <div className="font-semibold text-green-700 dark:text-green-400">
                         {team.name}
@@ -362,7 +362,7 @@ export function TeamComparisonView({
                   key={team.id}
                   className="flex items-start gap-3 rounded-lg border bg-background p-3"
                 >
-                  <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" />
                   <div className="flex-1">
                     <div className="mb-1 font-semibold">{team.name}</div>
                     <ul className="space-y-1 text-sm text-muted-foreground">

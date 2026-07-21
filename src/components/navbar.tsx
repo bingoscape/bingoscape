@@ -57,7 +57,7 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
   ]
 
   return (
-    <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur transition-all duration-300 supports-[backdrop-filter]:bg-background/60">
+    <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-sm transition-all duration-300 supports-backdrop-filter:bg-background/60">
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
         <div className="flex items-center space-x-6">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -87,7 +87,7 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
                       className={cn(
                         "group flex items-center space-x-3 rounded-md px-3 py-2 transition-all duration-200 hover:bg-accent",
                         pathname === item.href
-                          ? "bg-primary text-primary-foreground shadow-sm"
+                          ? "bg-primary text-primary-foreground shadow-xs"
                           : "text-muted-foreground hover:text-foreground"
                       )}
                       onClick={() => setIsOpen(false)}
@@ -111,7 +111,7 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
             className="flex items-center space-x-2 text-xl font-bold transition-opacity hover:opacity-80"
           >
             <Zap className="h-6 w-6 text-primary" />
-            <span className="bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-primary to-primary/80 bg-clip-text text-transparent">
               BingoScape
             </span>
           </Link>
@@ -126,7 +126,7 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
                     className={cn(
                       "group flex items-center gap-2 rounded-md px-3 py-2 transition-colors duration-200 hover:bg-accent",
                       pathname === item.href
-                        ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary"
+                        ? "bg-primary text-primary-foreground shadow-xs hover:bg-primary"
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >

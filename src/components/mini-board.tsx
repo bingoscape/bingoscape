@@ -103,8 +103,8 @@ export function MiniBoard({
             tile.isHidden
               ? "border-2 border-dashed border-muted-foreground/30 bg-muted/20"
               : tile.isCompleted
-                ? "border-2 border-green-500 bg-green-50 shadow-sm dark:bg-green-900/20"
-                : "border border-border/80 bg-card shadow-sm"
+                ? "border-2 border-green-500 bg-green-50 shadow-xs dark:bg-green-900/20"
+                : "border border-border/80 bg-card shadow-xs"
           }`}
           title={tile.isHidden ? "Hidden Tile" : tile.title}
         >

@@ -63,7 +63,7 @@ export function PrizePoolDisplay({
       {showIcon && (
         <Coins
           className={cn(
-            "flex-shrink-0",
+            "shrink-0",
             variant === "compact" ? "h-3.5 w-3.5" : "h-4 w-4"
           )}
         />

@@ -230,7 +230,7 @@ function DraggableMember({
           className="group mr-2 flex min-w-0 flex-1 items-center space-x-2 rounded-sm p-1 transition-colors"
           title="Click to edit player metadata"
         >
-          <div className="relative flex-shrink-0">
+          <div className="relative shrink-0">
             <Avatar className={`h-6 w-6 ${avatarRingClass}`}>
               <AvatarImage
                 src={member.user.image ?? undefined}
@@ -252,7 +252,7 @@ function DraggableMember({
               ? `${member.user.runescapeName} (${member.user.originalRunescapeName})`
               : member.user.runescapeName ?? member.user.name}
           </p>
-          <User className="h-3 w-3 flex-shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+          <User className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
         </button>
 
         {/* Enhanced metadata indicator with tooltip */}
@@ -261,7 +261,7 @@ function DraggableMember({
             <TooltipTrigger asChild>
               <button
                 onClick={onEditMetadata}
-                className="flex-shrink-0 transition-transform hover:scale-110"
+                className="shrink-0 transition-transform hover:scale-110"
               >
                 {member.user.hasMetadata ? (
                   <Badge
@@ -294,7 +294,7 @@ function DraggableMember({
           </Tooltip>
         </TooltipProvider>
       </div>
-      <div className="mr-1 flex flex-shrink-0">
+      <div className="mr-1 flex shrink-0">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -348,7 +348,7 @@ function TeamStatBadge({
   icon: React.ElementType
   label: string
   value: string
-  variant?: "default" | "secondary" | "destructive" | "outline"
+  variant?: "default" | "secondary" | "destructive" | "outline-solid"
   tooltip?: string
 }) {
   const badge = (
@@ -489,7 +489,7 @@ function TeamCard({
 
   return (
     <Card className="flex flex-col overflow-hidden border-2 transition-shadow hover:shadow-md">
-      <CardHeader className="flex-shrink-0 bg-secondary/30 pb-2">
+      <CardHeader className="shrink-0 bg-secondary/30 pb-2">
         <CardTitle className="flex items-center justify-between text-base">
           {editingTeamId === team.id ? (
             <Input
@@ -525,7 +525,7 @@ function TeamCard({
 
       {/* Prominent Statistics Header Banner */}
       {teamStats && (
-        <div className="flex-shrink-0 border-b-2 border-border bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 px-4 py-3">
+        <div className="shrink-0 border-b-2 border-border bg-linear-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-3">
               {/* Team Size Badge */}
@@ -628,7 +628,7 @@ function TeamCard({
               variant="ghost"
               size="sm"
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="h-7 flex-shrink-0 px-2"
+              className="h-7 shrink-0 px-2"
             >
               {isCollapsed ? (
                 <ChevronDown className="h-4 w-4" />
@@ -909,7 +909,7 @@ function DraggableUnassignedParticipant({
         ref={setNodeRef}
         {...attributes}
         {...listeners}
-        className="flex-shrink-0 cursor-grab rounded-sm p-1 hover:bg-secondary active:cursor-grabbing"
+        className="shrink-0 cursor-grab rounded-sm p-1 hover:bg-secondary active:cursor-grabbing"
       >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
@@ -920,7 +920,7 @@ function DraggableUnassignedParticipant({
         className="group -ml-1 flex min-w-0 flex-1 items-center space-x-2 rounded-sm p-1 transition-colors hover:bg-secondary/50"
         title="Click to edit player metadata"
       >
-        <Avatar className={`h-7 w-7 flex-shrink-0 ${avatarRingClass}`}>
+        <Avatar className={`h-7 w-7 shrink-0 ${avatarRingClass}`}>
           <AvatarImage
             src={participant.image ?? undefined}
             alt={participant.name ?? ""}
@@ -932,7 +932,7 @@ function DraggableUnassignedParticipant({
         <span className="truncate text-sm font-medium group-hover:text-primary">
           {participant.runescapeName ?? participant.name}
         </span>
-        <User className="h-3 w-3 flex-shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+        <User className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
       </button>
 
       {/* Enhanced metadata indicator */}
@@ -941,7 +941,7 @@ function DraggableUnassignedParticipant({
           <TooltipTrigger asChild>
             <button
               onClick={onEditMetadata}
-              className="flex-shrink-0 transition-transform hover:scale-110"
+              className="shrink-0 transition-transform hover:scale-110"
             >
               {participant.hasMetadata ? (
                 <Badge

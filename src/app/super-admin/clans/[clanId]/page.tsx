@@ -82,8 +82,8 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
     <div className="space-y-8">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary/10 via-transparent to-green-500/10" />
-        <div className="relative rounded-2xl border bg-gradient-to-r from-card to-muted/50 p-8 shadow-lg lg:p-12">
+        <div className="absolute inset-0 rounded-2xl bg-linear-to-r from-primary/10 via-transparent to-green-500/10" />
+        <div className="relative rounded-2xl border bg-linear-to-r from-card to-muted/50 p-8 shadow-lg lg:p-12">
           <Link href="/super-admin/clans">
             <Button variant="ghost" size="sm" className="mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -98,7 +98,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
                   <Shield className="h-8 w-8 text-green-500" />
                 </div>
                 <div>
-                  <h1 className="bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-4xl font-bold text-transparent lg:text-5xl">
+                  <h1 className="bg-linear-to-r from-green-500 to-emerald-600 bg-clip-text text-4xl font-bold text-transparent lg:text-5xl">
                     {clan.name}
                   </h1>
                 </div>
@@ -145,7 +145,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
 
       {/* Stats Cards Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="transform border-0 bg-gradient-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+        <Card className="transform border-0 bg-linear-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Members</CardTitle>
             <div className="rounded-full bg-purple-500/10 p-2">
@@ -153,7 +153,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="bg-gradient-to-r from-purple-500 to-violet-600 bg-clip-text text-3xl font-bold text-transparent">
+            <div className="bg-linear-to-r from-purple-500 to-violet-600 bg-clip-text text-3xl font-bold text-transparent">
               {totalMembers}
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
@@ -196,7 +196,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
           </CardContent>
         </Card>
 
-        <Card className="transform border-0 bg-gradient-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+        <Card className="transform border-0 bg-linear-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Events</CardTitle>
             <div className="rounded-full bg-blue-500/10 p-2">
@@ -204,7 +204,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="bg-gradient-to-r from-blue-500 to-cyan-600 bg-clip-text text-3xl font-bold text-transparent">
+            <div className="bg-linear-to-r from-blue-500 to-cyan-600 bg-clip-text text-3xl font-bold text-transparent">
               {totalEvents}
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
@@ -230,7 +230,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
           </CardContent>
         </Card>
 
-        <Card className="transform border-0 bg-gradient-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+        <Card className="transform border-0 bg-linear-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Submissions
@@ -240,7 +240,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-3xl font-bold text-transparent">
+            <div className="bg-linear-to-r from-green-500 to-emerald-600 bg-clip-text text-3xl font-bold text-transparent">
               {totalSubmissions}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -249,7 +249,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
           </CardContent>
         </Card>
 
-        <Card className="transform border-0 bg-gradient-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+        <Card className="transform border-0 bg-linear-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Active Members
@@ -259,7 +259,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-3xl font-bold text-transparent">
+            <div className="bg-linear-to-r from-orange-500 to-red-600 bg-clip-text text-3xl font-bold text-transparent">
               {activeMembers}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">Last 30 days</p>
@@ -268,7 +268,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
       </div>
 
       {/* Members Table Section */}
-      <Card className="border-0 bg-gradient-to-r from-card to-muted/50 shadow-lg">
+      <Card className="border-0 bg-linear-to-r from-card to-muted/50 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <div className="rounded-full bg-purple-500/10 p-2">
@@ -291,7 +291,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
 
       {/* Events Section */}
       {clan.events.length > 0 && (
-        <Card className="border-0 bg-gradient-to-r from-card to-muted/50 shadow-lg">
+        <Card className="border-0 bg-linear-to-r from-card to-muted/50 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <div className="rounded-full bg-blue-500/10 p-2">

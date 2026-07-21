@@ -727,7 +727,7 @@ export function ParticipantsTab({
       case "management":
         return "secondary"
       default:
-        return "outline"
+        return "outline-solid"
     }
   }
 

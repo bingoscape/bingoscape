@@ -43,7 +43,7 @@ export default async function HomePage() {
                 <div className="mb-6 inline-block rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
                   🎯 The Ultimate OSRS Bingo Platform
                 </div>
-                <h1 className="mb-6 bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-6xl font-bold text-transparent lg:text-7xl">
+                <h1 className="mb-6 bg-linear-to-r from-primary to-blue-600 bg-clip-text text-6xl font-bold text-transparent lg:text-7xl">
                   BingoScape
                 </h1>
                 <p className="mx-auto mb-8 max-w-3xl text-xl leading-relaxed text-muted-foreground lg:text-2xl">
@@ -125,7 +125,7 @@ export default async function HomePage() {
               </div>
 
               <div className="mb-16 grid grid-cols-1 gap-8 md:grid-cols-3">
-                <div className="rounded-xl border bg-card p-8 shadow-sm transition-shadow hover:shadow-md">
+                <div className="rounded-xl border bg-card p-8 shadow-xs transition-shadow hover:shadow-md">
                   <div className="mb-6 w-fit rounded-full bg-red-500/10 p-4">
                     <span className="text-3xl">❤️</span>
                   </div>
@@ -139,7 +139,7 @@ export default async function HomePage() {
                   </p>
                 </div>
 
-                <div className="rounded-xl border bg-card p-8 shadow-sm transition-shadow hover:shadow-md">
+                <div className="rounded-xl border bg-card p-8 shadow-xs transition-shadow hover:shadow-md">
                   <div className="mb-6 w-fit rounded-full bg-blue-500/10 p-4">
                     <span className="text-3xl">📸</span>
                   </div>
@@ -152,7 +152,7 @@ export default async function HomePage() {
                   </p>
                 </div>
 
-                <div className="rounded-xl border bg-card p-8 shadow-sm transition-shadow hover:shadow-md">
+                <div className="rounded-xl border bg-card p-8 shadow-xs transition-shadow hover:shadow-md">
                   <div className="mb-6 w-fit rounded-full bg-green-500/10 p-4">
                     <span className="text-3xl">🤝</span>
                   </div>

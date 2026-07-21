@@ -182,11 +182,11 @@ export function GoalProgressTree({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="rounded-lg border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md">
+      <div className="rounded-lg border border-border bg-card p-4 shadow-xs transition-all hover:shadow-md">
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div
-              className="h-3 w-3 rounded-full shadow-sm"
+              className="h-3 w-3 rounded-full shadow-xs"
               style={{ backgroundColor: teamColor }}
             />
             <h4 className="text-sm font-semibold text-foreground">
@@ -245,7 +245,7 @@ function ProgressTreeNode({
         style={{ marginLeft: `${marginLeft}px` }}
         className={cn(
           isSumGroup &&
-            "my-1.5 rounded-lg border border-indigo-100/30 bg-indigo-50/10 p-2 shadow-[0_2px_8px_-3px_rgba(99,102,241,0.15)] backdrop-blur-sm dark:border-indigo-900/30 dark:bg-indigo-950/10"
+            "my-1.5 rounded-lg border border-indigo-100/30 bg-indigo-50/10 p-2 shadow-[0_2px_8px_-3px_rgba(99,102,241,0.15)] backdrop-blur-xs dark:border-indigo-900/30 dark:bg-indigo-950/10"
         )}
       >
         <Collapsible
@@ -431,7 +431,7 @@ function ProgressTreeNode({
           <div className="mr-1 flex min-w-0 flex-1 items-center justify-end gap-2">
             <Badge
               variant="outline"
-              className="rounded-full border-indigo-200/60 bg-indigo-50/80 px-2 py-0.5 text-[10px] font-semibold text-indigo-600 shadow-sm dark:bg-indigo-950/50 dark:text-indigo-400"
+              className="rounded-full border-indigo-200/60 bg-indigo-50/80 px-2 py-0.5 text-[10px] font-semibold text-indigo-600 shadow-xs dark:bg-indigo-950/50 dark:text-indigo-400"
             >
               +{currentValue}
             </Badge>

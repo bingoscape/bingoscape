@@ -185,7 +185,7 @@ export function EditBingoModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="flex h-[600px] max-w-4xl overflow-hidden border-0 bg-background/95 p-0 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <DialogContent className="flex h-[600px] max-w-4xl overflow-hidden border-0 bg-background/95 p-0 backdrop-blur-sm supports-backdrop-filter:bg-background/80">
         {/* Sidebar Navigation */}
         <div className="flex w-64 flex-col border-r bg-muted/40 p-4">
           <DialogHeader className="mb-6 text-left">
@@ -350,7 +350,7 @@ export function EditBingoModal({
                       </div>
 
                       {!isLoadingPattern && (
-                        <div className="rounded-xl border bg-background/80 p-6 shadow-sm backdrop-blur-xl">
+                        <div className="rounded-xl border bg-background/80 p-6 shadow-xs backdrop-blur-xl">
                           <PatternBonusSchematicEditor
                             rows={patternData.rows}
                             columns={patternData.columns}

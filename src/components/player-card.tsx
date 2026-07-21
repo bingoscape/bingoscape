@@ -33,7 +33,7 @@ export function PlayerCard({ user, metadata, totalSubmissions }: PlayerCardProps
   const rank = calculateRank(totalSubmissions)
 
   return (
-    <Card className="overflow-hidden border-2 border-primary/20 bg-gradient-to-br from-card to-card/50">
+    <Card className="overflow-hidden border-2 border-primary/20 bg-linear-to-br from-card to-card/50">
       <CardContent className="p-8">
         <div className="flex flex-col md:flex-row items-center gap-6">
           <Avatar className="h-32 w-32 ring-4 ring-primary/20 ring-offset-4 ring-offset-background">

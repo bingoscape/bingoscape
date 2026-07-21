@@ -33,12 +33,12 @@ export default async function ClansPage() {
       {userClans.length === 0 ? (
         <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
           <div className="relative mb-8">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 blur-2xl" />
-            <div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-primary/10 to-accent/10">
+            <div className="absolute inset-0 rounded-full bg-linear-to-r from-primary/20 to-accent/20 blur-2xl" />
+            <div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-linear-to-br from-primary/10 to-accent/10">
               <Users className="h-16 w-16 text-primary" />
             </div>
           </div>
-          <h2 className="mb-4 bg-gradient-to-r from-primary to-primary/30 bg-clip-text text-3xl font-bold text-transparent">
+          <h2 className="mb-4 bg-linear-to-r from-primary to-primary/30 bg-clip-text text-3xl font-bold text-transparent">
             No Clans Yet
           </h2>
           <p className="mb-8 max-w-md text-lg leading-relaxed text-muted-foreground">
@@ -57,13 +57,13 @@ export default async function ClansPage() {
           {userClans.map((userClan) => (
             <Card
               key={userClan.clan.id}
-              className="relative overflow-hidden border-2 bg-gradient-to-br duration-300 hover:border-primary/20 hover:shadow-md"
+              className="relative overflow-hidden border-2 bg-linear-to-br duration-300 hover:border-primary/20 hover:shadow-md"
             >
-              <div className="absolute left-0 top-0 h-1 w-full bg-gradient-to-r from-primary to-primary/20" />
+              <div className="absolute left-0 top-0 h-1 w-full bg-linear-to-r from-primary to-primary/20" />
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary/10 to-accent/10">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-primary/10 to-accent/10">
                       <BowArrow className="h-6 w-6 text-primary" />
                     </div>
                     <div>
@@ -77,7 +77,7 @@ export default async function ClansPage() {
                   </div>
                   <Badge
                     variant={userClan.isMain ? "default" : "secondary"}
-                    className="shadow-sm"
+                    className="shadow-xs"
                   >
                     {userClan.isMain ? "Main" : "Guest"}
                   </Badge>
