@@ -85,7 +85,7 @@ export default async function MyTemplatesPage() {
                   })}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex-grow">
+              <CardContent className="grow">
                 <TemplatePreviewGrid
                   templateData={template.templateData}
                   title={template.title}

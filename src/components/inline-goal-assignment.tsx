@@ -180,7 +180,7 @@ export function InlineGoalAssignment({
                       {isItemGoal && (
                         <Badge
                           variant="secondary"
-                          className="h-4 flex-shrink-0 px-1 text-[10px]"
+                          className="h-4 shrink-0 px-1 text-[10px]"
                         >
                           <Package className="h-3 w-3" />
                         </Badge>

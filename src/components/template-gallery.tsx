@@ -110,7 +110,7 @@ export function TemplateGallery({
     <div>
       <div className="mb-6">
         <form onSubmit={handleSearch} className="flex gap-2">
-          <div className="relative flex-grow">
+          <div className="relative grow">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
@@ -140,7 +140,7 @@ export function TemplateGallery({
             {categories.map((category) => (
               <Badge
                 key={category}
-                variant={currentCategory === category ? "default" : "outline"}
+                variant={currentCategory === category ? "default" : "outline-solid"}
                 className="cursor-pointer"
                 onClick={() => handleCategoryClick(category)}
               >
@@ -159,7 +159,7 @@ export function TemplateGallery({
             {sizes.map((size) => (
               <Badge
                 key={size}
-                variant={currentSize === size ? "default" : "outline"}
+                variant={currentSize === size ? "default" : "outline-solid"}
                 className="cursor-pointer"
                 onClick={() => handleSizeClick(size)}
               >
@@ -222,7 +222,7 @@ export function TemplateGallery({
                       </span>
                     </div>
                   </CardHeader>
-                  <CardContent className="flex-grow pb-2">
+                  <CardContent className="grow pb-2">
                     <TemplatePreviewGrid
                       templateData={template.templateData}
                       title={template.title}

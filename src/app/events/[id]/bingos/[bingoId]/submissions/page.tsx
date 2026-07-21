@@ -594,7 +594,7 @@ export default function BingoSubmissionsPage(props: {
           </div>
         </div>
 
-        <div className="space-y-4 rounded-lg border border-border bg-card p-4 sm:p-6 shadow-sm">
+        <div className="space-y-4 rounded-lg border border-border bg-card p-4 sm:p-6 shadow-xs">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
               <div className="flex items-center justify-between">

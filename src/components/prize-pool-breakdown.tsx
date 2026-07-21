@@ -70,7 +70,7 @@ export function PrizePoolBreakdown({
 
   return (
     <Card
-      className={`${className} border-amber-200 bg-gradient-to-br from-amber-50/50 to-yellow-50/30 dark:border-amber-800 dark:from-amber-950/20 dark:to-yellow-950/10`}
+      className={`${className} border-amber-200 bg-linear-to-br from-amber-50/50 to-yellow-50/30 dark:border-amber-800 dark:from-amber-950/20 dark:to-yellow-950/10`}
     >
       <CardContent className="p-6">
         {/* Total Prize Pool - More Prominent */}

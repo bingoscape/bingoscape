@@ -34,14 +34,14 @@ export default async function SuperAdminEventsPage(props: PageProps) {
     <div className="space-y-8">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary/10 via-transparent to-blue-500/10" />
-        <div className="relative rounded-2xl border bg-gradient-to-r from-card to-muted/50 p-8 shadow-lg lg:p-12">
+        <div className="absolute inset-0 rounded-2xl bg-linear-to-r from-primary/10 via-transparent to-blue-500/10" />
+        <div className="relative rounded-2xl border bg-linear-to-r from-card to-muted/50 p-8 shadow-lg lg:p-12">
           <div className="mb-6 flex items-center gap-4">
             <div className="rounded-full bg-primary/10 p-3">
               <Calendar className="h-8 w-8 text-primary" />
             </div>
             <div>
-              <h1 className="bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-4xl font-bold text-transparent lg:text-5xl">
+              <h1 className="bg-linear-to-r from-primary to-blue-600 bg-clip-text text-4xl font-bold text-transparent lg:text-5xl">
                 Event Management
               </h1>
               <p className="mt-2 text-lg text-muted-foreground">
@@ -63,7 +63,7 @@ export default async function SuperAdminEventsPage(props: PageProps) {
 
       {/* Quick Stats */}
       <div className="grid gap-6 md:grid-cols-4">
-        <Card className="transform border-0 bg-gradient-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+        <Card className="transform border-0 bg-linear-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Events</CardTitle>
             <div className="rounded-full bg-purple-500/10 p-2">
@@ -71,7 +71,7 @@ export default async function SuperAdminEventsPage(props: PageProps) {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="bg-gradient-to-r from-purple-500 to-violet-600 bg-clip-text text-3xl font-bold text-transparent">
+            <div className="bg-linear-to-r from-purple-500 to-violet-600 bg-clip-text text-3xl font-bold text-transparent">
               {eventsData.totalCount}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -80,7 +80,7 @@ export default async function SuperAdminEventsPage(props: PageProps) {
           </CardContent>
         </Card>
 
-        <Card className="transform border-0 bg-gradient-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+        <Card className="transform border-0 bg-linear-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Events</CardTitle>
             <div className="rounded-full bg-green-500/10 p-2">
@@ -88,7 +88,7 @@ export default async function SuperAdminEventsPage(props: PageProps) {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-3xl font-bold text-transparent">
+            <div className="bg-linear-to-r from-green-500 to-emerald-600 bg-clip-text text-3xl font-bold text-transparent">
               {activeEvents.length}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -97,7 +97,7 @@ export default async function SuperAdminEventsPage(props: PageProps) {
           </CardContent>
         </Card>
 
-        <Card className="transform border-0 bg-gradient-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+        <Card className="transform border-0 bg-linear-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Upcoming Events
@@ -107,7 +107,7 @@ export default async function SuperAdminEventsPage(props: PageProps) {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="bg-gradient-to-r from-blue-500 to-cyan-600 bg-clip-text text-3xl font-bold text-transparent">
+            <div className="bg-linear-to-r from-blue-500 to-cyan-600 bg-clip-text text-3xl font-bold text-transparent">
               {upcomingEvents.length}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -116,7 +116,7 @@ export default async function SuperAdminEventsPage(props: PageProps) {
           </CardContent>
         </Card>
 
-        <Card className="transform border-0 bg-gradient-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+        <Card className="transform border-0 bg-linear-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Showing Results
@@ -126,7 +126,7 @@ export default async function SuperAdminEventsPage(props: PageProps) {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-3xl font-bold text-transparent">
+            <div className="bg-linear-to-r from-orange-500 to-red-600 bg-clip-text text-3xl font-bold text-transparent">
               {eventsData.events.length}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -137,7 +137,7 @@ export default async function SuperAdminEventsPage(props: PageProps) {
       </div>
 
       {/* Events Table */}
-      <Card className="border-0 bg-gradient-to-r from-card to-muted/50 shadow-lg">
+      <Card className="border-0 bg-linear-to-r from-card to-muted/50 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <div className="rounded-full bg-purple-500/10 p-2">

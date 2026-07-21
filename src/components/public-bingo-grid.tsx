@@ -217,10 +217,10 @@ function PublicBingoTile({
         >
           <div className="space-y-3">
             <div className="flex items-start justify-between gap-2">
-              <h4 className="flex-1 break-words text-base font-semibold leading-tight">
+              <h4 className="flex-1 wrap-break-word text-base font-semibold leading-tight">
                 {tile.title}
               </h4>
-              <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-1 dark:bg-amber-900/30">
+              <div className="flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-1 dark:bg-amber-900/30">
                 <Zap className="h-3.5 w-3.5 text-amber-500" />
                 <span className="text-xs font-medium">{tile.weight} XP</span>
               </div>
@@ -240,7 +240,7 @@ function PublicBingoTile({
                 <Markdown
                   components={{
                     p: ({ children }) => (
-                      <p className="mb-2 break-words leading-relaxed last:mb-0">
+                      <p className="mb-2 wrap-break-word leading-relaxed last:mb-0">
                         {children}
                       </p>
                     ),
@@ -263,7 +263,7 @@ function PublicBingoTile({
                       </ol>
                     ),
                     li: ({ children }) => (
-                      <li className="break-words text-sm">{children}</li>
+                      <li className="wrap-break-word text-sm">{children}</li>
                     ),
                     h1: ({ children }) => (
                       <h1 className="mb-1 text-base font-semibold text-foreground">

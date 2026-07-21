@@ -99,7 +99,7 @@ export function ItemStatisticsDisplay({
 
       {/* MVP Spotlight */}
       {mvp && (
-        <Card className="border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50 dark:border-yellow-800 dark:from-yellow-950/20 dark:to-amber-950/20">
+        <Card className="border-yellow-200 bg-linear-to-br from-yellow-50 to-amber-50 dark:border-yellow-800 dark:from-yellow-950/20 dark:to-amber-950/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-yellow-600" />
@@ -151,7 +151,7 @@ export function ItemStatisticsDisplay({
 
       {/* Most Valuable Item */}
       {mostValuableItem && (
-        <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 dark:border-purple-800 dark:from-purple-950/20 dark:to-pink-950/20">
+        <Card className="border-purple-200 bg-linear-to-br from-purple-50 to-pink-50 dark:border-purple-800 dark:from-purple-950/20 dark:to-pink-950/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5 text-purple-600" />
@@ -162,7 +162,7 @@ export function ItemStatisticsDisplay({
           <CardContent>
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-4">
-                <div className="relative h-16 w-16 flex-shrink-0">
+                <div className="relative h-16 w-16 shrink-0">
                   <Image
                     src={mostValuableItem.itemImageUrl}
                     alt={mostValuableItem.itemName}

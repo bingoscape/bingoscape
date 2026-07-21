@@ -480,7 +480,7 @@ export function CreateBingoModal({
                         </p>
                       </div>
 
-                      <div className="overflow-hidden rounded-lg border bg-background p-2 shadow-sm">
+                      <div className="overflow-hidden rounded-lg border bg-background p-2 shadow-xs">
                         <PatternBonusSchematicEditor
                           rows={rows}
                           columns={columns}

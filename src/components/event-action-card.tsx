@@ -8,7 +8,7 @@ interface EventActionCardProps {
   title: string
   description?: string
   badge?: number | string
-  badgeVariant?: "default" | "secondary" | "destructive" | "outline"
+  badgeVariant?: "default" | "secondary" | "destructive" | "outline-solid"
   colorScheme: "amber" | "purple" | "green" | "blue"
   onClick?: () => void
   href?: string
@@ -77,7 +77,7 @@ export function EventActionCard({
     >
       {/* Icon */}
       <div
-        className={`h-10 w-10 flex-shrink-0 ${colors.icon} flex items-center justify-center rounded-full`}
+        className={`h-10 w-10 shrink-0 ${colors.icon} flex items-center justify-center rounded-full`}
       >
         <Icon className={`h-5 w-5 ${colors.iconColor}`} />
       </div>
@@ -99,7 +99,7 @@ export function EventActionCard({
 
       {/* Arrow/External Icon */}
       {!children && (
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           {external ? (
             <ExternalLink className="h-4 w-4 text-muted-foreground" />
           ) : (

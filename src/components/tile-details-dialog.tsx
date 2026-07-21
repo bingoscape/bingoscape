@@ -103,7 +103,7 @@ export function TileDetailsDialog({
               <DialogTitle className="text-2xl font-bold text-foreground">
                 {selectedTile?.title}
               </DialogTitle>
-              <div className="flex items-center gap-2 rounded-full border border-yellow-500/30 bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 px-3 py-1.5">
+              <div className="flex items-center gap-2 rounded-full border border-yellow-500/30 bg-linear-to-r from-yellow-500/20 to-yellow-600/20 px-3 py-1.5">
                 <Zap className="h-4 w-4 text-yellow-500" />
                 <span className="font-semibold text-yellow-500">
                   {selectedTile?.weight} XP
@@ -119,7 +119,7 @@ export function TileDetailsDialog({
           <TabsList className="mb-4 grid h-14 w-full grid-cols-3 rounded-lg border border-border bg-muted/50 p-1">
             <TabsTrigger
               value="details"
-              className="rounded-md font-medium text-muted-foreground transition-all duration-200 hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              className="rounded-md font-medium text-muted-foreground transition-all duration-200 hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
             >
               <div className="flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-blue-500"></div>
@@ -128,7 +128,7 @@ export function TileDetailsDialog({
             </TabsTrigger>
             <TabsTrigger
               value="goals"
-              className="rounded-md font-medium text-muted-foreground transition-all duration-200 hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              className="rounded-md font-medium text-muted-foreground transition-all duration-200 hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
             >
               <div className="flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-green-500"></div>
@@ -137,7 +137,7 @@ export function TileDetailsDialog({
             </TabsTrigger>
             <TabsTrigger
               value="submissions"
-              className="rounded-md font-medium text-muted-foreground transition-all duration-200 hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              className="rounded-md font-medium text-muted-foreground transition-all duration-200 hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
             >
               <div className="flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-purple-500"></div>

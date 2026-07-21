@@ -169,12 +169,12 @@ export function ClanDetailClient({
       <Breadcrumbs items={breadcrumbItems} />
 
       {/* Clan Header */}
-      <Card className="relative overflow-hidden border-2 bg-gradient-to-br from-card to-card/50">
-        <div className="absolute left-0 top-0 h-2 w-full bg-gradient-to-r from-primary to-accent" />
+      <Card className="relative overflow-hidden border-2 bg-linear-to-br from-card to-card/50">
+        <div className="absolute left-0 top-0 h-2 w-full bg-linear-to-r from-primary to-accent" />
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-4">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-accent/20">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br from-primary/20 to-accent/20">
                 <BowArrow className="h-10 w-10 text-primary" />
               </div>
               <div>
@@ -364,7 +364,7 @@ export function ClanDetailClient({
 
 function getRoleBadgeVariant(
   role: Role
-): "default" | "secondary" | "destructive" | "outline" {
+): "default" | "secondary" | "destructive" | "outline-solid" {
   switch (role) {
     case "admin":
       return "destructive"
@@ -373,7 +373,7 @@ function getRoleBadgeVariant(
     case "member":
       return "secondary"
     case "guest":
-      return "outline"
+      return "outline-solid"
     default:
       return "secondary"
   }

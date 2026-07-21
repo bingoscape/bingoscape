@@ -157,7 +157,7 @@ export default async function PublicEventPage(props: {
                     ? "default"
                     : eventStatus === "upcoming"
                       ? "secondary"
-                      : "outline"
+                      : "outline-solid"
                 }
               >
                 {eventStatus === "active"
@@ -284,7 +284,7 @@ export default async function PublicEventPage(props: {
                         variant={
                           bingo.id === firstBingoDetails.id
                             ? "default"
-                            : "outline"
+                            : "outline-solid"
                         }
                         size="sm"
                       >

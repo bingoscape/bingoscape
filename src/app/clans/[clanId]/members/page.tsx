@@ -270,7 +270,7 @@ export default function ClanMembersPage(props: {
 
 function getRoleBadgeVariant(
   role: Role
-): "default" | "secondary" | "destructive" | "outline" {
+): "default" | "secondary" | "destructive" | "outline-solid" {
   switch (role) {
     case "admin":
       return "destructive"
@@ -279,7 +279,7 @@ function getRoleBadgeVariant(
     case "member":
       return "secondary"
     case "guest":
-      return "outline"
+      return "outline-solid"
     default:
       return "secondary"
   }

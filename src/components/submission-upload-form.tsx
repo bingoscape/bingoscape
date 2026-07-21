@@ -165,7 +165,7 @@ export function SubmissionUploadForm({
                 className={`rounded-lg border-2 border-dashed p-8 text-center transition-all duration-200 ${
                   disabled
                     ? "scale-[0.98] border-gray-200 bg-gray-50/50"
-                    : "scale-100 border-border bg-muted/20 shadow-sm hover:border-muted-foreground hover:bg-muted/30"
+                    : "scale-100 border-border bg-muted/20 shadow-xs hover:border-muted-foreground hover:bg-muted/30"
                 }`}
               >
                 <div className="flex flex-col items-center space-y-4">

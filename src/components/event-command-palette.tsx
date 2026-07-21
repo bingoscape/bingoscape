@@ -390,14 +390,14 @@ export function EventCommandPalette({
                           return (
                             <div
                               key={action.id}
-                              className={`group relative min-h-[56px] rounded-lg transition-all duration-150 sm:min-h-0 ${isSelected ? metadata.selected + " shadow-sm" : metadata.hover} `}
+                              className={`group relative min-h-[56px] rounded-lg transition-all duration-150 sm:min-h-0 ${isSelected ? metadata.selected + " shadow-xs" : metadata.hover} `}
                               onMouseEnter={() => setSelectedIndex(actionIndex)}
                             >
                               {/* Visual wrapper that looks like an action item */}
                               <div className="pointer-events-none flex items-center gap-3 px-3 py-3 sm:px-4">
                                 {/* Icon with colored background */}
                                 <div
-                                  className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md ${metadata.icon} transition-transform group-hover:scale-110`}
+                                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${metadata.icon} transition-transform group-hover:scale-110`}
                                 >
                                   <Icon
                                     className={`h-4 w-4 ${metadata.color}`}
@@ -429,7 +429,7 @@ export function EventCommandPalette({
                               </div>
 
                               {/* Actual button trigger positioned absolutely */}
-                              <div className="absolute inset-0 [&>*]:h-full [&>*]:w-full [&>*]:opacity-0">
+                              <div className="absolute inset-0 *:h-full *:w-full *:opacity-0">
                                 {action.component}
                               </div>
                             </div>
@@ -442,12 +442,12 @@ export function EventCommandPalette({
                             key={action.id}
                             href={action.href ?? "#"}
                             onClick={() => setOpen(false)}
-                            className={`group relative flex min-h-[56px] cursor-pointer items-center gap-3 rounded-lg px-3 py-3 transition-all duration-150 sm:min-h-0 sm:px-4 ${isSelected ? metadata.selected + " shadow-sm" : metadata.hover} `}
+                            className={`group relative flex min-h-[56px] cursor-pointer items-center gap-3 rounded-lg px-3 py-3 transition-all duration-150 sm:min-h-0 sm:px-4 ${isSelected ? metadata.selected + " shadow-xs" : metadata.hover} `}
                             onMouseEnter={() => setSelectedIndex(actionIndex)}
                           >
                             {/* Icon with colored background */}
                             <div
-                              className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md ${metadata.icon} transition-transform group-hover:scale-110`}
+                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${metadata.icon} transition-transform group-hover:scale-110`}
                             >
                               <Icon className={`h-4 w-4 ${metadata.color}`} />
                             </div>

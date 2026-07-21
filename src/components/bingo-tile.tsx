@@ -154,7 +154,7 @@ export const BingoTile = React.memo(function BingoTile({
     >
       <HoverCardTrigger asChild>
         <div
-          className={`${tileClasses} focus:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 focus:ring-offset-background sm:focus:scale-[1.02] sm:focus:ring-4 sm:focus:ring-offset-2 lg:focus:scale-105`}
+          className={`${tileClasses} focus:scale-[1.01] focus:outline-hidden focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 focus:ring-offset-background sm:focus:scale-[1.02] sm:focus:ring-4 sm:focus:ring-offset-2 lg:focus:scale-105`}
           onClick={handleClick}
           role="button"
           tabIndex={0}
@@ -206,7 +206,7 @@ export const BingoTile = React.memo(function BingoTile({
               )}
               {/* Progress indicator overlay - only show on hover with enhanced animations */}
               {completionStatus === "completed" && (
-                <div className="absolute inset-0 flex items-center justify-center bg-green-500/15 opacity-0 backdrop-blur-sm transition-all duration-500 group-hover:opacity-100">
+                <div className="absolute inset-0 flex items-center justify-center bg-green-500/15 opacity-0 backdrop-blur-xs transition-all duration-500 group-hover:opacity-100">
                   <div className="scale-90 transform rounded-full bg-green-500 p-3 text-white shadow-2xl ring-4 ring-green-200 transition-transform duration-300 group-hover:scale-100 dark:ring-green-800">
                     <span className="border-0 bg-green-500 text-sm font-semibold text-white">
                       ✓ Complete
@@ -215,7 +215,7 @@ export const BingoTile = React.memo(function BingoTile({
                 </div>
               )}
               {completionStatus === "needs_review" && (
-                <div className="absolute inset-0 flex items-center justify-center bg-yellow-500/15 opacity-0 backdrop-blur-sm transition-all duration-500 group-hover:opacity-100">
+                <div className="absolute inset-0 flex items-center justify-center bg-yellow-500/15 opacity-0 backdrop-blur-xs transition-all duration-500 group-hover:opacity-100">
                   <div className="scale-90 transform rounded-full bg-yellow-500 p-3 text-white shadow-2xl ring-4 ring-yellow-200 transition-transform duration-300 group-hover:scale-100 dark:ring-yellow-800">
                     <span className="border-0 bg-yellow-500 text-sm font-semibold text-white">
                       ⚠ Review
@@ -224,7 +224,7 @@ export const BingoTile = React.memo(function BingoTile({
                 </div>
               )}
               {completionStatus === "pending" && (
-                <div className="absolute inset-0 flex items-center justify-center bg-blue-500/15 opacity-0 backdrop-blur-sm transition-all duration-500 group-hover:opacity-100">
+                <div className="absolute inset-0 flex items-center justify-center bg-blue-500/15 opacity-0 backdrop-blur-xs transition-all duration-500 group-hover:opacity-100">
                   <div className="scale-90 transform rounded-full bg-blue-500 p-3 text-white shadow-2xl ring-4 ring-blue-200 transition-transform duration-300 group-hover:scale-100 dark:ring-blue-800">
                     <span className="border-0 bg-blue-500 text-sm font-semibold text-white">
                       ⏳ Pending
@@ -234,7 +234,7 @@ export const BingoTile = React.memo(function BingoTile({
               )}
 
               {/* XP indicator - simple and clean */}
-              <div className="absolute bottom-2 right-2 z-10 rounded border border-border bg-background/90 px-2 py-1 shadow-sm">
+              <div className="absolute bottom-2 right-2 z-10 rounded border border-border bg-background/90 px-2 py-1 shadow-xs">
                 <div className="flex items-center gap-1">
                   <Zap className="h-3 w-3 text-amber-500" />
                   <span className="text-xs font-medium text-foreground">
@@ -266,10 +266,10 @@ export const BingoTile = React.memo(function BingoTile({
         >
           <div className="space-y-3">
             <div className="flex items-start justify-between gap-2">
-              <h4 className="flex-1 break-words text-base font-semibold leading-tight">
+              <h4 className="flex-1 wrap-break-word text-base font-semibold leading-tight">
                 {tile.title}
               </h4>
-              <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-1 dark:bg-amber-900/30">
+              <div className="flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-1 dark:bg-amber-900/30">
                 <Zap className="h-3.5 w-3.5 text-amber-500" />
                 <span className="text-xs font-medium">{tile.weight} XP</span>
               </div>
@@ -289,7 +289,7 @@ export const BingoTile = React.memo(function BingoTile({
                 <Markdown
                   components={{
                     p: ({ children }) => (
-                      <p className="mb-2 break-words leading-relaxed last:mb-0">
+                      <p className="mb-2 wrap-break-word leading-relaxed last:mb-0">
                         {children}
                       </p>
                     ),
@@ -312,7 +312,7 @@ export const BingoTile = React.memo(function BingoTile({
                       </ol>
                     ),
                     li: ({ children }) => (
-                      <li className="break-words text-sm">{children}</li>
+                      <li className="wrap-break-word text-sm">{children}</li>
                     ),
                     h1: ({ children }) => (
                       <h1 className="mb-1 text-base font-semibold text-foreground">

@@ -111,7 +111,7 @@ export function ItemValueCharts({
                         fill: string
                       }
                       return (
-                        <div className="rounded-lg border bg-background p-2 shadow-sm">
+                        <div className="rounded-lg border bg-background p-2 shadow-xs">
                           <div className="grid gap-2">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-sm font-medium">
@@ -172,7 +172,7 @@ export function ItemValueCharts({
                         submissions: number
                       }
                       return (
-                        <div className="rounded-lg border bg-background p-2 shadow-sm">
+                        <div className="rounded-lg border bg-background p-2 shadow-xs">
                           <div className="grid gap-2">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-sm font-medium">
@@ -251,7 +251,7 @@ export function ItemValueCharts({
                         avgPerUser: number
                       }
                       return (
-                        <div className="rounded-lg border bg-background p-2 shadow-sm">
+                        <div className="rounded-lg border bg-background p-2 shadow-xs">
                           <div className="grid gap-2">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-sm font-medium">

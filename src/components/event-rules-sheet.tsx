@@ -213,7 +213,7 @@ export function EventRulesSheet({
                     key={rule.id}
                     className="flex items-start gap-3 rounded-md border bg-muted/30 px-3 py-2.5 text-sm"
                   >
-                    <span className="mt-0.5 min-w-[1.25rem] text-right font-mono text-xs font-medium text-muted-foreground">
+                    <span className="mt-0.5 min-w-5 text-right font-mono text-xs font-medium text-muted-foreground">
                       {index + 1}.
                     </span>
 

@@ -603,7 +603,7 @@ export function GoalTreeEditor({
 
         <DragOverlay>
           {activeId ? (
-            <div className="relative -top-16 max-w-32 rounded-lg border border-border bg-card p-3 opacity-90 shadow-lg 5xl:-left-[12vw]">
+            <div className="relative -top-16 max-w-32 rounded-lg border border-border bg-card p-3 opacity-90 shadow-lg 5xl:left-[-12vw]">
               <div className="flex items-center gap-2 text-sm font-medium">
                 {flatTree.find((n) => n.id === activeId)?.type === "group" ? (
                   <>
@@ -1750,11 +1750,11 @@ function TreeNode({
                       alt={goalData.itemGoal.baseName}
                       width={24}
                       height={24}
-                      className="h-6 w-6 flex-shrink-0 object-contain"
+                      className="h-6 w-6 shrink-0 object-contain"
                     />
                     <Badge
                       variant="secondary"
-                      className="flex-shrink-0 text-xs"
+                      className="shrink-0 text-xs"
                     >
                       <Package className="mr-1 h-3 w-3" />
                       Item
@@ -1762,19 +1762,19 @@ function TreeNode({
                   </>
                 ) : isMetricGoal ? (
                   <>
-                    <BarChart2 className="h-4 w-4 flex-shrink-0 text-blue-500" />
+                    <BarChart2 className="h-4 w-4 shrink-0 text-blue-500" />
                     <Badge
                       variant="secondary"
-                      className="flex-shrink-0 text-xs"
+                      className="shrink-0 text-xs"
                     >
                       Metric ({goalData.metricGoal.metricType})
                     </Badge>
                   </>
                 ) : (
-                  <Target className="h-4 w-4 flex-shrink-0 text-green-500" />
+                  <Target className="h-4 w-4 shrink-0 text-green-500" />
                 )}
                 <span className="text-sm">{goalData.description}</span>
-                <Badge variant="outline" className="flex-shrink-0 text-xs">
+                <Badge variant="outline" className="shrink-0 text-xs">
                   Target: {goalData.targetValue}
                 </Badge>
               </div>

@@ -180,7 +180,7 @@ export function AddClanMembersDialog({
       case "management":
         return "secondary"
       default:
-        return "outline"
+        return "outline-solid"
     }
   }
 
@@ -279,7 +279,7 @@ export function AddClanMembersDialog({
                     </div>
                     <Badge
                       variant={getRoleBadgeVariant(member.role)}
-                      className="flex flex-shrink-0 items-center gap-1"
+                      className="flex shrink-0 items-center gap-1"
                     >
                       {getRoleIcon(member.role)}
                       {member.role}

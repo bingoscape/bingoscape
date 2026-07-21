@@ -179,7 +179,7 @@ export function EventCard({
                   className={`${eventData.totalPrizePool > 0 ? "mt-6" : ""}`}
                 >
                   <div className="flex flex-wrap items-center gap-2">
-                    <CardTitle className="bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-xl font-bold tracking-tight text-transparent">
+                    <CardTitle className="bg-linear-to-br from-foreground to-muted-foreground bg-clip-text text-xl font-bold tracking-tight text-transparent">
                       {eventData.event.title}
                     </CardTitle>
                     <GameTypeBadge gameType={eventData.event.gameType} />
@@ -224,7 +224,7 @@ export function EventCard({
               {/* Event metadata in a structured grid */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {eventData.event.clan && (
-                  <div className="flex items-center space-x-2 rounded-full border border-border/50 bg-muted/40 px-3 py-1.5 backdrop-blur-sm">
+                  <div className="flex items-center space-x-2 rounded-full border border-border/50 bg-muted/40 px-3 py-1.5 backdrop-blur-xs">
                     <Users className="h-4 w-4 text-primary" />
                     <span className="truncate text-sm font-medium">
                       {eventData.event.clan?.name}
@@ -232,7 +232,7 @@ export function EventCard({
                   </div>
                 )}
 
-                <div className="flex items-center space-x-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 backdrop-blur-sm">
+                <div className="flex items-center space-x-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 backdrop-blur-xs">
                   <Trophy className="h-4 w-4 text-amber-500" />
                   <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
                     {eventData.event.bingos?.length ?? 0} Bingos boards

@@ -135,7 +135,7 @@ export default async function ManageEventPage(props: {
       </div>
 
       {/* Main Content Area */}
-      <main className="space-y-6 rounded-3xl border bg-gradient-to-br from-slate-50 to-slate-100 p-6 shadow-inner dark:from-slate-900/50 dark:to-slate-900 md:p-8">
+      <main className="space-y-6 rounded-3xl border bg-linear-to-br from-slate-50 to-slate-100 p-6 shadow-inner dark:from-slate-900/50 dark:to-slate-900 md:p-8">
         {/* Quick Stats Row */}
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
@@ -167,7 +167,7 @@ export default async function ManageEventPage(props: {
         <div className="grid grid-cols-1 gap-6 pt-4 lg:grid-cols-3">
           {/* Left: Actions (60-70%) */}
           <section className="space-y-6 lg:col-span-2">
-            <div className="rounded-2xl border bg-white/50 p-6 backdrop-blur-sm dark:bg-black/20">
+            <div className="rounded-2xl border bg-white/50 p-6 backdrop-blur-xs dark:bg-black/20">
               <h2 className="mb-6 text-xl font-bold">Quick Actions</h2>
               <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
                 <ActionTile
@@ -209,7 +209,7 @@ export default async function ManageEventPage(props: {
 
           {/* Right: Insights & Progress */}
           <section className="space-y-6">
-            <div className="h-full rounded-2xl border bg-white/50 p-6 backdrop-blur-sm dark:bg-black/20">
+            <div className="h-full rounded-2xl border bg-white/50 p-6 backdrop-blur-xs dark:bg-black/20">
               <h2 className="mb-6 text-xl font-bold">Event Insights</h2>
 
               <div className="space-y-6">

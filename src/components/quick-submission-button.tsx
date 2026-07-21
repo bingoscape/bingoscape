@@ -56,7 +56,7 @@ export function QuickSubmissionButton({
   return (
     <Button
       variant="default"
-      className={`bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 ${className ?? ""}`}
+      className={`bg-linear-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 ${className ?? ""}`}
       onClick={onClick}
     >
       <Upload className="mr-2 h-4 w-4" />
