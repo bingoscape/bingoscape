@@ -16,6 +16,7 @@ import {
   Users,
   Zap,
   User,
+  Filter,
 } from "lucide-react"
 import type { Tile, Team, SubmissionComment } from "@/app/actions/events"
 import type { SelectableUser } from "@/app/actions/bingo"
@@ -23,6 +24,8 @@ import { CommentForm } from "@/components/comment-form"
 import { SubmissionCommentDisplay } from "@/components/submission-comment"
 import { SubmissionUploadForm } from "@/components/submission-upload-form"
 import { getOptimizedImageUrl } from "@/lib/utils"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible"
 import {
   Select,
   SelectContent,
@@ -116,12 +119,13 @@ export function SubmissionsTab({
   const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(
     null
   )
-  const [statusFilter, setStatusFilter] = useState<string>("pending")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
   const [teamFilter, setTeamFilter] = useState<string>("all")
 
   // Filter state
   const [boardFilter, setBoardFilter] = useState<string>("all")
   const [tileFilter, setTileFilter] = useState<string>("all")
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false)
 
   // Local state to track real-time status changes
   const [localTileStatuses, setLocalTileStatuses] = useState<
@@ -458,6 +462,45 @@ export function SubmissionsTab({
 
   const filteredSubmissions = getFilteredSubmissions()
 
+  // Calculate submission counts by status
+  const counts = {
+    all: 0,
+    needs_review: 0,
+    pending: 0,
+    approved: 0
+  }
+  
+  if (teamTileSubmissions) {
+    let baseSubmissions = teamTileSubmissions
+    if (!hasSufficientRights && currentTeamId) {
+      baseSubmissions = baseSubmissions.filter((ts) => ts.teamId === currentTeamId)
+    }
+    if (hasSufficientRights && teamFilter !== "all") {
+      baseSubmissions = baseSubmissions.filter((ts) => ts.teamId === teamFilter)
+    }
+    if (boardFilter !== "all") {
+      baseSubmissions = baseSubmissions.filter(
+        (ts) => ts.tile?.bingo?.id === boardFilter || ts.tile?.bingoId === boardFilter
+      )
+    }
+    if (tileFilter !== "all") {
+      baseSubmissions = baseSubmissions.filter(
+        (ts) => ts.tile?.id === tileFilter || ts.tileId === tileFilter
+      )
+    }
+    
+    // Each individual submission adds to the count
+    baseSubmissions.forEach(ts => {
+      ts.submissions.forEach((sub: any) => {
+        counts.all++
+        const status = getSubmissionStatus(sub.id, sub.status || "pending")
+        if (status === "needs_review") counts.needs_review++
+        else if (status === "pending") counts.pending++
+        else if (status === "approved") counts.approved++
+      })
+    })
+  }
+
   const isMetricOnly = selectedTile?.goals?.length
     ? selectedTile.goals.every((g: any) => g.goalType === "metric")
     : false
@@ -510,157 +553,162 @@ export function SubmissionsTab({
         )}
 
         {/* Enhanced Filters */}
-        <div className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-foreground">Filters</h3>
-            {(statusFilter !== "all" || boardFilter !== "all" || tileFilter !== "all" || teamFilter !== "all") && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setStatusFilter("all")
-                  setBoardFilter("all")
-                  setTileFilter("all")
-                  setTeamFilter("all")
-                }}
-                className="h-8 text-muted-foreground hover:text-foreground"
-              >
-                Clear Filters
-              </Button>
-            )}
-          </div>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-            <div>
-              <Label
-                htmlFor="status-filter"
-                className="mb-2 block text-sm font-medium text-muted-foreground"
-              >
-                Status Filter
-              </Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-gray-400" />
-                      All Statuses
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="pending">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-blue-500" />
-                      Pending
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="approved">
-                    <div className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-500" />
-                      Approved
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="needs_review">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                      Needs Review
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {isAdminView && (
-              <>
-                <div>
-                  <Label
-                    htmlFor="board-filter"
-                    className="mb-2 block text-sm font-medium text-muted-foreground"
+        <div className="space-y-4 rounded-lg border border-border bg-card p-4 sm:p-6 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
+              <div className="flex items-center justify-between">
+                <TabsList className="h-9 sm:h-10">
+                  <TabsTrigger value="all" className="flex items-center gap-1.5 px-3">
+                    All <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.all}</Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="needs_review" className="flex items-center gap-1.5 px-3">
+                    <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />
+                    <span className="hidden sm:inline">Needs Review</span>
+                    <span className="sm:hidden">Review</span>
+                    <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.needs_review}</Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="pending" className="flex items-center gap-1.5 px-3">
+                    <Clock className="h-3.5 w-3.5 text-blue-500" />
+                    Pending <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.pending}</Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="approved" className="flex items-center gap-1.5 px-3">
+                    <Check className="h-3.5 w-3.5 text-green-500" />
+                    Approved <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.approved}</Badge>
+                  </TabsTrigger>
+                </TabsList>
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 sm:h-10"
+                    onClick={() => setIsFiltersOpen(!isFiltersOpen)}
                   >
-                    Board Filter
-                  </Label>
-                  <Select value={boardFilter} onValueChange={setBoardFilter}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Filter by board" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Boards</SelectItem>
-                      {uniqueBoards.map((board: any) => (
-                        <SelectItem key={board.id} value={board.id}>
-                          {board.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <Filter className="mr-2 h-4 w-4" />
+                    Filters
+                    {(boardFilter !== "all" || tileFilter !== "all" || teamFilter !== "all") && (
+                      <Badge variant="secondary" className="ml-2 px-1 rounded-full h-5 min-w-5 flex items-center justify-center">!</Badge>
+                    )}
+                  </Button>
                 </div>
-                <div>
-                  <Label
-                    htmlFor="tile-filter"
-                    className="mb-2 block text-sm font-medium text-muted-foreground"
+              </div>
+            </Tabs>
+          </div>
+
+          <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+            <CollapsibleContent className="mt-4 space-y-4">
+              <div className="flex items-center justify-between border-t pt-4">
+                <h3 className="text-sm font-medium text-foreground">Advanced Filters</h3>
+                {(boardFilter !== "all" || tileFilter !== "all" || teamFilter !== "all") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setBoardFilter("all")
+                      setTileFilter("all")
+                      setTeamFilter("all")
+                    }}
+                    className="h-8 text-muted-foreground hover:text-foreground"
                   >
-                    Tile Filter
-                  </Label>
-                  <Select value={tileFilter} onValueChange={setTileFilter}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Filter by tile" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Tiles</SelectItem>
-                      {uniqueTiles
-                        .filter(
-                          (t: any) =>
-                            boardFilter === "all" ||
-                            t.bingo?.id === boardFilter ||
-                            t.bingoId === boardFilter
-                        )
-                        .map((tile: any) => (
-                          <SelectItem key={tile.id} value={tile.id}>
-                            {tile.title}
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+                {isAdminView && (
+                  <>
+                    <div>
+                      <Label
+                        htmlFor="board-filter"
+                        className="mb-2 block text-sm font-medium text-muted-foreground"
+                      >
+                        Board Filter
+                      </Label>
+                      <Select value={boardFilter} onValueChange={setBoardFilter}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Filter by board" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Boards</SelectItem>
+                          {uniqueBoards.map((board: any) => (
+                            <SelectItem key={board.id} value={board.id}>
+                              {board.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label
+                        htmlFor="tile-filter"
+                        className="mb-2 block text-sm font-medium text-muted-foreground"
+                      >
+                        Tile Filter
+                      </Label>
+                      <Select value={tileFilter} onValueChange={setTileFilter}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Filter by tile" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Tiles</SelectItem>
+                          {uniqueTiles
+                            .filter(
+                              (t: any) =>
+                                boardFilter === "all" ||
+                                t.bingo?.id === boardFilter ||
+                                t.bingoId === boardFilter
+                            )
+                            .map((tile: any) => (
+                              <SelectItem key={tile.id} value={tile.id}>
+                                {tile.title}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+
+                {hasSufficientRights && (
+                  <div>
+                    <Label
+                      htmlFor="team-filter"
+                      className="mb-2 block text-sm font-medium text-muted-foreground"
+                    >
+                      Team Filter
+                    </Label>
+                    <Select value={teamFilter} onValueChange={setTeamFilter}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Filter by team" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-gray-500" />
+                            All Teams
+                          </div>
+                        </SelectItem>
+                        {teams.map((team) => (
+                          <SelectItem key={team.id} value={team.id}>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="h-2 w-2 rounded-full"
+                                style={{
+                                  backgroundColor: `hsl(${(team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`,
+                                }}
+                              />
+                              {team.name}
+                            </div>
                           </SelectItem>
                         ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            )}
-
-            {hasSufficientRights && (
-              <div>
-                <Label
-                  htmlFor="team-filter"
-                  className="mb-2 block text-sm font-medium text-muted-foreground"
-                >
-                  Team Filter
-                </Label>
-                <Select value={teamFilter} onValueChange={setTeamFilter}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Filter by team" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-gray-500" />
-                        All Teams
-                      </div>
-                    </SelectItem>
-                    {teams.map((team) => (
-                      <SelectItem key={team.id} value={team.id}>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="h-2 w-2 rounded-full"
-                            style={{
-                              backgroundColor: `hsl(${(team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`,
-                            }}
-                          />
-                          {team.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
         {/* Team submissions */}
@@ -742,7 +790,7 @@ export function SubmissionsTab({
 
                   {teamSubmission.submissions.length > 0 ? (
                     <div className="submission-grid grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 md:grid-cols-3">
-                      {teamSubmission.submissions
+                      {[...teamSubmission.submissions]
                         .filter((submission: any) => {
                           // Apply status filter to individual submissions (with local override)
                           if (statusFilter === "all") return true
@@ -751,6 +799,16 @@ export function SubmissionsTab({
                             submission.status || "pending"
                           )
                           return currentSubmissionStatus === statusFilter
+                        })
+                        .sort((a: any, b: any) => {
+                          const statusOrder: Record<string, number> = { needs_review: 0, pending: 1, approved: 2 }
+                          const statusA = getSubmissionStatus(a.id, a.status || "pending")
+                          const statusB = getSubmissionStatus(b.id, b.status || "pending")
+                          const valA = statusOrder[statusA] ?? 3
+                          const valB = statusOrder[statusB] ?? 3
+                          if (valA !== valB) return valA - valB
+                          // Sort by creation date descending if statuses are the same
+                          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                         })
                         .map((submission: any) => {
                           const currentSubmissionStatus = getSubmissionStatus(
