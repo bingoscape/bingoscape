@@ -3,6 +3,7 @@
 
 import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { getUserRole } from "@/app/actions/events"
 import { getTeamsByEventId } from "@/app/actions/team"
 import {
@@ -29,6 +30,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible"
 import { toast } from "@/hooks/use-toast"
 import {
   ArrowLeft,
@@ -101,12 +103,12 @@ export default function BingoSubmissionsPage(props: {
     src: string
     alt: string
   } | null>(null)
-  const [statusFilters, setStatusFilters] = useState<string[]>(["pending"])
+  const [statusFilter, setStatusFilter] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [refreshKey, setRefreshKey] = useState(0)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [teamsPopoverOpen, setTeamsPopoverOpen] = useState(false)
-  const [statusPopoverOpen, setStatusPopoverOpen] = useState(false)
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false)
 
   const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(
     null
@@ -143,6 +145,9 @@ export default function BingoSubmissionsPage(props: {
         setTiles(bingoData.tiles || [])
         setTeams(teamsData)
         setUserRole(userRoleData)
+        
+        // Select all teams by default if none are selected
+        setSelectedTeamIds(prev => prev.length === 0 ? teamsData.map((t: any) => t.id) : prev)
       } catch (error) {
         console.error("Error fetching data:", error)
         toast({
@@ -215,15 +220,7 @@ export default function BingoSubmissionsPage(props: {
     })
   }
 
-  const toggleStatusSelection = (status: string) => {
-    setStatusFilters((prev) => {
-      if (prev.includes(status)) {
-        return prev.filter((s) => s !== status)
-      } else {
-        return [...prev, status]
-      }
-    })
-  }
+
 
   const selectAllTeams = () => {
     setSelectedTeamIds(teams.map((team) => team.id))
@@ -231,14 +228,6 @@ export default function BingoSubmissionsPage(props: {
 
   const clearTeamSelection = () => {
     setSelectedTeamIds([])
-  }
-
-  const selectAllStatuses = () => {
-    setStatusFilters(statusOptions.map((status) => status.value))
-  }
-
-  const clearStatusSelection = () => {
-    setStatusFilters([])
   }
 
   // Update handleTileStatusUpdate function to use new status names
@@ -490,10 +479,10 @@ export default function BingoSubmissionsPage(props: {
 
     return tileSubmissionsArray.some((submission) => {
       const teamMatches = selectedTeamIds.includes(submission.teamId)
-      const teamStatusMatches = statusFilters.includes(submission.status)
+      const teamStatusMatches = statusFilter === "all" || submission.status === statusFilter
       const hasIndividualSubmissions = submission.submissions.some(
         (individualSub) =>
-          statusFilters.includes(individualSub.status || "pending")
+          statusFilter === "all" || (individualSub.status || "pending") === statusFilter
       )
 
       return teamMatches && (teamStatusMatches || hasIndividualSubmissions)
@@ -513,11 +502,11 @@ export default function BingoSubmissionsPage(props: {
       }
 
       // Filter by selected statuses (either team status or individual submission status)
-      if (statusFilters.length > 0) {
-        const teamStatusMatches = statusFilters.includes(submission.status)
+      if (statusFilter !== "all") {
+        const teamStatusMatches = submission.status === statusFilter
         const hasMatchingIndividualSubmissions = submission.submissions.some(
           (individualSub) =>
-            statusFilters.includes(individualSub.status || "pending")
+            (individualSub.status || "pending") === statusFilter
         )
 
         if (!teamStatusMatches && !hasMatchingIndividualSubmissions) {
@@ -537,6 +526,30 @@ export default function BingoSubmissionsPage(props: {
       }
 
       return true
+    })
+  }
+
+  // Calculate submission counts by status for selected teams
+  const counts = {
+    all: 0,
+    needs_review: 0,
+    pending: 0,
+    approved: 0
+  }
+  
+  if (selectedTeamIds.length > 0) {
+    Object.values(tileSubmissions).forEach(teamSubsArray => {
+      teamSubsArray.forEach(ts => {
+        if (!selectedTeamIds.includes(ts.teamId)) return;
+        
+        ts.submissions.forEach((sub: any) => {
+          counts.all++
+          const status = sub.status || "pending"
+          if (status === "needs_review") counts.needs_review++
+          else if (status === "pending") counts.pending++
+          else if (status === "approved") counts.approved++
+        })
+      })
     })
   }
 
@@ -586,200 +599,173 @@ export default function BingoSubmissionsPage(props: {
           </div>
         </div>
 
-        <div className="flex flex-col items-start justify-between gap-4 rounded-lg bg-muted/30 p-4 md:flex-row md:items-center">
-          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
-            {/* Teams Multi-select */}
-            <Popover open={teamsPopoverOpen} onOpenChange={setTeamsPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={teamsPopoverOpen}
-                  className="w-full justify-between bg-transparent md:w-[250px]"
-                >
-                  <div className="flex items-center gap-1 truncate">
-                    <span>
-                      {selectedTeamIds.length === 0
-                        ? "Select Teams"
-                        : selectedTeamIds.length === 1
-                          ? getTeamName(selectedTeamIds[0]!)
-                          : `${selectedTeamIds.length} teams selected`}
-                    </span>
-                    {selectedTeamIds.length > 0 && (
-                      <Badge variant="secondary" className="ml-1">
-                        {selectedTeamIds.length}
-                      </Badge>
+        <div className="space-y-4 rounded-lg border border-border bg-card p-4 sm:p-6 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
+              <div className="flex items-center justify-between">
+                <TabsList className="h-9 sm:h-10">
+                  <TabsTrigger value="all" className="flex items-center gap-1.5 px-3">
+                    All <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.all}</Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="needs_review" className="flex items-center gap-1.5 px-3">
+                    <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />
+                    <span className="hidden sm:inline">Needs Review</span>
+                    <span className="sm:hidden">Review</span>
+                    <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.needs_review}</Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="pending" className="flex items-center gap-1.5 px-3">
+                    <Clock className="h-3.5 w-3.5 text-blue-500" />
+                    Pending <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.pending}</Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="approved" className="flex items-center gap-1.5 px-3">
+                    <Check className="h-3.5 w-3.5 text-green-500" />
+                    Approved <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.approved}</Badge>
+                  </TabsTrigger>
+                </TabsList>
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 sm:h-10"
+                    onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+                  >
+                    <Filter className="mr-2 h-4 w-4" />
+                    Filters
+                    {(searchQuery !== "" || selectedTeamIds.length > 0) && (
+                      <Badge variant="secondary" className="ml-2 px-1 rounded-full h-5 min-w-5 flex items-center justify-center">!</Badge>
                     )}
-                  </div>
-                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[250px] p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Search teams..." />
-                  <CommandList>
-                    <CommandEmpty>No teams found.</CommandEmpty>
-                    <CommandGroup>
-                      <div className="flex items-center justify-between border-b p-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={selectAllTeams}
-                          className="h-8"
-                        >
-                          Select All
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={clearTeamSelection}
-                          className="h-8"
-                        >
-                          Clear
-                        </Button>
-                      </div>
-                      {teams.map((team) => (
-                        <CommandItem
-                          key={team.id}
-                          onSelect={() => toggleTeamSelection(team.id)}
-                          className="flex items-center gap-2"
-                        >
-                          {selectedTeamIds.includes(team.id) ? (
-                            <CircleCheck className="mr-2" />
-                          ) : (
-                            <Circle className="mr-2" />
-                          )}
-                          <span>{team.name}</span>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-
-            {/* Status Multi-select */}
-            <Popover
-              open={statusPopoverOpen}
-              onOpenChange={setStatusPopoverOpen}
-            >
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={statusPopoverOpen}
-                  className="w-full justify-between bg-transparent md:w-[250px]"
-                >
-                  <div className="flex items-center gap-1 truncate">
-                    <Filter className="mr-1 h-4 w-4" />
-                    <span>
-                      {statusFilters.length === 0
-                        ? "Filter by Status"
-                        : statusFilters.length === 1
-                          ? statusOptions.find(
-                              (s) => s.value === statusFilters[0]
-                            )?.label
-                          : `${statusFilters.length} statuses selected`}
-                    </span>
-                    {statusFilters.length > 0 && (
-                      <Badge variant="secondary" className="ml-1">
-                        {statusFilters.length}
-                      </Badge>
-                    )}
-                  </div>
-                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[250px] p-0" align="start">
-                <Command>
-                  <CommandList>
-                    <CommandGroup>
-                      <div className="flex items-center justify-between border-b p-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={selectAllStatuses}
-                          className="h-8"
-                        >
-                          Select All
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={clearStatusSelection}
-                          className="h-8"
-                        >
-                          Clear
-                        </Button>
-                      </div>
-                      {statusOptions.map((status) => (
-                        <CommandItem
-                          key={status.value}
-                          onSelect={() => toggleStatusSelection(status.value)}
-                          className="flex items-center gap-2"
-                        >
-                          {statusFilters.includes(status.value) ? (
-                            <CircleCheck className="mr-2" />
-                          ) : (
-                            <Circle className="mr-2" />
-                          )}
-                          <span>{status.label}</span>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div className="flex w-full items-center gap-2 md:w-auto">
-            <div className="relative flex-1 md:flex-none">
-              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
-              <Input
-                placeholder="Search tiles..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 md:w-[250px]"
-              />
-            </div>
-            <Tabs
-              value={viewMode}
-              onValueChange={(value) => setViewMode(value as "grid" | "list")}
-              className="w-auto"
-            >
-              <TabsList className="h-9">
-                <TabsTrigger value="grid" className="px-3">
-                  <div className="grid h-4 w-4 grid-cols-2 gap-0.5">
-                    <div className="rounded-sm bg-current"></div>
-                    <div className="rounded-sm bg-current"></div>
-                    <div className="rounded-sm bg-current"></div>
-                    <div className="rounded-sm bg-current"></div>
-                  </div>
-                </TabsTrigger>
-                <TabsTrigger value="list" className="px-3">
-                  <div className="flex h-4 w-4 flex-col justify-center gap-0.5">
-                    <div className="h-0.5 rounded-sm bg-current"></div>
-                    <div className="h-0.5 rounded-sm bg-current"></div>
-                    <div className="h-0.5 rounded-sm bg-current"></div>
-                  </div>
-                </TabsTrigger>
-              </TabsList>
+                  </Button>
+                </div>
+              </div>
             </Tabs>
-            {(selectedTeamIds.length > 0 || statusFilters.length > 0 || searchQuery !== "") && (
-              <Button
-                variant="ghost"
-                className="h-9 px-3 text-muted-foreground hover:text-foreground"
-                onClick={() => {
-                  clearTeamSelection()
-                  clearStatusSelection()
-                  setSearchQuery("")
-                }}
-              >
-                Clear Filters
-              </Button>
-            )}
           </div>
+
+          <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+            <CollapsibleContent className="mt-4 space-y-4">
+              <div className="flex items-center justify-between border-t pt-4">
+                <h3 className="text-sm font-medium text-foreground">Advanced Filters</h3>
+                {(searchQuery !== "" || selectedTeamIds.length > 0) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      clearTeamSelection()
+                      setSearchQuery("")
+                    }}
+                    className="h-8 text-muted-foreground hover:text-foreground"
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
+              
+              <div className="flex flex-col gap-4 md:flex-row">
+                <Popover open={teamsPopoverOpen} onOpenChange={setTeamsPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={teamsPopoverOpen}
+                      className="w-full justify-between bg-transparent md:w-[250px]"
+                    >
+                      <div className="flex items-center gap-1 truncate">
+                        <span>
+                          {selectedTeamIds.length === 0
+                            ? "Select Teams"
+                            : selectedTeamIds.length === 1
+                              ? getTeamName(selectedTeamIds[0]!)
+                              : `${selectedTeamIds.length} teams selected`}
+                        </span>
+                        {selectedTeamIds.length > 0 && (
+                          <Badge variant="secondary" className="ml-1">
+                            {selectedTeamIds.length}
+                          </Badge>
+                        )}
+                      </div>
+                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[250px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search teams..." />
+                      <CommandList>
+                        <CommandEmpty>No teams found.</CommandEmpty>
+                        <CommandGroup>
+                          <div className="flex items-center justify-between border-b p-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={selectAllTeams}
+                              className="h-8"
+                            >
+                              Select All
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={clearTeamSelection}
+                              className="h-8"
+                            >
+                              Clear
+                            </Button>
+                          </div>
+                          {teams.map((team) => (
+                            <CommandItem
+                              key={team.id}
+                              onSelect={() => toggleTeamSelection(team.id)}
+                              className="flex items-center gap-2"
+                            >
+                              {selectedTeamIds.includes(team.id) ? (
+                                <CircleCheck className="mr-2" />
+                              ) : (
+                                <Circle className="mr-2" />
+                              )}
+                              <span>{team.name}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+
+                <div className="relative flex-1">
+                  <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
+                  <Input
+                    placeholder="Search tiles..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-8"
+                  />
+                </div>
+                
+                <Tabs
+                  value={viewMode}
+                  onValueChange={(value) => setViewMode(value as "grid" | "list")}
+                  className="w-auto"
+                >
+                  <TabsList className="h-9">
+                    <TabsTrigger value="grid" className="px-3">
+                      <div className="grid h-4 w-4 grid-cols-2 gap-0.5">
+                        <div className="rounded-sm bg-current"></div>
+                        <div className="rounded-sm bg-current"></div>
+                        <div className="rounded-sm bg-current"></div>
+                        <div className="rounded-sm bg-current"></div>
+                      </div>
+                    </TabsTrigger>
+                    <TabsTrigger value="list" className="px-3">
+                      <div className="flex h-4 w-4 flex-col justify-center gap-0.5">
+                        <div className="h-0.5 rounded-sm bg-current"></div>
+                        <div className="h-0.5 rounded-sm bg-current"></div>
+                        <div className="h-0.5 rounded-sm bg-current"></div>
+                      </div>
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
         {selectedTeamIds.length > 0 && (
@@ -799,19 +785,15 @@ export default function BingoSubmissionsPage(props: {
               {filteredTiles.length}{" "}
               {filteredTiles.length === 1 ? "tile" : "tiles"} with submissions
             </div>
-            {statusFilters.length > 0 && (
+            {statusFilter !== "all" && (
               <>
                 <Separator
                   orientation="vertical"
                   className="hidden h-6 sm:block"
                 />
-                <div className="flex flex-wrap gap-1">
-                  {statusFilters.map((status) => (
-                    <Badge key={status} variant="outline" className="text-xs">
-                      {statusOptions.find((s) => s.value === status)?.label}
-                    </Badge>
-                  ))}
-                </div>
+                <Badge variant="outline" className="text-xs">
+                  {statusOptions.find((s) => s.value === statusFilter)?.label}
+                </Badge>
               </>
             )}
           </div>
@@ -922,16 +904,32 @@ export default function BingoSubmissionsPage(props: {
 
                         {teamSubmission.submissions.length > 0 ? (
                           <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 md:grid-cols-3">
-                            {teamSubmission.submissions.map((submission) => (
+                            {[...teamSubmission.submissions]
+                              .filter((submission) => {
+                                if (statusFilter === "all") return true
+                                return (submission.status || "pending") === statusFilter
+                              })
+                              .sort((a, b) => {
+                                const statusOrder: Record<string, number> = { needs_review: 0, pending: 1, approved: 2 }
+                                const statusA = a.status || "pending"
+                                const statusB = b.status || "pending"
+                                const valA = statusOrder[statusA] ?? 3
+                                const valB = statusOrder[statusB] ?? 3
+                                if (valA !== valB) return valA - valB
+                                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                              })
+                              .map((submission) => (
                               <div
                                 key={submission.id}
                                 className="overflow-hidden rounded-md border"
                               >
                                 <div className="relative aspect-video">
-                                  <img
+                                  <Image
                                     src={getOptimizedImageUrl(submission.image.path)}
                                     alt={`Submission by ${submission.user?.name || "Unknown"}`}
-                                    className="h-full w-full cursor-pointer object-cover"
+                                    fill
+                                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                    className="cursor-pointer object-cover"
                                     onClick={() =>
                                       setFullSizeImage({
                                         src: getOptimizedImageUrl(submission.image.path),
