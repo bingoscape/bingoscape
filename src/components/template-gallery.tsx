@@ -140,7 +140,7 @@ export function TemplateGallery({
             {categories.map((category) => (
               <Badge
                 key={category}
-                variant={currentCategory === category ? "default" : "outline-solid"}
+                variant={currentCategory === category ? "default" : "outline"}
                 className="cursor-pointer"
                 onClick={() => handleCategoryClick(category)}
               >
@@ -159,7 +159,7 @@ export function TemplateGallery({
             {sizes.map((size) => (
               <Badge
                 key={size}
-                variant={currentSize === size ? "default" : "outline-solid"}
+                variant={currentSize === size ? "default" : "outline"}
                 className="cursor-pointer"
                 onClick={() => handleSizeClick(size)}
               >

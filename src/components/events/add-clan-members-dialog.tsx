@@ -180,7 +180,7 @@ export function AddClanMembersDialog({
       case "management":
         return "secondary"
       default:
-        return "outline-solid"
+        return "outline"
     }
   }
 

@@ -8,7 +8,7 @@ interface EventActionCardProps {
   title: string
   description?: string
   badge?: number | string
-  badgeVariant?: "default" | "secondary" | "destructive" | "outline-solid"
+  badgeVariant?: "default" | "secondary" | "destructive" | "outline"
   colorScheme: "amber" | "purple" | "green" | "blue"
   onClick?: () => void
   href?: string
