@@ -1142,7 +1142,7 @@ export function ProgressionBingoGrid({
           <div className="flex justify-end">
             <Button
               onClick={() => setIsEditing(!isEditing)}
-              variant={isEditing ? "default" : "outline-solid"}
+              variant={isEditing ? "default" : "outline"}
               className="gap-2"
             >
               <Edit2 className="h-4 w-4" />

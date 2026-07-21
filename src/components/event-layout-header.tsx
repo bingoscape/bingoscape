@@ -130,7 +130,7 @@ export async function EventLayoutHeader({ eventId }: { eventId: string }) {
                       ? "default"
                       : eventStatus === "upcoming"
                         ? "secondary"
-                        : "outline-solid"
+                        : "outline"
                   }
                   className={
                     eventStatus === "active" ? "bg-green-500 text-white" : ""
@@ -175,7 +175,7 @@ export async function EventLayoutHeader({ eventId }: { eventId: string }) {
                 {event.registrationDeadline && (
                   <Badge
                     variant={
-                      registrationStatus.isOpen ? "outline-solid" : "secondary"
+                      registrationStatus.isOpen ? "outline" : "secondary"
                     }
                     className="text-xs"
                   >

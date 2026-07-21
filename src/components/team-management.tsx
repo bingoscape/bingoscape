@@ -348,7 +348,7 @@ function TeamStatBadge({
   icon: React.ElementType
   label: string
   value: string
-  variant?: "default" | "secondary" | "destructive" | "outline-solid"
+  variant?: "default" | "secondary" | "destructive" | "outline"
   tooltip?: string
 }) {
   const badge = (

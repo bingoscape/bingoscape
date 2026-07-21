@@ -112,7 +112,7 @@ export default async function PublicBingoPage(props: {
                   passHref
                 >
                   <Button
-                    variant={b.id === params.bingoId ? "default" : "outline-solid"}
+                    variant={b.id === params.bingoId ? "default" : "outline"}
                     size="sm"
                   >
                     Board {index + 1}
