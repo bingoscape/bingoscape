@@ -29,7 +29,7 @@ import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import fs from "fs/promises"
 import path from "path"
-import type { Tile, TeamTileSubmission, Bingo } from "./events"
+import type { Tile, TeamTileSubmission, Bingo } from "@/types/model"
 import { getUserRole } from "./events"
 import { createNotification } from "./notifications"
 import { getServerAuthSession } from "@/server/auth"
@@ -41,6 +41,7 @@ import {
 import { discordWebhooks } from "@/server/db/schema"
 import { sql } from "drizzle-orm"
 import { logger } from "@/lib/logger"
+import type { SelectableUser } from "@/types/model"
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
 
@@ -144,14 +145,7 @@ async function ensureUploadDir() {
   }
 }
 
-// Type for selectable users in submission on-behalf-of dropdown
-export interface SelectableUser {
-  id: string
-  name: string | null
-  runescapeName: string | null
-  teamId?: string | null
-  teamName?: string | null
-}
+// Type for selectable users in submission on-behalf-of dropdown imported from model.ts
 
 /**
  * Get users that the current user can submit on behalf of.
@@ -859,46 +853,7 @@ export async function getTileGoalsAndProgress(tileId: string) {
   return tileGoals
 }
 
-export interface GoalData {
-  id: string
-  description: string
-  createdAt: Date
-  updatedAt: Date
-  tileId: string
-  targetValue: number
-}
-
-export interface TileData {
-  id: string
-  title: string
-  description: string
-  createdAt: Date
-  updatedAt: Date
-  bingoId: string
-  headerImage: string | null
-  weight: number
-  index: number
-  isHidden: boolean
-  tier: number
-  goals: GoalData[]
-}
-
-export interface BingoData {
-  id: string
-  title: string
-  description: string | null
-  columns: number
-  createdAt: Date
-  updatedAt: Date
-  locked: boolean
-  eventId: string
-  rows: number
-  codephrase: string
-  visible: boolean
-  bingoType: "standard" | "progression"
-  tiersUnlockRequirement: number
-  tiles: TileData[]
-}
+// Types GoalData, TileData, BingoData are imported from @/types/model
 
 // Update the getAllSubmissionsForTeam function to include goal information
 export async function getAllSubmissionsForTeam(

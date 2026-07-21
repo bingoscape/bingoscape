@@ -73,13 +73,7 @@ import {
 } from "@/components/ui/dialog"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { OsrsItemSearch } from "./osrs-item-search"
-import {
-  createItemGoal,
-  updateGoal,
-  updateItemGoal,
-  createMetricGoal,
-  updateMetricGoal,
-} from "@/app/actions/bingo"
+import { createItemGoal, updateGoal, updateItemGoal, createMetricGoal, updateMetricGoal } from "@/app/actions/bingo"
 import { parseItemName } from "osrs-item-data"
 import type { OsrsItem } from "@/types/osrs-items"
 import { cn } from "@/lib/utils"

@@ -47,7 +47,7 @@ import {
   Award,
   Sparkles,
 } from "lucide-react"
-import type { Team } from "@/app/actions/events"
+
 import { getAllTeamPointsAndTotal } from "@/app/actions/stats"
 import type { StatsData } from "@/app/actions/stats"
 import { getCompletedPatterns } from "@/app/actions/pattern-completion"
@@ -55,6 +55,7 @@ import type { PatternCompletionResult } from "@/app/actions/pattern-completion"
 import { BonusXPBreakdown } from "./bonus-xp-breakdown"
 import { PatternCompletionGrid } from "./pattern-completion-grid"
 import { getBingoById } from "@/app/actions/getBingoById"
+import type { Team } from "@/types/model"
 
 interface StatsDialogProps {
   isOpen: boolean

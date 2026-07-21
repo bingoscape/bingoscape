@@ -18,8 +18,8 @@ import {
   User,
   Filter,
 } from "lucide-react"
-import type { Tile, Team, SubmissionComment } from "@/app/actions/events"
-import type { SelectableUser } from "@/app/actions/bingo"
+
+
 import { CommentForm } from "@/components/comment-form"
 import { SubmissionCommentDisplay } from "@/components/submission-comment"
 import { SubmissionUploadForm } from "@/components/submission-upload-form"
@@ -53,6 +53,7 @@ import {
 
 import { InlineGoalAssignment } from "@/components/inline-goal-assignment"
 import { toast } from "@/hooks/use-toast"
+import type { Tile, Team, SubmissionComment, SelectableUser } from "@/types/model"
 
 interface SubmissionsTabProps {
   selectedTile: Tile | null

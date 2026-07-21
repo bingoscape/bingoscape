@@ -1,6 +1,8 @@
 import React, { memo } from "react"
 import { BingoTile } from "./bingo-tile"
-import type { Tile, EventRole } from "@/app/actions/events"
+import { EventRole } from "@/app/actions/events"
+import type { Tile } from "@/types/model"
+
 
 interface BingoGridLayoutProps {
   tiles: Tile[]

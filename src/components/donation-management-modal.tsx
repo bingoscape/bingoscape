@@ -21,12 +21,7 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/hooks/use-toast"
-import {
-  addParticipantDonation,
-  updateParticipantDonation,
-  removeParticipantDonation,
-  getParticipantDonations,
-} from "@/app/actions/events"
+import { addParticipantDonation, updateParticipantDonation, removeParticipantDonation, getParticipantDonations } from "@/app/actions/events"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import { Loader2, Plus, Edit, Trash2, DollarSign, Check, X } from "lucide-react"
 import {

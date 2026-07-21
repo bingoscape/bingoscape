@@ -17,7 +17,7 @@ import {
   teamMembers,
 } from "@/server/db/schema"
 import { logger } from "@/lib/logger"
-import type { EventData, GetEventByIdResult } from "@/app/actions/events"
+import { EventData, GetEventByIdResult } from "@/app/actions/events"
 import { getUserRole } from "@/app/actions/events"
 
 export const getEventById = cache(async function getEventById(

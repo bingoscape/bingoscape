@@ -11,8 +11,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Info } from "lucide-react"
-import { type Bingo } from "@/app/actions/events"
+
 import { CodephraseDisplay } from "./codephrase-display"
+import type { Bingo } from "@/types/model"
 
 interface BingoInfoModalProps {
   bingo: Bingo

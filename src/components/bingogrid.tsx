@@ -17,8 +17,8 @@ import {
   updateSubmissionStatus,
   getTierXpRequirements,
   getSelectableUsersForSubmission,
-  type SelectableUser,
 } from "@/app/actions/bingo"
+import type { SelectableUser } from "@/types/model"
 import { getSubmissions } from "@/app/actions/getSubmissions"
 import "@mdxeditor/editor/style.css"
 import "@/styles/modal-animations.css"
@@ -26,10 +26,10 @@ import type {
   Bingo,
   Tile,
   Team,
-  EventRole,
   Goal,
   Submission,
-} from "@/app/actions/events"
+} from "@/types/model"
+import { type EventRole } from "@/app/actions/events"
 import Sortable, { type SortableEvent } from "sortablejs"
 import { BingoGridLayout } from "./bingo-grid-layout"
 import { ProgressionBingoGrid } from "./progression-bingo-grid"
@@ -44,9 +44,9 @@ import {
   initializeTeamTierProgress,
 } from "@/app/actions/bingo"
 
-// Define an extended submission type that includes goalId, submissionValue, and weight
+// Define an extended submission type that includes submissionValue and weight
 interface ExtendedSubmission extends Submission {
-  goalId?: string | null
+  // goalId is already in Submission
 }
 
 interface BingoGridProps {
@@ -333,15 +333,13 @@ export default function BingoGrid({
       const result = await addGoal(selectedTile.id, newGoal as Goal)
       if (result.success && result.goal) {
         const updatedGoal: Goal = {
-          id: result.goal.id,
-          tileId: result.goal.tileId,
-          description: result.goal.description,
-          targetValue: result.goal.targetValue,
+          ...result.goal,
           teamProgress: teams.map((team) => ({
+            id: `temp-${team.id}`,
             teamId: team.id,
-            teamName: team.name,
             goalId: result.goal!.id,
             currentValue: 0,
+            updatedAt: new Date(),
           })),
         }
         setSelectedTile((prev) => {
@@ -817,7 +815,7 @@ export default function BingoGrid({
                           updatedSub.goalId = goalId
                         }
                         if (submissionValue !== undefined) {
-                          updatedSub.submissionValue = submissionValue
+                          updatedSub.submissionValue = submissionValue ?? 1
                         }
 
                         return updatedSub
@@ -857,7 +855,7 @@ export default function BingoGrid({
                               updatedSub.goalId = goalId
                             }
                             if (submissionValue !== undefined) {
-                              updatedSub.submissionValue = submissionValue
+                              updatedSub.submissionValue = submissionValue ?? 1
                             }
 
                             return updatedSub

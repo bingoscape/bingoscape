@@ -41,13 +41,7 @@ import {
   Heart,
   UserPlus,
 } from "lucide-react"
-import {
-  updateParticipantRole,
-  assignParticipantToTeam,
-  updateParticipantBuyIn,
-  removeParticipantFromEvent,
-  getEventParticipants,
-} from "@/app/actions/events"
+import { updateParticipantRole, assignParticipantToTeam, updateParticipantBuyIn, removeParticipantFromEvent, getEventParticipants } from "@/app/actions/events"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import {
   AlertDialog,

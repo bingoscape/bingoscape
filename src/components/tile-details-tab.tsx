@@ -12,7 +12,7 @@ import Image from "next/image"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { ForwardRefEditor } from "./forward-ref-editor"
-import type { Tile, Team } from "@/app/actions/events"
+
 import {
   Pencil,
   X,
@@ -37,6 +37,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import getRandomFrog from "@/lib/getRandomFrog"
 import { GoalProgressTree } from "./goal-progress-tree"
 import { getGoalTreeWithProgress } from "@/app/actions/goal-groups"
+import type { Tile, Team } from "@/types/model"
 
 type EditableTileFields = {
   title: string

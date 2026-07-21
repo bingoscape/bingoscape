@@ -26,17 +26,12 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Trash2, Settings, Move } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
-import {
-  addTile,
-  deleteTile,
-  updateTileTier,
-  getTierXpRequirements,
-  setTierXpRequirement,
-  type TileData,
-} from "@/app/actions/bingo"
+import { addTile, deleteTile, updateTileTier, getTierXpRequirements, setTierXpRequirement } from "@/app/actions/bingo"
+
 import { getBingoById } from "@/app/actions/getBingoById"
-import type { Bingo } from "@/app/actions/events"
+
 import getRandomFrog from "@/lib/getRandomFrog"
+import type { TileData, Bingo } from "@/types/model"
 
 interface TierManagementModalProps {
   bingo: Bingo

@@ -6,16 +6,10 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { getUserRole } from "@/app/actions/events"
 import { getTeamsByEventId } from "@/app/actions/team"
-import {
-  getAllSubmissionsForTeam,
-  updateTeamTileSubmissionStatus,
-  updateSubmissionStatus,
-  deleteSubmission,
-  type BingoData,
-  type TileData,
-} from "@/app/actions/bingo"
+import { getAllSubmissionsForTeam, updateTeamTileSubmissionStatus, updateSubmissionStatus, deleteSubmission } from "@/app/actions/bingo"
+
 import { getBingoById } from "@/app/actions/getBingoById"
-import { type TeamTileSubmission } from "@/app/actions/events"
+
 import { getOptimizedImageUrl } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -81,6 +75,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { InlineGoalAssignment } from "@/components/inline-goal-assignment"
 import { getEventById } from "@/server/queries/events"
+import type { BingoData, TileData, TeamTileSubmission } from "@/types/model"
 
 export default function BingoSubmissionsPage(props: {
   params: Promise<{ id: string; bingoId: string }>
@@ -394,7 +389,7 @@ export default function BingoSubmissionsPage(props: {
               ...teamSub,
               submissions: teamSub.submissions.map((sub) =>
                 sub.id === submissionId
-                  ? { ...sub, goalId, submissionValue: value }
+                  ? { ...sub, goalId, submissionValue: value ?? 1 }
                   : sub
               ),
             })

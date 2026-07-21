@@ -17,11 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { Tile, Team, Bingo } from "@/app/actions/events"
-import type { SelectableUser } from "@/app/actions/bingo"
+
+
 import { TileSelectionDropdown } from "@/components/tile-selection-dropdown"
 import { SubmissionUploadForm } from "@/components/submission-upload-form"
 import { toast } from "@/hooks/use-toast"
+import type { Tile, Team, Bingo, SelectableUser } from "@/types/model"
 
 interface QuickSubmissionModalProps {
   isOpen: boolean

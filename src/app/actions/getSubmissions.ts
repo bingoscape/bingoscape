@@ -3,7 +3,7 @@ import { db } from "@/server/db"
 import { logger } from "@/lib/logger"
 import { teamTileSubmissions, teams } from "@/server/db/schema"
 import { eq, inArray } from "drizzle-orm"
-import type { TeamTileSubmission } from "./events"
+import type { TeamTileSubmission } from "@/types/model"
 
 // Update the getSubmissions function to include goal information
 

@@ -15,7 +15,8 @@ import { ShareEventButton } from "./share-event-button"
 import AssignEventToClanModal from "./assign-event-to-clan-modal"
 import { DiscordWebhookManagement } from "./discord-webhook-management"
 import { EventDeleteModal } from "./event-delete-modal"
-import type { Event } from "@/app/actions/events"
+import type { Event } from "@/types/model"
+
 
 interface EventHeaderActionsProps {
   eventId: string

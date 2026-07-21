@@ -2,15 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { EventCard } from "@/components/event-card"
-import {
-  joinEvent,
-  type EventData,
-  type EventParticipant,
-  getUserRegistrationStatus,
-} from "@/app/actions/events"
+import { joinEvent, type EventData, getUserRegistrationStatus } from "@/app/actions/events"
+
 import { toast } from "@/hooks/use-toast"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import type { EventParticipant } from "@/types/model"
 
 interface ClanEventsClientProps {
   initialEvents: EventData[]

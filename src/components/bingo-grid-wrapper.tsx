@@ -5,14 +5,12 @@ import BingoGrid from "@/components/bingogrid"
 import { Button } from "@/components/ui/button"
 import { Lock, Unlock, PlusSquare, MinusSquare } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
-import {
-  addRowOrColumn,
-  reorderTiles,
-  deleteRowOrColumn,
-} from "@/app/actions/bingo"
-import type { Bingo, Tile, Team, EventRole } from "@/app/actions/events"
+import { addRowOrColumn, reorderTiles, deleteRowOrColumn } from "@/app/actions/bingo"
+import { EventRole } from "@/app/actions/events"
+
 import { motion, AnimatePresence } from "framer-motion"
 import { useSearchParams } from "next/navigation"
+import type { Bingo, Tile, Team } from "@/types/model"
 
 interface BingoGridWrapperProps {
   bingo: Bingo
