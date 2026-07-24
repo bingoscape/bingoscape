@@ -25,7 +25,7 @@ import { CSS } from "@dnd-kit/utilities"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+
 import { Badge } from "@/components/ui/badge"
 import {
   ChevronRight,
@@ -44,6 +44,9 @@ import {
   Component,
   Goal,
   BarChart2,
+  CheckCheck,
+  Shuffle,
+
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import type { GoalTreeNode } from "@/app/actions/goal-groups"
@@ -71,7 +74,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { OsrsItemSearch } from "./osrs-item-search"
 import { createItemGoal, updateGoal, updateItemGoal, createMetricGoal, updateMetricGoal } from "@/app/actions/bingo"
 import { parseItemName } from "osrs-item-data"
@@ -80,6 +88,7 @@ import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { SKILLS, BOSSES, ACTIVITIES } from "@wise-old-man/utils"
 import { getMetricName, getWikiIconUrl } from "@/lib/osrs-metrics"
+import { motion, AnimatePresence } from "framer-motion"
 
 interface GoalTreeEditorProps {
   tileId: string
@@ -125,6 +134,17 @@ export function GoalTreeEditor({
   const [selectedItems, setSelectedItems] = useState<OsrsItem[]>([])
   const [itemGoalTargetValue, setItemGoalTargetValue] = useState<number>(1)
   const [isCreatingBulk, setIsCreatingBulk] = useState(false)
+  const [isAddGoalDrawerOpen, setIsAddGoalDrawerOpen] = useState(false)
+  const [addGoalParentId, setAddGoalParentId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      ;(window as any).openAddGoalDrawer = (parentId: string | null = null) => {
+        setAddGoalParentId(parentId)
+        setIsAddGoalDrawerOpen(true)
+      }
+    }
+  }, [])
 
   // Metric goal state
   const [_metricProvider, _setMetricProvider] = useState<
@@ -217,6 +237,9 @@ export function GoalTreeEditor({
 
       if (result.success) {
         successCount++
+        if (addGoalParentId && result.goal) {
+          await moveGoalToGroup(result.goal.id, addGoalParentId)
+        }
       } else {
         failCount++
       }
@@ -249,6 +272,10 @@ export function GoalTreeEditor({
     setSelectedItems([])
     setItemGoalTargetValue(1)
     setGoalType("generic")
+    if (successCount > 0) {
+      setIsAddGoalDrawerOpen(false)
+      setAddGoalParentId(null)
+    }
 
     // Refresh tree
     onRefresh()
@@ -279,6 +306,8 @@ export function GoalTreeEditor({
       setMetricName("")
       setMetricTargetValue(1)
       setGoalType("generic")
+      setIsAddGoalDrawerOpen(false)
+      setAddGoalParentId(null)
       onRefresh()
     } else {
       toast({
@@ -582,7 +611,7 @@ export function GoalTreeEditor({
           items={flatTree.map((n) => n.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="space-y-2">
+          <div className="relative ml-2 space-y-2 border-l border-border pl-4">
             {flatTree.map((node) => (
               <TreeNode
                 key={node.id}
@@ -639,162 +668,302 @@ export function GoalTreeEditor({
             Create Group
           </Button>
 
-          <Card className="border-2 border-dashed border-border bg-muted/20">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Target className="h-4 w-4" />
-                <span className="text-base font-medium">Add New Goal</span>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Goal Type Selector */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-muted-foreground">
-                  Goal Type
-                </Label>
-                <RadioGroup
-                  value={goalType}
-                  onValueChange={(value) =>
-                    setGoalType(value as "generic" | "item" | "metric")
-                  }
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="generic" id="tree-generic" />
-                    <Label
-                      htmlFor="tree-generic"
-                      className="cursor-pointer font-normal"
+          <Button
+            onClick={() => {
+              if ((window as any).openAddGoalDrawer) {
+                (window as any).openAddGoalDrawer(null)
+              }
+            }}
+            variant="outline"
+            className="w-full"
+          >
+            <Target className="mr-2 h-4 w-4" />
+            Add New Goal
+          </Button>
+
+          <Sheet open={isAddGoalDrawerOpen} onOpenChange={setIsAddGoalDrawerOpen}>
+            <SheetContent side="right" className="w-[400px] sm:w-[540px] overflow-y-auto z-50">
+              <SheetHeader className="mb-6">
+                <SheetTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5" />
+                  Add New Goal {addGoalParentId ? "to Group" : ""}
+                </SheetTitle>
+              </SheetHeader>
+              <div className="space-y-6 pt-2 pb-6">
+                {/* Goal Type Selector (Card Grid) */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-foreground">
+                    Select Goal Type
+                  </Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <button
+                      onClick={() => setGoalType("generic")}
+                      className={cn(
+                        "flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-4 transition-all duration-200",
+                        goalType === "generic"
+                          ? "border-primary bg-primary/5 text-primary shadow-sm"
+                          : "border-muted-foreground/20 text-muted-foreground hover:border-primary/50 hover:bg-accent"
+                      )}
                     >
-                      Generic Goal
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="item" id="tree-item" />
-                    <Label
-                      htmlFor="tree-item"
-                      className="flex cursor-pointer items-center gap-1 font-normal"
+                      <Target className="h-6 w-6" />
+                      <span className="text-xs font-semibold">Generic</span>
+                    </button>
+                    <button
+                      onClick={() => setGoalType("item")}
+                      className={cn(
+                        "flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-4 transition-all duration-200",
+                        goalType === "item"
+                          ? "border-primary bg-primary/5 text-primary shadow-sm"
+                          : "border-muted-foreground/20 text-muted-foreground hover:border-primary/50 hover:bg-accent"
+                      )}
                     >
-                      <Package className="h-4 w-4" />
-                      OSRS Item Goal
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="metric" id="tree-metric" />
-                    <Label
-                      htmlFor="tree-metric"
-                      className="flex cursor-pointer items-center gap-1 font-normal"
+                      <Package className="h-6 w-6" />
+                      <span className="text-xs font-semibold">Item</span>
+                    </button>
+                    <button
+                      onClick={() => setGoalType("metric")}
+                      className={cn(
+                        "flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-4 transition-all duration-200",
+                        goalType === "metric"
+                          ? "border-primary bg-primary/5 text-primary shadow-sm"
+                          : "border-muted-foreground/20 text-muted-foreground hover:border-primary/50 hover:bg-accent"
+                      )}
                     >
-                      <BarChart2 className="h-4 w-4" />
-                      OSRS Metric
-                    </Label>
+                      <BarChart2 className="h-6 w-6" />
+                      <span className="text-xs font-semibold">Metric</span>
+                    </button>
                   </div>
-                </RadioGroup>
+                </div>
+
+                <div className="rounded-lg border bg-card p-4 shadow-sm">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={goalType}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                      className="space-y-6"
+                    >
+                      {/* Generic Goal Form */}
+                      {goalType === "generic" && (
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="goalDescription" className="text-sm font-medium">
+                              Description
+                            </Label>
+                            <Input
+                              id="goalDescription"
+                              value={newGoal.description || ""}
+                              onChange={(e) =>
+                                onNewGoalChange("description", e.target.value)
+                              }
+                              placeholder="Complete the task..."
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="targetValue" className="text-sm font-medium">
+                              Target Value
+                            </Label>
+                            <Input
+                              id="targetValue"
+                              type="number"
+                              value={newGoal.targetValue ?? 1}
+                              onChange={(e) =>
+                                onNewGoalChange(
+                                  "targetValue",
+                                  Number.parseInt(e.target.value)
+                                )
+                              }
+                            />
+                            <div className="mt-2 rounded-md bg-muted/50 p-3 border text-xs text-muted-foreground">
+                              <strong>Note:</strong> In a SUM group, this target is illustrative and does not cap contributions.
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Item Goal Form */}
+                      {goalType === "item" && (
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Select OSRS Items
+                            </Label>
+                            <OsrsItemSearch
+                              onItemSelect={(items) => {
+                                if (Array.isArray(items)) {
+                                  setSelectedItems(items)
+                                } else {
+                                  setSelectedItems([items])
+                                }
+                              }}
+                              selectedItems={selectedItems}
+                              placeholder="Search for items..."
+                              multiSelect={true}
+                            />
+                            {selectedItems.length > 0 && (
+                              <p className="text-xs font-medium text-primary mt-2">
+                                {selectedItems.length} item{selectedItems.length !== 1 ? "s" : ""} selected
+                                <span className="text-muted-foreground font-normal"> - a separate goal will be created for each item</span>
+                              </p>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="tree-itemTargetValue" className="text-sm font-medium">
+                              Quantity Required per Item
+                            </Label>
+                            <Input
+                              id="tree-itemTargetValue"
+                              type="number"
+                              value={itemGoalTargetValue}
+                              onChange={(e) =>
+                                setItemGoalTargetValue(
+                                  Number.parseInt(e.target.value) || 1
+                                )
+                              }
+                              placeholder="1"
+                              min="1"
+                            />
+                            <div className="mt-2 rounded-md bg-muted/50 p-3 border text-xs text-muted-foreground">
+                              <strong>Note:</strong> Number of times this item must be obtained. In a SUM group, this target is illustrative and does not cap contributions.
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Metric Goal Form */}
+                      {goalType === "metric" && (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">
+                                Metric Type
+                              </Label>
+                              <Select
+                                value={metricType}
+                                onValueChange={(v: any) => {
+                                  setMetricType(v)
+                                  setMetricName("")
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="skill">Skill</SelectItem>
+                                  <SelectItem value="boss">Boss</SelectItem>
+                                  <SelectItem value="activity">Activity</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">
+                                Target Value
+                              </Label>
+                              <Input
+                                type="number"
+                                value={metricTargetValue}
+                                onChange={(e) =>
+                                  setMetricTargetValue(
+                                    Number.parseInt(e.target.value) || 1
+                                  )
+                                }
+                                placeholder="1"
+                                min="1"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              Metric Name
+                            </Label>
+                            <Select value={metricName} onValueChange={setMetricName}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select metric" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-[300px]">
+                                {metricType === "skill" &&
+                                  SKILLS.map((m) => (
+                                    <SelectItem key={m} value={m}>
+                                      <div className="flex items-center gap-2">
+                                        <div className="relative h-4 w-4 shrink-0">
+                                          <Image
+                                            fill
+                                            src={getWikiIconUrl(m)}
+                                            alt={m}
+                                            className="object-cover"
+                                            onError={(e) => {
+                                              e.currentTarget.style.display = "none"
+                                            }}
+                                          />
+                                        </div>
+                                        <span>{getMetricName(m)}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                {metricType === "boss" &&
+                                  BOSSES.map((m) => (
+                                    <SelectItem key={m} value={m}>
+                                      <div className="flex items-center gap-2">
+                                        <div className="relative h-4 w-4 shrink-0">
+                                          <Image
+                                            fill
+                                            src={getWikiIconUrl(m)}
+                                            alt={m}
+                                            className="object-cover"
+                                            onError={(e) => {
+                                              e.currentTarget.style.display = "none"
+                                            }}
+                                          />
+                                        </div>
+                                        <span>{getMetricName(m)}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                {metricType === "activity" &&
+                                  ACTIVITIES.map((m) => (
+                                    <SelectItem key={m} value={m}>
+                                      <div className="flex items-center gap-2">
+                                        <div className="relative h-4 w-4 shrink-0">
+                                          <Image
+                                            fill
+                                            src={getWikiIconUrl(m)}
+                                            alt={m}
+                                            className="object-cover"
+                                            onError={(e) => {
+                                              e.currentTarget.style.display = "none"
+                                            }}
+                                          />
+                                        </div>
+                                        <span>{getMetricName(m)}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="rounded-md bg-muted/50 p-3 border text-xs text-muted-foreground">
+                            <strong>Note:</strong> In a SUM group, this target is illustrative and does not cap contributions.
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
               </div>
 
-              {/* Generic Goal Form */}
-              {goalType === "generic" && (
-                <>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div>
-                      <Label htmlFor="goalDescription" className="text-sm">
-                        Description
-                      </Label>
-                      <Input
-                        id="goalDescription"
-                        value={newGoal.description || ""}
-                        onChange={(e) =>
-                          onNewGoalChange("description", e.target.value)
-                        }
-                        placeholder="Complete the task..."
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="targetValue" className="text-sm">
-                        Target Value
-                      </Label>
-                      <Input
-                        id="targetValue"
-                        type="number"
-                        value={newGoal.targetValue ?? 1}
-                        onChange={(e) =>
-                          onNewGoalChange(
-                            "targetValue",
-                            Number.parseInt(e.target.value)
-                          )
-                        }
-                        className="mt-1"
-                      />
-                      <p className="mt-1 text-[10px] text-muted-foreground">
-                        Note: In a SUM group, this target is illustrative and
-                        does not cap contributions.
-                      </p>
-                    </div>
-                  </div>
+              {/* Sticky Footer for Actions */}
+              <div className="sticky bottom-0 left-0 right-0 border-t bg-background pt-4 pb-2 z-10 -mx-6 px-6 -mb-6">
+                {goalType === "generic" && (
                   <Button onClick={onAddGoal} className="w-full">
                     <Plus className="mr-2 h-4 w-4" />
                     Add Goal
                   </Button>
-                </>
-              )}
-
-              {/* Item Goal Form */}
-              {goalType === "item" && (
-                <>
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground">
-                        Select OSRS Items
-                      </Label>
-                      <div className="mt-1">
-                        <OsrsItemSearch
-                          onItemSelect={(items) => {
-                            if (Array.isArray(items)) {
-                              setSelectedItems(items)
-                            } else {
-                              setSelectedItems([items])
-                            }
-                          }}
-                          selectedItems={selectedItems}
-                          placeholder="Search for items..."
-                          multiSelect={true}
-                        />
-                      </div>
-                      {selectedItems.length > 0 && (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {selectedItems.length} item
-                          {selectedItems.length !== 1 ? "s" : ""} selected - a
-                          separate goal will be created for each item
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label
-                        htmlFor="tree-itemTargetValue"
-                        className="text-sm font-medium text-muted-foreground"
-                      >
-                        Quantity Required
-                      </Label>
-                      <Input
-                        id="tree-itemTargetValue"
-                        type="number"
-                        value={itemGoalTargetValue}
-                        onChange={(e) =>
-                          setItemGoalTargetValue(
-                            Number.parseInt(e.target.value) || 1
-                          )
-                        }
-                        placeholder="1"
-                        min="1"
-                        className="mt-1"
-                      />
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Number of times this item must be obtained. In a SUM
-                        group, this target is illustrative and does not cap
-                        contributions.
-                      </p>
-                    </div>
-                  </div>
+                )}
+                {goalType === "item" && (
                   <Button
                     onClick={handleAddItemGoal}
                     disabled={selectedItems.length === 0 || isCreatingBulk}
@@ -803,8 +972,7 @@ export function GoalTreeEditor({
                     {isCreatingBulk ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating {selectedItems.length} Goal
-                        {selectedItems.length !== 1 ? "s" : ""}...
+                        Creating {selectedItems.length} Goal{selectedItems.length !== 1 ? "s" : ""}...
                       </>
                     ) : (
                       <>
@@ -813,125 +981,8 @@ export function GoalTreeEditor({
                       </>
                     )}
                   </Button>
-                </>
-              )}
-
-              {/* Metric Goal Form */}
-              {goalType === "metric" && (
-                <>
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground">
-                        Metric Type
-                      </Label>
-                      <Select
-                        value={metricType}
-                        onValueChange={(v: any) => {
-                          setMetricType(v)
-                          setMetricName("")
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="skill">Skill</SelectItem>
-                          <SelectItem value="boss">Boss</SelectItem>
-                          <SelectItem value="activity">Activity</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground">
-                        Metric Name
-                      </Label>
-                      <Select value={metricName} onValueChange={setMetricName}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Select metric" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[300px]">
-                          {metricType === "skill" &&
-                            SKILLS.map((m) => (
-                              <SelectItem key={m} value={m}>
-                                <div className="flex items-center gap-2">
-                                  <div className="relative h-4 w-4 shrink-0">
-                                    <Image
-                                      fill
-                                      src={getWikiIconUrl(m)}
-                                      alt={m}
-                                      className="object-cover"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = "none"
-                                      }}
-                                    />
-                                  </div>
-                                  <span>{getMetricName(m)}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          {metricType === "boss" &&
-                            BOSSES.map((m) => (
-                              <SelectItem key={m} value={m}>
-                                <div className="flex items-center gap-2">
-                                  <div className="relative h-4 w-4 shrink-0">
-                                    <Image
-                                      fill
-                                      src={getWikiIconUrl(m)}
-                                      alt={m}
-                                      className="object-cover"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = "none"
-                                      }}
-                                    />
-                                  </div>
-                                  <span>{getMetricName(m)}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          {metricType === "activity" &&
-                            ACTIVITIES.map((m) => (
-                              <SelectItem key={m} value={m}>
-                                <div className="flex items-center gap-2">
-                                  <div className="relative h-4 w-4 shrink-0">
-                                    <Image
-                                      fill
-                                      src={getWikiIconUrl(m)}
-                                      alt={m}
-                                      className="object-cover"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = "none"
-                                      }}
-                                    />
-                                  </div>
-                                  <span>{getMetricName(m)}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground">
-                        Target XP/KC/Score
-                      </Label>
-                      <Input
-                        type="number"
-                        value={metricTargetValue}
-                        onChange={(e) =>
-                          setMetricTargetValue(
-                            Number.parseInt(e.target.value) || 1
-                          )
-                        }
-                        placeholder="1"
-                        min="1"
-                        className="mt-1"
-                      />
-                      <p className="mt-1 text-[10px] text-muted-foreground">
-                        Note: In a SUM group, this target is illustrative and
-                        does not cap contributions.
-                      </p>
-                    </div>
-                  </div>
+                )}
+                {goalType === "metric" && (
                   <Button
                     onClick={handleAddMetricGoal}
                     disabled={!metricName.trim()}
@@ -940,11 +991,11 @@ export function GoalTreeEditor({
                     <BarChart2 className="mr-2 h-4 w-4" />
                     Add Metric Goal
                   </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                )}
+              </div>
+            </SheetContent>
+        </Sheet>
+      </div>
       )}
 
       <Dialog open={showNewGroupDialog} onOpenChange={setShowNewGroupDialog}>
@@ -1092,7 +1143,7 @@ function TreeNode({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-    marginLeft: `${node.depth * 24}px`,
+    marginLeft: node.depth > 0 ? `${node.depth * 24}px` : "0px",
   }
 
   const handleStartEdit = () => {
@@ -1298,7 +1349,25 @@ function TreeNode({
   if (node.type === "group") {
     const groupData = node.data as any
     return (
-      <div ref={setNodeRef} style={style} className="flex items-center gap-2">
+      <div 
+        ref={setNodeRef} 
+        style={style} 
+        className={cn(
+          "flex items-center gap-2",
+          node.depth > 0 && "border-l-2 pl-4 mb-2 relative",
+          node.depth > 0 && groupData.logicalOperator === "SUM" ? "border-indigo-500/30" :
+          node.depth > 0 && groupData.logicalOperator === "OR" ? "border-purple-500/30" :
+          node.depth > 0 ? "border-blue-500/30" : ""
+        )}
+      >
+        {node.depth > 0 && (
+          <div className={cn(
+            "absolute left-0 top-1/2 w-4 h-0.5 -translate-y-1/2",
+            groupData.logicalOperator === "SUM" ? "bg-indigo-500/30" :
+            groupData.logicalOperator === "OR" ? "bg-purple-500/30" :
+            "bg-blue-500/30"
+          )} />
+        )}
         {hasSufficientRights && (
           <div
             {...attributes}
@@ -1308,24 +1377,20 @@ function TreeNode({
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
         )}
-        <Card
+        <div
           className={cn(
-            "flex-1 cursor-pointer transition-all",
+            "flex-1 cursor-pointer transition-all rounded-md py-1.5 px-3 border-l-2 mb-0.5",
             groupData.logicalOperator === "SUM"
-              ? "border-indigo-500/30 bg-indigo-500/10 dark:bg-indigo-950/20"
-              : "border-blue-500/30 bg-blue-500/10",
-            isOver &&
-              (groupData.logicalOperator === "SUM"
-                ? "border-2 border-indigo-500 bg-indigo-500/20"
-                : "border-2 border-blue-500 bg-blue-500/20"),
-            isSelected &&
-              (groupData.logicalOperator === "SUM"
-                ? "border-2 border-indigo-600 shadow-md"
-                : "border-2 border-blue-600 shadow-md")
+              ? "border-green-500 bg-green-50/30 dark:bg-green-950/20"
+              : groupData.logicalOperator === "OR"
+                ? "border-purple-500 bg-purple-50/30 dark:bg-purple-950/20"
+                : "border-blue-500 bg-blue-50/30 dark:bg-blue-950/20",
+            isOver && "border-2",
+            isSelected && "border-2 shadow-sm"
           )}
           onClick={(e) => onNodeClick(node.id, e)}
         >
-          <CardContent className="p-3">
+          <div>
             <div className="flex items-center justify-between">
               {isEditingGroupName ? (
                 <div className="flex flex-1 items-center gap-2">
@@ -1418,13 +1483,32 @@ function TreeNode({
                           onUpdateOperator(node.id, v as "AND" | "OR" | "SUM")
                         }
                       >
-                        <SelectTrigger className="h-7 w-24">
-                          <SelectValue />
+                        <SelectTrigger className="h-7 w-auto min-w-[70px] px-2 gap-1.5 [&>span]:hidden">
+                          <div className="flex items-center gap-1 text-[10px] font-medium">
+                            {groupData.logicalOperator === "AND" && <><CheckCheck className="h-3 w-3 text-blue-500" /> AND</>}
+                            {groupData.logicalOperator === "OR" && <><Shuffle className="h-3 w-3 text-purple-500" /> OR</>}
+                            {groupData.logicalOperator === "SUM" && <><Plus className="h-3 w-3 text-green-500" /> SUM</>}
+                          </div>
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="AND">AND</SelectItem>
-                          <SelectItem value="OR">OR</SelectItem>
-                          <SelectItem value="SUM">SUM</SelectItem>
+                          <SelectItem value="AND">
+                            <div className="flex flex-col">
+                              <span className="flex items-center gap-1"><CheckCheck className="h-3 w-3 text-blue-500" /> AND</span>
+                              <span className="text-[10px] text-muted-foreground whitespace-normal max-w-[200px]">Require players to complete every item.</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="OR">
+                            <div className="flex flex-col">
+                              <span className="flex items-center gap-1"><Shuffle className="h-3 w-3 text-purple-500" /> OR</span>
+                              <span className="text-[10px] text-muted-foreground whitespace-normal max-w-[200px]">Give players a choice to complete a specific number of items.</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="SUM">
+                            <div className="flex flex-col">
+                              <span className="flex items-center gap-1"><Plus className="h-3 w-3 text-green-500" /> SUM</span>
+                              <span className="text-[10px] text-muted-foreground whitespace-normal max-w-[200px]">Pool raw progress from all items together.</span>
+                            </div>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     ) : (
@@ -1432,10 +1516,24 @@ function TreeNode({
                         variant={
                           groupData.logicalOperator === "AND"
                             ? "default"
-                            : "secondary"
+                            : groupData.logicalOperator === "OR"
+                              ? "secondary"
+                              : "outline"
                         }
+                        className={cn(
+                          "h-5 px-1.5 text-[10px] font-medium flex items-center gap-1 shrink-0",
+                          groupData.logicalOperator === "SUM" && "bg-green-50 text-green-700 border-green-200"
+                        )}
                       >
-                        {groupData.logicalOperator}
+                        {groupData.logicalOperator === "AND" && (
+                          <><CheckCheck className="h-3 w-3" /> AND</>
+                        )}
+                        {groupData.logicalOperator === "OR" && (
+                          <><Shuffle className="h-3 w-3" /> OR</>
+                        )}
+                        {groupData.logicalOperator === "SUM" && (
+                          <><Plus className="h-3 w-3" /> SUM</>
+                        )}
                       </Badge>
                     )}
                     {(groupData.logicalOperator === "OR" ||
@@ -1521,20 +1619,38 @@ function TreeNode({
                     )}
                   </div>
                   {hasSufficientRights && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDeleteGroup(node.id)}
-                      className="h-7 text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1 ml-4">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          // We will pass this prop down
+                          // onOpenAddGoal(node.id)
+                          if ((window as any).openAddGoalDrawer) {
+                            (window as any).openAddGoalDrawer(node.id)
+                          }
+                        }}
+                        className="h-7 text-primary hover:text-primary/80"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        <span className="text-xs">Add</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDeleteGroup(node.id)}
+                        className="h-7 text-red-600 hover:text-red-700 p-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   )}
                 </>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     )
   }
@@ -1544,7 +1660,17 @@ function TreeNode({
   const isMetricGoal = goalData.goalType === "metric" && goalData.metricGoal
 
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-2">
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      className={cn(
+        "flex items-center gap-2",
+        node.depth > 0 && "border-l-2 pl-4 relative border-muted-foreground/30"
+      )}
+    >
+      {node.depth > 0 && (
+        <div className="absolute left-0 top-1/2 w-4 h-0.5 bg-muted-foreground/30 -translate-y-1/2" />
+      )}
       {hasSufficientRights && (
         <div
           {...attributes}
@@ -1554,15 +1680,18 @@ function TreeNode({
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </div>
       )}
-      <Card
+      <div
         className={cn(
           "flex-1 cursor-pointer transition-all",
+          isEditing
+            ? "rounded-md border bg-card p-3 shadow-sm my-1"
+            : "flex items-center justify-between py-1 px-2 my-0.5 rounded-full bg-muted/50 border border-muted/20 hover:bg-muted/80",
           isOver && "border-2 border-primary",
-          isSelected && "border-2 border-blue-600 shadow-md"
+          isSelected && "border-2 border-blue-600 shadow-sm"
         )}
         onClick={(e) => !isEditing && onNodeClick(node.id, e)}
       >
-        <CardContent className="p-3">
+        <div>
           {isEditing ? (
             <div className="space-y-3">
               {/* Edit Mode */}
@@ -1800,8 +1929,8 @@ function TreeNode({
               )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }

@@ -26,6 +26,9 @@ import {
   ChevronDown,
   ChevronRight,
   BarChart2,
+  CheckCheck,
+  Shuffle,
+  Plus,
 } from "lucide-react"
 import type { GoalTreeNode } from "@/app/actions/goal-groups"
 import { getWikiIconUrl } from "@/lib/osrs-metrics"
@@ -238,16 +241,10 @@ function ProgressTreeNode({
     const groupData = node.data as any
     const hasChildren = node.children && node.children.length > 0
     const isCollapsed = collapsedGroups.has(node.id)
-    const isSumGroup = groupData.logicalOperator === "SUM"
+
 
     return (
-      <div
-        style={{ marginLeft: `${marginLeft}px` }}
-        className={cn(
-          isSumGroup &&
-            "my-1.5 rounded-lg border border-indigo-100/30 bg-indigo-50/10 p-2 shadow-[0_2px_8px_-3px_rgba(99,102,241,0.15)] backdrop-blur-xs dark:border-indigo-900/30 dark:bg-indigo-950/10"
-        )}
-      >
+      <div style={{ marginLeft: `${marginLeft}px` }}>
         <Collapsible
           open={!isCollapsed}
           onOpenChange={() => toggleGroup(node.id)}
@@ -255,35 +252,48 @@ function ProgressTreeNode({
           <CollapsibleTrigger asChild>
             <div
               className={cn(
-                "flex cursor-pointer items-center gap-1 rounded py-0.5 transition-colors",
-                isSumGroup
-                  ? "text-indigo-950 hover:bg-indigo-100/20 dark:text-indigo-200"
-                  : "hover:bg-muted/50"
+                "flex items-center gap-1 py-1 px-1.5 rounded-md border-l-2 mb-0.5 cursor-pointer transition-colors",
+                groupData.logicalOperator === "AND" ? "border-blue-500 bg-blue-50/30 hover:bg-blue-100/30" : 
+                groupData.logicalOperator === "OR" ? "border-purple-500 bg-purple-50/30 hover:bg-purple-100/30" : 
+                "border-green-500 bg-green-50/30 hover:bg-green-100/30"
               )}
             >
               {/* Chevron Icon */}
               {isCollapsed ? (
-                <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
               ) : (
-                <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
               )}
 
               {/* Group Icon with Tooltip */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <Layers
-                      className={`h-3 w-3 ${node.isGroupComplete ? "text-green-500" : "text-blue-500"}`}
+                      className={`h-3 w-3 shrink-0 ${node.isGroupComplete ? "text-green-500" : "text-blue-500"}`}
                     />
                     <Badge
                       variant={
                         groupData.logicalOperator === "AND"
                           ? "default"
-                          : "secondary"
+                          : groupData.logicalOperator === "OR"
+                            ? "secondary"
+                            : "outline"
                       }
-                      className="h-4 px-1 text-[10px]"
+                      className={cn(
+                        "h-5 px-1.5 text-[10px] font-medium flex items-center gap-1 shrink-0",
+                        groupData.logicalOperator === "SUM" && "bg-green-50 text-green-700 border-green-200"
+                      )}
                     >
-                      {groupData.logicalOperator}
+                      {groupData.logicalOperator === "AND" && (
+                        <><CheckCheck className="h-3 w-3" /> Complete All</>
+                      )}
+                      {groupData.logicalOperator === "OR" && (
+                        <><Shuffle className="h-3 w-3" /> Complete Any {groupData.minRequiredGoals || 1}</>
+                      )}
+                      {groupData.logicalOperator === "SUM" && (
+                        <><Plus className="h-3 w-3" /> Combined Total: {groupData.minRequiredGoals || 1}</>
+                      )}
                     </Badge>
                   </div>
                 </TooltipTrigger>
@@ -301,19 +311,19 @@ function ProgressTreeNode({
 
               {/* Group Name */}
               {groupData.name && (
-                <span className="text-[10px] font-medium text-foreground">
+                <span className="text-[10px] font-medium text-foreground truncate shrink-0 max-w-[100px]">
                   {groupData.name}
                 </span>
               )}
 
               {/* Mini Progress */}
               {node.groupProgress && (
-                <div className="flex min-w-0 flex-1 items-center gap-1">
+                <div className="flex min-w-[60px] flex-1 items-center justify-end gap-1 ml-auto">
                   <AnimatedProgress
                     value={node.groupProgress.percentage}
-                    className="h-1 flex-1"
+                    className="h-1 flex-1 max-w-[60px]"
                   />
-                  <span className="whitespace-nowrap text-[10px] text-muted-foreground">
+                  <span className="whitespace-nowrap text-[10px] text-muted-foreground shrink-0">
                     {node.groupProgress.completed}/{node.groupProgress.total}
                   </span>
                 </div>
@@ -362,11 +372,11 @@ function ProgressTreeNode({
 
   return (
     <div style={{ marginLeft: `${marginLeft}px` }}>
-      <div className="flex items-center gap-1 py-0.5">
+      <div className="flex items-center gap-1.5 py-1 px-2 my-0.5 rounded-full bg-muted/50 border border-muted/20 hover:bg-muted/80 transition-colors">
         {/* Goal Icon with Tooltip */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex flex-1 min-w-0 items-center gap-1.5 cursor-help">
               {isItemGoal && itemGoal ? (
                 <>
                   <div className="relative h-4 w-4 shrink-0">
@@ -377,7 +387,7 @@ function ProgressTreeNode({
                       className="object-cover"
                     />
                   </div>
-                  <Badge variant="secondary" className="h-3 px-0.5 text-[10px]">
+                  <Badge variant="secondary" className="h-3 px-0.5 text-[10px] shrink-0">
                     <Package className="h-2.5 w-2.5" />
                   </Badge>
                 </>
@@ -396,18 +406,21 @@ function ProgressTreeNode({
                       />
                     </div>
                   ) : (
-                    <BarChart2 className="h-3 w-3 text-blue-500" />
+                    <BarChart2 className="h-3 w-3 shrink-0 text-blue-500" />
                   )}
                   <Badge
                     variant="secondary"
-                    className="h-3 px-0.5 text-[10px] uppercase"
+                    className="h-3 px-0.5 text-[10px] uppercase shrink-0"
                   >
                     {metricGoal.metricType}
                   </Badge>
                 </>
               ) : (
-                <Target className="h-3 w-3 text-muted-foreground" />
+                <Target className="h-3 w-3 shrink-0 text-muted-foreground" />
               )}
+              <span className="truncate text-[10px] font-medium leading-none text-foreground/80">
+                {goalData.description}
+              </span>
             </div>
           </TooltipTrigger>
           <TooltipContent side="right" className="max-w-xs">
@@ -428,7 +441,7 @@ function ProgressTreeNode({
 
         {/* Mini Progress Bar or Contributor View */}
         {node.inSumGroup ? (
-          <div className="mr-1 flex min-w-0 flex-1 items-center justify-end gap-2">
+          <div className="flex shrink-0 items-center justify-end gap-1.5 ml-2">
             <Badge
               variant="outline"
               className="rounded-full border-indigo-200/60 bg-indigo-50/80 px-2 py-0.5 text-[10px] font-semibold text-indigo-600 shadow-xs dark:bg-indigo-950/50 dark:text-indigo-400"
@@ -438,21 +451,20 @@ function ProgressTreeNode({
             {node.parentGroupTarget && node.parentGroupTarget > 0 ? (
               <Badge
                 variant="secondary"
-                className="rounded-full border border-slate-200/40 bg-slate-100 px-2 py-0.5 text-[9px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                className="rounded-full border border-slate-200/40 bg-slate-100 px-2 py-0.5 text-[9px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300 shrink-0"
               >
-                {((currentValue / node.parentGroupTarget) * 100).toFixed(0)}%
-                share
+                {((currentValue / node.parentGroupTarget) * 100).toFixed(0)}% share
               </Badge>
             ) : null}
           </div>
         ) : (
-          <div className="flex min-w-0 flex-1 items-center gap-1">
+          <div className="flex min-w-[60px] shrink-0 items-center justify-end gap-1 ml-2">
             <AnimatedProgress
               value={percentage}
-              className="h-1 flex-1"
+              className="h-1 flex-1 max-w-[60px]"
               indicatorClassName={isComplete ? "bg-green-500" : "bg-blue-500"}
             />
-            <span className="whitespace-nowrap text-[10px] text-muted-foreground">
+            <span className="whitespace-nowrap text-[10px] text-muted-foreground shrink-0">
               {currentValue}/{targetValue}
             </span>
           </div>

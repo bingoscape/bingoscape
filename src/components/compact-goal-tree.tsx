@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import { cn } from "@/lib/utils"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -19,6 +20,9 @@ import {
   Circle,
   Package,
   BarChart2,
+  CheckCheck,
+  Shuffle,
+  Plus,
 } from "lucide-react"
 import type { GoalTreeNode } from "@/app/actions/goal-groups"
 import { getWikiIconUrl } from "@/lib/osrs-metrics"
@@ -192,23 +196,41 @@ function CompactTreeNode({
 
     return (
       <div style={{ marginLeft: `${marginLeft}px` }}>
-        <div className="flex items-center gap-1 py-0.5">
+        <div className={cn(
+          "flex items-center gap-1 py-1 px-1.5 rounded-md border-l-2 mb-0.5",
+          groupData.logicalOperator === "AND" ? "border-blue-500 bg-blue-50/30" : 
+          groupData.logicalOperator === "OR" ? "border-purple-500 bg-purple-50/30" : 
+          "border-green-500 bg-green-50/30"
+        )}>
           {/* Group Icon with Tooltip */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 min-w-0">
                 <Layers
-                  className={`h-3 w-3 ${node.isGroupComplete ? "text-green-500" : "text-blue-500"}`}
+                  className={`h-3 w-3 shrink-0 ${node.isGroupComplete ? "text-green-500" : "text-blue-500"}`}
                 />
                 <Badge
                   variant={
                     groupData.logicalOperator === "AND"
                       ? "default"
-                      : "secondary"
+                      : groupData.logicalOperator === "OR"
+                        ? "secondary"
+                        : "outline"
                   }
-                  className="h-4 px-1 text-[10px]"
+                  className={cn(
+                    "h-5 px-1.5 text-[10px] font-medium flex items-center gap-1 shrink-0",
+                    groupData.logicalOperator === "SUM" && "bg-green-50 text-green-700 border-green-200"
+                  )}
                 >
-                  {groupData.logicalOperator}
+                  {groupData.logicalOperator === "AND" && (
+                    <><CheckCheck className="h-3 w-3" /> Complete All</>
+                  )}
+                  {groupData.logicalOperator === "OR" && (
+                    <><Shuffle className="h-3 w-3" /> Complete Any {groupData.minRequiredGoals || 1}</>
+                  )}
+                  {groupData.logicalOperator === "SUM" && (
+                    <><Plus className="h-3 w-3" /> Combined Total: {groupData.minRequiredGoals || 1}</>
+                  )}
                 </Badge>
               </div>
             </TooltipTrigger>
@@ -226,12 +248,12 @@ function CompactTreeNode({
 
           {/* Mini Progress */}
           {showProgress && node.groupProgress && (
-            <div className="flex min-w-0 flex-1 items-center gap-1">
+            <div className="flex min-w-[60px] flex-1 items-center justify-end gap-1 ml-auto">
               <AnimatedProgress
                 value={node.groupProgress.percentage}
-                className="h-1 flex-1"
+                className="h-1 flex-1 max-w-[60px]"
               />
-              <span className="whitespace-nowrap text-[10px] text-muted-foreground">
+              <span className="whitespace-nowrap text-[10px] text-muted-foreground shrink-0">
                 {node.groupProgress.completed}/{node.groupProgress.total}
               </span>
             </div>
@@ -276,11 +298,11 @@ function CompactTreeNode({
 
   return (
     <div style={{ marginLeft: `${marginLeft}px` }}>
-      <div className="flex items-center gap-1 py-0.5">
+      <div className="flex items-center gap-2 py-1 px-2 my-0.5 rounded-full bg-muted/50 border border-muted/20 hover:bg-muted/80 transition-colors">
         {/* Goal Icon with Tooltip */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex flex-1 min-w-0 items-center gap-1.5 cursor-help">
               {isItemGoal && itemGoal ? (
                 <>
                   <div className="relative h-4 w-4 shrink-0">
@@ -291,7 +313,7 @@ function CompactTreeNode({
                       className="object-cover"
                     />
                   </div>
-                  <Badge variant="secondary" className="h-3 px-0.5 text-[10px]">
+                  <Badge variant="secondary" className="h-3 px-0.5 text-[10px] shrink-0">
                     <Package className="h-2.5 w-2.5" />
                   </Badge>
                 </>
@@ -310,18 +332,21 @@ function CompactTreeNode({
                       />
                     </div>
                   ) : (
-                    <BarChart2 className="h-3 w-3 text-blue-500" />
+                    <BarChart2 className="h-3 w-3 shrink-0 text-blue-500" />
                   )}
                   <Badge
                     variant="secondary"
-                    className="h-3 px-0.5 text-[10px] uppercase"
+                    className="h-3 px-0.5 text-[10px] uppercase shrink-0"
                   >
                     {metricGoal.metricType}
                   </Badge>
                 </>
               ) : (
-                <Target className="h-3 w-3 text-muted-foreground" />
+                <Target className="h-3 w-3 shrink-0 text-muted-foreground" />
               )}
+              <span className="truncate text-[10px] font-medium leading-none text-foreground/80">
+                {goalData.description}
+              </span>
             </div>
           </TooltipTrigger>
           <TooltipContent side="right" className="max-w-xs">
@@ -343,7 +368,7 @@ function CompactTreeNode({
         {/* Mini Progress Bar or Contributor View */}
         {showProgress &&
           (node.inSumGroup ? (
-            <div className="mr-1 flex min-w-0 flex-1 items-center justify-end gap-1.5">
+            <div className="flex shrink-0 items-center justify-end gap-1.5 ml-2">
               <Badge
                 variant="outline"
                 className="h-3.5 border-indigo-200 bg-indigo-50 px-1 py-0 text-[9px] font-semibold text-indigo-600"
@@ -352,19 +377,18 @@ function CompactTreeNode({
               </Badge>
               {node.parentGroupTarget && node.parentGroupTarget > 0 ? (
                 <span className="whitespace-nowrap text-[9px] font-medium text-muted-foreground">
-                  ({((currentValue / node.parentGroupTarget) * 100).toFixed(0)}%
-                  of target)
+                  ({((currentValue / node.parentGroupTarget) * 100).toFixed(0)}%)
                 </span>
               ) : null}
             </div>
           ) : (
-            <div className="flex min-w-0 flex-1 items-center gap-1">
+            <div className="flex min-w-[60px] shrink-0 items-center justify-end gap-1 ml-2">
               <AnimatedProgress
                 value={percentage}
-                className="h-1 flex-1"
+                className="h-1 flex-1 max-w-[60px]"
                 indicatorClassName={isComplete ? "bg-green-500" : "bg-blue-500"}
               />
-              <span className="whitespace-nowrap text-[10px] text-muted-foreground">
+              <span className="whitespace-nowrap text-[10px] text-muted-foreground shrink-0">
                 {currentValue}/{targetValue}
               </span>
             </div>
