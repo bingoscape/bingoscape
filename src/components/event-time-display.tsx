@@ -12,15 +12,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 
 export function EventTimeDisplay({
   date,
   label,
   eventTz,
+  className,
 }: {
   date: Date
   label: string
   eventTz: string
+  className?: string
 }) {
   const localTz = React.useSyncExternalStore(
     emptySubscribe,
@@ -39,7 +42,7 @@ export function EventTimeDisplay({
     )
     const tzName = eventTz.split("/").pop()?.replace(/_/g, " ") || eventTz
     return (
-      <div className="mb-1.5 flex items-center gap-2 last:mb-0">
+      <div className={cn("flex items-center gap-2", className ?? "mb-1.5 last:mb-0")}>
         <span className="min-w-[36px] text-muted-foreground">{label}:</span>
         <span className="font-medium text-foreground">{formattedTime}</span>
         <Badge
@@ -65,7 +68,7 @@ export function EventTimeDisplay({
   const eventTzName = eventTz.split("/").pop()?.replace(/_/g, " ") || eventTz
 
   return (
-    <div className="mb-1.5 flex items-center gap-2 last:mb-0">
+    <div className={cn("flex items-center gap-2", className ?? "mb-1.5 last:mb-0")}>
       <span className="min-w-[36px] text-muted-foreground">{label}:</span>
       <span className="font-medium text-foreground">{localFormatted}</span>
       <TooltipProvider delayDuration={150}>

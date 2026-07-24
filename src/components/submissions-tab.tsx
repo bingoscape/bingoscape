@@ -625,8 +625,8 @@ export function SubmissionsTab({
   })
 
   return (
-    <div className="max-h-[60vh] space-y-6 overflow-y-auto bg-background pr-4 text-foreground">
-      <div className="space-y-6 p-4">
+    <div className="w-full flex flex-col space-y-4 text-foreground">
+      <div className="space-y-4 p-2 shrink-0">
         {/* Current team submission form */}
         {!isAdminView && currentTeamId && !isSubmissionsLocked && (
           <div className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-xs">
@@ -815,19 +815,21 @@ export function SubmissionsTab({
             </CollapsibleContent>
           </Collapsible>
         </div>
+      </div>
 
-        {/* Submissions Display */}
-        <div className="space-y-6">
-          {filteredFlatSubmissions.length > 0 ? (
+      {/* Submissions Display */}
+      <div className="flex flex-col px-2 pb-2">
+        {filteredFlatSubmissions.length > 0 ? (
             hasSufficientRights ? (
               /* --- SPLIT PANE TRIAGE INBOX (Power User View) --- */
-              <div className="flex flex-col md:flex-row gap-6 h-[800px] max-h-[70vh]">
+              <div className="flex flex-col md:flex-row gap-6 relative">
                 
-                {/* Left Pane: Queue List */}
-                <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col gap-2 overflow-y-auto pr-2 border-r border-border custom-scrollbar">
-                  {filteredFlatSubmissions.map((submission: any) => {
-                    const currentStatus = getSubmissionStatus(submission.id, submission.status || "pending")
-                    const isSelected = selectedSubmissionId === submission.id
+                {/* Left Pane: Queue List Wrapper */}
+                <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col md:relative">
+                  <div className="md:absolute md:inset-0 flex flex-col gap-2 overflow-y-auto pr-2 md:border-r border-border custom-scrollbar max-h-[300px] md:max-h-none">
+                    {filteredFlatSubmissions.map((submission: any) => {
+                      const currentStatus = getSubmissionStatus(submission.id, submission.status || "pending")
+                      const isSelected = selectedSubmissionId === submission.id
                     
                     return (
                       <div
@@ -855,9 +857,10 @@ export function SubmissionsTab({
                     )
                   })}
                 </div>
+                </div>
 
                 {/* Right Pane: Focus Area */}
-                <div className="w-full md:w-2/3 lg:w-3/4 flex flex-col gap-4 overflow-y-auto pl-2 custom-scrollbar">
+                <div className="w-full md:w-2/3 lg:w-3/4 flex flex-col gap-4 pl-2">
                   {filteredFlatSubmissions.filter((s: any) => s.id === selectedSubmissionId).map((submission: any) => {
                     const currentSubmissionStatus = getSubmissionStatus(submission.id, submission.status || "pending")
                     const currentTileStatus = getTileStatus(submission.teamTileSubmissionId, submission.parentStatus)
@@ -865,7 +868,7 @@ export function SubmissionsTab({
                     return (
                       <div key={`focus-${submission.id}`} className="flex flex-col gap-6 animate-in fade-in duration-200">
                         {/* Header Context */}
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 bg-muted/20 p-4 rounded-lg border border-border">
+                        <div className="shrink-0 flex flex-col sm:flex-row sm:items-start justify-between gap-4 bg-muted/20 p-4 rounded-lg border border-border">
                           <div>
                             <h2 className="text-xl font-bold flex items-center gap-2">
                               <div
@@ -919,8 +922,7 @@ export function SubmissionsTab({
 
                         {/* High-Res Image Display */}
                         <div 
-                           className="relative w-full rounded-xl overflow-hidden border border-border shadow-md bg-black/5 flex items-center justify-center cursor-pointer group"
-                           style={{ minHeight: '400px', maxHeight: '600px' }}
+                           className="flex-1 min-h-[250px] shrink-0 relative w-full rounded-xl overflow-hidden border border-border shadow-md bg-black/5 flex items-center justify-center cursor-pointer group"
                            onClick={() => onFullSizeImageView(getOptimizedImageUrl(submission.image.path), "Submission")}
                         >
                           <Image
@@ -934,7 +936,7 @@ export function SubmissionsTab({
                         
                         {/* Auto-submission metadata */}
                         {submission.isAutoSubmission && (
-                          <div className="space-y-1 rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/30 grid grid-cols-2 gap-x-4">
+                          <div className="shrink-0 space-y-1 rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/30 grid grid-cols-2 gap-x-4">
                             <div className="col-span-2 flex items-center gap-1 text-sm font-medium text-blue-700 dark:text-blue-300 mb-1">
                               <Zap className="h-4 w-4" /> Auto-Submitted
                             </div>
@@ -948,7 +950,7 @@ export function SubmissionsTab({
                         )}
 
                         {/* Action Zone */}
-                        <div className="flex flex-col gap-4 p-5 rounded-lg border border-border bg-card shadow-xs">
+                        <div className="shrink-0 flex flex-col gap-4 p-5 rounded-lg border border-border bg-card shadow-xs">
                           <h3 className="font-semibold text-lg">Goal Assignment</h3>
                           
                           <InlineGoalAssignment
@@ -1005,7 +1007,7 @@ export function SubmissionsTab({
                         </div>
 
                         {/* Comments section */}
-                        <div className="mt-2">
+                        <div className="shrink-0 mt-2 max-h-32 overflow-y-auto custom-scrollbar pr-2">
                            {showCommentForm === submission.id && (
                             <div className="mb-4">
                               <CommentForm
@@ -1036,8 +1038,9 @@ export function SubmissionsTab({
               </div>
             ) : (
               /* --- STANDARD GRID (Normal User View) --- */
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                {filteredFlatSubmissions.map((submission: any) => {
+              <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                  {filteredFlatSubmissions.map((submission: any) => {
                   const currentSubmissionStatus = getSubmissionStatus(submission.id, submission.status || "pending")
                   
                   return (
@@ -1077,10 +1080,11 @@ export function SubmissionsTab({
                     </div>
                   )
                 })}
+                </div>
               </div>
             )
           ) : (
-            <div className="rounded-xl border border-dashed border-border bg-muted/20 py-16 text-center flex flex-col items-center justify-center h-full">
+            <div className="flex-1 rounded-xl border border-dashed border-border bg-muted/20 py-16 text-center flex flex-col items-center justify-center min-h-[300px]">
               <Check className="h-12 w-12 text-muted-foreground/30 mb-4" />
               <p className="text-lg font-medium text-foreground mb-1">All caught up!</p>
               <p className="text-muted-foreground text-sm">
@@ -1091,7 +1095,6 @@ export function SubmissionsTab({
             </div>
           )}
         </div>
-      </div>
     </div>
   )
 }

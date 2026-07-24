@@ -46,7 +46,6 @@ import {
   BarChart2,
   CheckCheck,
   Shuffle,
-
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import type { GoalTreeNode } from "@/app/actions/goal-groups"

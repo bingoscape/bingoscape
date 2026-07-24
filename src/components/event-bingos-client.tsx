@@ -135,39 +135,7 @@ export function EventBingosClient({
 
   return (
     <>
-      <div className="mb-6 mt-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="flex flex-wrap items-center gap-4">
-          <div>
-            <h2 className="text-2xl font-bold">Boards</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {visibleBingos.length} board
-              {visibleBingos.length !== 1 ? "s" : ""} available
-            </p>
-          </div>
-          {visibleBingos.length > 1 && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={prevBingo}
-                disabled={visibleBingos.length <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                {currentBingoIndex + 1} of {visibleBingos.length}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={nextBingo}
-                disabled={visibleBingos.length <= 1}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-        </div>
+      <div className="mb-4 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div className="flex flex-wrap items-center gap-2">
           {/* Team selector for admins/management */}
           {isAdminOrManagement && event.teams && event.teams.length > 0 && (
@@ -180,6 +148,35 @@ export function EventBingosClient({
             />
           )}
         </div>
+        
+        {visibleBingos.length > 1 && (
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="text-sm font-medium text-muted-foreground">
+              {visibleBingos.length} board{visibleBingos.length !== 1 ? "s" : ""} available
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={prevBingo}
+                disabled={visibleBingos.length <= 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm font-medium text-muted-foreground min-w-[3rem] text-center">
+                {currentBingoIndex + 1} / {visibleBingos.length}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={nextBingo}
+                disabled={visibleBingos.length <= 1}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {visibleBingos.length === 0 ? (

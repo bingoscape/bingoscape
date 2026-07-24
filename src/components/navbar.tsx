@@ -20,7 +20,7 @@ import {
   Calendar,
   FileJson,
   Shield,
-  Zap,
+  Grid3x3,
 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
@@ -57,15 +57,15 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
   ]
 
   return (
-    <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-sm transition-all duration-300 supports-backdrop-filter:bg-background/60">
-      <div className="container mx-auto flex items-center justify-between px-4 py-3">
-        <div className="flex items-center space-x-6">
+    <nav className="sticky top-4 z-50 mb-4 mx-auto w-[95%] max-w-6xl rounded-full border bg-background/70 backdrop-blur-md shadow-sm transition-all duration-300">
+      <div className="container mx-auto flex items-center justify-between px-4 py-2">
+        <div className="flex items-center space-x-4">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="hover:bg-accent md:hidden"
+                className="hover:bg-accent lg:hidden"
               >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle menu</span>
@@ -75,7 +75,7 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
               <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <div className="mt-6 flex flex-col space-y-2">
                 <div className="mb-4 flex items-center space-x-2 border-b pb-4">
-                  <Zap className="h-5 w-5 text-primary" />
+                  <Grid3x3 className="h-5 w-5 text-primary drop-shadow-md" />
                   <span className="text-lg font-bold">BingoScape</span>
                 </div>
                 {navItems
@@ -108,15 +108,15 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
           </Sheet>
           <Link
             href="/"
-            className="flex items-center space-x-2 text-xl font-bold transition-opacity hover:opacity-80"
+            className="flex items-center space-x-2 text-xl font-bold transition-transform hover:scale-105 active:scale-95 duration-200"
           >
-            <Zap className="h-6 w-6 text-primary" />
-            <span className="bg-linear-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+            <Grid3x3 className="h-6 w-6 text-primary drop-shadow-md" />
+            <span className="bg-linear-to-br from-primary via-primary/80 to-primary/50 bg-clip-text text-transparent">
               BingoScape
             </span>
           </Link>
           {session?.user && (
-            <div className="hidden items-center space-x-1 md:flex">
+            <div className="hidden absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center space-x-1 lg:flex">
               {navItems
                 .filter((item) => !item.adminOnly || isSuperAdminUser)
                 .map((item) => (
@@ -124,17 +124,17 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "group flex items-center gap-2 rounded-md px-3 py-2 transition-colors duration-200 hover:bg-accent",
+                      "group flex items-center gap-2 rounded-full px-4 py-2 transition-all duration-200 hover:scale-105 active:scale-95",
                       pathname === item.href
-                        ? "bg-primary text-primary-foreground shadow-xs hover:bg-primary"
-                        : "text-muted-foreground hover:text-foreground"
+                        ? "bg-primary/10 text-primary shadow-xs"
+                        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                     )}
                   >
                     <item.icon
                       className={cn(
                         "hidden h-4 w-4 transition-colors lg:inline",
                         pathname === item.href
-                          ? "text-primary-foreground"
+                          ? "text-primary"
                           : "text-muted-foreground group-hover:text-foreground"
                       )}
                     />
@@ -155,13 +155,17 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
             <span className="hidden max-w-32 truncate text-sm font-medium text-muted-foreground lg:inline">
               {session.user.runescapeName || session.user.name}
             </span>
-            <ModeToggle />
-            <NotificationBell userId={session.user.id} />
+            <div className="transition-transform duration-200 hover:scale-105 active:scale-95">
+              <ModeToggle />
+            </div>
+            <div className="transition-transform duration-200 hover:scale-105 active:scale-95">
+              <NotificationBell userId={session.user.id} />
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="relative h-9 w-9 rounded-full ring-2 ring-transparent transition-all duration-200 hover:ring-primary/20"
+                  className="relative h-9 w-9 rounded-full ring-2 ring-transparent transition-all duration-200 hover:ring-primary/20 hover:scale-105 active:scale-95"
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarImage
