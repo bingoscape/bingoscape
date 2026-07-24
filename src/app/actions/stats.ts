@@ -136,7 +136,7 @@ export async function getAllTeamPointsAndTotal(
         and(
           eq(teamTileSubmissions.teamId, team.id),
           eq(tiles.bingoId, bingoId),
-          eq(teamTileSubmissions.status, "approved")
+          eq(teamTileSubmissions.status, "completed")
         )
       )
 
@@ -176,11 +176,11 @@ export async function getAllTeamPointsAndTotal(
 
     // Fill in actual counts
     submissionStats.forEach((stat) => {
-      if (stat.status === "approved")
+      if (stat.status === "completed")
         submissionCounts.accepted = Number(stat.count)
-      else if (stat.status === "pending")
+      else if (stat.status === "incomplete")
         submissionCounts.pending = Number(stat.count)
-      else if (stat.status === "needs_review")
+      else if (stat.status === "needs_attention")
         submissionCounts.requiresInteraction = Number(stat.count)
     })
 
@@ -333,7 +333,7 @@ export async function getAllTeamPointsAndTotal(
       )?.status
 
       // Only count accepted submissions for the weighted average
-      if (submissionStatus === "approved") {
+      if (submissionStatus === "completed") {
         // Initialize user map if needed
         if (!userTileSubmissionsMap.has(userId)) {
           userTileSubmissionsMap.set(userId, new Map())
@@ -457,7 +457,7 @@ export async function getAllTeamPointsAndTotal(
       teamTileSubmissions,
       and(
         eq(teamTileSubmissions.tileId, tiles.id),
-        eq(teamTileSubmissions.status, "approved")
+        eq(teamTileSubmissions.status, "completed")
       )
     )
     .where(eq(tiles.bingoId, bingoId))
@@ -616,7 +616,7 @@ export async function getEventStats(eventId: string): Promise<EventStatsData> {
       .where(
         and(
           eq(tiles.bingoId, bingo.id),
-          eq(teamTileSubmissions.status, "approved")
+          eq(teamTileSubmissions.status, "completed")
         )
       )
 
@@ -663,7 +663,7 @@ export async function getEventStats(eventId: string): Promise<EventStatsData> {
           and(
             eq(teamTileSubmissions.teamId, team.id),
             eq(tiles.bingoId, bingo.id),
-            eq(teamTileSubmissions.status, "approved")
+            eq(teamTileSubmissions.status, "completed")
           )
         )
 

@@ -99,7 +99,7 @@ async function checkPatternCompletion(
     .where(
       and(
         eq(teamTileSubmissions.teamId, teamId),
-        eq(teamTileSubmissions.status, "approved"),
+        eq(teamTileSubmissions.status, "completed"),
         inArray(teamTileSubmissions.tileId, tileIds)
       )
     )

@@ -96,7 +96,7 @@ export function EventBingosClient({
           (tts: any) => tts.teamId === effectiveTeamId
         )
         if (teamSubmission) {
-          if (teamSubmission.status === "approved") stats.completed++
+          if (teamSubmission.status === "completed") stats.completed++
           else if (teamSubmission.status === "pending") stats.pending++
           else if (teamSubmission.status === "needs_review") stats.needsReview++
         }

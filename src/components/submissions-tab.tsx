@@ -69,7 +69,7 @@ interface SubmissionsTabProps {
   onFullSizeImageView: (src: string, alt: string) => void
   onTeamTileSubmissionStatusUpdate: (
     teamTileSubmissionId: string | undefined,
-    newStatus: "approved" | "needs_review"
+    newStatus: "completed" | "needs_attention"
   ) => void
   onSubmissionStatusUpdate: (
     submissionId: string,
@@ -128,9 +128,12 @@ export function SubmissionsTab({
   const [tileFilter, setTileFilter] = useState<string>("all")
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
 
+  // Triage Inbox State
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null)
+
   // Local state to track real-time status changes
   const [localTileStatuses, setLocalTileStatuses] = useState<
-    Record<string, "approved" | "needs_review" | "pending">
+    Record<string, "incomplete" | "completed" | "needs_attention">
   >({})
   const [localSubmissionStatuses, setLocalSubmissionStatuses] = useState<
     Record<string, "approved" | "needs_review" | "pending">
@@ -152,7 +155,15 @@ export function SubmissionsTab({
     goalId: string | null,
     value: number | null
   ) => {
-    onSubmissionStatusUpdate(submissionId, "pending", goalId, value)
+    const allSubmissions = teamTileSubmissions ? teamTileSubmissions.flatMap(t => t.submissions || []) : []
+    const submission = allSubmissions.find((s: any) => s.id === submissionId)
+    const currentStatus = getSubmissionStatus(submissionId, submission?.status || "pending")
+    
+    // Optimistically update local state so the UI reflects the removal (or change) immediately
+    setLocalGoals((prev) => ({ ...prev, [submissionId]: goalId }))
+    setLocalValues((prev) => ({ ...prev, [submissionId]: value }))
+    
+    onSubmissionStatusUpdate(submissionId, currentStatus as any, goalId, value)
   }
 
   const currentTeam = teams.find((team) => team.id === currentTeamId)
@@ -186,7 +197,7 @@ export function SubmissionsTab({
         return (
           <Badge className="border-yellow-200 bg-yellow-100 px-3 py-1 text-yellow-800">
             <AlertTriangle className="mr-1 h-3 w-3" />
-            Needs Review
+            Changes Requested
           </Badge>
         )
       default:
@@ -202,7 +213,7 @@ export function SubmissionsTab({
   // Enhanced handlers with real-time updates
   const handleTeamTileSubmissionStatusUpdate = async (
     teamTileSubmissionId: string | undefined,
-    newStatus: "approved" | "needs_review"
+    newStatus: "completed" | "needs_attention"
   ) => {
     if (!teamTileSubmissionId) return
 
@@ -213,7 +224,7 @@ export function SubmissionsTab({
     }))
 
     // If approving the tile, also update all submissions in that tile
-    if (newStatus === "approved") {
+    if (newStatus === "completed") {
       const teamSubmission = teamTileSubmissions?.find(
         (ts) => ts.id === teamTileSubmissionId
       )
@@ -231,6 +242,15 @@ export function SubmissionsTab({
 
     // Call the original handler
     onTeamTileSubmissionStatusUpdate(teamTileSubmissionId, newStatus)
+    
+    if (newStatus === "completed") {
+      toast({
+        title: "Tile Approved",
+        description: "The tile and all its submissions have been approved.",
+        duration: 3000,
+        className: "bg-green-50 border-green-200 text-green-900",
+      })
+    }
   }
 
   const handleSubmissionStatusUpdate = async (
@@ -267,8 +287,25 @@ export function SubmissionsTab({
       })
     }
 
+    // Auto-advance selection for power users if status changes
+    if (hasSufficientRights && selectedSubmissionId === submissionId) {
+      const currentIndex = filteredFlatSubmissions.findIndex((s: any) => s.id === submissionId)
+      if (currentIndex !== -1 && currentIndex < filteredFlatSubmissions.length - 1) {
+        setSelectedSubmissionId(filteredFlatSubmissions[currentIndex + 1].id)
+      }
+    }
+
     // Call the original handler
     onSubmissionStatusUpdate(submissionId, newStatus, goalId, submissionValue)
+
+    if (newStatus === "approved") {
+      toast({
+        title: "Submission Approved",
+        description: "The submission has been successfully approved.",
+        duration: 3000,
+        className: "bg-green-50 border-green-200 text-green-900",
+      })
+    }
   }
 
   // Helper function to get the current status (local override or original)
@@ -403,65 +440,132 @@ export function SubmissionsTab({
     }
   }, [teamTileSubmissions, submissionComments])
 
-  // Filter submissions based on user role and selected filters
-  const getFilteredSubmissions = () => {
-    if (!teamTileSubmissions) return []
+  // Flatten submissions
+  const allFlatSubmissions = teamTileSubmissions ? teamTileSubmissions.flatMap(ts => 
+    ts.submissions.map((sub: any) => ({
+      ...sub,
+      teamTileSubmissionId: ts.id,
+      team: ts.team,
+      tile: ts.tile,
+      parentStatus: ts.status
+    }))
+  ) : []
 
-    let submissions = teamTileSubmissions
+  // Filter submissions based on user role and selected filters
+  const getFilteredFlatSubmissions = () => {
+    let submissions = allFlatSubmissions
 
     // If user is a normal participant, only show their team's submissions
     if (!hasSufficientRights && currentTeamId) {
-      submissions = submissions.filter(
-        (teamSub) => teamSub.teamId === currentTeamId
-      )
+      submissions = submissions.filter((sub: any) => sub.team.id === currentTeamId)
     }
 
     // Apply team filter (for admin/management users)
     if (hasSufficientRights && teamFilter !== "all") {
-      submissions = submissions.filter(
-        (teamSub) => teamSub.teamId === teamFilter
-      )
+      submissions = submissions.filter((sub: any) => sub.team.id === teamFilter)
     }
 
     // Apply Board filter
     if (boardFilter !== "all") {
       submissions = submissions.filter(
-        (teamSub) =>
-          teamSub.tile?.bingo?.id === boardFilter ||
-          teamSub.tile?.bingoId === boardFilter
+        (sub: any) => sub.tile?.bingo?.id === boardFilter || sub.tile?.bingoId === boardFilter
       )
     }
 
     // Apply Tile filter
     if (tileFilter !== "all") {
       submissions = submissions.filter(
-        (teamSub) =>
-          teamSub.tile?.id === tileFilter || teamSub.tileId === tileFilter
+        (sub: any) => sub.tile?.id === tileFilter || sub.tileId === tileFilter
       )
     }
 
     // Apply status filter
     if (statusFilter !== "all") {
-      submissions = submissions.filter((teamSub) => {
-        // Check team submission status (with local override)
-        const currentTileStatus = getTileStatus(teamSub.id, teamSub.status)
-        if (currentTileStatus === statusFilter) return true
-
-        // Also check individual submission statuses (with local override)
-        return teamSub.submissions.some((sub: any) => {
-          const currentSubmissionStatus = getSubmissionStatus(
-            sub.id,
-            sub.status || "pending"
-          )
-          return currentSubmissionStatus === statusFilter
-        })
+      submissions = submissions.filter((sub: any) => {
+        const currentSubmissionStatus = getSubmissionStatus(sub.id, sub.status || "pending")
+        return currentSubmissionStatus === statusFilter
       })
     }
 
-    return submissions
+    // Sort
+    return submissions.sort((a: any, b: any) => {
+      const statusOrder: Record<string, number> = { needs_review: 0, pending: 1, approved: 2 }
+      const statusA = getSubmissionStatus(a.id, a.status || "pending")
+      const statusB = getSubmissionStatus(b.id, b.status || "pending")
+      const valA = statusOrder[statusA] ?? 3
+      const valB = statusOrder[statusB] ?? 3
+      if (valA !== valB) return valA - valB
+      // Sort by creation date descending if statuses are the same
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
   }
 
-  const filteredSubmissions = getFilteredSubmissions()
+  const filteredFlatSubmissions = getFilteredFlatSubmissions()
+
+  // Select first item by default if nothing is selected
+  useEffect(() => {
+    if (hasSufficientRights && filteredFlatSubmissions.length > 0 && (!selectedSubmissionId || !filteredFlatSubmissions.find((s: any) => s.id === selectedSubmissionId))) {
+      setSelectedSubmissionId(filteredFlatSubmissions[0].id)
+    }
+  }, [filteredFlatSubmissions, hasSufficientRights, selectedSubmissionId])
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (!hasSufficientRights || filteredFlatSubmissions.length === 0) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts if user is typing in an input/textarea
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return
+      }
+
+      const currentIndex = filteredFlatSubmissions.findIndex((s: any) => s.id === selectedSubmissionId)
+      
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        if (currentIndex < filteredFlatSubmissions.length - 1) {
+          setSelectedSubmissionId(filteredFlatSubmissions[currentIndex + 1].id)
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        if (currentIndex > 0) {
+          setSelectedSubmissionId(filteredFlatSubmissions[currentIndex - 1].id)
+        }
+      } else if (e.key === 'g' || e.key === 'G') {
+        e.preventDefault()
+        // Find the combobox input and focus it
+        const inputs = document.querySelectorAll('input[role="combobox"]')
+        if (inputs.length > 0) {
+          ;(inputs[inputs.length - 1] as HTMLInputElement).focus()
+        }
+      } else if (e.key === 'A' && e.shiftKey) {
+        e.preventDefault()
+        if (selectedSubmissionId) {
+           const sub = filteredFlatSubmissions.find((s: any) => s.id === selectedSubmissionId)
+           if (sub) {
+             const currentStatus = getSubmissionStatus(sub.id, sub.status || "pending")
+             if (currentStatus !== "approved") {
+               handleSubmissionStatusUpdate(selectedSubmissionId, "approved")
+             }
+           }
+        }
+      } else if (e.key === 'R' && e.shiftKey) {
+        e.preventDefault()
+        if (selectedSubmissionId) {
+           const sub = filteredFlatSubmissions.find((s: any) => s.id === selectedSubmissionId)
+           if (sub) {
+             const currentStatus = getSubmissionStatus(sub.id, sub.status || "pending")
+             if (currentStatus !== "needs_review") {
+               handleNeedsReviewClick(selectedSubmissionId)
+             }
+           }
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [hasSufficientRights, filteredFlatSubmissions, selectedSubmissionId, localSubmissionStatuses])
 
   // Calculate submission counts by status
   const counts = {
@@ -564,8 +668,8 @@ export function SubmissionsTab({
                   </TabsTrigger>
                   <TabsTrigger value="needs_review" className="flex items-center gap-1.5 px-3">
                     <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />
-                    <span className="hidden sm:inline">Needs Review</span>
-                    <span className="sm:hidden">Review</span>
+                    <span className="hidden sm:inline">Changes Requested</span>
+                    <span className="sm:hidden">Changes</span>
                     <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.needs_review}</Badge>
                   </TabsTrigger>
                   <TabsTrigger value="pending" className="flex items-center gap-1.5 px-3">
@@ -712,381 +816,276 @@ export function SubmissionsTab({
           </Collapsible>
         </div>
 
-        {/* Team submissions */}
+        {/* Submissions Display */}
         <div className="space-y-6">
-          {filteredSubmissions.length > 0 ? (
-            filteredSubmissions.map((teamSubmission) => {
-              const currentTileStatus = getTileStatus(
-                teamSubmission.id,
-                teamSubmission.status
-              )
-
-              return (
-                <div
-                  key={teamSubmission.id}
-                  className="overflow-hidden rounded-lg border border-border bg-card shadow-xs"
-                >
-                  <div className="border-b border-border bg-muted/30 p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="h-4 w-4 rounded-full shadow-xs"
-                          style={{
-                            backgroundColor: `hsl(${(teamSubmission.team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`,
-                          }}
-                        />
-                        <h3 className="font-semibold text-foreground">
-                          {teamSubmission.team.name}
-                          {isAdminView && teamSubmission.tile && (
-                            <span className="ml-2 text-sm font-normal text-muted-foreground">
-                              ({teamSubmission.tile.bingo?.title} -{" "}
-                              {teamSubmission.tile.title})
-                            </span>
-                          )}
-                        </h3>
-                        {getStatusBadge(currentTileStatus)}
+          {filteredFlatSubmissions.length > 0 ? (
+            hasSufficientRights ? (
+              /* --- SPLIT PANE TRIAGE INBOX (Power User View) --- */
+              <div className="flex flex-col md:flex-row gap-6 h-[800px] max-h-[70vh]">
+                
+                {/* Left Pane: Queue List */}
+                <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col gap-2 overflow-y-auto pr-2 border-r border-border custom-scrollbar">
+                  {filteredFlatSubmissions.map((submission: any) => {
+                    const currentStatus = getSubmissionStatus(submission.id, submission.status || "pending")
+                    const isSelected = selectedSubmissionId === submission.id
+                    
+                    return (
+                      <div
+                        key={submission.id}
+                        onClick={() => setSelectedSubmissionId(submission.id)}
+                        className={`p-3 rounded-lg border transition-colors cursor-pointer flex gap-3 ${isSelected ? 'bg-primary/5 border-primary shadow-xs' : 'bg-card border-border hover:bg-muted/50'}`}
+                      >
+                        <div className="relative w-16 h-12 rounded-md overflow-hidden shrink-0 border border-border/50">
+                          <Image
+                            src={getOptimizedImageUrl(submission.image.path)}
+                            alt="thumb"
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="flex flex-col min-w-0 overflow-hidden w-full">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-sm truncate text-foreground">{submission.team.name}</span>
+                            <div className="scale-75 origin-right shrink-0">{getStatusBadge(currentStatus)}</div>
+                          </div>
+                          <span className="text-xs text-muted-foreground truncate">{submission.user.runescapeName || submission.user.name || "Unknown"}</span>
+                          <span className="text-[10px] text-muted-foreground/70">{new Date(submission.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                        </div>
                       </div>
-                      {hasSufficientRights && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-8">
-                              Tile Status:{" "}
-                              <span className="ml-1 capitalize text-muted-foreground">
-                                {currentTileStatus.replace("_", " ")}
-                              </span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              className="text-green-600 focus:bg-green-50 focus:text-green-700 cursor-pointer"
-                              onClick={() =>
-                                handleTeamTileSubmissionStatusUpdate(
-                                  teamSubmission.id,
-                                  "approved"
-                                )
-                              }
-                              disabled={currentTileStatus === "approved"}
+                    )
+                  })}
+                </div>
+
+                {/* Right Pane: Focus Area */}
+                <div className="w-full md:w-2/3 lg:w-3/4 flex flex-col gap-4 overflow-y-auto pl-2 custom-scrollbar">
+                  {filteredFlatSubmissions.filter((s: any) => s.id === selectedSubmissionId).map((submission: any) => {
+                    const currentSubmissionStatus = getSubmissionStatus(submission.id, submission.status || "pending")
+                    const currentTileStatus = getTileStatus(submission.teamTileSubmissionId, submission.parentStatus)
+                    
+                    return (
+                      <div key={`focus-${submission.id}`} className="flex flex-col gap-6 animate-in fade-in duration-200">
+                        {/* Header Context */}
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 bg-muted/20 p-4 rounded-lg border border-border">
+                          <div>
+                            <h2 className="text-xl font-bold flex items-center gap-2">
+                              <div
+                                className="h-4 w-4 rounded-full shadow-xs"
+                                style={{ backgroundColor: `hsl(${(submission.team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)` }}
+                              />
+                              {submission.team.name}
+                            </h2>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Submitted by {submission.user.runescapeName || submission.user.name || "Unknown"} at {new Date(submission.createdAt).toLocaleString()}
+                            </p>
+                            {isAdminView && submission.tile && (
+                              <p className="text-sm font-medium mt-1">
+                                {submission.tile.bingo?.title} &rarr; {submission.tile.title}
+                              </p>
+                            )}
+                          </div>
+                          
+                          <div className="flex flex-col items-end gap-2">
+                             <div className="flex gap-2">
+                               {getStatusBadge(currentSubmissionStatus)}
+                               <Badge variant="outline" className="capitalize border-muted-foreground/30">{currentTileStatus.replace("_", " ")} Tile</Badge>
+                             </div>
+                             
+                             {/* Tile Force Actions */}
+                             <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-8">
+                                  Tile Actions
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  className="text-green-600 focus:bg-green-50 focus:text-green-700 cursor-pointer"
+                                  onClick={() => handleTeamTileSubmissionStatusUpdate(submission.teamTileSubmissionId, "completed")}
+                                  disabled={currentTileStatus === "completed"}
+                                >
+                                  <Check className="mr-2 h-4 w-4" /> Force Approve Tile
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-yellow-600 focus:bg-yellow-50 focus:text-yellow-700 cursor-pointer"
+                                  onClick={() => handleTeamTileSubmissionStatusUpdate(submission.teamTileSubmissionId, "needs_attention")}
+                                  disabled={currentTileStatus === "needs_attention"}
+                                >
+                                  <AlertTriangle className="mr-2 h-4 w-4" /> Flag Tile for Review
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+
+                        {/* High-Res Image Display */}
+                        <div 
+                           className="relative w-full rounded-xl overflow-hidden border border-border shadow-md bg-black/5 flex items-center justify-center cursor-pointer group"
+                           style={{ minHeight: '400px', maxHeight: '600px' }}
+                           onClick={() => onFullSizeImageView(getOptimizedImageUrl(submission.image.path), "Submission")}
+                        >
+                          <Image
+                            src={getOptimizedImageUrl(submission.image.path)}
+                            alt="Submission"
+                            fill
+                            className="object-contain transition-transform group-hover:scale-[1.02]"
+                            priority
+                          />
+                        </div>
+                        
+                        {/* Auto-submission metadata */}
+                        {submission.isAutoSubmission && (
+                          <div className="space-y-1 rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/30 grid grid-cols-2 gap-x-4">
+                            <div className="col-span-2 flex items-center gap-1 text-sm font-medium text-blue-700 dark:text-blue-300 mb-1">
+                              <Zap className="h-4 w-4" /> Auto-Submitted
+                            </div>
+                            {submission.sourceName && (
+                              <div className="text-sm text-muted-foreground"><span className="font-medium">Source:</span> {submission.sourceName}</div>
+                            )}
+                            {submission.pluginAccountName && (
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground"><User className="h-4 w-4" /> {submission.pluginAccountName}</div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Action Zone */}
+                        <div className="flex flex-col gap-4 p-5 rounded-lg border border-border bg-card shadow-xs">
+                          <h3 className="font-semibold text-lg">Goal Assignment</h3>
+                          
+                          <InlineGoalAssignment
+                            submissionId={submission.id}
+                            currentGoalId={getSubmissionGoal(submission.id, submission.goalId)}
+                            currentValue={getSubmissionValue(submission.id, submission.submissionValue)}
+                            goals={submission.tile?.goals || selectedTile?.goals || []}
+                            goalValues={goalValuesCache[submission.goalId || ""] || []}
+                            onAssign={(goalId, value) => handleInlineGoalAssignment(submission.id, goalId, value)}
+                            hasSufficientRights={hasSufficientRights}
+                          />
+
+                          <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-border">
+                            <Button
+                              className={`flex-1 min-w-[140px] h-10 ${currentSubmissionStatus !== "approved" ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
+                              variant={currentSubmissionStatus === "approved" ? "secondary" : "default"}
+                              onClick={() => handleSubmissionStatusUpdate(submission.id, "approved")}
+                              disabled={currentSubmissionStatus === "approved"}
                             >
                               <Check className="mr-2 h-4 w-4" />
-                              Force Approve Tile
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-yellow-600 focus:bg-yellow-50 focus:text-yellow-700 cursor-pointer"
-                              onClick={() =>
-                                handleTeamTileSubmissionStatusUpdate(
-                                  teamSubmission.id,
-                                  "needs_review"
-                                )
-                              }
-                              disabled={currentTileStatus === "needs_review"}
+                              Approve <span className="ml-1 opacity-50 text-[10px] hidden sm:inline">(⇧A)</span>
+                            </Button>
+
+                            <Button
+                              className={`flex-1 min-w-[140px] h-10 ${currentSubmissionStatus !== "needs_review" ? "bg-yellow-500 hover:bg-yellow-600 text-white" : ""}`}
+                              variant={currentSubmissionStatus === "needs_review" ? "secondary" : "default"}
+                              onClick={() => handleNeedsReviewClick(submission.id)}
+                              disabled={currentSubmissionStatus === "needs_review"}
                             >
                               <AlertTriangle className="mr-2 h-4 w-4" />
-                              Flag Tile for Review
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                    </div>
-                  </div>
+                              Request Changes <span className="ml-1 opacity-50 text-[10px] hidden sm:inline">(⇧R)</span>
+                            </Button>
 
-                  {teamSubmission.submissions.length > 0 ? (
-                    <div className="submission-grid grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 md:grid-cols-3">
-                      {[...teamSubmission.submissions]
-                        .filter((submission: any) => {
-                          // Apply status filter to individual submissions (with local override)
-                          if (statusFilter === "all") return true
-                          const currentSubmissionStatus = getSubmissionStatus(
-                            submission.id,
-                            submission.status || "pending"
-                          )
-                          return currentSubmissionStatus === statusFilter
-                        })
-                        .sort((a: any, b: any) => {
-                          const statusOrder: Record<string, number> = { needs_review: 0, pending: 1, approved: 2 }
-                          const statusA = getSubmissionStatus(a.id, a.status || "pending")
-                          const statusB = getSubmissionStatus(b.id, b.status || "pending")
-                          const valA = statusOrder[statusA] ?? 3
-                          const valB = statusOrder[statusB] ?? 3
-                          if (valA !== valB) return valA - valB
-                          // Sort by creation date descending if statuses are the same
-                          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-                        })
-                        .map((submission: any) => {
-                          const currentSubmissionStatus = getSubmissionStatus(
-                            submission.id,
-                            submission.status || "pending"
-                          )
+                            <AlertDialog open={submissionToDelete === submission.id} onOpenChange={(open) => !open && setSubmissionToDelete(null)}>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" className="h-10 text-destructive hover:bg-destructive/10 border-destructive/20">
+                                  <X className="mr-2 h-4 w-4" /> Delete
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Submission</AlertDialogTitle>
+                                  <AlertDialogDescription>Are you sure you want to delete this submission? This action cannot be undone.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => { onDeleteSubmission(submission.id); setSubmissionToDelete(null); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
 
-                          return (
-                            <div
-                              key={submission.id}
-                              className="overflow-hidden rounded-md border border-border bg-card shadow-xs transition-shadow hover:shadow-md"
-                            >
-                              <div className="relative aspect-video">
-                                <Image
-                                  src={getOptimizedImageUrl(submission.image.path)}
-                                  alt={`Submission by ${submission.user.runescapeName || "Unknown"}`}
-                                  fill
-                                  className="cursor-pointer object-cover transition-opacity hover:opacity-90"
-                                  onClick={() =>
-                                    onFullSizeImageView(
-                                      getOptimizedImageUrl(submission.image.path),
-                                      `Submission by ${submission.user.runescapeName || "Unknown"}`
-                                    )
-                                  }
-                                />
-                                {/* Status overlay */}
-                                <div className="absolute right-2 top-2">
-                                  {getStatusBadge(currentSubmissionStatus)}
-                                </div>
-                              </div>
-                              <div className="space-y-3 p-3">
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1">
-                                    <div className="truncate text-sm font-medium text-foreground">
-                                      {submission.user.runescapeName ||
-                                        submission.user.name ||
-                                        "Unknown"}
-                                    </div>
-                                    <div className="mt-1 text-xs text-muted-foreground">
-                                      {new Date(
-                                        submission.createdAt
-                                      ).toLocaleString()}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Auto-submission metadata */}
-                                {submission.isAutoSubmission && (
-                                  <div className="space-y-1 rounded-md border border-blue-200 bg-blue-50 p-2 dark:border-blue-800 dark:bg-blue-950/30">
-                                    <div className="flex items-center gap-1 text-xs font-medium text-blue-700 dark:text-blue-300">
-                                      <Zap className="h-3 w-3" />
-                                      Auto-Submitted
-                                    </div>
-                                    {submission.sourceName && (
-                                      <div className="text-xs text-muted-foreground">
-                                        <span className="font-medium">
-                                          Source:
-                                        </span>{" "}
-                                        {submission.sourceName}
-                                        {submission.sourceNpcId &&
-                                          ` (NPC #${submission.sourceNpcId})`}
-                                      </div>
-                                    )}
-                                    {submission.sourceItemId && (
-                                      <div className="text-xs text-muted-foreground">
-                                        <span className="font-medium">
-                                          Item:
-                                        </span>{" "}
-                                        #{submission.sourceItemId}
-                                      </div>
-                                    )}
-                                    {submission.pluginAccountName && (
-                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <User className="h-3 w-3" />
-                                        {submission.pluginAccountName}
-                                      </div>
-                                    )}
-                                    {submission.sourceType && (
-                                      <div className="text-xs text-muted-foreground">
-                                        <span className="font-medium">
-                                          Type:
-                                        </span>{" "}
-                                        {submission.sourceType}
-                                      </div>
-                                    )}
-                                    {/* Location information */}
-                                    {(submission.locationWorldX !== null ||
-                                      submission.locationWorldY !== null ||
-                                      submission.locationWorldNumber !==
-                                        null) && (
-                                      <div className="mt-1 border-t border-blue-200 pt-1 text-xs text-muted-foreground dark:border-blue-800">
-                                        <div className="mb-0.5 font-medium">
-                                          Location:
-                                        </div>
-                                        {submission.locationWorldNumber && (
-                                          <div>
-                                            World{" "}
-                                            {submission.locationWorldNumber}
-                                          </div>
-                                        )}
-                                        {submission.locationWorldX !== null &&
-                                          submission.locationWorldY !==
-                                            null && (
-                                            <div>
-                                              Coords: (
-                                              {submission.locationWorldX},{" "}
-                                              {submission.locationWorldY}
-                                              {submission.locationPlane !=
-                                                null &&
-                                              submission.locationPlane > 0
-                                                ? `, Plane ${submission.locationPlane}`
-                                                : ""}
-                                              )
-                                            </div>
-                                          )}
-                                        {submission.locationRegionId && (
-                                          <div className="text-xs opacity-75">
-                                            Region ID:{" "}
-                                            {submission.locationRegionId}
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-
-                                {/* Inline Goal Assignment */}
-                                <InlineGoalAssignment
-                                  submissionId={submission.id}
-                                  currentGoalId={getSubmissionGoal(submission.id, submission.goalId)}
-                                  currentValue={getSubmissionValue(submission.id, submission.submissionValue)}
-                                  goals={
-                                    teamSubmission.tile?.goals ||
-                                    selectedTile?.goals ||
-                                    []
-                                  }
-                                  goalValues={
-                                    goalValuesCache[submission.goalId || ""] ||
-                                    []
-                                  }
-                                  onAssign={(goalId, value) =>
-                                    handleInlineGoalAssignment(
-                                      submission.id,
-                                      goalId,
-                                      value
-                                    )
-                                  }
-                                  hasSufficientRights={hasSufficientRights}
-                                />
-
-                                {hasSufficientRights && (
-                                  <div className="mt-2 flex justify-end gap-2 border-t border-border pt-3">
-                                    <Button
-                                      variant={currentSubmissionStatus === "approved" ? "secondary" : "outline"}
-                                      size="sm"
-                                      className={`h-8 ${currentSubmissionStatus !== "approved" ? "border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700" : "bg-green-100 text-green-800 hover:bg-green-200"}`}
-                                      onClick={() =>
-                                        handleSubmissionStatusUpdate(
-                                          submission.id,
-                                          "approved"
-                                        )
-                                      }
-                                      disabled={
-                                        currentSubmissionStatus === "approved"
-                                      }
-                                    >
-                                      <Check className="mr-1.5 h-3.5 w-3.5" />
-                                      Approve
-                                    </Button>
-
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className={`h-8 ${currentSubmissionStatus !== "needs_review" ? "border-yellow-200 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700" : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"}`}
-                                      onClick={() =>
-                                        handleNeedsReviewClick(
-                                          submission.id
-                                        )
-                                      }
-                                      disabled={
-                                        currentSubmissionStatus === "needs_review"
-                                      }
-                                    >
-                                      <AlertTriangle className="mr-1.5 h-3.5 w-3.5" />
-                                      Review
-                                    </Button>
-
-                                    <AlertDialog
-                                      open={
-                                        submissionToDelete === submission.id
-                                      }
-                                      onOpenChange={(open) =>
-                                        !open && setSubmissionToDelete(null)
-                                      }
-                                    >
-                                      <AlertDialogTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                        >
-                                          <X className="mr-1.5 h-3.5 w-3.5" />
-                                          Delete
-                                        </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>
-                                            Delete Submission
-                                          </AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            Are you sure you want to delete this
-                                            submission? This action cannot be
-                                            undone.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>
-                                            Cancel
-                                          </AlertDialogCancel>
-                                          <AlertDialogAction
-                                            onClick={() => {
-                                              onDeleteSubmission(submission.id)
-                                              setSubmissionToDelete(null)
-                                            }}
-                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                          >
-                                            Delete
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                  </div>
-                                )}
-
-                                {/* Comment section - only show if user has sufficient rights to add comments */}
-                                {hasSufficientRights &&
-                                  showCommentForm === submission.id && (
-                                    <CommentForm
-                                      submissionId={submission.id}
-                                      onSubmit={(comment) =>
-                                        handleCommentSubmit(
-                                          submission.id,
-                                          comment
-                                        )
-                                      }
-                                      onCancel={handleCommentCancel}
-                                      isLoading={isSubmittingComment}
-                                    />
-                                  )}
-
-                                {/* Display existing comments - everyone can view */}
-                                <SubmissionCommentDisplay
-                                  comments={
-                                    submissionComments[submission.id] || []
-                                  }
-                                  submissionId={submission.id}
-                                  canViewComments={true}
-                                />
-                              </div>
+                        {/* Comments section */}
+                        <div className="mt-2">
+                           {showCommentForm === submission.id && (
+                            <div className="mb-4">
+                              <CommentForm
+                                submissionId={submission.id}
+                                onSubmit={(comment) => handleCommentSubmit(submission.id, comment)}
+                                onCancel={handleCommentCancel}
+                                isLoading={isSubmittingComment}
+                              />
                             </div>
-                          )
-                        })}
-                    </div>
-                  ) : (
-                    <div className="p-4 text-center text-muted-foreground">
-                      No submissions yet
+                          )}
+                          <SubmissionCommentDisplay
+                            comments={submissionComments[submission.id] || []}
+                            submissionId={submission.id}
+                            canViewComments={true}
+                          />
+                        </div>
+
+                      </div>
+                    )
+                  })}
+                  {(!selectedSubmissionId || !filteredFlatSubmissions.find((s: any) => s.id === selectedSubmissionId)) && (
+                    <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full min-h-[300px]">
+                      <Check className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                      <p>Select a submission to review</p>
                     </div>
                   )}
                 </div>
-              )
-            })
+              </div>
+            ) : (
+              /* --- STANDARD GRID (Normal User View) --- */
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {filteredFlatSubmissions.map((submission: any) => {
+                  const currentSubmissionStatus = getSubmissionStatus(submission.id, submission.status || "pending")
+                  
+                  return (
+                    <div key={submission.id} className="overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
+                      <div className="relative aspect-video">
+                        <Image
+                          src={getOptimizedImageUrl(submission.image.path)}
+                          alt="Submission"
+                          fill
+                          className="cursor-pointer object-cover transition-opacity hover:opacity-90"
+                          onClick={() => onFullSizeImageView(getOptimizedImageUrl(submission.image.path), "Submission")}
+                        />
+                        <div className="absolute right-2 top-2">
+                          {getStatusBadge(currentSubmissionStatus)}
+                        </div>
+                      </div>
+                      <div className="p-4 space-y-4">
+                        <div>
+                          <div className="font-semibold text-foreground truncate">{submission.team.name}</div>
+                          <div className="text-sm text-muted-foreground">by {submission.user.runescapeName || submission.user.name || "Unknown"}</div>
+                          <div className="text-xs text-muted-foreground mt-1">{new Date(submission.createdAt).toLocaleString()}</div>
+                        </div>
+                        
+                        {/* Auto-submission info if applicable */}
+                        {submission.isAutoSubmission && (
+                          <div className="text-xs flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                             <Zap className="h-3 w-3" /> Auto-submitted
+                          </div>
+                        )}
+
+                        <SubmissionCommentDisplay
+                          comments={submissionComments[submission.id] || []}
+                          submissionId={submission.id}
+                          canViewComments={true}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
           ) : (
-            <div className="rounded-lg bg-muted/30 py-8 text-center">
-              <p className="text-muted-foreground">
+            <div className="rounded-xl border border-dashed border-border bg-muted/20 py-16 text-center flex flex-col items-center justify-center h-full">
+              <Check className="h-12 w-12 text-muted-foreground/30 mb-4" />
+              <p className="text-lg font-medium text-foreground mb-1">All caught up!</p>
+              <p className="text-muted-foreground text-sm">
                 {statusFilter === "pending"
-                  ? "No pending submissions for this tile yet."
+                  ? "No pending submissions require your attention."
                   : "No submissions match the current filters."}
               </p>
             </div>

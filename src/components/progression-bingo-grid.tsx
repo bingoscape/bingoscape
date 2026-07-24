@@ -159,9 +159,13 @@ function SortableTile({
 
   // Render status icon function (similar to BingoTile)
   const renderStatusIcon = (
-    status: "approved" | "needs_review" | "pending" | undefined
+    status: string | undefined
   ) => {
-    const iconMap = {
+    if (status === "completed") status = "approved"
+    if (status === "needs_attention") status = "needs_review"
+    if (status === "incomplete") return null
+
+    const iconMap: Record<string, React.ReactNode> = {
       approved: (
         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-white shadow-lg ring-2 ring-green-200 transition-all duration-300 dark:ring-green-800">
           <span className="text-sm font-bold">✓</span>
@@ -452,11 +456,11 @@ function SortableTile({
               </div>
             </div>
 
-            {currentTeamSubmission && (
+            {tileStatus !== "locked" && tileStatus !== "available" && (
               <div className="flex items-center gap-2 rounded-lg bg-secondary/30 p-2">
-                {renderStatusIcon(currentTeamSubmission.status)}
+                {renderStatusIcon(tileStatus === "review" ? "needs_attention" : tileStatus)}
                 <span className="text-sm font-medium capitalize">
-                  {currentTeamSubmission.status?.replace("_", " ")}
+                  {tileStatus === "review" ? "needs review" : tileStatus.replace("_", " ")}
                 </span>
               </div>
             )}
@@ -779,9 +783,9 @@ export function ProgressionBingoGrid({
       (tts) => tts.teamId === currentTeamId
     )
 
-    if (submission?.status === "approved") return "completed"
-    if (submission?.status === "pending") return "pending"
-    if (submission?.status === "needs_review") return "review"
+    if (submission?.status === "completed") return "completed"
+    if (submission?.status === "needs_attention") return "review"
+    
     return "available"
   }
 
@@ -797,7 +801,7 @@ export function ProgressionBingoGrid({
         const submission = tile.teamTileSubmissions?.find(
           (tts) => tts.teamId === currentTeamId
         )
-        return submission?.status === "approved"
+        return submission?.status === "completed"
       })
       .reduce((sum, tile) => sum + tile.weight, 0)
 

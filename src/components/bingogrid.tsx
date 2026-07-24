@@ -633,7 +633,7 @@ export default function BingoGrid({
   const handleTeamTileSubmissionStatusUpdate = useCallback(
     async (
       teamTileSubmissionId: string | undefined,
-      newStatus: "approved" | "needs_review"
+      newStatus: "completed" | "needs_attention"
     ) => {
       if (!teamTileSubmissionId || !selectedTile) {
         toast({

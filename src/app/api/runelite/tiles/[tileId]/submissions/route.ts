@@ -139,7 +139,7 @@ export async function POST(
     )
     if (
       !!teamSubmissionForTile &&
-      teamSubmissionForTile.status === "approved"
+      teamSubmissionForTile.status === "completed"
     ) {
       return NextResponse.json(
         { error: "Your submission has already been approved!" },
@@ -193,13 +193,13 @@ export async function POST(
         .values({
           tileId,
           teamId: userTeam.id,
-          status: "pending",
+          status: "incomplete",
         })
         .onConflictDoUpdate({
           target: [teamTileSubmissions.tileId, teamTileSubmissions.teamId],
           set: {
             updatedAt: new Date(),
-            status: "pending", // Reset status to pending when a new submission is made
+            // CRITICAL: Option B - do not downgrade status if already completed
           },
         })
         .returning()

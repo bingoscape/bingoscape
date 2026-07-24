@@ -156,7 +156,7 @@ export async function getPublicTeams(
         .where(
           and(
             eq(teamTileSubmissions.teamId, team.id),
-            eq(teamTileSubmissions.status, "approved"),
+            eq(teamTileSubmissions.status, "completed"),
             inArray(teamTileSubmissions.tileId, bingoTileIds)
           )
         )
@@ -170,7 +170,7 @@ export async function getPublicTeams(
         .where(
           and(
             eq(teamTileSubmissions.teamId, team.id),
-            inArray(teamTileSubmissions.status, ["pending", "needs_review"]),
+            inArray(teamTileSubmissions.status, ["incomplete", "needs_attention"]),
             inArray(teamTileSubmissions.tileId, bingoTileIds)
           )
         )

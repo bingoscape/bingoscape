@@ -2,7 +2,6 @@
 
 import { SubmissionsTab } from "@/components/submissions-tab"
 import { updateTeamTileSubmissionStatus, updateSubmissionStatus, deleteSubmission } from "@/app/actions/bingo"
-import { updateSubmissionGoalAndValue } from "@/app/actions/goals"
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
@@ -65,14 +64,7 @@ export function ReviewSubmissionsClient({
           submissionValue
         ) => {
           try {
-            await updateSubmissionStatus(id, status)
-            if (goalId !== undefined) {
-              await updateSubmissionGoalAndValue(
-                id,
-                goalId,
-                submissionValue ?? 1.0
-              )
-            }
+            await updateSubmissionStatus(id, status, goalId, submissionValue)
             startTransition(() => {
               router.refresh()
             })
