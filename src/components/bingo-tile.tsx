@@ -111,12 +111,21 @@ export const BingoTile = React.memo(function BingoTile({
   const getCompletionStatus = () => {
     if (!currentTeamSubmission) return "incomplete"
     if (currentTeamSubmission.status === "completed") return "completed"
-    if (currentTeamSubmission.status === "needs_attention") return "needs_review"
-    
     return "incomplete"
   }
 
+  const getSubmissionState = () => {
+    if (!currentTeamSubmission) return null
+    if (currentTeamSubmission.status === "needs_attention") return "needs_review"
+    const submissions = currentTeamSubmission.submissions || []
+    if (submissions.some(s => s.status === "needs_review")) return "needs_review"
+    if (submissions.some(s => s.status === "pending")) return "pending"
+    if (submissions.length > 0) return "approved"
+    return null
+  }
+
   const completionStatus = getCompletionStatus()
+  const submissionState = getSubmissionState()
 
   const tileClasses = `
     relative rounded-lg overflow-hidden aspect-square group
@@ -130,10 +139,13 @@ export const BingoTile = React.memo(function BingoTile({
         ? `
       border-2 cursor-pointer transform hover:scale-[1.01] sm:hover:scale-[1.02] lg:hover:scale-[1.05] hover:z-10 hover:shadow-2xl
       active:scale-[0.98] active:transition-transform active:duration-100
-      ${completionStatus === "completed" ? "border-green-500 bg-green-50 dark:bg-green-900/20 shadow-green-200/50 hover:shadow-green-300/60" : ""}
-      ${completionStatus === "needs_review" ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 shadow-yellow-200/50 hover:shadow-yellow-300/60" : ""}
-      ${completionStatus === "pending" ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-blue-200/50 hover:shadow-blue-300/60" : ""}
-      ${completionStatus === "incomplete" ? "border-muted-foreground/40 hover:border-primary shadow-md hover:shadow-xl" : ""}
+      ${
+        completionStatus === "completed"
+          ? "border-green-500 bg-green-50 dark:bg-green-900/20 shadow-green-200/50 hover:shadow-green-300/60"
+          : submissionState
+            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-blue-200/50 hover:border-blue-600 hover:shadow-blue-300/60"
+            : "border-gray-400 bg-gray-100 dark:bg-gray-800/50 dark:border-gray-600 shadow-md hover:border-gray-500"
+      }
     `
         : ""
     }
@@ -169,7 +181,7 @@ export const BingoTile = React.memo(function BingoTile({
               handleClick()
             }
           }}
-          aria-label={`Bingo tile: ${tile.title}. Worth ${tile.weight} points. Current status: ${completionStatus === "completed" ? "Completed" : completionStatus === "pending" ? "Pending review" : completionStatus === "needs_review" ? "Needs review" : "Not started"}. ${tile.description ? `Description: ${tile.description.substring(0, 100)}...` : ""}`}
+          aria-label={`Bingo tile: ${tile.title}. Worth ${tile.weight} points. Current status: ${completionStatus === "completed" ? "Completed" : "Incomplete"}. ${submissionState === "pending" ? "Has pending submissions. " : ""}${submissionState === "needs_review" ? "Changes requested on submissions. " : ""}${tile.description ? `Description: ${tile.description.substring(0, 100)}...` : ""}`}
           aria-describedby={
             tile.description ? `tile-desc-${tile.id}` : undefined
           }
@@ -185,23 +197,19 @@ export const BingoTile = React.memo(function BingoTile({
                   className={`object-contain transition-all duration-500 ease-in-out group-hover:scale-110 ${
                     completionStatus === "completed"
                       ? "saturate-110 brightness-110"
-                      : completionStatus === "needs_review"
-                        ? "saturate-95 brightness-95"
-                        : completionStatus === "pending"
-                          ? "brightness-100 saturate-100"
-                          : "brightness-100 saturate-100 group-hover:brightness-110"
+                      : submissionState
+                        ? "saturate-100 brightness-100"
+                        : "grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100"
                   }`}
                 />
               ) : (
                 <div
                   className={`flex h-full w-full items-center justify-center transition-all duration-300 ${
                     completionStatus === "completed"
-                      ? "bg-green-500"
-                      : completionStatus === "needs_review"
-                        ? "bg-yellow-500"
-                        : completionStatus === "pending"
-                          ? "bg-blue-500"
-                          : "bg-primary group-hover:bg-primary/90"
+                      ? "bg-green-500 text-white"
+                      : submissionState
+                        ? "bg-blue-500 text-white group-hover:bg-blue-600"
+                        : "bg-gray-400 text-white group-hover:bg-gray-500 dark:bg-gray-600 dark:group-hover:bg-gray-500"
                   }`}
                 >
                   <span className="px-2 text-center text-lg font-semibold text-primary-foreground">
@@ -219,22 +227,15 @@ export const BingoTile = React.memo(function BingoTile({
                   </div>
                 </div>
               )}
-              {completionStatus === "needs_review" && (
-                <div className="absolute inset-0 flex items-center justify-center bg-yellow-500/15 opacity-0 backdrop-blur-xs transition-all duration-500 group-hover:opacity-100">
-                  <div className="scale-90 transform rounded-full bg-yellow-500 p-3 text-white shadow-2xl ring-4 ring-yellow-200 transition-transform duration-300 group-hover:scale-100 dark:ring-yellow-800">
-                    <span className="border-0 bg-yellow-500 text-sm font-semibold text-white">
-                      ⚠ Review
-                    </span>
-                  </div>
+              {/* Submission Status Badges */}
+              {submissionState === "needs_review" && (
+                <div className="absolute top-2 left-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-yellow-500 text-white shadow-md ring-2 ring-yellow-200 dark:ring-yellow-800" title="Changes Requested">
+                  <span className="text-xs font-bold">!</span>
                 </div>
               )}
-              {completionStatus === "pending" && (
-                <div className="absolute inset-0 flex items-center justify-center bg-blue-500/15 opacity-0 backdrop-blur-xs transition-all duration-500 group-hover:opacity-100">
-                  <div className="scale-90 transform rounded-full bg-blue-500 p-3 text-white shadow-2xl ring-4 ring-blue-200 transition-transform duration-300 group-hover:scale-100 dark:ring-blue-800">
-                    <span className="border-0 bg-blue-500 text-sm font-semibold text-white">
-                      ⏳ Pending
-                    </span>
-                  </div>
+              {submissionState === "pending" && (
+                <div className="absolute top-2 left-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-md ring-2 ring-blue-200 dark:ring-blue-800" title="Pending Review">
+                  <span className="text-xs font-bold">⏳</span>
                 </div>
               )}
 
@@ -280,12 +281,24 @@ export const BingoTile = React.memo(function BingoTile({
               </div>
             </div>
 
-            {completionStatus !== "incomplete" && (
-              <div className="flex items-center gap-2 rounded-lg bg-secondary/30 p-2">
-                {renderStatusIcon(completionStatus)}
-                <span className="text-sm font-medium capitalize">
-                  {completionStatus.replace("_", " ")}
-                </span>
+            {(completionStatus !== "incomplete" || submissionState) && (
+              <div className="flex flex-col gap-2 rounded-lg bg-secondary/30 p-2">
+                {completionStatus !== "incomplete" && (
+                  <div className="flex items-center gap-2">
+                    {renderStatusIcon(completionStatus)}
+                    <span className="text-sm font-medium capitalize">
+                      {completionStatus.replace("_", " ")}
+                    </span>
+                  </div>
+                )}
+                {submissionState && (
+                  <div className="flex items-center gap-2">
+                    {renderStatusIcon(submissionState)}
+                    <span className="text-sm font-medium capitalize">
+                      {submissionState === "needs_review" ? "Changes requested" : "Pending review"}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 

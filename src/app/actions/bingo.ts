@@ -889,7 +889,21 @@ export async function getAllSubmissionsForTeam(
           },
         },
         team: true,
-        tile: true,
+        tile: {
+          with: {
+            bingo: {
+              columns: {
+                id: true,
+                title: true,
+              },
+            },
+            goals: {
+              with: {
+                itemGoal: true,
+              }
+            }
+          }
+        }
       },
       where: and(
         eq(teamTileSubmissions.teamId, teamId),
@@ -1251,11 +1265,22 @@ export async function updateSubmissionStatus(
 
     // Update submission value if provided
     if (submissionValue !== undefined) {
-      updateData.submissionValue = submissionValue
+      updateData.submissionValue = submissionValue ?? 1
     }
 
-    const [updatedSubmission] = await db
-      .update(submissions)
+    // Fetch the old submission before updating to get the correct oldGoalId
+    const oldSubmissionRecord = await db.query.submissions.findFirst({
+      where: eq(submissions.id, submissionId),
+      with: {
+        teamTileSubmission: true
+      }
+    })
+
+    if (!oldSubmissionRecord || !oldSubmissionRecord.teamTileSubmission) {
+      throw new Error("Associated team tile submission not found")
+    }
+
+    const [updatedSubmission] = await db.update(submissions)
       .set(updateData)
       .where(eq(submissions.id, submissionId))
       .returning()
@@ -1276,12 +1301,31 @@ export async function updateSubmissionStatus(
         .where(
           eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId)
         )
+    } else {
+      // Reconcile needs_attention status if parent was needs_attention
+      const teamSubmission = await db.query.teamTileSubmissions.findFirst({
+        where: eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId)
+      })
+      if (teamSubmission?.status === "needs_attention") {
+        const remainingNeedsReview = await db.query.submissions.findFirst({
+          where: and(
+            eq(submissions.teamTileSubmissionId, teamSubmission.id),
+            eq(submissions.status, "needs_review")
+          )
+        })
+        if (!remainingNeedsReview) {
+          // If no remaining submissions need review, revert tile to incomplete
+          await db.update(teamTileSubmissions)
+            .set({ status: "incomplete", updatedAt: new Date() })
+            .where(eq(teamTileSubmissions.id, teamSubmission.id))
+        }
+      }
     }
 
     // Goal-less tile auto-completion
     if (newStatus === "approved") {
       const goalsResult = await db.query.goals.findMany({
-        where: eq(goals.tileId, submissionRecord.teamTileSubmission.tileId)
+        where: eq(goals.tileId, oldSubmissionRecord.teamTileSubmission.tileId)
       });
       
       if (goalsResult.length === 0) {
@@ -1297,8 +1341,8 @@ export async function updateSubmissionStatus(
 
     // If submission has a goal assignment, recalculate goal progress
     const { recalculateGoalProgress } = await import("./goals")
-    const oldGoalId = submissionRecord.goalId
-    const teamId = submissionRecord.teamTileSubmission.teamId
+    const oldGoalId = oldSubmissionRecord.goalId
+    const teamId = oldSubmissionRecord.teamTileSubmission.teamId
 
     if (oldGoalId && oldGoalId !== updatedSubmission.goalId) {
       await recalculateGoalProgress(db, oldGoalId, teamId)
@@ -1326,7 +1370,7 @@ export async function updateSubmissionStatus(
       { error, submissionId, action: "updateSubmissionStatus" },
       "Error updating submission status"
     )
-    return { success: false, error: "Failed to update submission status" }
+    return { success: false, error: error instanceof Error ? error.message : "Failed to update submission status" }
   }
 }
 
@@ -1515,6 +1559,25 @@ export async function updateSubmissionStatusWithComment(
           .where(
             eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId)
           )
+      } else {
+        // Reconcile needs_attention status if parent was needs_attention
+        const teamSubmission = await tx.query.teamTileSubmissions.findFirst({
+          where: eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId)
+        })
+        if (teamSubmission?.status === "needs_attention") {
+          const remainingNeedsReview = await tx.query.submissions.findFirst({
+            where: and(
+              eq(submissions.teamTileSubmissionId, teamSubmission.id),
+              eq(submissions.status, "needs_review")
+            )
+          })
+          if (!remainingNeedsReview) {
+            // If no remaining submissions need review, revert tile to incomplete
+            await tx.update(teamTileSubmissions)
+              .set({ status: "incomplete", updatedAt: new Date() })
+              .where(eq(teamTileSubmissions.id, teamSubmission.id))
+          }
+        }
       }
 
       // Goal-less tile auto-completion

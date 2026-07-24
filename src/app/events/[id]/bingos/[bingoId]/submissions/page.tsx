@@ -3,79 +3,19 @@
 
 import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
-import Image from "next/image"
 import { getUserRole } from "@/app/actions/events"
 import { getTeamsByEventId } from "@/app/actions/team"
 import { getAllSubmissionsForTeam, updateTeamTileSubmissionStatus, updateSubmissionStatus, deleteSubmission } from "@/app/actions/bingo"
-
 import { getBingoById } from "@/app/actions/getBingoById"
 
-import { getOptimizedImageUrl } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible"
 import { toast } from "@/hooks/use-toast"
-import {
-  ArrowLeft,
-  Check,
-  RefreshCw,
-  AlertTriangle,
-  Search,
-  Clock,
-  Award,
-  ChevronDown,
-  Filter,
-  CircleCheck,
-  Circle,
-  X,
-  Zap,
-  User,
-} from "lucide-react"
-import { FullSizeImageDialog } from "@/components/full-size-image-dialog"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { InlineGoalAssignment } from "@/components/inline-goal-assignment"
+import { ArrowLeft, RefreshCw } from "lucide-react"
 import { getEventById } from "@/server/queries/events"
-import type { BingoData, TileData, TeamTileSubmission } from "@/types/model"
+import type { BingoData, TeamTileSubmission } from "@/types/model"
+import { SubmissionsTab } from "@/components/submissions-tab"
+import { FullSizeImageDialog } from "@/components/full-size-image-dialog"
 
 export default function BingoSubmissionsPage(props: {
   params: Promise<{ id: string; bingoId: string }>
@@ -83,53 +23,25 @@ export default function BingoSubmissionsPage(props: {
   const params = use(props.params)
   const { id: eventId, bingoId } = params
   const router = useRouter()
+  
   const [loading, setLoading] = useState(true)
   const [bingo, setBingo] = useState<BingoData | null>(null)
   const [teams, setTeams] = useState<any[]>([])
-  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([])
-  const [userRole, setUserRole] = useState<
-    "participant" | "management" | "admin" | null
-  >(null)
-  const [tiles, setTiles] = useState<TileData[]>([])
-  const [tileSubmissions, setTileSubmissions] = useState<
-    Record<string, TeamTileSubmission[]>
-  >({})
-  const [fullSizeImage, setFullSizeImage] = useState<{
-    src: string
-    alt: string
-  } | null>(null)
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [searchQuery, setSearchQuery] = useState("")
+  const [userRole, setUserRole] = useState<"participant" | "management" | "admin" | null>(null)
+  const [tileSubmissions, setTileSubmissions] = useState<TeamTileSubmission[]>([])
   const [refreshKey, setRefreshKey] = useState(0)
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [teamsPopoverOpen, setTeamsPopoverOpen] = useState(false)
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false)
-
-  const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(
-    null
-  )
-  const [goalValuesCache, _setGoalValuesCache] = useState<Record<string, any[]>>(
-    {}
-  )
-
-  // Update the statusOptions array to remove "declined" and use new names
-  const statusOptions = [
-    { value: "pending", label: "Pending" },
-    { value: "approved", label: "Approved" },
-    { value: "needs_review", label: "Needs Review" },
-  ]
+  const [fullSizeImage, setFullSizeImage] = useState<{ src: string; alt: string } | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true)
-        const [eventData, teamsData, userRoleData, bingoData] =
-          await Promise.all([
-            getEventById(eventId),
-            getTeamsByEventId(eventId),
-            getUserRole(eventId),
-            getBingoById(bingoId),
-          ])
+        const [eventData, teamsData, userRoleData, bingoData] = await Promise.all([
+          getEventById(eventId),
+          getTeamsByEventId(eventId),
+          getUserRole(eventId),
+          getBingoById(bingoId),
+        ])
 
         if (!eventData || !bingoData) {
           router.push(`/events/${eventId}`)
@@ -137,429 +49,36 @@ export default function BingoSubmissionsPage(props: {
         }
 
         setBingo(bingoData)
-        setTiles(bingoData.tiles || [])
         setTeams(teamsData)
         setUserRole(userRoleData)
         
-        // Select all teams by default if none are selected
-        setSelectedTeamIds(prev => prev.length === 0 ? teamsData.map((t: any) => t.id) : prev)
+        // Fetch submissions for all teams
+        const allTeamSubmissions: TeamTileSubmission[] = []
+        await Promise.all(
+          teamsData.map(async (team: any) => {
+            const teamSubMap = await getAllSubmissionsForTeam(bingoId, team.id)
+            Object.values(teamSubMap).forEach((subsArray) => {
+              if (Array.isArray(subsArray)) {
+                allTeamSubmissions.push(...subsArray)
+              }
+            })
+          })
+        )
+        
+        setTileSubmissions(allTeamSubmissions)
       } catch (error) {
         console.error("Error fetching data:", error)
-        toast({
-          title: "Error",
-          description: "Failed to fetch data",
-          variant: "destructive",
-        })
+        toast({ title: "Error", description: "Failed to fetch data", variant: "destructive" })
       } finally {
         setLoading(false)
       }
     }
 
-    fetchData().catch((error) => console.error("Error fetching data:", error))
+    fetchData().catch(console.error)
   }, [eventId, bingoId, router, refreshKey])
-
-  useEffect(() => {
-    const fetchSubmissions = async () => {
-      if (selectedTeamIds.length === 0) return
-
-      try {
-        setLoading(true)
-        // Fetch submissions for all selected teams
-        const allSubmissions: Record<string, TeamTileSubmission[]> = {}
-
-        await Promise.all(
-          selectedTeamIds.map(async (teamId) => {
-            const teamSubmissions = await getAllSubmissionsForTeam(
-              bingoId,
-              teamId
-            )
-
-            // Merge the submissions into the allSubmissions object
-            Object.keys(teamSubmissions).forEach((tileId) => {
-              if (!allSubmissions[tileId]) {
-                allSubmissions[tileId] = []
-              }
-
-              // Check if teamSubmissions[tileId] exists and is an array before spreading
-              const submissionsForTile = teamSubmissions[tileId] || []
-              allSubmissions[tileId].push(...submissionsForTile)
-            })
-          })
-        )
-
-        setTileSubmissions(allSubmissions)
-      } catch (error) {
-        console.error("Error fetching submissions:", error)
-        toast({
-          title: "Error",
-          description: "Failed to fetch submissions",
-          variant: "destructive",
-        })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchSubmissions().catch((error) =>
-      console.error("Error fetching submissions:", error)
-    )
-  }, [bingoId, selectedTeamIds, refreshKey])
-
-  const toggleTeamSelection = (teamId: string) => {
-    setSelectedTeamIds((prev) => {
-      if (prev.includes(teamId)) {
-        return prev.filter((id) => id !== teamId)
-      } else {
-        return [...prev, teamId]
-      }
-    })
-  }
-
-
-
-  const selectAllTeams = () => {
-    setSelectedTeamIds(teams.map((team) => team.id))
-  }
-
-  const clearTeamSelection = () => {
-    setSelectedTeamIds([])
-  }
-
-  // Update handleTileStatusUpdate function to use new status names
-  const handleTileStatusUpdate = async (
-    teamTileSubmissionId: string,
-    newStatus: "completed" | "needs_attention" // removed "declined"
-  ) => {
-    try {
-      const result = await updateTeamTileSubmissionStatus(
-        teamTileSubmissionId,
-        newStatus
-      )
-      if (result.success) {
-        // Update local state
-        const updatedSubmissions = { ...tileSubmissions }
-
-        Object.keys(updatedSubmissions).forEach((tileId) => {
-          updatedSubmissions[tileId] = updatedSubmissions[tileId]!.map((sub) =>
-            sub.id === teamTileSubmissionId
-              ? { ...sub, status: newStatus }
-              : sub
-          )
-        })
-
-        setTileSubmissions(updatedSubmissions)
-
-        toast({
-          title: "Tile status updated",
-          description: `Tile marked as ${newStatus.replace("_", " ")}`,
-        })
-      } else {
-        throw new Error(result.error || "Failed to update team status")
-      }
-    } catch (error) {
-      console.error("Error updating team submission status:", error)
-      toast({
-        title: "Error",
-        description: "Failed to update team submission status",
-        variant: "destructive",
-      })
-    }
-  }
-
-  // Update handleSubmissionStatusUpdate function to use new status names
-  const handleSubmissionStatusUpdate = async (
-    submissionId: string,
-    newStatus: "approved" | "needs_review" | "pending",
-    goalId?: string | null
-  ) => {
-    try {
-      const result = await updateSubmissionStatus(
-        submissionId,
-        newStatus,
-        goalId
-      )
-      if (result.success) {
-        // Update local state
-        const updatedSubmissions = { ...tileSubmissions }
-
-        Object.keys(updatedSubmissions).forEach((tileId) => {
-          updatedSubmissions[tileId] = updatedSubmissions[tileId]!.map(
-            (teamSub) => ({
-              ...teamSub,
-              submissions: teamSub.submissions.map((sub) =>
-                sub.id === submissionId
-                  ? { ...sub, status: newStatus, goalId: goalId ?? sub.goalId }
-                  : sub
-              ),
-            })
-          )
-        })
-
-        setTileSubmissions(updatedSubmissions)
-
-        if (goalId !== undefined) {
-          toast({
-            title: goalId ? "Goal assigned" : "Goal removed",
-            description: goalId
-              ? "Goal has been assigned to the submission"
-              : "Goal has been removed from the submission",
-          })
-        } else {
-          toast({
-            title: "Submission status updated",
-            description: `Individual submission marked as ${newStatus.replace("_", " ")}`,
-          })
-        }
-      } else {
-        throw new Error(result.error || "Failed to update submission status")
-      }
-    } catch (error) {
-      console.error("Error updating submission status:", error)
-      toast({
-        title: "Error",
-        description: "Failed to update submission status",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleDeleteSubmission = async (submissionId: string) => {
-    try {
-      const result = await deleteSubmission(submissionId)
-      if (result.success) {
-        // Refresh submissions after deletion
-        setRefreshKey((prev) => prev + 1)
-
-        toast({
-          title: "Submission deleted",
-          description: "The submission has been successfully deleted.",
-        })
-      } else {
-        throw new Error(
-          (result as { error: string }).error ?? "Failed to delete submission"
-        )
-      }
-    } catch (error) {
-      console.error("Error deleting submission:", error)
-      toast({
-        title: "Error",
-        description: "Failed to delete submission",
-        variant: "destructive",
-      })
-    }
-  }
-
-
-
-  // Handle inline goal assignment
-  const handleInlineGoalAssignment = async (
-    submissionId: string,
-    goalId: string | null,
-    value: number | null
-  ) => {
-    try {
-      // Find the current submission to get its status
-      let currentStatus = "pending"
-
-      // Look through all tile submissions to find the current status
-      Object.keys(tileSubmissions).forEach((tileId) => {
-        tileSubmissions[tileId]?.forEach((teamSub) => {
-          teamSub.submissions.forEach((sub) => {
-            if (sub.id === submissionId) {
-              currentStatus = sub.status || "pending"
-            }
-          })
-        })
-      })
-
-      const result = await updateSubmissionStatus(
-        submissionId,
-        currentStatus as "approved" | "needs_review" | "pending",
-        goalId,
-        value
-      )
-
-      if (result.success) {
-        // Update local state
-        const updatedSubmissions = { ...tileSubmissions }
-
-        Object.keys(updatedSubmissions).forEach((tileId) => {
-          updatedSubmissions[tileId] = updatedSubmissions[tileId]!.map(
-            (teamSub) => ({
-              ...teamSub,
-              submissions: teamSub.submissions.map((sub) =>
-                sub.id === submissionId
-                  ? { ...sub, goalId, submissionValue: value ?? 1 }
-                  : sub
-              ),
-            })
-          )
-        })
-
-        setTileSubmissions(updatedSubmissions)
-
-        toast({
-          title: goalId ? "Goal assigned" : "Goal removed",
-          description: goalId
-            ? "Goal has been assigned to the submission"
-            : "Goal has been removed from the submission",
-        })
-
-
-      } else {
-        throw new Error(result.error || "Failed to assign goal")
-      }
-    } catch (error) {
-      console.error("Error assigning goal:", error)
-      toast({
-        title: "Error",
-        description: "Failed to assign goal to submission",
-        variant: "destructive",
-      })
-    }
-  }
-
-  // Add this helper function to find a tile by ID
-  const findTileById = (tileId: string) => {
-    return tiles.find((tile) => tile.id === tileId)
-  }
-
-  // Add this helper function to get goals for a tile
-  const getTileGoals = (tileId: string) => {
-    const tile = findTileById(tileId)
-    return tile?.goals || []
-  }
 
   const handleRefresh = () => {
     setRefreshKey((prev) => prev + 1)
-  }
-
-  // Update getStatusBadge function to use new status names and remove "declined"
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "approved":
-        return (
-          <Badge className="bg-green-500 text-white">
-            <Check className="mr-1 h-3 w-3" />
-            Approved
-          </Badge>
-        )
-      case "needs_review":
-        return (
-          <Badge className="bg-yellow-500 text-white">
-            <AlertTriangle className="mr-1 h-3 w-3" />
-            Needs Review
-          </Badge>
-        )
-      default:
-        return (
-          <Badge className="bg-blue-500 text-white">
-            <Clock className="mr-1 h-3 w-3" />
-            Pending
-          </Badge>
-        )
-    }
-  }
-
-  const getTeamName = (teamId: string) => {
-    const team = teams.find((t) => t.id === teamId)
-    return team ? team.name : "Unknown Team"
-  }
-
-  const filteredTiles = tiles.filter((tile) => {
-    // Only include tiles that have submissions for any of the selected teams
-    if (selectedTeamIds.length === 0) return false
-
-    const tileSubmissionsArray = tileSubmissions[tile.id] || []
-
-    return tileSubmissionsArray.some((submission) => {
-      const teamMatches = selectedTeamIds.includes(submission.teamId)
-      const hasIndividualSubmissions = submission.submissions.some(
-        (individualSub) =>
-          statusFilter === "all" || (individualSub.status || "pending") === statusFilter
-      )
-
-      return teamMatches && hasIndividualSubmissions
-    })
-  })
-
-  const filteredSubmissions = (tileId: string) => {
-    const submissions = tileSubmissions[tileId] || []
-
-    return submissions.filter((submission) => {
-      // Filter by selected teams
-      if (
-        selectedTeamIds.length > 0 &&
-        !selectedTeamIds.includes(submission.teamId)
-      ) {
-        return false
-      }
-
-      // Filter by selected statuses (individual submission status only)
-      if (statusFilter !== "all") {
-        const hasMatchingIndividualSubmissions = submission.submissions.some(
-          (individualSub) =>
-            (individualSub.status || "pending") === statusFilter
-        )
-
-        if (!hasMatchingIndividualSubmissions) {
-          return false
-        }
-      }
-
-      // Filter by search query (tile title or submission details)
-      if (searchQuery) {
-        const tile = tiles.find((t) => t.id === tileId)
-        const tileTitle = tile?.title?.toLowerCase() || ""
-        const tileContent = tile?.description?.toLowerCase() || ""
-        return (
-          tileTitle.includes(searchQuery.toLowerCase()) ||
-          tileContent.includes(searchQuery.toLowerCase())
-        )
-      }
-
-      return true
-    })
-  }
-
-  // Calculate submission counts by status for selected teams
-  const counts = {
-    all: 0,
-    needs_review: 0,
-    pending: 0,
-    approved: 0
-  }
-  
-  if (selectedTeamIds.length > 0) {
-    Object.values(tileSubmissions).forEach(teamSubsArray => {
-      teamSubsArray.forEach(ts => {
-        if (!selectedTeamIds.includes(ts.teamId)) return;
-        
-        ts.submissions.forEach((sub: any) => {
-          counts.all++
-          const status = sub.status || "pending"
-          if (status === "needs_review") counts.needs_review++
-          else if (status === "pending") counts.pending++
-          else if (status === "approved") counts.approved++
-        })
-      })
-    })
-  }
-
-  if (loading && !bingo) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Skeleton className="mb-4 h-8 w-64" />
-        <Skeleton className="mb-6 h-6 w-full" />
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {Array(6)
-            .fill(0)
-            .map((_, i) => (
-              <Skeleton key={i} className="h-64 w-full" />
-            ))}
-        </div>
-      </div>
-    )
   }
 
   const isAdminOrManagement = userRole === "admin" || userRole === "management"
@@ -592,541 +111,69 @@ export default function BingoSubmissionsPage(props: {
           </div>
         </div>
 
-        <div className="space-y-4 rounded-lg border border-border bg-card p-4 sm:p-6 shadow-xs">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
-              <div className="flex items-center justify-between">
-                <TabsList className="h-9 sm:h-10">
-                  <TabsTrigger value="all" className="flex items-center gap-1.5 px-3">
-                    All <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.all}</Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="needs_review" className="flex items-center gap-1.5 px-3">
-                    <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />
-                    <span className="hidden sm:inline">Needs Review</span>
-                    <span className="sm:hidden">Review</span>
-                    <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.needs_review}</Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="pending" className="flex items-center gap-1.5 px-3">
-                    <Clock className="h-3.5 w-3.5 text-blue-500" />
-                    Pending <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.pending}</Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="approved" className="flex items-center gap-1.5 px-3">
-                    <Check className="h-3.5 w-3.5 text-green-500" />
-                    Approved <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.approved}</Badge>
-                  </TabsTrigger>
-                </TabsList>
-                
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-9 sm:h-10"
-                    onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                  >
-                    <Filter className="mr-2 h-4 w-4" />
-                    Filters
-                    {(searchQuery !== "" || selectedTeamIds.length > 0) && (
-                      <Badge variant="secondary" className="ml-2 px-1 rounded-full h-5 min-w-5 flex items-center justify-center">!</Badge>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </Tabs>
-          </div>
-
-          <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-            <CollapsibleContent className="mt-4 space-y-4">
-              <div className="flex items-center justify-between border-t pt-4">
-                <h3 className="text-sm font-medium text-foreground">Advanced Filters</h3>
-                {(searchQuery !== "" || selectedTeamIds.length > 0) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      clearTeamSelection()
-                      setSearchQuery("")
-                    }}
-                    className="h-8 text-muted-foreground hover:text-foreground"
-                  >
-                    Clear Filters
-                  </Button>
-                )}
-              </div>
-              
-              <div className="flex flex-col gap-4 md:flex-row">
-                <Popover open={teamsPopoverOpen} onOpenChange={setTeamsPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={teamsPopoverOpen}
-                      className="w-full justify-between bg-transparent md:w-[250px]"
-                    >
-                      <div className="flex items-center gap-1 truncate">
-                        <span>
-                          {selectedTeamIds.length === 0
-                            ? "Select Teams"
-                            : selectedTeamIds.length === 1
-                              ? getTeamName(selectedTeamIds[0]!)
-                              : `${selectedTeamIds.length} teams selected`}
-                        </span>
-                        {selectedTeamIds.length > 0 && (
-                          <Badge variant="secondary" className="ml-1">
-                            {selectedTeamIds.length}
-                          </Badge>
-                        )}
-                      </div>
-                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[250px] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search teams..." />
-                      <CommandList>
-                        <CommandEmpty>No teams found.</CommandEmpty>
-                        <CommandGroup>
-                          <div className="flex items-center justify-between border-b p-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={selectAllTeams}
-                              className="h-8"
-                            >
-                              Select All
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={clearTeamSelection}
-                              className="h-8"
-                            >
-                              Clear
-                            </Button>
-                          </div>
-                          {teams.map((team) => (
-                            <CommandItem
-                              key={team.id}
-                              onSelect={() => toggleTeamSelection(team.id)}
-                              className="flex items-center gap-2"
-                            >
-                              {selectedTeamIds.includes(team.id) ? (
-                                <CircleCheck className="mr-2" />
-                              ) : (
-                                <Circle className="mr-2" />
-                              )}
-                              <span>{team.name}</span>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-
-                <div className="relative flex-1">
-                  <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
-                  <Input
-                    placeholder="Search tiles..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-8"
-                  />
-                </div>
-                
-                <Tabs
-                  value={viewMode}
-                  onValueChange={(value) => setViewMode(value as "grid" | "list")}
-                  className="w-auto"
-                >
-                  <TabsList className="h-9">
-                    <TabsTrigger value="grid" className="px-3">
-                      <div className="grid h-4 w-4 grid-cols-2 gap-0.5">
-                        <div className="rounded-sm bg-current"></div>
-                        <div className="rounded-sm bg-current"></div>
-                        <div className="rounded-sm bg-current"></div>
-                        <div className="rounded-sm bg-current"></div>
-                      </div>
-                    </TabsTrigger>
-                    <TabsTrigger value="list" className="px-3">
-                      <div className="flex h-4 w-4 flex-col justify-center gap-0.5">
-                        <div className="h-0.5 rounded-sm bg-current"></div>
-                        <div className="h-0.5 rounded-sm bg-current"></div>
-                        <div className="h-0.5 rounded-sm bg-current"></div>
-                      </div>
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
-
-        {selectedTeamIds.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 rounded-md bg-muted/20 p-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20">
-                <Award className="h-3 w-3" />
-              </div>
-              <span className="font-medium">
-                {selectedTeamIds.length === 1
-                  ? getTeamName(selectedTeamIds[0]!)
-                  : `${selectedTeamIds.length} teams selected`}
-              </span>
-            </div>
-            <Separator orientation="vertical" className="hidden h-6 sm:block" />
-            <div className="text-sm text-muted-foreground">
-              {filteredTiles.length}{" "}
-              {filteredTiles.length === 1 ? "tile" : "tiles"} with submissions
-            </div>
-            {statusFilter !== "all" && (
-              <>
-                <Separator
-                  orientation="vertical"
-                  className="hidden h-6 sm:block"
-                />
-                <Badge variant="outline" className="text-xs">
-                  {statusOptions.find((s) => s.value === statusFilter)?.label}
-                </Badge>
-              </>
-            )}
-          </div>
-        )}
-
-        {selectedTeamIds.length === 0 ? (
-          <div className="py-8 text-center">
-            Please select a team to view submissions
-          </div>
-        ) : loading ? (
+        {loading ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {Array(6)
-              .fill(0)
-              .map((_, i) => (
-                <Skeleton key={i} className="h-64 w-full" />
-              ))}
-          </div>
-        ) : filteredTiles.length === 0 ? (
-          <div className="py-8 text-center">
-            No submissions found for the selected teams and statuses
+            {Array(6).fill(0).map((_, i) => (
+              <Skeleton key={i} className="h-64 w-full" />
+            ))}
           </div>
         ) : (
-          <div className="space-y-6">
-            {filteredTiles.map((tile) => {
-              const submissions = filteredSubmissions(tile.id)
-              if (submissions.length === 0) return null
-
-              return (
-                <Card key={tile.id} className="overflow-hidden">
-                  <CardHeader className="bg-muted/30 pb-2">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">{tile.title}</CardTitle>
-                        <div className="mt-1 flex items-center gap-2">
-                          {tile.weight && (
-                            <div className="flex items-center gap-1 text-sm">
-                              <Award className="h-3.5 w-3.5" />
-                              <span>{tile.weight} xp</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="font-normal">
-                        {submissions.length} submission
-                        {submissions.length !== 1 ? "s" : ""}
-                      </Badge>
-                    </div>
-                    {tile.description && (
-                      <CardDescription className="mt-2 line-clamp-2">
-                        {tile.description}
-                      </CardDescription>
-                    )}
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    {submissions.map((teamSubmission) => (
-                      <div
-                        key={teamSubmission.id}
-                        className="mb-4 overflow-hidden rounded-lg border last:mb-0"
-                      >
-                        <div className="bg-muted/30 p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="h-3 w-3 rounded-full"
-                                style={{
-                                  backgroundColor: `hsl(${
-                                    (teamSubmission.team?.name?.charCodeAt(0) *
-                                      10) %
-                                      360 || 0
-                                  }, 70%, 50%)`,
-                                }}
-                              />
-                              <h3 className="font-medium">
-                                {getTeamName(teamSubmission.teamId)}
-                              </h3>
-                              {getStatusBadge(teamSubmission.status)}
-                            </div>
-                            {isAdminOrManagement && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="outline" size="sm" className="h-8">
-                                    Override Status
-                                    <ChevronDown className="ml-2 h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => handleTileStatusUpdate(teamSubmission.id, "completed")}
-                                    disabled={teamSubmission.status === "completed"}
-                                    className="text-green-600 focus:bg-green-50 focus:text-green-700"
-                                  >
-                                    <Check className="mr-2 h-4 w-4" />
-                                    Force Approve Tile
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleTileStatusUpdate(teamSubmission.id, "needs_attention")}
-                                    disabled={teamSubmission.status === "needs_attention"}
-                                    className="text-yellow-600 focus:bg-yellow-50 focus:text-yellow-700"
-                                  >
-                                    <AlertTriangle className="mr-2 h-4 w-4" />
-                                    Flag Tile for Review
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </div>
-                        </div>
-
-                        {teamSubmission.submissions.length > 0 ? (
-                          <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 md:grid-cols-3">
-                            {[...teamSubmission.submissions]
-                              .filter((submission) => {
-                                if (statusFilter === "all") return true
-                                return (submission.status || "pending") === statusFilter
-                              })
-                              .sort((a, b) => {
-                                const statusOrder: Record<string, number> = { needs_review: 0, pending: 1, approved: 2 }
-                                const statusA = a.status || "pending"
-                                const statusB = b.status || "pending"
-                                const valA = statusOrder[statusA] ?? 3
-                                const valB = statusOrder[statusB] ?? 3
-                                if (valA !== valB) return valA - valB
-                                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-                              })
-                              .map((submission) => (
-                              <div
-                                key={submission.id}
-                                className="overflow-hidden rounded-md border"
-                              >
-                                <div className="relative aspect-video">
-                                  <Image
-                                    src={getOptimizedImageUrl(submission.image.path)}
-                                    alt={`Submission by ${submission.user?.name || "Unknown"}`}
-                                    fill
-                                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                    className="cursor-pointer object-cover"
-                                    onClick={() =>
-                                      setFullSizeImage({
-                                        src: getOptimizedImageUrl(submission.image.path),
-                                        alt: `Submission by ${submission.user?.name || "Unknown"}`,
-                                      })
-                                    }
-                                  />
-                                </div>
-                                <div className="space-y-2 p-3">
-                                  <div className="flex items-center justify-between">
-                                    <div className="truncate text-sm font-medium">
-                                      {submission.user?.name ||
-                                        submission.user?.runescapeName ||
-                                        "Unknown"}
-                                    </div>
-                                    {getStatusBadge(
-                                      submission.status || "pending"
-                                    )}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {new Date(
-                                      submission.createdAt
-                                    ).toLocaleString()}
-                                  </div>
-
-                                  {/* Auto-submission metadata */}
-                                  {submission.isAutoSubmission && (
-                                    <div className="space-y-1 rounded-md border border-blue-200 bg-blue-50 p-2 dark:border-blue-800 dark:bg-blue-950/30">
-                                      <div className="flex items-center gap-1 text-xs font-medium text-blue-700 dark:text-blue-300">
-                                        <Zap className="h-3 w-3" />
-                                        Auto-Submitted
-                                      </div>
-                                      {submission.sourceName && (
-                                        <div className="text-xs text-muted-foreground">
-                                          <span className="font-medium">
-                                            Source:
-                                          </span>{" "}
-                                          {submission.sourceName}
-                                          {submission.sourceNpcId &&
-                                            ` (NPC #${submission.sourceNpcId})`}
-                                        </div>
-                                      )}
-                                      {submission.sourceItemId && (
-                                        <div className="text-xs text-muted-foreground">
-                                          <span className="font-medium">
-                                            Item:
-                                          </span>{" "}
-                                          #{submission.sourceItemId}
-                                        </div>
-                                      )}
-                                      {submission.pluginAccountName && (
-                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                          <User className="h-3 w-3" />
-                                          {submission.pluginAccountName}
-                                        </div>
-                                      )}
-                                      {submission.sourceType && (
-                                        <div className="text-xs text-muted-foreground">
-                                          <span className="font-medium">
-                                            Type:
-                                          </span>{" "}
-                                          {submission.sourceType}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {/* Inline Goal Assignment */}
-                                  <InlineGoalAssignment
-                                    submissionId={submission.id}
-                                    currentGoalId={submission.goalId}
-                                    currentValue={submission.submissionValue}
-                                    goals={getTileGoals(tile.id)}
-                                    goalValues={
-                                      goalValuesCache[
-                                        submission.goalId || ""
-                                      ] || []
-                                    }
-                                    onAssign={(goalId, value) =>
-                                      handleInlineGoalAssignment(
-                                        submission.id,
-                                        goalId,
-                                        value
-                                      )
-                                    }
-                                    hasSufficientRights={isAdminOrManagement}
-
-                                  />
-                                </div>
-
-                                {isAdminOrManagement && (
-                                  <div className="mt-2 flex flex-wrap justify-end gap-2 border-t pt-2">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-8 text-green-600 hover:bg-green-50 hover:text-green-700 border border-transparent hover:border-green-200"
-                                      onClick={() =>
-                                        handleSubmissionStatusUpdate(
-                                          submission.id,
-                                          "approved"
-                                        )
-                                      }
-                                      disabled={
-                                        submission.status === "approved"
-                                      }
-                                    >
-                                      <Check className="mr-1.5 h-4 w-4" />
-                                      Approve
-                                    </Button>
-
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-8 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
-                                      onClick={() =>
-                                        handleSubmissionStatusUpdate(
-                                          submission.id,
-                                          "needs_review"
-                                        )
-                                      }
-                                      disabled={
-                                        submission.status === "needs_review"
-                                      }
-                                    >
-                                      <AlertTriangle className="mr-1.5 h-4 w-4" />
-                                      Review
-                                    </Button>
-
-                                    <AlertDialog
-                                      open={submissionToDelete === submission.id}
-                                      onOpenChange={(open) =>
-                                        !open && setSubmissionToDelete(null)
-                                      }
-                                    >
-                                      <AlertDialogTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-8 text-red-600 hover:bg-red-50 hover:text-red-700"
-                                          onClick={() =>
-                                            setSubmissionToDelete(
-                                              submission.id
-                                            )
-                                          }
-                                        >
-                                          <X className="mr-1.5 h-4 w-4" />
-                                          Delete
-                                        </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>
-                                            Delete Submission
-                                          </AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            Are you sure you want to delete this
-                                            submission? This action cannot be
-                                            undone.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>
-                                            Cancel
-                                          </AlertDialogCancel>
-                                          <AlertDialogAction
-                                            onClick={() => {
-                                              handleDeleteSubmission(
-                                                submission.id
-                                              )
-                                              setSubmissionToDelete(null)
-                                            }}
-                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                          >
-                                            Delete
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="p-4 text-center text-muted-foreground">
-                            No submissions yet
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              )
-            })}
+          <div className="rounded-lg border border-border bg-card shadow-xs min-h-[60vh]">
+            <SubmissionsTab
+              selectedTile={null}
+              teamTileSubmissions={tileSubmissions}
+              teams={teams}
+              hasSufficientRights={isAdminOrManagement}
+              isAdminView={isAdminOrManagement}
+              currentTeamId={undefined}
+              isSubmissionsLocked={false}
+              selectedImage={null}
+              pastedImage={null}
+              isUploadingImage={false}
+              onImageChange={() => {}}
+              onImageSubmit={() => {}}
+              onFullSizeImageView={(src, alt) => setFullSizeImage({ src, alt })}
+              onTeamTileSubmissionStatusUpdate={async (id, status) => {
+                if (!id) return
+                try {
+                  await updateTeamTileSubmissionStatus(id, status)
+                  handleRefresh()
+                  toast({ title: "Success", description: "Tile status updated." })
+                } catch {
+                  toast({ title: "Error", description: "Failed to update tile.", variant: "destructive" })
+                }
+              }}
+              onSubmissionStatusUpdate={async (id, status, goalId, submissionValue) => {
+                try {
+                  await updateSubmissionStatus(id, status, goalId, submissionValue)
+                  handleRefresh()
+                  toast({ title: "Success", description: "Submission updated successfully." })
+                } catch {
+                  toast({ title: "Error", description: "Failed to update submission.", variant: "destructive" })
+                }
+              }}
+              onDeleteSubmission={async (id) => {
+                try {
+                  await deleteSubmission(id)
+                  handleRefresh()
+                  toast({ title: "Success", description: "Submission deleted." })
+                } catch {
+                  toast({ title: "Error", description: "Failed to delete submission.", variant: "destructive" })
+                }
+              }}
+            />
           </div>
         )}
       </div>
 
-      <FullSizeImageDialog
-        isOpen={!!fullSizeImage}
-        onClose={() => setFullSizeImage(null)}
-        imageSrc={fullSizeImage?.src ?? ""}
-        imageAlt={fullSizeImage?.alt ?? ""}
-      />
+      {fullSizeImage && (
+        <FullSizeImageDialog
+          isOpen={!!fullSizeImage}
+          onClose={() => setFullSizeImage(null)}
+          imageSrc={fullSizeImage.src}
+          imageAlt={fullSizeImage.alt}
+        />
+      )}
     </div>
   )
 }

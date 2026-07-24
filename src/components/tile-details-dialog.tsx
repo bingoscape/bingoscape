@@ -11,7 +11,7 @@ import { TileDetailsTab } from "./tile-details-tab"
 import { GoalsTab } from "./goals-tab"
 import { SubmissionsTab } from "./submissions-tab"
 import { EventRole } from "@/app/actions/events"
-import type { Tile, Team, Goal, SelectableUser } from "@/types/model"
+import type { Tile, Team, Goal, SelectableUser, Submission } from "@/types/model"
 
 
 
@@ -94,6 +94,21 @@ export function TileDetailsDialog({
   selectedUserId,
   onUserSelect,
 }: TileDetailsDialogProps) {
+
+  // Calculate pending submissions for the badge
+  const pendingCount = selectedTile?.teamTileSubmissions?.reduce((acc, teamSub) => {
+    // If not admin, only count for their team
+    if (!hasSufficientRights && teamSub.teamId !== currentTeamId) return acc
+    
+    // Count pending and needs_review
+    const count = teamSub.submissions.filter((sub: Submission) => sub.status === "pending" || sub.status === "needs_review").length
+    return acc + count
+  }, 0) || 0
+
+  const currentTeamSubmission = currentTeamId 
+    ? selectedTile?.teamTileSubmissions?.find((sub) => sub.teamId === currentTeamId)
+    : null;
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="modal-content flex h-[90vh] w-[95vw] max-w-[1400px] flex-col overflow-hidden border-border bg-background">
@@ -109,6 +124,18 @@ export function TileDetailsDialog({
                   {selectedTile?.weight} XP
                 </span>
               </div>
+              {currentTeamSubmission && (
+                <div className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium ${
+                  currentTeamSubmission.status === 'completed' 
+                    ? 'border-green-500/30 bg-green-500/10 text-green-600' 
+                    : currentTeamSubmission.status === 'needs_attention'
+                      ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-600'
+                      : 'border-blue-500/30 bg-blue-500/10 text-blue-600'
+                }`}>
+                  {currentTeamSubmission.status === 'completed' ? 'Completed' : 
+                   currentTeamSubmission.status === 'needs_attention' ? 'Needs Attention' : 'In Progress'}
+                </div>
+              )}
             </div>
           </div>
           <DialogDescription className="mt-2 text-sm text-muted-foreground">
@@ -142,6 +169,11 @@ export function TileDetailsDialog({
               <div className="flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-purple-500"></div>
                 <span>Submissions</span>
+                {pendingCount > 0 && (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-700">
+                    {pendingCount}
+                  </span>
+                )}
               </div>
             </TabsTrigger>
           </TabsList>

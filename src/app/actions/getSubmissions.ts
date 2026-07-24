@@ -61,7 +61,11 @@ export async function getEventSubmissions(
                 title: true,
               },
             },
-            goals: true,
+            goals: {
+              with: {
+                itemGoal: true,
+              }
+            },
           },
         },
         submissions: {

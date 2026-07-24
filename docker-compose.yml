@@ -99,7 +99,7 @@ services:
       SKIP_ENV_VALIDATION: "1"
       NODE_ENV: production
     working_dir: /app
-    command: npx drizzle-kit push
+    command: npx drizzle-kit migrate
     networks:
       - bingoscape-network
     profiles:
