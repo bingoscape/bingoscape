@@ -82,9 +82,13 @@ export const BingoTile = React.memo(function BingoTile({
   }, [currentTeamId, tile.teamTileSubmissions])
 
   const renderStatusIcon = (
-    status: "approved" | "needs_review" | "pending" | undefined
+    status: string | undefined
   ) => {
-    const iconMap = {
+    if (status === "completed") status = "approved"
+    if (status === "needs_attention") status = "needs_review"
+    if (status === "incomplete") return null
+
+    const iconMap: Record<string, React.ReactNode> = {
       approved: (
         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-white shadow-lg ring-2 ring-green-200 transition-all duration-300 dark:ring-green-800">
           <span className="text-sm font-bold">✓</span>
@@ -106,9 +110,10 @@ export const BingoTile = React.memo(function BingoTile({
 
   const getCompletionStatus = () => {
     if (!currentTeamSubmission) return "incomplete"
-    if (currentTeamSubmission.status === "approved") return "completed"
-    if (currentTeamSubmission.status === "needs_review") return "needs_review"
-    return "pending"
+    if (currentTeamSubmission.status === "completed") return "completed"
+    if (currentTeamSubmission.status === "needs_attention") return "needs_review"
+    
+    return "incomplete"
   }
 
   const completionStatus = getCompletionStatus()
@@ -275,11 +280,11 @@ export const BingoTile = React.memo(function BingoTile({
               </div>
             </div>
 
-            {currentTeamSubmission && (
+            {completionStatus !== "incomplete" && (
               <div className="flex items-center gap-2 rounded-lg bg-secondary/30 p-2">
-                {renderStatusIcon(currentTeamSubmission.status)}
+                {renderStatusIcon(completionStatus)}
                 <span className="text-sm font-medium capitalize">
-                  {currentTeamSubmission.status?.replace("_", " ")}
+                  {completionStatus.replace("_", " ")}
                 </span>
               </div>
             )}

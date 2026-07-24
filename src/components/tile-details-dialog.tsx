@@ -46,7 +46,7 @@ interface TileDetailsDialogProps {
   onFullSizeImageView: (src: string, alt: string) => void
   onTeamTileSubmissionStatusUpdate: (
     teamTileSubmissionId: string | undefined,
-    newStatus: "approved" | "needs_review"
+    newStatus: "completed" | "needs_attention"
   ) => void
   onSubmissionStatusUpdate: (
     submissionId: string,

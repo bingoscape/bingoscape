@@ -256,7 +256,7 @@ export async function getEvents(userId: string): Promise<EventData[]> {
         .where(
           and(
             inArray(teamTileSubmissions.teamId, userTeamIds),
-            eq(teamTileSubmissions.status, "approved")
+            eq(teamTileSubmissions.status, "completed")
           )
         )
         .groupBy(teamTileSubmissions.teamId)

@@ -518,7 +518,7 @@ export async function getEvents(userId: string): Promise<EventData[]> {
         .where(
           and(
             inArray(teamTileSubmissions.teamId, userTeamIds),
-            eq(teamTileSubmissions.status, "approved")
+            eq(teamTileSubmissions.status, "completed")
           )
         )
         .groupBy(teamTileSubmissions.teamId)
@@ -2416,7 +2416,7 @@ export async function getMiniBoardTiles(bingoId: string) {
     const status = submissionMap.get(tile.id) || "none"
     return {
       ...tile,
-      isCompleted: status === "approved",
+      isCompleted: status === "completed",
     }
   })
 }

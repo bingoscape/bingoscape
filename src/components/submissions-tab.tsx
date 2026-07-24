@@ -69,7 +69,7 @@ interface SubmissionsTabProps {
   onFullSizeImageView: (src: string, alt: string) => void
   onTeamTileSubmissionStatusUpdate: (
     teamTileSubmissionId: string | undefined,
-    newStatus: "approved" | "needs_review"
+    newStatus: "completed" | "needs_attention"
   ) => void
   onSubmissionStatusUpdate: (
     submissionId: string,
@@ -130,7 +130,7 @@ export function SubmissionsTab({
 
   // Local state to track real-time status changes
   const [localTileStatuses, setLocalTileStatuses] = useState<
-    Record<string, "approved" | "needs_review" | "pending">
+    Record<string, "incomplete" | "completed" | "needs_attention">
   >({})
   const [localSubmissionStatuses, setLocalSubmissionStatuses] = useState<
     Record<string, "approved" | "needs_review" | "pending">
@@ -202,7 +202,7 @@ export function SubmissionsTab({
   // Enhanced handlers with real-time updates
   const handleTeamTileSubmissionStatusUpdate = async (
     teamTileSubmissionId: string | undefined,
-    newStatus: "approved" | "needs_review"
+    newStatus: "completed" | "needs_attention"
   ) => {
     if (!teamTileSubmissionId) return
 
@@ -213,7 +213,7 @@ export function SubmissionsTab({
     }))
 
     // If approving the tile, also update all submissions in that tile
-    if (newStatus === "approved") {
+    if (newStatus === "completed") {
       const teamSubmission = teamTileSubmissions?.find(
         (ts) => ts.id === teamTileSubmissionId
       )
@@ -443,11 +443,7 @@ export function SubmissionsTab({
     // Apply status filter
     if (statusFilter !== "all") {
       submissions = submissions.filter((teamSub) => {
-        // Check team submission status (with local override)
-        const currentTileStatus = getTileStatus(teamSub.id, teamSub.status)
-        if (currentTileStatus === statusFilter) return true
-
-        // Also check individual submission statuses (with local override)
+        // Only check individual submission statuses (with local override)
         return teamSub.submissions.some((sub: any) => {
           const currentSubmissionStatus = getSubmissionStatus(
             sub.id,
@@ -762,10 +758,10 @@ export function SubmissionsTab({
                               onClick={() =>
                                 handleTeamTileSubmissionStatusUpdate(
                                   teamSubmission.id,
-                                  "approved"
+                                  "completed"
                                 )
                               }
-                              disabled={currentTileStatus === "approved"}
+                              disabled={currentTileStatus === "completed"}
                             >
                               <Check className="mr-2 h-4 w-4" />
                               Force Approve Tile
@@ -775,10 +771,10 @@ export function SubmissionsTab({
                               onClick={() =>
                                 handleTeamTileSubmissionStatusUpdate(
                                   teamSubmission.id,
-                                  "needs_review"
+                                  "needs_attention"
                                 )
                               }
-                              disabled={currentTileStatus === "needs_review"}
+                              disabled={currentTileStatus === "needs_attention"}
                             >
                               <AlertTriangle className="mr-2 h-4 w-4" />
                               Flag Tile for Review

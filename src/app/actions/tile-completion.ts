@@ -198,20 +198,30 @@ export async function checkAndAutoCompleteTile(tileId: string, teamId: string) {
     const isComplete = await evaluateTileCompletion(tileId, teamId)
 
     if (!isComplete) {
+      // Revert to incomplete if it was previously completed
+      if (existingSubmission?.status === "completed") {
+        await db
+          .update(teamTileSubmissions)
+          .set({
+            status: "incomplete",
+            updatedAt: new Date(),
+          })
+          .where(eq(teamTileSubmissions.id, existingSubmission.id))
+      }
       return { success: true, shouldComplete: false }
     }
 
-    // If submission exists and is already approved, nothing to do
-    if (existingSubmission?.status === "approved") {
+    // If submission exists and is already completed, nothing to do
+    if (existingSubmission?.status === "completed") {
       return { success: true, alreadyApproved: true }
     }
 
-    // If submission exists but not approved, update it to approved
+    // If submission exists but not completed, update it to completed
     if (existingSubmission) {
       const [updatedSubmission] = await db
         .update(teamTileSubmissions)
         .set({
-          status: "approved",
+          status: "completed",
           updatedAt: new Date(),
         })
         .where(eq(teamTileSubmissions.id, existingSubmission.id))
@@ -228,13 +238,13 @@ export async function checkAndAutoCompleteTile(tileId: string, teamId: string) {
       }
     }
 
-    // No submission exists, create a new one with approved status
+    // No submission exists, create a new one with completed status
     const [newSubmission] = await db
       .insert(teamTileSubmissions)
       .values({
         tileId,
         teamId,
-        status: "approved",
+        status: "completed",
       })
       .returning()
 

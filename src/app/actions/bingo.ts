@@ -1060,13 +1060,13 @@ export async function submitImage(formData: FormData) {
         .values({
           tileId,
           teamId: effectiveTeamId,
-          status: "pending",
+          status: "incomplete",
         })
         .onConflictDoUpdate({
           target: [teamTileSubmissions.tileId, teamTileSubmissions.teamId],
           set: {
             updatedAt: new Date(),
-            status: "pending", // Reset status to pending when a new submission is made
+            status: sql`CASE WHEN ${teamTileSubmissions.status} = 'completed' THEN 'completed'::tile_completion_status ELSE 'incomplete'::tile_completion_status END`,
           },
         })
         .returning()
@@ -1269,13 +1269,30 @@ export async function updateSubmissionStatus(
       await db
         .update(teamTileSubmissions)
         .set({
-          status: "needs_review",
+          status: "needs_attention",
           reviewedBy: session.user.id,
           updatedAt: new Date(),
         })
         .where(
           eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId)
         )
+    }
+
+    // Goal-less tile auto-completion
+    if (newStatus === "approved") {
+      const goalsResult = await db.query.goals.findMany({
+        where: eq(goals.tileId, submissionRecord.teamTileSubmission.tileId)
+      });
+      
+      if (goalsResult.length === 0) {
+        await db.update(teamTileSubmissions)
+          .set({
+            status: "completed",
+            reviewedBy: session.user.id,
+            updatedAt: new Date(),
+          })
+          .where(eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId));
+      }
     }
 
     // If submission has a goal assignment, recalculate goal progress
@@ -1316,7 +1333,7 @@ export async function updateSubmissionStatus(
 // Keep the existing updateTeamTileSubmissionStatus function but remove any automatic propagation
 export async function updateTeamTileSubmissionStatus(
   teamTileSubmissionId: string,
-  newStatus: "approved" | "needs_review"
+  newStatus: "completed" | "needs_attention"
 ) {
   try {
     const session = await getServerAuthSession()
@@ -1338,17 +1355,40 @@ export async function updateTeamTileSubmissionStatus(
       throw new Error("Team tile submission not found")
     }
 
-    // If approving the whole tile, approve all individual submissions
-    if (newStatus === "approved") {
-      await db
-        .update(submissions)
-        .set({
-          status: "approved",
-          reviewedBy: session.user.id,
-          reviewedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(submissions.teamTileSubmissionId, teamTileSubmissionId))
+    // If approving the whole tile, approve all pending individual submissions
+    if (newStatus === "completed") {
+      const pendingSubmissions = await db.query.submissions.findMany({
+        where: and(
+          eq(submissions.teamTileSubmissionId, teamTileSubmissionId),
+          eq(submissions.status, "pending")
+        )
+      })
+
+      if (pendingSubmissions.length > 0) {
+        await db
+          .update(submissions)
+          .set({
+            status: "approved",
+            reviewedBy: session.user.id,
+            reviewedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(submissions.teamTileSubmissionId, teamTileSubmissionId),
+              eq(submissions.status, "pending")
+            )
+          )
+
+        // Recalculate goal progress for updated submissions
+        const { recalculateGoalProgress } = await import("./goals")
+        const teamId = updatedTeamTileSubmission.teamId
+        for (const sub of pendingSubmissions) {
+          if (sub.goalId) {
+            await recalculateGoalProgress(db, sub.goalId, teamId)
+          }
+        }
+      }
 
       // Check for tier unlock in progression bingo
       const tile = await db.query.tiles.findFirst({
@@ -1468,12 +1508,30 @@ export async function updateSubmissionStatusWithComment(
         await tx
           .update(teamTileSubmissions)
           .set({
-            status: "needs_review",
+            status: "needs_attention",
+            reviewedBy: session.user.id,
             updatedAt: new Date(),
           })
           .where(
             eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId)
           )
+      }
+
+      // Goal-less tile auto-completion
+      if (newStatus === "approved") {
+        const goalsResult = await tx.query.goals.findMany({
+          where: eq(goals.tileId, submissionRecord.teamTileSubmission.tileId)
+        });
+        
+        if (goalsResult.length === 0) {
+          await tx.update(teamTileSubmissions)
+            .set({
+              status: "completed",
+              reviewedBy: session.user.id,
+              updatedAt: new Date(),
+            })
+            .where(eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId));
+        }
       }
 
       // If submission has a goal assignment, recalculate goal progress
@@ -1570,8 +1628,22 @@ export async function deleteSubmission(submissionId: string) {
         await recalculateGoalProgress(tx, submission.goalId, teamSubmission.teamId)
       }
 
-      // Note: We no longer automatically update the team tile submission status
-      // when individual submissions are deleted - they remain independent
+      // Reconcile needs_attention status if parent was needs_attention
+      if (teamSubmission?.status === "needs_attention") {
+        const remainingNeedsReview = await tx.query.submissions.findFirst({
+          where: and(
+            eq(submissions.teamTileSubmissionId, submission.teamTileSubmissionId),
+            eq(submissions.status, "needs_review")
+          )
+        })
+        
+        if (!remainingNeedsReview) {
+          // If no remaining submissions need review, revert tile to incomplete
+          await tx.update(teamTileSubmissions)
+            .set({ status: "incomplete", updatedAt: new Date() })
+            .where(eq(teamTileSubmissions.id, submission.teamTileSubmissionId))
+        }
+      }
 
       return { success: true }
     })
@@ -2125,7 +2197,7 @@ export async function checkAndUnlockNextTier(teamId: string, bingoId: string) {
       )
 
     const completedTilesXP = currentTierTiles
-      .filter((tile) => tile.teamTileSubmissions?.status === "approved")
+      .filter((tile) => tile.teamTileSubmissions?.status === "completed")
       .reduce((totalXP, tile) => totalXP + tile.weight, 0)
 
     // Get XP requirement for current tier to unlock next tier

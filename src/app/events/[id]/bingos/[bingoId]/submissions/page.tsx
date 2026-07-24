@@ -228,7 +228,7 @@ export default function BingoSubmissionsPage(props: {
   // Update handleTileStatusUpdate function to use new status names
   const handleTileStatusUpdate = async (
     teamTileSubmissionId: string,
-    newStatus: "approved" | "needs_review" // removed "declined"
+    newStatus: "completed" | "needs_attention" // removed "declined"
   ) => {
     try {
       const result = await updateTeamTileSubmissionStatus(
@@ -474,13 +474,12 @@ export default function BingoSubmissionsPage(props: {
 
     return tileSubmissionsArray.some((submission) => {
       const teamMatches = selectedTeamIds.includes(submission.teamId)
-      const teamStatusMatches = statusFilter === "all" || submission.status === statusFilter
       const hasIndividualSubmissions = submission.submissions.some(
         (individualSub) =>
           statusFilter === "all" || (individualSub.status || "pending") === statusFilter
       )
 
-      return teamMatches && (teamStatusMatches || hasIndividualSubmissions)
+      return teamMatches && hasIndividualSubmissions
     })
   })
 
@@ -496,15 +495,14 @@ export default function BingoSubmissionsPage(props: {
         return false
       }
 
-      // Filter by selected statuses (either team status or individual submission status)
+      // Filter by selected statuses (individual submission status only)
       if (statusFilter !== "all") {
-        const teamStatusMatches = submission.status === statusFilter
         const hasMatchingIndividualSubmissions = submission.submissions.some(
           (individualSub) =>
             (individualSub.status || "pending") === statusFilter
         )
 
-        if (!teamStatusMatches && !hasMatchingIndividualSubmissions) {
+        if (!hasMatchingIndividualSubmissions) {
           return false
         }
       }
@@ -876,16 +874,16 @@ export default function BingoSubmissionsPage(props: {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuItem
-                                    onClick={() => handleTileStatusUpdate(teamSubmission.id, "approved")}
-                                    disabled={teamSubmission.status === "approved"}
+                                    onClick={() => handleTileStatusUpdate(teamSubmission.id, "completed")}
+                                    disabled={teamSubmission.status === "completed"}
                                     className="text-green-600 focus:bg-green-50 focus:text-green-700"
                                   >
                                     <Check className="mr-2 h-4 w-4" />
                                     Force Approve Tile
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
-                                    onClick={() => handleTileStatusUpdate(teamSubmission.id, "needs_review")}
-                                    disabled={teamSubmission.status === "needs_review"}
+                                    onClick={() => handleTileStatusUpdate(teamSubmission.id, "needs_attention")}
+                                    disabled={teamSubmission.status === "needs_attention"}
                                     className="text-yellow-600 focus:bg-yellow-50 focus:text-yellow-700"
                                   >
                                     <AlertTriangle className="mr-2 h-4 w-4" />

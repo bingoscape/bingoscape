@@ -136,6 +136,11 @@ export const submissionStatusEnum = pgEnum("submission_status", [
   "approved", // renamed from "accepted"
   "needs_review", // renamed from "requires_interaction"
 ])
+export const tileCompletionStatusEnum = pgEnum("tile_completion_status", [
+  "incomplete",
+  "completed",
+  "needs_attention",
+])
 export const clanRoleEnum = pgEnum("clan_role", [
   "admin",
   "management",
@@ -576,7 +581,7 @@ export const teamTileSubmissions = createTable(
     teamId: uuid("team_id")
       .notNull()
       .references(() => teams.id, { onDelete: "cascade" }),
-    status: submissionStatusEnum("status").default("pending").notNull(),
+    status: tileCompletionStatusEnum("status").default("incomplete").notNull(),
     reviewedBy: uuid("reviewed_by").references(() => users.id, {
       onDelete: "set null",
     }),

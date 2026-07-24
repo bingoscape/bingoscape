@@ -33,7 +33,7 @@ export function TileSelectionDropdown({
 
   // Get tile status for current team or target team
   const getTileStatus = useCallback(
-    (tile: Tile): "approved" | "pending" | "needs_review" | "not_started" => {
+    (tile: Tile): "completed" | "needs_attention" | "incomplete" | "not_started" => {
       // Use target team ID if provided, otherwise current team
       const teamIdForStatus = targetTeamId ?? currentTeamId
 
@@ -61,7 +61,7 @@ export function TileSelectionDropdown({
     return tiles.filter((tile) => {
       // Hide approved tiles
       const status = getTileStatus(tile)
-      if (status === "approved") return false
+      if (status === "completed") return false
 
       // Hide locked tier tiles
       if (isTileLocked(tile)) return false
@@ -81,34 +81,34 @@ export function TileSelectionDropdown({
   // Get status badge component
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "approved":
+      case "completed":
         return (
           <Badge
             variant="outline"
             className="border-green-200 bg-green-100 text-xs text-green-800"
           >
             <Check className="mr-1 h-3 w-3" />
-            Approved
+            Completed
           </Badge>
         )
-      case "needs_review":
+      case "needs_attention":
         return (
           <Badge
             variant="outline"
             className="border-yellow-200 bg-yellow-100 text-xs text-yellow-800"
           >
             <AlertTriangle className="mr-1 h-3 w-3" />
-            Needs Review
+            Needs Attention
           </Badge>
         )
-      case "pending":
+      case "incomplete":
         return (
           <Badge
             variant="outline"
             className="border-blue-200 bg-blue-100 text-xs text-blue-800"
           >
             <Clock className="mr-1 h-3 w-3" />
-            Pending
+            Incomplete
           </Badge>
         )
       default:

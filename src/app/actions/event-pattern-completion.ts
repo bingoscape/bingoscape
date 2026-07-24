@@ -129,7 +129,7 @@ export async function getEventPatternCompletion(
           and(
             eq(teamTileSubmissions.teamId, team.id),
             eq(tiles.bingoId, bingo.id),
-            eq(teamTileSubmissions.status, "approved")
+            eq(teamTileSubmissions.status, "completed")
           )
         )
 

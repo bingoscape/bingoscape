@@ -185,7 +185,7 @@ export async function POST(
     )
     if (
       !!teamSubmissionForTile &&
-      teamSubmissionForTile.status === "approved"
+      teamSubmissionForTile.status === "completed"
     ) {
       return NextResponse.json(
         { error: "Your submission has already been approved!" },
@@ -257,7 +257,7 @@ export async function POST(
 
     // CRITICAL: Tile always starts pending - let goal tree validation decide approval
     // Only checkAndAutoCompleteTile() should change tile status to "approved"
-    const teamTileStatus = "pending"
+    const teamTileStatus = "incomplete"
 
     // Create or update the submission in the database
     const result = await db.transaction(async (tx) => {

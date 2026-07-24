@@ -69,7 +69,7 @@ export default async function ManageEventPage(props: {
       .where(
         and(
           eq(teams.eventId, params.id),
-          eq(teamTileSubmissions.status, "pending")
+          eq(teamTileSubmissions.status, "needs_attention")
         )
       ),
     // Total Active Participants
@@ -83,6 +83,7 @@ export default async function ManageEventPage(props: {
       .from(teams)
       .where(eq(teams.eventId, params.id)),
     // Total Approved Submissions
+    // Total Completed Submissions
     db
       .select({ count: sql<number>`count(*)` })
       .from(teamTileSubmissions)
@@ -90,7 +91,7 @@ export default async function ManageEventPage(props: {
       .where(
         and(
           eq(teams.eventId, params.id),
-          eq(teamTileSubmissions.status, "approved")
+          eq(teamTileSubmissions.status, "completed")
         )
       ),
   ])
