@@ -2,7 +2,7 @@
 
 import React from "react"
 import Image from "next/image"
-import { Zap, EyeOff } from "lucide-react"
+import { Zap, EyeOff, CheckCircle2, AlertCircle, Clock } from "lucide-react"
 import type { Tile } from "@/types/model"
 import {
   HoverCard,
@@ -81,31 +81,38 @@ export const BingoTile = React.memo(function BingoTile({
     return tile.teamTileSubmissions.find((tts) => tts.teamId === currentTeamId)
   }, [currentTeamId, tile.teamTileSubmissions])
 
-  const renderStatusIcon = (
-    status: string | undefined
-  ) => {
-    if (status === "completed") status = "approved"
-    if (status === "needs_attention") status = "needs_review"
-    if (status === "incomplete") return null
+  const renderStatusBadge = (status: string, label?: string) => {
+    let normalizedStatus = status;
+    if (status === "completed") normalizedStatus = "approved";
+    if (status === "needs_attention") normalizedStatus = "needs_review";
 
-    const iconMap: Record<string, React.ReactNode> = {
-      approved: (
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-white shadow-lg ring-2 ring-green-200 transition-all duration-300 dark:ring-green-800">
-          <span className="text-sm font-bold">✓</span>
-        </div>
-      ),
-      needs_review: (
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-yellow-500 text-white shadow-lg ring-2 ring-yellow-200 transition-all duration-300 dark:ring-yellow-800">
-          <span className="text-sm font-bold">!</span>
-        </div>
-      ),
-      pending: (
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg ring-2 ring-blue-200 transition-all duration-300 dark:ring-blue-800">
-          <span className="text-sm font-bold">⏳</span>
-        </div>
-      ),
-    }
-    return status ? iconMap[status] : null
+    const badgeConfig: Record<string, { icon: React.ReactNode, classes: string, text: string }> = {
+      approved: {
+        icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+        classes: "bg-green-500/15 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/30",
+        text: label || "Completed"
+      },
+      needs_review: {
+        icon: <AlertCircle className="h-3.5 w-3.5" />,
+        classes: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/30",
+        text: label || "Changes requested"
+      },
+      pending: {
+        icon: <Clock className="h-3.5 w-3.5" />,
+        classes: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/30",
+        text: label || "Pending review"
+      }
+    };
+
+    const config = badgeConfig[normalizedStatus];
+    if (!config) return null;
+
+    return (
+      <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-solid text-xs font-medium ${config.classes}`}>
+        {config.icon}
+        <span>{config.text}</span>
+      </div>
+    );
   }
 
   const getCompletionStatus = () => {
@@ -282,22 +289,18 @@ export const BingoTile = React.memo(function BingoTile({
             </div>
 
             {(completionStatus !== "incomplete" || submissionState) && (
-              <div className="flex flex-col gap-2 rounded-lg bg-secondary/30 p-2">
-                {completionStatus !== "incomplete" && (
-                  <div className="flex items-center gap-2">
-                    {renderStatusIcon(completionStatus)}
-                    <span className="text-sm font-medium capitalize">
-                      {completionStatus.replace("_", " ")}
-                    </span>
-                  </div>
-                )}
-                {submissionState && (
-                  <div className="flex items-center gap-2">
-                    {renderStatusIcon(submissionState)}
-                    <span className="text-sm font-medium capitalize">
-                      {submissionState === "needs_review" ? "Changes requested" : "Pending review"}
-                    </span>
-                  </div>
+              <div className="flex flex-wrap gap-2 pt-1 pb-2">
+                {completionStatus !== "incomplete" ? (
+                  renderStatusBadge(completionStatus)
+                ) : (
+                  submissionState && renderStatusBadge(
+                    submissionState, 
+                    submissionState === "needs_review" 
+                      ? "Changes requested" 
+                      : submissionState === "pending"
+                        ? "Pending review"
+                        : "Approved"
+                  )
                 )}
               </div>
             )}
