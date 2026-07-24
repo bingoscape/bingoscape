@@ -6,7 +6,9 @@ import { TeamManagement } from "@/components/team-management"
 import { TeamDisplay } from "@/components/team-display"
 import { getCurrentTeamForUser } from "@/app/actions/team"
 import { EventBingosClient } from "@/components/event-bingos-client"
+import { EventDetailsCard } from "@/components/event-details-card"
 import { getEventById } from "@/server/queries/events"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default async function EventBingosPage(props: {
   params: Promise<{ id: UUID }>
@@ -37,30 +39,43 @@ export default async function EventBingosPage(props: {
 
   return (
     <main className="w-full">
-      <section aria-label="Event boards">
-        <EventBingosClient
-          event={event}
-          userRole={userRole}
-          currentTeam={currentTeam}
-          isAdminOrManagement={isAdminOrManagement}
-        />
-      </section>
-
-      <section className="mt-12" aria-label="Team management">
-        <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <h2 className="text-2xl font-bold">Teams</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Manage team assignments and member roles
-            </p>
-          </div>
+      <EventDetailsCard eventId={event.id} />
+      
+      <Tabs defaultValue="boards" className="w-full">
+        <div className="mb-6 flex items-center justify-between border-b border-border/40 pb-4">
+          <TabsList className="h-10 bg-transparent p-0">
+            <TabsTrigger 
+              value="boards" 
+              className="relative h-10 rounded-none border-b-2 border-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+            >
+              Boards
+            </TabsTrigger>
+            <TabsTrigger 
+              value="teams" 
+              className="relative h-10 rounded-none border-b-2 border-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+            >
+              Teams
+            </TabsTrigger>
+          </TabsList>
         </div>
-        {isAdminOrManagement ? (
-          <TeamManagement eventId={event.id} />
-        ) : (
-          <TeamDisplay eventId={event.id} />
-        )}
-      </section>
+        
+        <TabsContent value="boards" className="mt-0 outline-none">
+          <EventBingosClient
+            event={event}
+            userRole={userRole}
+            currentTeam={currentTeam}
+            isAdminOrManagement={isAdminOrManagement}
+          />
+        </TabsContent>
+        
+        <TabsContent value="teams" className="mt-0 outline-none">
+          {isAdminOrManagement ? (
+            <TeamManagement eventId={event.id} />
+          ) : (
+            <TeamDisplay eventId={event.id} />
+          )}
+        </TabsContent>
+      </Tabs>
     </main>
   )
 }

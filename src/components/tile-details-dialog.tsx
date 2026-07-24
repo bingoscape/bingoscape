@@ -142,8 +142,8 @@ export function TileDetailsDialog({
             Manage tile details, goals, and submissions for your bingo event
           </DialogDescription>
         </DialogHeader>
-        <Tabs defaultValue="details" className="flex flex-1 flex-col">
-          <TabsList className="mb-4 grid h-14 w-full grid-cols-3 rounded-lg border border-border bg-muted/50 p-1">
+        <Tabs defaultValue="details" className="flex flex-1 flex-col min-h-0">
+          <TabsList className="mb-4 grid h-14 w-full grid-cols-3 rounded-lg border border-border bg-muted/50 p-1 shrink-0">
             <TabsTrigger
               value="details"
               className="rounded-md font-medium text-muted-foreground transition-all duration-200 hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
@@ -179,7 +179,7 @@ export function TileDetailsDialog({
           </TabsList>
           <TabsContent
             value="details"
-            className="tab-content flex-1 space-y-6 overflow-y-auto"
+            className="tab-content flex-1 min-h-0 space-y-6 overflow-y-auto px-1"
           >
             <TileDetailsTab
               selectedTile={selectedTile}
@@ -197,7 +197,7 @@ export function TileDetailsDialog({
           </TabsContent>
           <TabsContent
             value="goals"
-            className="tab-content flex-1 space-y-6 overflow-y-auto"
+            className="tab-content flex-1 min-h-0 space-y-6 overflow-y-auto px-1"
           >
             <GoalsTab
               selectedTile={selectedTile}
@@ -210,7 +210,7 @@ export function TileDetailsDialog({
           </TabsContent>
           <TabsContent
             value="submissions"
-            className="tab-content flex-1 space-y-6 overflow-y-auto"
+            className="tab-content flex-1 min-h-0 space-y-6 overflow-y-auto px-1"
           >
             <SubmissionsTab
               teamTileSubmissions={selectedTile?.teamTileSubmissions || []}
