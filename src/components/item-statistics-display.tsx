@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Trophy, Coins, TrendingUp, Package, Clock, Award } from "lucide-react"
 import type { ItemStatistics } from "@/app/actions/item-statistics"
 import { formatGPValue } from "@/lib/format-gp"
@@ -246,168 +246,161 @@ export function ItemStatisticsDisplay({
         </Card>
       )}
 
-      {/* Tabs for detailed statistics */}
-      <Tabs defaultValue="teams" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="teams">Team Rankings</TabsTrigger>
-          <TabsTrigger value="users">User Rankings</TabsTrigger>
-          <TabsTrigger value="charts">Visualizations</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline & Trends</TabsTrigger>
-        </TabsList>
-
-        {/* Team Rankings Tab */}
-        <TabsContent value="teams" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Team Profit Rankings</CardTitle>
-              <CardDescription>
-                Teams ranked by total item value obtained
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {teamStats.map((team, index) => (
-                  <div
-                    key={team.teamId}
-                    className="flex items-center justify-between rounded-lg border p-4"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-full font-bold ${
-                          index === 0
-                            ? "bg-yellow-500 text-white"
-                            : index === 1
-                              ? "bg-gray-400 text-white"
-                              : index === 2
-                                ? "bg-amber-600 text-white"
-                                : "bg-primary text-primary-foreground"
-                        }`}
-                      >
-                        {index + 1}
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold">
-                          {team.teamName}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {team.userCount} users · {team.submissionCount}{" "}
-                          submissions · {team.itemCount} items
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-green-600 dark:text-green-400">
-                        {formatGPValue(team.totalValue)} GP
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Avg per user: {formatGPValue(team.averageValuePerUser)}{" "}
-                        GP
-                      </div>
-                      {team.mostValuableItem && (
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          Best: {team.mostValuableItem.itemName} (
-                          {formatGPValue(team.mostValuableItem.totalValue)} GP)
+      {/* Accordions for detailed statistics */}
+      <Accordion type="single" collapsible className="w-full mt-8">
+        <AccordionItem value="teams">
+          <AccordionTrigger className="text-xl font-bold">Team Profit Rankings</AccordionTrigger>
+          <AccordionContent>
+            <Card className="mt-4 border-none shadow-none">
+              <CardContent className="px-0">
+                <div className="space-y-4">
+                  {teamStats.map((team, index) => (
+                    <div
+                      key={team.teamId}
+                      className="flex items-center justify-between rounded-lg border p-4"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div
+                          className={`flex h-10 w-10 items-center justify-center rounded-full font-bold ${
+                            index === 0
+                              ? "bg-yellow-500 text-white"
+                              : index === 1
+                                ? "bg-gray-400 text-white"
+                                : index === 2
+                                  ? "bg-amber-600 text-white"
+                                  : "bg-primary text-primary-foreground"
+                          }`}
+                        >
+                          {index + 1}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {teamStats.length === 0 && (
-                  <div className="py-8 text-center text-muted-foreground">
-                    No team data available yet
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* User Rankings Tab */}
-        <TabsContent value="users" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>User Profit Rankings</CardTitle>
-              <CardDescription>
-                Top contributors by total item value
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {topUsers.map((user, index) => (
-                  <div
-                    key={user.userId}
-                    className="flex items-center justify-between rounded-lg border p-4"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-full font-bold ${
-                          index === 0
-                            ? "bg-yellow-500 text-white"
-                            : index === 1
-                              ? "bg-gray-400 text-white"
-                              : index === 2
-                                ? "bg-amber-600 text-white"
-                                : "bg-primary text-primary-foreground"
-                        }`}
-                      >
-                        {index + 1}
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold">
-                          {user.runescapeName ?? user.userName}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {user.submissionCount} submissions · {user.itemCount}{" "}
-                          items
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-green-600 dark:text-green-400">
-                        {formatGPValue(user.totalValue)} GP
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Avg per sub:{" "}
-                        {formatGPValue(
-                          Math.floor(user.totalValue / user.submissionCount)
-                        )}{" "}
-                        GP
-                      </div>
-                      {user.mostValuableItem && (
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          Best: {user.mostValuableItem.itemName} (
-                          {formatGPValue(user.mostValuableItem.totalValue)} GP)
+                        <div>
+                          <h3 className="text-lg font-semibold">
+                            {team.teamName}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {team.userCount} users · {team.submissionCount}{" "}
+                            submissions · {team.itemCount} items
+                          </p>
                         </div>
-                      )}
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xl font-bold text-green-600 dark:text-green-400">
+                          {formatGPValue(team.totalValue)} GP
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Avg per user: {formatGPValue(team.averageValuePerUser)}{" "}
+                          GP
+                        </div>
+                        {team.mostValuableItem && (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            Best: {team.mostValuableItem.itemName} (
+                            {formatGPValue(team.mostValuableItem.totalValue)} GP)
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-                {topUsers.length === 0 && (
-                  <div className="py-8 text-center text-muted-foreground">
-                    No user data available yet
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                  ))}
+                  {teamStats.length === 0 && (
+                    <div className="py-8 text-center text-muted-foreground">
+                      No team data available yet
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </AccordionContent>
+        </AccordionItem>
 
-        {/* Charts Tab */}
-        <TabsContent value="charts" className="space-y-4">
-          <ItemValueCharts teamStats={teamStats} userStats={topUsers} />
-        </TabsContent>
+        <AccordionItem value="users">
+          <AccordionTrigger className="text-xl font-bold">User Profit Rankings</AccordionTrigger>
+          <AccordionContent>
+            <Card className="mt-4 border-none shadow-none">
+              <CardContent className="px-0">
+                <div className="space-y-4">
+                  {topUsers.map((user, index) => (
+                    <div
+                      key={user.userId}
+                      className="flex items-center justify-between rounded-lg border p-4"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div
+                          className={`flex h-10 w-10 items-center justify-center rounded-full font-bold ${
+                            index === 0
+                              ? "bg-yellow-500 text-white"
+                              : index === 1
+                                ? "bg-gray-400 text-white"
+                                : index === 2
+                                  ? "bg-amber-600 text-white"
+                                  : "bg-primary text-primary-foreground"
+                          }`}
+                        >
+                          {index + 1}
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold">
+                            {user.runescapeName ?? user.userName}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {user.submissionCount} submissions · {user.itemCount}{" "}
+                            items
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xl font-bold text-green-600 dark:text-green-400">
+                          {formatGPValue(user.totalValue)} GP
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Avg per sub:{" "}
+                          {formatGPValue(
+                            Math.floor(user.totalValue / user.submissionCount)
+                          )}{" "}
+                          GP
+                        </div>
+                        {user.mostValuableItem && (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            Best: {user.mostValuableItem.itemName} (
+                            {formatGPValue(user.mostValuableItem.totalValue)} GP)
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {topUsers.length === 0 && (
+                    <div className="py-8 text-center text-muted-foreground">
+                      No user data available yet
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </AccordionContent>
+        </AccordionItem>
 
-        {/* Timeline & Trends Tab */}
-        <TabsContent value="timeline" className="space-y-4">
-          <ItemTimelineCharts
-            dailyValueTimeline={statistics.dailyValueTimeline}
-            teamTimelineComparison={statistics.teamTimelineComparison}
-            itemDiversityByTeam={statistics.itemDiversityByTeam}
-            efficiencyTrends={statistics.efficiencyTrends}
-            userStreaks={statistics.userStreaks}
-          />
-        </TabsContent>
-      </Tabs>
+        <AccordionItem value="charts">
+          <AccordionTrigger className="text-xl font-bold">Value Visualizations</AccordionTrigger>
+          <AccordionContent>
+            <div className="pt-4">
+              <ItemValueCharts teamStats={teamStats} userStats={topUsers} />
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="timeline">
+          <AccordionTrigger className="text-xl font-bold">Timeline & Trends</AccordionTrigger>
+          <AccordionContent>
+            <div className="pt-4">
+              <ItemTimelineCharts
+                dailyValueTimeline={statistics.dailyValueTimeline}
+                teamTimelineComparison={statistics.teamTimelineComparison}
+                itemDiversityByTeam={statistics.itemDiversityByTeam}
+                efficiencyTrends={statistics.efficiencyTrends}
+                userStreaks={statistics.userStreaks}
+              />
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   )
 }
