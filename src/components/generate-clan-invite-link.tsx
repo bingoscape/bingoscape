@@ -47,7 +47,7 @@ export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
     setIsLoading(true)
     try {
       // Calculate actual values
-      let expiresInDays: number | null = null
+      let expiresInDays: number | null = 0
       if (formData.expiresInDays === "custom") {
         expiresInDays = parseInt(formData.customDays) || null
       } else if (formData.expiresInDays !== "0") {
