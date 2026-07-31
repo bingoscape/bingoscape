@@ -12,3 +12,19 @@ jest.mock("next/navigation", () => ({
   usePathname: jest.fn(() => ""),
   useSearchParams: jest.fn(() => ({ get: () => null })),
 }))
+
+// Mock env to avoid ESM issues with @t3-oss
+jest.mock("@/env", () => require("./src/__mocks__/env"))
+
+// Mock database to support transactional tests
+jest.mock("@/server/db", () => {
+  const original = jest.requireActual("@/server/db")
+  return {
+    __esModule: true,
+    ...original,
+    get db() {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (globalThis as any).__TEST_TX__ || original.db
+    },
+  }
+})
