@@ -115,6 +115,7 @@
     "@playwright/test": "^1.54.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/typography": "^0.5.15",
+    "@testcontainers/postgresql": "^12.0.4",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",

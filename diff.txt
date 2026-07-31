@@ -1,0 +1,1408 @@
+diff --git a/jest.config.ts b/jest.config.ts
+index 8fd836c..a6bcfa7 100644
+--- a/jest.config.ts
++++ b/jest.config.ts
+@@ -12,8 +12,12 @@ const customJestConfig: Config = {
+   coverageProvider: "v8",
+   testEnvironment: "jsdom",
+   moduleNameMapper: {
++    "^@t3-oss/env-nextjs$": "<rootDir>/src/__mocks__/env-nextjs.ts",
++    "^@/env$": "<rootDir>/src/__mocks__/env.ts",
+     "^@/(.*)$": "<rootDir>/src/$1",
+   },
++  globalSetup: "<rootDir>/jest.global-setup.ts",
++  globalTeardown: "<rootDir>/jest.global-teardown.ts",
+   testMatch: ["**/__tests__/**/*.test.[jt]s?(x)"],
+ }
+ 
+diff --git a/jest.global-setup.ts b/jest.global-setup.ts
+new file mode 100644
+index 0000000..a1cd554
+--- /dev/null
++++ b/jest.global-setup.ts
+@@ -0,0 +1,25 @@
++import { PostgreSqlContainer } from "@testcontainers/postgresql"
++import { execSync } from "child_process"
++
++export default async function globalSetup() {
++  console.log("Starting Jest PostgreSQL container...")
++  const container = await new PostgreSqlContainer("postgres:15-alpine")
++    .withDatabase("bingoscape_test")
++    .start()
++
++  const dbUrl = container.getConnectionUri()
++  process.env.DATABASE_URL = dbUrl
++  process.env.SKIP_ENV_VALIDATION = "1"
++
++  console.log(`Jest Database started at ${dbUrl}`)
++  
++  console.log("Pushing database schema...")
++  execSync("npx drizzle-kit push", {
++    env: { ...process.env },
++    stdio: "inherit",
++  })
++
++  // Store globally to stop them in teardown
++  // eslint-disable-next-line @typescript-eslint/no-explicit-any
++  ;(globalThis as any).__JEST_DB_CONTAINER__ = container
++}
+diff --git a/jest.global-teardown.ts b/jest.global-teardown.ts
+new file mode 100644
+index 0000000..a0b837a
+--- /dev/null
++++ b/jest.global-teardown.ts
+@@ -0,0 +1,8 @@
++export default async function globalTeardown() {
++  console.log("Stopping Jest PostgreSQL container...")
++  // eslint-disable-next-line @typescript-eslint/no-explicit-any
++  const container = (globalThis as any).__JEST_DB_CONTAINER__
++  if (container) {
++    await container.stop()
++  }
++}
+diff --git a/jest.setup.ts b/jest.setup.ts
+index 4db6ae4..23705f9 100644
+--- a/jest.setup.ts
++++ b/jest.setup.ts
+@@ -12,3 +12,19 @@ jest.mock("next/navigation", () => ({
+   usePathname: jest.fn(() => ""),
+   useSearchParams: jest.fn(() => ({ get: () => null })),
+ }))
++
++// Mock env to avoid ESM issues with @t3-oss
++jest.mock("@/env", () => require("./src/__mocks__/env"))
++
++// Mock database to support transactional tests
++jest.mock("@/server/db", () => {
++  const original = jest.requireActual("@/server/db")
++  return {
++    __esModule: true,
++    ...original,
++    get db() {
++      // eslint-disable-next-line @typescript-eslint/no-explicit-any
++      return (globalThis as any).__TEST_TX__ || original.db
++    },
++  }
++})
+diff --git a/src/__mocks__/env-nextjs.ts b/src/__mocks__/env-nextjs.ts
+new file mode 100644
+index 0000000..e426733
+--- /dev/null
++++ b/src/__mocks__/env-nextjs.ts
+@@ -0,0 +1,3 @@
++export function createEnv(config: any) {
++  return config.runtimeEnv || {}
++}
+diff --git a/src/__mocks__/env.ts b/src/__mocks__/env.ts
+new file mode 100644
+index 0000000..3e570f7
+--- /dev/null
++++ b/src/__mocks__/env.ts
+@@ -0,0 +1,8 @@
++export const env = {
++  DATABASE_URL: process.env.DATABASE_URL || "postgres://test:test@localhost:32787/bingoscape_test",
++  NODE_ENV: "test",
++  NEXTAUTH_SECRET: "test-secret",
++  NEXTAUTH_URL: "http://localhost:3000",
++  DISCORD_CLIENT_ID: "test-client-id",
++  DISCORD_CLIENT_SECRET: "test-client-secret",
++}
+diff --git a/src/app/actions/__tests__/events.test.ts b/src/app/actions/__tests__/events.test.ts
+deleted file mode 100644
+index cc615f4..0000000
+--- a/src/app/actions/__tests__/events.test.ts
++++ /dev/null
+@@ -1,174 +0,0 @@
+-// // @ts-nocheck
+-// import {  getUserRegistrationStatus, requestToJoinEvent  } from "../events"
+-// import { db } from "@/server/db"
+-// import { auth } from "@/server/auth"
+-// import { describe, beforeEach, it, expect, jest } from "@jest/globals"
+-//
+-// // Mock dependencies
+-// jest.mock("@/server/db", () => ({
+-//   db: {
+-//     eventParticipant: {
+-//       findFirst: jest.fn(),
+-//       create: jest.fn(),
+-//     },
+-//     event: {
+-//       findUnique: jest.fn(),
+-//     },
+-//   },
+-// }))
+-//
+-// jest.mock("@/server/auth", () => ({
+-//   auth: jest.fn(),
+-// }))
+-//
+-// describe("Event Registration Actions", () => {
+-//   beforeEach(() => {
+-//     jest.clearAllMocks()
+-//       // Mock auth to return a user
+-//       ; (auth as jest.Mock).mockResolvedValue({
+-//         user: { id: "user-123", name: "Test User" },
+-//       })
+-//   })
+-//
+-//   describe("getUserRegistrationStatus", () => {
+-//     it("should return not_requested when user has no registration", async () => {
+-//       // Mock db to return null (no registration found)
+-//       ; (db.eventParticipant.findFirst as jest.Mock).mockResolvedValue(null)
+-//
+-//       const result = await getUserRegistrationStatus("event-123")
+-//
+-//       expect(result).toEqual({ status: "not_requested" })
+-//       expect(db.eventParticipant.findFirst).toHaveBeenCalledWith({
+-//         where: {
+-//           eventId: "event-123",
+-//           userId: "user-123",
+-//         },
+-//       })
+-//     })
+-//
+-//     it("should return pending status when registration is pending", async () => {
+-//       // Mock db to return a pending registration
+-//       ; (db.eventParticipant.findFirst as jest.Mock).mockResolvedValue({
+-//         status: "pending",
+-//         message: "Please let me join",
+-//         responseMessage: null,
+-//       })
+-//
+-//       const result = await getUserRegistrationStatus("event-123")
+-//
+-//       expect(result).toEqual({
+-//         status: "pending",
+-//         message: "Please let me join",
+-//         responseMessage: null,
+-//       })
+-//     })
+-//
+-//     it("should return approved status when registration is approved", async () => {
+-//       // Mock db to return an approved registration
+-//       ; (db.eventParticipant.findFirst as jest.Mock).mockResolvedValue({
+-//         status: "approved",
+-//         message: "Please let me join",
+-//         responseMessage: "Welcome!",
+-//       })
+-//
+-//       const result = await getUserRegistrationStatus("event-123")
+-//
+-//       expect(result).toEqual({
+-//         status: "approved",
+-//         message: "Please let me join",
+-//         responseMessage: "Welcome!",
+-//       })
+-//     })
+-//
+-//     it("should return rejected status when registration is rejected", async () => {
+-//       // Mock db to return a rejected registration
+-//       ; (db.eventParticipant.findFirst as jest.Mock).mockResolvedValue({
+-//         status: "rejected",
+-//         message: "Please let me join",
+-//         responseMessage: "Sorry, the event is full",
+-//       })
+-//
+-//       const result = await getUserRegistrationStatus("event-123")
+-//
+-//       expect(result).toEqual({
+-//         status: "rejected",
+-//         message: "Please let me join",
+-//         responseMessage: "Sorry, the event is full",
+-//       })
+-//     })
+-//
+-//     it("should throw an error when user is not authenticated", async () => {
+-//       // Mock auth to return no user
+-//       ; (auth as jest.Mock).mockResolvedValue({ user: null })
+-//
+-//       await expect(getUserRegistrationStatus("event-123")).rejects.toThrow(
+-//         "You must be logged in to check registration status",
+-//       )
+-//     })
+-//   })
+-//
+-//   describe("requestToJoinEvent", () => {
+-//     it("should create a pending registration request", async () => {
+-//       // Mock db to return an event that requires approval
+-//       ; (db.event.findUnique as jest.Mock).mockResolvedValue({
+-//         id: "event-123",
+-//         title: "Test Event",
+-//         requiresApproval: true,
+-//       })
+-//
+-//         // Mock db to return null (no existing registration)
+-//         ; (db.eventParticipant.findFirst as jest.Mock).mockResolvedValue(null)
+-//
+-//         // Mock db to successfully create a registration
+-//         ; (db.eventParticipant.create as jest.Mock).mockResolvedValue({
+-//           id: "participant-123",
+-//           eventId: "event-123",
+-//           userId: "user-123",
+-//           status: "pending",
+-//           message: "Please approve me",
+-//         })
+-//
+-//       await requestToJoinEvent("event-123", "Please approve me")
+-//
+-//       expect(db.eventParticipant.create).toHaveBeenCalledWith({
+-//         data: {
+-//           eventId: "event-123",
+-//           userId: "user-123",
+-//           status: "pending",
+-//           message: "Please approve me",
+-//         },
+-//       })
+-//     })
+-//
+-//     it("should throw an error when user already has a registration", async () => {
+-//       // Mock db to return an event that requires approval
+-//       ; (db.event.findUnique as jest.Mock).mockResolvedValue({
+-//         id: "event-123",
+-//         title: "Test Event",
+-//         requiresApproval: true,
+-//       })
+-//
+-//         // Mock db to return an existing registration
+-//         ; (db.eventParticipant.findFirst as jest.Mock).mockResolvedValue({
+-//           id: "participant-123",
+-//           eventId: "event-123",
+-//           userId: "user-123",
+-//           status: "pending",
+-//         })
+-//
+-//       await expect(requestToJoinEvent("event-123", "Please approve me")).rejects.toThrow(
+-//         "You have already requested to join this event",
+-//       )
+-//     })
+-//
+-//     it("should throw an error when event does not exist", async () => {
+-//       // Mock db to return null (event not found)
+-//       ; (db.event.findUnique as jest.Mock).mockResolvedValue(null)
+-//
+-//       await expect(requestToJoinEvent("event-123", "Please approve me")).rejects.toThrow("Event not found")
+-//     })
+-//   })
+-//
+-//   // Additional tests for joinEvent and joinEventViaInvite would follow a similar pattern
+-// })
+-//
+diff --git a/src/app/actions/__tests__/tile-completion.test.ts b/src/app/actions/__tests__/tile-completion.test.ts
+deleted file mode 100644
+index 0ac14cd..0000000
+--- a/src/app/actions/__tests__/tile-completion.test.ts
++++ /dev/null
+@@ -1,119 +0,0 @@
+-import { evaluateGroup } from "../tile-completion"
+-import { db } from "@/server/db"
+-
+-jest.mock("@/server/db", () => ({
+-  db: {
+-    query: {
+-      goalGroups: {
+-        findFirst: jest.fn(),
+-      },
+-      goals: {
+-        findFirst: jest.fn(),
+-      },
+-      teamGoalProgress: {
+-        findFirst: jest.fn(),
+-      },
+-    },
+-  },
+-}))
+-
+-describe("evaluateGroup", () => {
+-  beforeEach(() => {
+-    jest.clearAllMocks()
+-  })
+-
+-  it("should pool progress from children goals for SUM operator", async () => {
+-    ;(db.query.goalGroups.findFirst as jest.Mock).mockResolvedValue({
+-      id: "group-sum",
+-      logicalOperator: "SUM",
+-      minRequiredGoals: 10,
+-      childGroups: [],
+-      goals: [{ id: "goal-1" }, { id: "goal-2" }],
+-    })
+-    ;(db.query.goals.findFirst as jest.Mock)
+-      .mockResolvedValueOnce({ id: "goal-1", targetValue: 5 })
+-      .mockResolvedValueOnce({ id: "goal-2", targetValue: 5 })
+-    ;(db.query.teamGoalProgress.findFirst as jest.Mock)
+-      .mockResolvedValueOnce({ currentValue: 4 })
+-      .mockResolvedValueOnce({ currentValue: 7 })
+-
+-    const result = await evaluateGroup("group-sum", "team-1")
+-
+-    expect(result.currentValue).toBe(11) // 4 + 7
+-    expect(result.isComplete).toBe(true) // 11 >= 10
+-  })
+-
+-  it("should evaluate nested AND/OR groups correctly inside a SUM group", async () => {
+-    // Return the parent group first, then the child group
+-    ;(db.query.goalGroups.findFirst as jest.Mock)
+-      .mockResolvedValueOnce({
+-        id: "group-sum",
+-        logicalOperator: "SUM",
+-        minRequiredGoals: 3,
+-        childGroups: [{ id: "group-and" }],
+-        goals: [{ id: "goal-1" }],
+-      })
+-      .mockResolvedValueOnce({
+-        id: "group-and",
+-        logicalOperator: "AND",
+-        childGroups: [],
+-        goals: [{ id: "goal-2" }, { id: "goal-3" }],
+-      })
+-
+-    // evaluateGroup processes childGroups first, then goals.
+-    // So for group-sum, it calls evaluateGroup("group-and")
+-    // evaluateGroup("group-and") queries its childGroups (none), then goals (goal-2, goal-3)
+-    ;(db.query.goals.findFirst as jest.Mock)
+-      .mockResolvedValueOnce({ id: "goal-2", targetValue: 1 })
+-      .mockResolvedValueOnce({ id: "goal-3", targetValue: 1 })
+-      // After group-and returns, group-sum processes its goals (goal-1)
+-      .mockResolvedValueOnce({ id: "goal-1", targetValue: 5 })
+-    ;(db.query.teamGoalProgress.findFirst as jest.Mock)
+-      .mockResolvedValueOnce({ currentValue: 1 }) // goal-2 progress
+-      .mockResolvedValueOnce({ currentValue: 1 }) // goal-3 progress
+-      .mockResolvedValueOnce({ currentValue: 2 }) // goal-1 progress
+-
+-    const result = await evaluateGroup("group-sum", "team-1")
+-
+-    // AND group is complete -> contributes 1 to SUM
+-    // goal-1 progress is 2 -> contributes 2 to SUM
+-    // SUM total = 3, minRequiredGoals = 3 -> complete
+-    expect(result.currentValue).toBe(3)
+-    expect(result.isComplete).toBe(true)
+-  })
+-
+-  it("should handle empty SUM groups gracefully", async () => {
+-    ;(db.query.goalGroups.findFirst as jest.Mock).mockResolvedValueOnce({
+-      id: "group-sum",
+-      logicalOperator: "SUM",
+-      minRequiredGoals: 5,
+-      childGroups: [],
+-      goals: [],
+-    })
+-
+-    const result = await evaluateGroup("group-sum", "team-1")
+-    expect(result.currentValue).toBe(0)
+-    expect(result.isComplete).toBe(false)
+-  })
+-
+-  it("should handle goals with no progress entries", async () => {
+-    ;(db.query.goalGroups.findFirst as jest.Mock).mockResolvedValueOnce({
+-      id: "group-sum",
+-      logicalOperator: "SUM",
+-      minRequiredGoals: 10,
+-      childGroups: [],
+-      goals: [{ id: "goal-1" }],
+-    })
+-    ;(db.query.goals.findFirst as jest.Mock).mockResolvedValueOnce({
+-      id: "goal-1",
+-      targetValue: 5,
+-    })
+-    ;(db.query.teamGoalProgress.findFirst as jest.Mock).mockResolvedValueOnce(
+-      null
+-    )
+-
+-    const result = await evaluateGroup("group-sum", "team-1")
+-    expect(result.currentValue).toBe(0)
+-    expect(result.isComplete).toBe(false)
+-  })
+-})
+diff --git a/src/app/actions/__tests__/user.test.ts b/src/app/actions/__tests__/user.test.ts
+new file mode 100644
+index 0000000..68d0d60
+--- /dev/null
++++ b/src/app/actions/__tests__/user.test.ts
+@@ -0,0 +1,66 @@
++/**
++ * @jest-environment node
++ */
++import { linkRunescapeAccount } from "../user"
++
++import { db } from "@/server/db"
++import { users } from "@/server/db/schema"
++import { withDb } from "@/lib/test-utils"
++import { eq } from "drizzle-orm"
++import { getServerAuthSession } from "@/server/auth"
++
++jest.mock("@/server/auth", () => ({
++  getServerAuthSession: jest.fn(),
++}))
++
++describe("user actions integration", () => {
++  const mockGetServerAuthSession = getServerAuthSession as jest.Mock
++
++  beforeEach(() => {
++    jest.clearAllMocks()
++  })
++
++  it("updates the runescapeName for the authenticated user", async () => {
++    await withDb(async () => {
++      // 1. Arrange: insert a user
++      const [user] = await db
++        .insert(users)
++        .values({
++          name: "Test User",
++          email: "test@example.com",
++        })
++        .returning()
++
++      if (!user) throw new Error("Failed to insert user")
++
++      mockGetServerAuthSession.mockResolvedValue({
++        user: { id: user.id },
++      })
++
++      // 2. Act: call the server action
++      const result = await linkRunescapeAccount("Zezima")
++
++      // 3. Assert: action returns success
++      expect(result).toEqual({ success: true })
++
++      // 4. Assert: database is updated
++      const [updatedUser] = await db
++        .select()
++        .from(users)
++        .where(eq(users.id, user.id))
++
++      expect(updatedUser?.runescapeName).toBe("Zezima")
++    })
++  })
++
++  it("proves transaction rollback: the user from the previous test should not exist", async () => {
++    await withDb(async () => {
++      const allUsers = await db
++        .select()
++        .from(users)
++        .where(eq(users.email, "test@example.com"))
++      
++      expect(allUsers).toHaveLength(0)
++    })
++  })
++})
+diff --git a/src/app/events/[id]/status/__tests__/page.test.tsx b/src/app/events/[id]/status/__tests__/page.test.tsx
+deleted file mode 100644
+index ee2a340..0000000
+--- a/src/app/events/[id]/status/__tests__/page.test.tsx
++++ /dev/null
+@@ -1,99 +0,0 @@
+-import { render, screen } from "@testing-library/react"
+-import { useParams } from "next/navigation"
+-import { getUserRegistrationStatus } from "@/app/actions/events"
+-import StatusPage from "../page"
+-
+-// Mock dependencies
+-jest.mock("next/navigation", () => ({
+-  useParams: jest.fn(),
+-}))
+-
+-jest.mock("@/app/actions/events", () => ({
+-  getUserRegistrationStatus: jest.fn(),
+-}))
+-
+-describe("StatusPage", () => {
+-  beforeEach(() => {
+-    jest.clearAllMocks()
+-    ;(useParams as jest.Mock).mockReturnValue({ id: "event-123" })
+-  })
+-
+-  it("renders loading state initially", () => {
+-    ;(getUserRegistrationStatus as jest.Mock).mockResolvedValue({
+-      status: "pending",
+-    })
+-
+-    render(<StatusPage />)
+-
+-    expect(screen.getByRole("status")).toBeInTheDocument() // Loader component
+-  })
+-
+-  it("renders pending registration status", async () => {
+-    ;(getUserRegistrationStatus as jest.Mock).mockResolvedValue({
+-      status: "pending",
+-      message: "Please approve me",
+-      eventTitle: "Test Event",
+-    })
+-
+-    render(<StatusPage />)
+-
+-    // Wait for the async data to load
+-    expect(await screen.findByText("Registration Status")).toBeInTheDocument()
+-    expect(screen.getByText("Registration Pending")).toBeInTheDocument()
+-    expect(
+-      screen.getByText(/Your registration request is being reviewed/)
+-    ).toBeInTheDocument()
+-  })
+-
+-  it("renders approved registration status", async () => {
+-    ;(getUserRegistrationStatus as jest.Mock).mockResolvedValue({
+-      status: "approved",
+-      message: "Please approve me",
+-      responseMessage: "Welcome to the event!",
+-      eventTitle: "Test Event",
+-    })
+-
+-    render(<StatusPage />)
+-
+-    // Wait for the async data to load
+-    expect(await screen.findByText("Registration Status")).toBeInTheDocument()
+-    expect(screen.getByText("Registration Approved")).toBeInTheDocument()
+-    expect(
+-      screen.getByText(/Your registration has been approved/)
+-    ).toBeInTheDocument()
+-    expect(screen.getByText("Welcome to the event!")).toBeInTheDocument()
+-  })
+-
+-  it("renders rejected registration status", async () => {
+-    ;(getUserRegistrationStatus as jest.Mock).mockResolvedValue({
+-      status: "rejected",
+-      message: "Please approve me",
+-      responseMessage: "Sorry, the event is full",
+-      eventTitle: "Test Event",
+-    })
+-
+-    render(<StatusPage />)
+-
+-    // Wait for the async data to load
+-    expect(await screen.findByText("Registration Status")).toBeInTheDocument()
+-    expect(screen.getByText("Registration Declined")).toBeInTheDocument()
+-    expect(
+-      screen.getByText(/Your registration request was declined/)
+-    ).toBeInTheDocument()
+-    expect(screen.getByText("Sorry, the event is full")).toBeInTheDocument()
+-  })
+-
+-  it("renders error message when registration status cannot be fetched", async () => {
+-    ;(getUserRegistrationStatus as jest.Mock).mockRejectedValue(
+-      new Error("Failed to fetch registration status")
+-    )
+-
+-    render(<StatusPage />)
+-
+-    // Wait for the async error to be caught
+-    expect(await screen.findByText("Error")).toBeInTheDocument()
+-    expect(
+-      screen.getByText("Failed to fetch registration status")
+-    ).toBeInTheDocument()
+-  })
+-})
+diff --git a/src/app/events/join/[inviteCode]/__tests__/page.test.tsx b/src/app/events/join/[inviteCode]/__tests__/page.test.tsx
+deleted file mode 100644
+index 3bb5a53..0000000
+--- a/src/app/events/join/[inviteCode]/__tests__/page.test.tsx
++++ /dev/null
+@@ -1,190 +0,0 @@
+-import { render, screen, waitFor } from "@testing-library/react"
+-import JoinEventPage from "../page"
+-import { useRouter } from "next/navigation"
+-import { useSession } from "next-auth/react"
+-import { getUserRegistrationStatus } from "@/app/actions/events"
+-
+-// Mock dependencies
+-jest.mock("next/navigation", () => ({
+-  useRouter: jest.fn(),
+-}))
+-
+-jest.mock("next-auth/react", () => ({
+-  useSession: jest.fn(),
+-  signIn: jest.fn(),
+-}))
+-
+-jest.mock("@/app/actions/events", () => ({
+-  joinEventViaInvite: jest.fn(),
+-  getUserRegistrationStatus: jest.fn(),
+-}))
+-
+-jest.mock("@/hooks/use-toast", () => ({
+-  toast: jest.fn(),
+-}))
+-
+-// Mock fetch for API calls
+-global.fetch = jest.fn()
+-
+-describe("JoinEventPage", () => {
+-  const mockRouter = {
+-    push: jest.fn(),
+-  }
+-
+-  beforeEach(() => {
+-    jest.clearAllMocks()
+-    ;(useRouter as jest.Mock).mockReturnValue(mockRouter)
+-    ;(global.fetch as jest.Mock).mockResolvedValue({
+-      ok: true,
+-      json: jest.fn().mockResolvedValue({
+-        id: "event-123",
+-        title: "Test Event",
+-      }),
+-    })
+-  })
+-
+-  it("redirects to login if user is not authenticated", () => {
+-    ;(useSession as jest.Mock).mockReturnValue({
+-      data: null,
+-      status: "unauthenticated",
+-    })
+-
+-    render(
+-      <JoinEventPage
+-        params={
+-          { inviteCode: "invite-123" } as unknown as Promise<{
+-            inviteCode: string
+-          }>
+-        }
+-      />
+-    )
+-
+-    expect(screen.getByText("Redirecting to login...")).toBeInTheDocument()
+-  })
+-
+-  it("shows loading state while checking authentication", () => {
+-    ;(useSession as jest.Mock).mockReturnValue({
+-      data: null,
+-      status: "loading",
+-    })
+-
+-    render(
+-      <JoinEventPage
+-        params={
+-          { inviteCode: "invite-123" } as unknown as Promise<{
+-            inviteCode: string
+-          }>
+-        }
+-      />
+-    )
+-
+-    expect(screen.getByRole("status")).toBeInTheDocument() // Loader component
+-  })
+-
+-  it("redirects to event page if user is already approved", async () => {
+-    ;(useSession as jest.Mock).mockReturnValue({
+-      data: { user: { id: "user-123" } },
+-      status: "authenticated",
+-    })
+-    ;(getUserRegistrationStatus as jest.Mock).mockResolvedValue({
+-      status: "approved",
+-    })
+-
+-    render(
+-      <JoinEventPage
+-        params={
+-          { inviteCode: "invite-123" } as unknown as Promise<{
+-            inviteCode: string
+-          }>
+-        }
+-      />
+-    )
+-
+-    await waitFor(() => {
+-      expect(mockRouter.push).toHaveBeenCalledWith("/events/event-123")
+-    })
+-  })
+-
+-  it("shows registration status if user has pending registration", async () => {
+-    ;(useSession as jest.Mock).mockReturnValue({
+-      data: { user: { id: "user-123" } },
+-      status: "authenticated",
+-    })
+-    ;(getUserRegistrationStatus as jest.Mock).mockResolvedValue({
+-      status: "pending",
+-      message: "Please approve me",
+-    })
+-
+-    render(
+-      <JoinEventPage
+-        params={
+-          { inviteCode: "invite-123" } as unknown as Promise<{
+-            inviteCode: string
+-          }>
+-        }
+-      />
+-    )
+-
+-    await waitFor(() => {
+-      expect(screen.getByText("Registration Status")).toBeInTheDocument()
+-      expect(screen.getByText("Registration Pending")).toBeInTheDocument()
+-    })
+-  })
+-
+-  it("shows registration status if user has rejected registration", async () => {
+-    ;(useSession as jest.Mock).mockReturnValue({
+-      data: { user: { id: "user-123" } },
+-      status: "authenticated",
+-    })
+-    ;(getUserRegistrationStatus as jest.Mock).mockResolvedValue({
+-      status: "rejected",
+-      message: "Please approve me",
+-      responseMessage: "Sorry, the event is full",
+-    })
+-
+-    render(
+-      <JoinEventPage
+-        params={
+-          { inviteCode: "invite-123" } as unknown as Promise<{
+-            inviteCode: string
+-          }>
+-        }
+-      />
+-    )
+-
+-    await waitFor(() => {
+-      expect(screen.getByText("Registration Status")).toBeInTheDocument()
+-      expect(screen.getByText("Registration Declined")).toBeInTheDocument()
+-      expect(screen.getByText("Sorry, the event is full")).toBeInTheDocument()
+-    })
+-  })
+-
+-  it("shows join button if user has no registration", async () => {
+-    ;(useSession as jest.Mock).mockReturnValue({
+-      data: { user: { id: "user-123" } },
+-      status: "authenticated",
+-    })
+-    ;(getUserRegistrationStatus as jest.Mock).mockResolvedValue({
+-      status: "not_requested",
+-    })
+-
+-    render(
+-      <JoinEventPage
+-        params={
+-          { inviteCode: "invite-123" } as unknown as Promise<{
+-            inviteCode: string
+-          }>
+-        }
+-      />
+-    )
+-
+-    await waitFor(() => {
+-      expect(
+-        screen.getByText("You've been invited to join Test Event!")
+-      ).toBeInTheDocument()
+-      expect(
+-        screen.getByRole("button", { name: "Join Event" })
+-      ).toBeInTheDocument()
+-    })
+-  })
+-})
+diff --git a/src/components/__tests__/event-card.test.tsx b/src/components/__tests__/event-card.test.tsx
+deleted file mode 100644
+index 4138dcd..0000000
+--- a/src/components/__tests__/event-card.test.tsx
++++ /dev/null
+@@ -1,239 +0,0 @@
+-/* eslint-disable */
+-import { render, screen, fireEvent, waitFor } from "@testing-library/react"
+-import { EventCard } from "../event-card"
+-import { requestToJoinEvent } from "@/app/actions/events"
+-import { toast } from "@/hooks/use-toast"
+-import { useRouter } from "next/navigation"
+-
+-// Mock dependencies
+-jest.mock("@/app/actions/events", () => ({
+-  requestToJoinEvent: jest.fn(),
+-  getUserRegistrationStatus: jest.fn(),
+-}))
+-
+-jest.mock("@/hooks/use-toast", () => ({
+-  toast: jest.fn(),
+-}))
+-
+-jest.mock("next/navigation", () => ({
+-  useRouter: jest.fn(),
+-}))
+-
+-// Mock current date for consistent testing
+-const mockDate = new Date("2023-06-15T12:00:00Z")
+-global.Date = jest.fn(() => mockDate) as any
+-global.Date.now = jest.fn(() => mockDate.getTime())
+-
+-describe("EventCard Component", () => {
+-  const mockRouter = {
+-    push: jest.fn(),
+-  }
+-
+-  const mockEventData: any = {
+-    event: {
+-      id: "event-123",
+-      title: "Test Event",
+-      description: "This is a test event",
+-      startDate: "2023-06-10T00:00:00Z",
+-      endDate: "2023-06-20T00:00:00Z",
+-      registrationDeadline: "2023-06-18T00:00:00Z",
+-      requiresApproval: false,
+-      locked: false,
+-      clan: { name: "Test Clan" },
+-      bingos: [{ id: "bingo-1" }],
+-      eventParticipants: [],
+-    },
+-    totalPrizePool: 1000,
+-  }
+-
+-  beforeEach(() => {
+-    jest.clearAllMocks()
+-    ;(useRouter as jest.Mock).mockReturnValue(mockRouter)
+-  })
+-
+-  it("renders event details correctly", () => {
+-    render(<EventCard eventData={mockEventData} isParticipant={false} />)
+-
+-    expect(screen.getByText("Test Event")).toBeInTheDocument()
+-    expect(screen.getByText("This is a test event")).toBeInTheDocument()
+-    expect(screen.getByText("Test Clan")).toBeInTheDocument()
+-    expect(screen.getByText("1 Bingos")).toBeInTheDocument()
+-    expect(screen.getByText(/Registration: 6\/18\/2023/)).toBeInTheDocument()
+-  })
+-
+-  it("shows Join button when user is not a participant", () => {
+-    render(<EventCard eventData={mockEventData} isParticipant={false} />)
+-
+-    expect(screen.getByRole("button", { name: "Join" })).toBeInTheDocument()
+-  })
+-
+-  it("does not show Join button when user is a participant", () => {
+-    render(<EventCard eventData={mockEventData} isParticipant={true} />)
+-
+-    expect(
+-      screen.queryByRole("button", { name: "Join" })
+-    ).not.toBeInTheDocument()
+-  })
+-
+-  it("shows Request to Join button when event requires approval", () => {
+-    const eventWithApproval = {
+-      ...mockEventData,
+-      event: {
+-        ...mockEventData.event,
+-        requiresApproval: true,
+-      },
+-    }
+-
+-    render(<EventCard eventData={eventWithApproval} isParticipant={false} />)
+-
+-    expect(
+-      screen.getByRole("button", { name: "Request to Join" })
+-    ).toBeInTheDocument()
+-    expect(screen.getByText("Requires approval to join")).toBeInTheDocument()
+-  })
+-
+-  it("shows request form when Request to Join is clicked", () => {
+-    const eventWithApproval = {
+-      ...mockEventData,
+-      event: {
+-        ...mockEventData.event,
+-        requiresApproval: true,
+-      },
+-    }
+-
+-    render(<EventCard eventData={eventWithApproval} isParticipant={false} />)
+-
+-    fireEvent.click(screen.getByRole("button", { name: "Request to Join" }))
+-
+-    expect(
+-      screen.getByPlaceholderText(/Why do you want to join this event/)
+-    ).toBeInTheDocument()
+-    expect(
+-      screen.getByRole("button", { name: "Submit Request" })
+-    ).toBeInTheDocument()
+-    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument()
+-  })
+-
+-  it("submits request when form is submitted", async () => {
+-    const eventWithApproval = {
+-      ...mockEventData,
+-      event: {
+-        ...mockEventData.event,
+-        requiresApproval: true,
+-      },
+-    }
+-    ;(requestToJoinEvent as jest.Mock).mockResolvedValue({})
+-
+-    render(<EventCard eventData={eventWithApproval} isParticipant={false} />)
+-
+-    // Click Request to Join button
+-    fireEvent.click(screen.getByRole("button", { name: "Request to Join" }))
+-
+-    // Enter message
+-    fireEvent.change(
+-      screen.getByPlaceholderText(/Why do you want to join this event/),
+-      {
+-        target: { value: "I'm excited to join!" },
+-      }
+-    )
+-
+-    // Submit form
+-    fireEvent.click(screen.getByRole("button", { name: "Submit Request" }))
+-
+-    await waitFor(() => {
+-      expect(requestToJoinEvent).toHaveBeenCalledWith(
+-        "event-123",
+-        "I'm excited to join!"
+-      )
+-      expect(toast).toHaveBeenCalledWith({
+-        title: "Request submitted",
+-        description: "Your registration request has been submitted for review.",
+-      })
+-      expect(mockRouter.push).toHaveBeenCalledWith("/events/event-123/status")
+-    })
+-  })
+-
+-  it("shows View Status button when registration is pending", () => {
+-    const registrationStatus = {
+-      status: "pending" as const,
+-      message: "Please approve me",
+-    }
+-
+-    const eventWithApproval = {
+-      ...mockEventData,
+-      event: {
+-        ...mockEventData.event,
+-        requiresApproval: true,
+-      },
+-    }
+-
+-    render(
+-      <EventCard
+-        eventData={eventWithApproval}
+-        isParticipant={false}
+-        registrationStatus={registrationStatus}
+-      />
+-    )
+-
+-    expect(
+-      screen.getByText("Registration pending approval")
+-    ).toBeInTheDocument()
+-    expect(
+-      screen.getByRole("button", { name: "View Status" })
+-    ).toBeInTheDocument()
+-    expect(
+-      screen.queryByRole("button", { name: "Request to Join" })
+-    ).not.toBeInTheDocument()
+-  })
+-
+-  it("shows View Status button when registration is rejected", () => {
+-    const registrationStatus = {
+-      status: "rejected" as const,
+-      message: "Please approve me",
+-      responseMessage: "Sorry, the event is full",
+-    }
+-
+-    const eventWithApproval = {
+-      ...mockEventData,
+-      event: {
+-        ...mockEventData.event,
+-        requiresApproval: true,
+-      },
+-    }
+-
+-    render(
+-      <EventCard
+-        eventData={eventWithApproval}
+-        isParticipant={false}
+-        registrationStatus={registrationStatus}
+-      />
+-    )
+-
+-    expect(screen.getByText("Registration rejected")).toBeInTheDocument()
+-    expect(
+-      screen.getByText("Reason: Sorry, the event is full")
+-    ).toBeInTheDocument()
+-    expect(
+-      screen.getByRole("button", { name: "View Status" })
+-    ).toBeInTheDocument()
+-    expect(
+-      screen.queryByRole("button", { name: "Request to Join" })
+-    ).not.toBeInTheDocument()
+-  })
+-
+-  it("shows Closed button when registration is closed", () => {
+-    const closedEvent = {
+-      ...mockEventData,
+-      event: {
+-        ...mockEventData.event,
+-        registrationDeadline: "2023-06-01T00:00:00Z", // Past date
+-      },
+-    }
+-
+-    render(<EventCard eventData={closedEvent} isParticipant={false} />)
+-
+-    expect(screen.getByText("(Closed)")).toBeInTheDocument()
+-    expect(screen.getByRole("button", { name: "Closed" })).toBeInTheDocument()
+-    expect(screen.getByRole("button", { name: "Closed" })).toBeDisabled()
+-  })
+-})
+diff --git a/src/components/__tests__/registration-status.test.tsx b/src/components/__tests__/registration-status.test.tsx
+deleted file mode 100644
+index 16cf133..0000000
+--- a/src/components/__tests__/registration-status.test.tsx
++++ /dev/null
+@@ -1,85 +0,0 @@
+-import { render, screen } from "@testing-library/react"
+-import { RegistrationStatus } from "../registration-status"
+-
+-describe("RegistrationStatus Component", () => {
+-  const defaultProps = {
+-    eventId: "event-123",
+-    eventTitle: "Test Event",
+-    status: "pending" as const,
+-  }
+-
+-  it("renders pending status correctly", () => {
+-    render(<RegistrationStatus {...defaultProps} />)
+-
+-    expect(screen.getByText("Registration Status")).toBeInTheDocument()
+-    expect(
+-      screen.getByText("Your registration status for Test Event")
+-    ).toBeInTheDocument()
+-    expect(screen.getByText("Registration Pending")).toBeInTheDocument()
+-    expect(
+-      screen.getByText(/Your registration request is being reviewed/)
+-    ).toBeInTheDocument()
+-  })
+-
+-  it("renders approved status correctly", () => {
+-    render(
+-      <RegistrationStatus
+-        {...defaultProps}
+-        status="approved"
+-        responseMessage="Welcome to the event!"
+-      />
+-    )
+-
+-    expect(screen.getByText("Registration Approved")).toBeInTheDocument()
+-    expect(
+-      screen.getByText(/Your registration has been approved/)
+-    ).toBeInTheDocument()
+-    expect(screen.getByText("Organizer message:")).toBeInTheDocument()
+-    expect(screen.getByText("Welcome to the event!")).toBeInTheDocument()
+-  })
+-
+-  it("renders rejected status correctly", () => {
+-    render(
+-      <RegistrationStatus
+-        {...defaultProps}
+-        status="rejected"
+-        message="I want to join please"
+-        responseMessage="Sorry, the event is full"
+-      />
+-    )
+-
+-    expect(screen.getByText("Registration Declined")).toBeInTheDocument()
+-    expect(
+-      screen.getByText(/Your registration request was declined/)
+-    ).toBeInTheDocument()
+-    expect(screen.getByText("Reason:")).toBeInTheDocument()
+-    expect(screen.getByText("Sorry, the event is full")).toBeInTheDocument()
+-    expect(screen.getByText("Your message:")).toBeInTheDocument()
+-    expect(screen.getByText("I want to join please")).toBeInTheDocument()
+-  })
+-
+-  it("displays user message when provided", () => {
+-    render(
+-      <RegistrationStatus
+-        {...defaultProps}
+-        message="I'm excited to join this event!"
+-      />
+-    )
+-
+-    expect(screen.getByText("Your message:")).toBeInTheDocument()
+-    expect(
+-      screen.getByText("I'm excited to join this event!")
+-    ).toBeInTheDocument()
+-  })
+-
+-  it("includes a link to view the event", () => {
+-    render(<RegistrationStatus {...defaultProps} />)
+-
+-    const viewEventButton = screen.getByRole("button", { name: "View Event" })
+-    expect(viewEventButton).toBeInTheDocument()
+-    expect(viewEventButton.closest("a")).toHaveAttribute(
+-      "href",
+-      "/events/event-123"
+-    )
+-  })
+-})
+diff --git a/src/lib/__tests__/bingo-formatter.test.ts b/src/lib/__tests__/bingo-formatter.test.ts
+deleted file mode 100644
+index 8b7d1d3..0000000
+--- a/src/lib/__tests__/bingo-formatter.test.ts
++++ /dev/null
+@@ -1,236 +0,0 @@
+-import { calculateGroupProgress } from "../bingo-formatter"
+-import type { GroupNode } from "@/types/runelite-api"
+-
+-describe("calculateGroupProgress", () => {
+-  const allGoals: Array<{ id: string; targetValue: number }> = []
+-  const teamProgressMap = new Map<string, number>()
+-
+-  beforeEach(() => {
+-    teamProgressMap.clear()
+-  })
+-
+-  describe("SUM operator", () => {
+-    it("should pool progress from multiple goals against a sum target", () => {
+-      teamProgressMap.set("goal-1", 4)
+-      teamProgressMap.set("goal-2", 3)
+-
+-      const groupNode: GroupNode = {
+-        type: "group",
+-        id: "group-1",
+-        name: "Sum Group",
+-        logicalOperator: "SUM",
+-        minRequiredGoals: 10,
+-        orderIndex: 0,
+-        children: [
+-          {
+-            type: "goal",
+-            id: "goal-1",
+-            targetValue: 5,
+-            description: "Goal 1",
+-            orderIndex: 0,
+-            goalType: "generic",
+-          },
+-          {
+-            type: "goal",
+-            id: "goal-2",
+-            targetValue: 5,
+-            description: "Goal 2",
+-            orderIndex: 1,
+-            goalType: "generic",
+-          },
+-        ],
+-      }
+-
+-      const result = calculateGroupProgress(
+-        groupNode,
+-        allGoals,
+-        teamProgressMap
+-      )
+-      expect(result.completedCount).toBe(7)
+-      expect(result.totalCount).toBe(10)
+-      expect(result.isComplete).toBe(false)
+-    })
+-
+-    it("should mark as complete when pooled progress meets or exceeds target", () => {
+-      teamProgressMap.set("goal-1", 6)
+-      teamProgressMap.set("goal-2", 4)
+-
+-      const groupNode: GroupNode = {
+-        type: "group",
+-        id: "group-1",
+-        name: "Sum Group",
+-        logicalOperator: "SUM",
+-        minRequiredGoals: 10,
+-        orderIndex: 0,
+-        children: [
+-          {
+-            type: "goal",
+-            id: "goal-1",
+-            targetValue: 5,
+-            description: "Goal 1",
+-            orderIndex: 0,
+-            goalType: "generic",
+-          },
+-          {
+-            type: "goal",
+-            id: "goal-2",
+-            targetValue: 5,
+-            description: "Goal 2",
+-            orderIndex: 1,
+-            goalType: "generic",
+-          },
+-        ],
+-      }
+-
+-      const result = calculateGroupProgress(
+-        groupNode,
+-        allGoals,
+-        teamProgressMap
+-      )
+-      expect(result.completedCount).toBe(10)
+-      expect(result.totalCount).toBe(10)
+-      expect(result.isComplete).toBe(true)
+-    })
+-
+-    it("should properly sum nested AND/OR groups", () => {
+-      teamProgressMap.set("goal-1", 1)
+-      teamProgressMap.set("goal-2", 1)
+-      teamProgressMap.set("goal-3", 1)
+-
+-      const groupNode: GroupNode = {
+-        type: "group",
+-        id: "group-sum",
+-        name: "Sum Group",
+-        logicalOperator: "SUM",
+-        minRequiredGoals: 2,
+-        orderIndex: 0,
+-        children: [
+-          {
+-            type: "group",
+-            id: "group-and",
+-            name: "AND Group",
+-            logicalOperator: "AND",
+-            minRequiredGoals: 2,
+-            orderIndex: 0,
+-            children: [
+-              {
+-                type: "goal",
+-                id: "goal-1",
+-                targetValue: 1,
+-                description: "",
+-                orderIndex: 0,
+-                goalType: "generic",
+-              },
+-              {
+-                type: "goal",
+-                id: "goal-2",
+-                targetValue: 1,
+-                description: "",
+-                orderIndex: 1,
+-                goalType: "generic",
+-              },
+-            ],
+-          },
+-          {
+-            type: "group",
+-            id: "group-or",
+-            name: "OR Group",
+-            logicalOperator: "OR",
+-            minRequiredGoals: 1,
+-            orderIndex: 1,
+-            children: [
+-              {
+-                type: "goal",
+-                id: "goal-3",
+-                targetValue: 1,
+-                description: "",
+-                orderIndex: 0,
+-                goalType: "generic",
+-              },
+-              {
+-                type: "goal",
+-                id: "goal-4",
+-                targetValue: 1,
+-                description: "",
+-                orderIndex: 1,
+-                goalType: "generic",
+-              },
+-            ],
+-          },
+-        ],
+-      }
+-
+-      const result = calculateGroupProgress(
+-        groupNode,
+-        allGoals,
+-        teamProgressMap
+-      )
+-      expect(result.completedCount).toBe(2)
+-      expect(result.totalCount).toBe(2)
+-      expect(result.isComplete).toBe(true)
+-    })
+-
+-    it("should handle empty groups gracefully", () => {
+-      const groupNode: GroupNode = {
+-        type: "group",
+-        id: "group-1",
+-        name: "Sum Group",
+-        logicalOperator: "SUM",
+-        minRequiredGoals: 5,
+-        orderIndex: 0,
+-        children: [],
+-      }
+-
+-      const result = calculateGroupProgress(
+-        groupNode,
+-        allGoals,
+-        teamProgressMap
+-      )
+-      expect(result.completedCount).toBe(0)
+-      expect(result.totalCount).toBe(5)
+-      expect(result.isComplete).toBe(false)
+-    })
+-  })
+-
+-  describe("AND operator", () => {
+-    it("should only be complete when all children are complete", () => {
+-      teamProgressMap.set("goal-1", 1)
+-
+-      const groupNode: GroupNode = {
+-        type: "group",
+-        id: "group-1",
+-        name: "AND Group",
+-        logicalOperator: "AND",
+-        minRequiredGoals: 0,
+-        orderIndex: 0,
+-        children: [
+-          {
+-            type: "goal",
+-            id: "goal-1",
+-            targetValue: 1,
+-            description: "",
+-            orderIndex: 0,
+-            goalType: "generic",
+-          },
+-          {
+-            type: "goal",
+-            id: "goal-2",
+-            targetValue: 1,
+-            description: "",
+-            orderIndex: 1,
+-            goalType: "generic",
+-          },
+-        ],
+-      }
+-
+-      const result = calculateGroupProgress(
+-        groupNode,
+-        allGoals,
+-        teamProgressMap
+-      )
+-      expect(result.completedCount).toBe(1)
+-      expect(result.totalCount).toBe(2)
+-      expect(result.isComplete).toBe(false)
+-    })
+-  })
+-})
+diff --git a/src/lib/test-utils.ts b/src/lib/test-utils.ts
+new file mode 100644
+index 0000000..e1a82f6
+--- /dev/null
++++ b/src/lib/test-utils.ts
+@@ -0,0 +1,37 @@
++import { db } from "@/server/db"
++
++class RollbackError extends Error {
++  constructor() {
++    super("Rollback Error")
++    this.name = "RollbackError"
++  }
++}
++
++/**
++ * Wraps a test in a database transaction and rolls it back at the end.
++ * The test transaction is automatically injected into all imports of `@/server/db`
++ * thanks to the mock in `jest.setup.ts`.
++ */
++export async function withDb(testFn: () => Promise<void>) {
++  try {
++    await db.transaction(async (tx) => {
++      // Inject transaction into the global context for the db mock
++      // eslint-disable-next-line @typescript-eslint/no-explicit-any
++      ;(globalThis as any).__TEST_TX__ = tx
++      
++      await testFn()
++      
++      // Force a rollback
++      throw new RollbackError()
++    })
++  } catch (err) {
++    if (err instanceof RollbackError) {
++      // Expected rollback
++      return
++    }
++    throw err
++  } finally {
++    // eslint-disable-next-line @typescript-eslint/no-explicit-any
++    ;(globalThis as any).__TEST_TX__ = undefined
++  }
++}

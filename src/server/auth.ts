@@ -10,7 +10,6 @@ import DiscordProvider from "next-auth/providers/discord"
 import GithubProvider from "next-auth/providers/github"
 import GoogleProvider from "next-auth/providers/google"
 import { eq } from "drizzle-orm"
-import { ZodError } from "zod"
 
 import { signInSchema } from "@/lib/validation/auth"
 import { verifyPassword } from "@/lib/password"
@@ -122,8 +121,6 @@ export const authOptions: NextAuthOptions = {
 
           // Check if user exists and has a password
           if (!user?.password) {
-            // Return null to indicate authentication failed
-            // Don't reveal whether username exists
             return null
           }
 
@@ -143,12 +140,7 @@ export const authOptions: NextAuthOptions = {
             runescapeName: user.runescapeName ?? "",
           }
         } catch (error) {
-          // Log error but don't expose details
-          if (error instanceof ZodError) {
-            console.error("Validation error:", error.errors)
-          } else {
-            console.error("Authentication error:", error)
-          }
+          console.error("[AUTH DEBUG] Error in authorize:", error);
           return null
         }
       },
