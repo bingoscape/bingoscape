@@ -1,3 +1,3 @@
-export function createEnv(config: any) {
+export const createEnv = (config: Record<string, unknown>) => {
   return config.runtimeEnv || {}
 }

@@ -13,18 +13,24 @@ jest.mock("next/navigation", () => ({
   useSearchParams: jest.fn(() => ({ get: () => null })),
 }))
 
-// Mock env to avoid ESM issues with @t3-oss
-jest.mock("@/env", () => require("./src/__mocks__/env"))
+declare global {
+   
+  var __TEST_TX__: unknown
+}
 
 // Mock database to support transactional tests
 jest.mock("@/server/db", () => {
   const original = jest.requireActual("@/server/db")
   return {
     __esModule: true,
-    ...original,
-    get db() {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (globalThis as any).__TEST_TX__ || original.db
-    },
+    db: new Proxy(original.db, {
+      get(target, prop) {
+         
+        const activeDb = globalThis.__TEST_TX__ || target
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const value = (activeDb as any)[prop]
+        return typeof value === "function" ? value.bind(activeDb) : value
+      }
+    }),
   }
 })

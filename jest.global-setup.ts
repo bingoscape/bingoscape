@@ -1,4 +1,9 @@
-import { PostgreSqlContainer } from "@testcontainers/postgresql"
+import { PostgreSqlContainer, StartedPostgreSqlContainer } from "@testcontainers/postgresql"
+
+declare global {
+   
+  var __JEST_DB_CONTAINER__: StartedPostgreSqlContainer
+}
 import { execSync } from "child_process"
 
 export default async function globalSetup() {
@@ -20,6 +25,5 @@ export default async function globalSetup() {
   })
 
   // Store globally to stop them in teardown
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(globalThis as any).__JEST_DB_CONTAINER__ = container
+  globalThis.__JEST_DB_CONTAINER__ = container
 }

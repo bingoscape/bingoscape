@@ -1,12 +1,13 @@
 /**
  * @jest-environment node
  */
-import { linkRunescapeAccount } from "../user"
+import { describe, expect, it, jest } from "@jest/globals"
+import { eq } from "drizzle-orm"
 
+import { linkRunescapeAccount } from "@/app/actions/user"
 import { db } from "@/server/db"
 import { users } from "@/server/db/schema"
 import { withDb } from "@/lib/test-utils"
-import { eq } from "drizzle-orm"
 import { getServerAuthSession } from "@/server/auth"
 
 jest.mock("@/server/auth", () => ({

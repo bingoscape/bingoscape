@@ -16,8 +16,7 @@ export async function withDb(testFn: () => Promise<void>) {
   try {
     await db.transaction(async (tx) => {
       // Inject transaction into the global context for the db mock
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(globalThis as any).__TEST_TX__ = tx
+      globalThis.__TEST_TX__ = tx
       
       await testFn()
       
@@ -31,7 +30,6 @@ export async function withDb(testFn: () => Promise<void>) {
     }
     throw err
   } finally {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(globalThis as any).__TEST_TX__ = undefined
+    globalThis.__TEST_TX__ = undefined
   }
 }
