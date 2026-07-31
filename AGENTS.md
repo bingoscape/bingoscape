@@ -90,10 +90,12 @@
 - Import order: external libraries, internal `@/*` imports, type imports
 - Use `@/` alias for all internal imports (configured in tsconfig.json)
 
-### Formatting
+### Formatting & Linter
 
 - Prettier with tailwindcss plugin auto-formats on save
 - Tailwind classes are auto-sorted by the plugin
+- Agents must run `npm run lint -- --fix` after making changes
+- **NEVER** bypass ESLint errors (e.g., no `// eslint-disable` or `@ts-ignore`) unless it is a known false positive, which requires a justification comment next to the suppression
 
 ### TypeScript
 
@@ -118,13 +120,25 @@
 - Validation: Return early with error objects for invalid inputs
 - Use `toast()` from `@/hooks/use-toast` for user notifications
 
-### Database & State Management
+### Data Fetching
+
+- All data fetching must occur in Server Components via direct Drizzle queries
+- Pass fetched data as props to Client Components
+- Client-side data fetching (e.g., `useEffect` fetches) is strictly prohibited unless continuous polling or real-time updating is required
+
+### Database
 
 - All mutations wrapped in database transactions (use `db.transaction()`)
 - Revalidate paths after mutations: `revalidatePath("/")`
-- Use `useState` for local component state, `useEffect` for side effects
-- Memoize with `useCallback` for event handlers and dependencies
 - Financial operations (buy-ins, donations): Always use transactions
+
+### Client State Management
+
+- Keep client state to an absolute minimum
+- Use standard React hooks (`useState`, `useReducer`) for transient UI state
+- Use URL search parameters for any state that needs to be shared or bookmarked
+- **Global state managers (Redux, Zustand, etc.) are explicitly forbidden**
+- Use `useEffect` sparingly for side effects; memoize with `useCallback` for event handlers/dependencies
 - Optimistic UI updates preferred for better UX
 
 ### Server Actions
