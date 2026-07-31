@@ -162,3 +162,13 @@
 - Images stored in `public/uploads/` with absolute paths in DB
 - Console removed in production builds
 - Sentry integration for error tracking
+
+## Agent skills
+
+### Issue tracker
+
+GitHub issues (using the `gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context. See `docs/agents/domain.md`.
