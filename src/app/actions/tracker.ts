@@ -13,8 +13,10 @@ import { fetchCompetitionFromWOM } from "./wiseoldman"
 import { WOMClient } from "@wise-old-man/utils"
 import { logger } from "@/lib/logger"
 import { checkAndAutoCompleteTile } from "@/app/actions/tile-completion"
+import { unstable_noStore as noStore } from "next/cache"
 
 export async function syncTrackerProgress(bingoId: string) {
+  noStore()
   try {
     // 1. Get bingo
     const bingo = await db.query.bingos.findFirst({
@@ -101,8 +103,8 @@ export async function syncTrackerProgress(bingoId: string) {
         chunk.map(async (rsn) => {
           try {
             const gains = await womClient.players.getPlayerGains(rsn, {
-              startDate: startsAt,
-              endDate: endsAt,
+              startDate: startsAt.toISOString() as unknown as Date,
+              endDate: endsAt.toISOString() as unknown as Date,
             })
             gainsMap.set(rsn, gains)
           } catch (err) {
