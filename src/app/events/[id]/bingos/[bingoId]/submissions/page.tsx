@@ -136,7 +136,8 @@ export default function BingoSubmissionsPage(props: {
               onTeamTileSubmissionStatusUpdate={async (id, status) => {
                 if (!id) return
                 try {
-                  await updateTeamTileSubmissionStatus(id, status)
+                  const result = await updateTeamTileSubmissionStatus(id, status)
+                  if (result && 'success' in result && !result.success) throw new Error(result.error)
                   handleRefresh()
                   toast({ title: "Success", description: "Tile status updated." })
                 } catch {
@@ -145,20 +146,24 @@ export default function BingoSubmissionsPage(props: {
               }}
               onSubmissionStatusUpdate={async (id, status, goalId, submissionValue) => {
                 try {
-                  await updateSubmissionStatus(id, status, goalId, submissionValue)
+                  const result = await updateSubmissionStatus(id, status, goalId, submissionValue)
+                  if (!result.success) throw new Error("error" in result ? result.error : "Failed to update submission")
                   handleRefresh()
                   toast({ title: "Success", description: "Submission updated successfully." })
-                } catch {
-                  toast({ title: "Error", description: "Failed to update submission.", variant: "destructive" })
+                } catch (e) {
+                  const message = e instanceof Error ? e.message : "Failed to update submission."
+                  toast({ title: "Error", description: message, variant: "destructive" })
                 }
               }}
               onDeleteSubmission={async (id) => {
                 try {
-                  await deleteSubmission(id)
+                  const result = await deleteSubmission(id)
+                  if (!result.success) throw new Error("error" in result ? result.error : "Failed to delete submission")
                   handleRefresh()
                   toast({ title: "Success", description: "Submission deleted." })
-                } catch {
-                  toast({ title: "Error", description: "Failed to delete submission.", variant: "destructive" })
+                } catch (e) {
+                  const message = e instanceof Error ? e.message : "Failed to delete submission."
+                  toast({ title: "Error", description: message, variant: "destructive" })
                 }
               }}
             />

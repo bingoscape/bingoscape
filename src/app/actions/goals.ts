@@ -123,7 +123,7 @@ export async function recalculateGoalProgress(tx: DbOrTransaction, targetGoalId:
   })
   if (goal) {
     const { checkAndAutoCompleteTile } = await import("./tile-completion")
-    await checkAndAutoCompleteTile(goal.tileId, teamId)
+    await checkAndAutoCompleteTile(tx, goal.tileId, teamId)
   }
 }
 

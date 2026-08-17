@@ -984,7 +984,7 @@ export function SubmissionsTab({
                               Request Changes <span className="ml-1 opacity-50 text-[10px] hidden sm:inline">(⇧R)</span>
                             </Button>
 
-                            <AlertDialog open={submissionToDelete === submission.id} onOpenChange={(open) => !open && setSubmissionToDelete(null)}>
+                            <AlertDialog open={submissionToDelete === submission.id} onOpenChange={(open) => open ? setSubmissionToDelete(submission.id) : setSubmissionToDelete(null)}>
                               <AlertDialogTrigger asChild>
                                 <Button variant="outline" className="h-10 text-destructive hover:bg-destructive/10 border-destructive/20">
                                   <X className="mr-2 h-4 w-4" /> Delete

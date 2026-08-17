@@ -64,7 +64,8 @@ export function ReviewSubmissionsClient({
           submissionValue
         ) => {
           try {
-            await updateSubmissionStatus(id, status, goalId, submissionValue)
+            const result = await updateSubmissionStatus(id, status, goalId, submissionValue)
+            if (!result.success) throw new Error(result.error)
             startTransition(() => {
               router.refresh()
             })
@@ -75,13 +76,15 @@ export function ReviewSubmissionsClient({
         }}
         onDeleteSubmission={async (id) => {
           try {
-            await deleteSubmission(id)
+            const result = await deleteSubmission(id)
+            if (!result.success) throw new Error("error" in result ? result.error : "Failed to delete submission")
             startTransition(() => {
               router.refresh()
             })
             toast({ title: "Success", description: "Submission deleted." })
-          } catch {
-            toast({ title: "Error", description: "Failed to delete submission.", variant: "destructive" })
+          } catch (e) {
+            const message = e instanceof Error ? e.message : "Failed to delete submission."
+            toast({ title: "Error", description: message, variant: "destructive" })
           }
         }}
       />
