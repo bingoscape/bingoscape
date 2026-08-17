@@ -147,6 +147,7 @@ export function SubmissionsTab({
   >({})
   const [showCommentForm, setShowCommentForm] = useState<string | null>(null)
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
+  const [localDeletedSubmissions, setLocalDeletedSubmissions] = useState<Set<string>>(new Set())
 
 
 
@@ -449,7 +450,7 @@ export function SubmissionsTab({
       tile: ts.tile,
       parentStatus: ts.status
     }))
-  ) : []
+  ).filter((sub: any) => !localDeletedSubmissions.has(sub.id)) : []
 
   // Filter submissions based on user role and selected filters
   const getFilteredFlatSubmissions = () => {
@@ -490,8 +491,8 @@ export function SubmissionsTab({
     // Sort
     return submissions.sort((a: any, b: any) => {
       const statusOrder: Record<string, number> = { needs_review: 0, pending: 1, approved: 2 }
-      const statusA = getSubmissionStatus(a.id, a.status || "pending")
-      const statusB = getSubmissionStatus(b.id, b.status || "pending")
+      const statusA = a.status || "pending"
+      const statusB = b.status || "pending"
       const valA = statusOrder[statusA] ?? 3
       const valB = statusOrder[statusB] ?? 3
       if (valA !== valB) return valA - valB
@@ -597,6 +598,7 @@ export function SubmissionsTab({
     // Each individual submission adds to the count
     baseSubmissions.forEach(ts => {
       ts.submissions.forEach((sub: any) => {
+        if (localDeletedSubmissions.has(sub.id)) return;
         counts.all++
         const status = getSubmissionStatus(sub.id, sub.status || "pending")
         if (status === "needs_review") counts.needs_review++
@@ -997,8 +999,12 @@ export function SubmissionsTab({
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => { onDeleteSubmission(submission.id); setSubmissionToDelete(null); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                    Delete
+                                  <AlertDialogAction onClick={() => { 
+                                    setLocalDeletedSubmissions(prev => new Set(prev).add(submission.id));
+                                    onDeleteSubmission(submission.id); 
+                                    setSubmissionToDelete(null); 
+                                  }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    Delete Submission
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
