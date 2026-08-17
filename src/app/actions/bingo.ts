@@ -831,7 +831,7 @@ export async function updateGoalProgress(
     if (goal) {
       // Import the auto-completion function
       const { checkAndAutoCompleteTile } = await import("./tile-completion")
-      await checkAndAutoCompleteTile(goal.tileId, teamId)
+      await checkAndAutoCompleteTile(db, goal.tileId, teamId)
     }
 
     return { success: true, progress: updatedProgress }
@@ -1026,16 +1026,20 @@ export async function submitImage(formData: FormData) {
         .where(eq(users.id, onBehalfOfUserId))
         .execute()
 
-      if (targetUserTeamResult.length > 0 && targetUserTeamResult[0]) {
-        const targetUserData = targetUserTeamResult[0]
-        targetUser = {
-          id: targetUserData.id,
-          name: targetUserData.name,
-          runescapeName: targetUserData.runescapeName,
-        }
-        // Use the target user's team if they have one
-        if (targetUserData.teamId) {
-          effectiveTeamId = targetUserData.teamId
+      if (targetUserTeamResult.length > 0) {
+        // Find the record with a valid teamId for this event, or fallback to the first record
+        const targetUserData = targetUserTeamResult.find(r => r.teamId !== null) || targetUserTeamResult[0]
+        
+        if (targetUserData) {
+          targetUser = {
+            id: targetUserData.id,
+            name: targetUserData.name,
+            runescapeName: targetUserData.runescapeName,
+          }
+          // Use the target user's team if they have one
+          if (targetUserData.teamId) {
+            effectiveTeamId = targetUserData.teamId
+          }
         }
       }
     }
@@ -1653,36 +1657,41 @@ export async function deleteSubmission(submissionId: string) {
 
       // Fetch team submission to get the teamId for progress recalculation
       const teamSubmission = await tx.query.teamTileSubmissions.findFirst({
-        where: eq(teamTileSubmissions.id, submission.teamTileSubmissionId),
+        where: (tts, { eq }) => eq(tts.id, submission.teamTileSubmissionId),
       })
 
-      // Get the image path to delete the file
+      // Get the image path for potential file deletion
       const [imageRecord] = await tx
         .select({ path: images.path })
         .from(images)
         .where(eq(images.id, submission.imageId))
 
-      if (imageRecord?.path) {
-        // Delete the image file from the filesystem
-        const filePath = path.join(process.cwd(), "public", imageRecord.path)
-        try {
-          await fs.access(filePath)
-          await fs.unlink(filePath)
-        } catch (fileError) {
-          // If file doesn't exist, just log and continue
-          logger.warn(
-            { error: fileError, filePath },
-            `Could not delete file at ${filePath}`
-          )
-        }
-      }
-
       // Delete the submission record
       await tx.delete(submissions).where(eq(submissions.id, submissionId))
 
-      // Delete the image record
-      if (imageRecord) {
+      // Check if the image is still referenced by other submissions
+      const otherSubmissionsUsingImage = await tx.query.submissions.findFirst({
+        where: (subs, { eq }) => eq(subs.imageId, submission.imageId)
+      })
+
+      // If no other submissions use this image, it's safe to delete
+      if (!otherSubmissionsUsingImage && imageRecord) {
         await tx.delete(images).where(eq(images.id, submission.imageId))
+        
+        if (imageRecord.path) {
+          // Delete the image file from the filesystem
+          const filePath = path.join(process.cwd(), "public", imageRecord.path)
+          try {
+            await fs.access(filePath)
+            await fs.unlink(filePath)
+          } catch (fileError) {
+            // If file doesn't exist, just log and continue
+            logger.warn(
+              { error: fileError, filePath },
+              `Could not delete file at ${filePath}`
+            )
+          }
+        }
       }
 
       // Recalculate goal progress if it had a goal
@@ -1694,9 +1703,9 @@ export async function deleteSubmission(submissionId: string) {
       // Reconcile needs_attention status if parent was needs_attention
       if (teamSubmission?.status === "needs_attention") {
         const remainingNeedsReview = await tx.query.submissions.findFirst({
-          where: and(
-            eq(submissions.teamTileSubmissionId, submission.teamTileSubmissionId),
-            eq(submissions.status, "needs_review")
+          where: (subs, { eq, and }) => and(
+            eq(subs.teamTileSubmissionId, submission.teamTileSubmissionId),
+            eq(subs.status, "needs_review")
           )
         })
         
@@ -1708,6 +1717,7 @@ export async function deleteSubmission(submissionId: string) {
         }
       }
 
+      revalidatePath("/")
       return { success: true }
     })
   } catch (error) {

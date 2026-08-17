@@ -384,6 +384,7 @@ export async function POST(
     if (matchedGoalId) {
       try {
         const completionResult = await checkAndAutoCompleteTile(
+          db,
           tileId,
           userTeam.id
         )

@@ -274,7 +274,7 @@ export async function POST(req: Request) {
     // Check and auto-complete tiles
     const tilesAutoCompleted: string[] = []
     for (const { tileId, teamId } of tilesNeedingCheck) {
-      const result = await checkAndAutoCompleteTile(tileId, teamId)
+      const result = await checkAndAutoCompleteTile(db, tileId, teamId)
       if (result.success && result.autoCompleted) {
         tilesAutoCompleted.push(tileId)
       }

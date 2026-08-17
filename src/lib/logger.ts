@@ -40,7 +40,17 @@ class Logger {
     }
 
     if (typeof window === "undefined") {
-      exportLogEntry(entry)
+      if (process.env.NODE_ENV === "development") {
+        const logMethod = console[level] || console.log
+        const formattedMessage = `[${entry.timestamp}] ${level.toUpperCase()}: ${message}`
+        if (error) {
+          logMethod(formattedMessage, context, error)
+        } else {
+          logMethod(formattedMessage, context)
+        }
+      } else {
+        exportLogEntry(entry)
+      }
     }
   }
 

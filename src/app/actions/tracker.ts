@@ -208,7 +208,7 @@ export async function syncTrackerProgress(bingoId: string) {
     for (const item of updatedTiles) {
       const [tileId, teamId] = item.split(":")
       if (tileId && teamId) {
-        await checkAndAutoCompleteTile(tileId, teamId)
+        await checkAndAutoCompleteTile(db, tileId, teamId)
       }
     }
 
