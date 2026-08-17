@@ -2,13 +2,10 @@
 
 import { SubmissionsTab } from "@/components/submissions-tab"
 import { updateTeamTileSubmissionStatus, updateSubmissionStatus, deleteSubmission } from "@/app/actions/bingo"
-import { useState, useTransition } from "react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { toast } from "@/hooks/use-toast"
 import { FullSizeImageDialog } from "@/components/full-size-image-dialog"
 import type { Team } from "@/types/model"
-
-
 
 interface ReviewSubmissionsClientProps {
   teamTileSubmissions: unknown[]
@@ -21,8 +18,6 @@ export function ReviewSubmissionsClient({
   teams,
   isSubmissionsLocked,
 }: ReviewSubmissionsClientProps) {
-  const router = useRouter()
-  const [, startTransition] = useTransition()
   
   const [fullSizeImage, setFullSizeImage] = useState<{
     src: string
@@ -49,9 +44,6 @@ export function ReviewSubmissionsClient({
           if (!id) return
           try {
             await updateTeamTileSubmissionStatus(id, status)
-            startTransition(() => {
-              router.refresh()
-            })
             toast({ title: "Success", description: "Tile status updated." })
           } catch {
             toast({ title: "Error", description: "Failed to update tile.", variant: "destructive" })
@@ -66,9 +58,6 @@ export function ReviewSubmissionsClient({
           try {
             const result = await updateSubmissionStatus(id, status, goalId, submissionValue)
             if (!result.success) throw new Error(result.error)
-            startTransition(() => {
-              router.refresh()
-            })
             toast({ title: "Success", description: "Submission updated successfully." })
           } catch {
             toast({ title: "Error", description: "Failed to update submission.", variant: "destructive" })
@@ -78,9 +67,6 @@ export function ReviewSubmissionsClient({
           try {
             const result = await deleteSubmission(id)
             if (!result.success) throw new Error("error" in result ? result.error : "Failed to delete submission")
-            startTransition(() => {
-              router.refresh()
-            })
             toast({ title: "Success", description: "Submission deleted." })
           } catch (e) {
             const message = e instanceof Error ? e.message : "Failed to delete submission."

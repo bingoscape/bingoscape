@@ -138,7 +138,6 @@ export default function BingoSubmissionsPage(props: {
                 try {
                   const result = await updateTeamTileSubmissionStatus(id, status)
                   if (result && 'success' in result && !result.success) throw new Error(result.error)
-                  handleRefresh()
                   toast({ title: "Success", description: "Tile status updated." })
                 } catch {
                   toast({ title: "Error", description: "Failed to update tile.", variant: "destructive" })
@@ -148,7 +147,6 @@ export default function BingoSubmissionsPage(props: {
                 try {
                   const result = await updateSubmissionStatus(id, status, goalId, submissionValue)
                   if (!result.success) throw new Error("error" in result ? result.error : "Failed to update submission")
-                  handleRefresh()
                   toast({ title: "Success", description: "Submission updated successfully." })
                 } catch (e) {
                   const message = e instanceof Error ? e.message : "Failed to update submission."
@@ -159,7 +157,6 @@ export default function BingoSubmissionsPage(props: {
                 try {
                   const result = await deleteSubmission(id)
                   if (!result.success) throw new Error("error" in result ? result.error : "Failed to delete submission")
-                  handleRefresh()
                   toast({ title: "Success", description: "Submission deleted." })
                 } catch (e) {
                   const message = e instanceof Error ? e.message : "Failed to delete submission."
