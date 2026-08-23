@@ -63,6 +63,11 @@ export const getEventById = cache(async function getEventById(
 
   const userRole = await getUserRole(eventId)
 
+  // Filter out non-visible bingos if the user is not admin or management
+  if (userRole !== "admin" && userRole !== "management") {
+    event.bingos = event.bingos.filter((b) => b.visible === true)
+  }
+
   return {
     event,
     userRole,

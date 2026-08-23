@@ -252,7 +252,7 @@ export async function GET(
                           }}
                         >
                           {tile?.headerImage ? (
-                            // eslint-disable-next-line @next/next/no-img-element
+                             
                             <img
                               src={tile.headerImage}
                               alt={tile.title}
