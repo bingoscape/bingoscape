@@ -66,7 +66,7 @@ export function EventBingosClient({
   const visibleBingos =
     event.bingos?.filter(
       (bingo: any) =>
-        isAdminOrManagement || bingo.visible === true || bingo.locked === true
+        isAdminOrManagement || bingo.visible === true
     ) ?? []
 
   // Get current bingo based on index

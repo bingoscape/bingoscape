@@ -48,6 +48,13 @@ export default function BingoSubmissionsPage(props: {
           return
         }
 
+        // Prevent access to hidden boards for non-management participants
+        if (!bingoData.visible && userRoleData !== "admin" && userRoleData !== "management") {
+          toast({ title: "Access Denied", description: "You do not have permission to view this board.", variant: "destructive" })
+          router.push(`/events/${eventId}`)
+          return
+        }
+
         setBingo(bingoData)
         setTeams(teamsData)
         setUserRole(userRoleData)
