@@ -1691,7 +1691,10 @@ export async function getUserRegistrationStatus(eventId: string): Promise<{
   const request = await db.query.eventRegistrationRequests.findFirst({
     where: and(
       eq(eventRegistrationRequests.eventId, eventId),
-      eq(eventRegistrationRequests.userId, session.user.id)
+      eq(eventRegistrationRequests.userId, session.user.id),
+      // Only surface a pending request — rejected or previously-approved-then-kicked
+      // users should be treated as "not_requested" so they can re-apply or accept invites.
+      eq(eventRegistrationRequests.status, "pending")
     ),
     orderBy: [desc(eventRegistrationRequests.createdAt)],
     with: {

@@ -102,10 +102,21 @@ export function RegistrationStatus({
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-center">
-        <Link href={`/events/${eventId}`}>
-          <Button variant="outline">View Event</Button>
-        </Link>
+      <CardFooter className="flex justify-center gap-2">
+        {status === "rejected" ? (
+          <>
+            <Link href={`/events/${eventId}`}>
+              <Button>Try Again</Button>
+            </Link>
+            <Link href="/">
+              <Button variant="outline">Return Home</Button>
+            </Link>
+          </>
+        ) : (
+          <Link href={`/events/${eventId}`}>
+            <Button variant="outline">View Event</Button>
+          </Link>
+        )}
       </CardFooter>
     </Card>
   )
