@@ -20,6 +20,8 @@ import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { Checkbox } from "@/components/ui/checkbox"
 import generateOSRSCodePhrase from "@/lib/codephraseGenerator"
 import { PatternBonusSchematicEditor } from "./pattern-bonus-schematic-editor"
+import { ShipRulesEditor } from "./ship-rules-editor"
+import type { ShipRule } from "@/server/db/schema"
 import {
   ArrowLeft,
   ArrowRight,
@@ -28,6 +30,7 @@ import {
   ArrowUpRight,
   PlusCircle,
   CheckCircle2,
+  Ship,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -76,12 +79,16 @@ export function CreateBingoModal({
   >(undefined)
 
   // Step 2
-  const [bingoType, setBingoType] = useState<"standard" | "progression">(
-    "standard"
-  )
+  const [bingoType, setBingoType] = useState<
+    "standard" | "progression" | "battleship"
+  >("standard")
   const [rows, setRows] = useState(5)
   const [columns, setColumns] = useState(5)
   const [tiersUnlockRequirement, setTiersUnlockRequirement] = useState(5)
+  const [shipRules, setShipRules] = useState<ShipRule[]>([
+    { length: 3, count: 2 },
+    { length: 2, count: 1 },
+  ])
 
   // Step 3
   const [rowBonuses, setRowBonuses] = useState<Record<number, number>>({})
@@ -103,6 +110,10 @@ export function CreateBingoModal({
       setRows(5)
       setColumns(5)
       setTiersUnlockRequirement(5)
+      setShipRules([
+        { length: 3, count: 2 },
+        { length: 2, count: 1 },
+      ])
       setRowBonuses({})
       setColumnBonuses({})
       setMainDiagonalBonus(0)
@@ -153,6 +164,11 @@ export function CreateBingoModal({
 
     if (bingoType === "progression") {
       formData.append("tiersUnlockRequirement", String(tiersUnlockRequirement))
+    } else if (bingoType === "battleship") {
+      shipRules.forEach((rule, i) => {
+        formData.append(`shipRuleLength-${i}`, String(rule.length))
+        formData.append(`shipRuleCount-${i}`, String(rule.count))
+      })
     } else {
       for (let i = 0; i < rows; i++) {
         formData.append(`rowBonus-${i}`, String(rowBonuses[i] ?? 0))
@@ -340,7 +356,7 @@ export function CreateBingoModal({
                 <div className="space-y-6">
                   <div className="space-y-3">
                     <Label>Bingo Type</Label>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-3">
                       <motion.div
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -403,6 +419,39 @@ export function CreateBingoModal({
                         </h4>
                         <p className="mt-1 text-xs text-muted-foreground">
                           Teams unlock tiers progressively. Rows act as tiers.
+                        </p>
+                      </motion.div>
+
+                      <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className={cn(
+                          "group relative cursor-pointer overflow-hidden rounded-xl border-2 p-4 transition-colors",
+                          bingoType === "battleship"
+                            ? "border-primary bg-primary/10"
+                            : "border-border hover:border-primary/50"
+                        )}
+                        onClick={() => setBingoType("battleship")}
+                      >
+                        {bingoType === "battleship" && (
+                          <div className="absolute right-2 top-2 text-primary">
+                            <CheckCircle2 className="h-5 w-5" />
+                          </div>
+                        )}
+                        <Ship
+                          className={cn(
+                            "mb-3 h-8 w-8",
+                            bingoType === "battleship"
+                              ? "text-primary"
+                              : "text-muted-foreground"
+                          )}
+                        />
+                        <h4 className="text-sm font-semibold">
+                          Battleship Bingo
+                        </h4>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Teams hide ships on the grid. Completing opponent
+                          tiles scores hits.
                         </p>
                       </motion.div>
                     </div>
@@ -507,6 +556,14 @@ export function CreateBingoModal({
                         />
                       </div>
                     </div>
+                  ) : bingoType === "battleship" ? (
+                    <div className="space-y-4 rounded-xl border bg-muted/20 p-4">
+                      <ShipRulesEditor
+                        rules={shipRules}
+                        onChange={setShipRules}
+                        board={{ rows, columns }}
+                      />
+                    </div>
                   ) : (
                     <div className="flex h-48 flex-col items-center justify-center space-y-3 rounded-xl border border-dashed bg-muted/20 text-center">
                       <ArrowUpRight className="h-10 w-10 text-muted-foreground" />
@@ -541,12 +598,16 @@ export function CreateBingoModal({
                         <p className="flex items-center gap-2 font-medium">
                           {bingoType === "standard" ? (
                             <Grid3X3 className="h-4 w-4 text-primary" />
+                          ) : bingoType === "battleship" ? (
+                            <Ship className="h-4 w-4 text-primary" />
                           ) : (
                             <ArrowUpRight className="h-4 w-4 text-primary" />
                           )}
                           {bingoType === "standard"
                             ? "Standard"
-                            : "Progression"}
+                            : bingoType === "battleship"
+                              ? "Battleship"
+                              : "Progression"}
                         </p>
                       </div>
 

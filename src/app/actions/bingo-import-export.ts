@@ -81,7 +81,7 @@ const ExportedBingoSchema = z.object({
     rows: z.number(),
     columns: z.number(),
     codephrase: z.string(),
-    bingoType: z.enum(["standard", "progression"]),
+    bingoType: z.enum(["standard", "progression", "battleship"]),
     tiersUnlockRequirement: z.number().optional(),
     mainDiagonalBonusXP: z.number().optional(),
     antiDiagonalBonusXP: z.number().optional(),

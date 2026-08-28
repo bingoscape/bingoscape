@@ -18,6 +18,9 @@ interface BingoGridWrapperProps {
   teams: Team[]
   currentTeamId: string | undefined
   gameType: "osrs" | "rs3"
+  eventStartDate?: Date | string
+  eventEndDate?: Date | string
+  eventCreatorId?: string | null
 }
 
 export default function BingoGridWrapper({
@@ -26,6 +29,9 @@ export default function BingoGridWrapper({
   teams,
   currentTeamId,
   gameType,
+  eventStartDate,
+  eventEndDate,
+  eventCreatorId,
 }: BingoGridWrapperProps) {
   const [bingo, setBingo] = useState(initialBingo)
   const [isLayoutLocked, setIsLocked] = useState(true)
@@ -272,6 +278,9 @@ export default function BingoGridWrapper({
         isLayoutLocked={isLayoutLocked}
         onReorderTiles={handleReorderTiles}
         highlightedTiles={highlightedTiles}
+        eventStartDate={eventStartDate}
+        eventEndDate={eventEndDate}
+        eventCreatorId={eventCreatorId}
       />
     </div>
   )

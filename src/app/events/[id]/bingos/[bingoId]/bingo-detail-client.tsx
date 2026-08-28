@@ -3,12 +3,14 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import BingoGridWrapper from "@/components/bingo-grid-wrapper"
 import { TeamSelector } from "@/components/team-selector"
 import { BingoImportExportModal } from "@/components/bingo-import-export-modal"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, RefreshCw, FileJson } from "lucide-react"
+import { BattleshipPlaceShipsButton } from "@/components/battleship-place-ships-button"
 import { cn } from "@/lib/utils"
 
 export function BingoDetailClient({
@@ -29,6 +31,7 @@ export function BingoDetailClient({
   bingo: any
 }) {
   const router = useRouter()
+  const { data: session } = useSession()
   const [refreshKey, setRefreshKey] = useState(0)
 
   // Set initial selected team based on user role
@@ -59,9 +62,18 @@ export function BingoDetailClient({
   }
 
   const isAdminOrManagement = userRole === "admin" || userRole === "management"
+  const isBoardCreator = Boolean(
+    session?.user?.id &&
+      data?.event?.creatorId &&
+      session.user.id === data.event.creatorId
+  )
+  const canManageShipPlacement =
+    isBoardCreator || isAdminOrManagement || Boolean(currentTeam?.isLeader)
 
   // Determine which team ID to use for the bingo grid
   const effectiveTeamId = isAdminOrManagement ? selectedTeamId : currentTeam?.id
+  const shipPlacementTeamId =
+    isBoardCreator || isAdminOrManagement ? effectiveTeamId : currentTeam?.id
 
   if (!data || !bingo) {
     return <div className="container mx-auto px-4 py-8">Bingo not found</div>
@@ -99,6 +111,15 @@ export function BingoDetailClient({
                 selectedTeamId={selectedTeamId}
               />
             )}
+            {bingo.bingoType === "battleship" &&
+              canManageShipPlacement &&
+              shipPlacementTeamId && (
+                <BattleshipPlaceShipsButton
+                  eventId={eventId}
+                  bingoId={bingoId}
+                  teamId={shipPlacementTeamId}
+                />
+              )}
             {isAdminOrManagement && (
               <Button
                 variant="outline"
@@ -128,6 +149,9 @@ export function BingoDetailClient({
                 currentTeamId={effectiveTeamId}
                 teams={teams}
                 gameType={data.event.gameType}
+                eventStartDate={data.event.startDate}
+                eventEndDate={data.event.endDate}
+                eventCreatorId={data.event.creatorId}
               />
             </div>
           </CardContent>

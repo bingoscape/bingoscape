@@ -218,6 +218,20 @@
       "when": 1784802018249,
       "tag": "0030_wonderful_rocket_racer",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1786600000000,
+      "tag": "0031_battleship_bingo",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1786600000001,
+      "tag": "0032_battleship_ship_tile_scope_fix",
+      "breakpoints": true
     }
   ]
 }

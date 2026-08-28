@@ -2,7 +2,7 @@
 
 import React from "react"
 import Image from "next/image"
-import { Zap, EyeOff, CheckCircle2, AlertCircle, Clock } from "lucide-react"
+import { Zap, EyeOff, Sword, Target, Ship, CheckCircle2, AlertCircle, Clock } from "lucide-react"
 import type { Tile } from "@/types/model"
 import {
   HoverCard,
@@ -31,6 +31,14 @@ interface BingoTileProps {
   currentTeamId?: string
   isLocked: boolean
   isLoading?: boolean
+  isHitByCurrentTeam?: boolean
+  /** Battleship: approved tile with no opponent ship at this coordinate. */
+  isMissByCurrentTeam?: boolean
+  /** Battleship: hit tile on an opponent ship fully sunk by your team. */
+  isSunkHitByCurrentTeam?: boolean
+  /** Battleship pre-event: empty cells for non-creators (grid position only). */
+  hideTileDetails?: boolean
+  tileLabel?: string
 }
 
 export const BingoTile = React.memo(function BingoTile({
@@ -41,6 +49,11 @@ export const BingoTile = React.memo(function BingoTile({
   currentTeamId,
   isLocked,
   isLoading = false,
+  isHitByCurrentTeam = false,
+  isMissByCurrentTeam = false,
+  isSunkHitByCurrentTeam = false,
+  hideTileDetails = false,
+  tileLabel,
 }: BingoTileProps) {
   const isManagement = userRole === "management" || userRole === "admin"
 
@@ -134,10 +147,24 @@ export const BingoTile = React.memo(function BingoTile({
   const completionStatus = getCompletionStatus()
   const submissionState = getSubmissionState()
 
+  if (hideTileDetails) {
+    return (
+      <div
+        className="relative flex h-full w-full min-h-0 items-center justify-center rounded-lg border-2 border-muted-foreground/25 bg-muted/20"
+        aria-label={tileLabel ?? `Tile ${tile.index + 1}`}
+      >
+        {tileLabel && (
+          <span className="text-xs font-medium text-muted-foreground/70">
+            {tileLabel}
+          </span>
+        )}
+      </div>
+    )
+  }
+
   const tileClasses = `
-    relative rounded-lg overflow-hidden aspect-square group
-    transition-all duration-300 ease-in-out
-    min-h-[60px] sm:min-h-[80px] md:min-h-[100px] lg:min-h-[120px]
+    relative h-full w-full min-h-0 rounded-lg overflow-hidden group
+    transition-shadow duration-300 ease-in-out
     touch-manipulation
     ${tile.isHidden && isLocked ? "bg-transparent" : ""}
     ${tile.isHidden && !isLocked ? "border-2 border-dashed border-muted-foreground/40 bg-muted/20 cursor-pointer hover:bg-muted/40 hover:border-muted-foreground/60" : ""}
@@ -255,6 +282,34 @@ export const BingoTile = React.memo(function BingoTile({
                   </span>
                 </div>
               </div>
+
+              {isHitByCurrentTeam && isSunkHitByCurrentTeam && (
+                <div
+                  className="absolute left-2 top-2 z-20 rounded-full border border-red-500/60 bg-red-500/15 p-1.5 shadow-sm ring-2 ring-red-400/50"
+                  data-testid="battleship-sunk-icon"
+                  title="Sunk — opponent ship destroyed"
+                >
+                  <Ship className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                </div>
+              )}
+              {isHitByCurrentTeam && !isSunkHitByCurrentTeam && (
+                <div
+                  className="absolute left-2 top-2 z-20 rounded-full border border-border bg-background/90 p-1.5 shadow-sm"
+                  data-testid="battleship-hit-icon"
+                  title="Hit — opponent ship"
+                >
+                  <Sword className="h-3.5 w-3.5 text-foreground" />
+                </div>
+              )}
+              {isMissByCurrentTeam && !isHitByCurrentTeam && (
+                <div
+                  className="absolute left-2 top-2 z-20 rounded-full border border-border bg-background/90 p-1.5 shadow-sm"
+                  data-testid="battleship-miss-icon"
+                  title="Miss — no ship at this tile"
+                >
+                  <Target className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+              )}
 
               {/* Loading overlay */}
               {isLoading && (

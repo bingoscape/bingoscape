@@ -9,13 +9,19 @@ import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
 import { updateBingo, getBingoWithPatternBonuses } from "@/app/actions/bingo"
 import {
+  getBingoShipRules,
+  updateBingoShipRules,
+} from "@/app/actions/battleship"
+import { ShipRulesEditor } from "./ship-rules-editor"
+import type { ShipRule } from "@/server/db/schema"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Loader2, Info, Eye, Grid3X3, Lock } from "lucide-react"
+import { Loader2, Info, Eye, Grid3X3, Lock, Ship } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { PatternBonusSchematicEditor } from "./pattern-bonus-schematic-editor"
@@ -37,7 +43,7 @@ interface EditBingoModalProps {
 }
 
 interface BingoPatternData {
-  bingoType: "standard" | "progression"
+  bingoType: "standard" | "progression" | "battleship"
   rows: number
   columns: number
   mainDiagonalBonusXP: number
@@ -51,6 +57,7 @@ const TABS = [
   { id: "general", label: "General Details", icon: Info },
   { id: "visibility", label: "Visibility & State", icon: Eye },
   { id: "patterns", label: "Pattern Bonuses", icon: Grid3X3 },
+  { id: "ships", label: "Ship Rules", icon: Ship },
 ]
 
 export function EditBingoModal({
@@ -74,13 +81,17 @@ export function EditBingoModal({
   const [mainDiagonalBonus, setMainDiagonalBonus] = useState(0)
   const [antiDiagonalBonus, setAntiDiagonalBonus] = useState(0)
   const [completeBoardBonus, setCompleteBoardBonus] = useState(0)
+  const [shipRules, setShipRules] = useState<ShipRule[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Fetch pattern bonus data when modal opens
   useEffect(() => {
     if (isOpen) {
       setIsLoadingPattern(true)
-      void getBingoWithPatternBonuses(bingo.id).then((result) => {
+      void Promise.all([
+        getBingoWithPatternBonuses(bingo.id),
+        getBingoShipRules(bingo.id),
+      ]).then(([result, rules]) => {
         if (result.success && result.data) {
           const data = result.data
           setPatternData({
@@ -93,6 +104,16 @@ export function EditBingoModal({
             rowBonuses: data.rowBonuses,
             columnBonuses: data.columnBonuses,
           })
+          if (data.bingoType === "battleship") {
+            setShipRules(
+              rules.length > 0
+                ? rules
+                : [
+                    { length: 3, count: 2 },
+                    { length: 2, count: 1 },
+                  ]
+            )
+          }
 
           const rowBonusMap: Record<number, number> = {}
           for (let i = 0; i < data.rows; i++) {
@@ -156,15 +177,22 @@ export function EditBingoModal({
       }
 
       const result = await updateBingo(bingo.id, updateData)
-      if (result.success) {
-        toast({
-          title: "Success",
-          description: "Bingo board updated successfully",
-        })
-        onClose()
-      } else {
+      if (!result.success) {
         throw new Error(result.error)
       }
+
+      if (patternData?.bingoType === "battleship") {
+        const rulesResult = await updateBingoShipRules(bingo.id, shipRules)
+        if (!rulesResult.success) {
+          throw new Error(rulesResult.error)
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: "Bingo board updated successfully",
+      })
+      onClose()
     } catch (error) {
       console.error(error)
       toast({
@@ -178,7 +206,9 @@ export function EditBingoModal({
   }
 
   const visibleTabs = TABS.filter((tab) => {
-    if (tab.id === "patterns" && patternData?.bingoType === "progression")
+    if (tab.id === "patterns" && patternData?.bingoType !== "standard")
+      return false
+    if (tab.id === "ships" && patternData?.bingoType !== "battleship")
       return false
     return true
   })
@@ -379,6 +409,27 @@ export function EditBingoModal({
                       )}
                     </div>
                   )}
+
+                {activeTab === "ships" && patternData?.bingoType === "battleship" && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium">Ship Rules</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Ships each team must place before the event starts.
+                      </p>
+                    </div>
+                    <div className="rounded-xl border bg-background/80 p-6 shadow-xs">
+                      <ShipRulesEditor
+                        rules={shipRules}
+                        onChange={setShipRules}
+                        board={{
+                          rows: patternData.rows,
+                          columns: patternData.columns,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </motion.div>
             </AnimatePresence>
           </div>

@@ -23,7 +23,7 @@ const createBingoSchema = z.object({
   rows: z.number().min(1),
   columns: z.number().min(1),
   codephrase: z.string().min(1),
-  bingoType: z.enum(["standard", "progression"]).optional().default("standard"),
+  bingoType: z.enum(["standard", "progression", "battleship"]).optional().default("standard"),
   tiersUnlockRequirement: z.number().optional().default(1),
   mainDiagonalBonus: z.number().optional().default(0),
   antiDiagonalBonus: z.number().optional().default(0),
@@ -158,7 +158,7 @@ const updateBingoSchema = z.object({
   visible: z.boolean(),
   locked: z.boolean(),
   codephrase: z.string(),
-  bingoType: z.enum(["standard", "progression"]).optional(),
+  bingoType: z.enum(["standard", "progression", "battleship"]).optional(),
   tiersUnlockRequirement: z.number().optional(),
   patternBonuses: z
     .object({
