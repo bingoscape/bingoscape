@@ -114,6 +114,49 @@ interface SubmissionEmbedData {
   goalTarget?: number | null
 }
 
+/**
+ * Converts an HSL string like "hsl(240, 70%, 50%)" to a Discord integer color.
+ * Falls back to Discord blurple if parsing fails.
+ */
+function hslStringToHex(hslColor: string): number {
+  const colorRegex = /hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/
+  const colorMatch = colorRegex.exec(hslColor)
+  if (!colorMatch) return 0x7289da
+
+  const [, h, s, l] = colorMatch.map(Number)
+  const c = (1 - Math.abs(2 * (l! / 100) - 1)) * (s! / 100)
+  const x = c * (1 - Math.abs(((h! / 60) % 2) - 1))
+  const m = l! / 100 - c / 2
+
+  let r = 0,
+    g = 0,
+    b = 0
+  if (h! >= 0 && h! < 60) {
+    r = c; g = x; b = 0
+  } else if (h! >= 60 && h! < 120) {
+    r = x; g = c; b = 0
+  } else if (h! >= 120 && h! < 180) {
+    r = 0; g = c; b = x
+  } else if (h! >= 180 && h! < 240) {
+    r = 0; g = x; b = c
+  } else if (h! >= 240 && h! < 300) {
+    r = x; g = 0; b = c
+  } else if (h! >= 300 && h! < 360) {
+    r = c; g = 0; b = x
+  }
+
+  return (
+    (Math.round((r + m) * 255) << 16) |
+    (Math.round((g + m) * 255) << 8) |
+    Math.round((b + m) * 255)
+  )
+}
+
+/** Derive a deterministic team color string from a team name. */
+export function getTeamHslColor(teamName: string): string {
+  return `hsl(${(teamName.charCodeAt(0) * 10) % 360}, 70%, 50%)`
+}
+
 export function createSubmissionEmbed(data: SubmissionEmbedData): DiscordEmbed {
   const {
     userName,
@@ -130,54 +173,7 @@ export function createSubmissionEmbed(data: SubmissionEmbedData): DiscordEmbed {
     goalTarget,
   } = data
 
-  // Convert HSL color to hex
-  const colorRegex = /hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/
-  const colorMatch = colorRegex.exec(teamColor)
-  let hexColor = 0x7289da // Default Discord blue
-
-  if (colorMatch) {
-    const [, h, s, l] = colorMatch.map(Number)
-
-    // Simple HSL to RGB conversion for Discord color
-    const c = (1 - Math.abs(2 * (l! / 100) - 1)) * (s! / 100)
-    const x = c * (1 - Math.abs(((h! / 60) % 2) - 1))
-    const m = l! / 100 - c / 2
-
-    let r = 0,
-      g = 0,
-      b = 0
-    if (h! >= 0 && h! < 60) {
-      r = c
-      g = x
-      b = 0
-    } else if (h! >= 60 && h! < 120) {
-      r = x
-      g = c
-      b = 0
-    } else if (h! >= 120 && h! < 180) {
-      r = 0
-      g = c
-      b = x
-    } else if (h! >= 180 && h! < 240) {
-      r = 0
-      g = x
-      b = c
-    } else if (h! >= 240 && h! < 300) {
-      r = x
-      g = 0
-      b = c
-    } else if (h! >= 300 && h! < 360) {
-      r = c
-      g = 0
-      b = x
-    }
-
-    r = Math.round((r + m) * 255)
-    g = Math.round((g + m) * 255)
-    b = Math.round((b + m) * 255)
-
-    hexColor = (r << 16) | (g << 8) | b
-  }
+  const hexColor = hslStringToHex(teamColor)
 
   const fields = [
     {
@@ -224,3 +220,102 @@ export function createSubmissionEmbed(data: SubmissionEmbedData): DiscordEmbed {
     // Image will be set to attachment URL when file is attached
   }
 }
+
+// ---------------------------------------------------------------------------
+// WoM tracker notification embeds
+// ---------------------------------------------------------------------------
+
+export interface GoalCompleteEmbedData {
+  teamName: string
+  teamColor: string
+  tileName: string
+  goalDescription: string
+  metricName: string
+  currentValue: number
+  targetValue: number
+  eventTitle: string
+  bingoTitle: string
+}
+
+/**
+ * Embed sent when a single WoM metric goal crosses its targetValue for a team.
+ */
+export function createGoalCompleteEmbed(data: GoalCompleteEmbedData): DiscordEmbed {
+  const {
+    teamName,
+    teamColor,
+    tileName,
+    goalDescription,
+    metricName,
+    currentValue,
+    targetValue,
+    eventTitle,
+    bingoTitle,
+  } = data
+
+  const percentage = Math.min(100, Math.round((currentValue / targetValue) * 100))
+  const formattedCurrent = currentValue.toLocaleString("en-US")
+  const formattedTarget = targetValue.toLocaleString("en-US")
+
+  return {
+    title: "🎯 Goal Reached!",
+    description: `**${teamName}** reached a tracker milestone!`,
+    color: hslStringToHex(teamColor),
+    fields: [
+      { name: "🧩 Tile", value: tileName, inline: true },
+      { name: "🏆 Team", value: teamName, inline: true },
+      { name: "\u200B", value: "\u200B", inline: true },
+      { name: "🎯 Goal", value: goalDescription, inline: false },
+      {
+        name: "📊 Metric",
+        value: metricName
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase()),
+        inline: true,
+      },
+      {
+        name: "📈 Progress",
+        value: `${formattedCurrent} / ${formattedTarget} (${percentage}%)`,
+        inline: true,
+      },
+    ],
+    footer: { text: `${eventTitle} • ${bingoTitle}` },
+    timestamp: new Date().toISOString(),
+  }
+}
+
+export interface TileCompleteEmbedData {
+  teamName: string
+  tileName: string
+  tileDescription?: string | null
+  eventTitle: string
+  bingoTitle: string
+}
+
+/**
+ * Embed sent when an entire tile auto-completes via the WoM tracker sync.
+ */
+export function createTileCompleteEmbed(data: TileCompleteEmbedData): DiscordEmbed {
+  const { teamName, tileName, tileDescription, eventTitle, bingoTitle } = data
+
+  return {
+    title: "🏆 Tile Completed!",
+    description: `**${teamName}** has auto-completed a bingo tile via the WoM tracker!`,
+    color: 0xffd700, // Gold
+    fields: [
+      { name: "🧩 Tile", value: tileName, inline: true },
+      { name: "🏆 Team", value: teamName, inline: true },
+      ...(tileDescription
+        ? [{ name: "📝 Details", value: tileDescription, inline: false }]
+        : []),
+      {
+        name: "⚙️ Completed via",
+        value: "WiseOldMan Tracker Sync",
+        inline: false,
+      },
+    ],
+    footer: { text: `${eventTitle} • ${bingoTitle}` },
+    timestamp: new Date().toISOString(),
+  }
+}
+

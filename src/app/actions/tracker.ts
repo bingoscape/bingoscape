@@ -5,15 +5,25 @@ import { eq, and, inArray } from "drizzle-orm"
 import {
   teams,
   teamGoalProgress,
+  teamTileSubmissions,
   goals,
   tiles,
   bingos,
+  discordWebhooks,
 } from "@/server/db/schema"
 import { fetchCompetitionFromWOM } from "./wiseoldman"
 import { WOMClient } from "@wise-old-man/utils"
 import { logger } from "@/lib/logger"
 import { checkAndAutoCompleteTile } from "@/app/actions/tile-completion"
 import { unstable_noStore as noStore } from "next/cache"
+import {
+  sendDiscordWebhook,
+  createGoalCompleteEmbed,
+  createTileCompleteEmbed,
+  getTeamHslColor,
+  type GoalCompleteEmbedData,
+  type TileCompleteEmbedData,
+} from "@/lib/discord-webhook"
 
 export async function syncTrackerProgress(bingoId: string) {
   noStore()
@@ -53,11 +63,16 @@ export async function syncTrackerProgress(bingoId: string) {
 
     // 3. Get all metric goals for this bingo
     const eventTilesList = await db
-      .select({ id: tiles.id })
+      .select({ id: tiles.id, title: tiles.title, description: tiles.description })
       .from(tiles)
       .where(eq(tiles.bingoId, bingoId))
     if (!eventTilesList.length)
       return { success: false, error: "No tiles found" }
+
+    // Build a lookup map so we can enrich Discord embeds with tile info
+    const tileMap = new Map<string, { title: string; description: string | null }>(
+      eventTilesList.map((t) => [t.id, { title: t.title, description: t.description }])
+    )
 
     const allGoals = await db.query.goals.findMany({
       where: inArray(
@@ -144,6 +159,10 @@ export async function syncTrackerProgress(bingoId: string) {
     // 5. Map teams and progress
     const updatedTiles = new Set<string>()
 
+    // Accumulators for Discord notifications — populated during loops, dispatched at the end
+    const pendingGoalNotifications: Array<GoalCompleteEmbedData & { progressId: string | undefined }> = []
+    const pendingTileNotifications: Array<TileCompleteEmbedData & { submissionId: string | undefined }> = []
+
     const eventTeams = await db.query.teams.findMany({
       where: eq(teams.eventId, eventId),
       with: {
@@ -187,16 +206,52 @@ export async function syncTrackerProgress(bingoId: string) {
             ),
           })
 
+          // Detect first-time goal completion for Discord notification.
+          // We skip if notificationSent is already true to prevent repeat pings on re-syncs.
+          const prevValue = existingProgress?.currentValue ?? 0
+          const wasIncomplete =
+            prevValue < mGoal.targetValue && !existingProgress?.notificationSent
+          const isNowComplete = gained >= mGoal.targetValue
+
           if (existingProgress) {
+            // Build update payload — mark completedAt on first-time completion
+            const setFields = {
+              currentValue: gained,
+              updatedAt: new Date(),
+              ...(wasIncomplete && isNowComplete
+                ? { completedAt: new Date(), notificationSent: true }
+                : {}),
+            }
             await db
               .update(teamGoalProgress)
-              .set({ currentValue: gained, updatedAt: new Date() })
+              .set(setFields)
               .where(eq(teamGoalProgress.id, existingProgress.id))
           } else {
+            const isFirstSyncComplete = gained >= mGoal.targetValue
             await db.insert(teamGoalProgress).values({
               teamId: team.id,
               goalId: mGoal.id,
               currentValue: gained,
+              ...(isFirstSyncComplete
+                ? { completedAt: new Date(), notificationSent: true }
+                : {}),
+            })
+          }
+
+          // Stage a goal-complete notification if this is the first time reaching the target
+          if (wasIncomplete && isNowComplete) {
+            const tile = tileMap.get(mGoal.tileId)
+            pendingGoalNotifications.push({
+              teamName: team.name,
+              teamColor: getTeamHslColor(team.name),
+              tileName: tile?.title ?? "Unknown Tile",
+              goalDescription: mGoal.description ?? metricName,
+              metricName,
+              currentValue: gained,
+              targetValue: mGoal.targetValue,
+              eventTitle: bingo.event.title,
+              bingoTitle: bingo.title,
+              progressId: existingProgress?.id,
             })
           }
 
@@ -208,7 +263,89 @@ export async function syncTrackerProgress(bingoId: string) {
     for (const item of updatedTiles) {
       const [tileId, teamId] = item.split(":")
       if (tileId && teamId) {
-        await checkAndAutoCompleteTile(db, tileId, teamId)
+        const result = await checkAndAutoCompleteTile(db, tileId, teamId)
+
+        // Stage a tile-complete notification only when the tile *just* transitioned to completed
+        if (result.autoCompleted && (result.wasUpdated ?? result.wasCreated)) {
+          // Guard: skip if we already sent a notification for this tile submission
+          const submissionId = result.submission?.id
+          if (submissionId) {
+            const sub = await db.query.teamTileSubmissions.findFirst({
+              where: eq(teamTileSubmissions.id, submissionId),
+            })
+            if (!sub?.notificationSent) {
+              const team = eventTeams.find((t) => t.id === teamId)
+              const tile = tileMap.get(tileId)
+              if (team && tile) {
+                pendingTileNotifications.push({
+                  teamName: team.name,
+                  tileName: tile.title,
+                  tileDescription: tile.description,
+                  eventTitle: bingo.event.title,
+                  bingoTitle: bingo.title,
+                  submissionId,
+                })
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Dispatch all accumulated Discord notifications in one batch at the end
+    if (pendingGoalNotifications.length > 0 || pendingTileNotifications.length > 0) {
+      try {
+        const activeWebhooks = await db.query.discordWebhooks.findMany({
+          where: and(
+            eq(discordWebhooks.eventId, eventId),
+            eq(discordWebhooks.isActive, true)
+          ),
+        })
+
+        if (activeWebhooks.length > 0) {
+          const webhookPromises: Promise<boolean>[] = []
+
+          for (const goalData of pendingGoalNotifications) {
+            const embed = createGoalCompleteEmbed(goalData)
+            for (const webhook of activeWebhooks) {
+              webhookPromises.push(
+                sendDiscordWebhook(webhook.webhookUrl, { embeds: [embed] })
+              )
+            }
+          }
+
+          for (const tileData of pendingTileNotifications) {
+            const embed = createTileCompleteEmbed(tileData)
+            for (const webhook of activeWebhooks) {
+              webhookPromises.push(
+                sendDiscordWebhook(webhook.webhookUrl, { embeds: [embed] })
+              )
+            }
+          }
+
+          const results = await Promise.allSettled(webhookPromises)
+          const anySucceeded = results.some(
+            (r) => r.status === "fulfilled" && r.value === true
+          )
+
+          // Mark notificationSent on tile submissions where the webhook went through
+          if (anySucceeded) {
+            for (const tileData of pendingTileNotifications) {
+              if (tileData.submissionId) {
+                await db
+                  .update(teamTileSubmissions)
+                  .set({ notificationSent: true })
+                  .where(eq(teamTileSubmissions.id, tileData.submissionId))
+              }
+            }
+          }
+        }
+      } catch (discordError) {
+        // Discord errors must never fail the tracker sync
+        logger.error(
+          { error: discordError },
+          "Discord webhook error during tracker sync"
+        )
       }
     }
 

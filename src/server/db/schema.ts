@@ -585,6 +585,7 @@ export const teamTileSubmissions = createTable(
     reviewedBy: uuid("reviewed_by").references(() => users.id, {
       onDelete: "set null",
     }),
+    notificationSent: boolean("notification_sent").notNull().default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -857,6 +858,8 @@ export const teamGoalProgress = createTable(
       .notNull()
       .references(() => goals.id, { onDelete: "cascade" }),
     currentValue: integer("current_value").notNull().default(0),
+    completedAt: timestamp("completed_at"),
+    notificationSent: boolean("notification_sent").notNull().default(false),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => {
