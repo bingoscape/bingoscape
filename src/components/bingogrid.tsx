@@ -339,6 +339,8 @@ export default function BingoGrid({
             teamId: team.id,
             goalId: result.goal!.id,
             currentValue: 0,
+            notificationSent: false,
+            completedAt: null,
             updatedAt: new Date(),
           })),
         }
