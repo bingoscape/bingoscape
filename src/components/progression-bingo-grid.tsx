@@ -539,22 +539,25 @@ function SortableTile({
                       currentTeamSubmission?.submissions.filter(
                         (sub) => sub.goalId === goal.id
                       ) ?? []
-                    const approvedProgress = teamSubmissions
+                    const rawApprovedProgress = teamSubmissions
                       .filter((sub) => sub.status === "approved")
                       .reduce((sum, sub) => sum + (sub.submissionValue ?? 0), 0)
-                    const totalProgress = teamSubmissions.reduce(
+                    const rawTotalProgress = teamSubmissions.reduce(
                       (sum, sub) => sum + (sub.submissionValue ?? 0),
                       0
                     )
+
+                    const approvedProgress = Math.floor(rawApprovedProgress)
+                    const totalProgress = Math.floor(rawTotalProgress)
 
                     const approvedPercentage =
                       goal.targetValue > 0
                         ? Math.min(
                             100,
-                            (approvedProgress / goal.targetValue) * 100
+                            Math.round((rawApprovedProgress / goal.targetValue) * 100)
                           )
                         : 0
-                    const isCompleted = approvedProgress >= goal.targetValue
+                    const isCompleted = rawApprovedProgress >= goal.targetValue
 
                     return (
                       <div

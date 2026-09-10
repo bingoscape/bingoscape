@@ -182,10 +182,10 @@ export async function GET() {
             },
             progress: {
               description: "Present when user has a team",
-              approvedProgress: "number - Approved submissions total",
+              approvedProgress: "number (integer) - Approved submissions total",
               totalProgress:
-                "number - All submissions total (approved + pending)",
-              approvedPercentage: "number - Percentage complete (0-100)",
+                "number (integer) - All submissions total (approved + pending)",
+              approvedPercentage: "number (integer) - Percentage complete (0-100)",
               isCompleted: "boolean - Whether goal is complete",
             },
           },
@@ -380,9 +380,9 @@ export async function GET() {
               },
             ],
             progress: {
-              approvedProgress: 4.5,
-              totalProgress: 4.5,
-              approvedPercentage: 45,
+              approvedProgress: 4,
+              totalProgress: 4,
+              approvedPercentage: 40,
               isCompleted: false,
             },
           },
