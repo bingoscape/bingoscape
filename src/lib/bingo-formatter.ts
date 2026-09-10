@@ -246,20 +246,26 @@ export async function formatBingoData(
               (sub) => sub.goalId === goal.id
             ) ?? []
 
-          const approvedProgress = teamSubmissionsForGoal
+          const rawApprovedProgress = teamSubmissionsForGoal
             .filter((sub) => sub.status === "approved")
             .reduce((sum, sub) => sum + (sub.submissionValue ?? 0), 0)
-          const totalProgress = teamSubmissionsForGoal.reduce(
+          const rawTotalProgress = teamSubmissionsForGoal.reduce(
             (sum, sub) => sum + (sub.submissionValue ?? 0),
             0
           )
 
+          const approvedProgress = Math.floor(rawApprovedProgress)
+          const totalProgress = Math.floor(rawTotalProgress)
+
           const approvedPercentage =
             goal.targetValue && goal.targetValue > 0
-              ? Math.min(100, (approvedProgress / goal.targetValue) * 100)
+              ? Math.min(
+                  100,
+                  Math.round((rawApprovedProgress / goal.targetValue) * 100)
+                )
               : 0
           const isCompleted = goal.targetValue
-            ? approvedProgress >= goal.targetValue
+            ? rawApprovedProgress >= goal.targetValue
             : false
 
           return {
@@ -461,7 +467,7 @@ function formatGoalNode(
     const isComplete = currentValue >= goal.targetValue
 
     goalNode.progress = {
-      completedCount: currentValue,
+      completedCount: Math.floor(currentValue),
       totalCount: goal.targetValue,
       isComplete,
     }
@@ -564,7 +570,7 @@ export function calculateGroupProgress(
   }
 
   return {
-    completedCount: calculatedCompletedCount,
+    completedCount: Math.floor(calculatedCompletedCount),
     totalCount,
     isComplete,
   }
