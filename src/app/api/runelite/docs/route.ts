@@ -186,6 +186,49 @@ export async function GET() {
           "429": { error: "Too many requests (see Retry-After header)" },
         },
       },
+      {
+        path: "/team-tile-completions",
+        method: "GET",
+        description:
+          "Poll for tiles completed by your teams (includes your own completions). Keyset-paginated with an opaque cursor ordered by completion time; completions are delayed ~2s. Only visible bingos. Separate rate limit of 30 requests/minute per user.",
+        request: {
+          query: {
+            since:
+              "string (optional) - Opaque cursor from a previous response. Omit to receive the head cursor with no completions (no backfill).",
+            limit: "number (optional) - 1-100, default 50",
+            eventId:
+              "string (optional) - Narrow to one event; intersected with your teams",
+          },
+        },
+        response: {
+          cursor: "string - Pass as 'since' on the next poll",
+          hasMore: "boolean - More completions are available right now",
+          resync:
+            "boolean - Cursor older than 24h; no completions returned, restart from the returned cursor",
+          pollIntervalMs: "number - Suggested poll interval (5000)",
+          completions: [
+            {
+              id: "string - Team tile submission id",
+              completedAt: "string - ISO timestamp with microseconds",
+              eventId: "string",
+              bingoId: "string",
+              teamId: "string",
+              teamName: "string",
+              tileId: "string",
+              tileTitle: "string",
+              tile: {
+                points: "number - Tile weight",
+                tier: "number - Tile tier",
+              },
+            },
+          ],
+        },
+        errors: {
+          "400": { error: "Invalid cursor" },
+          "401": { error: "Invalid API key" },
+          "429": { error: "Too many requests (see Retry-After header)" },
+        },
+      },
     ],
     dataStructures: {
       goalTree: {
