@@ -40,6 +40,7 @@ import {
 } from "@/lib/discord-webhook"
 import { discordWebhooks } from "@/server/db/schema"
 import { sql } from "drizzle-orm"
+import { completedAtOnComplete } from "@/lib/completed-at"
 import { logger } from "@/lib/logger"
 import type { SelectableUser } from "@/types/model"
 
@@ -1299,6 +1300,7 @@ export async function updateSubmissionStatus(
         .update(teamTileSubmissions)
         .set({
           status: "needs_attention",
+          completedAt: null,
           reviewedBy: session.user.id,
           updatedAt: new Date(),
         })
@@ -1336,6 +1338,7 @@ export async function updateSubmissionStatus(
         await db.update(teamTileSubmissions)
           .set({
             status: "completed",
+            completedAt: completedAtOnComplete,
             reviewedBy: session.user.id,
             updatedAt: new Date(),
           })
@@ -1393,6 +1396,8 @@ export async function updateTeamTileSubmissionStatus(
       .update(teamTileSubmissions)
       .set({
         status: newStatus,
+        completedAt:
+          newStatus === "completed" ? completedAtOnComplete : null,
         reviewedBy: session.user.id,
         updatedAt: new Date(),
       })
@@ -1557,6 +1562,7 @@ export async function updateSubmissionStatusWithComment(
           .update(teamTileSubmissions)
           .set({
             status: "needs_attention",
+            completedAt: null,
             reviewedBy: session.user.id,
             updatedAt: new Date(),
           })
@@ -1594,6 +1600,7 @@ export async function updateSubmissionStatusWithComment(
           await tx.update(teamTileSubmissions)
             .set({
               status: "completed",
+              completedAt: completedAtOnComplete,
               reviewedBy: session.user.id,
               updatedAt: new Date(),
             })

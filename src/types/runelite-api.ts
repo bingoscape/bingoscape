@@ -117,3 +117,28 @@ export interface TeamDropsResponse {
   pollIntervalMs: number
   drops: TeamDropData[]
 }
+
+/**
+ * Team tile completions feed (GET /api/runelite/team-tile-completions)
+ */
+export interface TeamTileCompletionData {
+  /** Team tile submission id */
+  id: string
+  /** ISO timestamp with microsecond precision */
+  completedAt: string
+  eventId: string
+  bingoId: string
+  teamId: string
+  teamName: string
+  tileId: string
+  tileTitle: string
+  tile: { points: number; tier: number }
+}
+
+export interface TeamTileCompletionsResponse {
+  cursor: string
+  hasMore: boolean
+  resync: boolean
+  pollIntervalMs: number
+  completions: TeamTileCompletionData[]
+}

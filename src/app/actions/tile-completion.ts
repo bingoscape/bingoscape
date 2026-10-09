@@ -8,7 +8,8 @@ import {
   teamGoalProgress,
   teamTileSubmissions,
 } from "@/server/db/schema"
-import { eq, and, isNull } from "drizzle-orm"
+import { eq, and, isNull, sql } from "drizzle-orm"
+import { completedAtOnComplete } from "@/lib/completed-at"
 import { revalidatePath } from "next/cache"
 
 type DbOrTransaction = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]
@@ -205,6 +206,7 @@ export async function checkAndAutoCompleteTile(tx: DbOrTransaction, tileId: stri
         await tx.update(teamTileSubmissions)
           .set({
             status: "incomplete",
+            completedAt: null,
             updatedAt: new Date(),
           })
           .where(eq(teamTileSubmissions.id, existingSubmission.id))
@@ -222,6 +224,7 @@ export async function checkAndAutoCompleteTile(tx: DbOrTransaction, tileId: stri
       const [updatedSubmission] = await tx.update(teamTileSubmissions)
         .set({
           status: "completed",
+          completedAt: completedAtOnComplete,
           updatedAt: new Date(),
         })
         .where(eq(teamTileSubmissions.id, existingSubmission.id))
@@ -244,6 +247,7 @@ export async function checkAndAutoCompleteTile(tx: DbOrTransaction, tileId: stri
         tileId,
         teamId,
         status: "completed",
+        completedAt: sql`clock_timestamp()`,
       })
       .returning()
 

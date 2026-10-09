@@ -39,3 +39,6 @@ export function createRateLimiter(limit: number, windowMs: number) {
 
 /** 30 requests / minute per user for the team-drops feed */
 export const teamDropsRateLimiter = createRateLimiter(30, 60_000)
+
+/** 30 requests / minute per user for the team tile-completions feed (separate budget) */
+export const teamTileCompletionsRateLimiter = createRateLimiter(30, 60_000)

@@ -14,7 +14,7 @@ import {
 export const DEFAULT_LIMIT = 50
 export const MAX_LIMIT = 100
 export const POLL_INTERVAL_MS = 5000
-const LAG = sql`interval '2 seconds'`
+export const LAG = sql`interval '2 seconds'`
 const MAX_UUID = "ffffffff-ffff-ffff-ffff-ffffffffffff"
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const TS_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/
@@ -55,7 +55,7 @@ export function clampLimit(raw: string | null | undefined): number {
   return Math.min(MAX_LIMIT, Math.max(1, n))
 }
 
-const TS_FORMAT = sql.raw(`'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'`)
+export const TS_FORMAT = sql.raw(`'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'`)
 
 /** Cursor positioned at "now minus lag": only drops created after this are returned later. */
 export async function getHeadCursor(): Promise<string> {

@@ -588,12 +588,18 @@ export const teamTileSubmissions = createTable(
     notificationSent: boolean("notification_sent").notNull().default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    // Set (clock_timestamp()) only on the transition to completed; null otherwise
+    completedAt: timestamp("completed_at"),
   },
   (table) => {
     return {
       tileTeamUnique: uniqueIndex("tile_team_unique").on(
         table.tileId,
         table.teamId
+      ),
+      completedAtIdIdx: index("tts_completed_at_id_idx").on(
+        table.completedAt,
+        table.id
       ),
     }
   }
