@@ -89,3 +89,31 @@ export function isGoalNode(node: GoalTreeNode): node is GoalNode {
 export function isGroupNode(node: GoalTreeNode): node is GroupNode {
   return node.type === "group"
 }
+
+/**
+ * Team drops feed (GET /api/runelite/team-drops)
+ */
+export interface TeamDropData {
+  id: string
+  /** ISO timestamp with microsecond precision */
+  createdAt: string
+  status: "pending" | "approved" | "rejected"
+  eventId: string
+  bingoId: string
+  teamId: string
+  teamName: string
+  tileId: string
+  tileTitle: string
+  player: { runescapeName: string | null }
+  item: { itemId: number | null; quantity: number; value: number }
+  source: { name: string | null; type: string | null; npcId: number | null }
+  imageUrl: string | null
+}
+
+export interface TeamDropsResponse {
+  cursor: string
+  hasMore: boolean
+  resync: boolean
+  pollIntervalMs: number
+  drops: TeamDropData[]
+}
