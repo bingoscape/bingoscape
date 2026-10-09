@@ -9,8 +9,19 @@ import "@mdxeditor/editor/style.css"
 
 import { type Metadata } from "next"
 import { Noto_Sans } from "next/font/google"
+import localFont from "next/font/local"
 
-const noto = Noto_Sans({ subsets: ["latin"] })
+const body = Noto_Sans({
+  subsets: ["latin"],
+  variable: "--font-body",
+  display: "swap",
+})
+// Old School RuneScape bitmap font (CC0, github.com/runestar/fonts). Native size is 16px.
+const pixel = localFont({
+  src: "../fonts/RuneScape-Bold-12.ttf",
+  variable: "--font-pixel",
+  display: "swap",
+})
 
 export const metadata: Metadata = {
   title: "BingoScape Next",
@@ -24,10 +35,10 @@ export default async function RootLayout({
   const isSuperAdminUser = await isSuperAdmin()
 
   return (
-    <html lang="en" className={noto.className} suppressHydrationWarning>
+    <html lang="en" className={`${body.variable} ${pixel.variable}`} suppressHydrationWarning>
       <AuthProvider>
         <body>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
             <Navbar isSuperAdminUser={isSuperAdminUser} />
             <RunescapeLinkPrompt />
             {children}

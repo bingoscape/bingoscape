@@ -74,14 +74,14 @@ interface PublicBingoGridProps {
 const renderStatusIcon = (status: "completed" | "in_progress" | undefined) => {
   if (status === "completed") {
     return (
-      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-white shadow-lg ring-2 ring-green-200 transition-all duration-300 dark:ring-green-800">
+      <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-success border border-black text-success-foreground shadow-sm">
         <CheckCircle2 className="h-4 w-4" />
       </div>
     )
   }
   if (status === "in_progress") {
     return (
-      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg ring-2 ring-amber-200 transition-all duration-300 dark:ring-amber-800">
+      <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-warning border border-black text-warning-foreground shadow-sm">
         <Clock className="h-4 w-4" />
       </div>
     )
@@ -156,32 +156,35 @@ function PublicBingoTile({
       >
         <HoverCardTrigger asChild>
           <Card
-            className={`relative aspect-square cursor-pointer overflow-hidden ${
+            className={`osrs-slot relative aspect-square cursor-pointer overflow-hidden ${
               isCompleted
-                ? "border-2 border-green-500 dark:border-green-400"
+                ? "border-[3px] border-success"
                 : isInProgress
-                  ? "border-2 border-amber-500 dark:border-amber-400"
-                  : "border-2 border-primary"
+                  ? "border-[3px] border-warning"
+                  : "border-[3px] border-border"
             }`}
           >
+            <span className="osrs-qty absolute left-1 top-1 z-10 text-sm">
+              {tile.weight}
+            </span>
             {tile.headerImage ? (
               <div className="relative h-full w-full">
                 <Image
                   src={tile.headerImage || getRandomFrog()}
                   alt={tile.title}
                   fill
-                  className="object-contain transition-transform duration-300 ease-in-out hover:scale-110"
+                  className="object-contain hover:brightness-110"
                 />
                 {isCompleted && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-green-500/20">
-                    <div className="rotate-[-20deg] transform rounded-md bg-green-500 px-2 py-1 text-xs font-bold text-white">
+                  <div className="absolute inset-0 flex items-center justify-center bg-success/20">
+                    <div className="rounded-sm border border-black bg-success px-2 py-1 text-xs font-bold text-success-foreground">
                       COMPLETED
                     </div>
                   </div>
                 )}
                 {isInProgress && !isCompleted && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-amber-500/20">
-                    <div className="rotate-[-20deg] transform rounded-md bg-amber-500 px-2 py-1 text-xs font-bold text-white">
+                  <div className="absolute inset-0 flex items-center justify-center bg-warning/20">
+                    <div className="rounded-sm border border-black bg-warning px-2 py-1 text-xs font-bold text-warning-foreground">
                       IN PROGRESS
                     </div>
                   </div>
@@ -193,15 +196,15 @@ function PublicBingoTile({
                   {tile.title}
                 </span>
                 {isCompleted && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-green-500/20">
-                    <div className="rotate-[-20deg] transform rounded-md bg-green-500 px-2 py-1 text-xs font-bold text-white">
+                  <div className="absolute inset-0 flex items-center justify-center bg-success/20">
+                    <div className="rounded-sm border border-black bg-success px-2 py-1 text-xs font-bold text-success-foreground">
                       COMPLETED
                     </div>
                   </div>
                 )}
                 {isInProgress && !isCompleted && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-amber-500/20">
-                    <div className="rotate-[-20deg] transform rounded-md bg-amber-500 px-2 py-1 text-xs font-bold text-white">
+                  <div className="absolute inset-0 flex items-center justify-center bg-warning/20">
+                    <div className="rounded-sm border border-black bg-warning px-2 py-1 text-xs font-bold text-warning-foreground">
                       IN PROGRESS
                     </div>
                   </div>
@@ -220,14 +223,14 @@ function PublicBingoTile({
               <h4 className="flex-1 wrap-break-word text-base font-semibold leading-tight">
                 {tile.title}
               </h4>
-              <div className="flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-1 dark:bg-amber-900/30">
-                <Zap className="h-3.5 w-3.5 text-amber-500" />
+              <div className="flex shrink-0 items-center gap-1 rounded-sm border border-black bg-secondary px-2 py-0.5">
+                <Zap className="h-3.5 w-3.5 text-primary" />
                 <span className="text-xs font-medium">{tile.weight} XP</span>
               </div>
             </div>
 
             {tileStatus && (
-              <div className="flex items-center gap-2 rounded-lg bg-secondary/30 p-2">
+              <div className="flex items-center gap-2 rounded-sm bg-secondary/30 p-2">
                 {renderStatusIcon(tileStatus)}
                 <span className="text-sm font-medium capitalize">
                   {tileStatus === "completed" ? "Completed" : "In Progress"}
@@ -410,7 +413,7 @@ export function PublicBingoGrid({
                     src={tile.headerImage ?? getRandomFrog()}
                     alt={tile.title}
                     fill
-                    className="object-contain transition-transform duration-300 ease-in-out hover:scale-110"
+                    className="object-contain hover:brightness-110"
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-primary">
@@ -469,11 +472,11 @@ export function PublicBingoGrid({
               <h3 className="text-lg font-semibold">{selectedTeam?.name}</h3>
               <div className="flex flex-col items-center gap-1">
                 <p className="text-sm text-muted-foreground">
-                  <span className="font-medium text-green-600 dark:text-green-400">
+                  <span className="font-medium text-success ">
                     {completedTiles.length}
                   </span>{" "}
                   completed,
-                  <span className="ml-1 font-medium text-amber-600 dark:text-amber-400">
+                  <span className="ml-1 font-medium text-warning ">
                     {inProgressTiles.length}
                   </span>{" "}
                   in progress
@@ -498,7 +501,7 @@ export function PublicBingoGrid({
                   key={team.id}
                   variant="ghost"
                   size="sm"
-                  className={`h-2 w-2 rounded-full p-0 ${idx === teamIndex ? "bg-primary" : "bg-muted"}`}
+                  className={`h-2 w-2 rounded-sm p-0 ${idx === teamIndex ? "bg-primary" : "bg-muted"}`}
                   onClick={() => {
                     setTeamIndex(idx)
                     setSelectedTeamId(team.id)

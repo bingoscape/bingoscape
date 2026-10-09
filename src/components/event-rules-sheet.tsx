@@ -235,7 +235,7 @@ export function EventRulesSheet({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 shrink-0 text-green-600 hover:text-green-700"
+                          className="h-7 w-7 shrink-0 text-success hover:text-success"
                           onClick={() => handleUpdate(rule.id)}
                           disabled={isPending}
                         >
@@ -269,7 +269,7 @@ export function EventRulesSheet({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 text-destructive hover:text-destructive"
+                              className="h-6 w-6 text-danger hover:text-danger"
                               onClick={() => handleDelete(rule.id)}
                               disabled={isPending}
                             >

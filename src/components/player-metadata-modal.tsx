@@ -312,8 +312,8 @@ export function PlayerMetadataModal({
           <div className="grid gap-4 py-4">
             {/* Info banner for self-editing */}
             {isSelfEditing && (
-              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950">
-                <p className="text-sm text-blue-900 dark:text-blue-100">
+              <div className="rounded-lg border border-info bg-info/10 p-3 ">
+                <p className="text-sm text-info ">
                   <Lock className="mr-1 inline h-4 w-4" />
                   You can edit your timezone and availability. WiseOldMan stats
                   (EHP, EHB, Combat, Total Level) are managed by event
@@ -608,30 +608,30 @@ export function PlayerMetadataModal({
                 <SelectContent>
                   <SelectItem value="beginner">
                     <span className="flex items-center">
-                      <Sprout className="mr-2 h-4 w-4 text-green-500" />{" "}
+                      <Sprout className="mr-2 h-4 w-4 text-success" />{" "}
                       Beginner
                     </span>
                   </SelectItem>
                   <SelectItem value="intermediate">
                     <span className="flex items-center">
-                      <Sword className="mr-2 h-4 w-4 text-blue-500" />{" "}
+                      <Sword className="mr-2 h-4 w-4 text-info" />{" "}
                       Intermediate
                     </span>
                   </SelectItem>
                   <SelectItem value="advanced">
                     <span className="flex items-center">
-                      <Shield className="mr-2 h-4 w-4 text-purple-500" />{" "}
+                      <Shield className="mr-2 h-4 w-4 text-chart-5" />{" "}
                       Advanced
                     </span>
                   </SelectItem>
                   <SelectItem value="expert">
                     <span className="flex items-center">
-                      <Target className="mr-2 h-4 w-4 text-red-500" /> Expert
+                      <Target className="mr-2 h-4 w-4 text-danger" /> Expert
                     </span>
                   </SelectItem>
                   <SelectItem value="pvmgod">
                     <span className="flex items-center">
-                      <Crown className="mr-2 h-4 w-4 text-yellow-500" />{" "}
+                      <Crown className="mr-2 h-4 w-4 text-warning" />{" "}
                       God-tier PVMer
                     </span>
                   </SelectItem>

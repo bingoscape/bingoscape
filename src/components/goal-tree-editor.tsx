@@ -576,11 +576,11 @@ export function GoalTreeEditor({
 
       {/* Selection Action Toolbar */}
       {selectedNodes.size > 0 && (
-        <div className="rounded-lg border-2 border-blue-500 bg-background p-3 animate-in fade-in slide-in-from-top-2">
+        <div className="rounded-lg border-2 border-info bg-background p-3 animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <CheckSquare className="h-5 w-5 text-blue-600" />
-              <span className="font-medium text-blue-900">
+              <CheckSquare className="h-5 w-5 text-info" />
+              <span className="font-medium text-info">
                 {selectedNodes.size} item{selectedNodes.size !== 1 ? "s" : ""}{" "}
                 selected
               </span>
@@ -646,7 +646,7 @@ export function GoalTreeEditor({
                 )}
               </div>
               {selectedNodes.size > 1 && selectedNodes.has(activeId) && (
-                <div className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white shadow-md">
+                <div className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-sm bg-info text-xs font-bold text-info-foreground shadow-md">
                   {selectedNodes.size}
                 </div>
               )}
@@ -1354,17 +1354,17 @@ function TreeNode({
         className={cn(
           "flex items-center gap-2",
           node.depth > 0 && "border-l-2 pl-4 mb-2 relative",
-          node.depth > 0 && groupData.logicalOperator === "SUM" ? "border-indigo-500/30" :
-          node.depth > 0 && groupData.logicalOperator === "OR" ? "border-purple-500/30" :
-          node.depth > 0 ? "border-blue-500/30" : ""
+          node.depth > 0 && groupData.logicalOperator === "SUM" ? "border-chart-5/30" :
+          node.depth > 0 && groupData.logicalOperator === "OR" ? "border-chart-5/30" :
+          node.depth > 0 ? "border-info/30" : ""
         )}
       >
         {node.depth > 0 && (
           <div className={cn(
             "absolute left-0 top-1/2 w-4 h-0.5 -translate-y-1/2",
-            groupData.logicalOperator === "SUM" ? "bg-indigo-500/30" :
-            groupData.logicalOperator === "OR" ? "bg-purple-500/30" :
-            "bg-blue-500/30"
+            groupData.logicalOperator === "SUM" ? "bg-chart-5/30" :
+            groupData.logicalOperator === "OR" ? "bg-chart-5/30" :
+            "bg-info/30"
           )} />
         )}
         {hasSufficientRights && (
@@ -1380,10 +1380,10 @@ function TreeNode({
           className={cn(
             "flex-1 cursor-pointer transition-all rounded-md py-1.5 px-3 border-l-2 mb-0.5",
             groupData.logicalOperator === "SUM"
-              ? "border-green-500 bg-green-50/30 dark:bg-green-950/20"
+              ? "border-success bg-success/30 "
               : groupData.logicalOperator === "OR"
-                ? "border-purple-500 bg-purple-50/30 dark:bg-purple-950/20"
-                : "border-blue-500 bg-blue-50/30 dark:bg-blue-950/20",
+                ? "border-chart-5 bg-chart-5/30 "
+                : "border-info bg-info/30 ",
             isOver && "border-2",
             isSelected && "border-2 shadow-sm"
           )}
@@ -1397,8 +1397,8 @@ function TreeNode({
                     className={cn(
                       "h-4 w-4",
                       groupData.logicalOperator === "SUM"
-                        ? "text-indigo-500"
-                        : "text-blue-500"
+                        ? "text-chart-5"
+                        : "text-info"
                     )}
                   />
                   <Input
@@ -1455,8 +1455,8 @@ function TreeNode({
                       className={cn(
                         "h-4 w-4",
                         groupData.logicalOperator === "SUM"
-                          ? "text-indigo-500"
-                          : "text-blue-500"
+                          ? "text-chart-5"
+                          : "text-info"
                       )}
                     />
                     <span className="font-medium">
@@ -1484,27 +1484,27 @@ function TreeNode({
                       >
                         <SelectTrigger className="h-7 w-auto min-w-[70px] px-2 gap-1.5 [&>span]:hidden">
                           <div className="flex items-center gap-1 text-[10px] font-medium">
-                            {groupData.logicalOperator === "AND" && <><CheckCheck className="h-3 w-3 text-blue-500" /> AND</>}
-                            {groupData.logicalOperator === "OR" && <><Shuffle className="h-3 w-3 text-purple-500" /> OR</>}
-                            {groupData.logicalOperator === "SUM" && <><Plus className="h-3 w-3 text-green-500" /> SUM</>}
+                            {groupData.logicalOperator === "AND" && <><CheckCheck className="h-3 w-3 text-info" /> AND</>}
+                            {groupData.logicalOperator === "OR" && <><Shuffle className="h-3 w-3 text-chart-5" /> OR</>}
+                            {groupData.logicalOperator === "SUM" && <><Plus className="h-3 w-3 text-success" /> SUM</>}
                           </div>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="AND">
                             <div className="flex flex-col">
-                              <span className="flex items-center gap-1"><CheckCheck className="h-3 w-3 text-blue-500" /> AND</span>
+                              <span className="flex items-center gap-1"><CheckCheck className="h-3 w-3 text-info" /> AND</span>
                               <span className="text-[10px] text-muted-foreground whitespace-normal max-w-[200px]">Require players to complete every item.</span>
                             </div>
                           </SelectItem>
                           <SelectItem value="OR">
                             <div className="flex flex-col">
-                              <span className="flex items-center gap-1"><Shuffle className="h-3 w-3 text-purple-500" /> OR</span>
+                              <span className="flex items-center gap-1"><Shuffle className="h-3 w-3 text-chart-5" /> OR</span>
                               <span className="text-[10px] text-muted-foreground whitespace-normal max-w-[200px]">Give players a choice to complete a specific number of items.</span>
                             </div>
                           </SelectItem>
                           <SelectItem value="SUM">
                             <div className="flex flex-col">
-                              <span className="flex items-center gap-1"><Plus className="h-3 w-3 text-green-500" /> SUM</span>
+                              <span className="flex items-center gap-1"><Plus className="h-3 w-3 text-success" /> SUM</span>
                               <span className="text-[10px] text-muted-foreground whitespace-normal max-w-[200px]">Pool raw progress from all items together.</span>
                             </div>
                           </SelectItem>
@@ -1521,7 +1521,7 @@ function TreeNode({
                         }
                         className={cn(
                           "h-5 px-1.5 text-[10px] font-medium flex items-center gap-1 shrink-0",
-                          groupData.logicalOperator === "SUM" && "bg-green-50 text-green-700 border-green-200"
+                          groupData.logicalOperator === "SUM" && "bg-success/10 text-success border-success"
                         )}
                       >
                         {groupData.logicalOperator === "AND" && (
@@ -1639,7 +1639,7 @@ function TreeNode({
                         variant="ghost"
                         size="sm"
                         onClick={() => onDeleteGroup(node.id)}
-                        className="h-7 text-red-600 hover:text-red-700 p-2"
+                        className="h-7 text-danger hover:text-danger p-2"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -1684,9 +1684,9 @@ function TreeNode({
           "flex-1 cursor-pointer transition-all",
           isEditing
             ? "rounded-md border bg-card p-3 shadow-sm my-1"
-            : "flex items-center justify-between py-1 px-2 my-0.5 rounded-full bg-muted/50 border border-muted/20 hover:bg-muted/80",
+            : "flex items-center justify-between py-1 px-2 my-0.5 rounded-sm bg-muted/50 border border-muted/20 hover:bg-muted/80",
           isOver && "border-2 border-primary",
-          isSelected && "border-2 border-blue-600 shadow-sm"
+          isSelected && "border-2 border-info shadow-sm"
         )}
         onClick={(e) => !isEditing && onNodeClick(node.id, e)}
       >
@@ -1890,7 +1890,7 @@ function TreeNode({
                   </>
                 ) : isMetricGoal ? (
                   <>
-                    <BarChart2 className="h-4 w-4 shrink-0 text-blue-500" />
+                    <BarChart2 className="h-4 w-4 shrink-0 text-info" />
                     <Badge
                       variant="secondary"
                       className="shrink-0 text-xs"
@@ -1899,7 +1899,7 @@ function TreeNode({
                     </Badge>
                   </>
                 ) : (
-                  <Target className="h-4 w-4 shrink-0 text-green-500" />
+                  <Target className="h-4 w-4 shrink-0 text-success" />
                 )}
                 <span className="text-sm">{goalData.description}</span>
                 <Badge variant="outline" className="shrink-0 text-xs">
@@ -1920,7 +1920,7 @@ function TreeNode({
                     variant="ghost"
                     size="sm"
                     onClick={() => onDeleteGoal(node.id)}
-                    className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
+                    className="h-7 w-7 p-0 text-danger hover:text-danger"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

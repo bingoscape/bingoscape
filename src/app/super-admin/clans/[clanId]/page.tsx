@@ -82,8 +82,8 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
     <div className="space-y-8">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 rounded-2xl bg-linear-to-r from-primary/10 via-transparent to-green-500/10" />
-        <div className="relative rounded-2xl border bg-linear-to-r from-card to-muted/50 p-8 shadow-lg lg:p-12">
+        <div className="absolute inset-0 rounded-sm bg-primary/5" />
+        <div className="osrs-panel relative p-8 shadow-lg lg:p-12">
           <Link href="/super-admin/clans">
             <Button variant="ghost" size="sm" className="mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -94,11 +94,11 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <div className="mb-4 flex items-center gap-4">
-                <div className="rounded-full bg-green-500/10 p-3">
-                  <Shield className="h-8 w-8 text-green-500" />
+                <div className="rounded-sm bg-success/10 p-3">
+                  <Shield className="h-8 w-8 text-success" />
                 </div>
                 <div>
-                  <h1 className="bg-linear-to-r from-green-500 to-emerald-600 bg-clip-text text-4xl font-bold text-transparent lg:text-5xl">
+                  <h1 className="osrs-heading text-primary text-4xl font-bold lg:text-5xl">
                     {clan.name}
                   </h1>
                 </div>
@@ -125,7 +125,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
                     >
                       <Badge
                         variant="outline"
-                        className="border-amber-500/20 bg-amber-500/10 text-amber-600"
+                        className="border-warning/20 bg-warning/10 text-warning"
                       >
                         {owner.user.name ?? owner.user.email}
                       </Badge>
@@ -148,19 +148,19 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
         <Card className="transform border-0 bg-linear-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Members</CardTitle>
-            <div className="rounded-full bg-purple-500/10 p-2">
-              <Users className="h-4 w-4 text-purple-500" />
+            <div className="rounded-sm bg-pending/10 p-2">
+              <Users className="h-4 w-4 text-pending" />
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="bg-linear-to-r from-purple-500 to-violet-600 bg-clip-text text-3xl font-bold text-transparent">
+            <div className="osrs-heading text-primary text-3xl font-bold">
               {totalMembers}
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
               {roleBreakdown.admin > 0 && (
                 <Badge
                   variant="outline"
-                  className="border-purple-500/20 bg-purple-500/10 text-xs text-purple-500"
+                  className="border-pending/20 bg-pending/10 text-xs text-pending"
                 >
                   {roleBreakdown.admin} admin
                   {roleBreakdown.admin !== 1 ? "s" : ""}
@@ -169,7 +169,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
               {roleBreakdown.management > 0 && (
                 <Badge
                   variant="outline"
-                  className="border-blue-500/20 bg-blue-500/10 text-xs text-blue-500"
+                  className="border-info/20 bg-info/10 text-xs text-info"
                 >
                   {roleBreakdown.management} mgmt
                 </Badge>
@@ -177,7 +177,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
               {roleBreakdown.member > 0 && (
                 <Badge
                   variant="outline"
-                  className="border-green-500/20 bg-green-500/10 text-xs text-green-500"
+                  className="border-success/20 bg-success/10 text-xs text-success"
                 >
                   {roleBreakdown.member} member
                   {roleBreakdown.member !== 1 ? "s" : ""}
@@ -186,7 +186,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
               {roleBreakdown.guest > 0 && (
                 <Badge
                   variant="outline"
-                  className="border-gray-500/20 bg-gray-500/10 text-xs text-gray-500"
+                  className="border-border bg-muted text-xs text-muted-foreground"
                 >
                   {roleBreakdown.guest} guest
                   {roleBreakdown.guest !== 1 ? "s" : ""}
@@ -199,19 +199,19 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
         <Card className="transform border-0 bg-linear-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Events</CardTitle>
-            <div className="rounded-full bg-blue-500/10 p-2">
-              <Calendar className="h-4 w-4 text-blue-500" />
+            <div className="rounded-sm bg-info/10 p-2">
+              <Calendar className="h-4 w-4 text-info" />
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="bg-linear-to-r from-blue-500 to-cyan-600 bg-clip-text text-3xl font-bold text-transparent">
+            <div className="osrs-heading text-primary text-3xl font-bold">
               {totalEvents}
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
               {lockedEvents > 0 && (
                 <Badge
                   variant="outline"
-                  className="border-orange-500/20 bg-orange-500/10 text-xs text-orange-500"
+                  className="border-warning/20 bg-warning/10 text-xs text-warning"
                 >
                   <Lock className="mr-1 h-3 w-3" />
                   {lockedEvents} locked
@@ -220,7 +220,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
               {publicEvents > 0 && (
                 <Badge
                   variant="outline"
-                  className="border-green-500/20 bg-green-500/10 text-xs text-green-500"
+                  className="border-success/20 bg-success/10 text-xs text-success"
                 >
                   <Globe className="mr-1 h-3 w-3" />
                   {publicEvents} public
@@ -235,12 +235,12 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
             <CardTitle className="text-sm font-medium">
               Total Submissions
             </CardTitle>
-            <div className="rounded-full bg-green-500/10 p-2">
-              <ImageIcon className="h-4 w-4 text-green-500" />
+            <div className="rounded-sm bg-success/10 p-2">
+              <ImageIcon className="h-4 w-4 text-success" />
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="bg-linear-to-r from-green-500 to-emerald-600 bg-clip-text text-3xl font-bold text-transparent">
+            <div className="osrs-heading text-primary text-3xl font-bold">
               {totalSubmissions}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -254,12 +254,12 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
             <CardTitle className="text-sm font-medium">
               Active Members
             </CardTitle>
-            <div className="rounded-full bg-orange-500/10 p-2">
-              <BowArrow className="h-4 w-4 text-orange-500" />
+            <div className="rounded-sm bg-warning/10 p-2">
+              <BowArrow className="h-4 w-4 text-warning" />
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="bg-linear-to-r from-orange-500 to-red-600 bg-clip-text text-3xl font-bold text-transparent">
+            <div className="osrs-heading text-primary text-3xl font-bold">
               {activeMembers}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">Last 30 days</p>
@@ -271,8 +271,8 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
       <Card className="border-0 bg-linear-to-r from-card to-muted/50 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <div className="rounded-full bg-purple-500/10 p-2">
-              <Users className="h-5 w-5 text-purple-500" />
+            <div className="rounded-sm bg-pending/10 p-2">
+              <Users className="h-5 w-5 text-pending" />
             </div>
             Clan Members
             <span className="text-sm font-normal text-muted-foreground">
@@ -294,8 +294,8 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
         <Card className="border-0 bg-linear-to-r from-card to-muted/50 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <div className="rounded-full bg-blue-500/10 p-2">
-                <Calendar className="h-5 w-5 text-blue-500" />
+              <div className="rounded-sm bg-info/10 p-2">
+                <Calendar className="h-5 w-5 text-info" />
               </div>
               Clan Events
               <span className="text-sm font-normal text-muted-foreground">
@@ -326,7 +326,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
                         {event.locked && (
                           <Badge
                             variant="outline"
-                            className="border-orange-500/20 bg-orange-500/10 text-xs text-orange-500"
+                            className="border-warning/20 bg-warning/10 text-xs text-warning"
                           >
                             <Lock className="mr-1 h-3 w-3" />
                             Locked
@@ -335,7 +335,7 @@ export default async function SuperAdminClanDetailPage(props: PageProps) {
                         {event.public && (
                           <Badge
                             variant="outline"
-                            className="border-green-500/20 bg-green-500/10 text-xs text-green-500"
+                            className="border-success/20 bg-success/10 text-xs text-success"
                           >
                             <Globe className="mr-1 h-3 w-3" />
                             Public

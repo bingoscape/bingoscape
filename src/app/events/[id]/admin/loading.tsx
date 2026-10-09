@@ -19,7 +19,7 @@ export default function AdminLoading() {
               Back to Event
             </Button>
           </div>
-          <h1 className="flex items-center gap-3 text-3xl font-bold text-slate-300 dark:text-slate-800">
+          <h1 className="flex items-center gap-3 text-3xl font-bold text-foreground ">
             <ShieldCheck className="h-8 w-8" />
             <Skeleton className="h-8 w-48" />
           </h1>
@@ -29,13 +29,13 @@ export default function AdminLoading() {
       </div>
 
       {/* Main Content Area Skeleton */}
-      <main className="space-y-6 rounded-3xl border bg-linear-to-br from-slate-50 to-slate-100 p-6 shadow-inner dark:from-slate-900/50 dark:to-slate-900 md:p-8">
+      <main className="space-y-6 rounded-3xl border bg-linear-to-br from-background to-background p-6 shadow-inner md:p-8">
         {/* Quick Stats Row */}
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="flex items-center gap-4 rounded-2xl border bg-white/10 p-6 shadow-xs backdrop-blur-md dark:bg-black/10"
+              className="flex items-center gap-4 rounded-2xl border bg-foreground/10 p-6 shadow-xs backdrop-blur-md "
             >
               <Skeleton className="h-12 w-12 rounded-full" />
               <div className="space-y-2">
@@ -50,7 +50,7 @@ export default function AdminLoading() {
         <div className="grid grid-cols-1 gap-6 pt-4 lg:grid-cols-3">
           {/* Left: Actions */}
           <section className="space-y-6 lg:col-span-2">
-            <div className="rounded-2xl border bg-white/50 p-6 backdrop-blur-xs dark:bg-black/20">
+            <div className="rounded-2xl border bg-card/50 p-6 backdrop-blur-xs ">
               <Skeleton className="mb-6 h-6 w-32" />
               <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -62,7 +62,7 @@ export default function AdminLoading() {
 
           {/* Right: Insights */}
           <section className="space-y-6">
-            <div className="h-full rounded-2xl border bg-white/50 p-6 backdrop-blur-xs dark:bg-black/20">
+            <div className="h-full rounded-2xl border bg-card/50 p-6 backdrop-blur-xs ">
               <Skeleton className="mb-6 h-6 w-40" />
 
               <div className="space-y-6">

@@ -84,8 +84,8 @@ export function TileSelectionDropdown({
       case "completed":
         return (
           <Badge
-            variant="outline"
-            className="border-green-200 bg-green-100 text-xs text-green-800"
+            variant="success"
+            className="text-xs"
           >
             <Check className="mr-1 h-3 w-3" />
             Completed
@@ -94,8 +94,8 @@ export function TileSelectionDropdown({
       case "needs_attention":
         return (
           <Badge
-            variant="outline"
-            className="border-yellow-200 bg-yellow-100 text-xs text-yellow-800"
+            variant="warning"
+            className="text-xs"
           >
             <AlertTriangle className="mr-1 h-3 w-3" />
             Needs Attention
@@ -104,8 +104,8 @@ export function TileSelectionDropdown({
       case "incomplete":
         return (
           <Badge
-            variant="outline"
-            className="border-blue-200 bg-blue-100 text-xs text-blue-800"
+            variant="pending"
+            className="text-xs"
           >
             <Clock className="mr-1 h-3 w-3" />
             Incomplete
@@ -115,7 +115,7 @@ export function TileSelectionDropdown({
         return (
           <Badge
             variant="outline"
-            className="border-gray-200 bg-gray-100 text-xs text-gray-800"
+            className="text-xs text-muted-foreground"
           >
             Not Started
           </Badge>
@@ -125,7 +125,7 @@ export function TileSelectionDropdown({
 
   return (
     <div className="w-full">
-      <Command className="rounded-lg border">
+      <Command className="osrs-panel-inset rounded-sm">
         <CommandInput
           placeholder="Search tiles..."
           value={searchQuery}
@@ -178,7 +178,7 @@ export function TileSelectionDropdown({
       </Command>
 
       {filteredTiles.length === 0 && !searchQuery && (
-        <div className="mt-4 rounded-lg bg-muted/50 p-4 text-center">
+        <div className="mt-4 rounded-sm bg-muted/50 p-4 text-center">
           <p className="text-sm text-muted-foreground">
             All available tiles have been completed!
           </p>

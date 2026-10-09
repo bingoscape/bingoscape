@@ -122,22 +122,22 @@ export function EventCard({
     switch (registrationStatus.status) {
       case "pending":
         return (
-          <div className="mt-2 flex items-center text-yellow-500">
-            <Clock3 className="mr-1 h-4 w-4" />
+          <div className="mt-2 flex items-center text-pending">
+            <Clock3 aria-hidden="true" className="mr-1 h-4 w-4" />
             <span className="text-sm">Registration pending approval</span>
           </div>
         )
       case "approved":
         return (
-          <div className="mt-2 flex items-center text-green-500">
-            <CheckCircle2 className="mr-1 h-4 w-4" />
+          <div className="mt-2 flex items-center text-success">
+            <CheckCircle2 aria-hidden="true" className="mr-1 h-4 w-4" />
             <span className="text-sm">Registration approved</span>
           </div>
         )
       case "rejected":
         return (
-          <div className="mt-2 flex items-center text-red-500">
-            <XCircle className="mr-1 h-4 w-4" />
+          <div className="mt-2 flex items-center text-danger">
+            <XCircle aria-hidden="true" className="mr-1 h-4 w-4" />
             <span className="text-sm">Registration rejected</span>
             {registrationStatus.responseMessage && (
               <div className="mt-1 text-xs text-muted-foreground">
@@ -153,10 +153,9 @@ export function EventCard({
     <Card
       onClick={() => router.push(`/events/${eventData.event.id}`)}
       className={cn(
-        "group relative flex h-full cursor-pointer flex-col overflow-hidden border border-border/50 bg-card/60 backdrop-blur-xl transition-all duration-500 hover:scale-[1.02] hover:border-primary/50 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-primary/20",
+        "group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-sm transition-colors hover:brightness-110",
         status === "past" && "opacity-90 hover:opacity-100",
-        status === "active" &&
-          "border-green-500/30 shadow-[0_0_15px_rgba(16,185,129,0.05)]"
+        status === "active" && "border-l-4 border-l-success"
       )}
     >
       <div className="flex w-full flex-1 flex-col lg:flex-row">
@@ -179,22 +178,22 @@ export function EventCard({
                   className={`${eventData.totalPrizePool > 0 ? "mt-6" : ""}`}
                 >
                   <div className="flex flex-wrap items-center gap-2">
-                    <CardTitle className="bg-linear-to-br from-foreground to-muted-foreground bg-clip-text text-xl font-bold tracking-tight text-transparent">
+                    <CardTitle className="text-xl font-bold tracking-tight">
                       {eventData.event.title}
                     </CardTitle>
                     <GameTypeBadge gameType={eventData.event.gameType} />
                     {eventData.event.role === "admin" && (
-                      <Badge
-                        variant="outline"
-                        className="border-purple-500 bg-purple-500/10 text-purple-500"
-                      >
+                      <Badge variant="info">
                         Admin
                       </Badge>
                     )}
                   </div>
                   <CardDescription className="mt-3 flex flex-col gap-1 text-sm">
                     <div className="flex items-start">
-                      <CalendarIcon className="mr-2.5 mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                      <CalendarIcon
+                        aria-hidden="true"
+                        className="mr-2.5 mt-1 h-4 w-4 shrink-0 text-muted-foreground"
+                      />
                       <div className="flex w-full flex-col">
                         <EventTimeDisplay
                           date={startDate}
@@ -224,30 +223,33 @@ export function EventCard({
               {/* Event metadata in a structured grid */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {eventData.event.clan && (
-                  <div className="flex items-center space-x-2 rounded-full border border-border/50 bg-muted/40 px-3 py-1.5 backdrop-blur-xs">
-                    <Users className="h-4 w-4 text-primary" />
+                  <div className="osrs-slot flex items-center space-x-2 rounded-sm px-3 py-1.5">
+                    <Users aria-hidden="true" className="h-4 w-4 text-primary" />
                     <span className="truncate text-sm font-medium">
                       {eventData.event.clan?.name}
                     </span>
                   </div>
                 )}
 
-                <div className="flex items-center space-x-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 backdrop-blur-xs">
-                  <Trophy className="h-4 w-4 text-amber-500" />
-                  <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                    {eventData.event.bingos?.length ?? 0} Bingos boards
+                <div className="osrs-slot flex items-center space-x-2 rounded-sm px-3 py-1.5">
+                  <Trophy aria-hidden="true" className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">
+                    {eventData.event.bingos?.length ?? 0}{" "}
+                    {(eventData.event.bingos?.length ?? 0) === 1
+                      ? "Board"
+                      : "Boards"}
                   </span>
                 </div>
 
                 {registrationDeadline && (
-                  <div className="col-span-full flex items-center space-x-2 rounded-lg bg-muted/50 p-2">
-                    <Clock className="h-4 w-4 text-blue-500" />
+                  <div className="osrs-slot col-span-full flex items-center space-x-2 rounded-sm p-2">
+                    <Clock aria-hidden="true" className="h-4 w-4 text-info" />
                     <span className="text-sm font-medium">
                       Registration:{" "}
                       {registrationDeadline.toLocaleDateString("en-US")}
                     </span>
                     {isRegistrationClosed && (
-                      <span className="ml-1 font-semibold text-destructive">
+                      <span className="ml-1 font-semibold text-danger">
                         (Closed)
                       </span>
                     )}
@@ -262,9 +264,9 @@ export function EventCard({
                     <div className="flex flex-col gap-2">
                       {eventData.managerData.actionItems.pendingRegistrations >
                         0 && (
-                        <div className="flex items-center space-x-2 rounded-lg border border-blue-200 bg-blue-50 p-2 dark:border-blue-800 dark:bg-blue-900/20">
-                          <Users className="h-4 w-4 text-blue-500" />
-                          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                        <div className="osrs-slot flex items-center space-x-2 rounded-sm border-l-4 border-l-pending p-2">
+                          <Users aria-hidden="true" className="h-4 w-4 text-pending" />
+                          <span className="text-sm font-medium">
                             {
                               eventData.managerData.actionItems
                                 .pendingRegistrations
@@ -275,9 +277,9 @@ export function EventCard({
                       )}
                       {eventData.managerData.actionItems.pendingSubmissions >
                         0 && (
-                        <div className="flex items-center space-x-2 rounded-lg border border-purple-200 bg-purple-50 p-2 dark:border-purple-800 dark:bg-purple-900/20">
-                          <CheckCircle2 className="h-4 w-4 text-purple-500" />
-                          <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                        <div className="osrs-slot flex items-center space-x-2 rounded-sm border-l-4 border-l-pending p-2">
+                          <CheckCircle2 aria-hidden="true" className="h-4 w-4 text-pending" />
+                          <span className="text-sm font-medium">
                             {
                               eventData.managerData.actionItems
                                 .pendingSubmissions
@@ -292,10 +294,10 @@ export function EventCard({
 
                 {eventData.participantData &&
                   eventData.participantData.team && (
-                    <div className="col-span-full mt-2 rounded-lg border border-border/50 bg-muted/20 p-3">
+                    <div className="osrs-slot col-span-full mt-2 rounded-sm p-3">
                       <div className="mb-2 flex items-center justify-between">
                         <div className="flex items-center gap-2 text-sm font-medium">
-                          <Star className="h-4 w-4 text-yellow-500" />
+                          <Star aria-hidden="true" className="h-4 w-4 text-primary" />
                           {eventData.participantData.team.name}
                         </div>
                         <Badge variant="secondary" className="text-xs">
@@ -304,9 +306,9 @@ export function EventCard({
                       </div>
                       {eventData.participantData.progress && (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
+                          <div className="osrs-panel-inset h-3 flex-1 overflow-hidden rounded-sm">
                             <div
-                              className="h-full bg-primary"
+                              className="h-full bg-success"
                               style={{
                                 width: `${Math.min(100, Math.max(0, (eventData.participantData.progress.completedTiles / Math.max(1, eventData.participantData.progress.totalTiles)) * 100))}%`,
                               }}
@@ -324,9 +326,9 @@ export function EventCard({
               </div>
 
               {eventData.event.requiresApproval && !isParticipant && (
-                <div className="flex items-center space-x-2 rounded-lg border border-amber-200 bg-amber-50 p-2 dark:border-amber-800 dark:bg-amber-900/20">
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                <div className="osrs-slot flex items-center space-x-2 rounded-sm border-l-4 border-l-warning p-2">
+                  <AlertTriangle aria-hidden="true" className="h-4 w-4 text-warning" />
+                  <span className="text-sm font-medium">
                     Requires approval to join
                   </span>
                 </div>
@@ -379,7 +381,7 @@ export function EventCard({
           eventData.event.bingos.length > 0 &&
           eventData.event.bingos[0] && (
             <div className="flex w-full shrink-0 items-center justify-center p-4 pt-0 sm:p-6 lg:w-72 lg:pl-0 lg:pt-6">
-              <div className="w-[80%] max-w-[20rem] opacity-90 drop-shadow-xl transition-all duration-500 group-hover:scale-105 group-hover:opacity-100 lg:w-full">
+              <div className="osrs-bevel-inset w-[80%] max-w-[20rem] rounded-sm p-1 opacity-90 transition-opacity group-hover:opacity-100 lg:w-full">
                 <MiniBoard
                   bingoId={eventData.event.bingos[0].id}
                   rows={eventData.event.bingos[0].rows}
@@ -390,7 +392,7 @@ export function EventCard({
             </div>
           )}
       </div>
-      <CardFooter className="flex flex-col gap-3 border-t bg-muted/20 pt-4">
+      <CardFooter className="flex flex-col gap-3 border-t pt-4">
         {eventData.event.role === "admin" ? (
           <div className="flex w-full gap-3">
             <Button
@@ -402,7 +404,7 @@ export function EventCard({
                 router.push(`/events/${eventData.event.id}/admin`)
               }}
             >
-              <Settings className="h-4 w-4" />
+              <Settings aria-hidden="true" className="h-4 w-4" />
               Manage Event
             </Button>
           </div>
@@ -419,7 +421,6 @@ export function EventCard({
                     registrationStatus?.status === "pending" ? (
                       <Button
                         variant="outline"
-                        className="hover:bg-yellow-500 hover:text-white"
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
@@ -431,7 +432,6 @@ export function EventCard({
                     ) : registrationStatus?.status === "rejected" ? (
                       <Button
                         variant="outline"
-                        className="hover:bg-red-500 hover:text-white"
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
@@ -447,7 +447,6 @@ export function EventCard({
                           e.stopPropagation()
                           void handleJoinClick()
                         }}
-                        className="bg-primary text-primary-foreground shadow-md duration-200 hover:bg-primary/90 hover:shadow-lg"
                       >
                         Request to Join
                       </Button>
@@ -459,7 +458,6 @@ export function EventCard({
                         e.stopPropagation()
                         void handleJoinClick()
                       }}
-                      className="bg-primary text-primary-foreground shadow-md duration-200 hover:bg-primary/90 hover:shadow-lg"
                     >
                       Join
                     </Button>
@@ -482,7 +480,7 @@ export function EventCard({
         {/* Additional event info for completed events */}
         {status === "past" && (
           <div className="flex items-center justify-center text-xs text-muted-foreground">
-            <CheckCircle2 className="mr-1 h-3 w-3" />
+            <CheckCircle2 aria-hidden="true" className="mr-1 h-3 w-3" />
             <span>
               Event completed on {endDate.toLocaleDateString("en-US")}
             </span>

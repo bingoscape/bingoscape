@@ -101,7 +101,7 @@ export function UserTemplateActions({
             </DropdownMenuItem>
           )}
           <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
+            className="text-danger focus:text-danger"
             onClick={() => setIsDeleteDialogOpen(true)}
           >
             <Trash className="mr-2 h-4 w-4" />

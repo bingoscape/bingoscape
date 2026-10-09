@@ -141,10 +141,10 @@ export function SubmissionUploadForm({
         )}
 
         {isMetricOnly ? (
-          <div className="rounded-lg border-2 border-dashed border-blue-200 bg-blue-50/50 p-8 text-center transition-all duration-200">
+          <div className="rounded-lg border-2 border-dashed border-info bg-info/50 p-8 text-center transition-all duration-200">
             <div className="flex flex-col items-center space-y-4">
-              <div className="rounded-full bg-blue-100 p-4">
-                <BarChart2 className="h-8 w-8 text-blue-500" />
+              <div className="rounded-sm bg-info/10 p-4">
+                <BarChart2 className="h-8 w-8 text-info" />
               </div>
               <div className="space-y-2">
                 <p className="text-sm font-medium text-foreground">
@@ -164,26 +164,26 @@ export function SubmissionUploadForm({
               <div
                 className={`rounded-lg border-2 border-dashed p-8 text-center transition-all duration-200 ${
                   disabled
-                    ? "scale-[0.98] border-gray-200 bg-gray-50/50"
+                    ? "scale-[0.98] border-border bg-muted/50"
                     : "scale-100 border-border bg-muted/20 shadow-xs hover:border-muted-foreground hover:bg-muted/30"
                 }`}
               >
                 <div className="flex flex-col items-center space-y-4">
                   <div
-                    className={`rounded-full p-4 transition-colors ${
-                      disabled ? "bg-gray-200" : "bg-blue-500/20"
+                    className={`rounded-sm p-4 transition-colors ${
+                      disabled ? "bg-muted" : "bg-info/20"
                     }`}
                   >
                     <Upload
                       className={`h-8 w-8 transition-colors ${
-                        disabled ? "text-gray-400" : "text-blue-500"
+                        disabled ? "text-muted-foreground" : "text-info"
                       }`}
                     />
                   </div>
                   <div className="space-y-2">
                     <p
                       className={`text-sm font-medium ${
-                        disabled ? "text-gray-500" : "text-foreground"
+                        disabled ? "text-muted-foreground" : "text-foreground"
                       }`}
                     >
                       {disabled
@@ -192,7 +192,7 @@ export function SubmissionUploadForm({
                     </p>
                     <p
                       className={`text-xs ${
-                        disabled ? "text-gray-400" : "text-muted-foreground"
+                        disabled ? "text-muted-foreground" : "text-muted-foreground"
                       }`}
                     >
                       {!disabled && "PNG, JPG, GIF up to 10MB"}
@@ -230,28 +230,28 @@ export function SubmissionUploadForm({
               {/* Image preview */}
               {(selectedImage ?? pastedImage) && (
                 <div
-                  className={`mt-4 rounded-lg border p-4 ${isUploading ? "border-blue-500 bg-blue-500/20" : "border-green-500 bg-green-500/20"}`}
+                  className={`mt-4 rounded-lg border p-4 ${isUploading ? "border-info bg-info/20" : "border-success bg-success/20"}`}
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className={`rounded-full p-2 ${isUploading ? "bg-blue-500/30" : "bg-green-500/30"}`}
+                      className={`rounded-sm p-2 ${isUploading ? "bg-info/30" : "bg-success/30"}`}
                     >
                       {isUploading ? (
-                        <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                        <Loader2 className="h-5 w-5 animate-spin text-info" />
                       ) : (
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        <CheckCircle2 className="h-5 w-5 text-success" />
                       )}
                     </div>
                     <div className="flex-1">
                       <p
-                        className={`text-sm font-medium ${isUploading ? "text-blue-500" : "text-green-500"}`}
+                        className={`text-sm font-medium ${isUploading ? "text-info" : "text-success"}`}
                       >
                         {isUploading
                           ? "Uploading image..."
                           : "Image ready to submit"}
                       </p>
                       <p
-                        className={`text-xs ${isUploading ? "text-blue-500/80" : "text-green-500/80"}`}
+                        className={`text-xs ${isUploading ? "text-info/80" : "text-success/80"}`}
                       >
                         {selectedImage ? selectedImage.name : "Pasted image"}
                       </p>
@@ -259,7 +259,7 @@ export function SubmissionUploadForm({
                     <Button
                       onClick={onSubmit}
                       disabled={isUploading}
-                      className="bg-green-500 text-white hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="bg-success text-success-foreground hover:bg-success disabled:cursor-not-allowed disabled:opacity-50"
                       size="sm"
                     >
                       {isUploading ? (

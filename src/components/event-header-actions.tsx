@@ -101,7 +101,7 @@ export function EventHeaderActions({
                 <ClipboardList className="h-4 w-4" />
                 <span>Requests</span>
                 {pendingRegistrationsCount > 0 && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-xs font-medium text-white">
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-sm bg-warning px-1 text-xs font-medium text-warning-foreground">
                     {pendingRegistrationsCount}
                   </span>
                 )}
@@ -207,7 +207,7 @@ export function EventHeaderActions({
           isAdmin ? (
             <Button
               variant="ghost"
-              className="w-full justify-start text-destructive hover:text-destructive"
+              className="w-full justify-start text-danger hover:text-danger"
               onClick={() => setDeleteModalOpen(true)}
             >
               <Trash2 className="mr-2 h-4 w-4" />

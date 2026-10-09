@@ -39,14 +39,14 @@ interface ItemTimelineChartsProps {
 }
 
 const TEAM_COLORS = [
-  "#10b981",
-  "#3b82f6",
-  "#8b5cf6",
-  "#f59e0b",
-  "#ef4444",
-  "#06b6d4",
-  "#ec4899",
-  "#f97316",
+  "#ff981f",
+  "#4fd23c",
+  "#2bc4e8",
+  "#f0584a",
+  "#cf8fe0",
+  "#ffff00",
+  "#d8c9a0",
+  "#8a7550",
 ]
 
 export function ItemTimelineCharts({
@@ -517,13 +517,13 @@ export function ItemTimelineCharts({
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
+                      className={`flex h-8 w-8 items-center justify-center rounded-sm text-sm font-bold ${
                         index === 0
-                          ? "bg-yellow-500 text-white"
+                          ? "bg-warning text-warning-foreground"
                           : index === 1
-                            ? "bg-gray-400 text-white"
+                            ? "bg-muted-foreground text-osrs-parchment"
                             : index === 2
-                              ? "bg-amber-600 text-white"
+                              ? "bg-warning text-warning-foreground"
                               : "bg-primary text-primary-foreground"
                       }`}
                     >

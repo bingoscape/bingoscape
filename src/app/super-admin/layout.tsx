@@ -18,10 +18,10 @@ export default async function SuperAdminLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b">
+      <div className="osrs-panel border-x-0 border-t-0">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold">Super Admin Panel</h1>
+            <h1 className="osrs-heading text-3xl font-bold text-primary">Super Admin Panel</h1>
             <Link href="/">
               <Button variant="outline" size="sm">
                 <Home className="mr-2 h-4 w-4" />

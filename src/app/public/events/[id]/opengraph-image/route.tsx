@@ -20,7 +20,7 @@ export async function GET(
           style={{
             fontSize: 48,
             background:
-              "linear-gradient(135deg, #0f172a 0%, #020617 50%, #0c0a09 100%)",
+              "linear-gradient(135deg, #3e3529 0%, #2b2418 50%, #1c170f 100%)",
             width: "100%",
             height: "100%",
             display: "flex",
@@ -46,7 +46,7 @@ export async function GET(
       <div
         style={{
           background:
-            "linear-gradient(135deg, #0f172a 0%, #020617 50%, #0c0a09 100%)",
+            "linear-gradient(135deg, #3e3529 0%, #2b2418 50%, #1c170f 100%)",
           width: "100%",
           height: "100%",
           display: "flex",
@@ -70,10 +70,10 @@ export async function GET(
               fontSize: 52,
               fontWeight: "bold",
               marginBottom: "20px",
-              color: "#f8fafc",
+              color: "#ff981f",
               display: "flex",
               lineHeight: 1.2,
-              textShadow: "0 2px 4px rgba(0,0,0,0.8)",
+              textShadow: "2px 2px 0 #000",
             }}
           >
             {event.title}
@@ -84,7 +84,7 @@ export async function GET(
               style={{
                 fontSize: 22,
                 marginBottom: "15px",
-                color: "#cbd5e1",
+                color: "#d8c9a0",
                 display: "flex",
                 fontWeight: "500",
               }}
@@ -97,7 +97,7 @@ export async function GET(
             style={{
               fontSize: 20,
               marginBottom: "30px",
-              color: "#e2e8f0",
+              color: "#d8c9a0",
               display: "flex",
               fontWeight: "500",
             }}
@@ -119,7 +119,7 @@ export async function GET(
               <span
                 style={{
                   fontSize: "18px",
-                  color: "#f1f5f9",
+                  color: "#d8c9a0",
                   fontWeight: "600",
                 }}
               >
@@ -133,9 +133,9 @@ export async function GET(
               <span
                 style={{
                   fontSize: "18px",
-                  color: event.minimumBuyIn > 0 ? "#fbbf24" : "#10b981",
+                  color: event.minimumBuyIn > 0 ? "#ffff00" : "#00ff00",
                   fontWeight: "700",
-                  textShadow: "0 1px 2px rgba(0,0,0,0.8)",
+                  textShadow: "1px 1px 0 #000",
                 }}
               >
                 {event.minimumBuyIn > 0
@@ -148,9 +148,9 @@ export async function GET(
               <span
                 style={{
                   fontSize: "18px",
-                  color: event.basePrizePool > 0 ? "#fbbf24" : "#e2e8f0",
+                  color: event.basePrizePool > 0 ? "#ffff00" : "#d8c9a0",
                   fontWeight: "700",
-                  textShadow: "0 1px 2px rgba(0,0,0,0.8)",
+                  textShadow: "1px 1px 0 #000",
                 }}
               >
                 {event.basePrizePool > 0
@@ -163,7 +163,7 @@ export async function GET(
           <div
             style={{
               fontSize: 16,
-              color: "#94a3b8",
+              color: "#b8a77a",
               display: "flex",
               fontWeight: "500",
             }}
@@ -238,15 +238,15 @@ export async function GET(
                           style={{
                             width: `${tileSize}px`,
                             height: `${tileSize}px`,
-                            backgroundColor: "#334155",
-                            border: "1px solid #475569",
+                            backgroundColor: "#4b4132",
+                            border: "1px solid #1c170f",
                             borderRadius: "3px",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             fontSize: `${Math.max(8, tileSize / 12)}px`,
                             fontWeight: "bold",
-                            color: "#f1f5f9",
+                            color: "#d8c9a0",
                             position: "relative",
                             overflow: "hidden",
                           }}
@@ -296,15 +296,15 @@ export async function GET(
                       style={{
                         width: "100px",
                         height: "100px",
-                        backgroundColor: "#334155",
-                        border: "2px solid #475569",
-                        borderRadius: "8px",
+                        backgroundColor: "#4b4132",
+                        border: "2px solid #1c170f",
+                        borderRadius: "2px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         fontSize: "40px",
                         fontWeight: "bold",
-                        color: "#f1f5f9",
+                        color: "#d8c9a0",
                       }}
                     >
                       {letter}
@@ -314,7 +314,7 @@ export async function GET(
                 <div
                   style={{
                     fontSize: "20px",
-                    color: "#94a3b8",
+                    color: "#b8a77a",
                     marginTop: "10px",
                     display: "flex",
                   }}
@@ -339,7 +339,7 @@ export async function GET(
         style={{
           fontSize: 48,
           background:
-            "linear-gradient(135deg, #0f172a 0%, #020617 50%, #0c0a09 100%)",
+            "linear-gradient(135deg, #3e3529 0%, #2b2418 50%, #1c170f 100%)",
           width: "100%",
           height: "100%",
           display: "flex",

@@ -159,7 +159,7 @@ export default function BingoGrid({
         animation: 150,
         swap: true,
         swapClass: "bh-yellow-100",
-        ghostClass: "bg-blue-100",
+        ghostClass: "bg-pending/15",
         onEnd: (event: SortableEvent) => {
           const { oldIndex, newIndex } = event
           if (oldIndex !== newIndex) {

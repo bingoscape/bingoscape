@@ -84,7 +84,7 @@ export function GPInput({
       <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
         <span className="text-sm text-muted-foreground">GP</span>
       </div>
-      {error && <p className="mt-1 text-sm text-destructive">{error}</p>}
+      {error && <p className="mt-1 text-sm text-danger">{error}</p>}
     </div>
   )
 }

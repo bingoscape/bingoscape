@@ -9,7 +9,7 @@ export function GameTypeBadge({ gameType, className }: GameTypeBadgeProps) {
   const isOSRS = gameType === "osrs"
 
   return (
-    <Badge variant={isOSRS ? "default" : "secondary"} className={className}>
+    <Badge variant={isOSRS ? "default" : "info"} className={className}>
       {isOSRS ? "OSRS" : "RS3"}
     </Badge>
   )

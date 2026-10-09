@@ -89,17 +89,17 @@ export const BingoTile = React.memo(function BingoTile({
     const badgeConfig: Record<string, { icon: React.ReactNode, classes: string, text: string }> = {
       approved: {
         icon: <CheckCircle2 className="h-3.5 w-3.5" />,
-        classes: "bg-green-500/15 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/30",
+        classes: "bg-success text-success-foreground",
         text: label || "Completed"
       },
       needs_review: {
         icon: <AlertCircle className="h-3.5 w-3.5" />,
-        classes: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/30",
+        classes: "bg-warning text-warning-foreground",
         text: label || "Changes requested"
       },
       pending: {
         icon: <Clock className="h-3.5 w-3.5" />,
-        classes: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/30",
+        classes: "bg-pending text-pending-foreground",
         text: label || "Pending review"
       }
     };
@@ -108,7 +108,7 @@ export const BingoTile = React.memo(function BingoTile({
     if (!config) return null;
 
     return (
-      <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-solid text-xs font-medium ${config.classes}`}>
+      <div className={`flex items-center gap-1.5 border border-solid border-black px-2 py-0.5 text-xs font-medium rounded-sm ${config.classes}`}>
         {config.icon}
         <span>{config.text}</span>
       </div>
@@ -135,23 +135,25 @@ export const BingoTile = React.memo(function BingoTile({
   const submissionState = getSubmissionState()
 
   const tileClasses = `
-    relative rounded-lg overflow-hidden aspect-square group
-    transition-all duration-300 ease-in-out
+    relative rounded-sm overflow-hidden aspect-square group
+    transition-all duration-150 ease-in-out
     min-h-[60px] sm:min-h-[80px] md:min-h-[100px] lg:min-h-[120px]
     touch-manipulation
     ${tile.isHidden && isLocked ? "bg-transparent" : ""}
-    ${tile.isHidden && !isLocked ? "border-2 border-dashed border-muted-foreground/40 bg-muted/20 cursor-pointer hover:bg-muted/40 hover:border-muted-foreground/60" : ""}
+    ${tile.isHidden && !isLocked ? "osrs-slot border-2 border-dashed border-muted-foreground/50 cursor-pointer hover:border-primary" : ""}
     ${
       !tile.isHidden
         ? `
-      border-2 cursor-pointer transform hover:scale-[1.01] sm:hover:scale-[1.02] lg:hover:scale-[1.05] hover:z-10 hover:shadow-2xl
-      active:scale-[0.98] active:transition-transform active:duration-100
+      osrs-slot border-[3px] cursor-pointer hover:z-10 hover:brightness-110
+      active:brightness-95 active:transition-none
       ${
         completionStatus === "completed"
-          ? "border-green-500 bg-green-50 dark:bg-green-900/20 shadow-green-200/50 hover:shadow-green-300/60"
-          : submissionState
-            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-blue-200/50 hover:border-blue-600 hover:shadow-blue-300/60"
-            : "border-gray-400 bg-gray-100 dark:bg-gray-800/50 dark:border-gray-600 shadow-md hover:border-gray-500"
+          ? "border-success"
+          : submissionState === "needs_review"
+            ? "border-warning"
+            : submissionState
+              ? "border-pending"
+              : ""
       }
     `
         : ""
@@ -201,60 +203,56 @@ export const BingoTile = React.memo(function BingoTile({
                   src={tile.headerImage || getRandomFrog()}
                   alt={tile.title}
                   fill
-                  className={`object-contain transition-all duration-500 ease-in-out group-hover:scale-110 ${
+                  className={`object-contain ${
                     completionStatus === "completed"
-                      ? "saturate-110 brightness-110"
+                      ? "brightness-110"
                       : submissionState
-                        ? "saturate-100 brightness-100"
-                        : "grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100"
+                        ? ""
+                        : "opacity-80 grayscale group-hover:opacity-100 group-hover:grayscale-0"
                   }`}
                 />
               ) : (
                 <div
-                  className={`flex h-full w-full items-center justify-center transition-all duration-300 ${
+                  className={`flex h-full w-full items-center justify-center ${
                     completionStatus === "completed"
-                      ? "bg-green-500 text-white"
-                      : submissionState
-                        ? "bg-blue-500 text-white group-hover:bg-blue-600"
-                        : "bg-gray-400 text-white group-hover:bg-gray-500 dark:bg-gray-600 dark:group-hover:bg-gray-500"
+                      ? "bg-success/30"
+                      : submissionState === "needs_review"
+                        ? "bg-warning/25"
+                        : submissionState
+                          ? "bg-pending/25"
+                          : "bg-secondary"
                   }`}
                 >
-                  <span className="px-2 text-center text-lg font-semibold text-primary-foreground">
+                  <span className="osrs-text-shadow px-2 text-center font-display text-lg font-semibold text-osrs-gold">
                     {tile.title}
                   </span>
                 </div>
               )}
-              {/* Progress indicator overlay - only show on hover with enhanced animations */}
+              {/* Completed check overlay badge (bottom-right, inventory style) */}
               {completionStatus === "completed" && (
-                <div className="absolute inset-0 flex items-center justify-center bg-green-500/15 opacity-0 backdrop-blur-xs transition-all duration-500 group-hover:opacity-100">
-                  <div className="scale-90 transform rounded-full bg-green-500 p-3 text-white shadow-2xl ring-4 ring-green-200 transition-transform duration-300 group-hover:scale-100 dark:ring-green-800">
-                    <span className="border-0 bg-green-500 text-sm font-semibold text-white">
-                      ✓ Complete
-                    </span>
-                  </div>
+                <div
+                  className="absolute right-1 bottom-1 z-10 flex h-6 w-6 items-center justify-center rounded-sm border border-black bg-success text-success-foreground shadow-sm"
+                  title="Completed"
+                >
+                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                 </div>
               )}
               {/* Submission Status Badges */}
               {submissionState === "needs_review" && (
-                <div className="absolute top-2 left-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-yellow-500 text-white shadow-md ring-2 ring-yellow-200 dark:ring-yellow-800" title="Changes Requested">
+                <div className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-sm border border-black bg-warning text-warning-foreground shadow-sm" title="Changes Requested">
                   <span className="text-xs font-bold">!</span>
                 </div>
               )}
               {submissionState === "pending" && (
-                <div className="absolute top-2 left-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-md ring-2 ring-blue-200 dark:ring-blue-800" title="Pending Review">
-                  <span className="text-xs font-bold">⏳</span>
+                <div className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-sm border border-black bg-pending text-pending-foreground shadow-sm" title="Pending Review">
+                  <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                 </div>
               )}
 
-              {/* XP indicator - simple and clean */}
-              <div className="absolute bottom-2 right-2 z-10 rounded border border-border bg-background/90 px-2 py-1 shadow-xs">
-                <div className="flex items-center gap-1">
-                  <Zap className="h-3 w-3 text-amber-500" />
-                  <span className="text-xs font-medium text-foreground">
-                    {tile.weight}
-                  </span>
-                </div>
-              </div>
+              {/* Tile weight shown like an item quantity */}
+              <span className="osrs-qty absolute left-1 top-1 z-10 text-sm">
+                {tile.weight}
+              </span>
 
               {/* Loading overlay */}
               {isLoading && (
@@ -265,7 +263,7 @@ export const BingoTile = React.memo(function BingoTile({
             </>
           )}
           {tile.isHidden && !isLocked && isManagement && (
-            <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+            <div className="absolute inset-0 flex items-center justify-center text-center text-sm text-muted-foreground">
               Click to reveal
             </div>
           )}
@@ -282,8 +280,8 @@ export const BingoTile = React.memo(function BingoTile({
               <h4 className="flex-1 wrap-break-word text-base font-semibold leading-tight">
                 {tile.title}
               </h4>
-              <div className="flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-1 dark:bg-amber-900/30">
-                <Zap className="h-3.5 w-3.5 text-amber-500" />
+              <div className="flex shrink-0 items-center gap-1 rounded-sm border border-black bg-secondary px-2 py-0.5">
+                <Zap className="h-3.5 w-3.5 text-primary" />
                 <span className="text-xs font-medium">{tile.weight} XP</span>
               </div>
             </div>
@@ -306,7 +304,7 @@ export const BingoTile = React.memo(function BingoTile({
             )}
 
             {tile.description && (
-              <div className="prose prose-sm max-w-none text-sm text-muted-foreground dark:prose-invert">
+              <div className="prose prose-sm max-w-none text-sm text-muted-foreground">
                 <Markdown
                   components={{
                     p: ({ children }) => (
@@ -401,7 +399,7 @@ export const BingoTile = React.memo(function BingoTile({
             )}
 
             {tile.isHidden && (
-              <div className="mt-2 flex items-center gap-1.5 rounded bg-secondary p-1.5 text-xs">
+              <div className="mt-2 flex items-center gap-1.5 rounded-sm bg-secondary p-1.5 text-xs">
                 <EyeOff className="h-3.5 w-3.5" />
                 <span className="font-medium">Hidden tile</span>
               </div>

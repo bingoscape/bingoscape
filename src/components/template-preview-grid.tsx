@@ -125,8 +125,8 @@ export function TemplatePreviewGrid({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <h4 className="font-semibold">{tile.title}</h4>
-                  <div className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 dark:bg-amber-900/30">
-                    <Zap className="h-3.5 w-3.5 text-amber-500" />
+                  <div className="flex items-center gap-1 rounded-sm bg-warning/20 px-2 py-1">
+                    <Zap className="h-3.5 w-3.5 text-warning" />
                     <span className="text-xs font-medium">
                       {tile.weight} XP
                     </span>

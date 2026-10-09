@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { calculateEventPrizePool } from "@/app/actions/events"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import { DollarSign, Trophy, Users, Heart, Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface PrizePoolData {
   basePrizePool: number
@@ -46,7 +47,7 @@ export function PrizePoolBreakdown({
       <Card className={className}>
         <CardContent className="p-4">
           <div className="flex h-20 items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin" />
+            <Loader2 aria-hidden="true" className="h-6 w-6 animate-spin" />
           </div>
         </CardContent>
       </Card>
@@ -69,22 +70,18 @@ export function PrizePoolBreakdown({
     prizePoolData
 
   return (
-    <Card
-      className={`${className} border-amber-200 bg-linear-to-br from-amber-50/50 to-yellow-50/30 dark:border-amber-800 dark:from-amber-950/20 dark:to-yellow-950/10`}
-    >
+    <Card className={cn("border-primary/40", className)}>
       <CardContent className="p-6">
         {/* Total Prize Pool - More Prominent */}
         <div className="mb-6 text-center">
           <div className="mb-2 flex items-center justify-center gap-2">
-            <Trophy className="h-6 w-6 text-amber-500" />
-            <h3 className="text-lg font-semibold text-amber-700 dark:text-amber-300">
-              Prize Pool
-            </h3>
+            <Trophy aria-hidden="true" className="h-6 w-6 text-primary" />
+            <h3 className="osrs-heading text-lg font-semibold">Prize Pool</h3>
           </div>
-          <div className="mb-1 text-3xl font-bold text-amber-600 dark:text-amber-400">
+          <div className="osrs-panel-inset mx-auto mb-1 w-fit px-4 py-1 font-display text-3xl font-bold text-primary">
             {formatRunescapeGold(totalPrizePool)} GP
           </div>
-          <div className="text-sm text-amber-600/70 dark:text-amber-400/70">
+          <div className="text-sm text-muted-foreground">
             Total Available
           </div>
         </div>
@@ -92,10 +89,10 @@ export function PrizePoolBreakdown({
         {/* Enhanced Breakdown with Progress Bars */}
         <div className="grid grid-cols-3 gap-4 text-center">
           <div className="space-y-2">
-            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/20">
-              <DollarSign className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <div className="osrs-slot mx-auto flex h-8 w-8 items-center justify-center rounded-sm">
+              <DollarSign aria-hidden="true" className="h-4 w-4 text-pending" />
             </div>
-            <div className="text-xs font-medium text-blue-600 dark:text-blue-400">
+            <div className="text-xs font-medium text-pending">
               Base
             </div>
             <div className="text-sm font-bold">
@@ -110,11 +107,11 @@ export function PrizePoolBreakdown({
           </div>
 
           <div className="space-y-2">
-            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-green-500/20">
-              <Users className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <div className="osrs-slot mx-auto flex h-8 w-8 items-center justify-center rounded-sm">
+              <Users aria-hidden="true" className="h-4 w-4 text-success" />
             </div>
-            <div className="text-xs font-medium text-green-600 dark:text-green-400">
-              Buy-ins
+            <div className="text-xs font-medium text-success">
+              Buy-Ins
             </div>
             <div className="text-sm font-bold">
               {formatRunescapeGold(totalBuyIns)}
@@ -128,10 +125,10 @@ export function PrizePoolBreakdown({
           </div>
 
           <div className="space-y-2">
-            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-red-500/20">
-              <Heart className="h-4 w-4 text-red-600 dark:text-red-400" />
+            <div className="osrs-slot mx-auto flex h-8 w-8 items-center justify-center rounded-sm">
+              <Heart aria-hidden="true" className="h-4 w-4 text-danger" />
             </div>
-            <div className="text-xs font-medium text-red-600 dark:text-red-400">
+            <div className="text-xs font-medium text-danger">
               Donations
             </div>
             <div className="text-sm font-bold">
@@ -148,7 +145,7 @@ export function PrizePoolBreakdown({
 
         {/* Growth Summary */}
         {(totalBuyIns > 0 || totalDonations > 0) && (
-          <div className="border-t pt-2 text-center text-xs text-muted-foreground">
+          <div className="mt-4 border-t pt-2 text-center text-xs text-muted-foreground">
             +{formatRunescapeGold(totalBuyIns + totalDonations)} GP from
             participants
           </div>

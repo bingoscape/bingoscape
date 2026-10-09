@@ -277,7 +277,7 @@ export function CreateEventModal({
         </DialogHeader>
 
         {/* Progress bar */}
-        <div className="relative my-4 h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div className="relative my-4 h-2 w-full overflow-hidden rounded-sm bg-muted">
           <motion.div
             className="h-full bg-primary"
             initial={{ width: "25%" }}
@@ -302,7 +302,7 @@ export function CreateEventModal({
                 <div className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="title">
-                      Event Title <span className="text-destructive">*</span>
+                      Event Title <span className="text-danger">*</span>
                     </Label>
                     <Input
                       id="title"
@@ -313,7 +313,7 @@ export function CreateEventModal({
                       className={cn(errors.title && "border-destructive")}
                     />
                     {errors.title && (
-                      <p className="text-sm text-destructive">{errors.title}</p>
+                      <p className="text-sm text-danger">{errors.title}</p>
                     )}
                   </div>
 
@@ -332,7 +332,7 @@ export function CreateEventModal({
 
                   <div className="space-y-3">
                     <Label>
-                      Game Type <span className="text-destructive">*</span>
+                      Game Type <span className="text-danger">*</span>
                     </Label>
                     <div className="grid grid-cols-2 gap-4">
                       <motion.div
@@ -421,7 +421,7 @@ export function CreateEventModal({
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>
-                        Start Date <span className="text-destructive">*</span>
+                        Start Date <span className="text-danger">*</span>
                       </Label>
                       <DateTimePicker
                         date={startDate}
@@ -432,7 +432,7 @@ export function CreateEventModal({
                     </div>
                     <div className="space-y-2">
                       <Label>
-                        End Date <span className="text-destructive">*</span>
+                        End Date <span className="text-danger">*</span>
                       </Label>
                       <DateTimePicker
                         date={endDate}
@@ -463,7 +463,7 @@ export function CreateEventModal({
                       error={errors.registrationDeadline}
                     />
                     {errors.registrationDeadline && (
-                      <p className="text-sm text-destructive">
+                      <p className="text-sm text-danger">
                         {errors.registrationDeadline}
                       </p>
                     )}
@@ -566,7 +566,7 @@ export function CreateEventModal({
                         <p className="mb-1 text-xs text-muted-foreground">
                           Buy-In
                         </p>
-                        <p className="flex items-center gap-1 font-medium text-yellow-500">
+                        <p className="flex items-center gap-1 font-medium text-warning">
                           {minimumBuyIn.toLocaleString()} GP
                         </p>
                       </div>

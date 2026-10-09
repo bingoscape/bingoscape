@@ -54,8 +54,8 @@ export function SubmissionCommentDisplay({
           aria-label="Review comments"
         >
           <div className="mb-3 flex items-center gap-2">
-            <MessageCircle className="h-4 w-4 text-gray-600" />
-            <span className="text-sm font-medium text-gray-700">
+            <MessageCircle className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground">
               Review Comment{comments.length > 1 ? "s" : ""}
             </span>
           </div>
@@ -67,19 +67,19 @@ export function SubmissionCommentDisplay({
                   {comment.comment}
                 </div>
                 <div className="comment-metadata">
-                  <div className="reviewer-avatar flex items-center justify-center text-xs font-medium text-white">
+                  <div className="reviewer-avatar flex items-center justify-center text-xs font-medium text-osrs-parchment">
                     {comment.author.runescapeName?.charAt(0).toUpperCase() ??
                       comment.author.name?.charAt(0).toUpperCase() ?? (
                         <User className="h-3 w-3" />
                       )}
                   </div>
-                  <span className="text-xs font-medium text-gray-500">
+                  <span className="text-xs font-medium text-muted-foreground">
                     {comment.author.runescapeName ??
                       comment.author.name ??
                       "Unknown User"}
                   </span>
-                  <span className="text-xs text-gray-400">•</span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-muted-foreground">•</span>
+                  <span className="text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(comment.createdAt), {
                       addSuffix: true,
                     })}

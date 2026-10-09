@@ -306,7 +306,7 @@ export function StatsDialog({
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Trophy className="h-5 w-5 text-amber-500" />
+                      <Trophy className="h-5 w-5 text-warning" />
                       Team XP Leaderboard
                     </CardTitle>
                     <CardDescription>
@@ -390,7 +390,7 @@ export function StatsDialog({
                       <Card key={team.teamId} className="flex flex-col">
                         <CardHeader className="items-center pb-0">
                           <CardTitle className="flex items-center gap-2 text-base">
-                            <Award className="h-4 w-4 text-amber-500" />
+                            <Award className="h-4 w-4 text-warning" />
                             {team.teamName} MVPs
                           </CardTitle>
                           <CardDescription>
@@ -485,7 +485,7 @@ export function StatsDialog({
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-green-500" />
+                      <TrendingUp className="h-5 w-5 text-success" />
                       Team Efficiency
                     </CardTitle>
                     <CardDescription>
@@ -555,7 +555,7 @@ export function StatsDialog({
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Grid className="h-5 w-5 text-purple-500" />
+                      <Grid className="h-5 w-5 text-chart-5" />
                       Most Completed Tiles
                     </CardTitle>
                     <CardDescription>
@@ -633,7 +633,7 @@ export function StatsDialog({
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5 text-blue-500" />
+                      <Calendar className="h-5 w-5 text-info" />
                       Activity Timeline
                     </CardTitle>
                     <CardDescription>
@@ -696,7 +696,7 @@ export function StatsDialog({
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <BarChart2 className="h-5 w-5 text-orange-500" />
+                      <BarChart2 className="h-5 w-5 text-warning" />
                       Submission Status
                     </CardTitle>
                     <CardDescription>
@@ -761,7 +761,7 @@ export function StatsDialog({
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-amber-500" />
+                        <Sparkles className="h-5 w-5 text-warning" />
                         Pattern Bonuses
                       </CardTitle>
                     </CardHeader>

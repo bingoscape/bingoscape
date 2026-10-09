@@ -111,26 +111,26 @@ export function TileDetailsDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="modal-content flex h-[90vh] w-[95vw] max-w-[1400px] flex-col overflow-hidden border-border bg-background">
+      <DialogContent className="modal-content flex h-[90vh] w-[95vw] max-w-[1400px] flex-col overflow-hidden border-border">
         <DialogHeader className="border-b border-border pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <DialogTitle className="text-2xl font-bold text-foreground">
+              <DialogTitle className="osrs-heading text-2xl font-bold text-foreground">
                 {selectedTile?.title}
               </DialogTitle>
-              <div className="flex items-center gap-2 rounded-full border border-yellow-500/30 bg-linear-to-r from-yellow-500/20 to-yellow-600/20 px-3 py-1.5">
-                <Zap className="h-4 w-4 text-yellow-500" />
-                <span className="font-semibold text-yellow-500">
+              <div className="flex items-center gap-2 osrs-panel-inset rounded-sm px-3 py-1.5">
+                <Zap className="h-4 w-4 text-warning" />
+                <span className="font-semibold text-warning">
                   {selectedTile?.weight} XP
                 </span>
               </div>
               {currentTeamSubmission && (
-                <div className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium ${
+                <div className={`osrs-panel-inset flex items-center gap-2 rounded-sm px-3 py-1.5 text-sm font-medium ${
                   currentTeamSubmission.status === 'completed' 
-                    ? 'border-green-500/30 bg-green-500/10 text-green-600' 
+                    ? 'text-success' 
                     : currentTeamSubmission.status === 'needs_attention'
-                      ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-600'
-                      : 'border-blue-500/30 bg-blue-500/10 text-blue-600'
+                      ? 'text-warning'
+                      : 'text-pending'
                 }`}>
                   {currentTeamSubmission.status === 'completed' ? 'Completed' : 
                    currentTeamSubmission.status === 'needs_attention' ? 'Needs Attention' : 'In Progress'}
@@ -143,34 +143,34 @@ export function TileDetailsDialog({
           </DialogDescription>
         </DialogHeader>
         <Tabs defaultValue="details" className="flex flex-1 flex-col min-h-0">
-          <TabsList className="mb-4 grid h-14 w-full grid-cols-3 rounded-lg border border-border bg-muted/50 p-1 shrink-0">
+          <TabsList className="mb-4 grid h-14 w-full shrink-0 grid-cols-3">
             <TabsTrigger
               value="details"
-              className="rounded-md font-medium text-muted-foreground transition-all duration-200 hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
+              className="font-medium"
             >
               <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                <div className="h-2 w-2 rounded-sm bg-pending"></div>
                 <span>Tile Details</span>
               </div>
             </TabsTrigger>
             <TabsTrigger
               value="goals"
-              className="rounded-md font-medium text-muted-foreground transition-all duration-200 hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
+              className="font-medium"
             >
               <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                <div className="h-2 w-2 rounded-sm bg-success"></div>
                 <span>Goals</span>
               </div>
             </TabsTrigger>
             <TabsTrigger
               value="submissions"
-              className="rounded-md font-medium text-muted-foreground transition-all duration-200 hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
+              className="font-medium"
             >
               <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-purple-500"></div>
+                <div className="h-2 w-2 rounded-sm bg-info"></div>
                 <span>Submissions</span>
                 {pendingCount > 0 && (
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-700">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-sm bg-info/15 text-xs font-medium text-info">
                     {pendingCount}
                   </span>
                 )}

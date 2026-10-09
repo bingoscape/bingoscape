@@ -190,7 +190,7 @@ export function ClanInvitesManagement({ clanId }: ClanInvitesManagementProps) {
         return <Badge variant="secondary">Expiring Soon</Badge>
       }
     }
-    return <Badge className="bg-green-600">Active</Badge>
+    return <Badge className="bg-success">Active</Badge>
   }
 
   const formatExpiration = (expiresAt: Date | null) => {
@@ -344,7 +344,7 @@ export function ClanInvitesManagement({ clanId }: ClanInvitesManagementProps) {
                     )}
                     <DropdownMenuItem
                       onClick={() => handleDelete(invite.id)}
-                      className="text-destructive"
+                      className="text-danger"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete

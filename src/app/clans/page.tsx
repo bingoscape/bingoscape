@@ -34,7 +34,7 @@ export default async function ClansPage() {
         <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
           <div className="relative mb-8">
             <div className="absolute inset-0 rounded-full bg-linear-to-r from-primary/20 to-accent/20 blur-2xl" />
-            <div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-linear-to-br from-primary/10 to-accent/10">
+            <div className="relative flex h-32 w-32 items-center justify-center rounded-sm bg-linear-to-br from-primary/10 to-accent/10">
               <Users className="h-16 w-16 text-primary" />
             </div>
           </div>
@@ -63,7 +63,7 @@ export default async function ClansPage() {
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-primary/10 to-accent/10">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-linear-to-br from-primary/10 to-accent/10">
                       <BowArrow className="h-6 w-6 text-primary" />
                     </div>
                     <div>
@@ -90,7 +90,7 @@ export default async function ClansPage() {
 
                 <div className="grid grid-cols-1 gap-3">
                   <div className="flex items-center space-x-2 rounded-lg bg-secondary/30 p-2">
-                    <Crown className="h-4 w-4 text-yellow-600" />
+                    <Crown className="h-4 w-4 text-warning" />
                     <span className="text-sm font-medium text-muted-foreground">
                       Owner:
                     </span>
@@ -110,7 +110,7 @@ export default async function ClansPage() {
 
                   <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-2">
                     <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4 text-blue-600" />
+                      <Users className="h-4 w-4 text-info" />
                       <span className="text-sm font-medium text-muted-foreground">
                         Members:
                       </span>

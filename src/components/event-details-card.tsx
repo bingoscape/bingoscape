@@ -24,7 +24,7 @@ export async function EventDetailsCard({ eventId }: { eventId: string }) {
 
   return (
     <div className="mb-8" role="region" aria-label="Event Details">
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-lg border bg-muted/30 px-4 py-3 text-sm">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 osrs-panel rounded-sm px-4 py-3 text-sm">
         {/* Time Info */}
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
           <EventTimeDisplay
@@ -42,28 +42,28 @@ export async function EventDetailsCard({ eventId }: { eventId: string }) {
         </div>
 
         {/* Divider */}
-        <div className="hidden h-5 w-px bg-border sm:block" />
+        <div className="hidden h-5 w-0.5 bg-border sm:block" />
 
         {/* Stats & Status */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1.5 font-medium">
-            <Trophy className="h-4 w-4 text-primary" />
+            <Trophy aria-hidden="true" className="h-4 w-4 text-primary" />
             <PrizePoolDisplay prizePool={prizePool} />
           </div>
           
           {event.minimumBuyIn && (
             <div className="flex items-center gap-1.5 font-medium text-muted-foreground">
-              <Coins className="h-4 w-4" />
+              <Coins aria-hidden="true" className="h-4 w-4" />
               {formatRunescapeGold(event.minimumBuyIn)} GP
             </div>
           )}
           
           {event.registrationDeadline && (
             <Badge
-              variant={registrationStatus.isOpen ? "outline" : "secondary"}
-              className="px-2 py-0.5 text-xs bg-background"
+              variant={registrationStatus.isOpen ? "success" : "destructive"}
+              className="px-2 py-0.5 text-xs"
             >
-              <Users className="mr-1.5 h-3.5 w-3.5" />
+              <Users aria-hidden="true" className="mr-1.5 h-3.5 w-3.5" />
               Reg {registrationStatus.isOpen ? "Open" : "Closed"}
             </Badge>
           )}
@@ -73,7 +73,7 @@ export async function EventDetailsCard({ eventId }: { eventId: string }) {
       {event.locked && (
         <AlertBanner
           message="Registrations are locked for this event."
-          icon={<Lock className="mr-3 h-5 w-5" />}
+          icon={<Lock aria-hidden="true" className="mr-3 h-5 w-5" />}
           className="mt-4"
         />
       )}

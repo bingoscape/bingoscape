@@ -235,7 +235,7 @@ export default async function PublicEventPage(props: {
         {event.description && (
           <div className="mx-auto mb-8 max-w-3xl">
             <details className="group [&_summary::-webkit-details-marker]:hidden">
-              <summary className="flex cursor-pointer items-center justify-between gap-1.5 rounded-lg bg-muted p-4 text-gray-900 dark:text-white">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 rounded-lg bg-muted p-4 text-foreground ">
                 <div className="flex items-center gap-2">
                   <Info className="h-5 w-5" />
                   <h2 className="font-medium">About This Event</h2>
@@ -256,7 +256,7 @@ export default async function PublicEventPage(props: {
                 </svg>
               </summary>
 
-              <div className="mt-4 px-4 leading-relaxed text-gray-700 dark:text-gray-200">
+              <div className="mt-4 px-4 leading-relaxed text-foreground ">
                 <p>{event.description}</p>
               </div>
             </details>

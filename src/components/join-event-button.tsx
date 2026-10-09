@@ -115,7 +115,7 @@ export function JoinEventButton({
   if (!registrationStatus.isOpen) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-destructive">{registrationStatus.reason}</p>
+        <p className="text-sm text-danger">{registrationStatus.reason}</p>
         {registrationStatus.canOverride && (
           <Button
             onClick={() => handleJoinEvent(true)}

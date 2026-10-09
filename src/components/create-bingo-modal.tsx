@@ -202,7 +202,7 @@ export function CreateBingoModal({
         </DialogHeader>
 
         {/* Progress bar */}
-        <div className="relative my-2 h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div className="relative my-2 h-2 w-full overflow-hidden rounded-sm bg-muted">
           <motion.div
             className="h-full bg-primary"
             initial={{ width: "25%" }}
@@ -212,7 +212,7 @@ export function CreateBingoModal({
         </div>
 
         {error && (
-          <div className="mb-4 rounded border border-red-400 bg-red-100 px-4 py-2 text-sm text-red-700">
+          <div className="mb-4 rounded border border-destructive bg-destructive/10 px-4 py-2 text-sm text-danger">
             {error}
           </div>
         )}
@@ -233,7 +233,7 @@ export function CreateBingoModal({
                 <div className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="title">
-                      Board Title <span className="text-destructive">*</span>
+                      Board Title <span className="text-danger">*</span>
                     </Label>
                     <Input
                       id="title"
@@ -246,7 +246,7 @@ export function CreateBingoModal({
                   <div className="space-y-2">
                     <Label htmlFor="codephrase">
                       Secret Codephrase{" "}
-                      <span className="text-destructive">*</span>
+                      <span className="text-danger">*</span>
                     </Label>
                     <div className="flex gap-2">
                       <Input

@@ -181,7 +181,7 @@ export function EventBingosClient({
 
       {visibleBingos.length === 0 ? (
         <div className="py-12 text-center">
-          <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-muted">
+          <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-sm bg-muted">
             <ListFilter className="h-12 w-12 text-muted-foreground" />
           </div>
           <h3 className="mb-2 text-lg font-semibold">
@@ -211,9 +211,9 @@ export function EventBingosClient({
                       ) || 0}
                       %
                     </span>
-                    <div className="h-2 w-16 overflow-hidden rounded-full bg-muted">
+                    <div className="h-2 w-16 overflow-hidden rounded-sm bg-muted">
                       <div
-                        className="h-full bg-linear-to-r from-green-500 to-green-600 transition-all duration-300"
+                        className="h-full bg-linear-to-r from-success to-success transition-all duration-300"
                         style={{
                           width: `${Math.round((currentBingoStats!.completed / currentBingoStats!.total) * 100) || 0}%`,
                         }}
@@ -230,23 +230,23 @@ export function EventBingosClient({
                 {effectiveTeamId && (
                   <div className="mt-3 flex items-center gap-4 text-xs">
                     <div className="flex items-center gap-1">
-                      <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                      <span className="font-medium text-green-600 dark:text-green-400">
+                      <div className="h-2 w-2 rounded-full bg-success"></div>
+                      <span className="font-medium text-success ">
                         {currentBingoStats!.completed} completed
                       </span>
                     </div>
                     {currentBingoStats!.pending > 0 && (
                       <div className="flex items-center gap-1">
-                        <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                        <span className="font-medium text-blue-600 dark:text-blue-400">
+                        <div className="h-2 w-2 rounded-full bg-info"></div>
+                        <span className="font-medium text-info ">
                           {currentBingoStats!.pending} pending
                         </span>
                       </div>
                     )}
                     {currentBingoStats!.needsReview > 0 && (
                       <div className="flex items-center gap-1">
-                        <div className="h-2 w-2 rounded-full bg-yellow-500"></div>
-                        <span className="font-medium text-yellow-600 dark:text-yellow-400">
+                        <div className="h-2 w-2 rounded-full bg-warning"></div>
+                        <span className="font-medium text-warning ">
                           {currentBingoStats!.needsReview} review
                         </span>
                       </div>
@@ -299,7 +299,7 @@ export function EventBingosClient({
           <CardContent className="relative p-4">
             {isUpcoming && !isAdminOrManagement ? (
               <div className="flex min-h-[300px] flex-col items-center justify-center rounded-lg border border-muted/40 bg-muted/20 p-12 text-center">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-sm bg-muted">
                   <Lock className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <h3 className="mb-2 text-xl font-bold">Board Locked</h3>
@@ -320,7 +320,7 @@ export function EventBingosClient({
             ) : (
               <div className="relative rounded-lg border border-muted/40 bg-muted/20 p-2">
                 {isUpcoming && isAdminOrManagement && (
-                  <div className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-full border border-white/20 bg-black/80 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-xs">
+                  <div className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-sm border border-border/20 bg-osrs-black/80 px-3 py-1.5 text-xs font-bold text-osrs-parchment backdrop-blur-xs">
                     <Lock className="h-3 w-3" />
                     Upcoming (Locked)
                   </div>

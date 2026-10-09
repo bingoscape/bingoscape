@@ -59,14 +59,14 @@ const AnimatedProgress = React.forwardRef<
       <div
         ref={ref}
         className={cn(
-          "relative h-2 w-full overflow-hidden rounded-full bg-secondary",
+          "osrs-panel-inset relative h-2 w-full overflow-hidden rounded-none",
           className
         )}
         {...props}
       >
         <div
           className={cn(
-            "h-full w-full flex-1 bg-primary transition-all duration-300 ease-out",
+            "h-full w-full flex-1 bg-success shadow-[inset_0_1px_0_rgb(255_255_255/0.35)] transition-all duration-300 ease-out",
             indicatorClassName
           )}
           style={{ transform: `translateX(-${100 - animatedValue}%)` }}

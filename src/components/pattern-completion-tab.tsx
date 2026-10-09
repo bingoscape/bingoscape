@@ -186,7 +186,7 @@ export function PatternCompletionTab({ data }: PatternCompletionTabProps) {
                                     <div className="text-muted-foreground">
                                       Rows
                                     </div>
-                                    <div className="text-lg font-semibold text-green-600">
+                                    <div className="text-lg font-semibold text-success">
                                       {teamData.patterns.completedRows.length}
                                     </div>
                                   </div>
@@ -194,7 +194,7 @@ export function PatternCompletionTab({ data }: PatternCompletionTabProps) {
                                     <div className="text-muted-foreground">
                                       Columns
                                     </div>
-                                    <div className="text-lg font-semibold text-blue-600">
+                                    <div className="text-lg font-semibold text-info">
                                       {
                                         teamData.patterns.completedColumns
                                           .length
@@ -206,7 +206,7 @@ export function PatternCompletionTab({ data }: PatternCompletionTabProps) {
                                       <div className="text-muted-foreground">
                                         Diagonals
                                       </div>
-                                      <div className="text-lg font-semibold text-purple-600">
+                                      <div className="text-lg font-semibold text-chart-5">
                                         {(teamData.patterns.mainDiagonal
                                           ? 1
                                           : 0) +
@@ -220,7 +220,7 @@ export function PatternCompletionTab({ data }: PatternCompletionTabProps) {
                                     <div className="text-muted-foreground">
                                       Full Board
                                     </div>
-                                    <div className="text-lg font-semibold text-amber-600">
+                                    <div className="text-lg font-semibold text-warning">
                                       {teamData.patterns.completeBoard
                                         ? "Yes"
                                         : "No"}

@@ -5,23 +5,20 @@
 @plugin 'tailwindcss-animate';
 @plugin '@tailwindcss/typography';
 
-@custom-variant dark (&:is(.dark *));
+/*
+  Dark variant. `.parchment` / `.osrs-tooltip` are scoped light surfaces;
+  `dark:` utilities must not apply inside it even when the page is dark.
+*/
+@custom-variant dark (
+  &:is(.dark *):not(:is(.parchment, .parchment *, .osrs-tooltip, .osrs-tooltip *))
+);
 
-@theme {
-  --breakpoint-*: initial;
-  --breakpoint-sm: 640px;
-  --breakpoint-md: 768px;
-  --breakpoint-lg: 1024px;
-  --breakpoint-xl: 1280px;
-  --breakpoint-2xl: 1400px;
-  --breakpoint-3xl: 1536px;
-  --breakpoint-4xl: 1600px;
-  --breakpoint-5xl: 1700px;
-
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
-
+/*
+  Semantic colours. Triplets are defined per theme further down; `inline` makes
+  utilities resolve `hsl(var(--x))` at the element, so scoped surfaces such as
+  `.parchment` and `.osrs-tooltip` can re-define tokens for their subtree.
+*/
+@theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
 
@@ -45,9 +42,20 @@
 
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-danger: hsl(var(--danger));
+
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
+  --color-pending: hsl(var(--pending));
+  --color-pending-foreground: hsl(var(--pending-foreground));
 
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
+  --color-field: hsl(var(--field));
   --color-ring: hsl(var(--ring));
 
   --color-chart-1: hsl(var(--chart-1));
@@ -64,6 +72,302 @@
   --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-pixel), ui-monospace, 'Courier New', monospace;
+}
+
+@theme {
+  --breakpoint-*: initial;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1400px;
+  --breakpoint-3xl: 1536px;
+  --breakpoint-4xl: 1600px;
+  --breakpoint-5xl: 1700px;
+
+  /* Square, chiseled corners everywhere (rounded-full stays round). */
+  --radius-xs: 0px;
+  --radius-sm: 1px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 3px;
+  --radius-2xl: 4px;
+  --radius-3xl: 4px;
+
+  /* Hard pixel shadows instead of soft blurs. */
+  --shadow-2xs: 0 1px 0 rgb(0 0 0 / 0.5);
+  --shadow-xs: 0 1px 0 rgb(0 0 0 / 0.6);
+  --shadow-sm: 1px 1px 0 rgb(0 0 0 / 0.7);
+  --shadow-md: 2px 2px 0 rgb(0 0 0 / 0.7);
+  --shadow-lg: 3px 3px 0 rgb(0 0 0 / 0.7);
+  --shadow-xl: 4px 4px 0 rgb(0 0 0 / 0.7);
+  --shadow-2xl: 5px 5px 0 rgb(0 0 0 / 0.75);
+
+  /* Fixed OSRS interface colours (theme independent). */
+  --color-osrs-black: #000000;
+  --color-osrs-stone-950: #1c170f;
+  --color-osrs-stone-900: #2b2418;
+  --color-osrs-stone-800: #3e3529;
+  --color-osrs-stone-700: #4b4132;
+  --color-osrs-stone-600: #5a4f3f;
+  --color-osrs-stone-500: #6d6350;
+  --color-osrs-parchment: #d8c9a0;
+  --color-osrs-gold: #ff981f;
+  --color-osrs-yellow: #ffff00;
+  --color-osrs-green: #00ff00;
+  --color-osrs-red: #ff0000;
+  --color-osrs-cyan: #00ffff;
+
+  /*
+    Warm palette remap: every raw Tailwind family is re-tinted to the OSRS
+    stone/leather/parchment range, so legacy utilities such as bg-gray-100 or
+    text-green-500 stay on-theme. Prefer semantic tokens in new code.
+  */
+  --color-gray-50: #f7f5f2;
+  --color-gray-100: #efece6;
+  --color-gray-200: #dcd7d0;
+  --color-gray-300: #c6bfb3;
+  --color-gray-400: #aca191;
+  --color-gray-500: #968873;
+  --color-gray-600: #7d715e;
+  --color-gray-700: #665c4d;
+  --color-gray-800: #4e473b;
+  --color-gray-900: #3a342c;
+  --color-gray-950: #231f1a;
+  --color-slate-50: #f7f5f3;
+  --color-slate-100: #efebe6;
+  --color-slate-200: #dbd7d1;
+  --color-slate-300: #c5beb5;
+  --color-slate-400: #aaa092;
+  --color-slate-500: #938776;
+  --color-slate-600: #7b6f60;
+  --color-slate-700: #645b4f;
+  --color-slate-800: #4d463d;
+  --color-slate-900: #39342d;
+  --color-slate-950: #221f1b;
+  --color-zinc-50: #f7f5f3;
+  --color-zinc-100: #efece7;
+  --color-zinc-200: #dad7d2;
+  --color-zinc-300: #c3beb6;
+  --color-zinc-400: #a8a194;
+  --color-zinc-500: #918878;
+  --color-zinc-600: #797163;
+  --color-zinc-700: #625c50;
+  --color-zinc-800: #4c473e;
+  --color-zinc-900: #38342e;
+  --color-zinc-950: #221f1c;
+  --color-neutral-50: #f7f5f3;
+  --color-neutral-100: #eeebe7;
+  --color-neutral-200: #d9d7d3;
+  --color-neutral-300: #c2beb7;
+  --color-neutral-400: #a6a096;
+  --color-neutral-500: #8e877b;
+  --color-neutral-600: #766f65;
+  --color-neutral-700: #605b52;
+  --color-neutral-800: #4a463f;
+  --color-neutral-900: #37342f;
+  --color-neutral-950: #211f1c;
+  --color-stone-50: #f7f5f2;
+  --color-stone-100: #f0ebe5;
+  --color-stone-200: #ddd7d0;
+  --color-stone-300: #c7bdb2;
+  --color-stone-400: #ae9f8f;
+  --color-stone-500: #988671;
+  --color-stone-600: #7f6f5c;
+  --color-stone-700: #685a4b;
+  --color-stone-800: #50463a;
+  --color-stone-900: #3b342b;
+  --color-stone-950: #231f1a;
+  --color-red-50: #f9f1f0;
+  --color-red-100: #f4e3e1;
+  --color-red-200: #efc0bd;
+  --color-red-300: #e69994;
+  --color-red-400: #da6a62;
+  --color-red-500: #d04339;
+  --color-red-600: #b2332a;
+  --color-red-700: #912922;
+  --color-red-800: #70201a;
+  --color-red-900: #531813;
+  --color-red-950: #320e0c;
+  --color-orange-50: #f9f4f0;
+  --color-orange-100: #f4eae1;
+  --color-orange-200: #f7d4b6;
+  --color-orange-300: #f2b988;
+  --color-orange-400: #ec9951;
+  --color-orange-500: #e77e23;
+  --color-orange-600: #c56816;
+  --color-orange-700: #a15412;
+  --color-orange-800: #7c410e;
+  --color-orange-900: #5c300a;
+  --color-orange-950: #371d06;
+  --color-amber-50: #f9f6f0;
+  --color-amber-100: #f4eee1;
+  --color-amber-200: #f9e2b4;
+  --color-amber-300: #f5cf84;
+  --color-amber-400: #f0ba4c;
+  --color-amber-500: #eda71d;
+  --color-amber-600: #cb8d10;
+  --color-amber-700: #a5730d;
+  --color-amber-800: #7f580a;
+  --color-amber-900: #5e4108;
+  --color-amber-950: #392705;
+  --color-yellow-50: #f9f8f0;
+  --color-yellow-100: #f4f1e1;
+  --color-yellow-200: #f9f0b4;
+  --color-yellow-300: #f5e684;
+  --color-yellow-400: #f0db4c;
+  --color-yellow-500: #edd11d;
+  --color-yellow-600: #cbb210;
+  --color-yellow-700: #a5910d;
+  --color-yellow-800: #7f700a;
+  --color-yellow-900: #5e5308;
+  --color-yellow-950: #393205;
+  --color-lime-50: #f6f9f0;
+  --color-lime-100: #ecf4e1;
+  --color-lime-200: #daedc0;
+  --color-lime-300: #c3e198;
+  --color-lime-400: #a7d369;
+  --color-lime-500: #90c841;
+  --color-lime-600: #78aa31;
+  --color-lime-700: #618a28;
+  --color-lime-800: #4b6b1f;
+  --color-lime-900: #384f17;
+  --color-lime-950: #212f0e;
+  --color-green-50: #f0f9f0;
+  --color-green-100: #e1f4e1;
+  --color-green-200: #c2ebc2;
+  --color-green-300: #9cde9c;
+  --color-green-400: #6ecf6e;
+  --color-green-500: #47c247;
+  --color-green-600: #37a437;
+  --color-green-700: #2d862d;
+  --color-green-800: #226722;
+  --color-green-900: #1a4d1a;
+  --color-green-950: #0f2e0f;
+  --color-emerald-50: #f0f9f3;
+  --color-emerald-100: #e1f4e8;
+  --color-emerald-200: #c3ead0;
+  --color-emerald-300: #9dddb2;
+  --color-emerald-400: #70cd8f;
+  --color-emerald-500: #4abf71;
+  --color-emerald-600: #39a25c;
+  --color-emerald-700: #2e844b;
+  --color-emerald-800: #24663a;
+  --color-emerald-900: #1b4b2b;
+  --color-emerald-950: #102d1a;
+  --color-teal-50: #f0f9f8;
+  --color-teal-100: #e1f4f1;
+  --color-teal-200: #c5e7e3;
+  --color-teal-300: #a1d9d1;
+  --color-teal-400: #75c7bc;
+  --color-teal-500: #51b8aa;
+  --color-teal-600: #409c8f;
+  --color-teal-700: #347f75;
+  --color-teal-800: #28625a;
+  --color-teal-900: #1e4843;
+  --color-teal-950: #122b28;
+  --color-cyan-50: #f0f8f9;
+  --color-cyan-100: #e1f1f4;
+  --color-cyan-200: #c0e5ed;
+  --color-cyan-300: #98d5e1;
+  --color-cyan-400: #69c2d3;
+  --color-cyan-500: #41b1c8;
+  --color-cyan-600: #3196aa;
+  --color-cyan-700: #287a8a;
+  --color-cyan-800: #1f5e6b;
+  --color-cyan-900: #17464f;
+  --color-cyan-950: #0e2a2f;
+  --color-sky-50: #f0f6f9;
+  --color-sky-100: #e1eef4;
+  --color-sky-200: #c0deed;
+  --color-sky-300: #98c9e1;
+  --color-sky-400: #69b0d3;
+  --color-sky-500: #419bc8;
+  --color-sky-600: #3182aa;
+  --color-sky-700: #286a8a;
+  --color-sky-800: #1f516b;
+  --color-sky-900: #173c4f;
+  --color-sky-950: #0e242f;
+  --color-blue-50: #f0f4f9;
+  --color-blue-100: #e1eaf4;
+  --color-blue-200: #c2d5eb;
+  --color-blue-300: #9cbade;
+  --color-blue-400: #6e9bcf;
+  --color-blue-500: #4781c2;
+  --color-blue-600: #376aa4;
+  --color-blue-700: #2d5686;
+  --color-blue-800: #224367;
+  --color-blue-900: #1a314d;
+  --color-blue-950: #0f1e2e;
+  --color-indigo-50: #f0f1f9;
+  --color-indigo-100: #e1e4f4;
+  --color-indigo-200: #c7cbe6;
+  --color-indigo-300: #a4aad6;
+  --color-indigo-400: #7983c3;
+  --color-indigo-500: #5662b3;
+  --color-indigo-600: #444f97;
+  --color-indigo-700: #37407b;
+  --color-indigo-800: #2b325f;
+  --color-indigo-900: #202546;
+  --color-indigo-950: #13162a;
+  --color-violet-50: #f4f0f9;
+  --color-violet-100: #e8e2f4;
+  --color-violet-200: #d3c8e4;
+  --color-violet-300: #b7a6d3;
+  --color-violet-400: #957dbf;
+  --color-violet-500: #7a5bae;
+  --color-violet-600: #644893;
+  --color-violet-700: #513b78;
+  --color-violet-800: #3f2d5c;
+  --color-violet-900: #2e2244;
+  --color-violet-950: #1c1429;
+  --color-purple-50: #f7f0f9;
+  --color-purple-100: #eee1f4;
+  --color-purple-200: #dcc8e5;
+  --color-purple-300: #c6a5d5;
+  --color-purple-400: #ac7bc1;
+  --color-purple-500: #9659b1;
+  --color-purple-600: #7d4695;
+  --color-purple-700: #663979;
+  --color-purple-800: #4f2c5e;
+  --color-purple-900: #3a2145;
+  --color-purple-950: #23142a;
+  --color-fuchsia-50: #f9f0f9;
+  --color-fuchsia-100: #f4e1f2;
+  --color-fuchsia-200: #e5c8e2;
+  --color-fuchsia-300: #d5a5d1;
+  --color-fuchsia-400: #c17bbb;
+  --color-fuchsia-500: #b159a9;
+  --color-fuchsia-600: #95468f;
+  --color-fuchsia-700: #793974;
+  --color-fuchsia-800: #5e2c5a;
+  --color-fuchsia-900: #452142;
+  --color-fuchsia-950: #2a1428;
+  --color-pink-50: #f9f0f5;
+  --color-pink-100: #f4e1eb;
+  --color-pink-200: #e9c4d6;
+  --color-pink-300: #db9fbd;
+  --color-pink-400: #ca729e;
+  --color-pink-500: #bc4e85;
+  --color-pink-600: #9f3c6e;
+  --color-pink-700: #813159;
+  --color-pink-800: #642645;
+  --color-pink-900: #4a1c33;
+  --color-pink-950: #2c111f;
+  --color-rose-50: #f9f0f2;
+  --color-rose-100: #f4e1e4;
+  --color-rose-200: #ebc1c8;
+  --color-rose-300: #df9aa6;
+  --color-rose-400: #d06c7d;
+  --color-rose-500: #c4455a;
+  --color-rose-600: #a73548;
+  --color-rose-700: #882b3a;
+  --color-rose-800: #69212d;
+  --color-rose-900: #4e1821;
+  --color-rose-950: #2f0f14;
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
@@ -86,137 +390,334 @@
   }
 }
 
-/*
-  The default border color has changed to `currentcolor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
+/* ------------------------------------------------------------------ */
+/* Theme tokens: parchment (light) and stone (dark, default)           */
+/* ------------------------------------------------------------------ */
 @layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
-  }
-}
-
-@layer base {
-  :root {
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+  :root,
+  .parchment {
+    --background: 40 34% 76%;
+    --foreground: 32 40% 12%;
+    --card: 43 48% 88%;
+    --card-foreground: 32 40% 12%;
+    --popover: 43 48% 88%;
+    --popover-foreground: 32 40% 12%;
+    --primary: 24 90% 27%;
+    --primary-foreground: 43 60% 92%;
+    --secondary: 40 28% 66%;
+    --secondary-foreground: 32 40% 12%;
+    --muted: 40 30% 70%;
+    --muted-foreground: 30 38% 20%;
+    --accent: 40 40% 62%;
+    --accent-foreground: 28 50% 12%;
+    --destructive: 4 70% 36%;
+    --destructive-foreground: 43 60% 94%;
+    --danger: 4 75% 34%;
+    --success: 125 60% 22%;
+    --success-foreground: 43 60% 94%;
+    --warning: 34 100% 26%;
+    --warning-foreground: 43 60% 94%;
+    --info: 200 85% 24%;
+    --info-foreground: 43 60% 94%;
+    --pending: 215 70% 32%;
+    --pending-foreground: 43 60% 94%;
+    --border: 30 28% 22%;
+    --input: 30 28% 22%;
+    --field: 42 40% 92%;
+    --ring: 24 100% 28%;
+    --chart-1: 24 90% 40%;
+    --chart-2: 125 50% 30%;
+    --chart-3: 200 70% 34%;
+    --chart-4: 4 65% 40%;
+    --chart-5: 280 35% 40%;
+    --sidebar-background: 40 34% 72%;
+    --sidebar-foreground: 32 40% 12%;
+    --sidebar-primary: 24 90% 27%;
+    --sidebar-primary-foreground: 43 60% 92%;
+    --sidebar-accent: 40 40% 62%;
+    --sidebar-accent-foreground: 28 50% 12%;
+    --sidebar-border: 30 28% 22%;
+    --sidebar-ring: 24 100% 38%;
+    --bevel-light: #f4ebcf;
+    --bevel-dark: #8a7550;
+    --bevel-edge: #3a2d1b;
+    --title-shadow: 1px 1px 0 rgb(255 255 255 / 0.45);
+    --radius: 2px;
   }
 
   .dark {
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --background: 37 27% 11%;
+    --foreground: 42 38% 86%;
+    --card: 34 20% 20%;
+    --card-foreground: 42 38% 86%;
+    --popover: 34 20% 17%;
+    --popover-foreground: 42 38% 86%;
+    --primary: 33 100% 56%;
+    --primary-foreground: 36 28% 10%;
+    --secondary: 36 18% 30%;
+    --secondary-foreground: 42 38% 90%;
+    --muted: 35 22% 15%;
+    --muted-foreground: 41 22% 66%;
+    --accent: 36 18% 28%;
+    --accent-foreground: 52 100% 75%;
+    --destructive: 4 62% 38%;
+    --destructive-foreground: 42 60% 94%;
+    --danger: 5 100% 72%;
+    --success: 115 65% 52%;
+    --success-foreground: 36 28% 8%;
+    --warning: 44 100% 55%;
+    --warning-foreground: 36 28% 8%;
+    --info: 180 90% 50%;
+    --info-foreground: 36 28% 8%;
+    --pending: 205 85% 62%;
+    --pending-foreground: 36 28% 8%;
+    --border: 32 30% 7%;
+    --input: 32 30% 7%;
+    --field: 33 28% 9%;
+    --ring: 52 100% 50%;
+    --chart-1: 33 100% 56%;
+    --chart-2: 115 65% 52%;
+    --chart-3: 190 85% 55%;
+    --chart-4: 5 85% 62%;
+    --chart-5: 280 60% 70%;
+    --sidebar-background: 36 26% 14%;
+    --sidebar-foreground: 42 38% 86%;
+    --sidebar-primary: 33 100% 56%;
+    --sidebar-primary-foreground: 36 28% 10%;
+    --sidebar-accent: 36 18% 28%;
+    --sidebar-accent-foreground: 52 100% 75%;
+    --sidebar-border: 32 30% 7%;
+    --sidebar-ring: 52 100% 50%;
+    --bevel-light: #6d6350;
+    --bevel-dark: #17120b;
+    --bevel-edge: #000000;
+    --title-shadow: 1px 1px 0 #000;
   }
-}
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+  /* Yellow item-hover box (tooltips, hover cards). Same look in both themes. */
+  .osrs-tooltip,
+  .dark .osrs-tooltip {
+    --background: 60 100% 86%;
+    --foreground: 0 0% 4%;
+    --card: 60 100% 82%;
+    --card-foreground: 0 0% 4%;
+    --popover: 60 100% 82%;
+    --popover-foreground: 0 0% 4%;
+    --primary: 24 90% 26%;
+    --primary-foreground: 60 100% 92%;
+    --secondary: 55 70% 72%;
+    --secondary-foreground: 0 0% 4%;
+    --muted: 55 70% 74%;
+    --muted-foreground: 40 60% 16%;
+    --accent: 55 70% 70%;
+    --accent-foreground: 0 0% 4%;
+    --border: 0 0% 0%;
+    --input: 0 0% 0%;
+    --field: 60 100% 92%;
+    --bevel-light: #ffffd0;
+    --bevel-dark: #b8a64a;
+    --bevel-edge: #000000;
+    --title-shadow: none;
+    background-color: hsl(60 100% 82%);
+    color: hsl(0 0% 4%);
+    border: 1px solid #000;
+    box-shadow:
+      inset 1px 1px 0 #ffffd0,
+      inset -1px -1px 0 #b8a64a,
+      2px 2px 0 rgb(0 0 0 / 0.6);
   }
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-  }
-}
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
 
-@layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    background-image: var(--texture-grain);
+  }
+
+  /* The RuneScape bitmap font has no weight variants; never fake-bold it. */
+  html {
+    font-synthesis-weight: none;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: 0.01em;
+  }
+
+  ::selection {
+    background: #ff981f;
+    color: #1c170f;
+  }
+
+  /* Pixel scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #5a4f3f #1c170f;
+  }
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #1c170f;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #5a4f3f;
+    border: 1px solid #000;
+    box-shadow:
+      inset 1px 1px 0 #6d6350,
+      inset -1px -1px 0 #2b2418;
   }
 }
 
-/* Add hover card animation styles */
+:root {
+  --texture-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.9 0 0 0 -0.25'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+  --texture-leather: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect width='3' height='3' fill='%23000' opacity='.05'/%3E%3Crect x='3' y='3' width='3' height='3' fill='%23fff' opacity='.025'/%3E%3C/svg%3E");
+}
+
+/* ------------------------------------------------------------------ */
+/* Utilities                                                           */
+/* ------------------------------------------------------------------ */
+
+/* Signature 1px black text shadow (use on text over dark/stone surfaces). */
+@utility osrs-text-shadow {
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* Heading style: pixel display face with theme-aware shadow. */
+@utility osrs-heading {
+  font-family: var(--font-display);
+  letter-spacing: 0.01em;
+  text-shadow: var(--title-shadow);
+}
+
+/* Chiseled raised bevel; composes with shadow-* and ring-* utilities. */
+@utility osrs-bevel {
+  --tw-inset-shadow:
+    inset 2px 2px 0 0 var(--bevel-light), inset -2px -2px 0 0 var(--bevel-dark);
+  box-shadow:
+    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
+    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}
+
+/* Sunken bevel (inputs, inventory slots, bar tracks). */
+@utility osrs-bevel-inset {
+  --tw-inset-shadow:
+    inset 2px 2px 0 0 var(--bevel-dark), inset -2px -2px 0 0 var(--bevel-light);
+  box-shadow:
+    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
+    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}
+
+@utility osrs-texture {
+  background-image: var(--texture-grain), var(--texture-leather);
+}
+
+/* Stone/parchment panel. */
+@utility osrs-panel {
+  background-color: hsl(var(--card));
+  background-image: var(--texture-grain), var(--texture-leather);
+  color: hsl(var(--card-foreground));
+  border: 1px solid hsl(var(--border));
+  --tw-inset-shadow:
+    inset 2px 2px 0 0 var(--bevel-light), inset -2px -2px 0 0 var(--bevel-dark);
+  box-shadow:
+    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
+    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}
+
+/* Recessed field (inputs). */
+@utility osrs-panel-inset {
+  background-color: hsl(var(--field));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  --tw-inset-shadow:
+    inset 2px 2px 0 0 var(--bevel-dark), inset -1px -1px 0 0 var(--bevel-light);
+  box-shadow:
+    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
+    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}
+
+/* Inventory slot. */
+@utility osrs-slot {
+  background-color: hsl(var(--field));
+  border: 1px solid hsl(var(--border));
+  --tw-inset-shadow:
+    inset 2px 2px 0 0 var(--bevel-dark), inset -1px -1px 0 0 var(--bevel-light);
+  box-shadow:
+    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
+    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}
+
+/* Item quantity number: yellow, pixel face, shadowed. */
+@utility osrs-qty {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1;
+  color: #ffff00;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* Stone game button (theme independent; orange text). */
+@utility osrs-btn {
+  font-family: var(--font-display);
+  background-color: #4b4132;
+  color: #ff981f;
+  text-shadow: 1px 1px 0 #000;
+  border: 1px solid #000;
+  --tw-inset-shadow: inset 2px 2px 0 0 #6d6350, inset -2px -2px 0 0 #1c170f;
+  box-shadow:
+    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
+    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  &:hover:not(:disabled) {
+    background-color: #5a4f3f;
+    color: #ffff00;
+  }
+  &:active:not(:disabled) {
+    --tw-inset-shadow: inset 2px 2px 0 0 #1c170f, inset -1px -1px 0 0 #6d6350;
+    transform: translateY(1px);
+  }
+}
+
+/* Two-tone etched divider. */
+@utility osrs-divider {
+  height: 2px;
+  border: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--bevel-dark) 50%,
+    var(--bevel-light) 50%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Hover card animation styles (legacy) */
 .hover-card-enter {
   opacity: 0;
   transform: translateY(10px);
 }
-
 .hover-card-enter-active {
   opacity: 1;
   transform: translateY(0);
@@ -224,11 +725,9 @@
     opacity 200ms,
     transform 200ms;
 }
-
 .hover-card-exit {
   opacity: 1;
 }
-
 .hover-card-exit-active {
   opacity: 0;
   transform: translateY(10px);

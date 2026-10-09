@@ -79,12 +79,12 @@ export default async function ProfilePage() {
   return (
     <div className="space-y-8">
       {!data.hasApiKey && (
-        <Alert variant="destructive" className="bg-destructive/10 text-destructive border-destructive/20">
+        <Alert variant="destructive" className="bg-destructive/10 text-danger border-destructive/20">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>No API Key Configured</AlertTitle>
           <AlertDescription className="flex items-center justify-between">
             <span>You need an API key to submit drops via the RuneLite plugin.</span>
-            <Link href="/profile/api-keys" className="font-semibold underline underline-offset-2 hover:text-destructive/80">
+            <Link href="/profile/api-keys" className="font-semibold underline underline-offset-2 hover:text-danger/80">
               Set up your API Key
             </Link>
           </AlertDescription>

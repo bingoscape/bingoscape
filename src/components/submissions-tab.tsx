@@ -189,21 +189,21 @@ export function SubmissionsTab({
     switch (status) {
       case "approved":
         return (
-          <Badge className="border-green-200 bg-green-100 px-3 py-1 text-green-800">
+          <Badge className="border-success bg-success/10 px-3 py-1 text-success">
             <Check className="mr-1 h-3 w-3" />
             Approved
           </Badge>
         )
       case "needs_review":
         return (
-          <Badge className="border-yellow-200 bg-yellow-100 px-3 py-1 text-yellow-800">
+          <Badge className="border-warning bg-warning/10 px-3 py-1 text-warning">
             <AlertTriangle className="mr-1 h-3 w-3" />
             Changes Requested
           </Badge>
         )
       default:
         return (
-          <Badge className="border-blue-200 bg-blue-100 px-3 py-1 text-blue-800">
+          <Badge className="border-info bg-info/10 px-3 py-1 text-info">
             <Clock className="mr-1 h-3 w-3" />
             Pending
           </Badge>
@@ -249,7 +249,7 @@ export function SubmissionsTab({
         title: "Tile Approved",
         description: "The tile and all its submissions have been approved.",
         duration: 3000,
-        className: "bg-green-50 border-green-200 text-green-900",
+        className: "bg-success/10 border-success text-success",
       })
     }
   }
@@ -304,7 +304,7 @@ export function SubmissionsTab({
         title: "Submission Approved",
         description: "The submission has been successfully approved.",
         duration: 3000,
-        className: "bg-green-50 border-green-200 text-green-900",
+        className: "bg-success/10 border-success text-success",
       })
     }
   }
@@ -649,10 +649,10 @@ export function SubmissionsTab({
         )}
 
         {isSubmissionsLocked && (
-          <div className="rounded-lg border border-yellow-500 bg-yellow-500/20 p-4">
+          <div className="rounded-lg border border-warning bg-warning/20 p-4">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-500" />
-              <p className="text-yellow-500">
+              <AlertTriangle className="h-5 w-5 text-warning" />
+              <p className="text-warning">
                 Submissions are currently locked for this bingo board.
               </p>
             </div>
@@ -669,17 +669,17 @@ export function SubmissionsTab({
                     All <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.all}</Badge>
                   </TabsTrigger>
                   <TabsTrigger value="needs_review" className="flex items-center gap-1.5 px-3">
-                    <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />
+                    <AlertTriangle className="h-3.5 w-3.5 text-warning" />
                     <span className="hidden sm:inline">Changes Requested</span>
                     <span className="sm:hidden">Changes</span>
                     <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.needs_review}</Badge>
                   </TabsTrigger>
                   <TabsTrigger value="pending" className="flex items-center gap-1.5 px-3">
-                    <Clock className="h-3.5 w-3.5 text-blue-500" />
+                    <Clock className="h-3.5 w-3.5 text-info" />
                     Pending <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.pending}</Badge>
                   </TabsTrigger>
                   <TabsTrigger value="approved" className="flex items-center gap-1.5 px-3">
-                    <Check className="h-3.5 w-3.5 text-green-500" />
+                    <Check className="h-3.5 w-3.5 text-success" />
                     Approved <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.approved}</Badge>
                   </TabsTrigger>
                 </TabsList>
@@ -694,7 +694,7 @@ export function SubmissionsTab({
                     <Filter className="mr-2 h-4 w-4" />
                     Filters
                     {(boardFilter !== "all" || tileFilter !== "all" || teamFilter !== "all") && (
-                      <Badge variant="secondary" className="ml-2 px-1 rounded-full h-5 min-w-5 flex items-center justify-center">!</Badge>
+                      <Badge variant="secondary" className="ml-2 px-1 rounded-sm h-5 min-w-5 flex items-center justify-center">!</Badge>
                     )}
                   </Button>
                 </div>
@@ -792,7 +792,7 @@ export function SubmissionsTab({
                       <SelectContent>
                         <SelectItem value="all">
                           <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4 text-gray-500" />
+                            <Users className="h-4 w-4 text-muted-foreground" />
                             All Teams
                           </div>
                         </SelectItem>
@@ -904,14 +904,14 @@ export function SubmissionsTab({
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem
-                                  className="text-green-600 focus:bg-green-50 focus:text-green-700 cursor-pointer"
+                                  className="text-success focus:bg-success/10 focus:text-success cursor-pointer"
                                   onClick={() => handleTeamTileSubmissionStatusUpdate(submission.teamTileSubmissionId, "completed")}
                                   disabled={currentTileStatus === "completed"}
                                 >
                                   <Check className="mr-2 h-4 w-4" /> Force Approve Tile
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  className="text-yellow-600 focus:bg-yellow-50 focus:text-yellow-700 cursor-pointer"
+                                  className="text-warning focus:bg-warning/10 focus:text-warning cursor-pointer"
                                   onClick={() => handleTeamTileSubmissionStatusUpdate(submission.teamTileSubmissionId, "needs_attention")}
                                   disabled={currentTileStatus === "needs_attention"}
                                 >
@@ -924,7 +924,7 @@ export function SubmissionsTab({
 
                         {/* High-Res Image Display */}
                         <div 
-                           className="flex-1 min-h-[250px] shrink-0 relative w-full rounded-xl overflow-hidden border border-border shadow-md bg-black/5 flex items-center justify-center cursor-pointer group"
+                           className="flex-1 min-h-[250px] shrink-0 relative w-full rounded-xl overflow-hidden border border-border shadow-md bg-osrs-black/5 flex items-center justify-center cursor-pointer group"
                            onClick={() => onFullSizeImageView(getOptimizedImageUrl(submission.image.path), "Submission")}
                         >
                           <Image
@@ -938,8 +938,8 @@ export function SubmissionsTab({
                         
                         {/* Auto-submission metadata */}
                         {submission.isAutoSubmission && (
-                          <div className="shrink-0 space-y-1 rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/30 grid grid-cols-2 gap-x-4">
-                            <div className="col-span-2 flex items-center gap-1 text-sm font-medium text-blue-700 dark:text-blue-300 mb-1">
+                          <div className="shrink-0 space-y-1 rounded-md border border-info bg-info/10 p-3 grid grid-cols-2 gap-x-4">
+                            <div className="col-span-2 flex items-center gap-1 text-sm font-medium text-info mb-1">
                               <Zap className="h-4 w-4" /> Auto-Submitted
                             </div>
                             {submission.sourceName && (
@@ -967,7 +967,7 @@ export function SubmissionsTab({
 
                           <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-border">
                             <Button
-                              className={`flex-1 min-w-[140px] h-10 ${currentSubmissionStatus !== "approved" ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
+                              className={`flex-1 min-w-[140px] h-10 ${currentSubmissionStatus !== "approved" ? "bg-success hover:bg-success text-success-foreground" : ""}`}
                               variant={currentSubmissionStatus === "approved" ? "secondary" : "default"}
                               onClick={() => handleSubmissionStatusUpdate(submission.id, "approved")}
                               disabled={currentSubmissionStatus === "approved"}
@@ -977,7 +977,7 @@ export function SubmissionsTab({
                             </Button>
 
                             <Button
-                              className={`flex-1 min-w-[140px] h-10 ${currentSubmissionStatus !== "needs_review" ? "bg-yellow-500 hover:bg-yellow-600 text-white" : ""}`}
+                              className={`flex-1 min-w-[140px] h-10 ${currentSubmissionStatus !== "needs_review" ? "bg-warning hover:bg-warning text-warning-foreground" : ""}`}
                               variant={currentSubmissionStatus === "needs_review" ? "secondary" : "default"}
                               onClick={() => handleNeedsReviewClick(submission.id)}
                               disabled={currentSubmissionStatus === "needs_review"}
@@ -988,7 +988,7 @@ export function SubmissionsTab({
 
                             <AlertDialog open={submissionToDelete === submission.id} onOpenChange={(open) => open ? setSubmissionToDelete(submission.id) : setSubmissionToDelete(null)}>
                               <AlertDialogTrigger asChild>
-                                <Button variant="outline" className="h-10 text-destructive hover:bg-destructive/10 border-destructive/20">
+                                <Button variant="outline" className="h-10 text-danger hover:bg-destructive/10 border-destructive/20">
                                   <X className="mr-2 h-4 w-4" /> Delete
                                 </Button>
                               </AlertDialogTrigger>
@@ -1072,7 +1072,7 @@ export function SubmissionsTab({
                         
                         {/* Auto-submission info if applicable */}
                         {submission.isAutoSubmission && (
-                          <div className="text-xs flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                          <div className="text-xs flex items-center gap-1 text-info ">
                              <Zap className="h-3 w-3" /> Auto-submitted
                           </div>
                         )}

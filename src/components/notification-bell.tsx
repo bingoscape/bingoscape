@@ -63,10 +63,15 @@ export function NotificationBell({ userId }: { userId: string }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          aria-label="Notifications"
+        >
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
-            <span className="absolute right-0 top-0 inline-flex -translate-y-1/2 translate-x-1/2 transform items-center justify-center rounded-full bg-red-600 px-2 py-1 text-xs font-bold leading-none text-red-100">
+            <span className="absolute right-0 top-0 inline-flex -translate-y-1/2 translate-x-1/2 transform items-center justify-center rounded-sm border border-black bg-destructive px-1.5 py-1 text-xs font-bold leading-none text-destructive-foreground">
               {unreadCount}
             </span>
           )}
@@ -87,17 +92,17 @@ export function NotificationBell({ userId }: { userId: string }) {
                 key={notification.id}
                 className={`relative m-2 border p-0 ${
                   notification.isRead
-                    ? "bg-muted/20"
-                    : "border-l-4 border-l-blue-500 bg-background shadow-md"
+                    ? "bg-muted/40"
+                    : "border-l-4 border-l-info bg-background shadow-md"
                 }`}
                 onClick={() => handleNotificationClick(notification.id)}
               >
                 {!notification.isRead && (
-                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-blue-500"></span>
+                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-info"></span>
                 )}
                 <div className="flex gap-3 p-3">
                   {/* Tile image placeholder */}
-                  <div className="relative h-24 w-24 shrink-0 border border-[#d9d9d9]">
+                  <div className="relative h-24 w-24 shrink-0 osrs-slot">
                     <Image
                       src={notification.tileImage ?? getRandomFrog()}
                       alt="Tile"

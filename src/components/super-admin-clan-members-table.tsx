@@ -92,13 +92,13 @@ export function SuperAdminClanMembersTable({
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "admin":
-        return "bg-purple-500/10 text-purple-500 border-purple-500/20"
+        return "bg-pending/10 text-pending border-pending/20"
       case "management":
-        return "bg-blue-500/10 text-blue-500 border-blue-500/20"
+        return "bg-info/10 text-info border-info/20"
       case "member":
-        return "bg-green-500/10 text-green-500 border-green-500/20"
+        return "bg-success/10 text-success border-success/20"
       case "guest":
-        return "bg-gray-500/10 text-gray-500 border-gray-500/20"
+        return "bg-muted text-muted-foreground border-border"
       default:
         return ""
     }
@@ -177,7 +177,7 @@ export function SuperAdminClanMembersTable({
         </div>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-sm border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -235,7 +235,7 @@ export function SuperAdminClanMembersTable({
                             {isOwner && (
                               <Badge
                                 variant="outline"
-                                className="border-amber-500/20 bg-amber-500/10 text-amber-600"
+                                className="border-warning/20 bg-warning/10 text-warning"
                               >
                                 <Crown className="mr-1 h-3 w-3" />
                                 Owner

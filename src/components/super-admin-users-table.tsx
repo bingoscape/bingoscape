@@ -83,7 +83,7 @@ export function SuperAdminUsersTable({
         <Button type="submit">Search</Button>
       </form>
 
-      <div className="rounded-md border">
+      <div className="rounded-sm border">
         <Table>
           <TableHeader>
             <TableRow>

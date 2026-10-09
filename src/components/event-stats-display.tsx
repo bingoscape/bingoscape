@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { useToast } from "@/hooks/use-toast"
 import { generateEventMarkdown } from "@/lib/export-markdown"
+import { cn } from "@/lib/utils"
 
 interface EventStatsDisplayProps {
   eventStats: EventStatsData
@@ -65,7 +66,11 @@ export function EventStatsDisplay({
     <div className="space-y-8">
       <div className="flex justify-end">
         <Button variant="outline" onClick={handleExport} className="gap-2">
-          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+          {copied ? (
+            <Check aria-hidden="true" className="h-4 w-4" />
+          ) : (
+            <Copy aria-hidden="true" className="h-4 w-4" />
+          )}
           {copied ? "Copied!" : "Export to Discord"}
         </Button>
       </div>
@@ -75,20 +80,20 @@ export function EventStatsDisplay({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Teams</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users aria-hidden="true" className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{eventTeamPoints.length}</div>
+            <div className="font-display text-2xl font-bold">{eventTeamPoints.length}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bingo Boards</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Boards</CardTitle>
+            <Target aria-hidden="true" className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{bingoSummary.length}</div>
+            <div className="font-display text-2xl font-bold">{bingoSummary.length}</div>
           </CardContent>
         </Card>
 
@@ -97,10 +102,10 @@ export function EventStatsDisplay({
             <CardTitle className="text-sm font-medium">
               Overall Progress
             </CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            <BarChart3 aria-hidden="true" className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="font-display text-2xl font-bold">
               {overallCompletionRate.toFixed(1)}%
             </div>
             <Progress value={overallCompletionRate} className="mt-2" />
@@ -111,10 +116,10 @@ export function EventStatsDisplay({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Submissions</CardTitle>
-              <Target className="h-4 w-4 text-muted-foreground" />
+              <Target aria-hidden="true" className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="font-display text-2xl font-bold">
                 {itemStatistics.totalSubmissions.toLocaleString()}
               </div>
             </CardContent>
@@ -138,34 +143,37 @@ export function EventStatsDisplay({
                 return (
                   <div
                     key={team.teamId}
-                    className="flex flex-col md:flex-row items-start md:items-center justify-between rounded-lg border p-4 gap-4"
+                    className="osrs-slot flex flex-col items-start justify-between gap-4 rounded-sm p-4 md:flex-row md:items-center"
                   >
                     <div className="flex items-center space-x-4 min-w-[200px]">
-                      <div className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${
-                        index === 0 ? "bg-yellow-500 text-white" : 
-                        index === 1 ? "bg-gray-400 text-white" : 
-                        index === 2 ? "bg-amber-600 text-white" : 
-                        "bg-primary text-primary-foreground"
-                      }`}>
+                      <div
+                        className={cn(
+                          "osrs-bevel flex h-8 w-8 items-center justify-center rounded-sm font-display font-bold",
+                          index === 0 && "bg-osrs-gold text-osrs-stone-950",
+                          index === 1 && "bg-[#c0c0c0] text-osrs-stone-950",
+                          index === 2 && "bg-[#cd7f32] text-osrs-stone-950",
+                          index > 2 && "bg-primary text-primary-foreground"
+                        )}
+                      >
                         {index + 1}
                       </div>
                       <div>
-                        <h3 className="font-semibold text-lg">{team.name}</h3>
+                        <h3 className="text-lg font-semibold">{team.name}</h3>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 flex-1 w-full text-sm">
                       <div>
                         <div className="text-muted-foreground">Total XP</div>
-                        <div className="font-bold text-lg">{team.totalXP.toLocaleString()}</div>
+                        <div className="osrs-qty text-lg">{team.totalXP.toLocaleString()}</div>
                         {team.bonusXP !== undefined && team.bonusXP > 0 && (
-                          <div className="text-xs text-amber-600">+{team.bonusXP.toLocaleString()} bonus</div>
+                          <div className="text-xs text-warning">+{team.bonusXP.toLocaleString()} bonus</div>
                         )}
                       </div>
                       
                       <div>
                         <div className="text-muted-foreground">Completion</div>
-                        <div className="font-bold text-lg">
+                        <div className="text-lg font-bold">
                           {totalPossibleEventXP > 0
                             ? `${((team.totalXP / totalPossibleEventXP) * 100).toFixed(1)}%`
                             : "0%"}
@@ -176,13 +184,13 @@ export function EventStatsDisplay({
                         <>
                           <div>
                             <div className="text-muted-foreground">Loot Value</div>
-                            <div className="font-bold text-lg text-green-600 dark:text-green-400">
+                            <div className="font-bold text-lg text-success ">
                               {(teamItemStats.totalValue / 1000000).toFixed(1)}M GP
                             </div>
                           </div>
                           <div>
                             <div className="text-muted-foreground">Submissions</div>
-                            <div className="font-bold text-lg">{teamItemStats.submissionCount}</div>
+                            <div className="text-lg font-bold">{teamItemStats.submissionCount}</div>
                           </div>
                         </>
                       )}
@@ -201,7 +209,7 @@ export function EventStatsDisplay({
 
         {/* Board Progress Grid */}
         <div>
-          <h2 className="text-xl font-bold mb-4">Board Progress</h2>
+          <h2 className="osrs-heading mb-4 text-xl font-bold">Board Progress</h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {bingoSummary.map((bingo) => (
               <Card key={bingo.bingoId}>
@@ -224,8 +232,8 @@ export function EventStatsDisplay({
               </Card>
             ))}
             {bingoSummary.length === 0 && (
-              <div className="py-8 text-center text-muted-foreground col-span-full">
-                No bingo boards found for this event
+              <div className="col-span-full py-8 text-center text-muted-foreground">
+                No Boards found for this Event
               </div>
             )}
           </div>
@@ -234,7 +242,7 @@ export function EventStatsDisplay({
         {/* Item Statistics Integration */}
         {hasItemStats && itemStatistics && (
           <div className="mt-8">
-            <h2 className="text-xl font-bold mb-4">Player & Economy Highlights</h2>
+            <h2 className="osrs-heading mb-4 text-xl font-bold">Player & Economy Highlights</h2>
             <ItemStatisticsDisplay
               statistics={itemStatistics}
               title={eventTitle}
@@ -244,7 +252,7 @@ export function EventStatsDisplay({
 
         {/* Visualizations */}
         <div>
-          <h2 className="text-xl font-bold mb-4">Event Visualizations</h2>
+          <h2 className="osrs-heading mb-4 text-xl font-bold">Event Visualizations</h2>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <EventTeamChart
               data={eventTeamPoints}
@@ -266,7 +274,7 @@ export function EventStatsDisplay({
             <AccordionContent>
               <div className="space-y-6 pt-4">
                 {eventTeamPoints.map((team) => (
-                  <div key={team.teamId} className="rounded-lg border p-4">
+                  <div key={team.teamId} className="osrs-slot rounded-sm p-4">
                     <div className="mb-4 flex items-center justify-between">
                       <h3 className="text-lg font-semibold">{team.name}</h3>
                       <Badge variant="secondary">
@@ -275,13 +283,13 @@ export function EventStatsDisplay({
                     </div>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                       {team.bingoBreakdown.map((bingo) => (
-                        <div key={bingo.bingoId} className="rounded bg-muted p-3">
+                        <div key={bingo.bingoId} className="osrs-slot rounded-sm p-3">
                           <div className="flex items-center justify-between">
                             <span className="font-medium">{bingo.bingoTitle}</span>
                             <span className="font-mono text-sm">{bingo.xp.toLocaleString()} XP</span>
                           </div>
                           {bingo.bonusXP !== undefined && bingo.bonusXP > 0 && (
-                            <div className="mt-1 text-xs text-amber-600">
+                            <div className="mt-1 text-xs text-warning">
                               Base: {bingo.baseXP?.toLocaleString() ?? 0} + Bonus: {bingo.bonusXP.toLocaleString()}
                             </div>
                           )}

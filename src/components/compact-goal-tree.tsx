@@ -197,17 +197,17 @@ function CompactTreeNode({
     return (
       <div style={{ marginLeft: `${marginLeft}px` }}>
         <div className={cn(
-          "flex items-center gap-1 py-1 px-1.5 rounded-md border-l-2 mb-0.5",
-          groupData.logicalOperator === "AND" ? "border-blue-500 bg-blue-50/30" : 
-          groupData.logicalOperator === "OR" ? "border-purple-500 bg-purple-50/30" : 
-          "border-green-500 bg-green-50/30"
+          "flex items-center gap-1 py-1 px-1.5 rounded-sm border-l-2 mb-0.5",
+          groupData.logicalOperator === "AND" ? "border-pending bg-pending/15" : 
+          groupData.logicalOperator === "OR" ? "border-info bg-info/15" : 
+          "border-success bg-success/15"
         )}>
           {/* Group Icon with Tooltip */}
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="flex items-center gap-1.5 min-w-0">
                 <Layers
-                  className={`h-3 w-3 shrink-0 ${node.isGroupComplete ? "text-green-500" : "text-blue-500"}`}
+                  className={`h-3 w-3 shrink-0 text-foreground`}
                 />
                 <Badge
                   variant={
@@ -219,7 +219,7 @@ function CompactTreeNode({
                   }
                   className={cn(
                     "h-5 px-1.5 text-[10px] font-medium flex items-center gap-1 shrink-0",
-                    groupData.logicalOperator === "SUM" && "bg-green-50 text-green-700 border-green-200"
+                    groupData.logicalOperator === "SUM" && "bg-success/15 text-foreground border-success"
                   )}
                 >
                   {groupData.logicalOperator === "AND" && (
@@ -261,7 +261,7 @@ function CompactTreeNode({
 
           {/* Completion Indicator */}
           {node.isGroupComplete && (
-            <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />
+            <CheckCircle2 className="h-3 w-3 shrink-0 text-foreground" />
           )}
         </div>
 
@@ -298,7 +298,7 @@ function CompactTreeNode({
 
   return (
     <div style={{ marginLeft: `${marginLeft}px` }}>
-      <div className="flex items-center gap-2 py-1 px-2 my-0.5 rounded-full bg-muted/50 border border-muted/20 hover:bg-muted/80 transition-colors">
+      <div className="flex items-center gap-2 py-1 px-2 my-0.5 rounded-sm bg-muted/50 border border-border/40 hover:bg-muted/80 transition-colors">
         {/* Goal Icon with Tooltip */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -332,7 +332,7 @@ function CompactTreeNode({
                       />
                     </div>
                   ) : (
-                    <BarChart2 className="h-3 w-3 shrink-0 text-blue-500" />
+                    <BarChart2 className="h-3 w-3 shrink-0 text-foreground" />
                   )}
                   <Badge
                     variant="secondary"
@@ -371,7 +371,7 @@ function CompactTreeNode({
             <div className="flex shrink-0 items-center justify-end gap-1.5 ml-2">
               <Badge
                 variant="outline"
-                className="h-3.5 border-indigo-200 bg-indigo-50 px-1 py-0 text-[9px] font-semibold text-indigo-600"
+                className="h-3.5 border-info bg-info/15 px-1 py-0 text-[9px] font-semibold text-foreground"
               >
                 +{currentValue}
               </Badge>
@@ -386,7 +386,7 @@ function CompactTreeNode({
               <AnimatedProgress
                 value={percentage}
                 className="h-1 flex-1 max-w-[60px]"
-                indicatorClassName={isComplete ? "bg-green-500" : "bg-blue-500"}
+                indicatorClassName={isComplete ? "bg-success" : "bg-pending"}
               />
               <span className="whitespace-nowrap text-[10px] text-muted-foreground shrink-0">
                 {currentValue}/{targetValue}
@@ -396,9 +396,9 @@ function CompactTreeNode({
 
         {/* Completion Indicator */}
         {isComplete ? (
-          <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />
+          <CheckCircle2 className="h-3 w-3 shrink-0 text-foreground" />
         ) : currentValue > 0 ? (
-          <Circle className="h-3 w-3 shrink-0 text-yellow-500" />
+          <Circle className="h-3 w-3 shrink-0 text-foreground" />
         ) : (
           <Circle className="h-3 w-3 shrink-0 text-muted-foreground" />
         )}

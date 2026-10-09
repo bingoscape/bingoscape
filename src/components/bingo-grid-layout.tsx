@@ -37,7 +37,7 @@ export const BingoGridLayout = memo(
       return (
         <div
           ref={ref}
-          className="grid w-full max-w-full gap-2 p-2 sm:gap-3 sm:p-3 md:gap-4 md:p-4"
+          className="osrs-panel-inset grid w-full max-w-full gap-2 rounded-sm p-2 sm:gap-3 sm:p-3 md:gap-4 md:p-4"
           style={{
             gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
             gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
@@ -48,7 +48,7 @@ export const BingoGridLayout = memo(
           {tiles.map((tile, _index) => (
             <div
               key={tile.id}
-              className={`relative ${highlightedTiles.includes(tile.index) ? "ring-2 ring-red-500" : ""}`}
+              className={`relative ${highlightedTiles.includes(tile.index) ? "ring-2 ring-destructive" : ""}`}
               role="gridcell"
             >
               <BingoTile

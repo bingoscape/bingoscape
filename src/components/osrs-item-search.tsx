@@ -143,7 +143,7 @@ export function OsrsItemSearch({
         >
           {multiSelect && internalSelectedItems.length > 0 ? (
             <div className="flex items-center gap-2">
-              <CheckSquare className="h-4 w-4 text-blue-500" />
+              <CheckSquare className="h-4 w-4 text-info" />
               <span className="truncate">
                 {internalSelectedItems.length} item
                 {internalSelectedItems.length !== 1 ? "s" : ""} selected
@@ -211,7 +211,7 @@ export function OsrsItemSearch({
                       <div className="flex w-full items-center gap-3">
                         {multiSelect &&
                           (selected ? (
-                            <CheckSquare className="h-5 w-5 shrink-0 text-blue-500" />
+                            <CheckSquare className="h-5 w-5 shrink-0 text-info" />
                           ) : (
                             <Square className="h-5 w-5 shrink-0 text-muted-foreground" />
                           ))}

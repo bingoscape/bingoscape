@@ -297,7 +297,7 @@ export function DonationManagementModal({
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-2xl font-bold text-green-600">
+                  <div className="text-2xl font-bold text-success">
                     {formatRunescapeGold(totalDonations)} GP
                   </div>
                   <div className="text-sm text-muted-foreground">
@@ -307,7 +307,7 @@ export function DonationManagementModal({
                 </div>
                 <Button
                   onClick={() => setIsAddingDonation(true)}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-success hover:bg-success"
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   Add Donation
@@ -439,7 +439,7 @@ export function DonationManagementModal({
                                 onClick={() =>
                                   handleRemoveDonation(donation.id)
                                 }
-                                className="text-destructive hover:text-destructive"
+                                className="text-danger hover:text-danger"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>

@@ -155,9 +155,9 @@ export function ApiKeyManager({ initialKeys }: { initialKeys: ApiKey[] }) {
       </div>
 
       {newlyCreatedKey && (
-        <Card className="mb-6 border-green-500 bg-green-500/5">
+        <Card className="mb-6 border-success bg-success/5">
           <CardHeader>
-            <CardTitle className="text-green-500">API Key Created</CardTitle>
+            <CardTitle className="text-success">API Key Created</CardTitle>
             <CardDescription>
               This is your new API key. Make sure to copy it now as you won&apos;t be able to see it again.
             </CardDescription>
@@ -216,7 +216,7 @@ export function ApiKeyManager({ initialKeys }: { initialKeys: ApiKey[] }) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="text-destructive hover:bg-destructive/10"
+                        className="text-danger hover:bg-destructive/10"
                         onClick={() => setKeyToDelete(key.id)}
                       >
                         <Trash2 className="h-4 w-4" />

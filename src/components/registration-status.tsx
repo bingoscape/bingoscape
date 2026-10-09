@@ -38,7 +38,7 @@ export function RegistrationStatus({
       <CardContent>
         {status === "pending" && (
           <div className="flex flex-col items-center space-y-4 py-4">
-            <Clock3 className="h-16 w-16 text-amber-500" />
+            <Clock3 className="h-16 w-16 text-warning" />
             <h3 className="text-center text-xl font-semibold">
               Registration Pending
             </h3>
@@ -57,7 +57,7 @@ export function RegistrationStatus({
 
         {status === "approved" && (
           <div className="flex flex-col items-center space-y-4 py-4">
-            <CheckCircle2 className="h-16 w-16 text-green-500" />
+            <CheckCircle2 className="h-16 w-16 text-success" />
             <h3 className="text-center text-xl font-semibold">
               Registration Approved
             </h3>
@@ -78,7 +78,7 @@ export function RegistrationStatus({
 
         {status === "rejected" && (
           <div className="flex flex-col items-center space-y-4 py-4">
-            <XCircle className="h-16 w-16 text-red-500" />
+            <XCircle className="h-16 w-16 text-danger" />
             <h3 className="text-center text-xl font-semibold">
               Registration Declined
             </h3>

@@ -11,9 +11,9 @@ export default async function SignInPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#020817]">
+    <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-md p-6">
-        <h1 className="mb-8 text-center text-3xl font-bold text-white">
+        <h1 className="osrs-heading mb-8 text-center text-3xl font-bold text-primary">
           Sign in to BingoScape
         </h1>
         <LoginCard />

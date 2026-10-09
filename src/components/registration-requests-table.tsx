@@ -163,19 +163,19 @@ export function RegistrationRequestsTable({
     switch (status) {
       case "pending":
         return (
-          <Badge className="bg-yellow-500 text-white hover:bg-yellow-600">
+          <Badge className="bg-warning text-warning-foreground hover:bg-warning">
             Pending
           </Badge>
         )
       case "approved":
         return (
-          <Badge className="bg-green-500 text-white hover:bg-green-600">
+          <Badge className="bg-success text-success-foreground hover:bg-success">
             Approved
           </Badge>
         )
       case "rejected":
         return (
-          <Badge className="bg-red-500 text-white hover:bg-red-600">
+          <Badge className="bg-destructive text-destructive-foreground hover:bg-destructive">
             Rejected
           </Badge>
         )
@@ -287,7 +287,7 @@ export function RegistrationRequestsTable({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-green-600 hover:bg-green-50 hover:text-green-700"
+                          className="text-success hover:bg-success/10 hover:text-success"
                           onClick={() => {
                             setSelectedRequest(request)
                             setActionType("approve")
@@ -299,7 +299,7 @@ export function RegistrationRequestsTable({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                          className="text-danger hover:bg-destructive/10 hover:text-danger"
                           onClick={() => {
                             setSelectedRequest(request)
                             setActionType("reject")
@@ -374,7 +374,7 @@ export function RegistrationRequestsTable({
             <Button
               onClick={handleApprove}
               disabled={isSubmitting}
-              className="bg-green-600 text-white hover:bg-green-700"
+              className="bg-success text-success-foreground hover:bg-success"
             >
               {isSubmitting ? "Approving..." : "Approve Request"}
             </Button>

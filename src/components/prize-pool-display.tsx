@@ -27,12 +27,9 @@ export function PrizePoolDisplay({
     return "text-sm"
   }
 
-  // Determine color based on prize pool amount
+  // Prize Pools of 1M+ read as gold coins; smaller amounts are muted.
   const getTextColor = () => {
-    if (prizePool >= 1_000_000_000) return "text-amber-500 dark:text-amber-400" // 1B+
-    if (prizePool >= 100_000_000) return "text-amber-500 dark:text-amber-400" // 100M+
-    if (prizePool >= 10_000_000) return "text-amber-500 dark:text-amber-400" // 10M+
-    if (prizePool >= 1_000_000) return "text-amber-500 dark:text-amber-400" // 1M+
+    if (prizePool >= 1_000_000) return "text-primary"
     return "text-muted-foreground"
   }
 
@@ -40,12 +37,12 @@ export function PrizePoolDisplay({
     return (
       <div
         className={cn(
-          "inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium dark:bg-amber-900/30",
+          "osrs-slot inline-flex items-center rounded-sm px-2 py-0.5 text-xs font-medium",
           getTextColor(),
           className
         )}
       >
-        {showIcon && <Coins className="mr-1 h-3 w-3" />}
+        {showIcon && <Coins aria-hidden="true" className="mr-1 h-3 w-3" />}
         {formattedPrizePool}
       </div>
     )
@@ -62,6 +59,7 @@ export function PrizePoolDisplay({
     >
       {showIcon && (
         <Coins
+          aria-hidden="true"
           className={cn(
             "shrink-0",
             variant === "compact" ? "h-3.5 w-3.5" : "h-4 w-4"

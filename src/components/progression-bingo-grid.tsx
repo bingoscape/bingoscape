@@ -167,17 +167,17 @@ function SortableTile({
 
     const iconMap: Record<string, React.ReactNode> = {
       approved: (
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-white shadow-lg ring-2 ring-green-200 transition-all duration-300 dark:ring-green-800">
+        <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-success border border-black text-success-foreground shadow-sm">
           <span className="text-sm font-bold">✓</span>
         </div>
       ),
       needs_review: (
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-yellow-500 text-white shadow-lg ring-2 ring-yellow-200 transition-all duration-300 dark:ring-yellow-800">
+        <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-warning border border-black text-warning-foreground shadow-sm">
           <span className="text-sm font-bold">!</span>
         </div>
       ),
       pending: (
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg ring-2 ring-blue-200 transition-all duration-300 dark:ring-blue-800">
+        <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-pending border border-black text-pending-foreground shadow-sm">
           <span className="text-sm font-bold">⏳</span>
         </div>
       ),
@@ -195,24 +195,24 @@ function SortableTile({
           ref={setNodeRef}
           style={style}
           className={cn(
-            "relative overflow-hidden transition-all duration-200",
+            "relative overflow-hidden transition-colors duration-200",
             // Fixed size for all tiles with proper spacing
             "h-auto min-h-[180px] w-44 max-w-44",
             isClickable
-              ? "cursor-pointer hover:scale-105 hover:shadow-lg"
+              ? "cursor-pointer hover:brightness-110"
               : "cursor-not-allowed",
             tileStatus === "completed" &&
-              "bg-green-50 ring-2 ring-green-500 dark:bg-green-950/20",
+              "bg-success/15 ring-2 ring-success ",
             tileStatus === "pending" &&
-              "bg-yellow-50 ring-2 ring-yellow-500 dark:bg-yellow-950/20",
+              "bg-warning/15 ring-2 ring-warning ",
             tileStatus === "review" &&
-              "bg-orange-50 ring-2 ring-orange-500 dark:bg-orange-950/20",
+              "bg-warning/15 ring-2 ring-warning ",
             isLocked && !isEditing && "bg-muted/50 text-muted-foreground",
             isEditing && "border-primary/50",
             isEditing &&
               isLocked &&
-              "border-orange-300 bg-orange-50/30 dark:bg-orange-950/10",
-            isDragging && "shadow-lg ring-2 ring-primary/20"
+              "border-warning bg-warning/15 ",
+            isDragging && "shadow-lg ring-2 ring-primary"
           )}
           onClick={() => isClickable && onTileClick(tile)}
         >
@@ -331,20 +331,20 @@ function SortableTile({
               <div className="flex items-center gap-1">
                 {tileStatus === "completed" && (
                   <>
-                    <Check className="h-3 w-3 text-green-600" />
-                    <span className="text-xs text-green-600">Complete</span>
+                    <Check className="h-3 w-3 text-success" />
+                    <span className="text-xs text-success">Complete</span>
                   </>
                 )}
                 {tileStatus === "pending" && (
                   <>
-                    <Clock className="h-3 w-3 text-yellow-600" />
-                    <span className="text-xs text-yellow-600">Pending</span>
+                    <Clock className="h-3 w-3 text-warning" />
+                    <span className="text-xs text-warning">Pending</span>
                   </>
                 )}
                 {tileStatus === "review" && (
                   <>
-                    <AlertTriangle className="h-3 w-3 text-orange-600" />
-                    <span className="text-xs text-orange-600">Review</span>
+                    <AlertTriangle className="h-3 w-3 text-warning" />
+                    <span className="text-xs text-warning">Review</span>
                   </>
                 )}
                 {tileStatus === "available" && !isLocked && (
@@ -450,14 +450,14 @@ function SortableTile({
               <h4 className="flex-1 wrap-break-word text-base font-semibold leading-tight">
                 {tile.isHidden ? "Hidden Tile" : tile.title}
               </h4>
-              <div className="flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-1 dark:bg-amber-900/30">
-                <Zap className="h-3.5 w-3.5 text-amber-500" />
+              <div className="flex shrink-0 items-center gap-1 rounded-sm border border-black bg-secondary px-2 py-0.5">
+                <Zap className="h-3.5 w-3.5 text-primary" />
                 <span className="text-xs font-medium">{tile.weight} XP</span>
               </div>
             </div>
 
             {tileStatus !== "locked" && tileStatus !== "available" && (
-              <div className="flex items-center gap-2 rounded-lg bg-secondary/30 p-2">
+              <div className="flex items-center gap-2 rounded-sm bg-secondary/30 p-2">
                 {renderStatusIcon(tileStatus === "review" ? "needs_attention" : tileStatus)}
                 <span className="text-sm font-medium capitalize">
                   {tileStatus === "review" ? "needs review" : tileStatus.replace("_", " ")}
@@ -562,7 +562,7 @@ function SortableTile({
                     return (
                       <div
                         key={idx}
-                        className="space-y-1 rounded-lg bg-muted/30 p-2"
+                        className="space-y-1 rounded-sm bg-muted/30 p-2"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <span className="line-clamp-2 flex-1 wrap-break-word leading-tight text-muted-foreground">
@@ -577,7 +577,7 @@ function SortableTile({
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <div className="flex min-w-[60px] items-center gap-1">
-                                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                <CheckCircle2 className="h-3 w-3 text-foreground" />
                                 <span className="text-[10px] text-muted-foreground">
                                   Progress
                                 </span>
@@ -593,8 +593,8 @@ function SortableTile({
 
                             {isCompleted && (
                               <div className="flex items-center gap-1">
-                                <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                <span className="text-[10px] font-medium text-green-600">
+                                <CheckCircle2 className="h-3 w-3 text-foreground" />
+                                <span className="text-[10px] font-medium text-foreground">
                                   Completed!
                                 </span>
                               </div>
@@ -603,7 +603,7 @@ function SortableTile({
                             {totalProgress > approvedProgress && (
                               <div className="flex items-center gap-2">
                                 <div className="flex min-w-[60px] items-center gap-1">
-                                  <Clock className="h-3 w-3 text-yellow-500" />
+                                  <Clock className="h-3 w-3 text-foreground" />
                                   <span className="text-[10px] text-muted-foreground">
                                     Pending
                                   </span>
@@ -635,7 +635,7 @@ function SortableTile({
             )}
 
             {tile.isHidden && (
-              <div className="mt-2 flex items-center gap-1.5 rounded bg-secondary p-1.5 text-xs">
+              <div className="mt-2 flex items-center gap-1.5 rounded-sm bg-secondary p-1.5 text-xs">
                 <EyeOff className="h-3.5 w-3.5" />
                 <span className="font-medium">Hidden tile</span>
               </div>
@@ -675,8 +675,8 @@ function DroppableTierHeader({
     >
       {/* Drop indicator */}
       {isEditing && isOver && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-primary/10">
-          <div className="rounded bg-primary px-3 py-1 text-sm font-medium text-primary-foreground">
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-sm border-2 border-dashed border-primary bg-primary/10">
+          <div className="rounded-sm bg-primary px-3 py-1 text-sm font-medium text-primary-foreground">
             Drop tile here to move to Tier {tier + 1}
           </div>
         </div>
@@ -1168,19 +1168,19 @@ export function ProgressionBingoGrid({
               <DroppableTierHeader tier={tierInfo.tier} isEditing={isEditing}>
                 <Card
                   className={cn(
-                    "border-l-4 border-l-primary/50 bg-muted/50 p-4 transition-all duration-200",
+                    "border-l-4 border-l-primary p-4 transition-colors duration-200",
                     isEditing &&
-                      "cursor-pointer border-2 border-dashed border-l-primary hover:border-primary hover:bg-primary/5"
+                      "cursor-pointer border-2 border-dashed border-l-primary hover:border-primary"
                   )}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div
                         className={cn(
-                          "flex h-10 w-10 items-center justify-center rounded-full border-2 text-lg font-bold",
+                          "osrs-slot flex h-10 w-10 items-center justify-center rounded-sm font-display text-lg font-bold",
                           tierInfo.isUnlocked
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-muted-foreground/30 bg-muted text-muted-foreground"
+                            ? "osrs-qty"
+                            : "text-muted-foreground opacity-70"
                         )}
                       >
                         {tierInfo.isUnlocked ? (
@@ -1191,7 +1191,7 @@ export function ProgressionBingoGrid({
                       </div>
 
                       <div>
-                        <h3 className="text-lg font-semibold">
+                        <h3 className="osrs-heading text-lg font-semibold">
                           Tier {tierInfo.tier + 1}
                           {!tierInfo.isUnlocked && !isEditing && (
                             <span className="text-muted-foreground">
@@ -1200,7 +1200,7 @@ export function ProgressionBingoGrid({
                             </span>
                           )}
                           {!tierInfo.isUnlocked && isEditing && (
-                            <span className="text-orange-600">
+                            <span className="text-warning">
                               {" "}
                               (Locked - Editing)
                             </span>
@@ -1271,7 +1271,7 @@ export function ProgressionBingoGrid({
                         completionStatus.totalXP > 0 && (
                           <Badge
                             variant="outline"
-                            className="border-green-600 text-green-600"
+                            className="border-success text-success"
                           >
                             <Check className="mr-1 h-3 w-3" />
                             Complete
@@ -1399,7 +1399,7 @@ export function ProgressionBingoGrid({
       {/* Drag Overlay */}
       <DragOverlay>
         {draggedTile && (
-          <Card className="rotate-3 transform opacity-75 shadow-xl">
+          <Card className="opacity-75 shadow-xl">
             {draggedTile.headerImage && (
               <div className="aspect-square overflow-hidden">
                 <Image

@@ -42,7 +42,7 @@ export function StatsDashboard({ stats, metadata }: StatsDashboardProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Approved</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <CheckCircle2 className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.approvedSubmissions}</div>
@@ -51,7 +51,7 @@ export function StatsDashboard({ stats, metadata }: StatsDashboardProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Approval Rate</CardTitle>
-            <Activity className="h-4 w-4 text-blue-500" />
+            <Activity className="h-4 w-4 text-info" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.approvalRate.toFixed(1)}%</div>
@@ -83,8 +83,8 @@ export function StatsDashboard({ stats, metadata }: StatsDashboardProps) {
                   <span className="text-sm font-medium">Efficient Hours Played (EHP)</span>
                   <span className="text-sm text-muted-foreground">{metadata?.ehp?.toFixed(1) ?? "—"}</span>
                 </div>
-                <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min((metadata?.ehp || 0) / 10, 100)}%` }} />
+                <div className="h-2 w-full bg-secondary rounded-sm overflow-hidden">
+                  <div className="h-full bg-info rounded-sm" style={{ width: `${Math.min((metadata?.ehp || 0) / 10, 100)}%` }} />
                 </div>
               </div>
               <div>
@@ -92,8 +92,8 @@ export function StatsDashboard({ stats, metadata }: StatsDashboardProps) {
                   <span className="text-sm font-medium">Efficient Hours Bossed (EHB)</span>
                   <span className="text-sm text-muted-foreground">{metadata?.ehb?.toFixed(1) ?? "—"}</span>
                 </div>
-                <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                  <div className="h-full bg-red-500 rounded-full" style={{ width: `${Math.min((metadata?.ehb || 0) / 10, 100)}%` }} />
+                <div className="h-2 w-full bg-secondary rounded-sm overflow-hidden">
+                  <div className="h-full bg-destructive rounded-sm" style={{ width: `${Math.min((metadata?.ehb || 0) / 10, 100)}%` }} />
                 </div>
               </div>
             </div>

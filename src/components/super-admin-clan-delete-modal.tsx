@@ -67,7 +67,7 @@ export function SuperAdminClanDeleteModal({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-destructive">
+          <DialogTitle className="flex items-center gap-2 text-danger">
             <AlertTriangle className="h-5 w-5" />
             Delete Clan
           </DialogTitle>
@@ -90,7 +90,7 @@ export function SuperAdminClanDeleteModal({
             <li>Delete all clan-related data</li>
           </ul>
 
-          <div className="rounded-lg bg-muted p-3">
+          <div className="rounded-sm bg-muted p-3">
             <p className="font-medium">Clan to delete:</p>
             <p className="text-sm">{clan.name}</p>
           </div>

@@ -371,7 +371,7 @@ export function EditEventModal({
                         <div className="space-y-1">
                           <Label
                             htmlFor="isLocked"
-                            className="flex cursor-pointer items-center gap-2 text-base font-medium text-destructive"
+                            className="flex cursor-pointer items-center gap-2 text-base font-medium text-danger"
                           >
                             <Lock className="h-4 w-4" />
                             Lock Registration

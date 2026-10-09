@@ -231,7 +231,7 @@ export function TileDetailsTab({
                 src={imagePreview}
                 alt="Header image preview"
                 fill
-                className="rounded-md object-contain"
+                className="rounded-sm object-contain"
               />
             ) : selectedTile?.headerImage &&
               isValidImageUrl(selectedTile.headerImage) ? (
@@ -239,11 +239,11 @@ export function TileDetailsTab({
                 src={selectedTile.headerImage || getRandomFrog()}
                 alt={selectedTile.title}
                 fill
-                className="rounded-md object-contain"
+                className="rounded-sm object-contain"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center rounded-md bg-gray-200">
-                <span className="text-gray-400">
+              <div className="flex h-full w-full items-center justify-center rounded-sm bg-muted">
+                <span className="text-muted-foreground">
                   {isEditing && !isValidImage
                     ? "Invalid image URL"
                     : "No image"}
@@ -275,7 +275,7 @@ export function TileDetailsTab({
                   <div>
                     <label
                       htmlFor="title"
-                      className="block text-sm font-medium text-gray-700"
+                      className="block text-sm font-medium text-muted-foreground"
                     >
                       Title
                     </label>
@@ -293,7 +293,7 @@ export function TileDetailsTab({
                       </label>
                       <div className="relative mt-1">
                         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                          <Zap className="h-4 w-4 text-gray-400" />
+                          <Zap className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <Input
                           id="xp"
@@ -337,7 +337,7 @@ export function TileDetailsTab({
                       />
                       <label
                         htmlFor="isHidden"
-                        className="text-sm font-medium text-gray-700"
+                        className="text-sm font-medium text-muted-foreground"
                       >
                         Hide Tile on Board
                       </label>
@@ -346,7 +346,7 @@ export function TileDetailsTab({
                   <div>
                     <label
                       htmlFor="headerImage"
-                      className="block text-sm font-medium text-gray-700"
+                      className="block text-sm font-medium text-muted-foreground"
                     >
                       Header Image URL
                     </label>
@@ -357,10 +357,10 @@ export function TileDetailsTab({
                           value={editedTile.headerImage ?? ""}
                           onChange={handleHeaderImageChange}
                           onPaste={handleHeaderImagePaste}
-                          className={`${!isValidImage && editedTile.headerImage ? "border-red-500" : ""}`}
+                          className={`${!isValidImage && editedTile.headerImage ? "border-destructive" : ""}`}
                         />
                         {!isValidImage && editedTile.headerImage && (
-                          <p className="mt-1 text-sm text-red-500">
+                          <p className="mt-1 text-sm text-danger">
                             Please enter a valid image URL (starting with
                             http:// or https://)
                           </p>
@@ -401,9 +401,9 @@ export function TileDetailsTab({
                             </Button>
                           </div>
 
-                          <ScrollArea className="h-[300px] rounded-md border p-2">
+                          <ScrollArea className="h-[300px] rounded-sm border p-2">
                             {searchResults.length === 0 && !isSearching ? (
-                              <div className="flex h-full items-center justify-center text-gray-500">
+                              <div className="flex h-full items-center justify-center text-muted-foreground">
                                 {searchQuery
                                   ? "No results found"
                                   : "Search for OSRS images"}
@@ -413,7 +413,7 @@ export function TileDetailsTab({
                                 {searchResults.map((image) => (
                                   <div
                                     key={image.title}
-                                    className={`cursor-pointer rounded-md border p-2 transition-colors hover:bg-gray-100 ${selectedImage?.url === image.url ? "ring-2 ring-primary" : ""} `}
+                                    className={`cursor-pointer rounded-sm border p-2 transition-colors hover:bg-muted ${selectedImage?.url === image.url ? "ring-2 ring-primary" : ""} `}
                                     onClick={() => handleImageSelect(image)}
                                   >
                                     <div className="relative mb-1 aspect-square">
@@ -441,7 +441,7 @@ export function TileDetailsTab({
                               href="https://oldschool.runescape.wiki/"
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex items-center gap-1 text-xs text-gray-500"
+                              className="flex items-center gap-1 text-xs text-muted-foreground"
                             >
                               Images from OSRS Wiki
                               <ExternalLink className="h-3 w-3" />
@@ -467,11 +467,11 @@ export function TileDetailsTab({
                   <div>
                     <label
                       htmlFor="description"
-                      className="block text-sm font-medium text-gray-700"
+                      className="block text-sm font-medium text-muted-foreground"
                     >
                       Description
                     </label>
-                    <div className="mt-1 rounded-md border">
+                    <div className="mt-1 rounded-sm border">
                       <ForwardRefEditor
                         onChange={onEditorChange}
                         markdown={editedTile.description ?? ""}
@@ -488,14 +488,14 @@ export function TileDetailsTab({
               <>
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center gap-4">
-                    <div className="flex items-center gap-2 rounded-md px-3 py-1.5">
-                      <Zap className="h-4 w-4 text-amber-500" />
+                    <div className="flex items-center gap-2 rounded-sm px-3 py-1.5">
+                      <Zap className="h-4 w-4 text-warning" />
                       <span className="font-medium">
                         {selectedTile?.weight} XP
                       </span>
                     </div>
                     {selectedTile?.isHidden && (
-                      <div className="flex items-center gap-2 rounded-md bg-gray-100 px-3 py-1.5 text-gray-500">
+                      <div className="flex items-center gap-2 rounded-sm bg-muted px-3 py-1.5 text-muted-foreground">
                         <EyeOff className="h-4 w-4" />
                         <span className="font-medium">Hidden</span>
                       </div>
@@ -562,7 +562,7 @@ function TileProgress({
 
   if (!selectedTile?.goals || selectedTile.goals.length === 0) {
     return (
-      <div className="rounded-lg bg-muted/30 py-6 text-center">
+      <div className="rounded-sm bg-muted/30 py-6 text-center">
         <p className="text-muted-foreground">
           No goals have been set for this tile yet.
         </p>

@@ -68,7 +68,7 @@ export function SuperAdminUserDeleteModal({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-destructive">
+          <DialogTitle className="flex items-center gap-2 text-danger">
             <AlertTriangle className="h-5 w-5" />
             Delete User
           </DialogTitle>
@@ -92,7 +92,7 @@ export function SuperAdminUserDeleteModal({
             <li>Owned clans (ownership will be removed)</li>
           </ul>
 
-          <div className="rounded-lg bg-muted p-3">
+          <div className="rounded-sm bg-muted p-3">
             <p className="font-medium">User to delete:</p>
             <p className="text-sm">
               {user.name ?? "No name"} ({user.email})

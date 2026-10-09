@@ -86,7 +86,7 @@ export function EventDeleteModal({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-destructive">
+          <DialogTitle className="flex items-center gap-2 text-danger">
             <AlertTriangle className="h-5 w-5" />
             Delete Event
           </DialogTitle>
@@ -158,7 +158,7 @@ export function EventDeleteModal({
           <div className="space-y-2">
             <Label htmlFor="confirm-text" className="text-sm font-medium">
               Type{" "}
-              <span className="font-mono text-destructive">{event.title}</span>{" "}
+              <span className="font-mono text-danger">{event.title}</span>{" "}
               to confirm
             </Label>
             <Input
