@@ -1,0 +1,47 @@
+drizzle/0033_numerous_toxin.sql
+  s_979d71c1db30e5::t_21689c2d03b96b 1-3
+drizzle/meta/0033_snapshot.json
+  s_979d71c1db30e5::t_cb38c7b15050e9 1-3607
+drizzle/meta/_journal.json
+  s_979d71c1db30e5::t_3bf8fd251c80b3 235-241
+src/app/actions/bingo.ts
+  s_979d71c1db30e5::t_2eff3ea3136ab3 43,1303,1341,1399-1400,1565,1603
+src/app/actions/tile-completion.ts
+  s_979d71c1db30e5::t_28ec022aefe672 11-12,209,227,250
+src/app/api/runelite/docs/route.ts
+  s_979d71c1db30e5::t_4e44d20824f991 189-231
+src/app/api/runelite/team-tile-completions/route.ts
+  s_979d71c1db30e5::t_0ce46fc97834c6 1-93
+src/lib/__tests__/completed-at.test.ts
+  s_979d71c1db30e5::t_112772344c9dd2 1-19
+src/lib/__tests__/team-tile-completions.test.ts
+  s_979d71c1db30e5::t_d4e468ed264749 1-97
+src/lib/completed-at.ts
+  s_979d71c1db30e5::t_e4455b85fe8f3a 1-11
+src/lib/rate-limit.ts
+  s_979d71c1db30e5::t_08f37941716ff5 42-44
+src/lib/team-drops.ts
+  s_979d71c1db30e5::t_80a28beb601c5f 17,58
+src/lib/team-tile-completions.ts
+  s_979d71c1db30e5::t_0d9f28236929c0 1-79
+src/server/db/schema.ts
+  s_979d71c1db30e5::t_f8225c834439e7 591-592,600-603
+src/types/runelite-api.ts
+  s_979d71c1db30e5::t_964adaea68b76e 120-144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "59688f454669033b7348d8885403362a1d538815",
+  "prompts": {},
+  "sessions": {
+    "s_979d71c1db30e5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f5e63b2d-3fc1-40ca-bd87-7a2f48800df4",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
