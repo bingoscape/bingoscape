@@ -1,0 +1,39 @@
+drizzle/0032_greedy_jubilee.sql
+  s_979d71c1db30e5::t_31f635d9780ed7 1-2
+drizzle/meta/0032_snapshot.json
+  s_979d71c1db30e5::t_9f71483e768924 1-3580
+drizzle/meta/_journal.json
+  s_979d71c1db30e5::t_c214e24ecc4d27 228-234
+src/app/api/runelite/docs/route.ts
+  s_979d71c1db30e5::t_6cea27e01bb01e 144-188
+src/app/api/runelite/team-drops/route.ts
+  s_979d71c1db30e5::t_7f8aa41a05a0a4 1-94
+src/lib/__tests__/rate-limit.test.ts
+  s_979d71c1db30e5::t_7f7a84af75d9b9 1-25
+src/lib/__tests__/team-drops.test.ts
+  s_979d71c1db30e5::t_adf64216d1312c 1-44
+src/lib/rate-limit.ts
+  s_979d71c1db30e5::t_3cdcb35b43a336 1-41
+src/lib/team-drops.ts
+  s_979d71c1db30e5::t_476dfe399fb680 1-183
+src/server/db/schema.ts
+  s_979d71c1db30e5::t_fe80b6749d9a87 657-666
+src/types/runelite-api.ts
+  s_979d71c1db30e5::t_519d0ff063b624 92-119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dc6d2c0e17f3c144c8536ace337acd15c3ed0a0b",
+  "prompts": {},
+  "sessions": {
+    "s_979d71c1db30e5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f5e63b2d-3fc1-40ca-bd87-7a2f48800df4",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
