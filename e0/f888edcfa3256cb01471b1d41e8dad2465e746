@@ -1,0 +1,381 @@
+src/components/pattern-bonus-schematic-editor.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 110,112,115,117,150,152-153,181,202,204-205,237,250,252-253,285,309,364-365,372,413-414,421,435,439,444,449,485,490,536,542,589,594,662,667
+src/app/events/[id]/admin/submissions/page.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 70
+src/components/ui/card.tsx
+  s_fa301f65c4b50b::t_99357b7fced1ed 12
+  s_fa301f65c4b50b::t_1d71a1745cf756 39
+src/components/events-display.tsx
+  s_fa301f65c4b50b::t_4f9e6c73fe5749 40,42-43,46,50-51,66-67,69,90-91,93,114,120
+src/components/ui/context-menu.tsx
+  s_fa301f65c4b50b::t_ebcc1bfffbe2aa 49,65
+src/components/events/add-clan-members-dialog.tsx
+  s_fa301f65c4b50b::t_079fcf90c8e014 168,170,172,193,201-204,206,234,237-240,244,246,251,261,269,274-276,314-316
+src/app/page.tsx
+  s_fa301f65c4b50b::t_1803da97eea171 5,8-25,40-146,156-160,170-197,199,201,204,207,211,216-219,221,225-228,234-237,243,254,256-258,268-273,279-280,285-290,296,301-306,312
+components.json
+  s_fa301f65c4b50b::t_3b48e1f8c70fce 7,9
+src/app/super-admin/users/[userId]/page.tsx
+  s_fa301f65c4b50b::t_37c051c3a3a7db 122,163,211
+src/app/public/events/[id]/opengraph-image/route.tsx
+  s_fa301f65c4b50b::t_636bf460d9f9b3 301
+  s_fa301f65c4b50b::t_caed1766ebd0fc 23,49,73,76,87,100,122,136,138,151,153,166,241-242,249,299-300,307,317,342
+src/components/ui/field.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 58,225
+src/components/progression-bingo-grid.tsx
+  s_fa301f65c4b50b::t_05bb52d82eb05d 170,175,180,198,202,215,1402
+  s_fa301f65c4b50b::t_4bf682564f85f1 205,207,209,214,334-335,340-341,346-347,460,565,638,678-679,1203,1274
+  s_fa301f65c4b50b::t_86729a746edb4b 453-454,580,596-597,606
+  s_fa301f65c4b50b::t_8f1cd6fe5ed02f 1171,1173,1180,1182-1183,1194
+src/app/public/events/[id]/page.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 238,259
+src/components/item-timeline-charts.tsx
+  s_fa301f65c4b50b::t_3969f906161800 42-49
+  s_fa301f65c4b50b::t_e8e87e463a8c07 520,522,524,526
+src/app/sign-in/page.tsx
+  s_fa301f65c4b50b::t_a168c14251d895 14,16
+src/styles/globals.css
+  s_fa301f65c4b50b::t_079745bfba56e7 8-14,16-21,45-54,58,76-371,393-395,397-404,406-426,428-434,436-445,448-464,466-494,497-527,530-531,533-535,537-538,540,542-543,551-564,566-567,569-712,716
+  s_fa301f65c4b50b::t_b9d5929f3ab2be 405,427,435,465
+  s_fa301f65c4b50b::t_a72cd1e27c5f79 546-550
+src/components/ui/menubar.tsx
+  s_fa301f65c4b50b::t_ebcc1bfffbe2aa 46,97,120
+src/components/create-event-modal.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 305,316,335,424,435,466
+  s_fa301f65c4b50b::t_4537533df89897 280
+  s_fa301f65c4b50b::t_62f987bb2fd2ed 569
+src/components/ui/textarea.tsx
+  s_fa301f65c4b50b::t_1812f3a240ba43 12
+docs/design/osrs-theme.md
+  s_fa301f65c4b50b::t_56e04ec824401a 1-32,34-36,38-75
+  s_fa301f65c4b50b::t_e1cad479f7de12 37
+  s_fa301f65c4b50b::t_fc7cd34837e197 33
+src/components/eventlist.tsx
+  s_fa301f65c4b50b::t_4f9e6c73fe5749 50,53,57,72-73,79-84,87,89-92,94-97
+src/components/ui/sheet.tsx
+  s_fa301f65c4b50b::t_ebcc1bfffbe2aa 34
+src/app/clans/page.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 93,113
+  s_fa301f65c4b50b::t_a1449073eb12f4 37,66
+src/components/ui/tooltip.tsx
+  s_fa301f65c4b50b::t_3b48e1f8c70fce 22
+src/components/edit-bingo-modal.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 313
+src/components/donation-management-modal.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 300,310
+  s_fa301f65c4b50b::t_7b915f2fe61ada 442
+src/app/sign-up/page.tsx
+  s_fa301f65c4b50b::t_a168c14251d895 14,16
+src/components/registration-requests-table.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 166,172,178,290,302,377
+src/components/ui/popover.tsx
+  s_fa301f65c4b50b::t_f45c9a684c4d4e 22
+src/components/bingo-grid-layout.tsx
+  s_fa301f65c4b50b::t_e862b86b8cd110 40
+  s_fa301f65c4b50b::t_4bf682564f85f1 51
+src/app/events/[id]/admin/loading.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 22,32,38,53,65
+src/components/tile-details-dialog.tsx
+  s_fa301f65c4b50b::t_4bf682564f85f1 122-123,173
+  s_fa301f65c4b50b::t_62f987bb2fd2ed 114,118,121,128,130,132-133,146,149,158,167
+  s_fa301f65c4b50b::t_6772b583e58f69 152,161,170
+src/components/team-balance-preview.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 79,81,83-84,183-184,203-204,207
+src/components/team-comparison-view.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 121,131,135,139,152,192,232,287,326,328,345,347,349,352,365,371
+src/app/super-admin/layout.tsx
+  s_fa301f65c4b50b::t_81b50f6f8ff457 21,24
+src/components/quick-submission-button.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 59
+src/components/ui/dropdown-menu.tsx
+  s_fa301f65c4b50b::t_ebcc1bfffbe2aa 50,68
+src/components/clan-invites-management.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 193
+  s_fa301f65c4b50b::t_7b915f2fe61ada 347
+src/components/navbar.tsx
+  s_fa301f65c4b50b::t_ae03bfaeab91bd 60,78-81,90,92,113,115-116,129,131-132,139-140,151,157,160-161,166,207,217
+  s_fa301f65c4b50b::t_4cc353841baca3 68,156
+src/components/pattern-completion-tab.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 189,197,209,223
+src/components/prize-pool-breakdown.tsx
+  s_fa301f65c4b50b::t_4cc353841baca3 8,50,73,78-79,81,84,92-93,95,110-111,113-114,128-129,131,148
+src/components/goal-progress-tree.tsx
+  s_fa301f65c4b50b::t_6772b583e58f69 465
+  s_fa301f65c4b50b::t_8f1cd6fe5ed02f 188,447,454
+  s_fa301f65c4b50b::t_4bf682564f85f1 192,203,255-258,273,285,334,375,409,475,477
+src/app/events/[id]/admin/components/dashboard-ui.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 17,48
+  s_fa301f65c4b50b::t_f7090dca923919 20,51
+src/components/ui/alert.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 13
+  s_fa301f65c4b50b::t_f45c9a684c4d4e 7,11
+src/app/public/events/[id]/bingos/[bingoId]/page.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 129,150
+src/components/stats-dialog.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 309,393,488,558,636,699,764
+src/components/create-bingo-modal.tsx
+  s_fa301f65c4b50b::t_4537533df89897 205
+  s_fa301f65c4b50b::t_62f987bb2fd2ed 215
+  s_fa301f65c4b50b::t_7b915f2fe61ada 236,249
+src/components/bonus-xp-breakdown.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 61,79,95,100,113,124
+src/app/profile/page.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 82,87
+src/components/submission-upload-form.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 144,147,233,240,242,247,254,262
+  s_fa301f65c4b50b::t_5ed572de38d1a4 146,167,173-174,179,186,195,237
+src/styles/modal-animations.css
+  s_fa301f65c4b50b::t_839d21bfcb54d8 80,94,173,207,217,265,275,351,379
+src/components/edit-event-modal.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 374
+src/components/auto-team-generator-modal.tsx
+  s_fa301f65c4b50b::t_86729a746edb4b 466-467,469,472,482-483,492-493,742,744,751,758,765,772
+src/components/event-delete-modal.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 89,161
+src/components/inline-rsn-editor.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 94
+  s_fa301f65c4b50b::t_1aa7fb327c6608 85
+src/components/api-key-manager.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 158,160
+  s_fa301f65c4b50b::t_7b915f2fe61ada 219
+src/components/ui/toast.tsx
+  s_fa301f65c4b50b::t_b59dcfe45d4ef2 28,32,34,65,80,97
+src/components/registrations-tab.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 173,179,185,309,321,398
+src/app/clans/[clanId]/clan-detail-client.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 248,258,268
+  s_fa301f65c4b50b::t_7b2613839cf3ee 177,247,257,267
+src/app/super-admin/users/page.tsx
+  s_fa301f65c4b50b::t_37c051c3a3a7db 24-25,27,31,39-40,43,56-57,61,75-76,80,92-93,97,111-112
+src/styles/comments.css
+  s_fa301f65c4b50b::t_0dfa3bb7d3d81e 21,47,59,70,114,143,187
+src/components/ui/checkbox.tsx
+  s_fa301f65c4b50b::t_0c054e5a3cd450 16
+src/components/ui/alert-banner.tsx
+  s_fa301f65c4b50b::t_f5d92be7be2c55 15,17,21,24
+src/components/event-team-chart.tsx
+  s_fa301f65c4b50b::t_3969f906161800 74-75
+src/components/ui/switch.tsx
+  s_fa301f65c4b50b::t_18a7de04d34acb 22
+  s_fa301f65c4b50b::t_0c054e5a3cd450 14
+src/components/notification-bell.tsx
+  s_fa301f65c4b50b::t_81b50f6f8ff457 66-71,74,95-96,101,105
+src/components/super-admin-member-role-modal.tsx
+  s_fa301f65c4b50b::t_37c051c3a3a7db 68,70,72,74,152-154,219
+src/components/ui/animated-progress.tsx
+  s_fa301f65c4b50b::t_3b48e1f8c70fce 62,69
+src/app/events/[id]/admin/page.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 139,171,213,220,225,240
+src/components/ui/hover-card.tsx
+  s_fa301f65c4b50b::t_81dc77943a6a23 21
+src/components/mini-board.tsx
+  s_fa301f65c4b50b::t_e862b86b8cd110 67,87
+  s_fa301f65c4b50b::t_cce7c19ae13391 61,81,96,102,106-107
+  s_fa301f65c4b50b::t_6772b583e58f69 124
+src/components/tracker-settings-modal.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 364
+src/components/submissions-tab.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 192,199,206,252,307,652,654-655,672,678,682,697,795,907,914,927,941-942,970,980,1075
+  s_fa301f65c4b50b::t_7b915f2fe61ada 991
+src/components/comment-form.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 54-55,84
+src/components/join-event-button.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 118
+src/components/ui/progress.tsx
+  s_fa301f65c4b50b::t_04e415b9e1fcd6 8,16,19,23,26-28
+  s_fa301f65c4b50b::t_9cacf9ba69d1c4 29
+src/components/event-stats-display.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 92,149,157,170,187,292
+  s_fa301f65c4b50b::t_6b58384f592edc 20,69-73,83,86,93,96,105,108,119,122,146,150-156,161,168,176,193,212,235-236,245,255,277,286
+src/components/tile-selection-dropdown.tsx
+  s_fa301f65c4b50b::t_4bf682564f85f1 181
+  s_fa301f65c4b50b::t_1a01a00411b691 87-88,97-98,107-108,118,128
+src/components/ui/input.tsx
+  s_fa301f65c4b50b::t_e235ef6c117d41 11
+src/components/ui/dialog.tsx
+  s_fa301f65c4b50b::t_4599148958d1e6 24
+  s_fa301f65c4b50b::t_57ba783c9c0c16 41
+  s_fa301f65c4b50b::t_16ff868639add9 47-48
+  s_fa301f65c4b50b::t_c72d5651d53b00 91
+src/components/bingo-tile.tsx
+  s_fa301f65c4b50b::t_8e54205aa76a53 206,208,210-211,216,218-223,226,231,233-237,242,247-248,252-255
+  s_fa301f65c4b50b::t_68ee8f73d943b2 402
+  s_fa301f65c4b50b::t_eafe6b0749f2f8 102
+  s_fa301f65c4b50b::t_279807766816e2 92
+  s_fa301f65c4b50b::t_b72c1b5a447119 266
+  s_fa301f65c4b50b::t_76f3fc1934c5f4 283-284
+  s_fa301f65c4b50b::t_4aba8ae9200fdd 307
+  s_fa301f65c4b50b::t_94b5a04af23bdf 97
+  s_fa301f65c4b50b::t_880a87b1353a87 138-139,143,147-148,151-156
+  s_fa301f65c4b50b::t_cecc1c31d17454 111
+src/components/game-type-badge.tsx
+  s_fa301f65c4b50b::t_9459981936424c 12
+src/components/submission-comment.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 57-58,70,76,81-82
+src/components/player-metadata-modal.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 315-316,611,617,623,629,634
+src/components/template-preview-grid.tsx
+  s_fa301f65c4b50b::t_3969f906161800 128-129
+src/components/ui/gp-input.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 87
+src/components/public-bingo-grid.tsx
+  s_fa301f65c4b50b::t_6772b583e58f69 179,186,199,206
+  s_fa301f65c4b50b::t_05bb52d82eb05d 77,84,159,161,163-164,176,180,187,200,207,416
+  s_fa301f65c4b50b::t_246d55e8f50273 167-169,226-227
+  s_fa301f65c4b50b::t_4bf682564f85f1 233,475,479,504
+src/components/ui/date-range-picker.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 96
+src/components/osrs-item-search.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 146,214
+src/components/stats-chart.tsx
+  s_fa301f65c4b50b::t_3969f906161800 69-70
+src/components/ui/select.tsx
+  s_fa301f65c4b50b::t_1812f3a240ba43 22,78
+src/components/ui/tabs.tsx
+  s_fa301f65c4b50b::t_34953ce10e1d9f 17
+  s_fa301f65c4b50b::t_f6291b31c92972 32
+  s_fa301f65c4b50b::t_65f98310788dbe 47
+src/components/event-time-display.tsx
+  s_fa301f65c4b50b::t_4cc353841baca3 50,77-78,84,86,95
+src/components/tile-details-tab.tsx
+  s_fa301f65c4b50b::t_4bf682564f85f1 234,242,245-246,278,296,340,349,360,363,404,406,416,444,470,474,491-492,498,565
+src/components/event-command-palette.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 43-46,50-53,57-60,64-67
+src/components/user-template-actions.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 104
+src/components/event-action-card.tsx
+  s_fa301f65c4b50b::t_9459981936424c 5,23-24,27-28,31-32,35-36,57-61,64-65,71,87-90,92-95,106-110
+src/app/super-admin/clans/page.tsx
+  s_fa301f65c4b50b::t_37c051c3a3a7db 24-25,27,31,39-40,43,56-57,61,73-74,78,88-89,93,105-106,110,124-125
+src/app/super-admin/clans/[clanId]/page.tsx
+  s_fa301f65c4b50b::t_37c051c3a3a7db 85-86,97-98,101,128,151-152,156,163,172,180,189,202-203,207,214,223,238-239,243,257-258,262,274-275,297-298,329,338
+src/components/participants-tab.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 903,975
+  s_fa301f65c4b50b::t_1aa7fb327c6608 805,817,823,834,842,854,862,1019,1033,1040,1052,1060
+src/components/super-admin-clans-table.tsx
+  s_fa301f65c4b50b::t_37c051c3a3a7db 96
+src/app/super-admin/events/page.tsx
+  s_fa301f65c4b50b::t_37c051c3a3a7db 37-38,40,44,52-53,56,69-70,74,86-87,91,105-106,110,124-125,129,143-144
+src/components/stats-dashboard.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 45,54
+  s_fa301f65c4b50b::t_df552081609d08 86-87,95-96
+src/components/trophy-room.tsx
+  s_fa301f65c4b50b::t_a168c14251d895 3,12-20,22-28,36-37,45-47,55-57,65,71-75,79,81-90,95-97
+src/components/super-admin-users-table.tsx
+  s_fa301f65c4b50b::t_37c051c3a3a7db 86
+src/components/event-card.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 252
+  s_fa301f65c4b50b::t_759db4df91beda 125-126,132-133,139-140,156,158,181,186,193-196,226-227,234-240,245-246,267-269,280-282,297,300,309,311,329-331,384,395,407,483
+src/components/ui/badge.tsx
+  s_fa301f65c4b50b::t_c7c2c5a02c7491 7,11,13,15-20
+src/app/events/join/[inviteCode]/page.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 167
+src/components/super-admin-events-table.tsx
+  s_fa301f65c4b50b::t_37c051c3a3a7db 97
+src/components/team-management.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 108,111,113,115,117,119,121,145,244,269,279,528,535-536,592,833,949,959
+  s_fa301f65c4b50b::t_7b915f2fe61ada 519
+  s_fa301f65c4b50b::t_f5ba6632ebe8b6 144,242,482
+src/components/login.tsx
+  s_fa301f65c4b50b::t_f586ac6527ee3f 63,81,88-91,97-100,148,160,191
+src/components/ui/slider.tsx
+  s_fa301f65c4b50b::t_18a7de04d34acb 20,23
+src/components/super-admin-clan-delete-modal.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 70
+  s_fa301f65c4b50b::t_37c051c3a3a7db 93
+src/components/bingo-breakdown-chart.tsx
+  s_fa301f65c4b50b::t_3969f906161800 37-42
+src/components/super-admin-user-delete-modal.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 71
+  s_fa301f65c4b50b::t_37c051c3a3a7db 95
+src/components/pattern-completion-grid.tsx
+  s_fa301f65c4b50b::t_4bf682564f85f1 64,66,71,76,81,86,103,107,111,116,132,149,169,187,195
+  s_fa301f65c4b50b::t_1a01a00411b691 59
+src/app/layout.tsx
+  s_fa301f65c4b50b::t_37dec74b37beed 19-21
+  s_fa301f65c4b50b::t_d921b00461d953 14-18,22-24,38,41
+  s_fa301f65c4b50b::t_6b5de767565daf 12
+src/components/compact-goal-tree.tsx
+  s_fa301f65c4b50b::t_4bf682564f85f1 200-203
+  s_fa301f65c4b50b::t_e188a2d148e647 222,264,301,335,374,399,401
+  s_fa301f65c4b50b::t_cce7c19ae13391 210
+  s_fa301f65c4b50b::t_6772b583e58f69 389
+src/components/goal-tree-editor.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 579,582-583,649,1357-1359,1365-1367,1383,1385-1386,1400-1401,1458-1459,1487-1489,1495,1501,1507,1524,1642,1687,1689,1893,1902,1923
+src/components/player-card.tsx
+  s_fa301f65c4b50b::t_4cc353841baca3 36,39,41,49,52,63-64,67,70-71,74,77-78,81
+src/components/event-header-actions.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 210
+  s_fa301f65c4b50b::t_fd3c6ed68402ae 104
+src/components/super-admin-clan-members-table.tsx
+  s_fa301f65c4b50b::t_37c051c3a3a7db 95,97,99,101,180,238
+src/components/super-admin-event-delete-modal.tsx
+  s_fa301f65c4b50b::t_37c051c3a3a7db 92
+  s_fa301f65c4b50b::t_7b915f2fe61ada 70
+src/components/register.tsx
+  s_fa301f65c4b50b::t_f586ac6527ee3f 59,69-72,153
+src/components/super-admin-member-remove-modal.tsx
+  s_fa301f65c4b50b::t_37c051c3a3a7db 140-142,149
+  s_fa301f65c4b50b::t_7b915f2fe61ada 117,150,155,159,163,167
+src/components/ui/skeleton.tsx
+  s_fa301f65c4b50b::t_18a7de04d34acb 9
+src/components/inline-goal-assignment.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 314-315,326,350,352,363,374,380,394
+src/components/template-preview-with-tooltip.tsx
+  s_fa301f65c4b50b::t_3969f906161800 138,144,153,164,177
+  s_fa301f65c4b50b::t_1aa7fb327c6608 145
+src/components/ui/form.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 98,160
+src/components/event-rules-sheet.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 238
+  s_fa301f65c4b50b::t_7b915f2fe61ada 272
+src/components/registration-status.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 41,60,81
+src/components/item-value-charts.tsx
+  s_fa301f65c4b50b::t_3969f906161800 35-42
+src/components/event-layout-header.tsx
+  s_fa301f65c4b50b::t_81b50f6f8ff457 56,63,67,69
+src/components/prize-pool-display.tsx
+  s_fa301f65c4b50b::t_9459981936424c 30,32,40,45,62
+src/components/ui/drawer.tsx
+  s_fa301f65c4b50b::t_18a7de04d34acb 46
+src/components/ui/alert-dialog.tsx
+  s_fa301f65c4b50b::t_f45c9a684c4d4e 39
+src/components/ui/button.tsx
+  s_fa301f65c4b50b::t_cda18c4c999609 8,12-13,15,17,19-21,26-27
+src/components/bingogrid.tsx
+  s_fa301f65c4b50b::t_4bf682564f85f1 162
+src/components/item-statistics-display.tsx
+  s_fa301f65c4b50b::t_1aa7fb327c6608 102,105,124,146,154,157,182,287,350
+  s_fa301f65c4b50b::t_4ca649f1cd908b 264,266,268,270,327,329,331,333
+src/components/error-boundary.tsx
+  s_fa301f65c4b50b::t_7b915f2fe61ada 71
+src/components/event-details-card.tsx
+  s_fa301f65c4b50b::t_4cc353841baca3 27,45,50,56,63-64,66,76
+src/app/super-admin/page.tsx
+  s_fa301f65c4b50b::t_37c051c3a3a7db 19-20,22,26,34-35,38,51-52,56,68-69,73,85-86,90,104-105,112,120,128,136
+src/components/event-bingos-client.tsx
+  s_fa301f65c4b50b::t_843313672312c9 184,214,216,233-234,240-241,248-249,302,323
+src/components/mode-toggle.tsx
+  s_fa301f65c4b50b::t_2059ed8534f4f9 5,7-19,34-35,38-63
+src/components/team-display.tsx
+  s_fa301f65c4b50b::t_c6feac916cf1fb 14,52,58,64,70,76,124-128,140,145,149,156,168-171,173,191,208-209,226-229,231,249,264-265
+src/fonts/LICENSE
+  s_fa301f65c4b50b::t_0171839f52f0e5 1-116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e0f888edcfa3256cb01471b1d41e8dad2465e746",
+  "prompts": {},
+  "sessions": {
+    "s_fa301f65c4b50b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "412efaf2-20e6-4bc3-995e-6a56fb7b3861",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
