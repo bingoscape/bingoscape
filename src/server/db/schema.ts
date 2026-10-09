@@ -654,7 +654,16 @@ export const submissions = createTable("submissions", {
   locationRegionId: integer("location_region_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-})
+}, (table) => ({
+  createdAtIdIdx: index("submission_created_at_id_idx").on(
+    table.createdAt,
+    table.id
+  ),
+  teamTileCreatedAtIdx: index("submission_team_tile_created_at_idx").on(
+    table.teamTileSubmissionId,
+    table.createdAt
+  ),
+}))
 
 export const submissionComments = createTable("submission_comments", {
   id: uuid("id").defaultRandom().primaryKey(),

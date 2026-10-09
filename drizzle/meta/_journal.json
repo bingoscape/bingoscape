@@ -225,6 +225,13 @@
       "when": 1788555163424,
       "tag": "0031_fast_nightcrawler",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1791536127875,
+      "tag": "0032_greedy_jubilee",
+      "breakpoints": true
     }
   ]
 }

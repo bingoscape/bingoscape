@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS "submission_created_at_id_idx" ON "bingoscape-next_submissions" USING btree ("created_at","id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "submission_team_tile_created_at_idx" ON "bingoscape-next_submissions" USING btree ("team_tile_submission_id","created_at");

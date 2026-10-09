@@ -141,6 +141,51 @@ export async function GET() {
           },
         },
       },
+      {
+        path: "/team-drops",
+        method: "GET",
+        description:
+          "Poll for drops submitted by teammates (excludes your own). Keyset-paginated with an opaque cursor; drops are delayed ~2s. Rate limited to 30 requests/minute per user.",
+        request: {
+          query: {
+            since:
+              "string (optional) - Opaque cursor from a previous response. Omit to receive the head cursor with no drops (no backfill).",
+            limit: "number (optional) - 1-100, default 50",
+            eventId:
+              "string (optional) - Narrow to one event; intersected with your teams",
+          },
+        },
+        response: {
+          cursor: "string - Pass as 'since' on the next poll",
+          hasMore: "boolean - More drops are available right now",
+          resync:
+            "boolean - Cursor older than 24h; no drops returned, restart from the returned cursor",
+          pollIntervalMs: "number - Suggested poll interval (5000)",
+          drops: [
+            {
+              id: "string",
+              createdAt: "string - ISO timestamp with microseconds",
+              status:
+                "string - pending | approved | rejected (rejected = needs review)",
+              eventId: "string",
+              bingoId: "string",
+              teamId: "string",
+              teamName: "string",
+              tileId: "string",
+              tileTitle: "string",
+              player: { runescapeName: "string" },
+              item: { itemId: "number", quantity: "number", value: "number" },
+              source: { name: "string", type: "string", npcId: "number" },
+              imageUrl: "string",
+            },
+          ],
+        },
+        errors: {
+          "400": { error: "Invalid cursor" },
+          "401": { error: "Invalid API key" },
+          "429": { error: "Too many requests (see Retry-After header)" },
+        },
+      },
     ],
     dataStructures: {
       goalTree: {
