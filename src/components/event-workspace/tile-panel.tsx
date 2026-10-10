@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import type { CSSProperties } from "react"
 import type React from "react"
 import Image from "next/image"
 import {
@@ -8,7 +9,10 @@ import {
   CheckCircle2,
   Clock,
   EyeOff,
+  ImageIcon,
+  Info,
   Lock,
+  Target,
   Users,
   X,
   Zap,
@@ -16,6 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { cn } from "@/lib/utils"
 import { FullSizeImageDialog } from "@/components/full-size-image-dialog"
 import { GoalsTab } from "@/components/goals-tab"
 import { SubmissionsTab } from "@/components/submissions-tab"
@@ -53,9 +58,43 @@ interface TilePanelProps {
   readOnly?: boolean
   onSelectTile: (tileId: string) => void
   onClose?: () => void
+  /** Extra classes for the scroll container (the mobile drawer limits its height). */
+  scrollClassName?: string
+  scrollStyle?: CSSProperties
 }
 
 type SubTab = "details" | "submissions" | "goals"
+
+/**
+ * The panel's single scroll owner and its size container: every responsive
+ * rule inside the panel keys off this container's width (`@sm/tile:` ...), not
+ * the viewport, because the panel is 360-480px wide at any desktop width.
+ * Nothing inside may add a nested vertical scroller.
+ */
+function TilePanelScroll({
+  className,
+  style,
+  children,
+}: {
+  className?: string
+  style?: CSSProperties
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      data-tile-scroll
+      style={style}
+      className={cn(
+        "@container/tile flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pb-3 [scrollbar-gutter:stable]",
+        // Touch: every control in the panel is at least 44px tall.
+        "pointer-coarse:[&_button:not([role=checkbox]):not([role=switch]):not([role=radio])]:min-h-11",
+        className
+      )}
+    >
+      {children}
+    </div>
+  )
+}
 
 /**
  * Content of the Tile side panel (desktop) and bottom drawer (mobile): what
@@ -76,22 +115,27 @@ export function TilePanel({
   readOnly = false,
   onSelectTile,
   onClose,
+  scrollClassName,
+  scrollStyle,
 }: TilePanelProps) {
   const canEdit = !readOnly && (userRole === "admin" || userRole === "management")
 
   if (!tile) {
     return (
-      <TilePanelEmpty
-        bingo={bingo}
-        currentTeamId={currentTeamId}
-        teams={teams}
-        onSelectTile={onSelectTile}
-        readOnly={readOnly}
-      />
+      <TilePanelScroll className={scrollClassName} style={scrollStyle}>
+        <TilePanelEmpty
+          bingo={bingo}
+          currentTeamId={currentTeamId}
+          teams={teams}
+          onSelectTile={onSelectTile}
+          readOnly={readOnly}
+        />
+      </TilePanelScroll>
     )
   }
 
   return (
+    <TilePanelScroll className={scrollClassName} style={scrollStyle}>
     <TilePanelBody
       key={tile.id}
       tile={tile}
@@ -108,6 +152,7 @@ export function TilePanel({
       canEdit={canEdit}
       onClose={onClose}
     />
+    </TilePanelScroll>
   )
 }
 
@@ -125,7 +170,10 @@ function TilePanelBody({
   readOnly,
   canEdit,
   onClose,
-}: Omit<TilePanelProps, "onSelectTile" | "tile"> & {
+}: Omit<
+  TilePanelProps,
+  "onSelectTile" | "tile" | "scrollClassName" | "scrollStyle"
+> & {
   tile: Tile
   canEdit: boolean
 }) {
@@ -157,16 +205,16 @@ function TilePanelBody({
   const showJoinBanner = !readOnly && !isManagement && !currentTeamId
 
   return (
-    <div className="flex min-h-0 flex-col gap-3">
+    <div className="flex shrink-0 flex-col gap-3 pt-3">
       <header className="flex items-start gap-3">
-        <div className="osrs-slot relative size-16 shrink-0 overflow-hidden rounded-sm">
+        <div className="osrs-slot relative size-10 shrink-0 overflow-hidden rounded-sm @sm/tile:size-16">
           {tile.headerImage ? (
             <Image
               unoptimized
               src={tile.headerImage || getRandomFrog()}
               alt=""
               fill
-              sizes="64px"
+              sizes="(min-width: 384px) 64px, 40px"
               className="object-contain"
             />
           ) : (
@@ -176,7 +224,10 @@ function TilePanelBody({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="osrs-heading text-lg leading-tight wrap-break-word text-foreground">
+          <h2
+            title={tile.title || undefined}
+            className="osrs-heading line-clamp-4 text-base leading-tight wrap-break-word text-foreground @sm/tile:text-lg"
+          >
             {tile.title || "Hidden tile"}
           </h2>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
@@ -223,7 +274,7 @@ function TilePanelBody({
           <Button
             variant="ghost"
             size="icon"
-            className="-mt-1 -mr-1 shrink-0"
+            className="-mt-1 -mr-1 size-9 shrink-0 pointer-coarse:size-11"
             onClick={onClose}
           >
             <X aria-hidden="true" className="h-4 w-4" />
@@ -250,26 +301,47 @@ function TilePanelBody({
         onValueChange={(v) => setSubTab(v as SubTab)}
         className="flex min-h-0 flex-col"
       >
-        <TabsList className="h-10 w-full">
-          <TabsTrigger value="details" className="flex-1">
-            Details
-          </TabsTrigger>
-          {!readOnly && (
-            <TabsTrigger value="submissions" className="flex-1 gap-1.5">
-              Submissions
-              {pendingCount > 0 && (
-                <span className="flex h-4 min-w-4 items-center justify-center rounded-sm bg-info px-1 text-[10px] font-medium text-info-foreground">
-                  {pendingCount}
-                </span>
-              )}
-            </TabsTrigger>
-          )}
-          {canEdit && (
-            <TabsTrigger value="goals" className="flex-1">
-              Goals (edit)
-            </TabsTrigger>
-          )}
-        </TabsList>
+        <div className="sticky top-0 z-10 -mx-3 bg-card px-3 pt-1 pb-2">
+          <TabsList variant="scrollable" className="h-auto">
+            <SubTabTrigger
+              value="details"
+              label="Details"
+              icon={<Info aria-hidden="true" className="size-4 shrink-0" />}
+              active={subTab === "details"}
+            />
+            {!readOnly && (
+              <SubTabTrigger
+                value="submissions"
+                label="Submissions"
+                icon={
+                  <ImageIcon aria-hidden="true" className="size-4 shrink-0" />
+                }
+                active={subTab === "submissions"}
+                badge={
+                  pendingCount > 0 ? (
+                    <span
+                      aria-label={`${pendingCount} pending`}
+                      className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm bg-info px-1 text-[10px] font-medium text-info-foreground"
+                    >
+                      {pendingCount > 9 ? "9+" : pendingCount}
+                    </span>
+                  ) : null
+                }
+              />
+            )}
+            {canEdit && (
+              <SubTabTrigger
+                value="goals"
+                label="Goals"
+                accessibleLabel="Goals (edit)"
+                icon={
+                  <Target aria-hidden="true" className="size-4 shrink-0" />
+                }
+                active={subTab === "goals"}
+              />
+            )}
+          </TabsList>
+        </div>
 
         <TabsContent value="details" className="mt-3">
           <TileDetailsTab
@@ -344,6 +416,43 @@ function TilePanelBody({
   )
 }
 
+/**
+ * Sub-tab trigger: icon + label from the panel's `@sm` width up; below that
+ * only the active tab shows its label (inactive ones are icon-only, with an
+ * aria-label/title so the name is never lost).
+ */
+function SubTabTrigger({
+  value,
+  label,
+  accessibleLabel,
+  icon,
+  active,
+  badge,
+}: {
+  value: SubTab
+  label: string
+  accessibleLabel?: string
+  icon: React.ReactNode
+  active: boolean
+  badge?: React.ReactNode
+}) {
+  const name = accessibleLabel ?? label
+  return (
+    <TabsTrigger
+      value={value}
+      aria-label={name}
+      title={name}
+      className="min-h-9 min-w-0 shrink flex-1 gap-1.5 px-2 pointer-coarse:min-h-11 @sm/tile:px-3"
+    >
+      {icon}
+      <span className={cn("truncate", !active && "hidden @sm/tile:inline")}>
+        {label}
+      </span>
+      {badge}
+    </TabsTrigger>
+  )
+}
+
 /** Panel without a selection: the Team's progress and what needs attention. */
 function TilePanelEmpty({
   bingo,
@@ -373,7 +482,7 @@ function TilePanelEmpty({
   const team = teams.find((t) => t.id === currentTeamId)
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex shrink-0 flex-col gap-4 pt-3">
       <div>
         <h2 className="osrs-heading text-lg text-foreground">
           {team ? `${team.name} progress` : "Select a Tile"}

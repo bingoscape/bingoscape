@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import type { ReactNode } from "react"
+import type { CSSProperties, ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { ListFilter, Lock } from "lucide-react"
 import BingoGrid from "@/components/bingogrid"
@@ -57,6 +57,9 @@ interface EventWorkspaceProps {
 }
 
 const MOBILE_SNAP_POINTS = ["96px", 0.6, 0.92] as const
+
+/** Height of the drawer's handle / top bar above the scrolling panel. */
+const DRAWER_TOP_BAR = "1.5rem"
 
 /**
  * The Event workspace: Board on the left (fits the viewport), tabbed side
@@ -240,8 +243,23 @@ export function EventWorkspace({
   const panelTabValue: PanelTab =
     !isDesktop && activePanelTab === "tile" ? "teams" : activePanelTab
 
-  const tilePanel = bingo ? (
+  // The drawer is 97% tall but only `snap` of the viewport is visible, so the
+  // scroll container is limited to what is on screen (the rest of the panel is
+  // reachable by scrolling it, not by dragging the drawer off-screen).
+  const isPeek = typeof snap !== "number"
+  const drawerScrollStyle: CSSProperties = isPeek
+    ? { maxHeight: `calc(96px - ${DRAWER_TOP_BAR})`, overflowY: "hidden" }
+    : {
+        maxHeight: `calc(${snap} * 100dvh - ${DRAWER_TOP_BAR} - env(safe-area-inset-bottom))`,
+      }
+
+  const buildTilePanel = (mobile: boolean) =>
+    bingo ? (
     <TilePanel
+      scrollStyle={mobile ? drawerScrollStyle : undefined}
+      scrollClassName={
+        mobile ? "pb-[calc(env(safe-area-inset-bottom)+0.75rem)]" : undefined
+      }
       tile={selectedTile}
       bingo={bingo}
       workspace={workspace}
@@ -351,7 +369,7 @@ export function EventWorkspace({
               }}
               className="flex min-h-0 flex-1 flex-col"
             >
-              <TabsList className="m-2 grid shrink-0 grid-cols-3 lg:grid-cols-4">
+              <TabsList className="m-2 grid h-auto min-h-11 shrink-0 grid-cols-3 lg:min-h-10 lg:grid-cols-4">
                 <TabsTrigger value="tile" className="hidden lg:inline-flex">
                   Tile
                 </TabsTrigger>
@@ -359,19 +377,19 @@ export function EventWorkspace({
                 <TabsTrigger value="prize">Prize</TabsTrigger>
                 <TabsTrigger value="info">Info</TabsTrigger>
               </TabsList>
-              <div className="min-h-0 flex-1 px-3 pb-3 lg:overflow-y-auto">
+              <div className="min-h-0 flex-1 lg:overflow-y-auto">
                 {isDesktop && (
-                  <TabsContent value="tile" className="mt-0">
-                    {tilePanel}
+                  <TabsContent value="tile" className="mt-0 h-full">
+                    {buildTilePanel(false)}
                   </TabsContent>
                 )}
-                <TabsContent value="teams" className="mt-0">
+                <TabsContent value="teams" className="mt-0 px-3 pb-3">
                   {teamsPanel}
                 </TabsContent>
-                <TabsContent value="prize" className="mt-0">
+                <TabsContent value="prize" className="mt-0 px-3 pb-3">
                   {prizePanel}
                 </TabsContent>
-                <TabsContent value="info" className="mt-0">
+                <TabsContent value="info" className="mt-0 px-3 pb-3">
                   {infoPanel}
                 </TabsContent>
               </div>
@@ -393,16 +411,14 @@ export function EventWorkspace({
           activeSnapPoint={snap}
           setActiveSnapPoint={setSnap}
         >
-          <DrawerContent className="h-full max-h-[97%]">
+          <DrawerContent className="h-full max-h-[97%] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
             <DrawerTitle className="sr-only">
               {selectedTile?.title ?? "Tile details"}
             </DrawerTitle>
             <DrawerDescription className="sr-only">
               Tile details, goals and submissions
             </DrawerDescription>
-            <div className="min-h-0 flex-1 overflow-y-auto px-3 pt-3 pb-8">
-              {tilePanel}
-            </div>
+            {buildTilePanel(true)}
           </DrawerContent>
         </Drawer>
       )}

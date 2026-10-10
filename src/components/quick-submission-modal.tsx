@@ -290,10 +290,10 @@ export function QuickSubmissionModal({
 
           {/* Selected Tile Info */}
           {selectedTile && (
-            <div className="rounded-lg border bg-muted/30 p-3">
-              <p className="text-sm font-medium">{selectedTile.title}</p>
+            <div className="min-w-0 rounded-lg border bg-muted/30 p-3">
+              <p className="text-sm font-medium wrap-anywhere">{selectedTile.title}</p>
               {selectedTile.description && (
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 text-xs text-muted-foreground wrap-anywhere">
                   {selectedTile.description}
                 </p>
               )}

@@ -43,12 +43,17 @@ const DrawerContent = React.forwardRef<
     <DrawerPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col osrs-panel rounded-t-sm",
+        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col osrs-panel rounded-t-sm md:mx-auto md:max-w-[640px]",
         className
       )}
       {...props}
     >
-      <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
+      {/* 24px drag zone (matches the workspace's scroll-height maths) whose hit area grows to 44px. */}
+      <div
+        className="relative flex h-6 shrink-0 touch-none items-center justify-center before:absolute before:inset-x-0 before:top-0 before:h-11 before:content-['']"
+      >
+        <div className="h-1.5 w-16 rounded-full bg-muted-foreground/50" />
+      </div>
       {children}
     </DrawerPrimitive.Content>
   </DrawerPortal>

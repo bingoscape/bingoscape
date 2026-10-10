@@ -50,7 +50,7 @@ export function GoalsTab({
       }
     >
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Goals Management</h3>
+        <h3 className="min-w-0 text-base font-semibold @sm:text-lg">Goals Management</h3>
       </div>
 
       <GoalTreeEditor

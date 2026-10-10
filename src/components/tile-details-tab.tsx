@@ -315,7 +315,7 @@ export function TileDetailsTab({
                       className="mt-1"
                     />
                   </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-4 @md:grid-cols-3">
                     <div>
                       <label htmlFor="xp" className="block text-sm font-medium">
                         XP
@@ -438,7 +438,7 @@ export function TileDetailsTab({
                                   : "Search for OSRS images"}
                               </div>
                             ) : (
-                              <div className="grid grid-cols-3 gap-3">
+                              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                 {searchResults.map((image) => (
                                   <div
                                     key={image.title}
@@ -465,7 +465,7 @@ export function TileDetailsTab({
                             )}
                           </ScrollArea>
 
-                          <DialogFooter className="flex items-center justify-between">
+                          <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <a
                               href="https://oldschool.runescape.wiki/"
                               target="_blank"
@@ -475,7 +475,7 @@ export function TileDetailsTab({
                               Images from OSRS Wiki
                               <ExternalLink className="h-3 w-3" />
                             </a>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                               <DialogClose asChild>
                                 <Button variant="outline">Cancel</Button>
                               </DialogClose>
@@ -530,7 +530,7 @@ export function TileDetailsTab({
                       </div>
                     )}
                   </div>
-                  <div className="prose max-w-none">
+                  <div className="prose max-w-none break-words [&_img]:max-w-full [&_pre]:overflow-x-auto [&_table]:block [&_table]:overflow-x-auto">
                     <Markdown>{selectedTile?.description ?? ""}</Markdown>
                   </div>
                 </div>

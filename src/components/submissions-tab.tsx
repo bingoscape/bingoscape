@@ -130,6 +130,8 @@ export function SubmissionsTab({
   const [boardFilter, setBoardFilter] = useState<string>("all")
   const [tileFilter, setTileFilter] = useState<string>("all")
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
+  // Tile panel: the review queue shows a few rows instead of a nested scroller.
+  const [showAllQueue, setShowAllQueue] = useState(false)
 
   // Triage Inbox State
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null)
@@ -188,27 +190,42 @@ export function SubmissionsTab({
     )
   }
 
-  const getStatusBadge = (status: string) => {
+  /**
+   * `compact` (queue rows): no oversized padding, and below the container's
+   * `@sm` width only the icon is shown (the label stays for screen readers
+   * and as a tooltip).
+   */
+  const getStatusBadge = (status: string, compact = false) => {
+    const size = compact ? "shrink-0 gap-1 px-1.5 py-0.5" : "px-3 py-1"
+    const icon = compact ? "h-3 w-3" : "mr-1 h-3 w-3"
+    const label = (text: string) =>
+      compact ? (
+        <>
+          <span className="sr-only @sm:not-sr-only">{text}</span>
+        </>
+      ) : (
+        text
+      )
     switch (status) {
       case "approved":
         return (
-          <Badge className="border-success bg-success/10 px-3 py-1 text-success">
-            <Check className="mr-1 h-3 w-3" />
-            Approved
+          <Badge title="Approved" className={`border-success bg-success/10 text-success ${size}`}>
+            <Check className={icon} />
+            {label("Approved")}
           </Badge>
         )
       case "needs_review":
         return (
-          <Badge className="border-warning bg-warning/10 px-3 py-1 text-warning">
-            <AlertTriangle className="mr-1 h-3 w-3" />
-            Changes Requested
+          <Badge title="Changes Requested" className={`border-warning bg-warning/10 text-warning ${size}`}>
+            <AlertTriangle className={icon} />
+            {label("Changes Requested")}
           </Badge>
         )
       default:
         return (
-          <Badge className="border-info bg-info/10 px-3 py-1 text-info">
-            <Clock className="mr-1 h-3 w-3" />
-            Pending
+          <Badge title="Pending" className={`border-info bg-info/10 text-info ${size}`}>
+            <Clock className={icon} />
+            {label("Pending")}
           </Badge>
         )
     }
@@ -629,9 +646,32 @@ export function SubmissionsTab({
     return teamTileSubmissions.find((ts) => ts.tile?.id === id)?.tile
   })
 
+  // Tile panel queue: first rows only, unless expanded (or the selected row is further down).
+  const QUEUE_PREVIEW = 5
+  const selectedQueueIndex = filteredFlatSubmissions.findIndex(
+    (s: any) => s.id === selectedSubmissionId
+  )
+  const queueCollapsed =
+    stacked && !showAllQueue && filteredFlatSubmissions.length > QUEUE_PREVIEW
+  const visibleQueue = queueCollapsed
+    ? filteredFlatSubmissions.slice(
+        0,
+        Math.max(QUEUE_PREVIEW, selectedQueueIndex + 1)
+      )
+    : filteredFlatSubmissions
+  const statusTrigger =
+    "min-h-9 min-w-0 shrink flex-1 gap-1 px-2 pointer-coarse:min-h-11 @sm:gap-1.5 @sm:px-3"
+  const countBadge = (n: number) => (
+    <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm bg-secondary px-1 text-[10px] font-medium text-secondary-foreground">
+      {n > 99 ? "99+" : n}
+    </span>
+  )
+  const hasAdvancedFilters =
+    boardFilter !== "all" || tileFilter !== "all" || teamFilter !== "all"
+
   return (
-    <div className="w-full flex flex-col space-y-4 text-foreground">
-      <div className="space-y-4 p-2 shrink-0">
+    <div className="@container w-full min-w-0 flex flex-col space-y-4 text-foreground">
+      <div className={`space-y-3 shrink-0 ${stacked ? "" : "p-2"}`}>
         {/* Current team submission form */}
         {!isAdminView && currentTeamId && !isSubmissionsLocked && (
           <div className={`space-y-4 rounded-lg border border-border bg-card shadow-xs ${stacked ? "p-3" : "p-6"}`}>
@@ -663,51 +703,57 @@ export function SubmissionsTab({
         )}
 
         {/* Enhanced Filters */}
-        <div className="space-y-4 rounded-lg border border-border bg-card p-4 sm:p-6 shadow-xs">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
-              <div className="flex items-center justify-between">
-                <TabsList className="h-9 sm:h-10">
-                  <TabsTrigger value="all" className="flex items-center gap-1.5 px-3">
-                    All <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.all}</Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="needs_review" className="flex items-center gap-1.5 px-3">
-                    <AlertTriangle className="h-3.5 w-3.5 text-warning" />
-                    <span className="hidden sm:inline">Changes Requested</span>
-                    <span className="sm:hidden">Changes</span>
-                    <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.needs_review}</Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="pending" className="flex items-center gap-1.5 px-3">
-                    <Clock className="h-3.5 w-3.5 text-info" />
-                    Pending <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.pending}</Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="approved" className="flex items-center gap-1.5 px-3">
-                    <Check className="h-3.5 w-3.5 text-success" />
-                    Approved <Badge variant="secondary" className="ml-1 hidden sm:inline-flex">{counts.approved}</Badge>
-                  </TabsTrigger>
-                </TabsList>
-                
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-9 sm:h-10"
-                    onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                  >
-                    <Filter className="mr-2 h-4 w-4" />
-                    Filters
-                    {(boardFilter !== "all" || tileFilter !== "all" || teamFilter !== "all") && (
-                      <Badge variant="secondary" className="ml-2 px-1 rounded-sm h-5 min-w-5 flex items-center justify-center">!</Badge>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </Tabs>
+        <div className="space-y-3 rounded-lg border border-border bg-card p-2 shadow-xs @sm:p-3 @lg:p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="min-w-0 truncate text-sm text-muted-foreground">
+              {filteredFlatSubmissions.length} of {counts.all} submissions
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              title="Filters"
+              aria-label="Filters"
+              aria-expanded={isFiltersOpen}
+              className="relative h-9 min-w-9 shrink-0 px-2 pointer-coarse:h-11 pointer-coarse:min-w-11 @sm:px-3"
+              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+            >
+              <Filter aria-hidden="true" className="h-4 w-4" />
+              <span className="hidden @sm:inline">Filters</span>
+              {hasAdvancedFilters && (
+                <span
+                  aria-label="Filters active"
+                  className="absolute top-1 right-1 size-2 rounded-full bg-primary @sm:static @sm:ml-1"
+                />
+              )}
+            </Button>
           </div>
 
+          <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full min-w-0">
+            <TabsList variant="scrollable" className="h-auto">
+              <TabsTrigger value="all" aria-label="All" title="All" className={statusTrigger}>
+                All {countBadge(counts.all)}
+              </TabsTrigger>
+              <TabsTrigger value="needs_review" aria-label="Changes Requested" title="Changes Requested" className={statusTrigger}>
+                <AlertTriangle aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-warning" />
+                <span className={`truncate ${statusFilter === "needs_review" ? "" : "hidden @sm:inline"}`}>Changes</span>
+                {countBadge(counts.needs_review)}
+              </TabsTrigger>
+              <TabsTrigger value="pending" aria-label="Pending" title="Pending" className={statusTrigger}>
+                <Clock aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-info" />
+                <span className={`truncate ${statusFilter === "pending" ? "" : "hidden @sm:inline"}`}>Pending</span>
+                {countBadge(counts.pending)}
+              </TabsTrigger>
+              <TabsTrigger value="approved" aria-label="Approved" title="Approved" className={statusTrigger}>
+                <Check aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-success" />
+                <span className={`truncate ${statusFilter === "approved" ? "" : "hidden @sm:inline"}`}>Approved</span>
+                {countBadge(counts.approved)}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-            <CollapsibleContent className="mt-4 space-y-4">
-              <div className="flex items-center justify-between border-t pt-4">
+            <CollapsibleContent className="space-y-3">
+              <div className="flex items-center justify-between gap-2 border-t pt-3">
                 <h3 className="text-sm font-medium text-foreground">Advanced Filters</h3>
                 {(boardFilter !== "all" || tileFilter !== "all" || teamFilter !== "all") && (
                   <Button
@@ -718,14 +764,14 @@ export function SubmissionsTab({
                       setTileFilter("all")
                       setTeamFilter("all")
                     }}
-                    className="h-8 text-muted-foreground hover:text-foreground"
+                    className="h-8 text-muted-foreground hover:text-foreground pointer-coarse:h-11"
                   >
                     Clear Filters
                   </Button>
                 )}
               </div>
               
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 @md:grid-cols-2">
                 {isAdminView && (
                   <>
                     <div>
@@ -736,7 +782,7 @@ export function SubmissionsTab({
                         Board Filter
                       </Label>
                       <Select value={boardFilter} onValueChange={setBoardFilter}>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full pointer-coarse:min-h-11">
                           <SelectValue placeholder="Filter by board" />
                         </SelectTrigger>
                         <SelectContent>
@@ -757,7 +803,7 @@ export function SubmissionsTab({
                         Tile Filter
                       </Label>
                       <Select value={tileFilter} onValueChange={setTileFilter}>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full pointer-coarse:min-h-11">
                           <SelectValue placeholder="Filter by tile" />
                         </SelectTrigger>
                         <SelectContent>
@@ -789,7 +835,7 @@ export function SubmissionsTab({
                       Team Filter
                     </Label>
                     <Select value={teamFilter} onValueChange={setTeamFilter}>
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full pointer-coarse:min-h-11">
                         <SelectValue placeholder="Filter by team" />
                       </SelectTrigger>
                       <SelectContent>
@@ -823,16 +869,16 @@ export function SubmissionsTab({
       </div>
 
       {/* Submissions Display */}
-      <div className="flex flex-col px-2 pb-2">
+      <div className={`flex flex-col ${stacked ? "" : "px-2 pb-2"}`}>
         {filteredFlatSubmissions.length > 0 ? (
             hasSufficientRights ? (
               /* --- SPLIT PANE TRIAGE INBOX (Power User View) --- */
-              <div className={`flex flex-col gap-6 relative ${stacked ? "" : "md:flex-row"}`}>
+              <div className={`flex flex-col relative ${stacked ? "gap-4" : "gap-6 md:flex-row"}`}>
                 
                 {/* Left Pane: Queue List Wrapper */}
                 <div className={`w-full flex flex-col ${stacked ? "" : "md:w-1/3 lg:w-1/4 md:relative"}`}>
-                  <div className={`flex flex-col gap-2 overflow-y-auto pr-2 border-border custom-scrollbar max-h-[300px] ${stacked ? "" : "md:absolute md:inset-0 md:border-r md:max-h-none"}`}>
-                    {filteredFlatSubmissions.map((submission: any) => {
+                  <div className={`flex flex-col gap-2 ${stacked ? "" : "overflow-y-auto pr-2 border-border custom-scrollbar max-h-[300px] md:absolute md:inset-0 md:border-r md:max-h-none"}`}>
+                    {visibleQueue.map((submission: any) => {
                       const currentStatus = getSubmissionStatus(submission.id, submission.status || "pending")
                       const isSelected = selectedSubmissionId === submission.id
                     
@@ -840,9 +886,9 @@ export function SubmissionsTab({
                       <div
                         key={submission.id}
                         onClick={() => setSelectedSubmissionId(submission.id)}
-                        className={`p-3 rounded-lg border transition-colors cursor-pointer flex gap-3 ${isSelected ? 'bg-primary/5 border-primary shadow-xs' : 'bg-card border-border hover:bg-muted/50'}`}
+                        className={`rounded-lg border transition-colors cursor-pointer flex gap-3 ${stacked ? "min-h-11 p-2 @sm:p-3" : "p-3"} ${isSelected ? 'bg-primary/5 border-primary shadow-xs' : 'bg-card border-border hover:bg-muted/50'}`}
                       >
-                        <div className="relative w-16 h-12 rounded-md overflow-hidden shrink-0 border border-border/50">
+                        <div className={`relative h-12 rounded-md overflow-hidden shrink-0 border border-border/50 ${stacked ? "w-14" : "w-16"}`}>
                           <Image
                             src={getOptimizedImageUrl(submission.image.path)}
                             alt="thumb"
@@ -852,48 +898,58 @@ export function SubmissionsTab({
                         </div>
                         <div className="flex flex-col min-w-0 overflow-hidden w-full">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="font-semibold text-sm truncate text-foreground">{submission.team.name}</span>
-                            <div className="scale-75 origin-right shrink-0">{getStatusBadge(currentStatus)}</div>
+                            <span title={submission.team.name} className="font-semibold text-sm truncate text-foreground">{submission.team.name}</span>
+                            {stacked ? getStatusBadge(currentStatus, true) : <div className="scale-75 origin-right shrink-0">{getStatusBadge(currentStatus)}</div>}
                           </div>
-                          <span className="text-xs text-muted-foreground truncate">{submission.user.runescapeName || submission.user.name || "Unknown"}</span>
-                          <span className="text-[10px] text-muted-foreground/70">{new Date(submission.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                          <span title={submission.user.runescapeName || submission.user.name || "Unknown"} className="text-xs text-muted-foreground truncate">{submission.user.runescapeName || submission.user.name || "Unknown"}</span>
+                          <span className={`text-muted-foreground/70 ${stacked ? "text-xs" : "text-[10px]"}`}>{new Date(submission.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                         </div>
                       </div>
                     )
                   })}
+                  {stacked && filteredFlatSubmissions.length > QUEUE_PREVIEW && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setShowAllQueue((v) => !v)}
+                    >
+                      {showAllQueue ? "Show fewer" : `Show all (${filteredFlatSubmissions.length})`}
+                    </Button>
+                  )}
                 </div>
                 </div>
 
                 {/* Right Pane: Focus Area */}
-                <div className={`w-full flex flex-col gap-4 ${stacked ? "" : "md:w-2/3 lg:w-3/4 pl-2"}`}>
+                <div className={`w-full min-w-0 flex flex-col gap-4 ${stacked ? "" : "md:w-2/3 lg:w-3/4 pl-2"}`}>
                   {filteredFlatSubmissions.filter((s: any) => s.id === selectedSubmissionId).map((submission: any) => {
                     const currentSubmissionStatus = getSubmissionStatus(submission.id, submission.status || "pending")
                     const currentTileStatus = getTileStatus(submission.teamTileSubmissionId, submission.parentStatus)
                     
                     return (
-                      <div key={`focus-${submission.id}`} className="flex flex-col gap-6 animate-in fade-in duration-200">
+                      <div key={`focus-${submission.id}`} className={`flex flex-col animate-in fade-in duration-200 ${stacked ? "gap-4" : "gap-6"}`}>
                         {/* Header Context */}
-                        <div className="shrink-0 flex flex-col sm:flex-row sm:items-start justify-between gap-4 bg-muted/20 p-4 rounded-lg border border-border">
-                          <div>
-                            <h2 className="text-xl font-bold flex items-center gap-2">
+                        <div className={`shrink-0 flex flex-col justify-between bg-muted/20 rounded-lg border border-border ${stacked ? "gap-3 p-3" : "sm:flex-row sm:items-start gap-4 p-4"}`}>
+                          <div className="min-w-0">
+                            <h2 className={`font-bold flex items-center gap-2 min-w-0 ${stacked ? "text-base" : "text-xl"}`}>
                               <div
-                                className="h-4 w-4 rounded-full shadow-xs"
+                                className="h-4 w-4 shrink-0 rounded-full shadow-xs"
                                 style={{ backgroundColor: `hsl(${(submission.team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)` }}
                               />
-                              {submission.team.name}
+                              <span className="min-w-0 wrap-anywhere">{submission.team.name}</span>
                             </h2>
-                            <p className="text-sm text-muted-foreground mt-1">
+                            <p className="text-sm text-muted-foreground mt-1 wrap-anywhere">
                               Submitted by {submission.user.runescapeName || submission.user.name || "Unknown"} at {new Date(submission.createdAt).toLocaleString()}
                             </p>
                             {isAdminView && submission.tile && (
-                              <p className="text-sm font-medium mt-1">
+                              <p className="text-sm font-medium mt-1 wrap-anywhere">
                                 {submission.tile.bingo?.title} &rarr; {submission.tile.title}
                               </p>
                             )}
                           </div>
                           
-                          <div className="flex flex-col items-end gap-2">
-                             <div className="flex gap-2">
+                          <div className={`flex flex-col gap-2 min-w-0 ${stacked ? "items-start" : "items-end"}`}>
+                             <div className="flex flex-wrap gap-2">
                                {getStatusBadge(currentSubmissionStatus)}
                                <Badge variant="outline" className="capitalize border-muted-foreground/30">{currentTileStatus.replace("_", " ")} Tile</Badge>
                              </div>
@@ -927,8 +983,17 @@ export function SubmissionsTab({
 
                         {/* High-Res Image Display */}
                         <div 
-                           className="flex-1 min-h-[250px] shrink-0 relative w-full rounded-xl overflow-hidden border border-border shadow-md bg-osrs-black/5 flex items-center justify-center cursor-pointer group"
+                           role="button"
+                           tabIndex={0}
+                           aria-label="View submission image full size"
+                           className={`shrink-0 relative w-full rounded-xl overflow-hidden border border-border shadow-md bg-osrs-black/5 flex items-center justify-center cursor-pointer group ${stacked ? "aspect-video max-h-[50dvh]" : "flex-1 min-h-[250px]"}`}
                            onClick={() => onFullSizeImageView(getOptimizedImageUrl(submission.image.path), "Submission")}
+                           onKeyDown={(e) => {
+                             if (e.key === "Enter" || e.key === " ") {
+                               e.preventDefault()
+                               onFullSizeImageView(getOptimizedImageUrl(submission.image.path), "Submission")
+                             }
+                           }}
                         >
                           <Image
                             src={getOptimizedImageUrl(submission.image.path)}
@@ -941,22 +1006,22 @@ export function SubmissionsTab({
                         
                         {/* Auto-submission metadata */}
                         {submission.isAutoSubmission && (
-                          <div className="shrink-0 space-y-1 rounded-md border border-info bg-info/10 p-3 grid grid-cols-2 gap-x-4">
-                            <div className="col-span-2 flex items-center gap-1 text-sm font-medium text-info mb-1">
+                          <div className="shrink-0 space-y-1 rounded-md border border-info bg-info/10 p-3 grid grid-cols-1 @md:grid-cols-2 gap-x-4 min-w-0">
+                            <div className="@md:col-span-2 flex items-center gap-1 text-sm font-medium text-info mb-1">
                               <Zap className="h-4 w-4" /> Auto-Submitted
                             </div>
                             {submission.sourceName && (
-                              <div className="text-sm text-muted-foreground"><span className="font-medium">Source:</span> {submission.sourceName}</div>
+                              <div className="min-w-0 wrap-anywhere text-sm text-muted-foreground"><span className="font-medium">Source:</span> {submission.sourceName}</div>
                             )}
                             {submission.pluginAccountName && (
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground"><User className="h-4 w-4" /> {submission.pluginAccountName}</div>
+                              <div className="flex min-w-0 items-start gap-1 text-sm text-muted-foreground"><User className="mt-0.5 h-4 w-4 shrink-0" /> <span className="min-w-0 wrap-anywhere">{submission.pluginAccountName}</span></div>
                             )}
                           </div>
                         )}
 
                         {/* Action Zone */}
-                        <div className="shrink-0 flex flex-col gap-4 p-5 rounded-lg border border-border bg-card shadow-xs">
-                          <h3 className="font-semibold text-lg">Goal Assignment</h3>
+                        <div className={`shrink-0 flex flex-col gap-4 rounded-lg border border-border bg-card shadow-xs min-w-0 ${stacked ? "p-3 @sm:p-5" : "p-5"}`}>
+                          <h3 className={`font-semibold ${stacked ? "text-base @sm:text-lg" : "text-lg"}`}>Goal Assignment</h3>
                           
                           <InlineGoalAssignment
                             submissionId={submission.id}
@@ -968,30 +1033,30 @@ export function SubmissionsTab({
                             hasSufficientRights={hasSufficientRights}
                           />
 
-                          <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-border">
+                          <div className={stacked ? "grid grid-cols-2 gap-2 mt-2 pt-3 border-t border-border" : "flex flex-wrap gap-3 mt-4 pt-4 border-t border-border"}>
                             <Button
-                              className={`flex-1 min-w-[140px] h-10 ${currentSubmissionStatus !== "approved" ? "bg-success hover:bg-success text-success-foreground" : ""}`}
+                              className={`${stacked ? "h-11 min-w-0 px-2" : "flex-1 min-w-[140px] h-10"} ${currentSubmissionStatus !== "approved" ? "bg-success hover:bg-success text-success-foreground" : ""}`}
                               variant={currentSubmissionStatus === "approved" ? "secondary" : "default"}
                               onClick={() => handleSubmissionStatusUpdate(submission.id, "approved")}
                               disabled={currentSubmissionStatus === "approved"}
                             >
                               <Check className="mr-2 h-4 w-4" />
-                              Approve <span className="ml-1 opacity-50 text-[10px] hidden sm:inline">(⇧A)</span>
+                              Approve {!stacked && <span className="ml-1 opacity-50 text-[10px] hidden sm:inline pointer-coarse:hidden">(⇧A)</span>}
                             </Button>
 
                             <Button
-                              className={`flex-1 min-w-[140px] h-10 ${currentSubmissionStatus !== "needs_review" ? "bg-warning hover:bg-warning text-warning-foreground" : ""}`}
+                              className={`${stacked ? "h-11 min-w-0 px-2" : "flex-1 min-w-[140px] h-10"} ${currentSubmissionStatus !== "needs_review" ? "bg-warning hover:bg-warning text-warning-foreground" : ""}`}
                               variant={currentSubmissionStatus === "needs_review" ? "secondary" : "default"}
                               onClick={() => handleNeedsReviewClick(submission.id)}
                               disabled={currentSubmissionStatus === "needs_review"}
                             >
                               <AlertTriangle className="mr-2 h-4 w-4" />
-                              Request Changes <span className="ml-1 opacity-50 text-[10px] hidden sm:inline">(⇧R)</span>
+                              {stacked ? (<><span className="@sm:hidden">Changes</span><span className="hidden @sm:inline">Request Changes</span></>) : "Request Changes"} {!stacked && <span className="ml-1 opacity-50 text-[10px] hidden sm:inline pointer-coarse:hidden">(⇧R)</span>}
                             </Button>
 
                             <AlertDialog open={submissionToDelete === submission.id} onOpenChange={(open) => open ? setSubmissionToDelete(submission.id) : setSubmissionToDelete(null)}>
                               <AlertDialogTrigger asChild>
-                                <Button variant="outline" className="h-10 text-danger hover:bg-destructive/10 border-destructive/20">
+                                <Button variant="outline" className={`text-danger hover:bg-destructive/10 border-destructive/20 ${stacked ? "h-11 col-span-2" : "h-10"}`}>
                                   <X className="mr-2 h-4 w-4" /> Delete
                                 </Button>
                               </AlertDialogTrigger>
@@ -1016,7 +1081,7 @@ export function SubmissionsTab({
                         </div>
 
                         {/* Comments section */}
-                        <div className="shrink-0 mt-2 max-h-32 overflow-y-auto custom-scrollbar pr-2">
+                        <div className={`shrink-0 mt-2 min-w-0 ${stacked ? "" : "max-h-32 overflow-y-auto custom-scrollbar pr-2"}`}>
                            {showCommentForm === submission.id && (
                             <div className="mb-4">
                               <CommentForm
@@ -1047,13 +1112,13 @@ export function SubmissionsTab({
               </div>
             ) : (
               /* --- STANDARD GRID (Normal User View) --- */
-              <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              <div className={stacked ? "min-w-0" : "flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2"}>
+                <div className={stacked ? "grid grid-cols-1 gap-3 @lg:grid-cols-2" : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"}>
                   {filteredFlatSubmissions.map((submission: any) => {
                   const currentSubmissionStatus = getSubmissionStatus(submission.id, submission.status || "pending")
                   
                   return (
-                    <div key={submission.id} className="overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
+                    <div key={submission.id} className="min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
                       <div className="relative aspect-video">
                         <Image
                           src={getOptimizedImageUrl(submission.image.path)}
@@ -1066,10 +1131,10 @@ export function SubmissionsTab({
                           {getStatusBadge(currentSubmissionStatus)}
                         </div>
                       </div>
-                      <div className="p-4 space-y-4">
-                        <div>
-                          <div className="font-semibold text-foreground truncate">{submission.team.name}</div>
-                          <div className="text-sm text-muted-foreground">by {submission.user.runescapeName || submission.user.name || "Unknown"}</div>
+                      <div className={`min-w-0 space-y-4 ${stacked ? "p-3" : "p-4"}`}>
+                        <div className="min-w-0">
+                          <div title={submission.team.name} className="font-semibold text-foreground truncate">{submission.team.name}</div>
+                          <div title={submission.user.runescapeName || submission.user.name || "Unknown"} className="text-sm text-muted-foreground truncate">by {submission.user.runescapeName || submission.user.name || "Unknown"}</div>
                           <div className="text-xs text-muted-foreground mt-1">{new Date(submission.createdAt).toLocaleString()}</div>
                         </div>
                         

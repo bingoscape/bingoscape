@@ -7,7 +7,7 @@ import { AuthProvider } from "@/server/sessionwrapper"
 import "@/styles/globals.css"
 import "@mdxeditor/editor/style.css"
 
-import { type Metadata } from "next"
+import { type Metadata, type Viewport } from "next"
 import { Noto_Sans } from "next/font/google"
 import localFont from "next/font/local"
 
@@ -22,6 +22,13 @@ const pixel = localFont({
   variable: "--font-pixel",
   display: "swap",
 })
+
+// viewport-fit=cover lets the mobile Tile drawer honour env(safe-area-inset-*).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+}
 
 export const metadata: Metadata = {
   title: "BingoScape Next",

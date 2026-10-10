@@ -610,7 +610,7 @@ export function GoalTreeEditor({
           items={flatTree.map((n) => n.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="relative ml-2 space-y-2 border-l border-border pl-4">
+          <div className="relative ml-1 space-y-2 border-l border-border pl-2 [--goal-indent:0.75rem] @sm:ml-2 @sm:pl-4 @sm:[--goal-indent:1.25rem]">
             {flatTree.map((node) => (
               <TreeNode
                 key={node.id}
@@ -681,7 +681,7 @@ export function GoalTreeEditor({
           </Button>
 
           <Sheet open={isAddGoalDrawerOpen} onOpenChange={setIsAddGoalDrawerOpen}>
-            <SheetContent side="right" className="w-[400px] sm:w-[540px] overflow-y-auto z-50">
+            <SheetContent side="right" className="w-[min(100vw,540px)] overflow-y-auto z-50">
               <SheetHeader className="mb-6">
                 <SheetTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5" />
@@ -834,7 +834,7 @@ export function GoalTreeEditor({
                       {/* Metric Goal Form */}
                       {goalType === "metric" && (
                         <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div className="space-y-2">
                               <Label className="text-sm font-medium">
                                 Metric Type
@@ -1142,7 +1142,11 @@ function TreeNode({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-    marginLeft: node.depth > 0 ? `${node.depth * 24}px` : "0px",
+    // Visual indent is capped at depth 3 so deep trees never push content out of the panel.
+    marginLeft:
+      node.depth > 0
+        ? `calc(${Math.min(node.depth, 3)} * var(--goal-indent, 1.5rem))`
+        : "0px",
   }
 
   const handleStartEdit = () => {
@@ -1353,7 +1357,7 @@ function TreeNode({
         style={style} 
         className={cn(
           "flex items-center gap-2",
-          node.depth > 0 && "border-l-2 pl-4 mb-2 relative",
+          node.depth > 0 && "border-l-2 pl-3 @sm:pl-4 mb-2 relative",
           node.depth > 0 && groupData.logicalOperator === "SUM" ? "border-chart-5/30" :
           node.depth > 0 && groupData.logicalOperator === "OR" ? "border-chart-5/30" :
           node.depth > 0 ? "border-info/30" : ""
@@ -1390,7 +1394,7 @@ function TreeNode({
           onClick={(e) => onNodeClick(node.id, e)}
         >
           <div>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
               {isEditingGroupName ? (
                 <div className="flex flex-1 items-center gap-2">
                   <Layers
@@ -1438,7 +1442,7 @@ function TreeNode({
                 </div>
               ) : (
                 <>
-                  <div className="flex flex-1 items-center gap-2">
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1459,7 +1463,7 @@ function TreeNode({
                           : "text-info"
                       )}
                     />
-                    <span className="font-medium">
+                    <span className="min-w-0 font-medium wrap-anywhere">
                       {(groupData.name as string | null) || "Group"}
                     </span>
                     {hasSufficientRights && (
@@ -1618,7 +1622,7 @@ function TreeNode({
                     )}
                   </div>
                   {hasSufficientRights && (
-                    <div className="flex items-center gap-1 ml-4">
+                    <div className="ml-auto flex items-center gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1664,7 +1668,7 @@ function TreeNode({
       style={style} 
       className={cn(
         "flex items-center gap-2",
-        node.depth > 0 && "border-l-2 pl-4 relative border-muted-foreground/30"
+        node.depth > 0 && "border-l-2 pl-3 @sm:pl-4 relative border-muted-foreground/30"
       )}
     >
       {node.depth > 0 && (
@@ -1869,8 +1873,8 @@ function TreeNode({
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between">
-              <div className="flex flex-1 items-center gap-2">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                 {isItemGoal ? (
                   <>
                     <Image
@@ -1901,13 +1905,13 @@ function TreeNode({
                 ) : (
                   <Target className="h-4 w-4 shrink-0 text-success" />
                 )}
-                <span className="text-sm">{goalData.description}</span>
+                <span className="min-w-0 text-sm wrap-anywhere">{goalData.description}</span>
                 <Badge variant="outline" className="shrink-0 text-xs">
                   Target: {goalData.targetValue}
                 </Badge>
               </div>
               {hasSufficientRights && (
-                <div className="flex gap-1">
+                <div className="flex shrink-0 gap-1">
                   <Button
                     variant="ghost"
                     size="sm"
