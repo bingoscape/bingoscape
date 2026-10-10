@@ -1,0 +1,39 @@
+src/app/layout.tsx
+  s_fa301f65c4b50b::t_b1c982962fd860 10,26-32
+src/components/submissions-tab.tsx
+  s_fa301f65c4b50b::t_3d78ca1310fd39 133-134,193-208,212-214,219-221,226-228,649-671,673-674,706-728,731-753,755-756,767,774,785,806,838,872,876,880-881,889,891,901-902,904-905,910-919,924,930,932-934,936,939,941,945,951-952,986-989,991-996,1009-1010,1014,1017,1023-1024,1036,1038,1044,1048,1054,1059,1084,1115-1116,1121,1134-1137
+src/components/event-workspace/event-workspace.tsx
+  s_fa301f65c4b50b::t_b50911b99dec14 4,61-63,246-257,259-262,372,380,382-383,386,389,392,414,421
+src/components/goal-tree-editor.tsx
+  s_fa301f65c4b50b::t_b1c982962fd860 613,684,837,1145-1149,1360,1397,1445,1466,1625,1671,1876-1877,1908,1914
+src/components/submission-upload-form.tsx
+  s_fa301f65c4b50b::t_f39be0e9ecc5ea 75,77,79,84,96,144,165,233,235,237,245,254-255,263,283
+src/components/tile-details-tab.tsx
+  s_fa301f65c4b50b::t_e18016c6c07370 318,441,468,478,533
+src/components/goals-tab.tsx
+  s_fa301f65c4b50b::t_b1c982962fd860 53
+src/components/ui/tabs.tsx
+  s_fa301f65c4b50b::t_5c9901b7d5a0ef 10-22,25-98
+src/components/ui/drawer.tsx
+  s_fa301f65c4b50b::t_997c898bfa7d5d 46,51-56
+src/components/event-workspace/tile-panel.tsx
+  s_fa301f65c4b50b::t_07d3a8cd6091bf 4,12-13,15,23,61-63,68-98,118-119,125-133,138,155,173-176,208,210,217,227-230,277,304-344,419-455,485
+src/components/quick-submission-modal.tsx
+  s_fa301f65c4b50b::t_c242776e9514c6 293-294,296
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1b2bcda135614d74f413f7c68cdf8e85001daf41",
+  "prompts": {},
+  "sessions": {
+    "s_fa301f65c4b50b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "412efaf2-20e6-4bc3-995e-6a56fb7b3861",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
