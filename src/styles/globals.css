@@ -583,6 +583,10 @@
 }
 
 :root {
+  /* Sticky navbar height and the gap under it; the event workspace is sized as
+     calc(100dvh - var(--nav-h) - var(--nav-gap)). */
+  --nav-h: 3.5rem;
+  --nav-gap: 1rem;
   --texture-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.9 0 0 0 -0.25'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
   --texture-leather: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect width='3' height='3' fill='%23000' opacity='.05'/%3E%3Crect x='3' y='3' width='3' height='3' fill='%23fff' opacity='.025'/%3E%3C/svg%3E");
 }
@@ -702,6 +706,74 @@
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Event workspace: fit board (see docs/design/osrs-theme.md)          */
+/* ------------------------------------------------------------------ */
+
+/*
+  `.osrs-board-pane` is the size container. On desktop (>=1024px) it fills the
+  space it is given and the board shrinks to fit both axes; below that only the
+  width is constrained and the page scrolls. `.osrs-board-fit` is the board
+  itself: set unitless --cols and --rows (and --vgaps for tier ladders) on it.
+  Mirrors src/lib/board-fit.ts.
+*/
+@layer components {
+  .osrs-board-pane {
+    container-type: inline-size;
+    display: grid;
+    width: 100%;
+    overflow: auto;
+  }
+
+  .osrs-board-fit {
+    --g: clamp(2px, 1cqw, 10px);
+    --p: var(--g);
+    --vgaps: calc(var(--rows) - 1);
+    --s: max(
+      36px,
+      calc((100cqw - 2 * var(--p) - 2px - (var(--cols) - 1) * var(--g)) / var(--cols))
+    );
+    display: grid;
+    grid-template-columns: repeat(var(--cols), var(--s));
+    grid-auto-rows: var(--s);
+    gap: var(--g);
+    padding: var(--p);
+    /* auto margins centre the board and stay scrollable when it overflows */
+    margin: auto;
+    width: max-content;
+  }
+
+  @media (min-width: 1024px) {
+    .osrs-board-pane {
+      container-type: size;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .osrs-board-fit {
+      --g: clamp(2px, 1cqmin, 10px);
+      --s: max(
+        36px,
+        min(
+          calc((100cqw - 2 * var(--p) - 2px - (var(--cols) - 1) * var(--g)) / var(--cols)),
+          calc((100cqh - 2 * var(--p) - 2px - var(--vgaps) * var(--g)) / var(--rows))
+        )
+      );
+    }
+  }
+
+  /* Tile slot: its own size container so the face can adapt to --s. */
+  .osrs-tile {
+    container-type: inline-size;
+    container-name: tile;
+  }
+
+  /* Slot-relative type: 16% of the slot edge, between 9px and 16px. */
+  .osrs-tile-text {
+    font-size: clamp(9px, 16cqw, 16px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
@@ -734,4 +806,42 @@
   transition:
     opacity 150ms,
     transform 150ms;
+}
+
+/* Typography plugin: follow the OSRS theme tokens instead of its grey defaults,
+   so `prose` text stays readable on stone and parchment (and in hover boxes). */
+.prose,
+.prose-invert {
+  --tw-prose-body: hsl(var(--foreground));
+  --tw-prose-headings: hsl(var(--foreground));
+  --tw-prose-lead: hsl(var(--muted-foreground));
+  --tw-prose-links: hsl(var(--primary));
+  --tw-prose-bold: hsl(var(--foreground));
+  --tw-prose-counters: hsl(var(--muted-foreground));
+  --tw-prose-bullets: hsl(var(--muted-foreground));
+  --tw-prose-hr: hsl(var(--border));
+  --tw-prose-quotes: hsl(var(--foreground));
+  --tw-prose-quote-borders: hsl(var(--border));
+  --tw-prose-captions: hsl(var(--muted-foreground));
+  --tw-prose-code: hsl(var(--foreground));
+  --tw-prose-pre-code: hsl(var(--foreground));
+  --tw-prose-pre-bg: hsl(var(--field));
+  --tw-prose-th-borders: hsl(var(--border));
+  --tw-prose-td-borders: hsl(var(--border));
+  --tw-prose-invert-body: hsl(var(--foreground));
+  --tw-prose-invert-headings: hsl(var(--foreground));
+  --tw-prose-invert-lead: hsl(var(--muted-foreground));
+  --tw-prose-invert-links: hsl(var(--primary));
+  --tw-prose-invert-bold: hsl(var(--foreground));
+  --tw-prose-invert-counters: hsl(var(--muted-foreground));
+  --tw-prose-invert-bullets: hsl(var(--muted-foreground));
+  --tw-prose-invert-hr: hsl(var(--border));
+  --tw-prose-invert-quotes: hsl(var(--foreground));
+  --tw-prose-invert-quote-borders: hsl(var(--border));
+  --tw-prose-invert-captions: hsl(var(--muted-foreground));
+  --tw-prose-invert-code: hsl(var(--foreground));
+  --tw-prose-invert-pre-code: hsl(var(--foreground));
+  --tw-prose-invert-pre-bg: hsl(var(--field));
+  --tw-prose-invert-th-borders: hsl(var(--border));
+  --tw-prose-invert-td-borders: hsl(var(--border));
 }

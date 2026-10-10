@@ -17,14 +17,20 @@ interface PrizePoolData {
 interface PrizePoolBreakdownProps {
   eventId: string
   className?: string
+  /** Server-fetched data. When given, nothing is fetched on the client. */
+  initialData?: PrizePoolData
 }
 
 export function PrizePoolBreakdown({
   eventId,
   className,
+  initialData,
 }: PrizePoolBreakdownProps) {
-  const [prizePoolData, setPrizePoolData] = useState<PrizePoolData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [fetchedData, setPrizePoolData] = useState<PrizePoolData | null>(null)
+  const [fetching, setLoading] = useState(!initialData)
+  // Server data (fresh on every refresh) wins over anything fetched here.
+  const prizePoolData = initialData ?? fetchedData
+  const loading = !initialData && fetching
 
   const fetchPrizePoolData = useCallback(async () => {
     setLoading(true)
@@ -39,8 +45,9 @@ export function PrizePoolBreakdown({
   }, [eventId])
 
   useEffect(() => {
+    if (initialData) return
     void fetchPrizePoolData()
-  }, [fetchPrizePoolData])
+  }, [fetchPrizePoolData, initialData])
 
   if (loading) {
     return (

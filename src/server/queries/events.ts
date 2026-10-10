@@ -17,6 +17,7 @@ import {
   teamMembers,
 } from "@/server/db/schema"
 import { logger } from "@/lib/logger"
+import { redactHiddenTiles } from "@/lib/hidden-tiles"
 import { EventData, GetEventByIdResult } from "@/app/actions/events"
 import { getUserRole } from "@/app/actions/events"
 
@@ -37,7 +38,7 @@ export const getEventById = cache(async function getEventById(
                   submissions: {
                     with: {
                       image: true,
-                      user: true,
+                      user: { columns: { id: true, name: true, runescapeName: true } },
                     },
                   },
                   team: true,
@@ -46,8 +47,12 @@ export const getEventById = cache(async function getEventById(
               goals: {
                 with: {
                   teamProgress: true,
+                  goalValues: true,
+                  itemGoal: true,
+                  metricGoal: true,
                 },
               },
+              goalGroups: true,
             },
           },
         },
@@ -63,9 +68,17 @@ export const getEventById = cache(async function getEventById(
 
   const userRole = await getUserRole(eventId)
 
-  // Filter out non-visible bingos if the user is not admin or management
+  // Filter out non-visible bingos if the user is not admin or management, and
+  // strip the content of hidden Tiles server-side (the cell itself stays).
   if (userRole !== "admin" && userRole !== "management") {
-    event.bingos = event.bingos.filter((b) => b.visible === true)
+    event.bingos = event.bingos
+      .filter((b) => b.visible === true)
+      .map((b) => ({
+        ...b,
+        // The tracker verification code lets its holder edit the competition.
+        womVerificationCode: null,
+        tiles: redactHiddenTiles(b.tiles),
+      }))
   }
 
   return {

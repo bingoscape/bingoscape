@@ -1,0 +1,144 @@
+"use client"
+
+import { useCallback, useMemo } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+
+export const PANEL_TABS = ["tile", "teams", "prize", "info"] as const
+export type PanelTab = (typeof PANEL_TABS)[number]
+
+export interface WorkspaceParams {
+  /** Selected Board id (`?board=`), null means "first Board". */
+  board: string | null
+  /** Selected Tile id (`?tile=`). */
+  tile: string | null
+  /** Active side panel tab (`?panel=`), defaults to "tile". */
+  panel: PanelTab
+  /** Team being viewed (`?teamId=`), null means the caller's own Team. */
+  teamId: string | null
+}
+
+type ParamReader = { get(name: string): string | null }
+
+export function isPanelTab(value: string | null | undefined): value is PanelTab {
+  return !!value && (PANEL_TABS as readonly string[]).includes(value)
+}
+
+/** Reads the workspace state from the URL search params. Unknown values fall back. */
+export function parseWorkspaceParams(search: ParamReader): WorkspaceParams {
+  const panel = search.get("panel")
+  return {
+    board: search.get("board") || null,
+    tile: search.get("tile") || null,
+    panel: isPanelTab(panel) ? panel : "tile",
+    teamId: search.get("teamId") || null,
+  }
+}
+
+type Patch = Partial<{
+  [K in keyof WorkspaceParams]: WorkspaceParams[K] | null
+}>
+
+/**
+ * Builds the next URL by applying a patch to the current query string. Null
+ * removes a key; the default panel ("tile") is not written. Other query
+ * params are preserved.
+ */
+export function buildWorkspaceUrl(
+  pathname: string,
+  current: string | URLSearchParams | ParamReaderWithToString,
+  patch: Patch
+): string {
+  const next = new URLSearchParams(
+    typeof current === "string" ? current : current.toString()
+  )
+
+  const apply = (key: string, value: string | null | undefined) => {
+    if (value === undefined) return
+    if (value === null || value === "") next.delete(key)
+    else next.set(key, value)
+  }
+
+  apply("board", patch.board)
+  apply("tile", patch.tile)
+  apply("teamId", patch.teamId)
+  if (patch.panel !== undefined) {
+    apply("panel", patch.panel === "tile" ? null : patch.panel)
+  }
+
+  const query = next.toString()
+  return query ? `${pathname}?${query}` : pathname
+}
+
+interface ParamReaderWithToString extends ParamReader {
+  toString(): string
+}
+
+/**
+ * Workspace state lives in the URL so it can be shared and bookmarked:
+ * `?board=&tile=&panel=tile|teams|prize|info&teamId=`.
+ *
+ * - `tile` / `panel` use the History API (pushState) so Back deselects the
+ *   Tile. Switching between Tiles replaces the entry, so one Back always
+ *   clears the selection. Next.js syncs `useSearchParams` with native
+ *   pushState/replaceState, so no server round trip happens.
+ * - `board` / `teamId` change what the server renders (Board data, "view as"
+ *   Team), so they use `router.replace(..., { scroll: false })`.
+ */
+export function useWorkspaceParams() {
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
+
+  const params = useMemo(
+    () => parseWorkspaceParams(searchParams ?? { get: () => null }),
+    [searchParams]
+  )
+
+  const urlFor = useCallback(
+    (patch: Patch) =>
+      buildWorkspaceUrl(pathname, searchParams?.toString() ?? "", patch),
+    [pathname, searchParams]
+  )
+
+  const selectTile = useCallback(
+    (tileId: string | null) => {
+      if (tileId === params.tile) return
+      const url = urlFor(
+        tileId === null ? { tile: null } : { tile: tileId, panel: "tile" }
+      )
+      if (tileId !== null && params.tile === null) {
+        window.history.pushState(null, "", url)
+      } else {
+        window.history.replaceState(null, "", url)
+      }
+    },
+    [params.tile, urlFor]
+  )
+
+  const setPanel = useCallback(
+    (panel: PanelTab) => {
+      if (panel === params.panel) return
+      window.history.pushState(null, "", urlFor({ panel }))
+    },
+    [params.panel, urlFor]
+  )
+
+  const setBoard = useCallback(
+    (boardId: string) => {
+      // A Tile belongs to one Board: switching Boards clears the selection.
+      router.replace(urlFor({ board: boardId, tile: null, panel: "tile" }), {
+        scroll: false,
+      })
+    },
+    [router, urlFor]
+  )
+
+  const setTeamId = useCallback(
+    (teamId: string | null) => {
+      router.replace(urlFor({ teamId }), { scroll: false })
+    },
+    [router, urlFor]
+  )
+
+  return { params, selectTile, setPanel, setBoard, setTeamId }
+}

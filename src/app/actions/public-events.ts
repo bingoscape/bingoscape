@@ -1,17 +1,19 @@
 "use server"
 
 import { db } from "@/server/db"
-import {
-  events,
-  bingos,
-  teams,
-  teamTileSubmissions,
-  tiles,
-  clans,
-} from "@/server/db/schema"
-import { eq, and, count, inArray, asc } from "drizzle-orm"
+import { events, bingos, teams, tiles, clans } from "@/server/db/schema"
+import { eq, and, count, asc } from "drizzle-orm"
 import type { UUID } from "crypto"
 import { logger } from "@/lib/logger"
+import { redactHiddenTiles } from "@/lib/hidden-tiles"
+import type { Bingo, Team, Tile } from "@/types/model"
+
+/**
+ * Public (unauthenticated) read access. Every function first checks that the
+ * Event is marked public; Boards must additionally be visible. Hidden Tiles
+ * keep their cell but are redacted, and secrets (codephrase, tracker
+ * verification code) never leave the server.
+ */
 
 export interface PublicEventData {
   id: string
@@ -19,17 +21,32 @@ export interface PublicEventData {
   description: string | null
   startDate: Date
   endDate: Date
+  timezone: string
+  gameType: "osrs" | "rs3"
+  locked: boolean
+  registrationDeadline: Date | null
   clanName: string | null
   bingoCount: number
   basePrizePool: number
   minimumBuyIn: number
 }
 
-export interface PublicTeamData {
-  id: string
-  name: string
-  completedTiles: string[] // Array of tile IDs that the team has completed
-  inProgressTiles: string[] // Array of tile IDs that are in progress (pending, requires_interaction, declined)
+async function isPublicEvent(eventId: string): Promise<boolean> {
+  const event = await db.query.events.findFirst({
+    where: and(eq(events.id, eventId as UUID), eq(events.public, true)),
+    columns: { id: true },
+  })
+  return !!event
+}
+
+/** Board row without anything a public viewer must not see. */
+function sanitizeBingo<T extends Bingo>(bingo: T): T {
+  return {
+    ...bingo,
+    codephrase: "",
+    womCompetitionId: null,
+    womVerificationCode: null,
+  }
 }
 
 /**
@@ -67,6 +84,10 @@ export async function getPublicEvent(
       description: eventResult.description,
       startDate: eventResult.startDate,
       endDate: eventResult.endDate,
+      timezone: eventResult.timezone,
+      gameType: eventResult.gameType,
+      locked: eventResult.locked,
+      registrationDeadline: eventResult.registrationDeadline,
       basePrizePool: eventResult.basePrizePool,
       minimumBuyIn: eventResult.minimumBuyIn,
       clanName: clanName,
@@ -92,6 +113,8 @@ async function getClanName(clanId: string | null): Promise<string | null> {
  */
 export async function getPublicBingos(eventId: string) {
   try {
+    if (!(await isPublicEvent(eventId))) return []
+
     const result = await db
       .select({
         id: bingos.id,
@@ -117,85 +140,8 @@ export async function getPublicBingos(eventId: string) {
 }
 
 /**
- * Fetch public teams for an event and specific bingo board
- * Returns all teams participating in the event with their progress on the specified bingo board
- */
-export async function getPublicTeams(
-  eventId: string,
-  bingoId: string
-): Promise<PublicTeamData[]> {
-  try {
-    const eventTeams = await db.query.teams.findMany({
-      where: eq(teams.eventId, eventId as UUID),
-      columns: {
-        id: true,
-        name: true,
-      },
-    })
-
-    // Get all tile IDs for this bingo board
-    const bingoTiles = await db
-      .select({
-        id: tiles.id,
-      })
-      .from(tiles)
-      .where(eq(tiles.bingoId, bingoId as UUID))
-
-    const bingoTileIds = bingoTiles.map((tile) => tile.id)
-
-    const result: PublicTeamData[] = []
-
-    // For each team, get their completed and in-progress tiles for this specific bingo board
-    for (const team of eventTeams) {
-      // Get completed tiles (status = "accepted") for this bingo board
-      const completedTileSubmissions = await db
-        .select({
-          tileId: teamTileSubmissions.tileId,
-        })
-        .from(teamTileSubmissions)
-        .where(
-          and(
-            eq(teamTileSubmissions.teamId, team.id),
-            eq(teamTileSubmissions.status, "completed"),
-            inArray(teamTileSubmissions.tileId, bingoTileIds)
-          )
-        )
-
-      // Get in-progress tiles (status = "pending", "requires_interaction") for this bingo board
-      const inProgressTileSubmissions = await db
-        .select({
-          tileId: teamTileSubmissions.tileId,
-        })
-        .from(teamTileSubmissions)
-        .where(
-          and(
-            eq(teamTileSubmissions.teamId, team.id),
-            inArray(teamTileSubmissions.status, ["incomplete", "needs_attention"]),
-            inArray(teamTileSubmissions.tileId, bingoTileIds)
-          )
-        )
-
-      result.push({
-        id: team.id,
-        name: team.name,
-        completedTiles: completedTileSubmissions.map(
-          (submission) => submission.tileId
-        ),
-        inProgressTiles: inProgressTileSubmissions.map(
-          (submission) => submission.tileId
-        ),
-      })
-    }
-
-    return result
-  } catch (error) {
-    logger.error({ error, eventId, bingoId }, "Error fetching public teams")
-    return []
-  }
-}
-
-/**
- * Get detailed public bingo data including tiles and their goals
+ * Get public bingo data including tiles and their goals. Hidden Tiles are
+ * kept (so the grid geometry is right) but redacted.
  */
 export async function getPublicBingoDetails(bingoId: string) {
   try {
@@ -203,13 +149,12 @@ export async function getPublicBingoDetails(bingoId: string) {
       where: and(eq(bingos.id, bingoId as UUID), eq(bingos.visible, true)),
     })
 
-    if (!bingo) {
+    if (!bingo || !(await isPublicEvent(bingo.eventId))) {
       return null
     }
 
-    // Get visible tiles with their goals
     const bingoTiles = await db.query.tiles.findMany({
-      where: and(eq(tiles.bingoId, bingoId as UUID), eq(tiles.isHidden, false)),
+      where: eq(tiles.bingoId, bingoId as UUID),
       orderBy: [asc(tiles.index)],
       with: {
         goals: true,
@@ -217,11 +162,102 @@ export async function getPublicBingoDetails(bingoId: string) {
     })
 
     return {
-      ...bingo,
-      tiles: bingoTiles,
+      ...sanitizeBingo(bingo),
+      tiles: redactHiddenTiles(bingoTiles),
     }
   } catch (error) {
     logger.error({ error, bingoId }, "Error fetching public bingo details")
+    return null
+  }
+}
+
+export interface PublicWorkspaceData {
+  /** All visible Boards; only the active one carries its Tiles. */
+  bingos: Bingo[]
+  teams: Team[]
+}
+
+/**
+ * Everything the read-only Event workspace needs for `/public/events/[id]`:
+ * the visible Boards (the one picked by `board`, else the first, with its
+ * Tiles, Goals and Teams' progress) and the Event's Teams. Teams' Tile status
+ * is reduced to "completed" / "in progress": no images, users or reviewers.
+ */
+export async function getPublicWorkspaceData(
+  eventId: string,
+  board: string | null
+): Promise<PublicWorkspaceData | null> {
+  try {
+    if (!(await isPublicEvent(eventId))) return null
+
+    const [boards, eventTeams] = await Promise.all([
+      db.query.bingos.findMany({
+        where: and(
+          eq(bingos.eventId, eventId as UUID),
+          eq(bingos.visible, true)
+        ),
+        orderBy: [asc(bingos.createdAt)],
+      }),
+      db.query.teams.findMany({
+        where: eq(teams.eventId, eventId as UUID),
+        orderBy: [asc(teams.name)],
+      }),
+    ])
+
+    const safeBoards: Bingo[] = boards.map((b) => ({
+      ...sanitizeBingo(b),
+      tiles: [],
+    }))
+    const active = safeBoards.find((b) => b.id === board) ?? safeBoards[0]
+
+    if (active) {
+      const teamById = new Map(eventTeams.map((t) => [t.id, t]))
+      const rows = await db.query.tiles.findMany({
+        where: eq(tiles.bingoId, active.id as UUID),
+        orderBy: [asc(tiles.index)],
+        with: {
+          goals: {
+            with: {
+              teamProgress: true,
+              goalValues: true,
+              itemGoal: true,
+              metricGoal: true,
+            },
+          },
+          goalGroups: true,
+          teamTileSubmissions: true,
+        },
+      })
+
+      const publicTiles: Tile[] = rows.map((row) => ({
+        ...row,
+        teamTileSubmissions: row.teamTileSubmissions.flatMap((tts) => {
+          const team = teamById.get(tts.teamId)
+          if (!team) return []
+          // A Team with activity on a Tile that is not completed is "in
+          // progress". The workspace derives that from a Submission state, so
+          // hand it a state-only placeholder: the real Submissions (images,
+          // users) are never loaded for the public view.
+          const placeholder = [{ status: "approved" }] as unknown as NonNullable<
+            Tile["teamTileSubmissions"]
+          >[number]["submissions"]
+          return [
+            {
+              ...tts,
+              reviewedBy: null,
+              team,
+              submissions: tts.status === "completed" ? [] : placeholder,
+            },
+          ]
+        }),
+      }))
+
+      active.tiles = redactHiddenTiles(publicTiles)
+    }
+
+    return { bingos: safeBoards, teams: eventTeams }
+  } catch (error) {
+    logger.error({ error, eventId }, "Error fetching public workspace data")
     return null
   }
 }

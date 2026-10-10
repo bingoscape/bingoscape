@@ -1,25 +1,18 @@
-import { Badge } from "@/components/ui/badge"
+import { Suspense } from "react"
 import { notFound } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import {
-  Calendar,
-  Clock,
-  Users,
-  Trophy,
-  Coins,
-  Grid3X3,
-  Info,
-} from "lucide-react"
+import type { Metadata } from "next"
 import {
   getPublicEvent,
-  getPublicBingos,
-  getPublicTeams,
-  getPublicBingoDetails,
+  getPublicWorkspaceData,
 } from "@/app/actions/public-events"
-import Link from "next/link"
-import formatRunescapeGold from "@/lib/formatRunescapeGold"
-import type { Metadata } from "next"
-import { PublicBingoGrid } from "@/components/public-bingo-grid"
+import { EventWorkspace } from "@/components/event-workspace/event-workspace"
+import { EventSummaryBar } from "@/components/event-workspace/event-summary-bar"
+import { InfoPanel } from "@/components/event-workspace/info-panel"
+import { PrizePanel } from "@/components/event-workspace/prize-panel"
+import { TeamsPanel } from "@/components/event-workspace/teams-panel"
+import { Skeleton } from "@/components/ui/skeleton"
+import { getBoardTierData } from "@/server/queries/tiers"
+import { resolveWorkspaceSelection } from "@/lib/workspace-selection"
 
 // Generate metadata for SEO
 export async function generateMetadata(
@@ -87,246 +80,139 @@ export async function generateMetadata(
   }
 }
 
+function firstParam(value: string | string[] | undefined): string | null {
+  return (Array.isArray(value) ? value[0] : value) ?? null
+}
+
+/**
+ * Public, read-only view of an Event. It is the same workspace as
+ * `/events/[id]` (Board fitted to the viewport, side panel with the Tile,
+ * Teams, Prize and Info tabs) without submissions, images or admin actions.
+ * Only the Board selected by `?board=` is loaded.
+ */
 export default async function PublicEventPage(props: {
   params: Promise<{ id: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const params = await props.params
-  const event = await getPublicEvent(params.id)
+  const [params, search] = await Promise.all([props.params, props.searchParams])
 
+  const event = await getPublicEvent(params.id)
   if (!event) {
     notFound()
   }
 
-  const bingos = await getPublicBingos(params.id)
+  const board = firstParam(search.board)
+  const data = await getPublicWorkspaceData(params.id, board)
+  if (!data) {
+    notFound()
+  }
 
-  // Get the first bingo's details for display if available
-  const firstBingoDetails =
-    bingos.length > 0 ? await getPublicBingoDetails(bingos[0]!.id) : null
-
-  // Get teams for this event and the first bingo board
-  const teams = firstBingoDetails
-    ? await getPublicTeams(params.id, firstBingoDetails.id)
-    : []
-
-  // Find next and previous bingo IDs for the first bingo
-  const nextBingoId = bingos.length > 1 ? bingos[1]!.id : undefined
-
-  // Format dates
-  const startDate = new Date(event.startDate)
-  const endDate = new Date(event.endDate)
-  const formattedStartDate = startDate.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })
-  const formattedEndDate = endDate.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+  const { bingo, effectiveTeamId } = resolveWorkspaceSelection({
+    bingos: data.bingos,
+    teams: data.teams,
+    isManagement: false,
+    readOnly: true,
+    ownTeamId: undefined,
+    board,
+    teamId: firstParam(search.teamId),
   })
 
-  // Calculate event status
+  const tierData = await getBoardTierData(bingo, effectiveTeamId)
+
   const now = new Date()
-  let eventStatus = "upcoming"
-  if (now > endDate) {
-    eventStatus = "completed"
-  } else if (now >= startDate) {
-    eventStatus = "active"
+  const registrationOpen =
+    !event.locked &&
+    (!event.registrationDeadline || now <= new Date(event.registrationDeadline))
+
+  // Public view: only the base prize pool is shown.
+  const prizePool = {
+    basePrizePool: event.basePrizePool,
+    totalBuyIns: 0,
+    totalDonations: 0,
+    totalPrizePool: event.basePrizePool,
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b py-8">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="flex flex-col items-center text-center">
-            <h1 className="mb-2 text-3xl font-bold tracking-tight md:text-4xl">
-              {event.title}
-            </h1>
-            {event.clanName && (
-              <div className="mb-2 flex items-center">
-                <Users className="mr-2 h-5 w-5" />
-                <span className="text-lg">Hosted by {event.clanName}</span>
-              </div>
-            )}
-            <div className="mt-1 flex flex-wrap justify-center gap-3">
-              <Badge
-                variant={
-                  eventStatus === "active"
-                    ? "default"
-                    : eventStatus === "upcoming"
-                      ? "secondary"
-                      : "outline"
+    <EventWorkspace
+      readOnly
+      event={{
+        id: event.id,
+        startDate: event.startDate,
+        timezone: event.timezone,
+        gameType: event.gameType,
+        bingos: data.bingos,
+        teams: data.teams,
+      }}
+      userRole="participant"
+      currentTeam={null}
+      selectableUsers={[]}
+      tierData={tierData}
+      summaryBar={
+        <EventSummaryBar
+          eventId={event.id}
+          title={event.title}
+          startDate={event.startDate}
+          endDate={event.endDate}
+          timezone={event.timezone}
+          totalPrizePool={event.basePrizePool}
+          minimumBuyIn={event.minimumBuyIn}
+          hasRegistrationDeadline={!!event.registrationDeadline}
+          registrationOpen={registrationOpen}
+          backHref="/"
+          backLabel="Back to home"
+        />
+      }
+      teamsPanel={
+        <Suspense
+          fallback={<Skeleton className="h-24 w-full" aria-label="Loading" />}
+        >
+          <TeamsPanel
+            readOnly
+            eventId={event.id}
+            ownTeamId={undefined}
+            viewedTeamId={effectiveTeamId}
+            isManagement={false}
+            currentUser={null}
+          />
+        </Suspense>
+      }
+      prizePanel={
+        <PrizePanel
+          readOnly
+          eventId={event.id}
+          prizePool={prizePool}
+          minimumBuyIn={event.minimumBuyIn}
+          isManagement={false}
+        />
+      }
+      infoPanel={
+        <InfoPanel
+          readOnly
+          eventId={event.id}
+          title={event.title}
+          description={event.description}
+          startDate={event.startDate}
+          endDate={event.endDate}
+          timezone={event.timezone}
+          locked={event.locked}
+          registrationOpen={registrationOpen}
+          hasRegistrationDeadline={!!event.registrationDeadline}
+          isPublic
+          rules={[]}
+          board={
+            bingo
+              ? {
+                  title: bingo.title,
+                  description: bingo.description,
+                  rows: bingo.rows,
+                  columns: bingo.columns,
+                  codephrase: "",
                 }
-              >
-                {eventStatus === "active"
-                  ? "Active"
-                  : eventStatus === "upcoming"
-                    ? "Upcoming"
-                    : "Completed"}
-              </Badge>
-              {event.bingoCount > 0 && (
-                <Badge variant="outline">
-                  {event.bingoCount}{" "}
-                  {event.bingoCount === 1 ? "Bingo" : "Bingos"}
-                </Badge>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8 md:px-6">
-        {/* Event Details Bar */}
-        <div className="mb-8 flex flex-wrap justify-center gap-6 text-center">
-          <div className="flex flex-col items-center">
-            <Calendar className="mb-1 h-5 w-5 text-muted-foreground" />
-            <p className="font-medium">Dates</p>
-            <p className="text-sm text-muted-foreground">
-              {formattedStartDate.split(",")[0]}
-            </p>
-            <p className="text-sm text-muted-foreground">to</p>
-            <p className="text-sm text-muted-foreground">
-              {formattedEndDate.split(",")[0]}
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center">
-            <Clock className="mb-1 h-5 w-5 text-muted-foreground" />
-            <p className="font-medium">Duration</p>
-            <p className="text-sm text-muted-foreground">
-              {Math.ceil(
-                (endDate.getTime() - startDate.getTime()) /
-                  (1000 * 60 * 60 * 24)
-              )}{" "}
-              days
-            </p>
-          </div>
-
-          {event.minimumBuyIn > 0 && (
-            <div className="flex flex-col items-center">
-              <Coins className="mb-1 h-5 w-5 text-muted-foreground" />
-              <p className="font-medium">Buy-In</p>
-              <p className="text-sm text-muted-foreground">
-                {formatRunescapeGold(event.minimumBuyIn)} GP
-              </p>
-            </div>
-          )}
-
-          {event.basePrizePool > 0 && (
-            <div className="flex flex-col items-center">
-              <Trophy className="mb-1 h-5 w-5 text-muted-foreground" />
-              <p className="font-medium">Prize Pool</p>
-              <p className="text-sm text-muted-foreground">
-                {formatRunescapeGold(event.basePrizePool)} GP
-              </p>
-            </div>
-          )}
-
-          <div className="flex flex-col items-center">
-            <Users className="mb-1 h-5 w-5 text-muted-foreground" />
-            <p className="font-medium">Teams</p>
-            <p className="text-sm text-muted-foreground">{teams.length}</p>
-          </div>
-        </div>
-
-        {/* Description Accordion */}
-        {event.description && (
-          <div className="mx-auto mb-8 max-w-3xl">
-            <details className="group [&_summary::-webkit-details-marker]:hidden">
-              <summary className="flex cursor-pointer items-center justify-between gap-1.5 rounded-lg bg-muted p-4 text-foreground ">
-                <div className="flex items-center gap-2">
-                  <Info className="h-5 w-5" />
-                  <h2 className="font-medium">About This Event</h2>
-                </div>
-                <svg
-                  className="h-5 w-5 shrink-0 transition duration-300 group-open:-rotate-180"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </summary>
-
-              <div className="mt-4 px-4 leading-relaxed text-foreground ">
-                <p>{event.description}</p>
-              </div>
-            </details>
-          </div>
-        )}
-
-        {/* Bingo Board Display */}
-        {firstBingoDetails ? (
-          <div className="mb-8">
-            <div className="mb-6 flex flex-col items-center justify-between md:flex-row">
-              <h2 className="mb-2 flex items-center gap-2 text-2xl font-bold md:mb-0">
-                <Grid3X3 className="h-6 w-6" />
-                {firstBingoDetails.title}
-              </h2>
-
-              {bingos.length > 1 && (
-                <div className="flex gap-2">
-                  {bingos.map((bingo, index) => (
-                    <Link
-                      key={bingo.id}
-                      href={`/public/events/${event.id}/bingos/${bingo.id}`}
-                      passHref
-                    >
-                      <Button
-                        variant={
-                          bingo.id === firstBingoDetails.id
-                            ? "default"
-                            : "outline"
-                        }
-                        size="sm"
-                      >
-                        Board {index + 1}
-                      </Button>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="mx-auto max-w-4xl">
-              <PublicBingoGrid
-                bingo={firstBingoDetails}
-                teams={teams}
-                nextBingoId={nextBingoId}
-                eventId={params.id}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="py-12 text-center">
-            <Grid3X3 className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-            <h2 className="mb-2 text-2xl font-bold">
-              No Bingo Boards Available
-            </h2>
-            <p className="text-muted-foreground">
-              This event doesn&apos;t have any public bingo boards yet.
-            </p>
-          </div>
-        )}
-      </main>
-
-      <footer className="border-t py-6 md:py-8">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="flex flex-col items-center justify-center gap-4 md:flex-row md:gap-6">
-            <p className="text-center text-sm leading-loose text-muted-foreground">
-              © {new Date().getFullYear()} BingoScape. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
-    </div>
+              : null
+          }
+          isAdmin={false}
+        />
+      }
+    />
   )
 }

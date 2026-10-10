@@ -2386,7 +2386,10 @@ export async function getMiniBoardTiles(bingoId: string) {
 
   const teamId = userTeam[0]?.teamId
 
-  const allTiles = await db.query.tiles.findMany({
+  const callerRole = await getUserRole(bingo.eventId)
+  const callerIsManager = callerRole === "admin" || callerRole === "management"
+
+  const rawTiles = await db.query.tiles.findMany({
     where: eq(tiles.bingoId, bingoId),
     columns: {
       id: true,
@@ -2397,6 +2400,13 @@ export async function getMiniBoardTiles(bingoId: string) {
     },
     orderBy: (tiles, { asc }) => [asc(tiles.index)],
   })
+
+  // Hidden Tiles keep their grid cell but never leak their content.
+  const allTiles = rawTiles.map((tile) =>
+    tile.isHidden && !callerIsManager
+      ? { ...tile, title: "", headerImage: null }
+      : tile
+  )
 
   if (!teamId) {
     return allTiles.map((tile) => ({

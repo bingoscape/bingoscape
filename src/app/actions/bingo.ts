@@ -31,6 +31,18 @@ import fs from "fs/promises"
 import path from "path"
 import type { Tile, TeamTileSubmission, Bingo } from "@/types/model"
 import { getUserRole } from "./events"
+import {
+  authzErrorMessage,
+  canReadGoal,
+  canReadTile,
+  isEventManager,
+  requireBingoAdmin,
+  requireBingoAdminForGoal,
+  requireBingoAdminForSubmission,
+  requireBingoAdminForTeamTileSubmission,
+  requireBingoAdminForTile,
+  requireTeamMemberOrManager,
+} from "@/server/authz"
 import { createNotification } from "./notifications"
 import { getServerAuthSession } from "@/server/auth"
 import getRandomFrog from "@/lib/getRandomFrog"
@@ -45,82 +57,6 @@ import { logger } from "@/lib/logger"
 import type { SelectableUser } from "@/types/model"
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
-
-// ---------------------------------------------------------------------------
-// Private auth-guard helpers (C2 fix)
-// ---------------------------------------------------------------------------
-
-/**
- * Verifies that the currently authenticated user holds the admin or management
- * role for the event that owns the given bingo.
- * Returns the eventId on success, or throws a descriptive error on failure.
- */
-async function requireBingoAdmin(bingoId: string): Promise<string> {
-  const session = await getServerAuthSession()
-  if (!session?.user) throw new Error("Unauthorized")
-
-  const bingo = await db.query.bingos.findFirst({
-    where: eq(bingos.id, bingoId),
-    columns: { eventId: true },
-  })
-  if (!bingo) throw new Error("Bingo not found")
-
-  const role = await getUserRole(bingo.eventId)
-  if (role !== "admin" && role !== "management") {
-    throw new Error("Forbidden: admin or management role required")
-  }
-
-  return bingo.eventId
-}
-
-/**
- * Same check as requireBingoAdmin but starting from a tileId.
- */
-async function requireBingoAdminForTile(tileId: string): Promise<string> {
-  const session = await getServerAuthSession()
-  if (!session?.user) throw new Error("Unauthorized")
-
-  const tile = await db.query.tiles.findFirst({
-    where: eq(tiles.id, tileId),
-    columns: { bingoId: true },
-    with: { bingo: { columns: { eventId: true } } },
-  })
-  if (!tile) throw new Error("Tile not found")
-
-  const role = await getUserRole(tile.bingo.eventId)
-  if (role !== "admin" && role !== "management") {
-    throw new Error("Forbidden: admin or management role required")
-  }
-
-  return tile.bingo.eventId
-}
-
-/**
- * Same check as requireBingoAdmin but starting from a goalId.
- */
-async function requireBingoAdminForGoal(goalId: string): Promise<string> {
-  const session = await getServerAuthSession()
-  if (!session?.user) throw new Error("Unauthorized")
-
-  const goal = await db.query.goals.findFirst({
-    where: eq(goals.id, goalId),
-    columns: { tileId: true },
-    with: {
-      tile: {
-        columns: { bingoId: true },
-        with: { bingo: { columns: { eventId: true } } },
-      },
-    },
-  })
-  if (!goal) throw new Error("Goal not found")
-
-  const role = await getUserRole(goal.tile.bingo.eventId)
-  if (role !== "admin" && role !== "management") {
-    throw new Error("Forbidden: admin or management role required")
-  }
-
-  return goal.tile.bingo.eventId
-}
 
 interface AddRowOrColumnSuccessResult {
   success: true
@@ -281,7 +217,20 @@ export async function updateTile(
 ) {
   try {
     await requireBingoAdminForTile(tileId)
-    await db.update(tiles).set(updatedTile).where(eq(tiles.id, tileId))
+    // Never let the client re-parent or re-key a Tile (mass assignment).
+    const {
+      id: _id,
+      bingoId: _bingoId,
+      createdAt: _createdAt,
+      ...safeUpdate
+    } = updatedTile
+    await db.transaction(async (tx) => {
+      await tx
+        .update(tiles)
+        .set({ ...safeUpdate, updatedAt: new Date() })
+        .where(eq(tiles.id, tileId))
+    })
+    revalidatePath("/events/[id]", "layout")
     logger.info({ tileId, action: "updateTile" }, "Tile updated successfully")
     return { success: true }
   } catch (error) {
@@ -599,37 +548,47 @@ export async function createItemGoal(
   exactVariant?: string | null
 ) {
   try {
-    // Create the goal first
-    const [newGoal] = await db
-      .insert(goals)
-      .values({
-        tileId,
-        description: itemName,
-        targetValue,
-        goalType: "item",
-      })
-      .returning()
+    await requireBingoAdminForTile(tileId)
 
-    if (!newGoal) {
+    // Create the goal and its item metadata atomically
+    const created = await db.transaction(async (tx) => {
+      const [newGoal] = await tx
+        .insert(goals)
+        .values({
+          tileId,
+          description: itemName,
+          targetValue,
+          goalType: "item",
+        })
+        .returning()
+
+      if (!newGoal) return null
+
+      const [itemGoalData] = await tx
+        .insert(itemGoals)
+        .values({
+          goalId: newGoal.id,
+          itemId,
+          baseName,
+          exactVariant: exactVariant ?? null,
+          imageUrl,
+        })
+        .returning()
+
+      return { goal: newGoal, itemGoal: itemGoalData }
+    })
+
+    if (!created) {
       return { success: false, error: "Failed to create goal" }
     }
 
-    // Create the item goal metadata
-    const [itemGoalData] = await db
-      .insert(itemGoals)
-      .values({
-        goalId: newGoal.id,
-        itemId,
-        baseName,
-        exactVariant: exactVariant ?? null,
-        imageUrl,
-      })
-      .returning()
-
-    return { success: true, goal: newGoal, itemGoal: itemGoalData }
+    return { success: true, goal: created.goal, itemGoal: created.itemGoal }
   } catch (error) {
     logger.error({ error }, "Error creating item goal")
-    return { success: false, error: "Failed to create item goal" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to create item goal"),
+    }
   }
 }
 
@@ -641,37 +600,47 @@ export async function createMetricGoal(
   description?: string
 ) {
   try {
+    await requireBingoAdminForTile(tileId)
+
     const goalDescription = description || `${metricName} (${metricType})`
 
-    // Create the goal first
-    const [newGoal] = await db
-      .insert(goals)
-      .values({
-        tileId,
-        description: goalDescription,
-        targetValue,
-        goalType: "metric",
-      })
-      .returning()
+    // Create the goal and its metric metadata atomically
+    const created = await db.transaction(async (tx) => {
+      const [newGoal] = await tx
+        .insert(goals)
+        .values({
+          tileId,
+          description: goalDescription,
+          targetValue,
+          goalType: "metric",
+        })
+        .returning()
 
-    if (!newGoal) {
+      if (!newGoal) return null
+
+      const [metricGoalData] = await tx
+        .insert(metricGoals)
+        .values({
+          goalId: newGoal.id,
+          metricType,
+          metricName,
+        })
+        .returning()
+
+      return { goal: newGoal, metricGoal: metricGoalData }
+    })
+
+    if (!created) {
       return { success: false, error: "Failed to create goal" }
     }
 
-    // Create the metric goal metadata
-    const [metricGoalData] = await db
-      .insert(metricGoals)
-      .values({
-        goalId: newGoal.id,
-        metricType,
-        metricName,
-      })
-      .returning()
-
-    return { success: true, goal: newGoal, metricGoal: metricGoalData }
+    return { success: true, goal: created.goal, metricGoal: created.metricGoal }
   } catch (error) {
     logger.error({ error }, "Error creating metric goal")
-    return { success: false, error: "Failed to create metric goal" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to create metric goal"),
+    }
   }
 }
 
@@ -719,6 +688,11 @@ export async function updateMetricGoal(
  */
 export async function getGoalWithItemData(goalId: string) {
   try {
+    // Hidden Tiles must not leak their Goals to non-managers.
+    if (!(await canReadGoal(goalId))) {
+      return { success: false, error: "Goal not found" }
+    }
+
     const goal = await db.query.goals.findFirst({
       where: eq(goals.id, goalId),
       with: {
@@ -790,6 +764,10 @@ export async function updateItemGoal(
  */
 export async function getItemGoalsForTile(tileId: string) {
   try {
+    if (!(await canReadTile(tileId))) {
+      return { success: true, goals: [] }
+    }
+
     const itemGoalsList = await db.query.goals.findMany({
       where: and(eq(goals.tileId, tileId), eq(goals.goalType, "item")),
       with: {
@@ -810,39 +788,61 @@ export async function updateGoalProgress(
   newValue: number
 ) {
   try {
-    const [updatedProgress] = await db
-      .insert(teamGoalProgress)
-      .values({
-        goalId,
-        teamId,
-        currentValue: newValue,
-      })
-      .onConflictDoUpdate({
-        target: [teamGoalProgress.goalId, teamGoalProgress.teamId],
-        set: { currentValue: newValue },
-      })
-      .returning()
+    // Manual progress edits are a management action. The Event is derived
+    // from the Goal; the Team must belong to the same Event.
+    const eventId = await requireBingoAdminForGoal(goalId)
+    const team = await db.query.teams.findFirst({
+      where: eq(teams.id, teamId),
+      columns: { eventId: true },
+    })
+    if (!team || team.eventId !== eventId) {
+      return { success: false, error: "Team not found in this event" }
+    }
 
-    // Check if we need to auto-complete the tile
-    // First, get the tileId from the goal
-    const goal = await db.query.goals.findFirst({
-      where: eq(goals.id, goalId),
+    const updatedProgress = await db.transaction(async (tx) => {
+      const [progress] = await tx
+        .insert(teamGoalProgress)
+        .values({
+          goalId,
+          teamId,
+          currentValue: newValue,
+        })
+        .onConflictDoUpdate({
+          target: [teamGoalProgress.goalId, teamGoalProgress.teamId],
+          set: { currentValue: newValue },
+        })
+        .returning()
+
+      // Check if we need to auto-complete the tile
+      const goal = await tx.query.goals.findFirst({
+        where: eq(goals.id, goalId),
+      })
+
+      if (goal) {
+        // Import the auto-completion function
+        const { checkAndAutoCompleteTile } = await import("./tile-completion")
+        await checkAndAutoCompleteTile(tx, goal.tileId, teamId)
+      }
+
+      return progress
     })
 
-    if (goal) {
-      // Import the auto-completion function
-      const { checkAndAutoCompleteTile } = await import("./tile-completion")
-      await checkAndAutoCompleteTile(db, goal.tileId, teamId)
-    }
+    revalidatePath("/events/[id]", "layout")
 
     return { success: true, progress: updatedProgress }
   } catch (error) {
     logger.error({ error }, "Error updating goal progress")
-    return { success: false, error: "Failed to update goal progress" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to update goal progress"),
+    }
   }
 }
 
 export async function getTileGoalsAndProgress(tileId: string) {
+  // Hidden Tiles must not leak their Goals to non-managers.
+  if (!(await canReadTile(tileId))) return []
+
   const tileGoals = await db.query.goals.findMany({
     where: eq(goals.tileId, tileId),
     with: {
@@ -862,6 +862,10 @@ export async function getAllSubmissionsForTeam(
   teamId: string
 ): Promise<Record<string, TeamTileSubmission[]>> {
   try {
+    // Submissions (with images and users) are only visible to the Team itself
+    // and to managers of the Event.
+    await requireTeamMemberOrManager(teamId)
+
     // First, get all tiles for this bingo
     const bingoTiles = await db
       .select({ id: tiles.id })
@@ -885,7 +889,7 @@ export async function getAllSubmissionsForTeam(
         submissions: {
           with: {
             image: true,
-            user: true,
+            user: { columns: { id: true, name: true, runescapeName: true } },
             goal: true, // Include goal information
           },
         },
@@ -956,6 +960,7 @@ export async function submitImage(formData: FormData) {
         bingoId: tiles.bingoId,
         title: tiles.title,
         description: tiles.description,
+        isHidden: tiles.isHidden,
       })
       .from(tiles)
       .where(eq(tiles.id, tileId))
@@ -1047,7 +1052,7 @@ export async function submitImage(formData: FormData) {
 
     // Check if the team exists and get its name
     const teamResult = await db
-      .select({ id: teams.id, name: teams.name })
+      .select({ id: teams.id, name: teams.name, eventId: teams.eventId })
       .from(teams)
       .where(eq(teams.id, effectiveTeamId))
       .execute()
@@ -1057,6 +1062,29 @@ export async function submitImage(formData: FormData) {
     }
 
     const team = teamResult[0]!
+
+    // Participant authorization: the Team must belong to the Tile's Event and
+    // the caller must be a member of that Team (or manage the Event). Hidden
+    // Tiles can only be submitted to by managers.
+    if (team.eventId !== bingoResult.eventId) {
+      throw new Error("Team does not belong to this event")
+    }
+    const callerIsManager = await isEventManager(bingoResult.eventId)
+    if (!callerIsManager) {
+      if (tile.isHidden) {
+        throw new Error("Tile not found")
+      }
+      const callerMembership = await db.query.teamMembers.findFirst({
+        where: and(
+          eq(teamMembers.teamId, effectiveTeamId),
+          eq(teamMembers.userId, session.user.id)
+        ),
+        columns: { id: true },
+      })
+      if (!callerMembership) {
+        throw new Error("You are not a member of this team")
+      }
+    }
 
     // Ensure the upload directory exists
     await ensureUploadDir()
@@ -1392,6 +1420,10 @@ export async function updateTeamTileSubmissionStatus(
       throw new Error("Not authenticated")
     }
 
+    // Completing/flagging a Tile is a review action: managers only. The Event
+    // is derived from the team tile submission record.
+    await requireBingoAdminForTeamTileSubmission(teamTileSubmissionId)
+
     const [updatedTeamTileSubmission] = await db
       .update(teamTileSubmissions)
       .set({
@@ -1478,7 +1510,10 @@ export async function updateTeamTileSubmissionStatus(
     )
     return {
       success: false,
-      error: "Failed to update team tile submission status",
+      error: authzErrorMessage(
+        error,
+        "Failed to update team tile submission status"
+      ),
     }
   }
 }
@@ -1646,6 +1681,8 @@ export async function updateSubmissionStatusWithComment(
 
 export async function deleteSubmission(submissionId: string) {
   try {
+    await requireBingoAdminForSubmission(submissionId)
+
     return await db.transaction(async (tx) => {
       // First, get the submission to find the associated image and goal
       const [submission] = await tx
@@ -2112,8 +2149,7 @@ export async function updateBingo(
     })
 
     // Revalidate the bingo page
-    revalidatePath(`/events/[id]/bingos/${bingoId}`)
-    revalidatePath(`/events/[id]`)
+    revalidatePath("/events/[id]", "layout")
 
     return { success: true }
   } catch (error) {
@@ -2185,6 +2221,8 @@ export async function initializeTeamTierProgress(
   bingoId: string
 ) {
   try {
+    await requireTeamMemberOrManager(teamId)
+
     // Check if this is a progression bingo
     const [bingo] = await db
       .select({ bingoType: bingos.bingoType })
@@ -2228,19 +2266,34 @@ export async function initializeTeamTierProgress(
 
 export async function checkAndUnlockNextTier(teamId: string, bingoId: string) {
   try {
+    await requireTeamMemberOrManager(teamId)
+
     // Get tier-specific XP requirements for this bingo
     const tierXpReqs = await db.query.tierXpRequirements.findMany({
       where: eq(tierXpRequirements.bingoId, bingoId),
     })
 
     // Get team's current tier progress
-    const tierProgress = await db.query.teamTierProgress.findMany({
+    let tierProgress = await db.query.teamTierProgress.findMany({
       where: and(
         eq(teamTierProgress.teamId, teamId),
         eq(teamTierProgress.bingoId, bingoId)
       ),
       orderBy: asc(teamTierProgress.tier),
     })
+
+    // Tier rows are created here, when a Team's Tile is first reviewed, rather
+    // than while rendering the Board (a GET must not write).
+    if (tierProgress.length === 0) {
+      await initializeTeamTierProgress(teamId, bingoId)
+      tierProgress = await db.query.teamTierProgress.findMany({
+        where: and(
+          eq(teamTierProgress.teamId, teamId),
+          eq(teamTierProgress.bingoId, bingoId)
+        ),
+        orderBy: asc(teamTierProgress.tier),
+      })
+    }
 
     // Find the highest unlocked tier
     const highestUnlockedTier = Math.max(

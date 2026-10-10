@@ -57,8 +57,8 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
   ]
 
   return (
-    <nav className="osrs-panel sticky top-0 z-50 mb-4 w-full border-x-0 border-t-0 bg-osrs-stone-800 text-osrs-parchment shadow-md">
-      <div className="container mx-auto flex items-center justify-between px-4 py-2">
+    <nav className="osrs-panel sticky top-0 z-50 mb-(--nav-gap) h-(--nav-h) w-full border-x-0 border-t-0 bg-osrs-stone-800 text-osrs-parchment shadow-md">
+      <div className="container mx-auto flex h-full items-center justify-between px-4">
         <div className="flex items-center space-x-4">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>

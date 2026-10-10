@@ -117,7 +117,7 @@ export function BingoImportExportModal({
 
         // Navigate to the new bingo if we have its ID
         if (result.bingoId) {
-          router.push(`/events/${eventId}/bingos/${result.bingoId}`)
+          router.push(`/events/${eventId}?board=${result.bingoId}`)
         }
       } else {
         toast({

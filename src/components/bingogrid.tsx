@@ -1,160 +1,66 @@
-/* eslint-disable */
 "use client"
-
-import type React from "react"
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { toast } from "@/hooks/use-toast"
-import {
-  updateTile,
-  addGoal,
-  deleteGoal,
-  getTileGoalsAndProgress,
-  updateGoalProgress,
-  submitImage,
-  updateTeamTileSubmissionStatus,
-  deleteSubmission,
-  updateSubmissionStatus,
-  getTierXpRequirements,
-  getSelectableUsersForSubmission,
-} from "@/app/actions/bingo"
-import type { SelectableUser } from "@/types/model"
-import { getSubmissions } from "@/app/actions/getSubmissions"
-import "@mdxeditor/editor/style.css"
+import { updateTile } from "@/app/actions/bingo"
 import "@/styles/modal-animations.css"
-import type {
-  Bingo,
-  Tile,
-  Team,
-  Goal,
-  Submission,
-} from "@/types/model"
+import type { Bingo, Tile } from "@/types/model"
 import { type EventRole } from "@/app/actions/events"
 import Sortable, { type SortableEvent } from "sortablejs"
 import { BingoGridLayout } from "./bingo-grid-layout"
 import { ProgressionBingoGrid } from "./progression-bingo-grid"
-import { FullSizeImageDialog } from "./full-size-image-dialog"
-import { StatsDialog } from "./stats-dialog"
-import { TileDetailsDialog } from "./tile-details-dialog"
-import { BarChart } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useSession } from "next-auth/react"
-import {
-  getTeamTierProgress,
-  initializeTeamTierProgress,
-} from "@/app/actions/bingo"
-
-// Define an extended submission type that includes submissionValue and weight
-interface ExtendedSubmission extends Submission {
-  // goalId is already in Submission
-}
+import type { BoardTierData } from "@/lib/tiers"
 
 interface BingoGridProps {
   bingo: Bingo
   userRole: EventRole
-  teams: Team[]
   currentTeamId: string | undefined
-  gameType: "osrs" | "rs3"
-  isLayoutLocked: boolean // Controls whether the board layout can be modified
+  /** Controls whether the board layout can be modified. */
+  isLayoutLocked: boolean
   onReorderTiles?: (reorderedTiles: Tile[]) => void
   highlightedTiles: number[]
   onTileUpdated?: () => void
+  selectedTileId: string | null
+  onSelectTile: (tileId: string | null) => void
+  /** Tier unlock data (progression Boards, layout edit mode). */
+  tierData?: BoardTierData | null
+  /** Public view: no placeholder toggling. */
+  readOnly?: boolean
 }
 
+/**
+ * The Board's tiles: selection, layout editing (drag to swap, reveal hidden
+ * placeholders) and the progression edit view. Everything about the selected
+ * Tile (details, Goals, Submissions) lives in event-workspace/tile-panel.tsx.
+ */
 export default function BingoGrid({
   bingo,
   userRole,
-  teams,
   currentTeamId,
-  gameType,
   isLayoutLocked,
   onReorderTiles,
   highlightedTiles,
   onTileUpdated,
+  selectedTileId,
+  onSelectTile,
+  tierData,
+  readOnly = false,
 }: BingoGridProps) {
   const [tiles, setTiles] = useState<Tile[]>(bingo.tiles ?? [])
-  const [selectedTile, setSelectedTile] = useState<Tile | null>(null)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editedTile, setEditedTile] = useState<Partial<Tile>>({})
-  const [newGoal, setNewGoal] = useState<Partial<Goal>>({ targetValue: 1 })
-  const [selectedImage, setSelectedImage] = useState<File | null>(null)
-  const [pastedImage, setPastedImage] = useState<File | null>(null)
-  const [isUploadingImage, setIsUploadingImage] = useState(false)
-  const [fullSizeImage, setFullSizeImage] = useState<{
-    src: string
-    alt: string
-  } | null>(null)
+  // Re-sync local tiles (needed for drag-to-swap) when fresh data arrives.
+  const [syncedTiles, setSyncedTiles] = useState(bingo.tiles)
+  if (bingo.tiles !== syncedTiles) {
+    setSyncedTiles(bingo.tiles)
+    setTiles(bingo.tiles ?? [])
+  }
+
   const gridRef = useRef<HTMLDivElement>(null)
   const sortableRef = useRef<Sortable | null>(null)
-  const [isStatsDialogOpen, setIsStatsDialogOpen] = useState(false)
-  const session = useSession()
 
-  // State for submitting on behalf of another user
-  const [selectableUsers, setSelectableUsers] = useState<SelectableUser[]>([])
-  const [selectedUserId, setSelectedUserId] = useState<string | undefined>(
-    undefined
-  )
-
-  // Progression bingo state
-  const [tierProgress, setTierProgress] = useState<
-    Array<{
-      tier: number
-      isUnlocked: boolean
-      unlockedAt: Date | null
-    }>
-  >([])
-  const [tierXpRequirements, setTierXpRequirements] = useState<
-    Array<{
-      tier: number
-      xpRequired: number
-    }>
-  >([])
-  const [unlockedTiers, setUnlockedTiers] = useState<Set<number>>(new Set([0]))
-
-  // Load tier progress for progression bingo
-  useEffect(() => {
-    const loadTierProgress = async () => {
-      if (bingo.bingoType === "progression") {
-        try {
-          // Load tier XP requirements
-          const xpRequirements = await getTierXpRequirements(bingo.id)
-          setTierXpRequirements(
-            xpRequirements.map((req) => ({
-              tier: req.tier,
-              xpRequired: req.xpRequired,
-            }))
-          )
-
-          if (currentTeamId) {
-            // Initialize tier progress if needed
-            await initializeTeamTierProgress(currentTeamId, bingo.id)
-
-            // Load tier progress
-            const progress = await getTeamTierProgress(currentTeamId, bingo.id)
-            setTierProgress(
-              progress.map((p) => ({
-                tier: p.tier,
-                isUnlocked: p.isUnlocked,
-                unlockedAt: p.unlockedAt,
-              }))
-            )
-
-            const unlockedTierSet = new Set(
-              progress.filter((p) => p.isUnlocked).map((p) => p.tier)
-            )
-            setUnlockedTiers(unlockedTierSet)
-          }
-        } catch (error) {
-          console.error("Error loading tier progress:", error)
-        }
-      }
-    }
-
-    loadTierProgress()
-  }, [bingo.id, bingo.bingoType, currentTeamId])
+  const hasSufficientRights = userRole === "admin" || userRole === "management"
 
   useEffect(() => {
-    if (gridRef.current && hasSufficientRights() && !isLayoutLocked) {
+    if (gridRef.current && hasSufficientRights && !isLayoutLocked) {
       sortableRef.current = new Sortable(gridRef.current, {
         animation: 150,
         swap: true,
@@ -162,26 +68,28 @@ export default function BingoGrid({
         ghostClass: "bg-pending/15",
         onEnd: (event: SortableEvent) => {
           const { oldIndex, newIndex } = event
-          if (oldIndex !== newIndex) {
-            const updatedTiles = [...tiles]
-            const [movedTile] = updatedTiles.splice(oldIndex!, 1)
-            updatedTiles.splice(newIndex!, 0, movedTile!)
-
-            // Update the indices of the swapped tiles
-            const minIndex = Math.min(oldIndex!, newIndex!)
-            const maxIndex = Math.max(oldIndex!, newIndex!)
-            for (let i = minIndex; i <= maxIndex; i++) {
-              updatedTiles[i] = { ...updatedTiles[i], index: i } as Tile
-            }
-
-            setTiles(updatedTiles)
-            if (onReorderTiles) onReorderTiles(updatedTiles)
-
-            toast({
-              title: "Tiles swapped",
-              description: "The tiles have been successfully swapped.",
-            })
+          if (
+            oldIndex === undefined ||
+            newIndex === undefined ||
+            oldIndex === newIndex
+          ) {
+            return
           }
+          const updatedTiles = [...tiles]
+          const [movedTile] = updatedTiles.splice(oldIndex, 1)
+          if (!movedTile) return
+          updatedTiles.splice(newIndex, 0, movedTile)
+
+          // Update the indices of the swapped tiles
+          const minIndex = Math.min(oldIndex, newIndex)
+          const maxIndex = Math.max(oldIndex, newIndex)
+          for (let i = minIndex; i <= maxIndex; i++) {
+            const tile = updatedTiles[i]
+            if (tile) updatedTiles[i] = { ...tile, index: i }
+          }
+
+          setTiles(updatedTiles)
+          if (onReorderTiles) onReorderTiles(updatedTiles)
         },
       })
 
@@ -192,99 +100,30 @@ export default function BingoGrid({
         }
       }
     }
-  }, [tiles, isLayoutLocked, onReorderTiles])
-
-  // Fetch selectable users when dialog opens
-  useEffect(() => {
-    if (isDialogOpen && currentTeamId && bingo.eventId) {
-      const fetchUsers = async () => {
-        try {
-          const users = await getSelectableUsersForSubmission(
-            bingo.eventId,
-            currentTeamId
-          )
-          setSelectableUsers(users)
-          // Default to first user (which is the current user)
-          if (users.length > 0) {
-            setSelectedUserId(users[0]!.id)
-          }
-        } catch (error) {
-          console.error("Failed to fetch selectable users:", error)
-        }
-      }
-      void fetchUsers()
-    } else if (!isDialogOpen) {
-      // Reset when dialog closes
-      setSelectableUsers([])
-      setSelectedUserId(undefined)
-    }
-  }, [isDialogOpen, currentTeamId, bingo.eventId])
-
-  const handleTileClick = useCallback(
-    async (tile: Tile) => {
-      // Check if tile is locked due to progression (but allow if user has management rights)
-      if (
-        bingo.bingoType === "progression" &&
-        !unlockedTiers.has(tile.tier) &&
-        isLayoutLocked &&
-        !hasSufficientRights()
-      ) {
-        toast({
-          title: "Tier locked",
-          description: `Complete more tiles in tier ${tile.tier} to unlock this tier`,
-          variant: "destructive",
-        })
-        return
-      }
-
-      if (tile.isHidden && !isLayoutLocked && hasSufficientRights()) {
-        await handleTogglePlaceholder(tile)
-        return
-      }
-
-      try {
-        const goals = await getTileGoalsAndProgress(tile.id)
-        const teamTileSubmissions = await getSubmissions(tile.id)
-        const updatedTile: Tile = { ...tile, goals, teamTileSubmissions }
-        setSelectedTile(updatedTile)
-        setEditedTile(updatedTile)
-        setIsDialogOpen(true)
-      } catch (error) {
-        console.error("Error fetching tile data:", error)
-        toast({
-          title: "Error",
-          description: "Failed to fetch tile data",
-          variant: "destructive",
-        })
-      }
-    },
-    [bingo.bingoType, isLayoutLocked, unlockedTiers]
-  )
+  }, [tiles, isLayoutLocked, onReorderTiles, hasSufficientRights])
 
   const handleTogglePlaceholder = useCallback(
     async (tile: Tile) => {
       if (isLayoutLocked) {
         toast({
           title: "Layout locked",
-          description:
-            "The bingo board layout is currently locked for editing.",
+          description: "The bingo board layout is currently locked for editing.",
           variant: "destructive",
         })
         return
       }
 
-      const updatedTile = { ...tile, isHidden: !tile.isHidden }
-      const result = await updateTile(tile.id, updatedTile)
+      const result = await updateTile(tile.id, { isHidden: !tile.isHidden })
       if (result.success) {
         setTiles((prevTiles) =>
-          prevTiles.map((t) => (t.id === tile.id ? updatedTile : t))
+          prevTiles.map((t) =>
+            t.id === tile.id ? { ...t, isHidden: !tile.isHidden } : t
+          )
         )
-        if (onTileUpdated) {
-          onTileUpdated()
-        }
+        onTileUpdated?.()
         toast({
           title: "Tile updated",
-          description: `The tile is now ${updatedTile.isHidden ? "a placeholder" : "no longer a placeholder"}.`,
+          description: `The tile is now ${!tile.isHidden ? "a placeholder" : "no longer a placeholder"}.`,
         })
       } else {
         toast({
@@ -297,702 +136,54 @@ export default function BingoGrid({
     [isLayoutLocked, onTileUpdated]
   )
 
-  const handleTileUpdate = useCallback(async () => {
-    if (selectedTile && editedTile) {
-      const result = await updateTile(selectedTile.id, editedTile)
-      if (result.success) {
-        setTiles((prevTiles) =>
-          prevTiles.map((tile) =>
-            tile.id === selectedTile.id ? { ...tile, ...editedTile } : tile
-          )
-        )
-        if (onTileUpdated) {
-          onTileUpdated()
-        }
-        setIsDialogOpen(false)
-        toast({
-          title: "Tile updated",
-          description: "The tile has been successfully updated.",
-        })
-      } else {
-        toast({
-          title: "Error",
-          description: result.error ?? "Failed to update tile",
-          variant: "destructive",
-        })
-      }
-    }
-  }, [selectedTile, editedTile, onTileUpdated])
-
-  const handleEditorChange = useCallback((content: string) => {
-    setEditedTile((prev) => ({ ...prev, description: content }))
-  }, [])
-
-  const handleAddGoal = useCallback(async () => {
-    if (selectedTile && newGoal.description && newGoal.targetValue != null) {
-      const result = await addGoal(selectedTile.id, newGoal as Goal)
-      if (result.success && result.goal) {
-        const updatedGoal: Goal = {
-          ...result.goal,
-          teamProgress: teams.map((team) => ({
-            id: `temp-${team.id}`,
-            teamId: team.id,
-            goalId: result.goal!.id,
-            currentValue: 0,
-            notificationSent: false,
-            completedAt: null,
-            updatedAt: new Date(),
-          })),
-        }
-        setSelectedTile((prev) => {
-          if (prev) {
-            return {
-              ...prev,
-              goals: [...(prev.goals ?? []), updatedGoal],
-            }
-          }
-          return null
-        })
-        setTiles((prevTiles) =>
-          prevTiles.map((tile) =>
-            tile.id === selectedTile.id
-              ? { ...tile, goals: [...(tile.goals ?? []), updatedGoal] }
-              : tile
-          )
-        )
-        setNewGoal({})
-        toast({
-          title: "Goal added",
-          description: "The goal has been successfully added to the tile.",
-        })
-      } else {
-        toast({
-          title: "Error",
-          description: result.error ?? "Failed to add goal",
-          variant: "destructive",
-        })
-      }
-    }
-  }, [selectedTile, newGoal, teams])
-
-  const handleDeleteGoal = useCallback(
-    async (goalId: string) => {
-      if (selectedTile) {
-        const result = await deleteGoal(goalId)
-        if (result.success) {
-          setSelectedTile((prev) =>
-            prev
-              ? { ...prev, goals: prev.goals?.filter((g) => g.id !== goalId) }
-              : null
-          )
-          setTiles((prevTiles) =>
-            prevTiles.map((tile) =>
-              tile.id === selectedTile.id
-                ? { ...tile, goals: tile.goals?.filter((g) => g.id !== goalId) }
-                : tile
-            )
-          )
-          toast({
-            title: "Goal deleted",
-            description:
-              "The goal has been successfully deleted from the tile.",
-          })
-        } else {
-          toast({
-            title: "Error",
-            description: result.error ?? "Failed to delete goal",
-            variant: "destructive",
-          })
-        }
-      }
-    },
-    [selectedTile]
-  )
-
-  const handleProgressUpdate = useCallback(
-    async (goalId: string, teamId: string, newValue: number) => {
-      const result = await updateGoalProgress(goalId, teamId, newValue)
-      if (result.success) {
-        setSelectedTile((prev) => {
-          if (prev?.goals) {
-            return {
-              ...prev,
-              goals: prev.goals.map((goal) =>
-                goal.id === goalId
-                  ? {
-                      ...goal,
-                      teamProgress:
-                        goal.teamProgress?.map((progress) =>
-                          progress.teamId === teamId
-                            ? { ...progress, currentValue: newValue }
-                            : progress
-                        ) || [],
-                    }
-                  : goal
-              ),
-            }
-          }
-          return prev
-        })
-        toast({
-          title: "Progress updated",
-          description: "The goal progress has been successfully updated.",
-        })
-      } else {
-        toast({
-          title: "Error",
-          description: result.error ?? "Failed to update goal progress",
-          variant: "destructive",
-        })
-      }
-    },
-    []
-  )
-
-  const handleImageChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0]
-      if (file) {
-        setSelectedImage(file)
-      }
-    },
-    []
-  )
-
-  const refreshSubmissions = async (tileId: string) => {
-    try {
-      const submissions = await getSubmissions(tileId)
-      setSelectedTile((prev) => {
-        if (prev && prev.id === tileId) {
-          return {
-            ...prev,
-            teamTileSubmissions: submissions,
-          }
-        }
-        return prev
-      })
-      setTiles((prevTiles) =>
-        prevTiles.map((tile) =>
-          tile.id === tileId
-            ? { ...tile, teamTileSubmissions: submissions }
-            : tile
-        )
-      )
-    } catch (error) {
-      console.error("Error refreshing submissions:", error)
-      toast({
-        title: "Error",
-        description: "Failed to refresh submissions",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleImageSubmit = useCallback(
-    async (onBehalfOfUserId?: string) => {
-      // Prevent concurrent uploads
-      if (isUploadingImage) {
+  const handleTileClick = useCallback(
+    async (tile: Tile) => {
+      if (tile.isHidden && !isLayoutLocked && hasSufficientRights) {
+        await handleTogglePlaceholder(tile)
         return
       }
-
-      if (bingo.locked) {
-        toast({
-          title: "Submissions locked",
-          description: "Submissions are currently locked for this bingo board",
-          variant: "destructive",
-        })
-        return
-      }
-
-      if (!selectedTile || !(selectedImage || pastedImage) || !currentTeamId) {
-        toast({
-          title: "Error",
-          description: "Missing required information for submission",
-          variant: "destructive",
-        })
-        return
-      }
-
-      // Set uploading state
-      setIsUploadingImage(true)
-
-      try {
-        const formData = new FormData()
-        formData.append("image", selectedImage ?? pastedImage!)
-        formData.append("tileId", selectedTile.id)
-        formData.append("teamId", currentTeamId)
-
-        // Include onBehalfOfUserId if provided
-        if (onBehalfOfUserId) {
-          formData.append("onBehalfOfUserId", onBehalfOfUserId)
-        }
-
-        const result = await submitImage(formData)
-
-        if (result.success) {
-          setSelectedImage(null)
-          setPastedImage(null)
-          toast({
-            title: "Image submitted",
-            description:
-              "Your image has been successfully submitted for review",
-          })
-          await refreshSubmissions(selectedTile.id)
-        } else {
-          toast({
-            title: "Error",
-            description: result.error ?? "Failed to submit image",
-            variant: "destructive",
-          })
-        }
-      } finally {
-        // Always reset uploading state
-        setIsUploadingImage(false)
-      }
+      onSelectTile(tile.id)
     },
-    [
-      isUploadingImage,
-      bingo.locked,
-      selectedTile,
-      selectedImage,
-      pastedImage,
-      currentTeamId,
-    ]
+    [isLayoutLocked, hasSufficientRights, handleTogglePlaceholder, onSelectTile]
   )
 
-  const handlePaste = useCallback(
-    (event: ClipboardEvent) => {
-      if (bingo.locked) return
-      // Prevent pasting during upload
-      if (isUploadingImage) return
-
-      event.preventDefault()
-      const items = event.clipboardData?.items
-      if (items) {
-        for (const item of items) {
-          if (item.type.startsWith("image/")) {
-            const blob = item.getAsFile()
-            if (blob) {
-              const file = new File([blob], "pasted-image.png", {
-                type: blob.type,
-              })
-              setPastedImage(file)
-              setSelectedImage(file)
-              toast({
-                title: "Image pasted",
-                description: "Your pasted image is ready to be submitted.",
-              })
-              break
-            }
-          }
-        }
-      }
-    },
-    [bingo, isUploadingImage]
-  )
-
-  useEffect(() => {
-    document.addEventListener("paste", handlePaste)
-    return () => {
-      document.removeEventListener("paste", handlePaste)
-    }
-  }, [handlePaste])
-
-  // Add keyboard navigation support
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Only handle keyboard shortcuts when modal is open
-      if (!isDialogOpen) return
-
-      // Handle tab switching with Ctrl+1,2,3
-      if (event.ctrlKey && ["1", "2", "3"].includes(event.key)) {
-        event.preventDefault()
-        const tabValues = ["details", "goals", "submissions"]
-        const tabIndex = parseInt(event.key) - 1
-        const tabValue = tabValues[tabIndex]
-        if (tabValue) {
-          const tabTrigger = document.querySelector(
-            `[data-state]:not([data-state="active"])[value="${tabValue}"]`
-          ) as HTMLElement
-          if (tabTrigger) {
-            tabTrigger.click()
-          }
-        }
-      }
-
-      // Handle Escape key to close modal
-      if (event.key === "Escape") {
-        setIsDialogOpen(false)
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown)
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown)
-    }
-  }, [isDialogOpen])
-
-  const handleTeamTileSubmissionStatusUpdate = useCallback(
-    async (
-      teamTileSubmissionId: string | undefined,
-      newStatus: "completed" | "needs_attention"
-    ) => {
-      if (!teamTileSubmissionId || !selectedTile) {
-        toast({
-          title: "Error",
-          description: "No submission found for this team",
-          variant: "destructive",
-        })
-        return
-      }
-
-      try {
-        const result = await updateTeamTileSubmissionStatus(
-          teamTileSubmissionId,
-          newStatus
-        )
-        if (result.success) {
-          // Update local state with the new status
-          const updateSubmissions = (submissions: any[] | undefined) =>
-            submissions?.map((tts) =>
-              tts.id === teamTileSubmissionId
-                ? { ...tts, status: newStatus }
-                : tts
-            )
-
-          setSelectedTile((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  teamTileSubmissions: updateSubmissions(
-                    prev.teamTileSubmissions
-                  ),
-                }
-              : null
-          )
-          setTiles((prevTiles) =>
-            prevTiles.map((tile) =>
-              tile.id === selectedTile.id
-                ? {
-                    ...tile,
-                    teamTileSubmissions: updateSubmissions(
-                      tile.teamTileSubmissions
-                    ),
-                  }
-                : tile
-            )
-          )
-
-          toast({
-            title: "Status updated",
-            description: `Submission marked as ${newStatus.replace("_", " ")}`,
-          })
-        } else {
-          throw new Error(result.error)
-        }
-      } catch (error) {
-        console.error("Error updating submission status:", error)
-        toast({
-          title: "Error",
-          description: "Failed to update submission status",
-          variant: "destructive",
-        })
-      }
-    },
-    [selectedTile]
-  )
-
-  const handleDeleteSubmission = useCallback(
-    async (submissionId: string) => {
-      if (!selectedTile) return
-
-      try {
-        const result = await deleteSubmission(submissionId)
-        if (result.success) {
-          // Update the local state to remove the deleted submission
-          setSelectedTile((prev) => {
-            if (!prev) return null
-
-            const updatedTeamTileSubmissions = prev.teamTileSubmissions?.map(
-              (tts) => ({
-                ...tts,
-                submissions: tts.submissions.filter(
-                  (sub) => sub.id !== submissionId
-                ),
-              })
-            )
-
-            return {
-              ...prev,
-              teamTileSubmissions: updatedTeamTileSubmissions,
-            }
-          })
-
-          // Update the tiles state as well
-          setTiles((prevTiles) =>
-            prevTiles.map((tile) => {
-              if (tile.id === selectedTile.id) {
-                const updatedTeamTileSubmissions =
-                  tile.teamTileSubmissions?.map((tts) => ({
-                    ...tts,
-                    submissions: tts.submissions.filter(
-                      (sub) => sub.id !== submissionId
-                    ),
-                  }))
-
-                return {
-                  ...tile,
-                  teamTileSubmissions: updatedTeamTileSubmissions,
-                }
-              }
-              return tile
-            })
-          )
-
-          toast({
-            title: "Submission deleted",
-            description: "The submission has been successfully deleted.",
-          })
-        } else {
-          throw new Error("Failed to delete submission")
-        }
-      } catch (error) {
-        console.error("Error deleting submission:", error)
-        toast({
-          title: "Error",
-          description: "Failed to delete submission",
-          variant: "destructive",
-        })
-      }
-    },
-    [selectedTile]
-  )
-
-  // Updated to handle goal assignment with proper typing including value and weight
-  const handleSubmissionStatusUpdate = useCallback(
-    async (
-      submissionId: string,
-      newStatus: "pending" | "approved" | "needs_review",
-      goalId?: string | null,
-      submissionValue?: number | null
-    ) => {
-      try {
-        console.log(
-          `Updating submission ${submissionId} with status ${newStatus}, goalId ${goalId}, value ${submissionValue}`
-        )
-
-        // Only allow approved or needs_review to be passed to the server action
-        const validStatus = newStatus === "pending" ? "needs_review" : newStatus
-
-        const result = await updateSubmissionStatus(
-          submissionId,
-          validStatus,
-          goalId,
-          submissionValue
-        )
-        if (result.success) {
-          // Update local state for both individual submission and potentially team status
-          setSelectedTile((prev) => {
-            if (!prev) return null
-
-            // Create a deep copy of the tile with updated submissions
-            const updatedTile = { ...prev }
-
-            if (updatedTile.teamTileSubmissions) {
-              updatedTile.teamTileSubmissions =
-                updatedTile.teamTileSubmissions.map((tts) => {
-                  return {
-                    ...tts,
-                    submissions: tts.submissions.map((sub) => {
-                      if (sub.id === submissionId) {
-                        // Create a new submission object with updated fields
-                        // Use type assertion to handle the goalId property
-                        const updatedSub = { ...sub } as ExtendedSubmission
-                        updatedSub.status = newStatus
-                        updatedSub.reviewedBy = session.data?.user?.id || null
-                        updatedSub.reviewedAt = new Date()
-
-                        // Update goalId, submissionValue, and weight if provided
-                        if (goalId !== undefined) {
-                          updatedSub.goalId = goalId
-                        }
-                        if (submissionValue !== undefined) {
-                          updatedSub.submissionValue = submissionValue ?? 1
-                        }
-
-                        return updatedSub
-                      }
-                      return sub
-                    }),
-                  }
-                })
-            }
-
-            return updatedTile
-          })
-
-          // Also update the tiles state
-          setTiles((prevTiles) =>
-            prevTiles.map((tile) => {
-              if (tile.id === selectedTile?.id) {
-                const updatedTile = { ...tile }
-
-                if (updatedTile.teamTileSubmissions) {
-                  updatedTile.teamTileSubmissions =
-                    updatedTile.teamTileSubmissions.map((tts) => {
-                      return {
-                        ...tts,
-                        submissions: tts.submissions.map((sub) => {
-                          if (sub.id === submissionId) {
-                            // Create a new submission object with updated fields
-                            // Use type assertion to handle the goalId property
-                            const updatedSub = { ...sub } as ExtendedSubmission
-                            updatedSub.status = newStatus
-                            updatedSub.reviewedBy =
-                              session.data?.user?.id || null
-                            updatedSub.reviewedAt = new Date()
-
-                            // Update goalId, submissionValue, and weight if provided
-                            if (goalId !== undefined) {
-                              updatedSub.goalId = goalId
-                            }
-                            if (submissionValue !== undefined) {
-                              updatedSub.submissionValue = submissionValue ?? 1
-                            }
-
-                            return updatedSub
-                          }
-                          return sub
-                        }),
-                      }
-                    })
-                }
-
-                return updatedTile
-              }
-              return tile
-            })
-          )
-
-          const message =
-            goalId !== undefined
-              ? `Submission ${newStatus.replace("_", " ")}, goal ${goalId ? "assigned" : "removed"}${submissionValue ? ` with value ${submissionValue}` : ""}`
-              : `Submission marked as ${newStatus.replace("_", " ")}`
-
-          toast({
-            title: "Submission updated",
-            description: message,
-          })
-        } else {
-          throw new Error(result.error || "Failed to update submission status")
-        }
-      } catch (error) {
-        console.error("Error updating submission status:", error)
-        toast({
-          title: "Error",
-          description: "Failed to update submission status",
-          variant: "destructive",
-        })
-      }
-    },
-    [selectedTile, session.data?.user?.id]
-  )
-
-  return (
-    <div className="space-y-4">
-      <div className="mb-4 flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="flex items-center gap-2"
-          onClick={() => setIsStatsDialogOpen(true)}
-        >
-          <BarChart className="h-4 w-4" />
-          Stats
-        </Button>
-      </div>
-      {bingo.bingoType === "progression" ? (
+  if (bingo.bingoType === "progression") {
+    return (
+      <div className="min-h-0 overflow-auto">
         <ProgressionBingoGrid
           tiles={tiles}
           currentTeamId={currentTeamId}
           onTileClick={handleTileClick}
-          tierProgress={tierProgress}
-          tierXpRequirements={tierXpRequirements}
+          tierProgress={(tierData?.progress ?? []).map((p) => ({
+            tier: p.tier,
+            isUnlocked: p.isUnlocked,
+            unlockedAt: p.unlockedAt ?? null,
+          }))}
+          tierXpRequirements={tierData?.requirements ?? []}
           userRole={userRole}
           bingoId={bingo.id}
           onTilesUpdated={onTileUpdated}
           isEditMode={!isLayoutLocked}
         />
-      ) : (
-        <BingoGridLayout
-          ref={gridRef}
-          tiles={tiles}
-          columns={bingo.columns}
-          rows={bingo.rows}
-          userRole={userRole}
-          currentTeamId={currentTeamId}
-          onTileClick={handleTileClick}
-          onTogglePlaceholder={handleTogglePlaceholder}
-          highlightedTiles={highlightedTiles}
-          isLocked={isLayoutLocked}
-        />
-      )}
-
-      <TileDetailsDialog
-        isOpen={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        selectedTile={selectedTile}
-        editedTile={editedTile}
-        userRole={userRole}
-        teams={teams}
-        eventId={bingo.eventId}
-        gameType={gameType}
-        isProgressionBingo={bingo.bingoType === "progression"}
-        onEditTile={(field, value) =>
-          setEditedTile({ ...editedTile, [field]: value })
-        }
-        onUpdateTile={handleTileUpdate}
-        onEditorChange={handleEditorChange}
-        onUpdateProgress={handleProgressUpdate}
-        newGoal={newGoal}
-        hasSufficientRights={hasSufficientRights()}
-        onDeleteGoal={handleDeleteGoal}
-        onAddGoal={handleAddGoal}
-        onNewGoalChange={(field, value) =>
-          setNewGoal({ ...newGoal, [field]: value })
-        }
-        currentTeamId={currentTeamId}
-        selectedImage={selectedImage}
-        pastedImage={pastedImage}
-        isSubmissionsLocked={bingo.locked || false}
-        isUploadingImage={isUploadingImage}
-        onImageChange={handleImageChange}
-        onImageSubmit={handleImageSubmit}
-        onFullSizeImageView={(src, alt) => setFullSizeImage({ src, alt })}
-        onTeamTileSubmissionStatusUpdate={handleTeamTileSubmissionStatusUpdate}
-        onSubmissionStatusUpdate={handleSubmissionStatusUpdate}
-        onDeleteSubmission={handleDeleteSubmission}
-        selectableUsers={selectableUsers}
-        selectedUserId={selectedUserId}
-        onUserSelect={setSelectedUserId}
-      />
-
-      <FullSizeImageDialog
-        isOpen={!!fullSizeImage}
-        onClose={() => setFullSizeImage(null)}
-        imageSrc={fullSizeImage?.src ?? ""}
-        imageAlt={fullSizeImage?.alt ?? ""}
-      />
-      <StatsDialog
-        isOpen={isStatsDialogOpen}
-        onOpenChange={setIsStatsDialogOpen}
-        teams={teams}
-        bingoId={bingo.id}
-      />
-    </div>
-  )
-
-  function hasSufficientRights(): boolean {
-    return userRole === "admin" || userRole === "management"
+      </div>
+    )
   }
+
+  return (
+    <BingoGridLayout
+      ref={gridRef}
+      tiles={tiles}
+      columns={bingo.columns}
+      rows={bingo.rows}
+      userRole={userRole}
+      currentTeamId={currentTeamId}
+      onTileClick={handleTileClick}
+      onTogglePlaceholder={handleTogglePlaceholder}
+      highlightedTiles={highlightedTiles}
+      isLocked={isLayoutLocked}
+      selectedTileId={selectedTileId}
+      onClearSelection={() => onSelectTile(null)}
+      readOnly={readOnly}
+    />
+  )
 }

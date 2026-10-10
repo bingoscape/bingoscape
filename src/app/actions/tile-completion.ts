@@ -230,7 +230,7 @@ export async function checkAndAutoCompleteTile(tx: DbOrTransaction, tileId: stri
         .where(eq(teamTileSubmissions.id, existingSubmission.id))
         .returning()
 
-      revalidatePath("/events/[id]/bingos/[bingoId]", "page")
+      revalidatePath("/events/[id]", "layout")
 
       return {
         success: true,
@@ -251,7 +251,7 @@ export async function checkAndAutoCompleteTile(tx: DbOrTransaction, tileId: stri
       })
       .returning()
 
-    revalidatePath("/events/[id]/bingos/[bingoId]", "page")
+    revalidatePath("/events/[id]", "layout")
 
     return {
       success: true,

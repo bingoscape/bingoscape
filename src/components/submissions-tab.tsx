@@ -84,6 +84,8 @@ interface SubmissionsTabProps {
   onUserSelect?: (userId: string) => void
   teamTileSubmissions: any[] // Updated from selectedTile
   isAdminView?: boolean
+  /** Narrow container (Tile side panel): never split the review queue into columns. */
+  stacked?: boolean
 }
 
 export function SubmissionsTab({
@@ -106,6 +108,7 @@ export function SubmissionsTab({
   onUserSelect,
   teamTileSubmissions,
   isAdminView,
+  stacked = false,
 }: SubmissionsTabProps) {
 
   const [goalValuesCache, _] = useState<Record<string, any[]>>(
@@ -631,7 +634,7 @@ export function SubmissionsTab({
       <div className="space-y-4 p-2 shrink-0">
         {/* Current team submission form */}
         {!isAdminView && currentTeamId && !isSubmissionsLocked && (
-          <div className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-xs">
+          <div className={`space-y-4 rounded-lg border border-border bg-card shadow-xs ${stacked ? "p-3" : "p-6"}`}>
             <SubmissionUploadForm
               teamName={currentTeam?.name || "Your Team"}
               selectedImage={selectedImage}
@@ -824,11 +827,11 @@ export function SubmissionsTab({
         {filteredFlatSubmissions.length > 0 ? (
             hasSufficientRights ? (
               /* --- SPLIT PANE TRIAGE INBOX (Power User View) --- */
-              <div className="flex flex-col md:flex-row gap-6 relative">
+              <div className={`flex flex-col gap-6 relative ${stacked ? "" : "md:flex-row"}`}>
                 
                 {/* Left Pane: Queue List Wrapper */}
-                <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col md:relative">
-                  <div className="md:absolute md:inset-0 flex flex-col gap-2 overflow-y-auto pr-2 md:border-r border-border custom-scrollbar max-h-[300px] md:max-h-none">
+                <div className={`w-full flex flex-col ${stacked ? "" : "md:w-1/3 lg:w-1/4 md:relative"}`}>
+                  <div className={`flex flex-col gap-2 overflow-y-auto pr-2 border-border custom-scrollbar max-h-[300px] ${stacked ? "" : "md:absolute md:inset-0 md:border-r md:max-h-none"}`}>
                     {filteredFlatSubmissions.map((submission: any) => {
                       const currentStatus = getSubmissionStatus(submission.id, submission.status || "pending")
                       const isSelected = selectedSubmissionId === submission.id
@@ -862,7 +865,7 @@ export function SubmissionsTab({
                 </div>
 
                 {/* Right Pane: Focus Area */}
-                <div className="w-full md:w-2/3 lg:w-3/4 flex flex-col gap-4 pl-2">
+                <div className={`w-full flex flex-col gap-4 ${stacked ? "" : "md:w-2/3 lg:w-3/4 pl-2"}`}>
                   {filteredFlatSubmissions.filter((s: any) => s.id === selectedSubmissionId).map((submission: any) => {
                     const currentSubmissionStatus = getSubmissionStatus(submission.id, submission.status || "pending")
                     const currentTileStatus = getTileStatus(submission.teamTileSubmissionId, submission.parentStatus)

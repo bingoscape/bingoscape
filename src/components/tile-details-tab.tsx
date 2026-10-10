@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation"
 import { syncTrackerProgress } from "@/app/actions/tracker"
 import { toast } from "@/hooks/use-toast"
 
-import { useCallback } from "react"
-import { useState, useEffect } from "react"
+import { useCallback, useMemo } from "react"
+import { useState } from "react"
 import type React from "react"
 import Image from "next/image"
 import { Input } from "@/components/ui/input"
@@ -36,7 +36,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import getRandomFrog from "@/lib/getRandomFrog"
 import { GoalProgressTree } from "./goal-progress-tree"
-import { getGoalTreeWithProgress } from "@/app/actions/goal-groups"
+import { CompactGoalTree } from "./compact-goal-tree"
+import { buildGoalTree, getTeamGoalProgress } from "@/lib/goal-tree"
 import type { Tile, Team } from "@/types/model"
 
 type EditableTileFields = {
@@ -56,6 +57,11 @@ interface TileDetailsTabProps {
   gameType: "osrs" | "rs3"
   eventId?: string
   isProgressionBingo?: boolean
+  /**
+   * Rendered inside the Tile side panel: the panel header already shows the
+   * image and title, and the panel body scrolls, so drop those here.
+   */
+  embedded?: boolean
   onEditTile: <K extends keyof EditableTileFields>(
     field: K,
     value: EditableTileFields[K]
@@ -88,6 +94,7 @@ export function TileDetailsTab({
   gameType,
   eventId,
   isProgressionBingo = false,
+  embedded = false,
   onEditTile,
   onUpdateTile,
   onEditorChange,
@@ -222,10 +229,30 @@ export function TileDetailsTab({
   }
 
   return (
-    <div className="max-h-[60vh] space-y-6 overflow-y-auto bg-background pr-4 text-foreground">
-      <div className="space-y-6 p-4">
-        <div className="flex flex-col items-start gap-6 md:flex-row">
-          <div className="relative aspect-square w-full md:w-1/3">
+    <div
+      className={
+        embedded
+          ? "space-y-4 text-foreground"
+          : "max-h-[60vh] space-y-6 overflow-y-auto bg-background pr-4 text-foreground"
+      }
+    >
+      <div className={embedded ? "space-y-4" : "space-y-6 p-4"}>
+        <div
+          className={
+            embedded
+              ? "flex flex-col items-start gap-4"
+              : "flex flex-col items-start gap-6 md:flex-row"
+          }
+        >
+          <div
+            className={
+              embedded
+                ? isEditing
+                  ? "relative aspect-square w-32"
+                  : "hidden"
+                : "relative aspect-square w-full md:w-1/3"
+            }
+          >
             {isEditing && imagePreview && isValidImage ? (
               <Image
                 src={imagePreview}
@@ -251,9 +278,11 @@ export function TileDetailsTab({
               </div>
             )}
           </div>
-          <div className="w-full space-y-4 md:w-2/3">
+          <div className={embedded ? "w-full space-y-4" : "w-full space-y-4 md:w-2/3"}>
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">{selectedTile?.title}</h3>
+              <h3 className={embedded ? "sr-only" : "text-lg font-semibold"}>
+                {selectedTile?.title}
+              </h3>
               {canEdit && (
                 <Button
                   onClick={() => toggleEdit(isEditing)}
@@ -509,7 +538,7 @@ export function TileDetailsTab({
             )}
           </div>
         </div>
-        <div className="mt-6">
+        <div className={embedded ? "mt-2" : "mt-6"}>
           <h3 className="mb-4 text-lg font-semibold">Team Progress</h3>
           <TileProgress
             selectedTile={selectedTile}
@@ -535,30 +564,15 @@ function TileProgress({
   userRole: "admin" | "management" | "participant"
   eventId?: string
 }) {
-  const [teamTreeData, setTeamTreeData] = useState<
-    Map<string, { tree: any[]; teamProgress: any[] }>
-  >(new Map())
+  const router = useRouter()
+  const [isSyncing, setIsSyncing] = useState(false)
 
-  useEffect(() => {
-    if (!selectedTile?.id) return
-
-    // Load tree data for all teams
-    const loadTreeData = async () => {
-      const newData = new Map()
-      for (const team of teams) {
-        const data = await getGoalTreeWithProgress(selectedTile.id, team.id)
-        newData.set(team.id, data)
-      }
-      setTeamTreeData(newData)
-    }
-
-    void loadTreeData()
-  }, [
-    selectedTile?.id,
-    teams,
-    selectedTile?.teamTileSubmissions,
-    selectedTile?.goals,
-  ])
+  // The Goal tree and every Team's progress come from the Tile that the Event
+  // page already loaded: no client-side fetching.
+  const tree = useMemo(
+    () => buildGoalTree(selectedTile?.goals, selectedTile?.goalGroups),
+    [selectedTile?.goals, selectedTile?.goalGroups]
+  )
 
   if (!selectedTile?.goals || selectedTile.goals.length === 0) {
     return (
@@ -570,8 +584,12 @@ function TileProgress({
     )
   }
 
-  const router = useRouter()
-  const [isSyncing, setIsSyncing] = useState(false)
+  // No Team selected (public view): show the Goals without progress.
+  if (teams.length === 0) {
+    return (
+      <CompactGoalTree tree={tree} teamProgress={[]} showProgress={false} />
+    )
+  }
 
   const hasMetricGoals = selectedTile?.goals?.some(
     (g: any) => g.goalType === "metric"
@@ -650,21 +668,17 @@ function TileProgress({
           </Button>
         </div>
       )}
-      {/* <h4 className="font-semibold text-lg">Team Progress</h4> */}
 
       <div className="space-y-6">
         {teams.map((team) => {
-          const data = teamTreeData.get(team.id)
-          if (!data) return null
-
           const teamColor = `hsl(${(team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`
 
           return (
             <GoalProgressTree
               key={team.id}
-              tree={data.tree}
+              tree={tree}
               teamId={team.id}
-              teamProgress={data.teamProgress}
+              teamProgress={getTeamGoalProgress(selectedTile.goals, team.id)}
               teamName={team.name}
               teamColor={teamColor}
             />

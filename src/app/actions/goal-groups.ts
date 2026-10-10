@@ -5,6 +5,13 @@ import { logger } from "@/lib/logger"
 import { goalGroups, goals, teamGoalProgress } from "@/server/db/schema"
 import { eq, and, isNull, inArray } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
+import {
+  authzErrorMessage,
+  canReadTile,
+  requireBingoAdminForGoal,
+  requireBingoAdminForGoalGroup,
+  requireBingoAdminForTile,
+} from "@/server/authz"
 
 export interface GoalGroup {
   id: string
@@ -55,6 +62,10 @@ export async function createGoalGroup(
   minRequiredGoals = 1
 ) {
   try {
+    // Event is derived from the Tile (and parent group) in the database.
+    await requireBingoAdminForTile(tileId)
+    if (parentGroupId) await requireBingoAdminForGoalGroup(parentGroupId)
+
     // Get the next order index for this parent
     const siblings = await db.query.goalGroups.findMany({
       where: parentGroupId
@@ -64,23 +75,29 @@ export async function createGoalGroup(
 
     const orderIndex = siblings.length
 
-    const [newGroup] = await db
-      .insert(goalGroups)
-      .values({
-        tileId,
-        parentGroupId: parentGroupId || null,
-        logicalOperator,
-        minRequiredGoals,
-        orderIndex,
-      })
-      .returning()
+    const newGroup = await db.transaction(async (tx) => {
+      const [inserted] = await tx
+        .insert(goalGroups)
+        .values({
+          tileId,
+          parentGroupId: parentGroupId || null,
+          logicalOperator,
+          minRequiredGoals,
+          orderIndex,
+        })
+        .returning()
+      return inserted
+    })
 
-    revalidatePath("/events/[id]/bingos/[bingoId]", "page")
+    revalidatePath("/events/[id]", "layout")
 
     return { success: true, group: newGroup }
   } catch (error) {
     logger.error({ error }, "Error creating goal group:", error)
-    return { success: false, error: "Failed to create goal group" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to create goal group"),
+    }
   }
 }
 
@@ -96,6 +113,8 @@ export async function updateGoalGroup(
   }
 ) {
   try {
+    await requireBingoAdminForGoalGroup(groupId)
+
     const updateData: {
       logicalOperator?: "AND" | "OR" | "SUM"
       name?: string | null
@@ -118,18 +137,24 @@ export async function updateGoalGroup(
       updateData.minRequiredGoals = updates.minRequiredGoals
     }
 
-    const [updatedGroup] = await db
-      .update(goalGroups)
-      .set(updateData)
-      .where(eq(goalGroups.id, groupId))
-      .returning()
+    const updatedGroup = await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(goalGroups)
+        .set(updateData)
+        .where(eq(goalGroups.id, groupId))
+        .returning()
+      return updated
+    })
 
-    revalidatePath("/events/[id]/bingos/[bingoId]", "page")
+    revalidatePath("/events/[id]", "layout")
 
     return { success: true, group: updatedGroup }
   } catch (error) {
     logger.error({ error }, "Error updating goal group:", error)
-    return { success: false, error: "Failed to update goal group" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to update goal group"),
+    }
   }
 }
 
@@ -138,6 +163,8 @@ export async function updateGoalGroup(
  */
 export async function deleteGoalGroup(groupId: string) {
   try {
+    await requireBingoAdminForGoalGroup(groupId)
+
     // Get the group to find its parent
     const group = await db.query.goalGroups.findFirst({
       where: eq(goalGroups.id, groupId),
@@ -170,12 +197,15 @@ export async function deleteGoalGroup(groupId: string) {
       await tx.delete(goalGroups).where(eq(goalGroups.id, groupId))
     })
 
-    revalidatePath("/events/[id]/bingos/[bingoId]", "page")
+    revalidatePath("/events/[id]", "layout")
 
     return { success: true }
   } catch (error) {
     logger.error({ error }, "Error deleting goal group:", error)
-    return { success: false, error: "Failed to delete goal group" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to delete goal group"),
+    }
   }
 }
 
@@ -188,6 +218,14 @@ export async function moveGoalToGroup(
   orderIndex?: number
 ) {
   try {
+    const eventId = await requireBingoAdminForGoal(goalId)
+    if (targetGroupId) {
+      const targetEventId = await requireBingoAdminForGoalGroup(targetGroupId)
+      if (targetEventId !== eventId) {
+        return { success: false, error: "Target group is in a different Event" }
+      }
+    }
+
     const updateData: {
       parentGroupId: string | null
       orderIndex?: number
@@ -201,14 +239,19 @@ export async function moveGoalToGroup(
       updateData.orderIndex = orderIndex
     }
 
-    await db.update(goals).set(updateData).where(eq(goals.id, goalId))
+    await db.transaction(async (tx) => {
+      await tx.update(goals).set(updateData).where(eq(goals.id, goalId))
+    })
 
-    revalidatePath("/events/[id]/bingos/[bingoId]", "page")
+    revalidatePath("/events/[id]", "layout")
 
     return { success: true }
   } catch (error) {
     logger.error({ error }, "Error moving goal:", error)
-    return { success: false, error: "Failed to move goal" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to move goal"),
+    }
   }
 }
 
@@ -221,6 +264,14 @@ export async function moveGroupToGroup(
   orderIndex?: number
 ) {
   try {
+    const eventId = await requireBingoAdminForGoalGroup(groupId)
+    if (targetGroupId) {
+      const targetEventId = await requireBingoAdminForGoalGroup(targetGroupId)
+      if (targetEventId !== eventId) {
+        return { success: false, error: "Target group is in a different Event" }
+      }
+    }
+
     // Prevent circular references
     if (targetGroupId) {
       const isCircular = await checkCircularReference(groupId, targetGroupId)
@@ -245,17 +296,22 @@ export async function moveGroupToGroup(
       updateData.orderIndex = orderIndex
     }
 
-    await db
-      .update(goalGroups)
-      .set(updateData)
-      .where(eq(goalGroups.id, groupId))
+    await db.transaction(async (tx) => {
+      await tx
+        .update(goalGroups)
+        .set(updateData)
+        .where(eq(goalGroups.id, groupId))
+    })
 
-    revalidatePath("/events/[id]/bingos/[bingoId]", "page")
+    revalidatePath("/events/[id]", "layout")
 
     return { success: true }
   } catch (error) {
     logger.error({ error }, "Error moving group:", error)
-    return { success: false, error: "Failed to move group" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to move group"),
+    }
   }
 }
 
@@ -290,6 +346,11 @@ export async function reorderItems(
   items: Array<{ id: string; type: "goal" | "group"; orderIndex: number }>
 ) {
   try {
+    for (const item of items) {
+      if (item.type === "goal") await requireBingoAdminForGoal(item.id)
+      else await requireBingoAdminForGoalGroup(item.id)
+    }
+
     await db.transaction(async (tx) => {
       for (const item of items) {
         if (item.type === "goal") {
@@ -306,12 +367,15 @@ export async function reorderItems(
       }
     })
 
-    revalidatePath("/events/[id]/bingos/[bingoId]", "page")
+    revalidatePath("/events/[id]", "layout")
 
     return { success: true }
   } catch (error) {
     logger.error({ error }, "Error reordering items:", error)
-    return { success: false, error: "Failed to reorder items" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to reorder items"),
+    }
   }
 }
 
@@ -323,6 +387,19 @@ export async function moveMultipleItems(
   targetParentId: string | null
 ) {
   try {
+    const targetEventId = targetParentId
+      ? await requireBingoAdminForGoalGroup(targetParentId)
+      : null
+    for (const item of items) {
+      const itemEventId =
+        item.type === "goal"
+          ? await requireBingoAdminForGoal(item.id)
+          : await requireBingoAdminForGoalGroup(item.id)
+      if (targetEventId && itemEventId !== targetEventId) {
+        return { success: false, error: "Target group is in a different Event" }
+      }
+    }
+
     let successCount = 0
     let failCount = 0
     const errors: string[] = []
@@ -373,7 +450,7 @@ export async function moveMultipleItems(
       }
     })
 
-    revalidatePath("/events/[id]/bingos/[bingoId]", "page")
+    revalidatePath("/events/[id]", "layout")
 
     if (failCount === 0) {
       return { success: true, movedCount: successCount }
@@ -392,7 +469,10 @@ export async function moveMultipleItems(
     }
   } catch (error) {
     logger.error({ error }, "Error moving multiple items:", error)
-    return { success: false, error: "Failed to move items" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to move items"),
+    }
   }
 }
 
@@ -401,6 +481,9 @@ export async function moveMultipleItems(
  */
 export async function getGoalTree(tileId: string): Promise<GoalTreeNode[]> {
   try {
+    // Hidden Tiles must not leak their Goals to non-managers.
+    if (!(await canReadTile(tileId))) return []
+
     // Fetch all groups and goals for this tile
     const allGroups = await db.query.goalGroups.findMany({
       where: eq(goalGroups.tileId, tileId),
@@ -462,6 +545,8 @@ export async function getGoalTree(tileId: string): Promise<GoalTreeNode[]> {
  */
 export async function getGoalTreeWithProgress(tileId: string, teamId: string) {
   try {
+    if (!(await canReadTile(tileId))) return { tree: [], teamProgress: [] }
+
     const tree = await getGoalTree(tileId)
 
     // Get all team progress for this team and tile's goals

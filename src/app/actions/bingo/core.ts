@@ -15,6 +15,11 @@ import { actionClient } from "@/lib/safe-action"
 import { logger } from "@/lib/logger"
 import getRandomFrog from "@/lib/getRandomFrog"
 import { initializeTierXpRequirements } from "../bingo"
+import {
+  authzErrorMessage,
+  requireBingoAdmin,
+  requireEventManager,
+} from "@/server/authz"
 
 const createBingoSchema = z.object({
   eventId: z.string().uuid(),
@@ -37,6 +42,8 @@ export const createBingo = actionClient
   .schema(createBingoSchema)
   .action(async ({ parsedInput: data }) => {
     try {
+      await requireEventManager(data.eventId)
+
       const event = await db.query.events.findFirst({
         where: eq(events.id, data.eventId),
       })
@@ -128,7 +135,10 @@ export const createBingo = actionClient
       return { success: true }
     } catch (error) {
       logger.error({ error, action: "createBingo" }, "Error creating bingo")
-      return { success: false, error: "Failed to create bingo" }
+      return {
+        success: false,
+        error: authzErrorMessage(error, "Failed to create bingo"),
+      }
     }
   })
 
@@ -140,6 +150,7 @@ export const deleteBingo = actionClient
   .schema(deleteBingoSchema)
   .action(async ({ parsedInput: { bingoId } }) => {
     try {
+      await requireBingoAdmin(bingoId)
       await db.transaction(async (tx) => {
         await tx.delete(tiles).where(eq(tiles.bingoId, bingoId))
         await tx.delete(bingos).where(eq(bingos.id, bingoId))
@@ -147,7 +158,10 @@ export const deleteBingo = actionClient
       return { success: true }
     } catch (error) {
       logger.error({ error }, "Error deleting bingo")
-      return { success: false, error: "Failed to delete bingo" }
+      return {
+        success: false,
+        error: authzErrorMessage(error, "Failed to delete bingo"),
+      }
     }
   })
 
@@ -175,6 +189,7 @@ export const updateBingo = actionClient
   .schema(updateBingoSchema)
   .action(async ({ parsedInput: { bingoId, ...data } }) => {
     try {
+      await requireBingoAdmin(bingoId)
       await db.transaction(async (tx) => {
         const updateData: Partial<typeof bingos.$inferInsert> = {
           title: data.title,
@@ -260,13 +275,15 @@ export const updateBingo = actionClient
         }
       })
 
-      revalidatePath(`/events/[id]/bingos/${bingoId}`)
-      revalidatePath(`/events/[id]`)
+      revalidatePath("/events/[id]", "layout")
 
       return { success: true }
     } catch (error) {
       logger.error({ error }, "Error updating bingo")
-      return { success: false, error: "Failed to update bingo" }
+      return {
+        success: false,
+        error: authzErrorMessage(error, "Failed to update bingo"),
+      }
     }
   })
 

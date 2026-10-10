@@ -75,7 +75,7 @@ import type {
   Team,
   SortField,
   SortDirection,
-} from "@/app/events/[id]/participants/types"
+} from "@/app/events/[id]/(manage)/participants/types"
 import { AddClanMembersDialog } from "@/components/events/add-clan-members-dialog"
 
 interface RemoveParticipantDialogProps {
