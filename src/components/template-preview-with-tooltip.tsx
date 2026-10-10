@@ -135,14 +135,14 @@ export default function TemplatePreviewWithTooltip({
                 </div>
               </HoverCardTrigger>
               <HoverCardContent
-                className="w-80 border-[#677da2] bg-[#1e293b] p-4"
+                className="w-80 p-4"
                 side="left"
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold">{tile.title}</h4>
-                    <div className="flex items-center gap-1 rounded-full bg-amber-900/30 px-2 py-1">
-                      <Zap className="h-3.5 w-3.5 text-amber-500" />
+                    <div className="flex items-center gap-1 rounded-sm bg-warning/30 px-2 py-1">
+                      <Zap className="h-3.5 w-3.5 text-warning" />
                       <span className="text-xs font-medium">
                         {tile.weight} XP
                       </span>
@@ -150,7 +150,7 @@ export default function TemplatePreviewWithTooltip({
                   </div>
 
                   {tile.description && (
-                    <p className="line-clamp-3 text-sm text-[#677da2]">
+                    <p className="line-clamp-3 text-sm text-muted-foreground">
                       {tile.description}
                     </p>
                   )}
@@ -161,7 +161,7 @@ export default function TemplatePreviewWithTooltip({
                       <ul className="space-y-1 text-xs">
                         {tile.goals.map((goal, idx) => (
                           <li key={idx} className="flex justify-between">
-                            <span className="text-[#677da2]">
+                            <span className="text-muted-foreground">
                               {goal.description}
                             </span>
                             <span className="font-medium">
@@ -174,7 +174,7 @@ export default function TemplatePreviewWithTooltip({
                   )}
 
                   {tile.isHidden && (
-                    <div className="mt-2 rounded bg-[#101828] p-1.5 text-xs">
+                    <div className="mt-2 rounded-sm bg-muted p-1.5 text-xs">
                       <span className="font-medium">Hidden tile</span> - Not
                       visible on the board until revealed
                     </div>

@@ -56,34 +56,34 @@ export function PatternCompletionGrid({
     const isCompleted = completedTileIndices.has(index)
 
     const classes = [
-      "relative border aspect-square flex items-center justify-center",
+      "osrs-slot relative border aspect-square flex items-center justify-center",
     ]
 
     // Base color
     if (isCompleted) {
-      classes.push("bg-green-100 border-green-300")
+      classes.push("bg-success/15 border-success")
     } else {
-      classes.push("bg-gray-100 border-gray-300")
+      classes.push("bg-muted border-border")
     }
 
     // Highlight if part of completed row
     if (completedRowIndices.has(row)) {
-      classes.push("border-r-4 border-r-green-600")
+      classes.push("border-r-4 border-r-success")
     }
 
     // Highlight if part of completed column
     if (completedColumnIndices.has(col)) {
-      classes.push("border-b-4 border-b-blue-600")
+      classes.push("border-b-4 border-b-pending")
     }
 
     // Highlight if on completed main diagonal
     if (patterns.mainDiagonal && isOnMainDiagonal(index)) {
-      classes.push("border-4 border-purple-600")
+      classes.push("border-4 border-info")
     }
 
     // Highlight if on completed anti-diagonal
     if (patterns.antiDiagonal && isOnAntiDiagonal(index)) {
-      classes.push("border-4 border-purple-600")
+      classes.push("border-4 border-info")
     }
 
     return classes.join(" ")
@@ -100,20 +100,20 @@ export function PatternCompletionGrid({
           {/* Legend */}
           <div className="flex flex-wrap gap-4 text-sm">
             <div className="flex items-center gap-2">
-              <div className="h-4 w-4 border-2 border-green-600 bg-green-100"></div>
+              <div className="h-4 w-4 border-2 border-success bg-success/15"></div>
               <span>Completed Tile</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-4 w-4 border-r-4 border-r-green-600 bg-gray-100"></div>
+              <div className="h-4 w-4 border-r-4 border-r-success bg-muted"></div>
               <span>Completed Row</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-4 w-4 border-b-4 border-b-blue-600 bg-gray-100"></div>
+              <div className="h-4 w-4 border-b-4 border-b-pending bg-muted"></div>
               <span>Completed Column</span>
             </div>
             {rows === columns && (
               <div className="flex items-center gap-2">
-                <div className="h-4 w-4 border-4 border-purple-600 bg-gray-100"></div>
+                <div className="h-4 w-4 border-4 border-info bg-muted"></div>
                 <span>Completed Diagonal</span>
               </div>
             )}
@@ -129,7 +129,7 @@ export function PatternCompletionGrid({
             {Array.from({ length: rows * columns }).map((_, index) => (
               <div key={index} className={getTileStyle(index)}>
                 {completedTileIndices.has(index) && (
-                  <Check className="h-4 w-4 text-green-700" />
+                  <Check className="h-4 w-4 text-success" />
                 )}
               </div>
             ))}
@@ -146,7 +146,7 @@ export function PatternCompletionGrid({
                     className="flex justify-between"
                   >
                     <span>Row {row.index! + 1}:</span>
-                    <span className="font-medium text-green-600">
+                    <span className="font-medium text-success">
                       +{row.bonusXP} XP
                     </span>
                   </div>
@@ -166,7 +166,7 @@ export function PatternCompletionGrid({
                     className="flex justify-between"
                   >
                     <span>Column {col.index! + 1}:</span>
-                    <span className="font-medium text-blue-600">
+                    <span className="font-medium text-pending">
                       +{col.bonusXP} XP
                     </span>
                   </div>
@@ -184,7 +184,7 @@ export function PatternCompletionGrid({
                 {patterns.mainDiagonal && (
                   <div className="flex justify-between">
                     <span>Main Diagonal:</span>
-                    <span className="font-medium text-purple-600">
+                    <span className="font-medium text-info">
                       +{patterns.mainDiagonal.bonusXP} XP
                     </span>
                   </div>
@@ -192,7 +192,7 @@ export function PatternCompletionGrid({
                 {patterns.antiDiagonal && (
                   <div className="flex justify-between">
                     <span>Anti-Diagonal:</span>
-                    <span className="font-medium text-purple-600">
+                    <span className="font-medium text-info">
                       +{patterns.antiDiagonal.bonusXP} XP
                     </span>
                   </div>

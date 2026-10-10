@@ -1,10 +1,10 @@
 "use client"
 
 /* eslint-disable */
-import { useState, useEffect } from "react"
+import { useMemo } from "react"
 
 import { GoalTreeEditor } from "./goal-tree-editor"
-import { getGoalTree, type GoalTreeNode } from "@/app/actions/goal-groups"
+import { buildGoalTree } from "@/lib/goal-tree"
 import type { Tile, Goal } from "@/types/model"
 
 interface GoalsTabProps {
@@ -14,6 +14,10 @@ interface GoalsTabProps {
   onDeleteGoal: (goalId: string) => void
   onAddGoal: () => void
   onNewGoalChange: (field: string, value: any) => void
+  /** Called after the editor changed Goals; refreshes the page data. */
+  onGoalsChanged?: () => void
+  /** Rendered inside the Tile side panel (the panel body scrolls). */
+  embedded?: boolean
 }
 
 export function GoalsTab({
@@ -23,33 +27,37 @@ export function GoalsTab({
   onDeleteGoal,
   onAddGoal,
   onNewGoalChange,
+  onGoalsChanged,
+  embedded = false,
 }: GoalsTabProps) {
-  const [goalTree, setGoalTree] = useState<GoalTreeNode[]>([])
+  // The tree comes from the Tile the page already loaded; every editor change
+  // refreshes the route (onGoalsChanged), which delivers the new Tile.
+  const goalTree = useMemo(
+    () => buildGoalTree(selectedTile?.goals, selectedTile?.goalGroups),
+    [selectedTile?.goals, selectedTile?.goalGroups]
+  )
 
-  // Load goal tree when selectedTile changes
-  useEffect(() => {
-    if (selectedTile?.id) {
-      loadGoalTree()
-    }
-  }, [selectedTile?.id])
-
-  const loadGoalTree = async () => {
-    if (!selectedTile?.id) return
-    const tree = await getGoalTree(selectedTile.id)
-    setGoalTree(tree)
+  const handleRefresh = () => {
+    onGoalsChanged?.()
   }
 
   return (
-    <div className="max-h-[60vh] space-y-6 overflow-y-auto bg-background pr-4 text-foreground">
+    <div
+      className={
+        embedded
+          ? "space-y-4 text-foreground"
+          : "max-h-[60vh] space-y-6 overflow-y-auto bg-background pr-4 text-foreground"
+      }
+    >
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Goals Management</h3>
+        <h3 className="min-w-0 text-base font-semibold @sm:text-lg">Goals Management</h3>
       </div>
 
       <GoalTreeEditor
         tileId={selectedTile?.id || ""}
         tree={goalTree}
         hasSufficientRights={hasSufficientRights}
-        onRefresh={loadGoalTree}
+        onRefresh={handleRefresh}
         onDeleteGoal={onDeleteGoal}
         onAddGoal={onAddGoal}
         newGoal={newGoal}

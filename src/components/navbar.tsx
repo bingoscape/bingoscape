@@ -57,15 +57,15 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
   ]
 
   return (
-    <nav className="sticky top-4 z-50 mb-4 mx-auto w-[95%] max-w-6xl rounded-full border bg-background/70 backdrop-blur-md shadow-sm transition-all duration-300">
-      <div className="container mx-auto flex items-center justify-between px-4 py-2">
+    <nav className="osrs-panel sticky top-0 z-50 mb-(--nav-gap) h-(--nav-h) w-full border-x-0 border-t-0 bg-osrs-stone-800 text-osrs-parchment shadow-md">
+      <div className="container mx-auto flex h-full items-center justify-between px-4">
         <div className="flex items-center space-x-4">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="hover:bg-accent lg:hidden"
+                className="text-osrs-parchment hover:bg-osrs-stone-600 hover:text-osrs-yellow lg:hidden"
               >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle menu</span>
@@ -75,8 +75,10 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
               <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <div className="mt-6 flex flex-col space-y-2">
                 <div className="mb-4 flex items-center space-x-2 border-b pb-4">
-                  <Grid3x3 className="h-5 w-5 text-primary drop-shadow-md" />
-                  <span className="text-lg font-bold">BingoScape</span>
+                  <Grid3x3 className="h-5 w-5 text-primary" />
+                  <span className="osrs-heading text-lg font-bold text-primary">
+                    BingoScape
+                  </span>
                 </div>
                 {navItems
                   .filter((item) => !item.adminOnly || isSuperAdminUser)
@@ -85,9 +87,9 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
                       key={item.href}
                       href={item.href}
                       className={cn(
-                        "group flex items-center space-x-3 rounded-md px-3 py-2 transition-all duration-200 hover:bg-accent",
+                        "group flex items-center space-x-3 rounded-sm px-3 py-2 hover:bg-accent",
                         pathname === item.href
-                          ? "bg-primary text-primary-foreground shadow-xs"
+                          ? "osrs-btn"
                           : "text-muted-foreground hover:text-foreground"
                       )}
                       onClick={() => setIsOpen(false)}
@@ -108,10 +110,10 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
           </Sheet>
           <Link
             href="/"
-            className="flex items-center space-x-2 text-xl font-bold transition-transform hover:scale-105 active:scale-95 duration-200"
+            className="flex items-center space-x-2 text-xl font-bold"
           >
-            <Grid3x3 className="h-6 w-6 text-primary drop-shadow-md" />
-            <span className="bg-linear-to-br from-primary via-primary/80 to-primary/50 bg-clip-text text-transparent">
+            <Grid3x3 className="h-6 w-6 text-osrs-gold" />
+            <span className="font-display text-2xl text-osrs-gold osrs-text-shadow">
               BingoScape
             </span>
           </Link>
@@ -124,18 +126,18 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "group flex items-center gap-2 rounded-full px-4 py-2 transition-all duration-200 hover:scale-105 active:scale-95",
+                      "group flex items-center gap-2 rounded-sm px-4 py-2 font-display text-sm osrs-text-shadow",
                       pathname === item.href
-                        ? "bg-primary/10 text-primary shadow-xs"
-                        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                        ? "osrs-btn osrs-bevel-inset"
+                        : "text-osrs-parchment hover:bg-osrs-stone-600 hover:text-osrs-yellow"
                     )}
                   >
                     <item.icon
                       className={cn(
                         "hidden h-4 w-4 transition-colors lg:inline",
                         pathname === item.href
-                          ? "text-primary"
-                          : "text-muted-foreground group-hover:text-foreground"
+                          ? "text-osrs-gold"
+                          : "text-osrs-parchment group-hover:text-osrs-yellow"
                       )}
                     />
                     <span className="font-medium">{item.label}</span>
@@ -146,26 +148,22 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
         </div>
         {status === "loading" ? (
           <div className="flex items-center space-x-3">
-            <div className="hidden h-8 w-20 animate-pulse rounded-md bg-muted md:block" />
+            <div className="hidden h-8 w-20 animate-pulse rounded-sm bg-muted md:block" />
             <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
             <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
           </div>
         ) : session?.user ? (
-          <div className="flex items-center space-x-3">
-            <span className="hidden max-w-32 truncate text-sm font-medium text-muted-foreground lg:inline">
+          <div className="flex items-center space-x-3 [&_button]:text-osrs-parchment [&_button:hover]:bg-osrs-stone-600 [&_button:hover]:text-osrs-yellow">
+            <span className="hidden max-w-32 truncate text-sm font-medium text-osrs-parchment osrs-text-shadow lg:inline">
               {session.user.runescapeName || session.user.name}
             </span>
-            <div className="transition-transform duration-200 hover:scale-105 active:scale-95">
-              <ModeToggle />
-            </div>
-            <div className="transition-transform duration-200 hover:scale-105 active:scale-95">
-              <NotificationBell userId={session.user.id} />
-            </div>
+            <ModeToggle />
+            <NotificationBell userId={session.user.id} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="relative h-9 w-9 rounded-full ring-2 ring-transparent transition-all duration-200 hover:ring-primary/20 hover:scale-105 active:scale-95"
+                  className="relative h-9 w-9 rounded-full"
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarImage
@@ -206,7 +204,7 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => signOut()}
-                  className="flex items-center text-red-600 focus:text-red-600"
+                  className="flex items-center text-danger focus:text-danger"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
@@ -216,7 +214,7 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
           </div>
         ) : (
           <Link href="/sign-in">
-            <Button className="bg-primary text-primary-foreground transition-colors hover:bg-primary/90">
+            <Button>
               Log in
             </Button>
           </Link>

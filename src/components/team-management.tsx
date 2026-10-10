@@ -105,20 +105,20 @@ type Participant = {
 
 function getSkillRingClass(skillLevel?: string | null) {
   if (!skillLevel)
-    return "ring-2 ring-orange-400 ring-offset-2 ring-offset-background"
+    return "ring-2 ring-warning ring-offset-2 ring-offset-background"
   switch (skillLevel) {
     case "beginner":
-      return "ring-2 ring-green-500 ring-offset-2 ring-offset-background"
+      return "ring-2 ring-success ring-offset-2 ring-offset-background"
     case "intermediate":
-      return "ring-2 ring-blue-500 ring-offset-2 ring-offset-background"
+      return "ring-2 ring-info ring-offset-2 ring-offset-background"
     case "advanced":
-      return "ring-2 ring-purple-500 ring-offset-2 ring-offset-background"
+      return "ring-2 ring-chart-5 ring-offset-2 ring-offset-background"
     case "expert":
-      return "ring-2 ring-red-500 ring-offset-2 ring-offset-background"
+      return "ring-2 ring-destructive ring-offset-2 ring-offset-background"
     case "pvmgod":
-      return "ring-2 ring-yellow-500 ring-offset-2 ring-offset-background"
+      return "ring-2 ring-warning ring-offset-2 ring-offset-background"
     default:
-      return "ring-2 ring-orange-400 ring-offset-2 ring-offset-background"
+      return "ring-2 ring-warning ring-offset-2 ring-offset-background"
   }
 }
 
@@ -141,8 +141,8 @@ const PlayerDragOverlay = ({ activeDragData }: { activeDragData: any }) => {
             <AvatarFallback>{member.user.name?.[0] ?? "U"}</AvatarFallback>
           </Avatar>
           {member.isLeader && (
-            <div className="absolute -right-2 -top-2 rounded-full bg-yellow-500 p-0.5">
-              <Crown className="h-3 w-3 text-white" />
+            <div className="absolute -right-2 -top-2 rounded-sm bg-warning p-0.5">
+              <Crown className="h-3 w-3 text-osrs-parchment" />
             </div>
           )}
         </div>
@@ -239,9 +239,9 @@ function DraggableMember({
               <AvatarFallback>{member.user.name?.[0] ?? "U"}</AvatarFallback>
             </Avatar>
             {member.isLeader && (
-              <div className="absolute -right-2 -top-2 rounded-full bg-yellow-500 p-0.5">
+              <div className="absolute -right-2 -top-2 rounded-sm bg-warning p-0.5">
                 <Crown
-                  className="h-3 w-3 text-white"
+                  className="h-3 w-3 text-osrs-parchment"
                   aria-label="Team Leader"
                 />
               </div>
@@ -266,7 +266,7 @@ function DraggableMember({
                 {member.user.hasMetadata ? (
                   <Badge
                     variant="default"
-                    className="h-5 bg-green-600 px-1.5 py-0 text-xs hover:bg-green-700"
+                    className="h-5 bg-success px-1.5 py-0 text-xs hover:bg-success"
                   >
                     <CheckCircle2
                       className="h-3 w-3"
@@ -276,7 +276,7 @@ function DraggableMember({
                 ) : (
                   <Badge
                     variant="destructive"
-                    className="h-5 bg-orange-500 px-1.5 py-0 text-xs hover:bg-orange-600"
+                    className="h-5 bg-warning px-1.5 py-0 text-xs hover:bg-warning"
                   >
                     <AlertCircle
                       className="h-3 w-3"
@@ -479,7 +479,7 @@ function TeamCard({
           </Avatar>
         ))}
         {remainingCount > 0 && (
-          <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-secondary text-xs font-medium">
+          <div className="flex h-7 w-7 items-center justify-center rounded-sm border-2 border-background bg-secondary text-xs font-medium">
             +{remainingCount}
           </div>
         )}
@@ -516,7 +516,7 @@ function TeamCard({
             variant="ghost"
             size="icon"
             onClick={() => onDelete(team.id)}
-            className="h-6 w-6 text-destructive hover:bg-destructive/10"
+            className="h-6 w-6 text-danger hover:bg-destructive/10"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
@@ -525,15 +525,15 @@ function TeamCard({
 
       {/* Prominent Statistics Header Banner */}
       {teamStats && (
-        <div className="shrink-0 border-b-2 border-border bg-linear-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 px-4 py-3">
+        <div className="shrink-0 border-b-2 border-border bg-linear-to-r from-info/10 via-chart-5/10 to-destructive/10 px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-3">
               {/* Team Size Badge */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1.5 rounded-full border bg-background/80 px-2.5 py-1">
-                      <Users className="h-3.5 w-3.5 text-blue-600" />
+                    <div className="flex items-center gap-1.5 rounded-sm border bg-background/80 px-2.5 py-1">
+                      <Users className="h-3.5 w-3.5 text-info" />
                       <span className="text-sm font-semibold">
                         {team.teamMembers.length}
                       </span>
@@ -589,7 +589,7 @@ function TeamCard({
                           variant="outline"
                           className="flex items-center gap-1.5 bg-background"
                         >
-                          <Crown className="h-3 w-3 text-yellow-500" />
+                          <Crown className="h-3 w-3 text-warning" />
                           <span className="font-medium">
                             Avg Skill: {teamStats.averageSkillLevel.toFixed(1)}
                           </span>
@@ -830,7 +830,7 @@ function UnassignedParticipantsPool({
         </CardHeader>
         <CardContent>
           <div className="py-8 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-sm bg-muted">
               <Users className="h-8 w-8 text-muted-foreground" />
             </div>
             <p className="text-sm text-muted-foreground">
@@ -946,7 +946,7 @@ function DraggableUnassignedParticipant({
               {participant.hasMetadata ? (
                 <Badge
                   variant="default"
-                  className="h-5 bg-green-600 px-1.5 py-0 text-xs hover:bg-green-700"
+                  className="h-5 bg-success px-1.5 py-0 text-xs hover:bg-success"
                 >
                   <CheckCircle2
                     className="h-3 w-3"
@@ -956,7 +956,7 @@ function DraggableUnassignedParticipant({
               ) : (
                 <Badge
                   variant="destructive"
-                  className="h-5 bg-orange-500 px-1.5 py-0 text-xs hover:bg-orange-600"
+                  className="h-5 bg-warning px-1.5 py-0 text-xs hover:bg-warning"
                 >
                   <span>Incomplete metadata</span>
                   <AlertCircle className="h-3 w-3" />

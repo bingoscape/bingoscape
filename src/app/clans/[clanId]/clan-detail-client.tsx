@@ -174,7 +174,7 @@ export function ClanDetailClient({
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-4">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br from-primary/20 to-accent/20">
+              <div className="flex h-20 w-20 items-center justify-center rounded-sm bg-linear-to-br from-primary/20 to-accent/20">
                 <BowArrow className="h-10 w-10 text-primary" />
               </div>
               <div>
@@ -244,8 +244,8 @@ export function ClanDetailClient({
         <CardContent className="pt-0">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             <div className="flex items-center space-x-3 rounded-lg bg-secondary/30 p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20">
-                <Users className="h-5 w-5 text-blue-500" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-info/20">
+                <Users className="h-5 w-5 text-info" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Members</p>
@@ -254,8 +254,8 @@ export function ClanDetailClient({
             </div>
 
             <div className="flex items-center space-x-3 rounded-lg bg-secondary/30 p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-500/20">
-                <CalendarIcon className="h-5 w-5 text-purple-500" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-chart-5/20">
+                <CalendarIcon className="h-5 w-5 text-chart-5" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Events</p>
@@ -264,8 +264,8 @@ export function ClanDetailClient({
             </div>
 
             <div className="flex items-center space-x-3 rounded-lg bg-secondary/30 p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-500/20">
-                <Crown className="h-5 w-5 text-yellow-500" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-warning/20">
+                <Crown className="h-5 w-5 text-warning" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Owner</p>

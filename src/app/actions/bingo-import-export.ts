@@ -19,6 +19,11 @@ import {
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getServerAuthSession } from "@/server/auth"
+import {
+  authzErrorMessage,
+  requireBingoAdmin,
+  requireEventManager,
+} from "@/server/authz"
 import type { UUID } from "crypto"
 import { z } from "zod"
 
@@ -129,6 +134,10 @@ export async function exportBingoBoard(
   }
 
   try {
+    // Exports include hidden Tiles and all Goals: managers only. The Event is
+    // derived from the Board.
+    await requireBingoAdmin(bingoId)
+
     // Fetch the bingo with all its tiles, goals, tier requirements, and pattern bonuses
     const bingo = await db.query.bingos.findFirst({
       where: eq(bingos.id, bingoId),
@@ -271,7 +280,7 @@ export async function exportBingoBoard(
     return exportData
   } catch (error) {
     logger.error({ error }, "Error exporting bingo board:", error)
-    return { error: "Failed to export bingo board" }
+    return { error: authzErrorMessage(error, "Failed to export bingo board") }
   }
 }
 
@@ -285,6 +294,17 @@ export async function importBingoBoard(
   const session = await getServerAuthSession()
   if (!session || !session.user) {
     return { success: false, error: "Unauthorized" }
+  }
+
+  // Importing creates a Board with Tiles and Goals: managers of the target
+  // Event only.
+  try {
+    await requireEventManager(eventId)
+  } catch (error) {
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to verify permissions"),
+    }
   }
 
   // Validate the import data using Zod

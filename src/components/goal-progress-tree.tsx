@@ -185,11 +185,11 @@ export function GoalProgressTree({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="rounded-lg border border-border bg-card p-4 shadow-xs transition-all hover:shadow-md">
+      <div className="osrs-panel rounded-sm p-4">
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div
-              className="h-3 w-3 rounded-full shadow-xs"
+              className="h-3 w-3 rounded-sm shadow-xs"
               style={{ backgroundColor: teamColor }}
             />
             <h4 className="text-sm font-semibold text-foreground">
@@ -200,7 +200,7 @@ export function GoalProgressTree({
             <div className="text-[10px] text-muted-foreground">
               {overallProgress.completed} / {overallProgress.total}
             </div>
-            <div className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+            <div className="rounded-sm bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
               {overallProgress.percentage.toFixed(0)}%
             </div>
           </div>
@@ -252,10 +252,10 @@ function ProgressTreeNode({
           <CollapsibleTrigger asChild>
             <div
               className={cn(
-                "flex items-center gap-1 py-1 px-1.5 rounded-md border-l-2 mb-0.5 cursor-pointer transition-colors",
-                groupData.logicalOperator === "AND" ? "border-blue-500 bg-blue-50/30 hover:bg-blue-100/30" : 
-                groupData.logicalOperator === "OR" ? "border-purple-500 bg-purple-50/30 hover:bg-purple-100/30" : 
-                "border-green-500 bg-green-50/30 hover:bg-green-100/30"
+                "flex items-center gap-1 py-1 px-1.5 rounded-sm border-l-2 mb-0.5 cursor-pointer transition-colors",
+                groupData.logicalOperator === "AND" ? "border-pending bg-pending/15 hover:bg-pending/15" : 
+                groupData.logicalOperator === "OR" ? "border-info bg-info/15 hover:bg-info/15" : 
+                "border-success bg-success/15 hover:bg-success/15"
               )}
             >
               {/* Chevron Icon */}
@@ -270,7 +270,7 @@ function ProgressTreeNode({
                 <TooltipTrigger asChild>
                   <div className="flex items-center gap-1.5 min-w-0">
                     <Layers
-                      className={`h-3 w-3 shrink-0 ${node.isGroupComplete ? "text-green-500" : "text-blue-500"}`}
+                      className={`h-3 w-3 shrink-0 ${node.isGroupComplete ? "text-success" : "text-pending"}`}
                     />
                     <Badge
                       variant={
@@ -282,7 +282,7 @@ function ProgressTreeNode({
                       }
                       className={cn(
                         "h-5 px-1.5 text-[10px] font-medium flex items-center gap-1 shrink-0",
-                        groupData.logicalOperator === "SUM" && "bg-green-50 text-green-700 border-green-200"
+                        groupData.logicalOperator === "SUM" && "bg-success/15 text-success border-success"
                       )}
                     >
                       {groupData.logicalOperator === "AND" && (
@@ -331,7 +331,7 @@ function ProgressTreeNode({
 
               {/* Completion Indicator */}
               {node.isGroupComplete && (
-                <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />
+                <CheckCircle2 className="h-3 w-3 shrink-0 text-success" />
               )}
             </div>
           </CollapsibleTrigger>
@@ -372,7 +372,7 @@ function ProgressTreeNode({
 
   return (
     <div style={{ marginLeft: `${marginLeft}px` }}>
-      <div className="flex items-center gap-1.5 py-1 px-2 my-0.5 rounded-full bg-muted/50 border border-muted/20 hover:bg-muted/80 transition-colors">
+      <div className="flex items-center gap-1.5 py-1 px-2 my-0.5 rounded-sm bg-muted/50 border border-muted/20 hover:bg-muted/80 transition-colors">
         {/* Goal Icon with Tooltip */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -406,7 +406,7 @@ function ProgressTreeNode({
                       />
                     </div>
                   ) : (
-                    <BarChart2 className="h-3 w-3 shrink-0 text-blue-500" />
+                    <BarChart2 className="h-3 w-3 shrink-0 text-pending" />
                   )}
                   <Badge
                     variant="secondary"
@@ -444,14 +444,14 @@ function ProgressTreeNode({
           <div className="flex shrink-0 items-center justify-end gap-1.5 ml-2">
             <Badge
               variant="outline"
-              className="rounded-full border-indigo-200/60 bg-indigo-50/80 px-2 py-0.5 text-[10px] font-semibold text-indigo-600 shadow-xs dark:bg-indigo-950/50 dark:text-indigo-400"
+              className="px-2 py-0.5 text-[10px] font-semibold"
             >
               +{currentValue}
             </Badge>
             {node.parentGroupTarget && node.parentGroupTarget > 0 ? (
               <Badge
                 variant="secondary"
-                className="rounded-full border border-slate-200/40 bg-slate-100 px-2 py-0.5 text-[9px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300 shrink-0"
+                className="shrink-0 px-2 py-0.5 text-[9px] font-medium"
               >
                 {((currentValue / node.parentGroupTarget) * 100).toFixed(0)}% share
               </Badge>
@@ -462,7 +462,7 @@ function ProgressTreeNode({
             <AnimatedProgress
               value={percentage}
               className="h-1 flex-1 max-w-[60px]"
-              indicatorClassName={isComplete ? "bg-green-500" : "bg-blue-500"}
+              indicatorClassName={isComplete ? "bg-success" : "bg-pending"}
             />
             <span className="whitespace-nowrap text-[10px] text-muted-foreground shrink-0">
               {currentValue}/{targetValue}
@@ -472,9 +472,9 @@ function ProgressTreeNode({
 
         {/* Completion Indicator */}
         {isComplete ? (
-          <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />
+          <CheckCircle2 className="h-3 w-3 shrink-0 text-success" />
         ) : currentValue > 0 ? (
-          <Circle className="h-3 w-3 shrink-0 text-yellow-500" />
+          <Circle className="h-3 w-3 shrink-0 text-warning" />
         ) : (
           <Circle className="h-3 w-3 shrink-0 text-muted-foreground" />
         )}

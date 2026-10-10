@@ -86,7 +86,7 @@ export function ImportTemplateButton({
 
         // Navigate to the new bingo board
         if (result.bingoId) {
-          router.push(`/events/${selectedEventId}/bingos/${result.bingoId}`)
+          router.push(`/events/${selectedEventId}?board=${result.bingoId}`)
         } else {
           router.push(`/events/${selectedEventId}`)
         }

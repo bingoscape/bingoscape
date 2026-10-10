@@ -34,12 +34,12 @@ export function BingoBreakdownChart({
   // Create a stacked bar chart showing each team's XP breakdown by bingo
   const bingoTitles = bingoSummary.map((b) => b.title)
   const colors = [
-    "rgba(255, 99, 132, 0.5)",
-    "rgba(54, 162, 235, 0.5)",
-    "rgba(255, 205, 86, 0.5)",
-    "rgba(75, 192, 192, 0.5)",
-    "rgba(153, 102, 255, 0.5)",
-    "rgba(255, 159, 64, 0.5)",
+    "rgba(255, 152, 31, 0.7)",
+    "rgba(79, 210, 60, 0.7)",
+    "rgba(43, 196, 232, 0.7)",
+    "rgba(240, 88, 74, 0.7)",
+    "rgba(207, 143, 224, 0.7)",
+    "rgba(216, 201, 160, 0.7)",
   ]
 
   const datasets = bingoTitles.map((bingoTitle, index) => ({

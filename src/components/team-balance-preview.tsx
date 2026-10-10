@@ -76,12 +76,12 @@ export function TeamBalancePreview({
   // Get balance status
   const getBalanceStatus = () => {
     if (metrics.standardDeviation < 0.1)
-      return { label: "Excellent", color: "bg-green-500" }
+      return { label: "Excellent", color: "bg-success" }
     if (metrics.standardDeviation < 0.15)
-      return { label: "Good", color: "bg-blue-500" }
+      return { label: "Good", color: "bg-info" }
     if (metrics.standardDeviation < 0.2)
-      return { label: "Fair", color: "bg-yellow-500" }
-    return { label: "Poor", color: "bg-red-500" }
+      return { label: "Fair", color: "bg-warning" }
+    return { label: "Poor", color: "bg-destructive" }
   }
 
   const balanceStatus = getBalanceStatus()
@@ -180,8 +180,8 @@ export function TeamBalancePreview({
                           variant="outline"
                           className={
                             deviation > 0
-                              ? "border-green-500 text-green-600"
-                              : "border-red-500 text-red-600"
+                              ? "border-success text-success"
+                              : "border-destructive text-danger"
                           }
                         >
                           <TrendingUp
@@ -200,11 +200,11 @@ export function TeamBalancePreview({
 
         {/* Balance Tips */}
         {metrics.standardDeviation > 0.15 && (
-          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-950">
-            <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
+          <div className="rounded-lg border border-warning bg-warning/10 p-3 ">
+            <p className="text-sm font-medium text-warning ">
               Balance Suggestion
             </p>
-            <p className="text-xs text-yellow-700 dark:text-yellow-300">
+            <p className="text-xs text-warning ">
               Teams have significant strength differences. Consider adjusting
               weight sliders or manually reassigning players to improve balance.
             </p>

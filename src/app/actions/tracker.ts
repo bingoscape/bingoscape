@@ -15,6 +15,7 @@ import { fetchCompetitionFromWOM } from "./wiseoldman"
 import { WOMClient } from "@wise-old-man/utils"
 import { logger } from "@/lib/logger"
 import { checkAndAutoCompleteTile } from "@/app/actions/tile-completion"
+import { authzErrorMessage, requireBingoAdmin } from "@/server/authz"
 import { unstable_noStore as noStore } from "next/cache"
 import {
   sendDiscordWebhook,
@@ -28,6 +29,9 @@ import {
 export async function syncTrackerProgress(bingoId: string) {
   noStore()
   try {
+    // Syncing writes Team progress and may complete Tiles: managers only.
+    await requireBingoAdmin(bingoId)
+
     // 1. Get bingo
     const bingo = await db.query.bingos.findFirst({
       where: eq(bingos.id, bingoId),
@@ -352,7 +356,10 @@ export async function syncTrackerProgress(bingoId: string) {
     return { success: true, message: "Sync complete" }
   } catch (error) {
     logger.error({ error }, "Error syncing tracker progress:", error)
-    return { success: false, error: "Failed to sync tracker progress" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to sync tracker progress"),
+    }
   }
 }
 
@@ -363,6 +370,8 @@ export async function createWiseOldManCompetition(
   customEndsAt?: Date
 ) {
   try {
+    await requireBingoAdmin(bingoId)
+
     const bingo = await db.query.bingos.findFirst({
       where: eq(bingos.id, bingoId),
       with: { event: true },
@@ -424,7 +433,10 @@ export async function createWiseOldManCompetition(
     return { success: true, womCompetitionId: comp.competition.id }
   } catch (error) {
     logger.error({ error }, "Error creating WOM competition:", error)
-    return { success: false, error: "Failed to create WOM competition" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to create WOM competition"),
+    }
   }
 }
 
@@ -434,6 +446,8 @@ export async function linkWiseOldManCompetition(
   verificationCode?: string
 ) {
   try {
+    await requireBingoAdmin(bingoId)
+
     // Optionally verify that the competition exists
     const womResult = await fetchCompetitionFromWOM(competitionId)
     if (!womResult.success) {
@@ -451,12 +465,17 @@ export async function linkWiseOldManCompetition(
     return { success: true }
   } catch (error) {
     logger.error({ error }, "Error linking WOM competition:", error)
-    return { success: false, error: "Failed to link WOM competition" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to link WOM competition"),
+    }
   }
 }
 
 export async function unlinkWiseOldManCompetition(bingoId: string) {
   try {
+    await requireBingoAdmin(bingoId)
+
     await db
       .update(bingos)
       .set({
@@ -467,6 +486,9 @@ export async function unlinkWiseOldManCompetition(bingoId: string) {
     return { success: true }
   } catch (error) {
     logger.error({ error }, "Error unlinking WOM competition:", error)
-    return { success: false, error: "Failed to unlink WOM competition" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to unlink WOM competition"),
+    }
   }
 }

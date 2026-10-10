@@ -310,7 +310,7 @@ export function EditBingoModal({
                         <div className="space-y-1">
                           <Label
                             htmlFor="locked"
-                            className="flex items-center gap-2 text-base text-destructive"
+                            className="flex items-center gap-2 text-base text-danger"
                           >
                             <Lock className="h-4 w-4" />
                             Locked (Prevent Submissions)

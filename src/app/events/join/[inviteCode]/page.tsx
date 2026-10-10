@@ -164,7 +164,7 @@ export default function JoinEventPage(props: {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-destructive">{error}</p>
+            <p className="text-danger">{error}</p>
           </CardContent>
           <CardFooter>
             <Button asChild variant="outline" className="w-full">

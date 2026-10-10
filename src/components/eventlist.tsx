@@ -47,14 +47,14 @@ export default function EventList({ initialEvents }: EventListProps) {
         {/* Left: Title & Actions */}
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-primary/10 p-2 shadow-[0_0_15px_rgba(0,118,255,0.1)]">
+            <div className="osrs-slot rounded-sm p-2">
               <Trophy aria-hidden="true" className="h-6 w-6 text-primary" />
             </div>
-            <h1 className="bg-linear-to-br from-foreground to-muted-foreground bg-clip-text text-2xl font-bold tracking-tight text-transparent">
+            <h1 className="osrs-heading text-2xl font-bold tracking-tight">
               Events Dashboard
             </h1>
           </div>
-          <div className="hidden h-6 w-px bg-border sm:block"></div>
+          <div className="hidden h-6 w-0.5 bg-border sm:block"></div>
           <div className="flex flex-wrap gap-2">
             <CreateEventButton />
             <Button variant="outline" size="sm" asChild>
@@ -69,42 +69,32 @@ export default function EventList({ initialEvents }: EventListProps) {
         {/* Right: Micro-Stats */}
         {hasEvents && (
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <div className="flex items-center gap-1.5 rounded-full border border-border/50 bg-card/40 px-3 py-1.5 backdrop-blur-xs transition-colors hover:bg-card/60">
-              <TrendingUp
-                aria-hidden="true"
-                className="h-4 w-4 text-muted-foreground"
-              />
+            <div className="osrs-slot flex items-center gap-1.5 rounded-sm px-3 py-1.5">
+              <TrendingUp aria-hidden="true" className="h-4 w-4 text-primary" />
               <span className="font-semibold text-foreground">
                 {allEvents.length}
               </span>
               <span className="text-muted-foreground">Total</span>
             </div>
-            <div className="flex items-center gap-1.5 rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1.5 backdrop-blur-xs transition-colors hover:bg-green-500/20">
-              <div className="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
-              <span className="font-semibold text-green-600 dark:text-green-400">
+            <div className="osrs-slot flex items-center gap-1.5 rounded-sm px-3 py-1.5">
+              <div
+                aria-hidden="true"
+                className="h-2 w-2 animate-pulse rounded-full bg-success"
+              ></div>
+              <span className="font-semibold text-success">
                 {activeEventsCount}
               </span>
-              <span className="text-green-600/70 dark:text-green-400/70">
-                Active
-              </span>
+              <span className="text-muted-foreground">Active</span>
             </div>
-            <div className="flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 backdrop-blur-xs transition-colors hover:bg-amber-500/20">
-              <Trophy aria-hidden="true" className="h-4 w-4 text-amber-500" />
-              <span className="font-semibold text-amber-600 dark:text-amber-400">
-                {formattedPrizePool}
-              </span>
-              <span className="text-amber-600/70 dark:text-amber-400/70">
-                Prize Pool
-              </span>
+            <div className="osrs-slot flex items-center gap-1.5 rounded-sm px-3 py-1.5">
+              <Trophy aria-hidden="true" className="h-4 w-4 text-primary" />
+              <span className="osrs-qty">{formattedPrizePool}</span>
+              <span className="text-muted-foreground">Prize Pool</span>
             </div>
-            <div className="flex items-center gap-1.5 rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1.5 backdrop-blur-xs transition-colors hover:bg-purple-500/20">
-              <Users aria-hidden="true" className="h-4 w-4 text-purple-500" />
-              <span className="font-semibold text-purple-600 dark:text-purple-400">
-                {totalBingos}
-              </span>
-              <span className="text-purple-600/70 dark:text-purple-400/70">
-                Bingos
-              </span>
+            <div className="osrs-slot flex items-center gap-1.5 rounded-sm px-3 py-1.5">
+              <Users aria-hidden="true" className="h-4 w-4 text-info" />
+              <span className="font-semibold text-info">{totalBingos}</span>
+              <span className="text-muted-foreground">Boards</span>
             </div>
           </div>
         )}

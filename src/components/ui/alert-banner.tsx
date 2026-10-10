@@ -12,17 +12,16 @@ export default function AlertBanner({
 }) {
   return (
     <div
+      role="alert"
       className={cn(
-        "flex items-center rounded-md border-2 border-yellow-400 bg-yellow-50 p-4 dark:border-yellow-500 dark:bg-yellow-500/10",
+        "osrs-bevel flex items-center rounded-sm border border-border bg-warning/15 p-4",
         className
       )}
     >
-      <div className="shrink-0 text-yellow-400">
+      <div className="shrink-0 text-warning">
         {icon || <TriangleAlert className="size-5" />}
       </div>
-      <div className="text-md ml-2 text-yellow-700 dark:text-yellow-300">
-        {message}
-      </div>
+      <div className="text-md ml-2 font-medium text-foreground">{message}</div>
     </div>
   )
 }

@@ -47,7 +47,7 @@ export function EventTimeDisplay({
         <span className="font-medium text-foreground">{formattedTime}</span>
         <Badge
           variant="secondary"
-          className="h-4 border-none bg-secondary/50 px-1.5 py-0 text-[9px] uppercase tracking-wider text-secondary-foreground/70"
+          className="h-4 px-1.5 py-0 text-[10px] uppercase tracking-wider"
         >
           {tzName}
         </Badge>
@@ -74,16 +74,16 @@ export function EventTimeDisplay({
       <TooltipProvider delayDuration={150}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex cursor-help items-center gap-1 rounded border border-border/50 bg-muted/50 px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-              <Clock className="h-3 w-3" />
+            <div className="osrs-slot flex cursor-help items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground">
+              <Clock aria-hidden="true" className="h-3 w-3" />
               <span>Your time</span>
             </div>
           </TooltipTrigger>
           <TooltipContent
             side="top"
-            className="flex flex-col gap-1.5 border-border/50 bg-background/95 p-3 shadow-xl backdrop-blur-xs"
+            className="flex flex-col gap-1.5 p-3"
           >
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Official Event Time
             </p>
             <div className="flex items-center gap-2">
@@ -92,7 +92,7 @@ export function EventTimeDisplay({
               </span>
               <Badge
                 variant="secondary"
-                className="h-4 border-none bg-primary/10 px-1.5 py-0 text-[9px] uppercase tracking-wider text-primary"
+                className="h-4 px-1.5 py-0 text-[10px] uppercase tracking-wider"
               >
                 {eventTzName}
               </Badge>

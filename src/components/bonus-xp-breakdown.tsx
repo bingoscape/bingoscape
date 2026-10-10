@@ -58,7 +58,7 @@ export function BonusXPBreakdown({
                 <Badge
                   key={`row-${row.index}`}
                   variant="default"
-                  className="bg-green-600"
+                  className="bg-success"
                 >
                   Row {row.index! + 1}: +{row.bonusXP} XP
                 </Badge>
@@ -76,7 +76,7 @@ export function BonusXPBreakdown({
                 <Badge
                   key={`col-${col.index}`}
                   variant="default"
-                  className="bg-blue-600"
+                  className="bg-info"
                 >
                   Column {col.index! + 1}: +{col.bonusXP} XP
                 </Badge>
@@ -92,12 +92,12 @@ export function BonusXPBreakdown({
             <h4 className="mb-2 text-sm font-medium">Completed Diagonals</h4>
             <div className="flex flex-wrap gap-2">
               {patterns.mainDiagonal && (
-                <Badge variant="default" className="bg-purple-600">
+                <Badge variant="default" className="bg-chart-5">
                   Main Diagonal: +{patterns.mainDiagonal.bonusXP} XP
                 </Badge>
               )}
               {patterns.antiDiagonal && (
-                <Badge variant="default" className="bg-purple-600">
+                <Badge variant="default" className="bg-chart-5">
                   Anti-Diagonal: +{patterns.antiDiagonal.bonusXP} XP
                 </Badge>
               )}
@@ -110,7 +110,7 @@ export function BonusXPBreakdown({
           <div>
             <h4 className="mb-2 text-sm font-medium">Complete Board</h4>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="default" className="bg-amber-600">
+              <Badge variant="default" className="bg-warning">
                 All Tiles Completed: +{patterns.completeBoard.bonusXP} XP
               </Badge>
             </div>
@@ -121,7 +121,7 @@ export function BonusXPBreakdown({
         <div className="border-t pt-4">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Total Bonus XP:</span>
-            <span className="text-2xl font-bold text-amber-600">
+            <span className="text-2xl font-bold text-warning">
               +{patterns.totalBonusXP} XP
             </span>
           </div>

@@ -51,8 +51,8 @@ export function CommentForm({
   return (
     <div className="comment-section expanded">
       <div className="mb-3 flex items-center gap-2">
-        <MessageCircle className="h-4 w-4 text-gray-600" />
-        <span className="text-sm font-medium text-gray-700">
+        <MessageCircle className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm font-medium text-foreground">
           Add review comment (required)
         </span>
       </div>
@@ -81,7 +81,7 @@ export function CommentForm({
           </div>
         </div>
 
-        <div id="comment-help" className="text-xs text-gray-500">
+        <div id="comment-help" className="text-xs text-muted-foreground">
           Minimum {minLength} characters. Use Ctrl+Enter to submit quickly.
         </div>
 

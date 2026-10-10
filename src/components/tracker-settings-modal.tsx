@@ -361,7 +361,7 @@ export function TrackerSettingsModal({
                     <p className="text-xs text-muted-foreground">
                       Total Gained
                     </p>
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-2xl font-bold text-success">
                       {stats.participations
                         ?.reduce(
                           (

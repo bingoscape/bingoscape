@@ -12,6 +12,7 @@ import {
   teamTileSubmissions,
   teamGoalProgress,
   goalValues,
+  goalGroups,
   itemGoals,
   eventParticipants,
 } from "@/server/db/schema"
@@ -30,6 +31,7 @@ export type DbSubmissionComment = typeof submissionComments.$inferSelect
 export type DbTeamTileSubmission = typeof teamTileSubmissions.$inferSelect
 export type DbTeamProgress = typeof teamGoalProgress.$inferSelect
 export type DbGoalValue = typeof goalValues.$inferSelect
+export type DbGoalGroup = typeof goalGroups.$inferSelect
 export type DbItemGoal = typeof itemGoals.$inferSelect
 export type DbEventParticipant = typeof eventParticipants.$inferSelect
 
@@ -77,6 +79,7 @@ export type Goal = DbGoal & {
 export type Tile = DbTile & {
   teamTileSubmissions?: TeamTileSubmission[]
   goals?: Goal[]
+  goalGroups?: DbGoalGroup[]
 }
 
 export type Bingo = DbBingo & {

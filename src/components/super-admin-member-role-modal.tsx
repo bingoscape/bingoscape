@@ -65,13 +65,13 @@ export function SuperAdminMemberRoleModal({
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "admin":
-        return "bg-purple-500/10 text-purple-500 border-purple-500/20"
+        return "bg-pending/10 text-pending border-pending/20"
       case "management":
-        return "bg-blue-500/10 text-blue-500 border-blue-500/20"
+        return "bg-info/10 text-info border-info/20"
       case "member":
-        return "bg-green-500/10 text-green-500 border-green-500/20"
+        return "bg-success/10 text-success border-success/20"
       case "guest":
-        return "bg-gray-500/10 text-gray-500 border-gray-500/20"
+        return "bg-muted text-muted-foreground border-border"
       default:
         return ""
     }
@@ -149,9 +149,9 @@ export function SuperAdminMemberRoleModal({
         )}
 
         {isLastAdmin && newRole !== "admin" && !isOwner && (
-          <Alert className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
-            <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-            <AlertDescription className="text-orange-700 dark:text-orange-300">
+          <Alert className="border-warning/40 bg-warning/10">
+            <AlertTriangle className="h-4 w-4 text-warning" />
+            <AlertDescription className="text-warning">
               This is the last admin in the clan. Proceeding will leave the clan
               without any admins.
             </AlertDescription>
@@ -216,7 +216,7 @@ export function SuperAdminMemberRoleModal({
           </div>
 
           {roleChanged && !isOwner && (
-            <div className="rounded-lg bg-muted p-3 text-sm">
+            <div className="rounded-sm bg-muted p-3 text-sm">
               <p className="font-medium">Confirm Change:</p>
               <p className="mt-1 text-muted-foreground">
                 Change {displayName}&apos;s role from{" "}

@@ -58,13 +58,13 @@ export function MiniBoard({
   if (!visible) {
     return (
       <div
-        className="grid gap-1 overflow-hidden rounded-lg border border-border/50 bg-background/50 p-1.5 opacity-80 shadow-inner backdrop-blur-md sm:gap-1.5 sm:rounded-xl sm:p-2"
+        className="grid gap-1 overflow-hidden osrs-panel-inset rounded-sm p-1.5 opacity-80 sm:gap-1.5 sm:p-2"
         style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
       >
         {Array.from({ length: rows * columns }).map((_, i) => (
           <div
             key={i}
-            className="flex aspect-square items-center justify-center rounded border-2 border-dashed border-muted-foreground/30 bg-muted/20 sm:rounded-md"
+            className="flex aspect-square items-center justify-center rounded-sm border-2 border-dashed border-muted-foreground/30 bg-muted/20"
           >
             {i === Math.floor((rows * columns) / 2) && (
               <Lock className="h-6 w-6 text-muted-foreground/50" />
@@ -78,13 +78,13 @@ export function MiniBoard({
   if (loading) {
     return (
       <div
-        className="grid animate-pulse gap-1 overflow-hidden rounded-lg border border-border/50 bg-background/50 p-1.5 opacity-50 shadow-inner backdrop-blur-md sm:gap-1.5 sm:rounded-xl sm:p-2"
+        className="grid animate-pulse gap-1 overflow-hidden osrs-panel-inset rounded-sm p-1.5 opacity-50 sm:gap-1.5 sm:p-2"
         style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
       >
         {Array.from({ length: rows * columns }).map((_, i) => (
           <div
             key={i}
-            className="aspect-square rounded border border-border/50 bg-muted/40 sm:rounded-md"
+            className="aspect-square rounded-sm border border-border/50 bg-muted/40"
           />
         ))}
       </div>
@@ -93,18 +93,18 @@ export function MiniBoard({
 
   return (
     <div
-      className="grid gap-1 overflow-hidden rounded-lg border border-border/50 bg-background/50 p-1.5 shadow-inner backdrop-blur-md sm:gap-1.5 sm:rounded-xl sm:p-2"
+      className="grid gap-1 overflow-hidden osrs-panel-inset rounded-sm p-1.5 sm:gap-1.5 sm:p-2"
       style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
     >
       {tiles.map((tile) => (
         <div
           key={tile.id}
-          className={`relative flex aspect-square items-center justify-center overflow-hidden rounded transition-transform hover:scale-105 sm:rounded-md ${
+          className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-sm ${
             tile.isHidden
               ? "border-2 border-dashed border-muted-foreground/30 bg-muted/20"
               : tile.isCompleted
-                ? "border-2 border-green-500 bg-green-50 shadow-xs dark:bg-green-900/20"
-                : "border border-border/80 bg-card shadow-xs"
+                ? "osrs-slot border-2 border-success"
+                : "osrs-slot"
           }`}
           title={tile.isHidden ? "Hidden Tile" : tile.title}
         >
@@ -121,7 +121,7 @@ export function MiniBoard({
             />
           ) : (
             <div
-              className={`absolute inset-0 flex items-center justify-center ${tile.isCompleted ? "bg-green-500" : "bg-primary/20"}`}
+              className={`absolute inset-0 flex items-center justify-center ${tile.isCompleted ? "bg-success" : "bg-primary/20"}`}
             />
           )}
         </div>

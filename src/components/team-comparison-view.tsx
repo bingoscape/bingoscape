@@ -118,7 +118,7 @@ export function TeamComparisonView({
   return (
     <div className="space-y-6">
       {/* Comparison Legend */}
-      <Card className="bg-linear-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5">
+      <Card className="bg-linear-to-r from-info/5 via-chart-5/5 to-destructive/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Scale className="h-5 w-5" />
@@ -128,15 +128,15 @@ export function TeamComparisonView({
         <CardContent>
           <div className="flex flex-wrap gap-4 text-sm">
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-green-500" />
+              <div className="h-3 w-3 rounded-full bg-success" />
               <span>Optimal (within 10% of average)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-gray-500" />
+              <div className="h-3 w-3 rounded-full bg-muted-foreground" />
               <span>Acceptable (within 20% of average)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-red-500" />
+              <div className="h-3 w-3 rounded-full bg-destructive" />
               <span>Needs Attention (beyond 20% of average)</span>
             </div>
           </div>
@@ -149,7 +149,7 @@ export function TeamComparisonView({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <TrendingUp className="h-4 w-4 text-blue-600" />
+              <TrendingUp className="h-4 w-4 text-info" />
               Average EHP Comparison
             </CardTitle>
           </CardHeader>
@@ -189,7 +189,7 @@ export function TeamComparisonView({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Target className="h-4 w-4 text-red-600" />
+              <Target className="h-4 w-4 text-danger" />
               Average EHB Comparison
             </CardTitle>
           </CardHeader>
@@ -229,7 +229,7 @@ export function TeamComparisonView({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Globe className="h-4 w-4 text-purple-600" />
+              <Globe className="h-4 w-4 text-chart-5" />
               Timezone Variance
             </CardTitle>
           </CardHeader>
@@ -284,7 +284,7 @@ export function TeamComparisonView({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <CheckCircle2 className="h-4 w-4 text-success" />
               Metadata Coverage
             </CardTitle>
           </CardHeader>
@@ -323,9 +323,9 @@ export function TeamComparisonView({
       </div>
 
       {/* Recommendations Section */}
-      <Card className="border-orange-500/30 bg-orange-500/5">
+      <Card className="border-warning/30 bg-warning/5">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base text-orange-700 dark:text-orange-400">
+          <CardTitle className="flex items-center gap-2 text-base text-warning ">
             <AlertTriangle className="h-4 w-4" />
             Recommendations & Action Items
           </CardTitle>
@@ -342,14 +342,14 @@ export function TeamComparisonView({
                 return (
                   <div
                     key={team.id}
-                    className="flex items-start gap-3 rounded-lg border border-green-500/20 bg-green-500/10 p-3"
+                    className="flex items-start gap-3 rounded-lg border border-success/20 bg-success/10 p-3"
                   >
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                     <div>
-                      <div className="font-semibold text-green-700 dark:text-green-400">
+                      <div className="font-semibold text-success ">
                         {team.name}
                       </div>
-                      <div className="text-sm text-green-600 dark:text-green-500">
+                      <div className="text-sm text-success ">
                         Team is well-balanced with no action items
                       </div>
                     </div>
@@ -362,13 +362,13 @@ export function TeamComparisonView({
                   key={team.id}
                   className="flex items-start gap-3 rounded-lg border bg-background p-3"
                 >
-                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" />
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
                   <div className="flex-1">
                     <div className="mb-1 font-semibold">{team.name}</div>
                     <ul className="space-y-1 text-sm text-muted-foreground">
                       {recommendations.map((rec, idx) => (
                         <li key={idx} className="flex items-start gap-2">
-                          <span className="mt-0.5 text-orange-500">•</span>
+                          <span className="mt-0.5 text-warning">•</span>
                           <span>{rec}</span>
                         </li>
                       ))}

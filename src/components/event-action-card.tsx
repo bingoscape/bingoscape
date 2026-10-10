@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { type LucideIcon, ChevronRight, ExternalLink } from "lucide-react"
 import { type ReactNode } from "react"
+import { cn } from "@/lib/utils"
 
 interface EventActionCardProps {
   icon: LucideIcon
@@ -19,40 +20,20 @@ interface EventActionCardProps {
 
 const colorSchemes = {
   amber: {
-    bg: "bg-amber-50 dark:bg-amber-950/30",
-    border: "border-amber-200 dark:border-amber-800",
-    hover:
-      "hover:border-amber-300 dark:hover:border-amber-700 hover:bg-amber-100/50 dark:hover:bg-amber-900/30",
-    icon: "bg-amber-100 dark:bg-amber-900/50",
-    iconColor: "text-amber-600 dark:text-amber-400",
-    shadow: "hover:shadow-amber-200/50 dark:hover:shadow-amber-900/50",
+    accent: "border-l-warning",
+    iconColor: "text-warning",
   },
   purple: {
-    bg: "bg-purple-50 dark:bg-purple-950/30",
-    border: "border-purple-200 dark:border-purple-800",
-    hover:
-      "hover:border-purple-300 dark:hover:border-purple-700 hover:bg-purple-100/50 dark:hover:bg-purple-900/30",
-    icon: "bg-purple-100 dark:bg-purple-900/50",
-    iconColor: "text-purple-600 dark:text-purple-400",
-    shadow: "hover:shadow-purple-200/50 dark:hover:shadow-purple-900/50",
+    accent: "border-l-info",
+    iconColor: "text-info",
   },
   green: {
-    bg: "bg-green-50 dark:bg-green-950/30",
-    border: "border-green-200 dark:border-green-800",
-    hover:
-      "hover:border-green-300 dark:hover:border-green-700 hover:bg-green-100/50 dark:hover:bg-green-900/30",
-    icon: "bg-green-100 dark:bg-green-900/50",
-    iconColor: "text-green-600 dark:text-green-400",
-    shadow: "hover:shadow-green-200/50 dark:hover:shadow-green-900/50",
+    accent: "border-l-success",
+    iconColor: "text-success",
   },
   blue: {
-    bg: "bg-blue-50 dark:bg-blue-950/30",
-    border: "border-blue-200 dark:border-blue-800",
-    hover:
-      "hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-100/50 dark:hover:bg-blue-900/30",
-    icon: "bg-blue-100 dark:bg-blue-900/50",
-    iconColor: "text-blue-600 dark:text-blue-400",
-    shadow: "hover:shadow-blue-200/50 dark:hover:shadow-blue-900/50",
+    accent: "border-l-pending",
+    iconColor: "text-pending",
   },
 }
 
@@ -73,19 +54,21 @@ export function EventActionCard({
 
   const cardContent = (
     <div
-      className={`relative flex items-center gap-4 rounded-lg border-2 p-4 transition-all duration-200 ${colors.bg} ${colors.border} ${colors.hover} ${colors.shadow} cursor-pointer hover:scale-[1.02] hover:shadow-lg ${className} `}
+      className={cn(
+        "osrs-panel relative flex cursor-pointer items-center gap-4 rounded-sm border-l-4 p-4 transition-colors hover:brightness-110",
+        colors.accent,
+        className
+      )}
     >
       {/* Icon */}
-      <div
-        className={`h-10 w-10 shrink-0 ${colors.icon} flex items-center justify-center rounded-full`}
-      >
-        <Icon className={`h-5 w-5 ${colors.iconColor}`} />
+      <div className="osrs-slot flex h-10 w-10 shrink-0 items-center justify-center rounded-sm">
+        <Icon aria-hidden="true" className={cn("h-5 w-5", colors.iconColor)} />
       </div>
 
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold">{title}</p>
+          <p className="font-display text-sm font-semibold">{title}</p>
           {badge !== undefined && (
             <Badge variant={badgeVariant} className="ml-auto">
               {badge}
@@ -101,9 +84,15 @@ export function EventActionCard({
       {!children && (
         <div className="shrink-0">
           {external ? (
-            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+            <ExternalLink
+              aria-hidden="true"
+              className="h-4 w-4 text-muted-foreground"
+            />
           ) : (
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <ChevronRight
+              aria-hidden="true"
+              className="h-4 w-4 text-muted-foreground"
+            />
           )}
         </div>
       )}
@@ -114,7 +103,11 @@ export function EventActionCard({
   if (children) {
     return (
       <div
-        className={`relative rounded-lg border-2 transition-all duration-200 ${colors.bg} ${colors.border} ${colors.hover} ${colors.shadow} hover:scale-[1.02] hover:shadow-lg ${className} `}
+        className={cn(
+          "osrs-panel relative rounded-sm border-l-4 transition-colors hover:brightness-110",
+          colors.accent,
+          className
+        )}
       >
         <div className="w-full">{children}</div>
       </div>

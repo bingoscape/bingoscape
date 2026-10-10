@@ -99,10 +99,10 @@ export function ItemStatisticsDisplay({
 
       {/* MVP Spotlight */}
       {mvp && (
-        <Card className="border-yellow-200 bg-linear-to-br from-yellow-50 to-amber-50 dark:border-yellow-800 dark:from-yellow-950/20 dark:to-amber-950/20">
+        <Card className="border-warning bg-linear-to-br from-warning/10 to-warning/10 ">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-yellow-600" />
+              <Trophy className="h-5 w-5 text-warning" />
               MVP (Most Valuable Player)
             </CardTitle>
             <CardDescription>
@@ -121,7 +121,7 @@ export function ItemStatisticsDisplay({
                 <div className="mt-2 flex gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground">Total Value</p>
-                    <p className="text-lg font-semibold text-green-600 dark:text-green-400">
+                    <p className="text-lg font-semibold text-success ">
                       {formatGPValue(mvp.totalValue)} GP
                     </p>
                   </div>
@@ -143,7 +143,7 @@ export function ItemStatisticsDisplay({
                   </div>
                 </div>
               </div>
-              <Award className="h-16 w-16 text-yellow-500" />
+              <Award className="h-16 w-16 text-warning" />
             </div>
           </CardContent>
         </Card>
@@ -151,10 +151,10 @@ export function ItemStatisticsDisplay({
 
       {/* Most Valuable Item */}
       {mostValuableItem && (
-        <Card className="border-purple-200 bg-linear-to-br from-purple-50 to-pink-50 dark:border-purple-800 dark:from-purple-950/20 dark:to-pink-950/20">
+        <Card className="border-chart-5 bg-linear-to-br from-chart-5/10 to-destructive/10 ">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-purple-600" />
+              <Package className="h-5 w-5 text-chart-5" />
               Most Valuable Item
             </CardTitle>
             <CardDescription>Highest total value item obtained</CardDescription>
@@ -179,7 +179,7 @@ export function ItemStatisticsDisplay({
                       <p className="text-xs text-muted-foreground">
                         Total Value
                       </p>
-                      <p className="text-lg font-semibold text-purple-600 dark:text-purple-400">
+                      <p className="text-lg font-semibold text-chart-5 ">
                         {formatGPValue(mostValuableItem.totalValue)} GP
                       </p>
                     </div>
@@ -261,13 +261,13 @@ export function ItemStatisticsDisplay({
                     >
                       <div className="flex items-center space-x-4">
                         <div
-                          className={`flex h-10 w-10 items-center justify-center rounded-full font-bold ${
+                          className={`flex h-10 w-10 items-center justify-center rounded-sm font-bold ${
                             index === 0
-                              ? "bg-yellow-500 text-white"
+                              ? "bg-warning text-warning-foreground"
                               : index === 1
-                                ? "bg-gray-400 text-white"
+                                ? "bg-muted-foreground text-osrs-parchment"
                                 : index === 2
-                                  ? "bg-amber-600 text-white"
+                                  ? "bg-warning text-warning-foreground"
                                   : "bg-primary text-primary-foreground"
                           }`}
                         >
@@ -284,7 +284,7 @@ export function ItemStatisticsDisplay({
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-xl font-bold text-green-600 dark:text-green-400">
+                        <div className="text-xl font-bold text-success ">
                           {formatGPValue(team.totalValue)} GP
                         </div>
                         <div className="text-sm text-muted-foreground">
@@ -324,13 +324,13 @@ export function ItemStatisticsDisplay({
                     >
                       <div className="flex items-center space-x-4">
                         <div
-                          className={`flex h-10 w-10 items-center justify-center rounded-full font-bold ${
+                          className={`flex h-10 w-10 items-center justify-center rounded-sm font-bold ${
                             index === 0
-                              ? "bg-yellow-500 text-white"
+                              ? "bg-warning text-warning-foreground"
                               : index === 1
-                                ? "bg-gray-400 text-white"
+                                ? "bg-muted-foreground text-osrs-parchment"
                                 : index === 2
-                                  ? "bg-amber-600 text-white"
+                                  ? "bg-warning text-warning-foreground"
                                   : "bg-primary text-primary-foreground"
                           }`}
                         >
@@ -347,7 +347,7 @@ export function ItemStatisticsDisplay({
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-xl font-bold text-green-600 dark:text-green-400">
+                        <div className="text-xl font-bold text-success ">
                           {formatGPValue(user.totalValue)} GP
                         </div>
                         <div className="text-sm text-muted-foreground">

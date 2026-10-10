@@ -60,7 +60,7 @@ export function LoginCard() {
 
   if (session) {
     return (
-      <Card className="w-[400px]">
+      <Card className="w-full max-w-[400px]">
         <CardHeader>
           <CardTitle>Welcome, {session.user?.name}!</CardTitle>
           <CardDescription>You are currently signed in.</CardDescription>
@@ -78,20 +78,26 @@ export function LoginCard() {
   }
 
   return (
-    <Card className="w-[400px]">
+    <Card className="w-full max-w-[400px]">
       <CardHeader>
         <CardTitle>Welcome</CardTitle>
         <CardDescription>Sign in to your account</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
         {justRegistered && (
-          <div className="rounded-md bg-green-500/15 p-3 text-sm text-green-500">
+          <div
+            role="status"
+            className="rounded-sm border border-success bg-success/15 p-3 text-sm text-success"
+          >
             Account created successfully! Please sign in below.
           </div>
         )}
 
         {error && (
-          <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+          <div
+            role="alert"
+            className="rounded-sm border border-danger bg-destructive/15 p-3 text-sm text-danger"
+          >
             {error}
           </div>
         )}
@@ -139,7 +145,7 @@ export function LoginCard() {
             <Separator />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
+            <span className="bg-card px-2 text-muted-foreground">
               Or continue with
             </span>
           </div>
@@ -151,7 +157,7 @@ export function LoginCard() {
             className="w-full"
             variant="outline"
           >
-            <DiscordLogoIcon className="mr-2 h-4 w-4" />
+            <DiscordLogoIcon aria-hidden="true" className="mr-2 h-4 w-4" />
             Discord
           </Button>
           <Button
@@ -182,7 +188,7 @@ export function LoginCard() {
       <CardFooter className="flex flex-col gap-2">
         <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
-          <Link href="/sign-up" className="text-primary hover:underline">
+          <Link href="/sign-up" className="font-medium text-primary underline-offset-4 hover:underline">
             Sign up
           </Link>
         </p>

@@ -311,8 +311,8 @@ export function InlineGoalAssignment({
 
     return (
       <div className={cn("flex items-center gap-2", className)}>
-        <div className="flex items-center gap-1 rounded bg-blue-500/20 p-1.5 text-xs">
-          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-blue-500" />
+        <div className="flex items-center gap-1 rounded bg-info/20 p-1.5 text-xs">
+          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-info" />
           {isItemGoal && itemGoal && (
             <div className="relative h-5 w-5 shrink-0">
               <Image
@@ -323,7 +323,7 @@ export function InlineGoalAssignment({
               />
             </div>
           )}
-          <span className="truncate font-medium text-blue-500">
+          <span className="truncate font-medium text-info">
             {currentGoal?.description ?? "Goal"}
           </span>
           {isItemGoal && (
@@ -347,9 +347,9 @@ export function InlineGoalAssignment({
     <div className={cn("flex items-center gap-2", className)}>
       {currentGoalId && currentGoal ? (
         // Assigned Badge with edit trigger
-        <div className="group flex items-center gap-1 rounded bg-blue-500/20 p-1 text-xs transition-colors hover:bg-blue-500/30">
+        <div className="group flex items-center gap-1 rounded bg-info/20 p-1 text-xs transition-colors hover:bg-info/30">
           <div className="flex items-center gap-1 pl-1">
-            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-blue-500" />
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-info" />
             {currentGoal.goalType === "item" && currentGoal.itemGoal && (
               <div className="relative h-4 w-4 shrink-0">
                 <Image
@@ -360,7 +360,7 @@ export function InlineGoalAssignment({
                 />
               </div>
             )}
-            <span className="truncate font-medium text-blue-500 max-w-[150px]">
+            <span className="truncate font-medium text-info max-w-[150px]">
               {currentGoal.description}
             </span>
             {currentValue !== null && currentValue !== undefined && (
@@ -371,13 +371,13 @@ export function InlineGoalAssignment({
             )}
           </div>
 
-          <div className="ml-1 flex items-center gap-0.5 border-l border-blue-500/20 pl-1">
+          <div className="ml-1 flex items-center gap-0.5 border-l border-info/20 pl-1">
             <Popover open={open} onOpenChange={setOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-5 w-5 hover:bg-blue-500/20 text-blue-600"
+                  className="h-5 w-5 hover:bg-info/20 text-info"
                   title="Edit assignment"
                 >
                   <Pencil className="h-3 w-3" />
@@ -391,7 +391,7 @@ export function InlineGoalAssignment({
             <Button
               variant="ghost"
               size="icon"
-              className="h-5 w-5 text-red-500/70 hover:bg-red-500/20 hover:text-red-600"
+              className="h-5 w-5 text-danger/70 hover:bg-destructive/20 hover:text-danger"
               onClick={handleRemoveGoal}
               disabled={isSaving}
               title="Remove goal"

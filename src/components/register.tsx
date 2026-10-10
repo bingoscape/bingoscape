@@ -56,7 +56,7 @@ export function RegisterCard() {
   }
 
   return (
-    <Card className="w-[400px]">
+    <Card className="w-full max-w-[400px]">
       <CardHeader>
         <CardTitle>Create Account</CardTitle>
         <CardDescription>
@@ -66,7 +66,10 @@ export function RegisterCard() {
       <form onSubmit={handleSubmit}>
         <CardContent className="grid gap-4">
           {error && (
-            <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+            <div
+              role="alert"
+              className="rounded-sm border border-danger bg-destructive/15 p-3 text-sm text-danger"
+            >
               {error}
             </div>
           )}
@@ -147,7 +150,7 @@ export function RegisterCard() {
           </Button>
           <p className="text-center text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link href="/sign-in" className="text-primary hover:underline">
+            <Link href="/sign-in" className="font-medium text-primary underline-offset-4 hover:underline">
               Sign in
             </Link>
           </p>

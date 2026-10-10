@@ -4,37 +4,14 @@ import { logger } from "@/lib/logger"
 import { teamTileSubmissions, teams } from "@/server/db/schema"
 import { eq, inArray } from "drizzle-orm"
 import type { TeamTileSubmission } from "@/types/model"
-
-// Update the getSubmissions function to include goal information
-
-export async function getSubmissions(
-  tileId: string
-): Promise<TeamTileSubmission[]> {
-  try {
-    const result = await db.query.teamTileSubmissions.findMany({
-      with: {
-        submissions: {
-          with: {
-            image: true,
-            user: true,
-            goal: true, // Include goal information
-          },
-        },
-        team: true,
-      },
-      where: eq(teamTileSubmissions.tileId, tileId),
-    })
-
-    return result
-  } catch (error) {
-    logger.error({ error }, "Error fetching submissions:", error)
-    throw new Error("Failed to fetch submissions")
-  }
-}
+import { isEventManager } from "@/server/authz"
 
 export async function getEventSubmissions(
   eventId: string
 ): Promise<TeamTileSubmission[]> {
+  // All Teams' Submissions (with images and users) are for managers only.
+  if (!(await isEventManager(eventId))) return []
+
   try {
     // 1. Get all teams for the event
     const eventTeams = await db.query.teams.findMany({
@@ -71,7 +48,7 @@ export async function getEventSubmissions(
         submissions: {
           with: {
             image: true,
-            user: true,
+            user: { columns: { id: true, name: true, runescapeName: true } },
             goal: true,
           },
         },

@@ -463,13 +463,13 @@ export function AutoTeamGeneratorModal({
             </div>
           ) : (
             !canUseBalanced && (
-              <div className="mt-4 flex items-start gap-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-950">
-                <Info className="mt-0.5 h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+              <div className="mt-4 flex items-start gap-2 rounded-lg border border-warning bg-warning/10 p-3 ">
+                <Info className="mt-0.5 h-4 w-4 text-warning " />
                 <div>
-                  <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
+                  <p className="text-sm font-medium text-warning ">
                     Balanced mode unavailable
                   </p>
-                  <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                  <p className="text-xs text-warning ">
                     Only {metadataCoverage}% of participants have metadata. At
                     least 50% required for balanced generation.
                   </p>
@@ -479,8 +479,8 @@ export function AutoTeamGeneratorModal({
           )}
 
           <TabsContent value="random" className="mt-4 space-y-4">
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950">
-              <p className="text-sm text-blue-900 dark:text-blue-100">
+            <div className="rounded-lg border border-info bg-info/10 p-3 ">
+              <p className="text-sm text-info ">
                 <Shuffle className="mr-1 inline h-4 w-4" />
                 Random mode shuffles participants and distributes them evenly
                 across teams.
@@ -489,8 +489,8 @@ export function AutoTeamGeneratorModal({
           </TabsContent>
 
           <TabsContent value="balanced" className="mt-4 space-y-4">
-            <div className="rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-800 dark:bg-green-950">
-              <p className="text-sm text-green-900 dark:text-green-100">
+            <div className="rounded-lg border border-success bg-success/10 p-3 ">
+              <p className="text-sm text-success ">
                 <Sparkles className="mr-1 inline h-4 w-4" />
                 Balanced mode uses simulated annealing optimization with player
                 metadata to create well-balanced teams.
@@ -739,37 +739,37 @@ export function AutoTeamGeneratorModal({
                   </div>
 
                   {/* Visual Balance Bar */}
-                  <div className="mb-6 flex h-3 w-full overflow-hidden rounded-full">
+                  <div className="mb-6 flex h-3 w-full overflow-hidden rounded-sm">
                     <div
-                      className="bg-blue-500"
+                      className="bg-info"
                       style={{
                         width: `${saConfig.varianceWeights.timezone * 100}%`,
                       }}
                       title="Timezone"
                     />
                     <div
-                      className="bg-green-500"
+                      className="bg-success"
                       style={{
                         width: `${saConfig.varianceWeights.ehp * 100}%`,
                       }}
                       title="EHP"
                     />
                     <div
-                      className="bg-purple-500"
+                      className="bg-chart-5"
                       style={{
                         width: `${saConfig.varianceWeights.ehb * 100}%`,
                       }}
                       title="EHB"
                     />
                     <div
-                      className="bg-yellow-500"
+                      className="bg-warning"
                       style={{
                         width: `${saConfig.varianceWeights.dailyHours * 100}%`,
                       }}
                       title="Daily Hours"
                     />
                     <div
-                      className="bg-red-500"
+                      className="bg-destructive"
                       style={{
                         width: `${saConfig.varianceWeights.skillLevel * 100}%`,
                       }}

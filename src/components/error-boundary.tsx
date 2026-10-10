@@ -68,7 +68,7 @@ export class ErrorBoundary extends React.Component<
       return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
           <div className="max-w-md space-y-4 text-center">
-            <h1 className="text-4xl font-bold text-destructive">Oops!</h1>
+            <h1 className="text-4xl font-bold text-danger">Oops!</h1>
             <h2 className="text-2xl font-semibold">Something went wrong</h2>
             <p className="text-muted-foreground">
               We apologize for the inconvenience. An error has occurred and has

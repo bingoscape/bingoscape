@@ -93,7 +93,7 @@ export function DateRangePicker({
           />
         </PopoverContent>
       </Popover>
-      {error && <p className="mt-1 text-sm text-destructive">{error}</p>}
+      {error && <p className="mt-1 text-sm text-danger">{error}</p>}
     </div>
   )
 }

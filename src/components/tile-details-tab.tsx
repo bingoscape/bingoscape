@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation"
 import { syncTrackerProgress } from "@/app/actions/tracker"
 import { toast } from "@/hooks/use-toast"
 
-import { useCallback } from "react"
-import { useState, useEffect } from "react"
+import { useCallback, useMemo } from "react"
+import { useState } from "react"
 import type React from "react"
 import Image from "next/image"
 import { Input } from "@/components/ui/input"
@@ -36,7 +36,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import getRandomFrog from "@/lib/getRandomFrog"
 import { GoalProgressTree } from "./goal-progress-tree"
-import { getGoalTreeWithProgress } from "@/app/actions/goal-groups"
+import { CompactGoalTree } from "./compact-goal-tree"
+import { buildGoalTree, getTeamGoalProgress } from "@/lib/goal-tree"
 import type { Tile, Team } from "@/types/model"
 
 type EditableTileFields = {
@@ -56,6 +57,11 @@ interface TileDetailsTabProps {
   gameType: "osrs" | "rs3"
   eventId?: string
   isProgressionBingo?: boolean
+  /**
+   * Rendered inside the Tile side panel: the panel header already shows the
+   * image and title, and the panel body scrolls, so drop those here.
+   */
+  embedded?: boolean
   onEditTile: <K extends keyof EditableTileFields>(
     field: K,
     value: EditableTileFields[K]
@@ -88,6 +94,7 @@ export function TileDetailsTab({
   gameType,
   eventId,
   isProgressionBingo = false,
+  embedded = false,
   onEditTile,
   onUpdateTile,
   onEditorChange,
@@ -222,16 +229,36 @@ export function TileDetailsTab({
   }
 
   return (
-    <div className="max-h-[60vh] space-y-6 overflow-y-auto bg-background pr-4 text-foreground">
-      <div className="space-y-6 p-4">
-        <div className="flex flex-col items-start gap-6 md:flex-row">
-          <div className="relative aspect-square w-full md:w-1/3">
+    <div
+      className={
+        embedded
+          ? "space-y-4 text-foreground"
+          : "max-h-[60vh] space-y-6 overflow-y-auto bg-background pr-4 text-foreground"
+      }
+    >
+      <div className={embedded ? "space-y-4" : "space-y-6 p-4"}>
+        <div
+          className={
+            embedded
+              ? "flex flex-col items-start gap-4"
+              : "flex flex-col items-start gap-6 md:flex-row"
+          }
+        >
+          <div
+            className={
+              embedded
+                ? isEditing
+                  ? "relative aspect-square w-32"
+                  : "hidden"
+                : "relative aspect-square w-full md:w-1/3"
+            }
+          >
             {isEditing && imagePreview && isValidImage ? (
               <Image
                 src={imagePreview}
                 alt="Header image preview"
                 fill
-                className="rounded-md object-contain"
+                className="rounded-sm object-contain"
               />
             ) : selectedTile?.headerImage &&
               isValidImageUrl(selectedTile.headerImage) ? (
@@ -239,11 +266,11 @@ export function TileDetailsTab({
                 src={selectedTile.headerImage || getRandomFrog()}
                 alt={selectedTile.title}
                 fill
-                className="rounded-md object-contain"
+                className="rounded-sm object-contain"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center rounded-md bg-gray-200">
-                <span className="text-gray-400">
+              <div className="flex h-full w-full items-center justify-center rounded-sm bg-muted">
+                <span className="text-muted-foreground">
                   {isEditing && !isValidImage
                     ? "Invalid image URL"
                     : "No image"}
@@ -251,9 +278,11 @@ export function TileDetailsTab({
               </div>
             )}
           </div>
-          <div className="w-full space-y-4 md:w-2/3">
+          <div className={embedded ? "w-full space-y-4" : "w-full space-y-4 md:w-2/3"}>
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">{selectedTile?.title}</h3>
+              <h3 className={embedded ? "sr-only" : "text-lg font-semibold"}>
+                {selectedTile?.title}
+              </h3>
               {canEdit && (
                 <Button
                   onClick={() => toggleEdit(isEditing)}
@@ -275,7 +304,7 @@ export function TileDetailsTab({
                   <div>
                     <label
                       htmlFor="title"
-                      className="block text-sm font-medium text-gray-700"
+                      className="block text-sm font-medium text-muted-foreground"
                     >
                       Title
                     </label>
@@ -286,14 +315,14 @@ export function TileDetailsTab({
                       className="mt-1"
                     />
                   </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-4 @md:grid-cols-3">
                     <div>
                       <label htmlFor="xp" className="block text-sm font-medium">
                         XP
                       </label>
                       <div className="relative mt-1">
                         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                          <Zap className="h-4 w-4 text-gray-400" />
+                          <Zap className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <Input
                           id="xp"
@@ -337,7 +366,7 @@ export function TileDetailsTab({
                       />
                       <label
                         htmlFor="isHidden"
-                        className="text-sm font-medium text-gray-700"
+                        className="text-sm font-medium text-muted-foreground"
                       >
                         Hide Tile on Board
                       </label>
@@ -346,7 +375,7 @@ export function TileDetailsTab({
                   <div>
                     <label
                       htmlFor="headerImage"
-                      className="block text-sm font-medium text-gray-700"
+                      className="block text-sm font-medium text-muted-foreground"
                     >
                       Header Image URL
                     </label>
@@ -357,10 +386,10 @@ export function TileDetailsTab({
                           value={editedTile.headerImage ?? ""}
                           onChange={handleHeaderImageChange}
                           onPaste={handleHeaderImagePaste}
-                          className={`${!isValidImage && editedTile.headerImage ? "border-red-500" : ""}`}
+                          className={`${!isValidImage && editedTile.headerImage ? "border-destructive" : ""}`}
                         />
                         {!isValidImage && editedTile.headerImage && (
-                          <p className="mt-1 text-sm text-red-500">
+                          <p className="mt-1 text-sm text-danger">
                             Please enter a valid image URL (starting with
                             http:// or https://)
                           </p>
@@ -401,19 +430,19 @@ export function TileDetailsTab({
                             </Button>
                           </div>
 
-                          <ScrollArea className="h-[300px] rounded-md border p-2">
+                          <ScrollArea className="h-[300px] rounded-sm border p-2">
                             {searchResults.length === 0 && !isSearching ? (
-                              <div className="flex h-full items-center justify-center text-gray-500">
+                              <div className="flex h-full items-center justify-center text-muted-foreground">
                                 {searchQuery
                                   ? "No results found"
                                   : "Search for OSRS images"}
                               </div>
                             ) : (
-                              <div className="grid grid-cols-3 gap-3">
+                              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                 {searchResults.map((image) => (
                                   <div
                                     key={image.title}
-                                    className={`cursor-pointer rounded-md border p-2 transition-colors hover:bg-gray-100 ${selectedImage?.url === image.url ? "ring-2 ring-primary" : ""} `}
+                                    className={`cursor-pointer rounded-sm border p-2 transition-colors hover:bg-muted ${selectedImage?.url === image.url ? "ring-2 ring-primary" : ""} `}
                                     onClick={() => handleImageSelect(image)}
                                   >
                                     <div className="relative mb-1 aspect-square">
@@ -436,17 +465,17 @@ export function TileDetailsTab({
                             )}
                           </ScrollArea>
 
-                          <DialogFooter className="flex items-center justify-between">
+                          <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <a
                               href="https://oldschool.runescape.wiki/"
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex items-center gap-1 text-xs text-gray-500"
+                              className="flex items-center gap-1 text-xs text-muted-foreground"
                             >
                               Images from OSRS Wiki
                               <ExternalLink className="h-3 w-3" />
                             </a>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                               <DialogClose asChild>
                                 <Button variant="outline">Cancel</Button>
                               </DialogClose>
@@ -467,11 +496,11 @@ export function TileDetailsTab({
                   <div>
                     <label
                       htmlFor="description"
-                      className="block text-sm font-medium text-gray-700"
+                      className="block text-sm font-medium text-muted-foreground"
                     >
                       Description
                     </label>
-                    <div className="mt-1 rounded-md border">
+                    <div className="mt-1 rounded-sm border">
                       <ForwardRefEditor
                         onChange={onEditorChange}
                         markdown={editedTile.description ?? ""}
@@ -488,20 +517,20 @@ export function TileDetailsTab({
               <>
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center gap-4">
-                    <div className="flex items-center gap-2 rounded-md px-3 py-1.5">
-                      <Zap className="h-4 w-4 text-amber-500" />
+                    <div className="flex items-center gap-2 rounded-sm px-3 py-1.5">
+                      <Zap className="h-4 w-4 text-warning" />
                       <span className="font-medium">
                         {selectedTile?.weight} XP
                       </span>
                     </div>
                     {selectedTile?.isHidden && (
-                      <div className="flex items-center gap-2 rounded-md bg-gray-100 px-3 py-1.5 text-gray-500">
+                      <div className="flex items-center gap-2 rounded-sm bg-muted px-3 py-1.5 text-muted-foreground">
                         <EyeOff className="h-4 w-4" />
                         <span className="font-medium">Hidden</span>
                       </div>
                     )}
                   </div>
-                  <div className="prose max-w-none">
+                  <div className="prose max-w-none break-words [&_img]:max-w-full [&_pre]:overflow-x-auto [&_table]:block [&_table]:overflow-x-auto">
                     <Markdown>{selectedTile?.description ?? ""}</Markdown>
                   </div>
                 </div>
@@ -509,7 +538,7 @@ export function TileDetailsTab({
             )}
           </div>
         </div>
-        <div className="mt-6">
+        <div className={embedded ? "mt-2" : "mt-6"}>
           <h3 className="mb-4 text-lg font-semibold">Team Progress</h3>
           <TileProgress
             selectedTile={selectedTile}
@@ -535,34 +564,19 @@ function TileProgress({
   userRole: "admin" | "management" | "participant"
   eventId?: string
 }) {
-  const [teamTreeData, setTeamTreeData] = useState<
-    Map<string, { tree: any[]; teamProgress: any[] }>
-  >(new Map())
+  const router = useRouter()
+  const [isSyncing, setIsSyncing] = useState(false)
 
-  useEffect(() => {
-    if (!selectedTile?.id) return
-
-    // Load tree data for all teams
-    const loadTreeData = async () => {
-      const newData = new Map()
-      for (const team of teams) {
-        const data = await getGoalTreeWithProgress(selectedTile.id, team.id)
-        newData.set(team.id, data)
-      }
-      setTeamTreeData(newData)
-    }
-
-    void loadTreeData()
-  }, [
-    selectedTile?.id,
-    teams,
-    selectedTile?.teamTileSubmissions,
-    selectedTile?.goals,
-  ])
+  // The Goal tree and every Team's progress come from the Tile that the Event
+  // page already loaded: no client-side fetching.
+  const tree = useMemo(
+    () => buildGoalTree(selectedTile?.goals, selectedTile?.goalGroups),
+    [selectedTile?.goals, selectedTile?.goalGroups]
+  )
 
   if (!selectedTile?.goals || selectedTile.goals.length === 0) {
     return (
-      <div className="rounded-lg bg-muted/30 py-6 text-center">
+      <div className="rounded-sm bg-muted/30 py-6 text-center">
         <p className="text-muted-foreground">
           No goals have been set for this tile yet.
         </p>
@@ -570,8 +584,12 @@ function TileProgress({
     )
   }
 
-  const router = useRouter()
-  const [isSyncing, setIsSyncing] = useState(false)
+  // No Team selected (public view): show the Goals without progress.
+  if (teams.length === 0) {
+    return (
+      <CompactGoalTree tree={tree} teamProgress={[]} showProgress={false} />
+    )
+  }
 
   const hasMetricGoals = selectedTile?.goals?.some(
     (g: any) => g.goalType === "metric"
@@ -650,21 +668,17 @@ function TileProgress({
           </Button>
         </div>
       )}
-      {/* <h4 className="font-semibold text-lg">Team Progress</h4> */}
 
       <div className="space-y-6">
         {teams.map((team) => {
-          const data = teamTreeData.get(team.id)
-          if (!data) return null
-
           const teamColor = `hsl(${(team.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`
 
           return (
             <GoalProgressTree
               key={team.id}
-              tree={data.tree}
+              tree={tree}
               teamId={team.id}
-              teamProgress={data.teamProgress}
+              teamProgress={getTeamGoalProgress(selectedTile.goals, team.id)}
               teamName={team.name}
               teamColor={teamColor}
             />

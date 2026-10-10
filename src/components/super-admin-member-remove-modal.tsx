@@ -114,7 +114,7 @@ export function SuperAdminMemberRemoveModal({
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-destructive">
+          <DialogTitle className="flex items-center gap-2 text-danger">
             <XCircle className="h-5 w-5" />
             Remove Member
           </DialogTitle>
@@ -137,34 +137,34 @@ export function SuperAdminMemberRemoveModal({
         ) : (
           <>
             {isLastAdmin && (
-              <Alert className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
-                <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                <AlertDescription className="text-orange-700 dark:text-orange-300">
+              <Alert className="border-warning/40 bg-warning/10">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <AlertDescription className="text-warning">
                   Warning: This is the last admin in the clan. Removing them
                   will leave the clan without any administrators.
                 </AlertDescription>
               </Alert>
             )}
 
-            <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4">
-              <p className="mb-2 font-medium text-destructive">
+            <div className="rounded-sm border border-destructive/20 bg-destructive/10 p-4">
+              <p className="mb-2 font-medium text-danger">
                 This action will:
               </p>
               <ul className="space-y-1 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
-                  <span className="text-destructive">•</span>
+                  <span className="text-danger">•</span>
                   <span>Remove {displayName} from all clan events</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-destructive">•</span>
+                  <span className="text-danger">•</span>
                   <span>Revoke their access to clan bingo boards</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-destructive">•</span>
+                  <span className="text-danger">•</span>
                   <span>Remove them from clan team memberships</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-destructive">•</span>
+                  <span className="text-danger">•</span>
                   <span>This action cannot be undone</span>
                 </li>
               </ul>

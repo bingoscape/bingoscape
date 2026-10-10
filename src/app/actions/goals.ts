@@ -5,6 +5,13 @@ import { goalValues, submissions, teamGoalProgress, teamTileSubmissions, goals }
 import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { logger } from "@/lib/logger"
+import {
+  authzErrorMessage,
+  canReadGoal,
+  requireBingoAdminForGoal,
+  requireBingoAdminForGoalValue,
+  requireBingoAdminForSubmission,
+} from "@/server/authz"
 
 export interface GoalValue {
   id: string
@@ -21,16 +28,25 @@ export async function addGoalValue(
   description: string
 ) {
   try {
-    const [newGoalValue] = await db
-      .insert(goalValues)
-      .values({
-        goalId,
-        value,
-        description,
-      })
-      .returning()
+    await requireBingoAdminForGoal(goalId)
 
-    // revalidatePath("/events/[id]/bingos/[bingoId]", "page")
+    if (!Number.isFinite(value)) {
+      return { success: false, error: "Value must be a number" }
+    }
+
+    const newGoalValue = await db.transaction(async (tx) => {
+      const [inserted] = await tx
+        .insert(goalValues)
+        .values({
+          goalId,
+          value,
+          description,
+        })
+        .returning()
+      return inserted
+    })
+
+    revalidatePath("/events/[id]", "layout")
 
     return { success: true, goalValue: newGoalValue }
   } catch (error) {
@@ -38,25 +54,38 @@ export async function addGoalValue(
       { error, goalId, value, description },
       "Error adding goal value"
     )
-    return { success: false, error: "Failed to add goal value" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to add goal value"),
+    }
   }
 }
 
 export async function deleteGoalValue(goalValueId: string) {
   try {
-    await db.delete(goalValues).where(eq(goalValues.id, goalValueId))
+    await requireBingoAdminForGoalValue(goalValueId)
 
-    // revalidatePath("/events/[id]/bingos/[bingoId]", "page")
+    await db.transaction(async (tx) => {
+      await tx.delete(goalValues).where(eq(goalValues.id, goalValueId))
+    })
+
+    revalidatePath("/events/[id]", "layout")
 
     return { success: true }
   } catch (error) {
     logger.error({ error, goalValueId }, "Error deleting goal value")
-    return { success: false, error: "Failed to delete goal value" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to delete goal value"),
+    }
   }
 }
 
 export async function getGoalValues(goalId: string): Promise<GoalValue[]> {
   try {
+    // Hidden Tiles must not leak their Goals to non-managers.
+    if (!(await canReadGoal(goalId))) return []
+
     const values = await db.query.goalValues.findMany({
       where: eq(goalValues.goalId, goalId),
       orderBy: (goalValues, { asc }) => [asc(goalValues.value)],
@@ -133,6 +162,10 @@ export async function updateSubmissionGoalAndValue(
   submissionValue: number
 ) {
   try {
+    // Re-assigning a Submission to a Goal is a review action: managers only.
+    // The Event is derived from the Submission, never supplied by the client.
+    await requireBingoAdminForSubmission(submissionId)
+
     const result = await db.transaction(async (tx) => {
       // 1. Fetch current submission to get the old goalId
       const currentSubmission = await tx.query.submissions.findFirst({
@@ -180,7 +213,7 @@ export async function updateSubmissionGoalAndValue(
       return updatedSubmission
     })
 
-    revalidatePath("/bingo")
+    revalidatePath("/")
 
     return { success: true, submission: result }
   } catch (error) {
@@ -188,6 +221,9 @@ export async function updateSubmissionGoalAndValue(
       { error, submissionId, goalId, submissionValue },
       "Error updating submission goal and value"
     )
-    return { success: false, error: "Failed to update submission" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to update submission"),
+    }
   }
 }

@@ -47,7 +47,10 @@ export async function getTeamsByEventId(eventId: string) {
     with: {
       teamMembers: {
         with: {
-          user: true,
+          // Never ship email / password hash to the client.
+          user: {
+            columns: { id: true, name: true, image: true, runescapeName: true },
+          },
         },
       },
     },

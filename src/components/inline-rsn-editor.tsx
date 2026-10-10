@@ -82,7 +82,7 @@ export function InlineRsnEditor({ userId, initialRsn, fallbackName }: InlineRsnE
           variant="ghost" 
           onClick={handleSave} 
           disabled={isExecuting}
-          className="h-8 w-8 text-green-500 hover:text-green-600 hover:bg-green-500/10"
+          className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
         >
           {isExecuting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
         </Button>
@@ -91,7 +91,7 @@ export function InlineRsnEditor({ userId, initialRsn, fallbackName }: InlineRsnE
           variant="ghost" 
           onClick={handleCancel} 
           disabled={isExecuting}
-          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          className="h-8 w-8 text-muted-foreground hover:text-danger hover:bg-destructive/10"
         >
           <X className="h-4 w-4" />
         </Button>

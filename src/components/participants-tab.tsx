@@ -75,7 +75,7 @@ import type {
   Team,
   SortField,
   SortDirection,
-} from "@/app/events/[id]/participants/types"
+} from "@/app/events/[id]/(manage)/participants/types"
 import { AddClanMembersDialog } from "@/components/events/add-clan-members-dialog"
 
 interface RemoveParticipantDialogProps {
@@ -802,7 +802,7 @@ export function ParticipantsTab({
                   onCheckedChange={(checked) =>
                     handleBuyInChange(participant.id, checked as boolean)
                   }
-                  className="h-5 w-5 data-[state=checked]:border-green-500 data-[state=checked]:bg-green-500"
+                  className="h-5 w-5 data-[state=checked]:border-success data-[state=checked]:bg-success"
                 />
                 <span className="text-sm font-medium">
                   {participant.buyIn >= minimumBuyIn ? "Paid" : "Unpaid"}
@@ -814,13 +814,13 @@ export function ParticipantsTab({
                   {formatRunescapeGold(participant.buyIn)} GP
                 </span>
                 {participant.buyIn >= minimumBuyIn ? (
-                  <Badge variant="default" className="bg-green-500 text-white">
+                  <Badge variant="default" className="bg-success text-success-foreground">
                     Paid
                   </Badge>
                 ) : (
                   <Badge
                     variant="outline"
-                    className="border-orange-600 text-orange-600"
+                    className="border-warning text-warning"
                   >
                     Unpaid
                   </Badge>
@@ -831,7 +831,7 @@ export function ParticipantsTab({
         </TableCell>
         <TableCell>
           <div className="flex items-center gap-2">
-            <span className="font-medium text-green-600 dark:text-green-400">
+            <span className="font-medium text-success ">
               {formatRunescapeGold(participant.totalDonations)} GP
             </span>
             {canEditBuyIns() && (
@@ -839,7 +839,7 @@ export function ParticipantsTab({
                 size="sm"
                 variant="ghost"
                 onClick={() => openDonationModal(participant)}
-                className="h-7 w-7 p-0 text-green-600 hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-950"
+                className="h-7 w-7 p-0 text-success hover:bg-success/10 hover:text-success "
               >
                 <Heart className="h-4 w-4" />
               </Button>
@@ -851,7 +851,7 @@ export function ParticipantsTab({
             {participant.buyIn >= minimumBuyIn ? (
               <Badge
                 variant="default"
-                className="border-0 bg-green-500 text-white"
+                className="border-0 bg-success text-success-foreground"
               >
                 <CheckCircle className="mr-1 h-3 w-3" />
                 Verified
@@ -859,7 +859,7 @@ export function ParticipantsTab({
             ) : (
               <Badge
                 variant="outline"
-                className="border-orange-600 text-orange-600"
+                className="border-warning text-warning"
               >
                 <CircleAlert className="mr-1 h-3 w-3" />
                 Pending
@@ -900,7 +900,7 @@ export function ParticipantsTab({
                   {canRemoveParticipants() && (
                     <DropdownMenuItem
                       onClick={() => openRemoveDialog(participant)}
-                      className="text-destructive"
+                      className="text-danger"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Remove
@@ -972,7 +972,7 @@ export function ParticipantsTab({
                       {canRemoveParticipants() && (
                         <DropdownMenuItem
                           onClick={() => openRemoveDialog(participant)}
-                          className="text-destructive"
+                          className="text-danger"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Remove
@@ -1016,7 +1016,7 @@ export function ParticipantsTab({
                     onCheckedChange={(checked) =>
                       handleBuyInChange(participant.id, checked as boolean)
                     }
-                    className="h-4 w-4 data-[state=checked]:border-green-500 data-[state=checked]:bg-green-500"
+                    className="h-4 w-4 data-[state=checked]:border-success data-[state=checked]:bg-success"
                   />
                   <span className="text-sm font-medium">
                     {participant.buyIn >= minimumBuyIn ? "Paid" : "Unpaid"}
@@ -1030,14 +1030,14 @@ export function ParticipantsTab({
                   {participant.buyIn >= minimumBuyIn ? (
                     <Badge
                       variant="default"
-                      className="bg-green-500 text-xs text-white"
+                      className="bg-success text-xs text-success-foreground"
                     >
                       Paid
                     </Badge>
                   ) : (
                     <Badge
                       variant="outline"
-                      className="border-orange-600 text-xs text-orange-600"
+                      className="border-warning text-xs text-warning"
                     >
                       Unpaid
                     </Badge>
@@ -1049,7 +1049,7 @@ export function ParticipantsTab({
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Donations:</span>
             <div className="flex items-center gap-2">
-              <span className="font-medium text-green-600 dark:text-green-400">
+              <span className="font-medium text-success ">
                 {formatRunescapeGold(participant.totalDonations)} GP
               </span>
               {canEditBuyIns() && (
@@ -1057,7 +1057,7 @@ export function ParticipantsTab({
                   size="sm"
                   variant="ghost"
                   onClick={() => openDonationModal(participant)}
-                  className="h-6 w-6 p-0 text-green-600 hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-950"
+                  className="h-6 w-6 p-0 text-success hover:bg-success/10 hover:text-success "
                 >
                   <Heart className="h-3 w-3" />
                 </Button>

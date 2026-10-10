@@ -53,24 +53,21 @@ export async function EventLayoutHeader({ eventId }: { eventId: string }) {
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
       <div className="flex items-center gap-4">
         <Link href="/" className="text-muted-foreground hover:text-foreground">
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-sm">
             <ArrowLeft className="h-4 w-4" />
             <span className="sr-only">Back to Events</span>
           </Button>
         </Link>
         
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold tracking-tight">{event.title}</h1>
+          <h1 className="osrs-heading text-2xl font-semibold tracking-tight text-primary">{event.title}</h1>
           <Badge
             variant={
               eventStatus === "active"
-                ? "default"
+                ? "success"
                 : eventStatus === "upcoming"
-                  ? "secondary"
+                  ? "info"
                   : "outline"
-            }
-            className={
-              eventStatus === "active" ? "bg-green-500 text-white" : ""
             }
           >
             {eventStatus === "active"

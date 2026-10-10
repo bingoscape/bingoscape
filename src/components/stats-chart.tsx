@@ -66,8 +66,8 @@ export function StatsChart({ data, totalPossibleXP, title }: StatsChartProps) {
     datasets: [
       {
         data: data.map((item) => item.xp),
-        backgroundColor: "rgba(53, 162, 235, 0.5)",
-        borderColor: "rgb(53, 162, 235)",
+        backgroundColor: "rgba(255, 152, 31, 0.6)",
+        borderColor: "rgb(255, 152, 31)",
         borderWidth: 1,
       },
     ],

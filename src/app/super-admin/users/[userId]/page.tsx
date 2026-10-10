@@ -119,7 +119,7 @@ export default async function UserDetailsPage(props: PageProps) {
                 {clans.map((membership) => (
                   <div
                     key={membership.clan.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
+                    className="flex items-center justify-between rounded-sm border p-3"
                   >
                     <div>
                       <Link
@@ -160,7 +160,7 @@ export default async function UserDetailsPage(props: PageProps) {
             ) : (
               <div className="space-y-3">
                 {createdEvents.slice(0, 5).map((event) => (
-                  <div key={event.id} className="rounded-lg border p-3">
+                  <div key={event.id} className="rounded-sm border p-3">
                     <Link
                       href={`/super-admin/events/${event.id}`}
                       className="font-medium hover:underline"
@@ -208,7 +208,7 @@ export default async function UserDetailsPage(props: PageProps) {
                 {participatingEvents.slice(0, 5).map((participation) => (
                   <div
                     key={participation.event.id}
-                    className="rounded-lg border p-3"
+                    className="rounded-sm border p-3"
                   >
                     <Link
                       href={`/super-admin/events/${participation.event.id}`}
