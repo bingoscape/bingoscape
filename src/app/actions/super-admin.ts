@@ -1,7 +1,6 @@
 "use server"
 
 import { and, count, eq, ne, sql } from "drizzle-orm"
-import { revalidatePath } from "next/cache"
 
 import {
   clanAuditSnapshot,
@@ -38,6 +37,7 @@ import {
   events,
   users,
 } from "@/server/db/schema"
+import { revalidateAdmin } from "@/server/super-admin/revalidate"
 import {
   adminAction,
   conflictError,
@@ -257,8 +257,7 @@ export async function updateUser(
 ): Promise<AdminResult> {
   const result = await updateUserAction({ userId, data })
   if (result.success) {
-    revalidatePath(`/super-admin/users/${userId}`)
-    revalidatePath("/super-admin/users")
+    revalidateAdmin({ userIds: [userId] })
   }
   return result
 }
@@ -319,7 +318,8 @@ const deleteUserAction = adminAction(
 export async function deleteUser(userId: string): Promise<AdminResult> {
   const result = await deleteUserAction({ userId })
   if (result.success) {
-    revalidatePath("/super-admin/users")
+    // Also drops the user's created events and clears them as clan owner.
+    revalidateAdmin({ userIds: [userId], clanIds: [], eventIds: [] })
   }
   return result
 }
@@ -395,8 +395,7 @@ export async function updateClan(
 ): Promise<AdminResult> {
   const result = await updateClanAction({ clanId, data })
   if (result.success) {
-    revalidatePath(`/super-admin/clans/${clanId}`)
-    revalidatePath("/super-admin/clans")
+    revalidateAdmin({ clanIds: [clanId] })
   }
   return result
 }
@@ -439,7 +438,7 @@ const deleteClanAction = adminAction(
 export async function deleteClan(clanId: string): Promise<AdminResult> {
   const result = await deleteClanAction({ clanId })
   if (result.success) {
-    revalidatePath("/super-admin/clans")
+    revalidateAdmin({ clanIds: [clanId], eventIds: [] })
   }
   return result
 }
@@ -484,7 +483,7 @@ export async function removeClanMember(
 ): Promise<AdminResult> {
   const result = await removeClanMemberAction({ clanId, userId })
   if (result.success) {
-    revalidatePath(`/super-admin/clans/${clanId}`)
+    revalidateAdmin({ clanIds: [clanId], userIds: [userId] })
   }
   return result
 }
@@ -532,7 +531,7 @@ export async function updateClanMemberRole(
 ): Promise<AdminResult> {
   const result = await updateClanMemberRoleAction({ clanId, userId, role })
   if (result.success) {
-    revalidatePath(`/super-admin/clans/${clanId}`)
+    revalidateAdmin({ clanIds: [clanId], userIds: [userId] })
   }
   return result
 }
@@ -643,8 +642,7 @@ export async function updateEvent(
 ): Promise<AdminResult> {
   const result = await updateEventAction({ eventId, data })
   if (result.success) {
-    revalidatePath(`/super-admin/events/${eventId}`)
-    revalidatePath("/super-admin/events")
+    revalidateAdmin({ eventIds: [eventId] })
   }
   return result
 }
@@ -692,7 +690,7 @@ const deleteEventAction = adminAction(
 export async function deleteEvent(eventId: string): Promise<AdminResult> {
   const result = await deleteEventAction({ eventId })
   if (result.success) {
-    revalidatePath("/super-admin/events")
+    revalidateAdmin({ eventIds: [eventId] })
   }
   return result
 }
@@ -737,7 +735,7 @@ export async function removeEventParticipant(
 ): Promise<AdminResult> {
   const result = await removeEventParticipantAction({ eventId, userId })
   if (result.success) {
-    revalidatePath(`/super-admin/events/${eventId}`)
+    revalidateAdmin({ eventIds: [eventId], userIds: [userId] })
   }
   return result
 }
@@ -789,7 +787,7 @@ export async function updateEventParticipantRole(
     role,
   })
   if (result.success) {
-    revalidatePath(`/super-admin/events/${eventId}`)
+    revalidateAdmin({ eventIds: [eventId], userIds: [userId] })
   }
   return result
 }
