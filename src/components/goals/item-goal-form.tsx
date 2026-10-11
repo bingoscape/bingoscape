@@ -1,63 +1,32 @@
 "use client"
 
-import { Label } from "@/components/ui/label"
-import { OsrsItemSearch } from "@/components/osrs-item-search"
-import type { OsrsItem } from "@/types/osrs-items"
-import { NumberField } from "./number-field"
+import { ItemPicker } from "./item-picker"
+import type { SelectedItem } from "./types"
 
 interface ItemGoalFormProps {
-  selectedItems: OsrsItem[]
-  onSelectedItemsChange: (items: OsrsItem[]) => void
-  /** Raw text of the quantity field. */
-  targetValue: string
-  onTargetValueChange: (raw: string) => void
-  /** Focus the first field on mount. */
+  selectedItems: SelectedItem[]
+  onSelectedItemsChange: (items: SelectedItem[]) => void
+  /** Focus the item search on mount. */
   autoFocus?: boolean
 }
 
 export function ItemGoalForm({
   selectedItems,
   onSelectedItemsChange,
-  targetValue,
-  onTargetValueChange,
   autoFocus = true,
 }: ItemGoalFormProps) {
   return (
-    <div className="space-y-4">
-      <div className="space-y-1.5">
-        <Label className="text-sm font-medium">Items</Label>
-        <OsrsItemSearch
-          onItemSelect={(items) => {
-            if (Array.isArray(items)) {
-              onSelectedItemsChange(items)
-            } else {
-              onSelectedItemsChange([items])
-            }
-          }}
-          selectedItems={selectedItems}
-          placeholder="Search for items..."
-          multiSelect={true}
-          autoFocus={autoFocus}
-        />
-        {selectedItems.length > 0 && (
-          <p className="mt-2 text-xs font-medium text-primary">
-            {selectedItems.length} item{selectedItems.length !== 1 ? "s" : ""}{" "}
-            selected
-            <span className="font-normal text-muted-foreground">
-              {" "}
-              - a separate goal will be created for each item
-            </span>
-          </p>
-        )}
-      </div>
-      <NumberField
-        id="tree-itemTargetValue"
-        label="Quantity per item"
-        value={targetValue}
-        onValueChange={onTargetValueChange}
-        placeholder="1"
-        hint="How many times each item must be obtained. In a SUM group, this target is illustrative and does not cap contributions."
+    <div className="space-y-3">
+      <ItemPicker
+        value={selectedItems}
+        onChange={onSelectedItemsChange}
+        autoFocus={autoFocus}
       />
+      <p className="text-muted-foreground text-xs">
+        Each item becomes its own goal. The quantity is how many of that item
+        must be obtained. In a SUM group, this target is illustrative and does
+        not cap contributions.
+      </p>
     </div>
   )
 }

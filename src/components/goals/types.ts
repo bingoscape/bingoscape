@@ -1,8 +1,15 @@
 import type { GoalGroup, GoalTreeNode } from "@/app/actions/goal-groups"
+import type { OsrsItem } from "@/types/osrs-items"
 
 export type GroupOperator = "AND" | "OR" | "SUM"
 export type GoalType = "generic" | "item" | "metric"
 export type MetricType = "skill" | "boss" | "activity"
+
+/** An item picked for a new Goal, with the raw text of its quantity field. */
+export interface SelectedItem {
+  item: OsrsItem
+  quantity: string
+}
 
 /**
  * Goal payload of a tree node. `GoalTreeNode` does not declare `metricGoal`,

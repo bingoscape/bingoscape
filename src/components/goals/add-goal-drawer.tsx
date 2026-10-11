@@ -4,6 +4,7 @@ import { useRef, useState } from "react"
 import { Plus, Target, Package, Loader2, BarChart2 } from "lucide-react"
 import { parseItemName } from "osrs-item-data"
 import { Button } from "@/components/ui/button"
+import { getItemDisplayName } from "@/components/osrs-item-option"
 import {
   Sheet,
   SheetContent,
@@ -23,13 +24,13 @@ import {
   getMetricName,
   getMetricTargetCopy,
 } from "@/lib/osrs-metrics"
-import type { OsrsItem } from "@/types/osrs-items"
+import { MAX_GOALS_PER_BATCH } from "@/lib/goal-validation"
 import { AddedGoalsList, type AddedGoalEntry } from "./added-goals-list"
 import { GoalTypePicker } from "./goal-type-picker"
 import { GenericGoalForm } from "./generic-goal-form"
 import { ItemGoalForm } from "./item-goal-form"
 import { MetricGoalForm } from "./metric-goal-form"
-import type { GoalType, MetricType } from "./types"
+import type { GoalType, MetricType, SelectedItem } from "./types"
 import { resolveItemId } from "./utils"
 
 /** How many of the most recently added goals the drawer lists. */
@@ -65,6 +66,18 @@ export function AddGoalDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
+        onEscapeKeyDown={(event) => {
+          // Escape in a search field with text clears the text (the field does
+          // that itself) instead of closing the drawer and losing the picks.
+          const target = event.target
+          if (
+            target instanceof HTMLInputElement &&
+            target.hasAttribute("data-escape-clears") &&
+            target.value !== ""
+          ) {
+            event.preventDefault()
+          }
+        }}
         className="z-50 flex w-[min(100vw,540px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[540px]"
       >
         <AddGoalPanel
@@ -117,8 +130,7 @@ function AddGoalPanel({
   const [genericTarget, setGenericTarget] = useState("1")
 
   // Item goal state
-  const [selectedItems, setSelectedItems] = useState<OsrsItem[]>([])
-  const [itemTarget, setItemTarget] = useState("1")
+  const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([])
 
   // XP / Kills goal state
   const [metricType, setMetricType] = useState<MetricType>("skill")
@@ -139,12 +151,19 @@ function AddGoalPanel({
         if (selectedItems.length === 0) {
           return "Select at least one item to add."
         }
-        const error = validateNumberInput(itemTarget)
-        return error && `Quantity: ${error}`
+        if (selectedItems.length > MAX_GOALS_PER_BATCH) {
+          return `You can add up to ${MAX_GOALS_PER_BATCH} goals at once. Remove some items.`
+        }
+        for (const { item, quantity } of selectedItems) {
+          const error = validateNumberInput(quantity)
+          if (error) return `Quantity for ${getItemDisplayName(item)}: ${error}`
+        }
+        return null
       }
       case "metric": {
         if (!metricName) {
-          return `Select a ${metricCopy.nameLabel.toLowerCase()} to add.`
+          // "a skill", "a boss", "an activity"
+          return `Select ${/^[aeiou]/i.test(metricCopy.nameLabel) ? "an" : "a"} ${metricCopy.nameLabel.toLowerCase()} to add.`
         }
         const error = validateNumberInput(metricTarget)
         return error && `${metricCopy.targetLabel}: ${error}`
@@ -175,35 +194,33 @@ function AddGoalPanel({
   }
 
   const createItems = async () => {
-    const targetValue = parseTargetInput(itemTarget)
-    if (targetValue === null) return
-    const result = await createGoals(
-      tileId,
-      selectedItems.map((selectedItem) => {
-        const parsed = parseItemName(selectedItem.name)
-        return {
-          type: "item" as const,
-          itemId: resolveItemId(selectedItem),
-          itemName: selectedItem.name,
-          baseName: parsed.baseName,
-          imageUrl: selectedItem.imageUrl,
-          targetValue,
-          exactVariant: parsed.variant ?? null,
-        }
-      }),
-      { parentGroupId }
-    )
+    const inputs = []
+    for (const { item, quantity } of selectedItems) {
+      const targetValue = parseTargetInput(quantity)
+      if (targetValue === null) return
+      const parsed = parseItemName(item.name)
+      inputs.push({
+        type: "item" as const,
+        itemId: resolveItemId(item),
+        itemName: item.name,
+        baseName: parsed.baseName,
+        imageUrl: item.imageUrl,
+        targetValue,
+        exactVariant: parsed.variant ?? null,
+      })
+    }
+    const result = await createGoals(tileId, inputs, { parentGroupId })
     if (!result.success) {
       // Nothing was created, so keep the selection for another attempt.
       return result.error
     }
     recordAdded(
-      selectedItems.map(
-        (item) => `${item.name} x${formatNumber(targetValue)}`
+      inputs.map(
+        (input) =>
+          `${getItemDisplayName({ name: input.itemName })} x${formatNumber(input.targetValue)}`
       )
     )
     setSelectedItems([])
-    setItemTarget("1")
   }
 
   const createMetric = async () => {
@@ -309,8 +326,6 @@ function AddGoalPanel({
                 <ItemGoalForm
                   selectedItems={selectedItems}
                   onSelectedItemsChange={setSelectedItems}
-                  targetValue={itemTarget}
-                  onTargetValueChange={setItemTarget}
                   autoFocus={focusFirstField}
                 />
               )}
@@ -361,7 +376,9 @@ function AddGoalPanel({
             ) : goalType === "item" ? (
               <>
                 <Package aria-hidden="true" className="mr-2 h-4 w-4" />
-                Add Item Goal{selectedCount > 1 ? `s (${selectedCount})` : ""}
+                {selectedCount === 0
+                  ? "Add goals"
+                  : `Add ${selectedCount} ${selectedCount === 1 ? "goal" : "goals"}`}
               </>
             ) : goalType === "metric" ? (
               <>

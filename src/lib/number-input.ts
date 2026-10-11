@@ -1,4 +1,4 @@
-import { validateTargetValue } from "@/lib/goal-validation"
+import { MAX_GOAL_TARGET, validateTargetValue } from "@/lib/goal-validation"
 
 /** Result of reading what a user typed into a number field. */
 export type ParsedNumber =
@@ -91,4 +91,32 @@ export function formatNumberPreview(
   if (value === null) return null
   const label = value === 1 ? (unitSingular ?? unit) : unit
   return `= ${formatNumber(value)}${label ? ` ${label}` : ""}`
+}
+
+/**
+ * Moves a typed value one step up or down, for +/- buttons: "5" + 1 -> "6".
+ * The result stays within `min` to `max`, fractions round toward the step
+ * ("1.5" - 1 -> "1") and text that is not a number steps to `min`.
+ */
+export function stepNumberInput(
+  raw: string,
+  delta: 1 | -1,
+  { min = 1, max = MAX_GOAL_TARGET }: { min?: number; max?: number } = {}
+): string {
+  const parsed = parseNumberInput(raw)
+  if (parsed.kind !== "number") return String(min)
+  const base = delta > 0 ? Math.floor(parsed.value) : Math.ceil(parsed.value)
+  return String(Math.min(max, Math.max(min, base + delta)))
+}
+
+/** Whether a typed value can still be stepped in the given direction. */
+export function canStepNumberInput(
+  raw: string,
+  delta: 1 | -1,
+  { min = 1, max = MAX_GOAL_TARGET }: { min?: number; max?: number } = {}
+): boolean {
+  const parsed = parseNumberInput(raw)
+  // Text that is not a number can only be reset upwards, to `min`.
+  if (parsed.kind !== "number") return delta > 0
+  return delta > 0 ? parsed.value < max : parsed.value > min
 }
