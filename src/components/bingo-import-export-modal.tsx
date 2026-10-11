@@ -28,7 +28,7 @@ import {
   importBingoBoard,
   validateImportData,
 } from "@/app/actions/bingo-import-export"
-import type { ExportedBingo } from "@/app/actions/bingo-import-export"
+import type { ExportedBingo } from "@/lib/bingo-template-schema"
 import { useRouter } from "next/navigation"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
