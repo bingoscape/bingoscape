@@ -38,6 +38,9 @@ RUN \
   else echo "Lockfile not found." && exit 1; \
   fi
 
+# Bundle one-off maintenance scripts (run with `docker compose exec app node ...`)
+RUN npm run build:backfill
+
 # Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
@@ -63,6 +66,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/drizzle.config.prod.js ./drizzle.config.js
 COPY --from=builder /app/src/server/db ./src/server/db
+# One-off template metadata backfill; DATABASE_URL comes from the container env:
+#   docker compose exec app node scripts/backfill-template-metadata.mjs --dry-run
+COPY --from=builder /app/.backfill/backfill-template-metadata.mjs ./scripts/backfill-template-metadata.mjs
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules
 
