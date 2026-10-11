@@ -1,139 +1,138 @@
-import { getAllClans } from "@/app/actions/super-admin"
-import { SuperAdminClansTable } from "@/components/super-admin-clans-table"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Shield, Lock, Globe, TrendingUp } from "lucide-react"
+import type { Metadata } from "next"
+
+import { ClanActions } from "@/components/super-admin/clan-actions"
+import { ClanLink, UserLink } from "@/components/super-admin/admin-links"
+import {
+  AdminDataTable,
+  type AdminColumn,
+} from "@/components/super-admin/admin-data-table"
+import { PageHeader } from "@/components/super-admin/page-header"
+import { Badge } from "@/components/ui/badge"
+import {
+  parseListParams,
+  toHrefState,
+  type RawSearchParams,
+} from "@/lib/admin-list-params"
+import { formatDate, plural } from "@/lib/super-admin-format"
+import {
+  CLAN_LIST_CONFIG,
+  listClans,
+  type ClanListRow,
+} from "@/server/super-admin/queries"
+
+export const metadata: Metadata = { title: "Clans - Super admin" }
 
 interface PageProps {
-  searchParams: Promise<{
-    page?: string
-    search?: string
-  }>
+  searchParams: Promise<RawSearchParams>
 }
 
-export default async function SuperAdminClansPage(props: PageProps) {
-  const searchParams = await props.searchParams
-  const page = Number.parseInt(searchParams.page ?? "1")
-  const search = searchParams.search ?? ""
+const columns: AdminColumn<ClanListRow>[] = [
+  {
+    key: "name",
+    header: "Clan",
+    sortKey: "name",
+    isRowHeader: true,
+    cell: (clan) => (
+      <div className="min-w-0">
+        <ClanLink clan={clan} />
+        <div className="text-muted-foreground truncate text-xs md:hidden">
+          {clan.owner ? "Owner: " : "No owner"}
+          {clan.owner
+            ? (clan.owner.name ?? clan.owner.runescapeName ?? "Unnamed")
+            : ""}
+        </div>
+        {clan.description ? (
+          <div className="text-muted-foreground line-clamp-1 hidden max-w-md text-xs md:block">
+            {clan.description}
+          </div>
+        ) : null}
+      </div>
+    ),
+  },
+  {
+    key: "owner",
+    header: "Owner",
+    hideOnMobile: true,
+    cell: (clan) =>
+      clan.owner ? (
+        <UserLink user={clan.owner} />
+      ) : (
+        <Badge variant="warning">No owner</Badge>
+      ),
+  },
+  {
+    key: "members",
+    header: "Members",
+    sortKey: "members",
+    firstDir: "desc",
+    cell: (clan) => clan.memberCount,
+  },
+  {
+    key: "events",
+    header: "Events",
+    sortKey: "events",
+    firstDir: "desc",
+    cell: (clan) => clan.eventCount,
+  },
+  {
+    key: "created",
+    header: "Created",
+    sortKey: "created",
+    firstDir: "desc",
+    hideOnMobile: true,
+    cell: (clan) => formatDate(clan.createdAt),
+  },
+]
 
-  const clansData = await getAllClans(page, 50, search)
+export default async function SuperAdminClansPage({ searchParams }: PageProps) {
+  const params = parseListParams(await searchParams, CLAN_LIST_CONFIG)
+  const data = await listClans(params)
 
   return (
-    <div className="space-y-8">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 rounded-sm bg-primary/5" />
-        <div className="osrs-panel relative p-8 shadow-lg lg:p-12">
-          <div className="mb-6 flex items-center gap-4">
-            <div className="rounded-sm bg-primary/10 p-3">
-              <Shield className="h-8 w-8 text-primary" />
-            </div>
-            <div>
-              <h1 className="osrs-heading text-primary text-4xl font-bold lg:text-5xl">
-                Clan Management
-              </h1>
-              <p className="mt-2 text-lg text-muted-foreground">
-                Monitor and manage all platform clans
-              </p>
-            </div>
-          </div>
-          <div className="rounded-sm border border-success/40 bg-success/10 p-4">
-            <p className="font-medium text-success">
-              🛡️ Clan Overview
-            </p>
-            <p className="mt-1 text-sm text-success">
-              View clan details, manage members, and track clan activity across
-              the platform.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid gap-6 md:grid-cols-4">
-        <Card className="transform border-0 bg-linear-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Clans</CardTitle>
-            <div className="rounded-sm bg-success/10 p-2">
-              <Shield className="h-4 w-4 text-success" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="osrs-heading text-primary text-3xl font-bold">
-              {clansData.totalCount}
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Created on the platform
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="transform border-0 bg-linear-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Open Clans</CardTitle>
-            <div className="rounded-sm bg-info/10 p-2">
-              <Globe className="h-4 w-4 text-info" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="osrs-heading text-primary text-3xl font-bold">
-              {clansData.clans.length}
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">Public clans</p>
-          </CardContent>
-        </Card>
-
-        <Card className="transform border-0 bg-linear-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Private Clans</CardTitle>
-            <div className="rounded-sm bg-pending/10 p-2">
-              <Lock className="h-4 w-4 text-pending" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="osrs-heading text-primary text-3xl font-bold">
-              {clansData.clans.length}
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">Private clans</p>
-          </CardContent>
-        </Card>
-
-        <Card className="transform border-0 bg-linear-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Showing Results
-            </CardTitle>
-            <div className="rounded-sm bg-warning/10 p-2">
-              <TrendingUp className="h-4 w-4 text-warning" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="osrs-heading text-primary text-3xl font-bold">
-              {clansData.clans.length}
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {search ? `Filtered by "${search}"` : "Current page"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Clans Table */}
-      <Card className="border-0 bg-linear-to-r from-card to-muted/50 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <div className="rounded-sm bg-success/10 p-2">
-              <Shield className="h-5 w-5 text-success" />
-            </div>
-            All Clans
-            <span className="text-sm font-normal text-muted-foreground">
-              ({clansData.totalCount})
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <SuperAdminClansTable {...clansData} search={search} />
-        </CardContent>
-      </Card>
-    </div>
+    <>
+      <PageHeader
+        title="Clans"
+        breadcrumbs={[{ label: "Clans" }]}
+        meta={
+          <span>
+            {plural(data.totalCount, "clan")}
+            {params.filter || params.q ? " match" : " in total"}
+          </span>
+        }
+      />
+      <AdminDataTable
+        idPrefix="clans"
+        caption="Clans"
+        noun="clans"
+        columns={columns}
+        rows={data.rows}
+        getRowKey={(clan) => clan.id}
+        rowActions={(clan) => (
+          <ClanActions
+            variant="menu"
+            clan={{
+              id: clan.id,
+              name: clan.name,
+              description: clan.description,
+              ownerId: clan.owner?.id ?? null,
+            }}
+            counts={{ members: clan.memberCount, events: clan.eventCount }}
+          />
+        )}
+        basePath="/super-admin/clans"
+        state={toHrefState(params, CLAN_LIST_CONFIG)}
+        sort={{ key: params.sort, dir: params.dir }}
+        page={data.page}
+        totalPages={data.totalPages}
+        totalCount={data.totalCount}
+        pageSize={data.pageSize}
+        searchLabel="Search clans"
+        searchPlaceholder="Search by name or description"
+        filters={[
+          { label: "All", value: null },
+          { label: "No owner", value: "no-owner" },
+        ]}
+      />
+    </>
   )
 }

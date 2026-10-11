@@ -1,126 +1,142 @@
-import { getAllUsers } from "@/app/actions/super-admin"
-import { SuperAdminUsersTable } from "@/components/super-admin-users-table"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, UserCheck, TrendingUp } from "lucide-react"
+import type { Metadata } from "next"
+import Link from "next/link"
+
+import {
+  AdminDataTable,
+  type AdminColumn,
+} from "@/components/super-admin/admin-data-table"
+import { PageHeader } from "@/components/super-admin/page-header"
+import { UserActions } from "@/components/super-admin/user-actions"
+import { UserAvatar } from "@/components/super-admin/user-avatar"
+import { Badge } from "@/components/ui/badge"
+import {
+  parseListParams,
+  toHrefState,
+  type RawSearchParams,
+} from "@/lib/admin-list-params"
+import { plural, userLabel } from "@/lib/super-admin-format"
+import {
+  listUsers,
+  USER_LIST_CONFIG,
+  type UserListRow,
+} from "@/server/super-admin/queries"
+
+export const metadata: Metadata = { title: "Users - Super admin" }
 
 interface PageProps {
-  searchParams: Promise<{
-    page?: string
-    search?: string
-  }>
+  searchParams: Promise<RawSearchParams>
 }
 
-export default async function SuperAdminUsersPage(props: PageProps) {
-  const searchParams = await props.searchParams
-  const page = Number.parseInt(searchParams.page ?? "1")
-  const search = searchParams.search ?? ""
-
-  const usersData = await getAllUsers(page, 50, search)
-
-  return (
-    <div className="space-y-8">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 rounded-sm bg-primary/5" />
-        <div className="osrs-panel relative p-8 shadow-lg lg:p-12">
-          <div className="mb-6 flex items-center gap-4">
-            <div className="rounded-sm bg-primary/10 p-3">
-              <Users className="h-8 w-8 text-primary" />
-            </div>
-            <div>
-              <h1 className="osrs-heading text-primary text-4xl font-bold lg:text-5xl">
-                User Management
-              </h1>
-              <p className="mt-2 text-lg text-muted-foreground">
-                Monitor and manage all platform users
-              </p>
-            </div>
-          </div>
-          <div className="rounded-sm border border-info/40 bg-info/10 p-4">
-            <p className="font-medium text-info">
-              👥 User Overview
-            </p>
-            <p className="mt-1 text-sm text-info">
-              View user profiles, manage permissions, and track user activity
-              across the platform.
-            </p>
+const columns: AdminColumn<UserListRow>[] = [
+  {
+    key: "name",
+    header: "User",
+    sortKey: "name",
+    isRowHeader: true,
+    cell: (user) => {
+      const label = userLabel(user)
+      return (
+        <div className="flex items-center gap-3">
+          <UserAvatar label={label} image={user.image} />
+          <div className="min-w-0">
+            <Link
+              href={`/super-admin/users/${user.id}`}
+              className="focus-visible:ring-ring rounded-sm font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-hidden"
+            >
+              {label}
+            </Link>
+            {!user.emailVerified ? (
+              <Badge variant="outline" className="ml-2">
+                Unverified
+              </Badge>
+            ) : null}
+            {user.email ? (
+              <div className="text-muted-foreground truncate text-xs md:hidden">
+                {user.email}
+              </div>
+            ) : null}
           </div>
         </div>
-      </div>
+      )
+    },
+  },
+  {
+    key: "email",
+    header: "Email",
+    sortKey: "email",
+    hideOnMobile: true,
+    cell: (user) =>
+      user.email ?? <span className="text-muted-foreground">None</span>,
+  },
+  {
+    key: "rsn",
+    header: "RuneScape name",
+    sortKey: "rsn",
+    hideOnMobile: true,
+    cell: (user) =>
+      user.runescapeName ?? (
+        <span className="text-muted-foreground">Not set</span>
+      ),
+  },
+  {
+    key: "clans",
+    header: "Clans",
+    hideOnMobile: true,
+    cell: (user) => user.clanMemberships,
+  },
+  {
+    key: "created",
+    header: "Events created",
+    hideOnMobile: true,
+    cell: (user) => user.createdEvents,
+  },
+]
 
-      {/* Quick Stats */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="transform border-0 bg-linear-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <div className="rounded-sm bg-info/10 p-2">
-              <Users className="h-4 w-4 text-info" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="osrs-heading text-primary text-3xl font-bold">
-              {usersData.totalCount}
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Registered on the platform
-            </p>
-          </CardContent>
-        </Card>
+export default async function SuperAdminUsersPage({ searchParams }: PageProps) {
+  const params = parseListParams(await searchParams, USER_LIST_CONFIG)
+  const data = await listUsers(params)
 
-        <Card className="transform border-0 bg-linear-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Verified Users
-            </CardTitle>
-            <div className="rounded-sm bg-success/10 p-2">
-              <UserCheck className="h-4 w-4 text-success" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="osrs-heading text-primary text-3xl font-bold">
-              {usersData.users.filter((user) => user.emailVerified).length}
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">Email verified</p>
-          </CardContent>
-        </Card>
-
-        <Card className="transform border-0 bg-linear-to-r from-card to-muted/50 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Showing Results
-            </CardTitle>
-            <div className="rounded-sm bg-pending/10 p-2">
-              <TrendingUp className="h-4 w-4 text-pending" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="osrs-heading text-primary text-3xl font-bold">
-              {usersData.users.length}
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {search ? `Filtered by "${search}"` : "Current page"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Users Table */}
-      <Card className="border-0 bg-linear-to-r from-card to-muted/50 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <div className="rounded-sm bg-info/10 p-2">
-              <Users className="h-5 w-5 text-info" />
-            </div>
-            All Users
-            <span className="text-sm font-normal text-muted-foreground">
-              ({usersData.totalCount})
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <SuperAdminUsersTable {...usersData} search={search} />
-        </CardContent>
-      </Card>
-    </div>
+  return (
+    <>
+      <PageHeader
+        title="Users"
+        breadcrumbs={[{ label: "Users" }]}
+        meta={<span>{plural(data.totalCount, "user")} in total</span>}
+      />
+      <AdminDataTable
+        idPrefix="users"
+        caption="Users"
+        noun="users"
+        columns={columns}
+        rows={data.rows}
+        getRowKey={(user) => user.id}
+        rowActions={(user) => (
+          <UserActions
+            variant="menu"
+            user={{
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              runescapeName: user.runescapeName,
+            }}
+            counts={{
+              createdEvents: user.createdEvents,
+              ownedClans: user.ownedClans,
+              clanMemberships: user.clanMemberships,
+              eventParticipations: user.eventParticipations,
+            }}
+          />
+        )}
+        basePath="/super-admin/users"
+        state={toHrefState(params, USER_LIST_CONFIG)}
+        sort={{ key: params.sort, dir: params.dir }}
+        page={data.page}
+        totalPages={data.totalPages}
+        totalCount={data.totalCount}
+        pageSize={data.pageSize}
+        searchLabel="Search users"
+        searchPlaceholder="Search by name, email or RuneScape name"
+      />
+    </>
   )
 }
