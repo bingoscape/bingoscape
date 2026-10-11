@@ -133,7 +133,7 @@ export function MembershipActions({
         title={`Remove ${noun}`}
         description={`Remove ${member.label} from ${parentName}.${
           isLastAdmin
-            ? ` They are the last admin, so the ${parentNoun} will be left without one.`
+            ? ` They are the last admin, so the server will refuse until another admin exists.`
             : ""
         }`}
         confirmText={member.confirmText}
@@ -239,8 +239,8 @@ function RoleForm({
       </div>
       {isLastAdmin && role !== "admin" ? (
         <p className="border-warning/50 bg-warning/10 rounded-sm border p-3 text-sm">
-          This is the last admin. Saving leaves the {parentNoun} without any
-          admin.
+          This is the last admin. Saving is refused until another admin exists
+          in this {parentNoun}.
         </p>
       ) : null}
       <FormError message={formError} />

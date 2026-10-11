@@ -1,8 +1,14 @@
 "use server"
 
-import { and, eq } from "drizzle-orm"
+import { and, count, eq, ne, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 
+import { getSuperAdminEmails, normalizeEmail } from "@/lib/super-admin-email"
+import {
+  emailChangeBlocker,
+  membershipChangeBlocker,
+  userDeleteBlocker,
+} from "@/lib/super-admin-invariants"
 import {
   clanMemberSchema,
   deleteClanSchema,
@@ -27,6 +33,7 @@ import {
 } from "@/server/db/schema"
 import {
   adminAction,
+  conflictError,
   invalidError,
   notFoundError,
   type AdminResult,
@@ -53,6 +60,91 @@ async function assertUserExists(tx: AdminTx, userId: string, what: string) {
   if (!row) throw notFoundError(what)
 }
 
+/**
+ * Locks the membership's parent row for the rest of the transaction, so two
+ * concurrent demotions cannot both see "another admin exists".
+ */
+async function guardMembershipChange(
+  tx: AdminTx,
+  scope: "clan" | "event",
+  parentId: string,
+  userId: string,
+  nextRole: string | null
+) {
+  if (scope === "clan") {
+    const [clan] = await tx
+      .select({ ownerId: clans.ownerId })
+      .from(clans)
+      .where(eq(clans.id, parentId))
+      .for("update")
+      .limit(1)
+    if (!clan) throw notFoundError("Clan")
+
+    const [member] = await tx
+      .select({ role: clanMembers.role })
+      .from(clanMembers)
+      .where(
+        and(eq(clanMembers.clanId, parentId), eq(clanMembers.userId, userId))
+      )
+      .limit(1)
+    if (!member) throw notFoundError("Clan member")
+
+    const [admins] = await tx
+      .select({ total: count() })
+      .from(clanMembers)
+      .where(
+        and(eq(clanMembers.clanId, parentId), eq(clanMembers.role, "admin"))
+      )
+    const reason = membershipChangeBlocker({
+      scope,
+      isOwner: clan.ownerId === userId,
+      currentRole: member.role,
+      adminCount: admins?.total ?? 0,
+      nextRole,
+    })
+    if (reason) throw conflictError(reason)
+    return
+  }
+
+  const [event] = await tx
+    .select({ id: events.id })
+    .from(events)
+    .where(eq(events.id, parentId))
+    .for("update")
+    .limit(1)
+  if (!event) throw notFoundError("Event")
+
+  const [participant] = await tx
+    .select({ role: eventParticipants.role })
+    .from(eventParticipants)
+    .where(
+      and(
+        eq(eventParticipants.eventId, parentId),
+        eq(eventParticipants.userId, userId)
+      )
+    )
+    .limit(1)
+  if (!participant) throw notFoundError("Participant")
+
+  const [admins] = await tx
+    .select({ total: count() })
+    .from(eventParticipants)
+    .where(
+      and(
+        eq(eventParticipants.eventId, parentId),
+        eq(eventParticipants.role, "admin")
+      )
+    )
+  const reason = membershipChangeBlocker({
+    scope,
+    isOwner: false,
+    currentRole: participant.role,
+    adminCount: admins?.total ?? 0,
+    nextRole,
+  })
+  if (reason) throw conflictError(reason)
+}
+
 /* -------------------------------------------------------------------------- */
 /* Users                                                                       */
 /* -------------------------------------------------------------------------- */
@@ -66,8 +158,51 @@ const updateUserAction = adminAction(
 
     const set: Partial<typeof users.$inferInsert> = {}
     if (data.name !== undefined) set.name = data.name
-    if (data.email !== undefined) set.email = data.email
     if (data.runescapeName !== undefined) set.runescapeName = data.runescapeName
+
+    if (data.email !== undefined) {
+      // Serialise admin email edits so the uniqueness check below cannot race.
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext('super-admin:user-email'))`
+      )
+      const [current] = await tx
+        .select({ email: users.email })
+        .from(users)
+        .where(eq(users.id, userId))
+        .for("update")
+        .limit(1)
+      if (!current) throw notFoundError("User")
+
+      const newEmail = normalizeEmail(data.email)
+      // An unchanged address (ignoring case/whitespace) is left untouched.
+      if (normalizeEmail(current.email) !== newEmail) {
+        const reason = emailChangeBlocker({
+          oldEmail: current.email,
+          newEmail,
+          adminEmails: getSuperAdminEmails(),
+        })
+        if (reason) throw conflictError(reason)
+
+        if (newEmail) {
+          const [taken] = await tx
+            .select({ id: users.id })
+            .from(users)
+            .where(
+              and(
+                sql`lower(${users.email}) = ${newEmail}`,
+                ne(users.id, userId)
+              )
+            )
+            .limit(1)
+          if (taken) {
+            throw conflictError("Another user already uses this email.")
+          }
+        }
+        set.email = newEmail
+      }
+    }
+
+    if (Object.keys(set).length === 0) return
 
     const updated = await tx
       .update(users)
@@ -97,7 +232,23 @@ export async function updateUser(
 const deleteUserAction = adminAction(
   "user.delete",
   deleteUserSchema,
-  async ({ tx, input }) => {
+  async ({ tx, admin, input }) => {
+    const [target] = await tx
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(eq(users.id, input.userId))
+      .for("update")
+      .limit(1)
+    if (!target) throw notFoundError("User")
+
+    const reason = userDeleteBlocker({
+      actorId: admin.adminId,
+      targetId: target.id,
+      targetEmail: target.email,
+      adminEmails: getSuperAdminEmails(),
+    })
+    if (reason) throw conflictError(reason)
+
     // Product behavior kept as-is: events the user created are deleted too
     // (their boards, teams and submissions cascade). Everything else owned by
     // the user (team/event/clan memberships, submissions, sessions, accounts)
@@ -191,6 +342,7 @@ const removeClanMemberAction = adminAction(
   "clan.member.remove",
   clanMemberSchema,
   async ({ tx, input }) => {
+    await guardMembershipChange(tx, "clan", input.clanId, input.userId, null)
     const deleted = await tx
       .delete(clanMembers)
       .where(
@@ -219,6 +371,13 @@ const updateClanMemberRoleAction = adminAction(
   "clan.member.role",
   updateClanMemberRoleSchema,
   async ({ tx, input }) => {
+    await guardMembershipChange(
+      tx,
+      "clan",
+      input.clanId,
+      input.userId,
+      input.role
+    )
     const updated = await tx
       .update(clanMembers)
       .set({ role: input.role })
@@ -344,6 +503,7 @@ const removeEventParticipantAction = adminAction(
   "event.participant.remove",
   eventParticipantSchema,
   async ({ tx, input }) => {
+    await guardMembershipChange(tx, "event", input.eventId, input.userId, null)
     const deleted = await tx
       .delete(eventParticipants)
       .where(
@@ -372,6 +532,13 @@ const updateEventParticipantRoleAction = adminAction(
   "event.participant.role",
   updateEventParticipantRoleSchema,
   async ({ tx, input }) => {
+    await guardMembershipChange(
+      tx,
+      "event",
+      input.eventId,
+      input.userId,
+      input.role
+    )
     const updated = await tx
       .update(eventParticipants)
       .set({ role: input.role, updatedAt: new Date() })
