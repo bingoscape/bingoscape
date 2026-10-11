@@ -1,6 +1,6 @@
 # GitHub Secrets Configuration
 
-Complete list of GitHub Secrets required for CI/CD pipelines, deployments, and migrations.
+Complete list of GitHub Secrets used by the deploy and migration workflows. The deploy workflow renders them into `~/bingoscape/.env` on the server (see [GITHUB-ACTIONS.md](./GITHUB-ACTIONS.md)).
 
 ## How to Add Secrets
 
@@ -18,15 +18,21 @@ These secrets **must** be configured for the deployment pipeline to work.
 
 ### Database Configuration
 
-| Secret Name   | Description                                    | Example Value         |
-| ------------- | ---------------------------------------------- | --------------------- |
-| `DB_PASSWORD` | PostgreSQL database password                   | `secure_password_123` |
-| `DB_NAME`     | PostgreSQL database name                       | `bingoscapenext`      |
-| `DB_USER`     | PostgreSQL database username                   | `bingoscapenext`      |
-| `DB_HOST`     | PostgreSQL database host (Docker service name) | `bingoscapedb`        |
-| `DB_PORT`     | PostgreSQL database port                       | `5432`                |
+| Secret Name   | Description                                                   | Example Value         | Default when unset |
+| ------------- | ------------------------------------------------------------- | --------------------- | ------------------ |
+| `DB_PASSWORD` | PostgreSQL database password (**required**)                   | `secure_password_123` | -                  |
+| `DB_NAME`     | PostgreSQL database name                                      | `bingoscapenext`      | `bingoscape`       |
+| `DB_USER`     | PostgreSQL database username                                  | `bingoscapenext`      | `postgres`         |
+| `DB_HOST`     | PostgreSQL host name inside the compose network               | `bingoscapedb`        | `bingoscapedb`     |
+| `DB_PORT`     | Port PostgreSQL is published on, on `127.0.0.1` of the server | `5432`                | `5432`             |
 
-**Note:** If your password contains `$`, it will be escaped automatically in the generated .env file.
+The defaults are those of `docker-compose.yml`. `scripts/backup-db.sh` and `scripts/restore-db.sh` read `DB_NAME` and `DB_USER` from the server's `.env` with the same defaults, so they always use the database the app uses.
+
+**Notes:**
+
+- Values are quoted for docker compose when the `.env` is generated, so characters like `"`, `$`, `#` and `\` survive. Line breaks are not allowed.
+- The app connects with `postgresql://DB_USER:DB_PASSWORD@DB_HOST:5432/DB_NAME`, built by docker compose without URL-encoding. Use a password without URL-special characters (`@ : / ? # %`), for example `openssl rand -hex 24`.
+- Changing `DB_PASSWORD` does not change the password of an already initialized database volume. Change it in PostgreSQL first.
 
 ### Authentication Configuration
 
@@ -44,9 +50,11 @@ These secrets **must** be configured for the deployment pipeline to work.
 
 ### Application Configuration
 
-| Secret Name          | Description                  | Example Value                          |
-| -------------------- | ---------------------------- | -------------------------------------- |
-| `SUPER_ADMIN_EMAILS` | Comma-separated admin emails | `admin@example.com,admin2@example.com` |
+| Secret Name                          | Description                                                                                                                                         | Example Value                          |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `SUPER_ADMIN_EMAILS`                 | Comma-separated admin emails                                                                                                                        | `admin@example.com,admin2@example.com` |
+| `CRON_SECRET`                        | Bearer secret for `/api/cron/unlock` (scheduled bingo unlock). The endpoint answers 401 while it is unset (recommended)                             | `openssl rand -hex 32`                 |
+| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | Stable key for Next.js server action IDs/closures (recommended). Without it, every build gets a new key and open browser tabs break after a deploy. | `openssl rand -base64 32`              |
 
 ### SSH Access (For Deployments & Migrations)
 
@@ -70,6 +78,17 @@ cat github_actions_deploy
 cat github_actions_deploy.pub
 ```
 
+#### Pinning the server host key (recommended)
+
+`SSH_HOST_FINGERPRINT` is optional. When set, the deploy and migrate workflows verify the server's SSH host key against it and refuse to connect on a mismatch (protection against man-in-the-middle). When it is empty, host key verification is skipped.
+
+```bash
+# Run on the server (or use ssh-keyscan from your machine); the value to store is the SHA256:... string
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub -E sha256
+```
+
+Store the full `SHA256:...` value as the `SSH_HOST_FINGERPRINT` secret. Update it if the server's host keys are ever regenerated.
+
 ---
 
 ## Optional Secrets
@@ -78,12 +97,14 @@ These secrets are optional but recommended for enhanced functionality.
 
 ### Additional OAuth Providers
 
-| Secret Name            | Description                           | Where to Get                                                        |
-| ---------------------- | ------------------------------------- | ------------------------------------------------------------------- |
-| `GITHUB_CLIENT_ID`     | GitHub OAuth Client ID (optional)     | [GitHub Developer Settings](https://github.com/settings/developers) |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret (optional) | [GitHub Developer Settings](https://github.com/settings/developers) |
-| `GOOGLE_CLIENT_ID`     | Google OAuth Client ID (optional)     | [Google Cloud Console](https://console.cloud.google.com/)           |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret (optional) | [Google Cloud Console](https://console.cloud.google.com/)           |
+| Secret Name              | Description                           | Where to Get                                                        |
+| ------------------------ | ------------------------------------- | ------------------------------------------------------------------- |
+| `GH_OAUTH_CLIENT_ID`     | GitHub OAuth Client ID (optional)     | [GitHub Developer Settings](https://github.com/settings/developers) |
+| `GH_OAUTH_CLIENT_SECRET` | GitHub OAuth Client Secret (optional) | [GitHub Developer Settings](https://github.com/settings/developers) |
+| `GOOGLE_CLIENT_ID`       | Google OAuth Client ID (optional)     | [Google Cloud Console](https://console.cloud.google.com/)           |
+| `GOOGLE_CLIENT_SECRET`   | Google OAuth Client Secret (optional) | [Google Cloud Console](https://console.cloud.google.com/)           |
+
+**Why `GH_OAUTH_*`?** GitHub reserves secret names starting with `GITHUB_`, so `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` can never be created as secrets. The deploy workflow reads `GH_OAUTH_CLIENT_ID`/`GH_OAUTH_CLIENT_SECRET` and writes them to the server's `.env` as `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`, which are the names the app expects.
 
 **Note:** If you don't configure these, users simply won't see GitHub/Google login options.
 
@@ -93,12 +114,11 @@ These secrets are optional but recommended for enhanced functionality.
 
 These secrets are automatically provided by GitHub - no configuration needed.
 
-| Secret Name         | Description                         | Usage                         |
-| ------------------- | ----------------------------------- | ----------------------------- |
-| `GITHUB_TOKEN`      | Automatic token for GitHub API      | Pushing Docker images to GHCR |
-| `github.actor`      | GitHub username triggering workflow | Login to GHCR                 |
-| `github.repository` | Repository name (owner/repo)        | Docker image naming           |
-| `github.sha`        | Commit SHA                          | Image tagging                 |
+| Secret Name         | Description                         | Usage                                                                    |
+| ------------------- | ----------------------------------- | ------------------------------------------------------------------------ |
+| `GITHUB_TOKEN`      | Automatic token for GitHub API      | Pushing images to GHCR (CI), pulling them on the server (deploy/migrate) |
+| `github.actor`      | GitHub username triggering workflow | Login to GHCR                                                            |
+| `github.repository` | Repository name (owner/repo)        | Docker image naming                                                      |
 
 ---
 
@@ -108,11 +128,10 @@ Use this checklist to ensure all required secrets are configured:
 
 ### ✅ Database Secrets
 
-- [ ] `DB_PASSWORD` - Configured with strong password
-- [ ] `DB_NAME` - Set to your database name
-- [ ] `DB_USER` - Set to your database username
-- [ ] `DB_HOST` - Set to Docker service name (`bingoscapedb`)
-- [ ] `DB_PORT` - Set to `5432`
+- [ ] `DB_PASSWORD` - Configured with strong, URL-safe password
+- [ ] `DB_NAME` - Matches the existing database (default `bingoscape`)
+- [ ] `DB_USER` - Matches the existing database user (default `postgres`)
+- [ ] `DB_HOST` / `DB_PORT` - Only if you changed the defaults
 
 ### ✅ Authentication Secrets
 
@@ -128,6 +147,8 @@ Use this checklist to ensure all required secrets are configured:
 ### ✅ Application Secrets
 
 - [ ] `SUPER_ADMIN_EMAILS` - At least one admin email configured
+- [ ] `CRON_SECRET` - Generated (recommended)
+- [ ] `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` - Generated (recommended)
 
 ### ✅ SSH Secrets (For Deployments)
 
@@ -135,30 +156,21 @@ Use this checklist to ensure all required secrets are configured:
 - [ ] `SSH_USER` - SSH username
 - [ ] `SSH_PORT` - SSH port (usually `22`)
 - [ ] `SSH_PRIVATE_KEY` - Private key content
+- [ ] `SSH_HOST_FINGERPRINT` - (Recommended) SHA256 fingerprint of the server host key
 - [ ] Public key added to server's `~/.ssh/authorized_keys`
 
 ### ⚙️ Optional Secrets
 
-- [ ] `GITHUB_CLIENT_ID` - (Optional) For GitHub OAuth
-- [ ] `GITHUB_CLIENT_SECRET` - (Optional) For GitHub OAuth
+- [ ] `GH_OAUTH_CLIENT_ID` - (Optional) For GitHub OAuth
+- [ ] `GH_OAUTH_CLIENT_SECRET` - (Optional) For GitHub OAuth
 - [ ] `GOOGLE_CLIENT_ID` - (Optional) For Google OAuth
 - [ ] `GOOGLE_CLIENT_SECRET` - (Optional) For Google OAuth
 
 ---
 
-## Environment-Specific Secrets
+## Environment Secrets
 
-If you're using GitHub Environments (production/staging), you can configure environment-specific secrets:
-
-**Settings → Environments → [Environment Name] → Add secret**
-
-This allows different values for production vs staging:
-
-| Secret         | Production Value         | Staging Value                    |
-| -------------- | ------------------------ | -------------------------------- |
-| `NEXTAUTH_URL` | `https://bingoscape.org` | `https://staging.bingoscape.org` |
-| `DB_NAME`      | `bingoscape_prod`        | `bingoscape_staging`             |
-| `SSH_HOST`     | `prod.bingoscape.org`    | `staging.bingoscape.org`         |
+The deploy and migration workflows run in the GitHub Environment `production` (there is no staging environment). Secrets can be stored either as repository secrets or as secrets of that environment (**Settings -> Environments -> production -> Add secret**); environment secrets take precedence and let you add protection rules such as required reviewers.
 
 ---
 
@@ -225,26 +237,14 @@ GitHub automatically logs all secret usage:
 ssh -i github_actions_deploy -p 22 deploy@your-server.com "echo 'SSH connection successful'"
 ```
 
-### Test Deployment (Dry Run)
+### Check which secrets are set
 
-Create a test workflow to validate secrets without deploying:
-
-```yaml
-name: Test Secrets
-on: workflow_dispatch
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Validate secrets are set
-        run: |
-          echo "Testing required secrets..."
-          [ -n "${{ secrets.DB_PASSWORD }}" ] && echo "✅ DB_PASSWORD" || echo "❌ DB_PASSWORD missing"
-          [ -n "${{ secrets.DB_NAME }}" ] && echo "✅ DB_NAME" || echo "❌ DB_NAME missing"
-          [ -n "${{ secrets.NEXTAUTH_SECRET }}" ] && echo "✅ NEXTAUTH_SECRET" || echo "❌ NEXTAUTH_SECRET missing"
-          # Add more checks...
+```bash
+gh secret list                      # repository secrets
+gh secret list --env production     # environment secrets
 ```
+
+Names that must exist: `DB_PASSWORD`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `SSH_HOST`, `SSH_USER`, `SSH_PORT`, `SSH_PRIVATE_KEY`. The deploy workflow fails with a clear message if one of the required ones is empty.
 
 ---
 
@@ -257,8 +257,8 @@ jobs:
 **Solution:**
 
 1. Verify secret name matches exactly (case-sensitive)
-2. Check if secret is set at repository or environment level
-3. Ensure you're accessing the correct environment
+2. Check if secret is set at repository or environment (`production`) level
+3. Secrets whose names start with `GITHUB_` cannot be created: use `GH_OAUTH_CLIENT_ID` / `GH_OAUTH_CLIENT_SECRET`
 
 ### SSH Authentication Failed
 
@@ -292,7 +292,7 @@ Update the `NEXTAUTH_SECRET` secret in GitHub.
 
 1. Verify `DB_PASSWORD` matches database password
 2. Check `DB_USER` and `DB_NAME` are correct
-3. Ensure `DB_HOST` matches docker-compose service name
+3. Ensure `DB_HOST` matches the compose host name (default `bingoscapedb`) and the password has no URL-special characters
 4. Test database connection on server
 
 ---

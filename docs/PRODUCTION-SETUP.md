@@ -46,10 +46,12 @@ Complete step-by-step guide for deploying Bingoscape Next to a Debian server usi
 
 ### Deployment Flow
 
-1. **Code Push** → GitHub automatically builds and pushes Docker image to GHCR
-2. **Manual Deploy** → GitHub Actions deploys image to your server via SSH
-3. **Automatic Setup** → Server pulls image, generates config, starts containers
-4. **Health Check** → Verifies deployment was successful
+1. **Code Push** → GitHub automatically builds and pushes the app and migrator images to GHCR (`:main`, `:sha-<short>`)
+2. **Manual Deploy** → You run the Deploy workflow with an image tag; GitHub Actions deploys it to your server via SSH
+3. **Automatic Setup** → Server pulls the images, generates config, backs up the database, runs migrations, then starts the new app
+4. **Health Check** → Verifies `/api/uptime` answers; on failure the previous version is restored automatically
+
+See [GITHUB-ACTIONS.md](./GITHUB-ACTIONS.md) for details.
 
 ---
 
@@ -261,12 +263,12 @@ Add the following secrets:
 
 #### Optional Secrets
 
-| Secret Name            | Description       | Required For               |
-| ---------------------- | ----------------- | -------------------------- |
-| `GITHUB_CLIENT_ID`     | GitHub OAuth      | GitHub login (optional)    |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth      | GitHub login (optional)    |
-| `GOOGLE_CLIENT_ID`     | Google OAuth      | Google login (optional)    |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth      | Google login (optional)    |
+| Secret Name            | Description  | Required For            |
+| ---------------------- | ------------ | ----------------------- |
+| `GITHUB_CLIENT_ID`     | GitHub OAuth | GitHub login (optional) |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth | GitHub login (optional) |
+| `GOOGLE_CLIENT_ID`     | Google OAuth | Google login (optional) |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth | Google login (optional) |
 
 ### Step 3: Generate Required Secrets
 
@@ -344,8 +346,8 @@ Discord authentication is required for user login.
 1. Copy **Client ID**
 2. Click **Generate a new client secret** → Copy secret
 3. Add both to GitHub Secrets:
-   - `GITHUB_CLIENT_ID`
-   - `GITHUB_CLIENT_SECRET`
+   - `GH_OAUTH_CLIENT_ID` (GitHub reserves the `GITHUB_` prefix for secret names; the deploy writes it to `.env` as `GITHUB_CLIENT_ID`)
+   - `GH_OAUTH_CLIENT_SECRET`
 
 ### Google OAuth (Optional)
 
@@ -408,14 +410,14 @@ git push origin main
 
 GitHub Actions will automatically:
 
-1. Run linter and tests
-2. Build Docker image
-3. Push to GHCR at `ghcr.io/YOUR-USERNAME/YOUR-REPO:main`
+1. Run linter, type check and tests
+2. Build the app and migrator Docker images
+3. Push to GHCR as `ghcr.io/YOUR-USERNAME/YOUR-REPO:main` and `...:sha-<short>` (plus `-migrator` for the migration image)
 
 #### Option B: Manual Workflow Trigger
 
 1. Go to **Actions** tab in GitHub
-2. Select **CI/CD - Build and Push to GHCR**
+2. Select **CI/CD**
 3. Click **Run workflow**
 4. Select branch: `main`
 5. Click **Run workflow**
@@ -434,8 +436,7 @@ Once the image is built and pushed to GHCR:
 2. Select **Deploy to Production** workflow
 3. Click **Run workflow**
 4. Configure deployment:
-   - **Environment**: `production`
-   - **Image tag**: `main` (or specific version like `v1.0.0`)
+   - **Image tag**: `main` (or `sha-<short>` / a release tag like `v1.0.0`)
 5. Click **Run workflow**
 
 **The deployment will:**
@@ -443,45 +444,30 @@ Once the image is built and pushed to GHCR:
 - Create application directory on server
 - Copy docker-compose.yml and scripts
 - Generate .env file from GitHub Secrets
-- Pull Docker image from GHCR
-- Start all containers (app, postgres)
-- Perform health checks
-- Display application logs
+- Pull the app and migrator images from GHCR
+- Back up the database (skipped on the very first deploy)
+- Start PostgreSQL and run the database migrations (this initializes the schema on the first deploy)
+- Start the new app and check `/api/uptime`
+- Roll back to the previous version automatically if the new one does not become healthy
 
 ### Step 4: Monitor Deployment
 
 Watch the deployment logs in real-time:
 
 1. Click on the running **Deploy to Production** workflow
-2. Click on **Deploy Application** job
+2. Click on the **Deploy** job
 3. Watch each step complete
 
 **Look for these success indicators:**
 
-- ✅ Configuration files copied
-- ✅ .env file generated
-- ✅ Docker image pulled
-- ✅ Containers started
-- ✅ Application is healthy and responding
-- 🎉 Deployment completed successfully!
+- `Pulling images` finishes without errors
+- `Running migrations` prints the migrator output
+- `Application is healthy`
+- `Deploy of <tag> succeeded`
 
-### Step 5: Run Database Migrations
+### Step 5: Database Migrations
 
-After first deployment, initialize the database:
-
-1. Go to **Actions** tab
-2. Select **Database Migration** workflow
-3. Click **Run workflow**
-4. Configure:
-   - **Environment**: `production`
-   - **Confirmation**: Type `MIGRATE` (in capital letters)
-5. Click **Run workflow**
-
-**Monitor migration:**
-
-- Watch workflow logs
-- Look for "Migration completed successfully"
-- Verify database tables were created
+Migrations run automatically during every deploy, before the new app starts, so the first deploy already initializes the database. The separate **Database Migration** workflow is only needed to run migrations without deploying (type `MIGRATE` to confirm and pick an image tag).
 
 ### Step 6: Verify Deployment
 
@@ -588,6 +574,8 @@ docker compose exec -T postgres psql -U bingoscapenext bingoscapenext < backup_2
 
 ### Run Migrations (After Code Updates)
 
+Deploys run migrations automatically, before the new app starts. To run migrations on their own:
+
 1. Go to GitHub **Actions** tab
 2. Select **Database Migration** workflow
 3. Click **Run workflow**
@@ -601,8 +589,8 @@ docker compose exec -T postgres psql -U bingoscapenext bingoscapenext < backup_2
 ssh deploy@your-server-ip
 cd ~/bingoscape
 
-# Run migrations
-docker compose run --rm app npm run db:migrate
+# Run migrations (uses the migrator image of the tag in .env)
+docker compose run --rm migrate
 ```
 
 ---
@@ -659,24 +647,22 @@ docker compose up -d
 
 ```bash
 # In GitHub Actions Deploy workflow
-Environment: production
-Image tag: v1.2.3  # Or specific commit SHA like: main-abc1234
+Image tag: v1.2.3  # Or specific commit SHA like: sha-abc1234
 ```
 
 #### Rollback to Previous Version
 
-Deploy a previous image tag:
+A failed deploy rolls back to the previous version automatically (the app only; migrations are not reverted). To go back to an older version later, deploy a previous image tag:
 
 ```bash
 # In GitHub Actions Deploy workflow
-Environment: production
 Image tag: v1.2.2  # Previous working version
 ```
 
 Or use commit SHA:
 
 ```bash
-Image tag: main-a1b2c3d  # Specific commit
+Image tag: sha-a1b2c3d  # Specific commit
 ```
 
 ### Monitor System Resources
@@ -766,7 +752,7 @@ docker compose logs app --tail 100
 
 # Common issues:
 # 1. Database connection failed → check .env file
-# 2. Migration needed → run migration workflow
+# 2. Migration failed → the deploy stops before the app is replaced; check the migrator output
 # 3. Port conflict → check if port 3000 is available
 ```
 
@@ -932,13 +918,13 @@ docker compose exec -T postgres pg_dump -U bingoscapenext bingoscapenext > backu
 ### GitHub Actions Workflows
 
 ```bash
-# CI/CD - Build and Push to GHCR
-# Trigger: Automatic on push to main
+# CI/CD (lint, typecheck, tests, build and push images)
+# Trigger: Automatic on pull requests, pushes to main and v*.*.* tags
 # Manual: Actions → CI/CD → Run workflow
 
 # Deploy to Production
 # Trigger: Manual only
-# Actions → Deploy to Production → Run workflow → Select environment and image tag
+# Actions → Deploy to Production → Run workflow → Enter image tag (main, sha-<short>, v1.2.3)
 
 # Database Migration
 # Trigger: Manual only
@@ -957,7 +943,7 @@ docker compose exec -T postgres pg_dump -U bingoscapenext bingoscapenext > backu
 ### Useful URLs
 
 - **Application:** `https://your-domain.com`
-- **Health Check:** `https://your-domain.com/api/health`
+- **Health Check:** `https://your-domain.com/api/uptime`
 - **GitHub Packages:** `https://github.com/YOUR-USERNAME/YOUR-REPO/packages`
 - **Discord Developer:** `https://discord.com/developers/applications`
 
