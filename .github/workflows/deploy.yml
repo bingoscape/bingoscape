@@ -38,7 +38,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose.yml,nginx/nginx.conf,nginx/conf.d/default-ssl.conf.example,nginx/conf.d/default-dev.conf.example,scripts/"
+          source: "docker-compose.yml,scripts/"
           target: "/tmp/bingoscape-deploy/"
           overwrite: true
 

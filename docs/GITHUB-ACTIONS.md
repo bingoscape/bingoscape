@@ -162,9 +162,7 @@ Deploys the application to production or staging environments with automatic .en
 
 ##### 1. Deploy (`deploy`)
 
-- Copies docker-compose.yml and production nginx config to server
-  - `nginx.conf` - Main nginx configuration
-  - `default-ssl.conf.example` → `default.conf` - SSL configuration (automatically activated)
+- Copies docker-compose.yml and scripts to server
 - Creates application directory if it doesn't exist
 - Creates uploads directory with proper permissions
 - Backs up existing .env file with timestamp
@@ -173,7 +171,6 @@ Deploys the application to production or staging environments with automatic .en
   - NextAuth configuration
   - OAuth providers (Discord, GitHub, Google)
   - Admin emails
-  - SSL configuration
 - Logs into GitHub Container Registry
 - Pulls specified Docker image tag
 - Stops existing containers
@@ -190,7 +187,7 @@ Deploys the application to production or staging environments with automatic .en
 #### Features
 
 - ✅ **Automatic directory setup** - Creates app and uploads directories if missing
-- ✅ **Automatic file deployment** - Copies docker-compose.yml and production nginx SSL config
+- ✅ **Automatic file deployment** - Copies docker-compose.yml and scripts
 - ✅ **Automatic .env generation** from GitHub Secrets
 - ✅ **Backup** of existing .env before deployment
 - ✅ **Health checks** to verify successful deployment
@@ -220,10 +217,6 @@ The deployment workflow automatically generates the `.env` file from the followi
 **Application:**
 
 - `SUPER_ADMIN_EMAILS`
-
-**SSL:**
-
-- `CERTBOT_EMAIL` (optional)
 
 See [GITHUB-SECRETS.md](./GITHUB-SECRETS.md) for complete secret configuration guide.
 
@@ -384,7 +377,7 @@ Same as production, but select `staging` environment.
 **The workflow will:**
 
 - Create application directory (if it doesn't exist)
-- Copy docker-compose.yml and nginx configuration
+- Copy docker-compose.yml and scripts
 - Create uploads directory with proper permissions
 - Generate `.env` file from GitHub Secrets
 - Pull specified Docker image
