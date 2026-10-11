@@ -1,16 +1,20 @@
 "use client"
 
-import { useState } from "react"
+import { useState, type FormEvent } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { Download } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
-  DialogContent,
+  DialogClose,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -18,143 +22,164 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
+import { Spinner } from "@/components/ui/spinner"
+import {
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogFooter,
+} from "@/components/responsive-dialog"
+import { importTemplateIntoEvent } from "@/app/actions/templates"
 import { toast } from "@/hooks/use-toast"
-import { useRouter } from "next/navigation"
-import { getUserCreatedEvents } from "@/app/actions/events"
-import { getTemplateData } from "@/app/actions/templates"
-import { importBingoBoard } from "@/app/actions/bingo-import-export"
-import { Download } from "lucide-react"
+import type { ManageableEvent } from "@/server/queries/manageable-events"
 
 interface ImportTemplateButtonProps {
   templateId: string
+  /** What gets added, e.g. "5×5 Standard board". */
+  boardLabel: string
+  /** Events the user can manage (loaded by the page). */
+  events: ManageableEvent[]
+  className?: string
 }
 
 export function ImportTemplateButton({
   templateId,
+  boardLabel,
+  events,
+  className,
 }: ImportTemplateButtonProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [events, setEvents] = useState<Array<{ id: string; title: string }>>([])
-  const [selectedEventId, setSelectedEventId] = useState("")
   const router = useRouter()
+  const [isOpen, setIsOpen] = useState(false)
+  const [pending, setPending] = useState(false)
+  const [eventId, setEventId] = useState("")
 
-  const loadEvents = async () => {
-    try {
-      const eventsData = await getUserCreatedEvents()
-      setEvents(
-        eventsData.map((e) => ({ id: e.event.id, title: e.event.title }))
-      )
-    } catch (error) {
-      console.error("Error loading events:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load your events",
-        variant: "destructive",
-      })
-    }
+  const selectedEvent = events.find((event) => event.id === eventId)
+
+  const handleOpenChange = (open: boolean) => {
+    if (pending) return
+    setIsOpen(open)
+    // Forms start fresh every time they open.
+    if (open) setEventId(events.length === 1 ? (events[0]?.id ?? "") : "")
   }
 
-  const handleImport = async () => {
-    if (!selectedEventId) {
-      toast({
-        title: "Error",
-        description: "Please select an event",
-        variant: "destructive",
-      })
-      return
-    }
+  const handleSubmit = async (formEvent: FormEvent<HTMLFormElement>) => {
+    formEvent.preventDefault()
+    if (!selectedEvent) return
 
-    setIsLoading(true)
+    setPending(true)
     try {
-      // Get the template data
-      const templateData = await getTemplateData(templateId)
-
-      if ("error" in templateData) {
-        throw new Error(templateData.error)
+      const result = await importTemplateIntoEvent(templateId, selectedEvent.id)
+      if (!result.success) {
+        throw new Error(result.error ?? "Failed to import template")
       }
-
-      // Import the template into the selected event
-      const result = await importBingoBoard(selectedEventId, templateData)
-
-      if (result.success) {
-        toast({
-          title: "Success",
-          description: "Template imported successfully",
-        })
-        setIsOpen(false)
-
-        // Navigate to the new bingo board
-        if (result.bingoId) {
-          router.push(`/events/${selectedEventId}?board=${result.bingoId}`)
-        } else {
-          router.push(`/events/${selectedEventId}`)
-        }
-      } else {
-        throw new Error(result.error)
-      }
+      toast({
+        title: "Board added",
+        description: `A new ${boardLabel} was added to ${selectedEvent.title}.`,
+      })
+      setIsOpen(false)
+      router.push(
+        result.bingoId
+          ? `/events/${selectedEvent.id}?board=${result.bingoId}`
+          : `/events/${selectedEvent.id}`
+      )
     } catch (error) {
       toast({
-        title: "Error",
+        title: "Couldn't use the template",
         description:
           error instanceof Error ? error.message : "Failed to import template",
         variant: "destructive",
       })
     } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleOpenChange = (open: boolean) => {
-    setIsOpen(open)
-    if (open) {
-      loadEvents()
-        .then(() => console.log("Events loaded"))
-        .catch((error) => console.error("Error loading events:", error))
+      setPending(false)
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button>
-          <Download className="mr-2 h-4 w-4" />
-          Use Template
+        <Button className={className}>
+          <Download aria-hidden="true" />
+          Use template
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <ResponsiveDialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Import Template</DialogTitle>
+          <DialogTitle>Use this template</DialogTitle>
           <DialogDescription>
-            Select an event to import this template into
+            Choose the event that gets a new board from this template.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="event">Event</Label>
-            <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-              <SelectTrigger id="event">
-                <SelectValue placeholder="Select an event" />
-              </SelectTrigger>
-              <SelectContent>
-                {events.map((event) => (
-                  <SelectItem key={event.id} value={event.id}>
-                    {event.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button
-            onClick={handleImport}
-            disabled={isLoading || !selectedEventId}
-          >
-            {isLoading ? "Importing..." : "Import Template"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+
+        <form
+          onSubmit={(event) => void handleSubmit(event)}
+          className="flex min-h-0 flex-1 flex-col gap-4"
+        >
+          <ResponsiveDialogBody>
+            {events.length === 0 ? (
+              <div className="osrs-slot space-y-3 rounded-sm p-4 text-sm">
+                <p className="font-medium">
+                  You don&apos;t manage any events yet.
+                </p>
+                <p className="text-muted-foreground">
+                  Templates are added to an event you run or manage. Create one
+                  first, then come back.
+                </p>
+                <Button asChild variant="outline">
+                  <Link href="/">Create an event</Link>
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor={`import-template-event-${templateId}`}>
+                    Event
+                  </Label>
+                  <Select
+                    value={eventId}
+                    onValueChange={setEventId}
+                    disabled={pending}
+                  >
+                    <SelectTrigger id={`import-template-event-${templateId}`}>
+                      <SelectValue placeholder="Select an event" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {events.map((event) => (
+                        <SelectItem key={event.id} value={event.id}>
+                          {event.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p aria-live="polite" className="text-muted-foreground text-sm">
+                  {selectedEvent
+                    ? `Adds a new ${boardLabel} to ${selectedEvent.title}. Existing boards aren't changed.`
+                    : "You can edit the board after it's added."}
+                </p>
+              </>
+            )}
+          </ResponsiveDialogBody>
+
+          <ResponsiveDialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={pending}>
+                Cancel
+              </Button>
+            </DialogClose>
+            {events.length > 0 ? (
+              <Button type="submit" disabled={pending || !selectedEvent}>
+                {pending ? (
+                  <>
+                    <Spinner aria-hidden="true" />
+                    Adding…
+                  </>
+                ) : (
+                  "Add board"
+                )}
+              </Button>
+            ) : null}
+          </ResponsiveDialogFooter>
+        </form>
+      </ResponsiveDialogContent>
     </Dialog>
   )
 }

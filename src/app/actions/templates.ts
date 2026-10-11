@@ -1,35 +1,42 @@
 "use server"
 
-import { db } from "@/server/db"
-import { logger } from "@/lib/logger"
-import { bingoTemplates } from "@/server/db/schema"
-import { eq, desc, like, and, or, sql } from "drizzle-orm"
-import { getServerAuthSession } from "@/server/auth"
-import { exportBingoBoard } from "./bingo-import-export"
-import type { ExportedBingo } from "./bingo-import-export"
 import { revalidatePath } from "next/cache"
-import getRandomFrog from "@/lib/getRandomFrog"
+import { and, eq, sql } from "drizzle-orm"
+import { z } from "zod"
 
-export interface BingoTemplate {
-  id: string
-  title: string
-  description: string | null
-  previewImage: string | null
-  creatorId: string | null
-  originalBingoId: string | null
-  category: string | null
-  tags: string | null
-  isPublic: boolean
-  templateData: string
-  downloadCount: number
-  createdAt: Date
-  updatedAt: Date
-  creatorName?: string | null
-  creatorImage?: string | null
+import { db } from "@/server/db"
+import { bingoTemplates } from "@/server/db/schema"
+import { getServerAuthSession } from "@/server/auth"
+import { logger } from "@/lib/logger"
+import { parseExportedBingo } from "@/lib/bingo-template-schema"
+import { templateDetailsSchema } from "@/lib/template-input"
+import { summarizeTemplate } from "@/lib/template-summary"
+import { exportBingoBoard, importBingoBoard } from "./bingo-import-export"
+
+/**
+ * Template mutations. Reads live in `@/server/queries/templates` so they are
+ * not exposed as server actions.
+ */
+
+const saveTemplateSchema = templateDetailsSchema.extend({
+  previewImage: z.string().max(255).optional(),
+})
+
+const idSchema = z.string().min(1).max(64)
+
+function firstIssue(error: z.ZodError, fallback: string) {
+  return error.issues[0]?.message ?? fallback
+}
+
+function revalidateTemplates(templateId?: string) {
+  revalidatePath("/templates")
+  revalidatePath("/templates/my-templates")
+  if (templateId) revalidatePath(`/templates/${templateId}`)
 }
 
 /**
- * Save a bingo board as a template
+ * Save a bingo board as a template. The caller must manage the board's Event
+ * (enforced by `exportBingoBoard`).
  */
 export async function saveBingoAsTemplate(
   bingoId: string,
@@ -41,234 +48,169 @@ export async function saveBingoAsTemplate(
     isPublic: boolean
     previewImage?: string
   }
-) {
+): Promise<{ success: boolean; templateId?: string; error?: string }> {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
     return { success: false, error: "Unauthorized" }
   }
 
-  try {
-    // Export the bingo board data
-    const exportedData = await exportBingoBoard(bingoId)
+  const parsedInput = saveTemplateSchema.safeParse(templateData)
+  if (!parsedInput.success) {
+    return {
+      success: false,
+      error: firstIssue(parsedInput.error, "Invalid template data"),
+    }
+  }
+  const input = parsedInput.data
 
+  try {
+    const exportedData = await exportBingoBoard(bingoId)
     if ("error" in exportedData) {
-      throw new Error(exportedData.error)
+      return { success: false, error: exportedData.error }
     }
 
-    // Save the template
-    const [template] = await db
-      .insert(bingoTemplates)
-      .values({
-        title: templateData.title,
-        description: templateData.description,
-        category: templateData.category,
-        tags: templateData.tags,
-        isPublic: templateData.isPublic,
-        creatorId: session.user.id,
-        originalBingoId: bingoId,
-        previewImage: templateData.previewImage ?? null,
-        templateData: JSON.stringify(exportedData),
-      })
-      .returning()
+    const summary = summarizeTemplate(exportedData)
 
-    revalidatePath("/templates")
+    const template = await db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(bingoTemplates)
+        .values({
+          title: input.title,
+          description: input.description,
+          category: input.category,
+          tags: input.tags,
+          isPublic: input.isPublic,
+          creatorId: session.user.id,
+          originalBingoId: bingoId,
+          previewImage: input.previewImage ?? null,
+          templateData: JSON.stringify(exportedData),
+          ...summary,
+        })
+        .returning({ id: bingoTemplates.id })
+      return created
+    })
+
+    revalidateTemplates()
     return { success: true, templateId: template?.id }
   } catch (error) {
     logger.error({ error }, "Error saving template:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to save template",
-    }
+    return { success: false, error: "Failed to save template" }
   }
 }
 
 /**
- * Get all public templates with optional filtering
+ * Edit a template's details. Only the creator may; the board content is
+ * immutable (save a new template to change it).
  */
-export async function getPublicTemplates(
-  options: {
-    search?: string
-    category?: string
-    size?: string
-    limit?: number
-    offset?: number
-  } = {}
-): Promise<{ templates: BingoTemplate[]; total: number }> {
-  const { search, category, size, limit = 12, offset = 0 } = options
-
-  try {
-    // Build the query conditions
-    const conditions = [eq(bingoTemplates.isPublic, true)]
-
-    if (search) {
-      conditions.push(
-        or(
-          like(bingoTemplates.title, `%${search}%`),
-          like(bingoTemplates.description, `%${search}%`),
-          like(bingoTemplates.tags, `%${search}%`)
-        )!
-      )
-    }
-
-    if (category) {
-      conditions.push(eq(bingoTemplates.category, category))
-    }
-
-    if (size) {
-      // Parse the size filter (e.g., "5x5", "3x3")
-      const [rows, columns] = size.split("x").map(Number)
-      if (!!rows && !!columns && !isNaN(rows) && !isNaN(columns)) {
-        conditions.push(
-          sql`json_extract(${bingoTemplates.templateData}, '$.metadata.rows') = ${rows} AND
-              json_extract(${bingoTemplates.templateData}, '$.metadata.columns') = ${columns}`
-        )
-      }
-    }
-
-    // Get total count
-    const result = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(bingoTemplates)
-      .where(and(...conditions))
-
-    const count = result[0]?.count ?? 0
-
-    // Get templates with pagination
-    const templates = await db.query.bingoTemplates.findMany({
-      where: and(...conditions),
-      orderBy: [desc(bingoTemplates.createdAt)],
-      limit,
-      offset,
-      with: {
-        creator: {
-          columns: {
-            id: true,
-            name: true,
-            image: true,
-          },
-        },
-      },
-    })
-
-    // Format the results
-    const formattedTemplates = templates.map((template) => ({
-      ...template,
-      creatorName: template.creator?.name ?? "Unknown Creator",
-      creatorImage: template.creator?.image ?? getRandomFrog(),
-    }))
-
-    return {
-      templates: formattedTemplates,
-      total: Number(count),
-    }
-  } catch (error) {
-    logger.error({ error }, "Error fetching templates:", error)
-    return { templates: [], total: 0 }
+export async function updateTemplate(
+  templateId: string,
+  details: {
+    title: string
+    description: string
+    category: string
+    tags: string
+    isPublic: boolean
   }
-}
-
-/**
- * Get a template by ID
- */
-export async function getTemplateById(
-  templateId: string
-): Promise<BingoTemplate | null> {
-  try {
-    const template = await db.query.bingoTemplates.findFirst({
-      where: eq(bingoTemplates.id, templateId),
-      with: {
-        creator: {
-          columns: {
-            id: true,
-            name: true,
-            image: true,
-          },
-        },
-      },
-    })
-
-    if (!template) {
-      return null
-    }
-
-    return {
-      ...template,
-      creatorName: template.creator?.name ?? "Unknown Creator",
-      creatorImage: template.creator?.image ?? getRandomFrog(),
-    }
-  } catch (error) {
-    logger.error({ error }, "Error fetching template:", error)
-    return null
-  }
-}
-
-/**
- * Get templates created by the current user
- */
-export async function getUserTemplates(): Promise<BingoTemplate[]> {
+): Promise<{ success: boolean; error?: string }> {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
-    return []
+    return { success: false, error: "Unauthorized" }
   }
 
+  const parsedId = idSchema.safeParse(templateId)
+  if (!parsedId.success) {
+    return { success: false, error: "Template not found" }
+  }
+
+  const parsedInput = templateDetailsSchema.safeParse(details)
+  if (!parsedInput.success) {
+    return {
+      success: false,
+      error: firstIssue(parsedInput.error, "Invalid template data"),
+    }
+  }
+  const input = parsedInput.data
+  const userId = session.user.id
+
   try {
-    const templates = await db.query.bingoTemplates.findMany({
-      where: eq(bingoTemplates.creatorId, session.user.id),
-      orderBy: [desc(bingoTemplates.createdAt)],
-      with: {
-        creator: {
-          columns: {
-            id: true,
-            name: true,
-            image: true,
-          },
-        },
-      },
+    const result = await db.transaction(async (tx) => {
+      const template = await tx.query.bingoTemplates.findFirst({
+        where: eq(bingoTemplates.id, templateId),
+        columns: { creatorId: true },
+      })
+
+      if (!template) {
+        return { success: false, error: "Template not found" }
+      }
+      if (template.creatorId !== userId) {
+        return {
+          success: false,
+          error: "You don't have permission to edit this template",
+        }
+      }
+
+      await tx
+        .update(bingoTemplates)
+        .set({
+          title: input.title,
+          description: input.description,
+          category: input.category,
+          tags: input.tags,
+          isPublic: input.isPublic,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(bingoTemplates.id, templateId),
+            eq(bingoTemplates.creatorId, userId)
+          )
+        )
+
+      return { success: true }
     })
 
-    return templates.map((template) => ({
-      ...template,
-      creatorName: template.creator?.name ?? "Unknown Creator",
-      creatorImage: template.creator?.image ?? getRandomFrog(),
-    }))
+    if (result.success) revalidateTemplates(templateId)
+    return result
   } catch (error) {
-    logger.error({ error }, "Error fetching user templates:", error)
-    return []
+    logger.error({ error }, "Error updating template:", error)
+    return { success: false, error: "Failed to update template" }
   }
 }
 
 /**
- * Delete a template
+ * Delete a template (creator only).
  */
-export async function deleteTemplate(templateId: string) {
+export async function deleteTemplate(
+  templateId: string
+): Promise<{ success: boolean; error?: string }> {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
     return { success: false, error: "Unauthorized" }
   }
 
   try {
-    const template = await db.query.bingoTemplates.findFirst({
-      where: eq(bingoTemplates.id, templateId),
-      columns: {
-        creatorId: true,
-      },
+    const result = await db.transaction(async (tx) => {
+      const template = await tx.query.bingoTemplates.findFirst({
+        where: eq(bingoTemplates.id, templateId),
+        columns: { creatorId: true },
+      })
+
+      if (!template) {
+        return { success: false, error: "Template not found" }
+      }
+      if (template.creatorId !== session.user.id) {
+        return {
+          success: false,
+          error: "You don't have permission to delete this template",
+        }
+      }
+
+      await tx.delete(bingoTemplates).where(eq(bingoTemplates.id, templateId))
+      return { success: true }
     })
 
-    if (!template) {
-      return { success: false, error: "Template not found" }
-    }
-
-    if (template.creatorId !== session.user.id) {
-      return {
-        success: false,
-        error: "You don't have permission to delete this template",
-      }
-    }
-
-    await db.delete(bingoTemplates).where(eq(bingoTemplates.id, templateId))
-
-    revalidatePath("/templates")
-    return { success: true }
+    if (result.success) revalidateTemplates(templateId)
+    return result
   } catch (error) {
     logger.error({ error }, "Error deleting template:", error)
     return { success: false, error: "Failed to delete template" }
@@ -276,107 +218,64 @@ export async function deleteTemplate(templateId: string) {
 }
 
 /**
- * Increment the download count for a template
+ * Adds a template's board to an Event. The template JSON never leaves the
+ * server. Needs read access to the template (public, or yours) and the
+ * admin/management role in the target Event (enforced by `importBingoBoard`).
  */
-export async function incrementTemplateDownloadCount(templateId: string) {
-  try {
-    await db
-      .update(bingoTemplates)
-      .set({
-        downloadCount: sql`${bingoTemplates.downloadCount} + 1`,
-        updatedAt: new Date(),
-      })
-      .where(eq(bingoTemplates.id, templateId))
-
-    return { success: true }
-  } catch (error) {
-    logger.error({ error }, "Error incrementing download count:", error)
-    return { success: false }
+export async function importTemplateIntoEvent(
+  templateId: string,
+  eventId: string
+): Promise<{ success: boolean; bingoId?: string; error?: string }> {
+  const session = await getServerAuthSession()
+  if (!session || !session.user) {
+    return { success: false, error: "Unauthorized" }
   }
-}
+  if (
+    !idSchema.safeParse(templateId).success ||
+    !idSchema.safeParse(eventId).success
+  ) {
+    return { success: false, error: "Template or event not found" }
+  }
 
-/**
- * Get template data for import
- */
-export async function getTemplateData(
-  templateId: string
-): Promise<ExportedBingo | { error: string }> {
   try {
     const template = await db.query.bingoTemplates.findFirst({
       where: eq(bingoTemplates.id, templateId),
-      columns: {
-        templateData: true,
-      },
+      columns: { templateData: true, isPublic: true, creatorId: true },
     })
 
-    if (!template) {
-      return { error: "Template not found" }
+    // Private templates look identical to missing ones for other users.
+    if (
+      !template ||
+      !(template.isPublic || template.creatorId === session.user.id)
+    ) {
+      return { success: false, error: "Template not found" }
     }
 
-    // Increment download count
-    await incrementTemplateDownloadCount(templateId)
+    // Validates and upgrades templates saved by older versions.
+    const parsed = parseExportedBingo(template.templateData)
+    if (!parsed.success) {
+      logger.warn({ templateId, error: parsed.error }, "Invalid template data")
+      return { success: false, error: "This template can't be imported" }
+    }
 
-    // Parse the template data
-    return JSON.parse(template.templateData) as ExportedBingo
+    const imported = await importBingoBoard(eventId, parsed.data)
+    if (!imported.success) return imported
+
+    try {
+      await db
+        .update(bingoTemplates)
+        .set({ downloadCount: sql`${bingoTemplates.downloadCount} + 1` })
+        .where(eq(bingoTemplates.id, templateId))
+      revalidatePath("/templates")
+      revalidatePath(`/templates/${templateId}`)
+    } catch (error) {
+      // The board exists already; a missed counter must not fail the import.
+      logger.error({ error }, "Error incrementing download count:", error)
+    }
+
+    return imported
   } catch (error) {
-    logger.error({ error }, "Error getting template data:", error)
-    return { error: "Failed to get template data" }
-  }
-}
-
-/**
- * Get popular categories
- */
-export async function getTemplateCategories(): Promise<string[]> {
-  try {
-    const categories = await db
-      .select({ category: bingoTemplates.category })
-      .from(bingoTemplates)
-      .where(
-        and(
-          eq(bingoTemplates.isPublic, true),
-          sql`${bingoTemplates.category} IS NOT NULL`
-        )
-      )
-      .groupBy(bingoTemplates.category)
-      .orderBy(desc(sql`count(*)`))
-      .limit(10)
-
-    return categories
-      .map((c) => c.category)
-      .filter((c): c is string => c !== null)
-  } catch (error) {
-    logger.error({ error }, "Error fetching categories:", error)
-    return []
-  }
-}
-
-/**
- * Get available board sizes
- */
-export async function getTemplateSizes(): Promise<string[]> {
-  try {
-    const sizes = await db
-      .select({
-        rows: sql<number>`json_extract(${bingoTemplates.templateData}, '$.metadata.rows')`,
-        columns: sql<number>`json_extract(${bingoTemplates.templateData}, '$.metadata.columns')`,
-      })
-      .from(bingoTemplates)
-      .where(eq(bingoTemplates.isPublic, true))
-      .groupBy(
-        sql`json_extract(${bingoTemplates.templateData}, '$.metadata.rows')`,
-        sql`json_extract(${bingoTemplates.templateData}, '$.metadata.columns')`
-      )
-      .orderBy(
-        sql`json_extract(${bingoTemplates.templateData}, '$.metadata.rows')`,
-        sql`json_extract(${bingoTemplates.templateData}, '$.metadata.columns')`
-      )
-
-    return sizes
-      .map((s) => `${s.rows}x${s.columns}`)
-      .filter((size) => size.includes("x")) // Filter out any invalid sizes
-  } catch (error) {
-    logger.error({ error }, "Error fetching sizes:", error)
-    return []
+    logger.error({ error }, "Error importing template:", error)
+    return { success: false, error: "Failed to import template" }
   }
 }

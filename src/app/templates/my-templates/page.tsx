@@ -1,123 +1,153 @@
-import { getUserTemplates } from "@/app/actions/templates"
-import { Breadcrumbs } from "@/components/breadcrumbs"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { getServerAuthSession } from "@/server/auth"
-import { redirect } from "next/navigation"
-import { CreateTemplateButton } from "@/components/create-template-button"
-import { UserTemplateActions } from "@/components/user-template-actions"
+import type { Metadata } from "next"
 import Link from "next/link"
-import { formatDistanceToNow } from "date-fns"
-import { Eye, EyeOff } from "lucide-react"
-import { TemplatePreviewGrid } from "@/components/template-preview-grid"
+import { redirect } from "next/navigation"
+import { FolderOpen, LayoutTemplate } from "lucide-react"
 
-export default async function MyTemplatesPage() {
+import { Button } from "@/components/ui/button"
+import { CreateTemplateButton } from "@/components/create-template-button"
+import { FilterPills } from "@/components/filter-pills"
+import { PageHeader } from "@/components/page-header"
+import { TemplateCard } from "@/components/template-card"
+import { UserTemplateActions } from "@/components/user-template-actions"
+import { getServerAuthSession } from "@/server/auth"
+import { getManageableEvents } from "@/server/queries/manageable-events"
+import {
+  getCategorySuggestions,
+  getUserTemplates,
+} from "@/server/queries/templates"
+import type { RawSearchParams } from "@/lib/admin-list-params"
+import {
+  parseTemplateVisibility,
+  type TemplateVisibility,
+} from "@/lib/template-list-params"
+
+export const metadata: Metadata = { title: "My templates" }
+
+const VISIBILITY_LABELS: Record<TemplateVisibility, string> = {
+  all: "All",
+  public: "Public",
+  private: "Private",
+}
+
+function visibilityHref(visibility: TemplateVisibility) {
+  return visibility === "all"
+    ? "/templates/my-templates"
+    : `/templates/my-templates?visibility=${visibility}`
+}
+
+export default async function MyTemplatesPage(props: {
+  searchParams: Promise<RawSearchParams>
+}) {
   const session = await getServerAuthSession()
+  if (!session?.user) redirect("/sign-in?callbackUrl=/templates/my-templates")
 
-  if (!session?.user) {
-    redirect("/login")
-  }
+  const visibility = parseTemplateVisibility(await props.searchParams)
 
-  const templates = await getUserTemplates()
+  const [{ templates, counts }, events, categorySuggestions] =
+    await Promise.all([
+      getUserTemplates(session.user.id, visibility),
+      getManageableEvents(session.user.id, { withBoards: true }),
+      getCategorySuggestions(session.user.id),
+    ])
 
-  const breadcrumbItems = [
-    { label: "Home", href: "/" },
-    { label: "Templates", href: "/templates" },
-    { label: "My Templates", href: "/templates/my-templates" },
-  ]
+  const createButton = (
+    <CreateTemplateButton
+      events={events}
+      categorySuggestions={categorySuggestions}
+    />
+  )
 
   return (
-    <div className="container mx-auto py-10">
-      <div className="mb-6 flex items-center justify-between">
-        <Breadcrumbs items={breadcrumbItems} />
-        <CreateTemplateButton />
-      </div>
+    <div className="container mx-auto space-y-6 px-4 py-6 sm:py-8">
+      <PageHeader
+        title="My templates"
+        icon={FolderOpen}
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "Templates", href: "/templates" },
+          { label: "My templates" },
+        ]}
+        meta={
+          <span>
+            {counts.all} {counts.all === 1 ? "template" : "templates"}
+          </span>
+        }
+        actions={
+          <>
+            {createButton}
+            <Button asChild variant="outline">
+              <Link href="/templates">
+                <LayoutTemplate aria-hidden="true" />
+                Browse gallery
+              </Link>
+            </Button>
+          </>
+        }
+      />
 
-      <h1 className="mb-6 text-3xl font-bold">My Templates</h1>
+      {counts.all > 0 ? (
+        <FilterPills
+          label="Filter your templates by visibility"
+          pills={(Object.keys(VISIBILITY_LABELS) as TemplateVisibility[]).map(
+            (value) => ({
+              label: VISIBILITY_LABELS[value],
+              count: counts[value],
+              href: visibilityHref(value),
+              selected: visibility === value,
+            })
+          )}
+        />
+      ) : null}
 
       {templates.length === 0 ? (
-        <div className="py-12 text-center">
-          <h2 className="mb-4 text-xl font-medium">
-            You haven&apos;t created any templates yet
+        <div className="osrs-panel mx-auto max-w-2xl rounded-sm p-6 text-center sm:p-10">
+          <div className="osrs-slot mx-auto mb-4 w-fit rounded-sm p-4">
+            <FolderOpen aria-hidden="true" className="text-primary h-10 w-10" />
+          </div>
+          <h2 className="osrs-heading text-2xl font-bold">
+            {counts.all === 0
+              ? "You haven't made a template yet"
+              : `No ${visibility} templates`}
           </h2>
-          <p className="mb-6 text-muted-foreground">
-            Create your first template by saving one of your bingo boards as a
-            template.
+          <p className="text-muted-foreground mt-2">
+            {counts.all === 0
+              ? "Save one of your boards as a template to reuse it or share it with the community."
+              : "Nothing matches this filter. Try another one."}
           </p>
-          <CreateTemplateButton />
+          <div className="mt-6 flex justify-center">
+            {counts.all === 0 ? (
+              createButton
+            ) : (
+              <Button asChild>
+                <Link href={visibilityHref("all")}>Show all templates</Link>
+              </Button>
+            )}
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {templates.map((template) => (
-            <Card key={template.id} className="flex flex-col">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between">
-                  <CardTitle className="line-clamp-1">
-                    {template.title}
-                  </CardTitle>
-                  {template.isPublic ? (
-                    <Badge className="flex items-center gap-1">
-                      <Eye className="h-3 w-3" />
-                      <span>Public</span>
-                    </Badge>
-                  ) : (
-                    <Badge
-                      variant="outline"
-                      className="flex items-center gap-1"
-                    >
-                      <EyeOff className="h-3 w-3" />
-                      <span>Private</span>
-                    </Badge>
-                  )}
-                </div>
-                <CardDescription>
-                  Created{" "}
-                  {formatDistanceToNow(new Date(template.createdAt), {
-                    addSuffix: true,
-                  })}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grow">
-                <TemplatePreviewGrid
-                  templateData={template.templateData}
-                  title={template.title}
-                  className="mb-4 h-32"
-                />
-                <p className="mb-4 line-clamp-2 text-sm text-muted-foreground">
-                  {template.description}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {template.category && (
-                    <Badge variant="secondary">{template.category}</Badge>
-                  )}
-                  {template.tags?.split(",").map((tag) => (
-                    <Badge key={tag} variant="outline">
-                      {tag.trim()}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-between pt-2">
-                <Link href={`/templates/${template.id}`} passHref>
-                  <Button variant="outline">View</Button>
-                </Link>
-                <UserTemplateActions
-                  templateId={template.id}
-                  downloadCount={template.downloadCount}
-                  templateData={template.templateData}
-                />
-              </CardFooter>
-            </Card>
+            <li key={template.id}>
+              <TemplateCard
+                template={template}
+                variant="mine"
+                actions={
+                  <UserTemplateActions
+                    template={{
+                      id: template.id,
+                      title: template.title,
+                      description: template.description,
+                      category: template.category,
+                      tags: template.tags,
+                      isPublic: template.isPublic,
+                    }}
+                    categorySuggestions={categorySuggestions}
+                  />
+                }
+              />
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   )

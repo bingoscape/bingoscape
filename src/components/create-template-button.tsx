@@ -1,20 +1,20 @@
 "use client"
 
-import { useState } from "react"
+import { useState, type FormEvent } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { Plus } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
-  DialogContent,
+  DialogClose,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -22,301 +22,305 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { toast } from "@/hooks/use-toast"
-import { useRouter } from "next/navigation"
+import { Spinner } from "@/components/ui/spinner"
+import {
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogFooter,
+} from "@/components/responsive-dialog"
+import {
+  TemplateDetailsFields,
+  toTemplateInput,
+  type TemplateDetailsValue,
+} from "@/components/template-details-fields"
 import { saveBingoAsTemplate } from "@/app/actions/templates"
-import { getUserCreatedEvents } from "@/app/actions/events"
-import { Plus } from "lucide-react"
-import { getEventById } from "@/server/queries/events"
+import { toast } from "@/hooks/use-toast"
+import { templateDetailsSchema } from "@/lib/template-input"
+import { BINGO_TYPE_LABELS, formatBoardSize } from "@/lib/template-labels"
+import type { ManageableEvent } from "@/server/queries/manageable-events"
 
-export function CreateTemplateButton() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [step, setStep] = useState<"select-bingo" | "template-details">(
-    "select-bingo"
-  )
-  const [events, setEvents] = useState<Array<{ id: string; title: string }>>([])
-  const [bingos, setBingos] = useState<Array<{ id: string; title: string }>>([])
-  const [selectedEventId, setSelectedEventId] = useState("")
-  const [selectedBingoId, setSelectedBingoId] = useState("")
-  const [templateData, setTemplateData] = useState({
-    title: "",
-    description: "",
-    category: "",
-    tags: "",
-    isPublic: true,
-  })
+interface CreateTemplateButtonProps {
+  /** Events the user manages, with their boards (loaded by the page). */
+  events: ManageableEvent[]
+  categorySuggestions: string[]
+  className?: string
+  variant?: "default" | "outline" | "secondary"
+}
+
+const EMPTY_DETAILS: TemplateDetailsValue = {
+  title: "",
+  description: "",
+  category: "",
+  tags: [],
+  isPublic: true,
+}
+
+export function CreateTemplateButton({
+  events,
+  categorySuggestions,
+  className,
+  variant = "default",
+}: CreateTemplateButtonProps) {
   const router = useRouter()
+  const eventsWithBoards = events.filter((event) => event.boards.length > 0)
 
-  const loadEvents = async () => {
-    try {
-      const eventsData = await getUserCreatedEvents()
-      setEvents(
-        eventsData.map((e) => ({ id: e.event.id, title: e.event.title }))
-      )
-    } catch (error) {
-      console.error("Error loading events:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load your events",
-        variant: "destructive",
-      })
+  const [isOpen, setIsOpen] = useState(false)
+  const [step, setStep] = useState<1 | 2>(1)
+  const [eventId, setEventId] = useState("")
+  const [bingoId, setBingoId] = useState("")
+  const [details, setDetails] = useState<TemplateDetailsValue>(EMPTY_DETAILS)
+  const [titleTouched, setTitleTouched] = useState(false)
+  const [pending, setPending] = useState(false)
+
+  const selectedEvent = eventsWithBoards.find((event) => event.id === eventId)
+  const selectedBoard = selectedEvent?.boards.find(
+    (board) => board.id === bingoId
+  )
+
+  const selectBoard = (event: ManageableEvent | undefined, boardId: string) => {
+    setBingoId(boardId)
+    const board = event?.boards.find((b) => b.id === boardId)
+    if (board && !titleTouched) {
+      setDetails((previous) => ({ ...previous, title: board.title }))
     }
   }
 
-  const loadBingos = async (eventId: string) => {
-    try {
-      const eventData = await getEventById(eventId)
-      if (eventData?.event.bingos) {
-        setBingos(
-          eventData.event.bingos.map((b) => ({ id: b.id, title: b.title }))
-        )
-      } else {
-        setBingos([])
-      }
-    } catch (error) {
-      console.error("Error loading bingos:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load bingo boards",
-        variant: "destructive",
-      })
+  const handleOpenChange = (open: boolean) => {
+    if (pending) return
+    setIsOpen(open)
+    if (!open) return
+
+    // Forms start fresh every time they open.
+    setStep(1)
+    setDetails(EMPTY_DETAILS)
+    setTitleTouched(false)
+    const onlyEvent =
+      eventsWithBoards.length === 1 ? eventsWithBoards[0] : undefined
+    setEventId(onlyEvent?.id ?? "")
+    const onlyBoard =
+      onlyEvent?.boards.length === 1 ? onlyEvent.boards[0] : undefined
+    setBingoId(onlyBoard?.id ?? "")
+    if (onlyBoard) {
+      setDetails({ ...EMPTY_DETAILS, title: onlyBoard.title })
     }
   }
 
-  const handleEventChange = (eventId: string) => {
-    setSelectedEventId(eventId)
-    setSelectedBingoId("")
-    loadBingos(eventId)
-      .then(() => console.log("Bingos loaded"))
-      .catch((error) => console.error("Error loading bingos:", error))
-  }
-
-  const handleBingoChange = (bingoId: string) => {
-    setSelectedBingoId(bingoId)
-    // Pre-fill template title with bingo title
-    const selectedBingo = bingos.find((b) => b.id === bingoId)
-    if (selectedBingo) {
-      setTemplateData((prev) => ({ ...prev, title: selectedBingo.title }))
+  const handleEventChange = (nextEventId: string) => {
+    setEventId(nextEventId)
+    const event = eventsWithBoards.find((e) => e.id === nextEventId)
+    const onlyBoard = event?.boards.length === 1 ? event.boards[0] : undefined
+    if (onlyBoard) {
+      selectBoard(event, onlyBoard.id)
+    } else {
+      setBingoId("")
     }
   }
 
-  const handleContinue = () => {
-    if (!selectedBingoId) {
+  const handleSubmit = async (formEvent: FormEvent<HTMLFormElement>) => {
+    formEvent.preventDefault()
+
+    if (step === 1) {
+      if (!bingoId) return
+      setStep(2)
+      return
+    }
+
+    const input = toTemplateInput(details)
+    const validation = templateDetailsSchema.safeParse(input)
+    if (!validation.success) {
       toast({
-        title: "Error",
-        description: "Please select a bingo board",
+        title: "Check the template details",
+        description: validation.error.issues[0]?.message,
         variant: "destructive",
       })
       return
     }
-    setStep("template-details")
-  }
 
-  const handleSubmit = async () => {
-    if (!templateData.title) {
-      toast({
-        title: "Error",
-        description: "Please enter a title for your template",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsLoading(true)
+    setPending(true)
     try {
-      const result = await saveBingoAsTemplate(selectedBingoId, templateData)
-      if (result.success) {
-        toast({
-          title: "Success",
-          description: "Template created successfully",
-        })
-        setIsOpen(false)
-        router.push(`/templates/${result.templateId}`)
-      } else {
-        throw new Error(result.error)
+      const result = await saveBingoAsTemplate(bingoId, input)
+      if (!result.success) {
+        throw new Error(result.error ?? "Failed to create template")
       }
+      toast({
+        title: "Template created",
+        description: details.isPublic
+          ? "It is now public in the gallery."
+          : "Only you can see it.",
+      })
+      setIsOpen(false)
+      router.push(`/templates/${result.templateId}`)
     } catch (error) {
       toast({
-        title: "Error",
+        title: "Couldn't create the template",
         description:
           error instanceof Error ? error.message : "Failed to create template",
         variant: "destructive",
       })
     } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleOpenChange = (open: boolean) => {
-    setIsOpen(open)
-    if (open) {
-      setStep("select-bingo")
-      loadEvents()
-        .then(() => console.log("Events loaded"))
-        .catch((error) => console.error("Error loading events:", error))
+      setPending(false)
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Template
+        <Button variant={variant} className={className}>
+          <Plus aria-hidden="true" />
+          Create template
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <ResponsiveDialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {step === "select-bingo"
-              ? "Select a Bingo Board"
-              : "Create Template"}
+            {step === 1 ? "Choose a board" : "Describe your template"}
           </DialogTitle>
           <DialogDescription>
-            {step === "select-bingo"
-              ? "Choose one of your bingo boards to save as a template"
-              : "Fill in the details for your new template"}
+            <span className="font-medium">Step {step} of 2.</span>{" "}
+            {step === 1
+              ? "Pick one of your boards to share as a template. The board is copied, so later changes to it won't affect the template."
+              : "Tell others what this board is for."}
           </DialogDescription>
         </DialogHeader>
 
-        {step === "select-bingo" ? (
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="event">Event</Label>
-              <Select value={selectedEventId} onValueChange={handleEventChange}>
-                <SelectTrigger id="event">
-                  <SelectValue placeholder="Select an event" />
-                </SelectTrigger>
-                <SelectContent>
-                  {events.map((event) => (
-                    <SelectItem key={event.id} value={event.id}>
-                      {event.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <form
+          onSubmit={(event) => void handleSubmit(event)}
+          className="flex min-h-0 flex-1 flex-col gap-4"
+        >
+          <ResponsiveDialogBody>
+            {step === 1 ? (
+              eventsWithBoards.length === 0 ? (
+                <div className="osrs-slot space-y-3 rounded-sm p-4 text-sm">
+                  <p className="font-medium">
+                    {events.length === 0
+                      ? "You don't manage any events yet."
+                      : "None of your events have a board yet."}
+                  </p>
+                  <p className="text-muted-foreground">
+                    Templates are made from a board in an event you run or
+                    manage.
+                  </p>
+                  <Button asChild variant="outline">
+                    <Link href="/">
+                      {events.length === 0
+                        ? "Create an event"
+                        : "Go to your events"}
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="create-template-event">Event</Label>
+                    <Select value={eventId} onValueChange={handleEventChange}>
+                      <SelectTrigger id="create-template-event">
+                        <SelectValue placeholder="Select an event" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {eventsWithBoards.map((event) => (
+                          <SelectItem key={event.id} value={event.id}>
+                            {event.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="bingo">Bingo Board</Label>
-              <Select
-                value={selectedBingoId}
-                onValueChange={handleBingoChange}
-                disabled={!selectedEventId || bingos.length === 0}
-              >
-                <SelectTrigger id="bingo">
-                  <SelectValue
-                    placeholder={
-                      !selectedEventId
-                        ? "Select an event first"
-                        : bingos.length === 0
-                          ? "No bingo boards found"
-                          : "Select a bingo board"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {bingos.map((bingo) => (
-                    <SelectItem key={bingo.id} value={bingo.id}>
-                      {bingo.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="create-template-board">Board</Label>
+                    <Select
+                      value={bingoId}
+                      onValueChange={(id) => selectBoard(selectedEvent, id)}
+                      disabled={!selectedEvent}
+                    >
+                      <SelectTrigger id="create-template-board">
+                        <SelectValue
+                          placeholder={
+                            selectedEvent
+                              ? "Select a board"
+                              : "Select an event first"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedEvent?.boards.map((board) => (
+                          <SelectItem key={board.id} value={board.id}>
+                            {board.title} ·{" "}
+                            {formatBoardSize(board.rows, board.columns)}{" "}
+                            {BINGO_TYPE_LABELS[board.bingoType]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            <DialogFooter>
-              <Button onClick={handleContinue} disabled={!selectedBingoId}>
-                Continue
-              </Button>
-            </DialogFooter>
-          </div>
-        ) : (
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={templateData.title}
-                onChange={(e) =>
-                  setTemplateData((prev) => ({
-                    ...prev,
-                    title: e.target.value,
-                  }))
-                }
-                placeholder="Template title"
-              />
-            </div>
+                  <p className="text-muted-foreground text-sm">
+                    Templates carry the board only: tiles, goals, tiers and
+                    pattern bonuses. Rules, prizes and buy-ins are not copied.
+                  </p>
+                </>
+              )
+            ) : (
+              <>
+                {selectedBoard ? (
+                  <p className="text-muted-foreground text-sm">
+                    From {selectedBoard.title} (
+                    {formatBoardSize(selectedBoard.rows, selectedBoard.columns)}{" "}
+                    {BINGO_TYPE_LABELS[selectedBoard.bingoType]})
+                  </p>
+                ) : null}
+                <TemplateDetailsFields
+                  idPrefix="create-template"
+                  value={details}
+                  autoFocusTitle
+                  disabled={pending}
+                  categorySuggestions={categorySuggestions}
+                  onChange={(next) => {
+                    if (next.title !== details.title) setTitleTouched(true)
+                    setDetails(next)
+                  }}
+                />
+              </>
+            )}
+          </ResponsiveDialogBody>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={templateData.description}
-                onChange={(e) =>
-                  setTemplateData((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-                placeholder="Describe your template"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
-              <Input
-                id="category"
-                value={templateData.category}
-                onChange={(e) =>
-                  setTemplateData((prev) => ({
-                    ...prev,
-                    category: e.target.value,
-                  }))
-                }
-                placeholder="e.g., PvM, Skilling, Questing"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="tags">Tags (comma separated)</Label>
-              <Input
-                id="tags"
-                value={templateData.tags}
-                onChange={(e) =>
-                  setTemplateData((prev) => ({ ...prev, tags: e.target.value }))
-                }
-                placeholder="e.g., boss, raids, ironman"
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="isPublic"
-                checked={templateData.isPublic}
-                onCheckedChange={(checked) =>
-                  setTemplateData((prev) => ({ ...prev, isPublic: checked }))
-                }
-              />
-              <Label htmlFor="isPublic">Make this template public</Label>
-            </div>
-
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setStep("select-bingo")}
-                disabled={isLoading}
-              >
-                Back
-              </Button>
-              <Button onClick={handleSubmit} disabled={isLoading}>
-                {isLoading ? "Creating..." : "Create Template"}
-              </Button>
-            </DialogFooter>
-          </div>
-        )}
-      </DialogContent>
+          <ResponsiveDialogFooter>
+            {step === 1 ? (
+              <>
+                <DialogClose asChild>
+                  <Button type="button" variant="outline">
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button type="submit" disabled={!bingoId}>
+                  Continue
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={pending}
+                  onClick={() => setStep(1)}
+                >
+                  Back
+                </Button>
+                <Button type="submit" disabled={pending}>
+                  {pending ? (
+                    <>
+                      <Spinner aria-hidden="true" />
+                      Creating…
+                    </>
+                  ) : (
+                    "Create template"
+                  )}
+                </Button>
+              </>
+            )}
+          </ResponsiveDialogFooter>
+        </form>
+      </ResponsiveDialogContent>
     </Dialog>
   )
 }

@@ -1,93 +1,92 @@
-import {
-  getPublicTemplates,
-  getTemplateCategories,
-  getTemplateSizes,
-} from "@/app/actions/templates"
-import { TemplateGallery } from "@/components/template-gallery"
-import { Breadcrumbs } from "@/components/breadcrumbs"
-import { Suspense } from "react"
-import { Skeleton } from "@/components/ui/skeleton"
-import { getServerAuthSession } from "@/server/auth"
+import type { Metadata } from "next"
+import Link from "next/link"
+import { redirect } from "next/navigation"
+import { FolderOpen, LayoutTemplate } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
 import { CreateTemplateButton } from "@/components/create-template-button"
+import { PageHeader } from "@/components/page-header"
+import { TemplateGallery } from "@/components/template-gallery"
+import { getServerAuthSession } from "@/server/auth"
+import { getManageableEvents } from "@/server/queries/manageable-events"
+import {
+  getCategorySuggestions,
+  getPublicTemplates,
+  getTemplateFacets,
+} from "@/server/queries/templates"
+import type { RawSearchParams } from "@/lib/admin-list-params"
+import {
+  TEMPLATE_PAGE_SIZE,
+  buildTemplateListHref,
+  parseTemplateListParams,
+} from "@/lib/template-list-params"
+
+export const metadata: Metadata = { title: "Templates" }
 
 export default async function TemplatesPage(props: {
-  searchParams: Promise<{
-    search?: string
-    category?: string
-    size?: string
-    page?: string
-  }>
+  searchParams: Promise<RawSearchParams>
 }) {
-  const searchParams = await props.searchParams
   const session = await getServerAuthSession()
-  const isAuthenticated = !!session?.user
+  if (!session?.user) redirect("/sign-in?callbackUrl=/templates")
 
-  const search = searchParams.search ?? ""
-  const category = searchParams.category ?? ""
-  const size = searchParams.size ?? ""
-  const page = Number.parseInt(searchParams.page ?? "1", 10)
-  const limit = 12
-  const offset = (page - 1) * limit
+  const params = parseTemplateListParams(await props.searchParams)
 
-  const [templatesData, categories, sizes] = await Promise.all([
-    getPublicTemplates({ search, category, size, limit, offset }),
-    getTemplateCategories(),
-    getTemplateSizes(),
-  ])
+  const [{ templates, total }, facets, events, categorySuggestions] =
+    await Promise.all([
+      getPublicTemplates({
+        search: params.search,
+        category: params.category,
+        size: params.size,
+        bingoType: params.type,
+        sort: params.sort,
+        limit: TEMPLATE_PAGE_SIZE,
+        offset: (params.page - 1) * TEMPLATE_PAGE_SIZE,
+      }),
+      getTemplateFacets(),
+      getManageableEvents(session.user.id, { withBoards: true }),
+      getCategorySuggestions(session.user.id),
+    ])
 
-  const breadcrumbItems = [
-    { label: "Home", href: "/" },
-    { label: "Templates", href: "/templates" },
-  ]
+  // A stale link to a page past the end lands on the last page instead.
+  const totalPages = Math.max(1, Math.ceil(total / TEMPLATE_PAGE_SIZE))
+  if (params.page > totalPages) {
+    redirect(buildTemplateListHref(params, { page: totalPages }))
+  }
 
-  return (
-    <div className="container mx-auto py-10">
-      <div className="mb-6 flex items-center justify-between">
-        <Breadcrumbs items={breadcrumbItems} />
-        {isAuthenticated && <CreateTemplateButton />}
-      </div>
-
-      <div className="flex flex-col gap-6 md:flex-row">
-        <div className="w-full">
-          <h1 className="mb-6 text-4xl font-bold">Bingo Board Templates</h1>
-          <p className="mb-8 text-lg text-muted-foreground">
-            Browse and use community-created bingo board templates for your
-            events. Find the perfect template or create your own to share with
-            others.
-          </p>
-
-          <Suspense fallback={<TemplateGallerySkeleton />}>
-            <TemplateGallery
-              templates={templatesData.templates}
-              totalTemplates={templatesData.total}
-              categories={categories}
-              sizes={sizes}
-              currentSearch={search}
-              currentCategory={category}
-              currentSize={size}
-              currentPage={page}
-              limit={limit}
-            />
-          </Suspense>
-        </div>
-      </div>
-    </div>
+  const createButton = (
+    <CreateTemplateButton
+      events={events}
+      categorySuggestions={categorySuggestions}
+    />
   )
-}
 
-function TemplateGallerySkeleton() {
   return (
-    <div>
-      <div className="mb-6 flex gap-4">
-        <Skeleton className="h-10 w-40" />
-        <Skeleton className="h-10 w-40" />
-        <Skeleton className="h-10 w-40" />
-      </div>
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-[300px] w-full rounded-lg" />
-        ))}
-      </div>
+    <div className="container mx-auto space-y-6 px-4 py-6 sm:py-8">
+      <PageHeader
+        title="Templates"
+        icon={LayoutTemplate}
+        breadcrumbs={[{ label: "Home", href: "/" }, { label: "Templates" }]}
+        description="Start from a board the community already built, or share your own."
+        actions={
+          <>
+            {createButton}
+            <Button asChild variant="outline">
+              <Link href="/templates/my-templates">
+                <FolderOpen aria-hidden="true" />
+                My templates
+              </Link>
+            </Button>
+          </>
+        }
+      />
+
+      <TemplateGallery
+        params={params}
+        templates={templates}
+        total={total}
+        facets={facets}
+        createAction={createButton}
+      />
     </div>
   )
 }
