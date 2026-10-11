@@ -1,13 +1,7 @@
-import { trace } from "@opentelemetry/api"
-import { exportLogEntry } from "@/lib/logs-exporter"
-
 export interface LogContext {
-  traceId?: string
-  spanId?: string
   [key: string]: unknown
 }
 
-// This interface is imported by logs-exporter.ts
 export interface LogEntry {
   timestamp: string
   level: "debug" | "info" | "warn" | "error"
@@ -17,13 +11,6 @@ export interface LogEntry {
 }
 
 class Logger {
-  private getTraceContext(): Pick<LogContext, "traceId" | "spanId"> {
-    const span = trace.getActiveSpan()
-    if (!span) return {}
-    const { traceId, spanId } = span.spanContext()
-    return { traceId, spanId }
-  }
-
   private log(
     level: "debug" | "info" | "warn" | "error",
     message: string,
@@ -31,11 +18,10 @@ class Logger {
     error?: Error
   ) {
     const entry: LogEntry = {
-      // Use the LogEntry type
       timestamp: new Date().toISOString(),
       level,
       message,
-      context: { ...this.getTraceContext(), ...context },
+      context: { ...context },
       error,
     }
 
@@ -49,7 +35,21 @@ class Logger {
           logMethod(formattedMessage, context)
         }
       } else {
-        exportLogEntry(entry)
+        // One JSON line per entry so `docker logs` output stays parseable
+        const logMethod = console[level] || console.log
+        logMethod(
+          JSON.stringify({
+            timestamp: entry.timestamp,
+            level,
+            message,
+            ...(Object.keys(entry.context).length > 0 && {
+              context: entry.context,
+            }),
+            ...(error && {
+              error: { name: error.name, message: error.message, stack: error.stack },
+            }),
+          })
+        )
       }
     }
   }

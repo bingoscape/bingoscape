@@ -71,7 +71,7 @@ Frontend: React 18 + TypeScript + Tailwind CSS + shadcn/ui
 Backend: Next.js App Router + Server Actions + API Routes
 Database: PostgreSQL + Drizzle ORM (19+ tables)
 Authentication: NextAuth.js (Discord OAuth)
-External: RuneLite Plugin API + Discord Webhooks + SigNoz
+External: RuneLite Plugin API + Discord Webhooks
 ```
 
 ### **Key Technical Features**
@@ -116,7 +116,6 @@ External: RuneLite Plugin API + Discord Webhooks + SigNoz
 
 - **[RuneLite Plugin](https://runelite.net/plugin-hub/show/bingoscape-companion)** - OSRS client integration
 - **[Discord Webhooks](https://discord.com/developers/docs/resources/webhook)** - Real-time notifications
-- **[SigNoz](https://signoz.io/)** - Error monitoring and performance tracking
 
 ## Getting Started
 
@@ -363,9 +362,6 @@ NEXTAUTH_URL="https://your-domain.com"
 # Discord OAuth (production app credentials)
 DISCORD_CLIENT_ID="prod-client-id"
 DISCORD_CLIENT_SECRET="prod-client-secret"
-
-# Optional: OpenTelemetry (SigNoz APM)
-OTEL_EXPORTER_OTLP_ENDPOINT="http://host.docker.internal:4318"
 ```
 
 ### Platform Deployment

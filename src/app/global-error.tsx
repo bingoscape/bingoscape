@@ -9,23 +9,7 @@ export default function GlobalError({
   error: Error & { digest?: string }
 }) {
   useEffect(() => {
-    // Log error to our custom error API endpoint
-    fetch("/api/errors", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        message: error.message,
-        stack: error.stack,
-        digest: error.digest,
-        url: window.location.href,
-        userAgent: navigator.userAgent,
-        timestamp: Date.now(),
-      }),
-    }).catch((err) => {
-      console.error("Failed to log error:", err)
-    })
+    console.error(error)
   }, [error])
 
   return (

@@ -173,7 +173,6 @@ Deploys the application to production or staging environments with automatic .en
   - NextAuth configuration
   - OAuth providers (Discord, GitHub, Google)
   - Admin emails
-  - Monitoring (Sentry)
   - SSL configuration
 - Logs into GitHub Container Registry
 - Pulls specified Docker image tag
@@ -221,10 +220,6 @@ The deployment workflow automatically generates the `.env` file from the followi
 **Application:**
 
 - `SUPER_ADMIN_EMAILS`
-
-**Monitoring:**
-
-- `SENTRY_AUTH_TOKEN`, `SENTRY_DSN` (optional)
 
 **SSL:**
 
