@@ -229,17 +229,18 @@ export function DonationManagementModal({
     }
 
     return (
-      <TableRow>
-        <TableCell>
+      <TableRow className="max-md:flex max-md:flex-col max-md:gap-1 max-md:py-2">
+        <TableCell className="max-md:block max-md:py-1">
           <Input
             type="number"
+            inputMode="numeric"
             value={editAmount}
             onChange={(e) => setEditAmount(e.target.value)}
             min="0"
-            className="w-32"
+            className="w-full md:w-32"
           />
         </TableCell>
-        <TableCell>
+        <TableCell className="max-md:block max-md:py-1">
           <Input
             value={editDescription}
             onChange={(e) => setEditDescription(e.target.value)}
@@ -247,14 +248,19 @@ export function DonationManagementModal({
             className="w-full"
           />
         </TableCell>
-        <TableCell>
+        <TableCell className="max-md:block max-md:py-1">
           <Badge variant="outline">
             {new Date(donation.createdAt).toLocaleDateString()}
           </Badge>
         </TableCell>
-        <TableCell>
+        <TableCell className="max-md:block max-md:py-1">
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={handleSave} disabled={isUpdating}>
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={isUpdating}
+              aria-label="Save donation"
+            >
               {isUpdating ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -266,6 +272,7 @@ export function DonationManagementModal({
               variant="outline"
               onClick={handleCancel}
               disabled={isUpdating}
+              aria-label="Cancel editing"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -277,7 +284,7 @@ export function DonationManagementModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
@@ -295,7 +302,7 @@ export function DonationManagementModal({
               <CardTitle className="text-lg">Donation Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div className="text-2xl font-bold text-success">
                     {formatRunescapeGold(totalDonations)} GP
@@ -323,11 +330,12 @@ export function DonationManagementModal({
                 <CardTitle className="text-lg">Add New Donation</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label className="text-sm font-medium">Amount (GP)</label>
                     <Input
                       type="number"
+                      inputMode="numeric"
                       value={newDonation.amount}
                       onChange={(e) =>
                         setNewDonation((prev) => ({
@@ -390,7 +398,7 @@ export function DonationManagementModal({
                 </div>
               ) : (
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="max-md:hidden">
                     <TableRow>
                       <TableHead>Amount</TableHead>
                       <TableHead>Description</TableHead>
@@ -406,30 +414,34 @@ export function DonationManagementModal({
                           donation={donation}
                         />
                       ) : (
-                        <TableRow key={donation.id}>
-                          <TableCell className="font-medium">
+                        <TableRow
+                          key={donation.id}
+                          className="max-md:flex max-md:flex-col max-md:gap-1 max-md:py-2"
+                        >
+                          <TableCell className="font-medium max-md:block max-md:py-1">
                             {formatRunescapeGold(donation.amount)} GP
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="max-md:block max-md:py-1">
                             {donation.description ?? (
                               <span className="italic text-muted-foreground">
                                 No description
                               </span>
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="max-md:block max-md:py-1">
                             <Badge variant="outline">
                               {new Date(
                                 donation.createdAt
                               ).toLocaleDateString()}
                             </Badge>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="max-md:block max-md:py-1">
                             <div className="flex items-center gap-2">
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => setEditingDonation(donation)}
+                                aria-label="Edit donation"
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -440,6 +452,7 @@ export function DonationManagementModal({
                                   handleRemoveDonation(donation.id)
                                 }
                                 className="text-danger hover:text-danger"
+                                aria-label="Remove donation"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>

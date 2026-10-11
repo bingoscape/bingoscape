@@ -3,12 +3,12 @@
 import { useState, useEffect, useMemo } from "react"
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { ResponsiveDialogContent } from "@/components/responsive-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -186,7 +186,7 @@ export function AddClanMembersDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[80vh] max-w-2xl flex-col">
+      <ResponsiveDialogContent className="max-w-2xl md:h-[80dvh]">
         <DialogHeader>
           <DialogTitle>Add Clan Members</DialogTitle>
           <DialogDescription>
@@ -194,7 +194,7 @@ export function AddClanMembersDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-1 flex-col gap-4 overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
           {/* Search and Select All */}
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
@@ -231,7 +231,7 @@ export function AddClanMembersDialog({
           )}
 
           {/* Members List */}
-          <div className="osrs-panel-inset flex-1 overflow-y-auto rounded-sm">
+          <div className="osrs-panel-inset min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-sm">
             {isLoading ? (
               <div className="flex h-32 items-center justify-center">
                 <Loader2
@@ -318,7 +318,7 @@ export function AddClanMembersDialog({
             {selectedMembers.size === 1 ? "Member" : "Members"}
           </Button>
         </DialogFooter>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   )
 }

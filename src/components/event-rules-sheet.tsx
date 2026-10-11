@@ -157,7 +157,7 @@ export function EventRulesSheet({
       </Button>
 
       <Sheet open={open} onOpenChange={handleOpenChange}>
-        <SheetContent className="flex flex-col gap-0 p-0 sm:max-w-md">
+        <SheetContent className="flex w-full flex-col gap-0 p-0 sm:w-3/4 sm:max-w-md">
           {/* Header */}
           <SheetHeader className="border-b px-6 py-4">
             <div className="flex items-center justify-between pr-6">
@@ -224,7 +224,7 @@ export function EventRulesSheet({
                           ref={editInputRef}
                           value={editingText}
                           onChange={(e) => setEditingText(e.target.value)}
-                          className="h-7 flex-1 text-sm"
+                          className="h-7 flex-1"
                           maxLength={500}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") handleUpdate(rule.id)
@@ -263,6 +263,7 @@ export function EventRulesSheet({
                               className="h-6 w-6"
                               onClick={() => startEditing(rule)}
                               disabled={isPending}
+                              aria-label="Edit rule"
                             >
                               <Pencil className="h-3 w-3" />
                             </Button>
@@ -272,6 +273,7 @@ export function EventRulesSheet({
                               className="h-6 w-6 text-danger hover:text-danger"
                               onClick={() => handleDelete(rule.id)}
                               disabled={isPending}
+                              aria-label="Delete rule"
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -295,7 +297,7 @@ export function EventRulesSheet({
                   value={newRuleText}
                   onChange={(e) => setNewRuleText(e.target.value)}
                   maxLength={500}
-                  className="flex-1 text-sm"
+                  className="flex-1"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleAdd()
                   }}

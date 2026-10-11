@@ -38,7 +38,7 @@ export function BingoInfoModal({ bingo }: BingoInfoModalProps) {
         <div className="space-y-4">
           <div>
             <h4 className="font-semibold">Description</h4>
-            <pre className="whitespace-pre-wrap text-sm text-muted-foreground">
+            <pre className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
               {bingo.description}
             </pre>
           </div>

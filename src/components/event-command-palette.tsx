@@ -320,7 +320,7 @@ export function EventCommandPalette({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="gap-0 p-0 sm:max-w-[600px]">
+        <DialogContent className="gap-0 p-0 max-md:top-4 max-md:translate-y-0 sm:max-w-[600px]">
           <DialogTitle className="sr-only">
             Quick Actions Command Palette
           </DialogTitle>
@@ -331,7 +331,7 @@ export function EventCommandPalette({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="h-12 border-0 pl-11 pr-20 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 sm:h-14 sm:text-base"
+              className="h-12 border-0 pl-11 pr-20 text-base focus-visible:ring-0 focus-visible:ring-offset-0 sm:h-14"
               autoFocus
             />
             {search && (
@@ -347,7 +347,7 @@ export function EventCommandPalette({
             )}
           </div>
 
-          <div className="max-h-[400px] overflow-y-auto overflow-x-hidden">
+          <div className="max-h-[min(400px,calc(100dvh-8rem))] overflow-y-auto overflow-x-hidden">
             {filteredActions.length === 0 ? (
               <div className="px-4 py-12 text-center">
                 <Search className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />

@@ -165,7 +165,11 @@ export function ApiKeyManager({ initialKeys }: { initialKeys: ApiKey[] }) {
           <CardContent>
             <div className="flex items-center space-x-2">
               <Input value={newlyCreatedKey} readOnly className="font-mono bg-background" />
-              <Button size="icon" onClick={() => copyToClipboard(newlyCreatedKey)}>
+              <Button
+                size="icon"
+                onClick={() => copyToClipboard(newlyCreatedKey)}
+                aria-label="Copy API key"
+              >
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
@@ -218,6 +222,7 @@ export function ApiKeyManager({ initialKeys }: { initialKeys: ApiKey[] }) {
                         size="icon"
                         className="text-danger hover:bg-destructive/10"
                         onClick={() => setKeyToDelete(key.id)}
+                        aria-label="Delete API key"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

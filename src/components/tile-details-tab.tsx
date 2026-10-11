@@ -430,7 +430,7 @@ export function TileDetailsTab({
                             </Button>
                           </div>
 
-                          <ScrollArea className="h-[300px] rounded-sm border p-2">
+                          <ScrollArea className="h-[min(300px,40dvh)] rounded-sm border p-2">
                             {searchResults.length === 0 && !isSearching ? (
                               <div className="flex h-full items-center justify-center text-muted-foreground">
                                 {searchQuery
@@ -440,10 +440,12 @@ export function TileDetailsTab({
                             ) : (
                               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                 {searchResults.map((image) => (
-                                  <div
+                                  <button
+                                    type="button"
                                     key={image.title}
-                                    className={`cursor-pointer rounded-sm border p-2 transition-colors hover:bg-muted ${selectedImage?.url === image.url ? "ring-2 ring-primary" : ""} `}
+                                    className={`cursor-pointer rounded-sm border p-2 text-left transition-colors hover:bg-muted ${selectedImage?.url === image.url ? "ring-2 ring-primary" : ""} `}
                                     onClick={() => handleImageSelect(image)}
+                                    aria-pressed={selectedImage?.url === image.url}
                                   >
                                     <div className="relative mb-1 aspect-square">
                                       <Image
@@ -459,7 +461,7 @@ export function TileDetailsTab({
                                     >
                                       {image.title}
                                     </p>
-                                  </div>
+                                  </button>
                                 ))}
                               </div>
                             )}

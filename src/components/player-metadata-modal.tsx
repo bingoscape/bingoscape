@@ -380,7 +380,7 @@ export function PlayerMetadataModal({
             )}
 
             {/* EHP/EHB Section - Read-only for self-editing */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="ehp" className="flex items-center gap-2">
                   EHP (Efficient Hours Played)
@@ -394,6 +394,7 @@ export function PlayerMetadataModal({
                 <Input
                   id="ehp"
                   type="text"
+                  inputMode="decimal"
                   placeholder="0.0"
                   value={formData.ehp}
                   onChange={(e) => handleNumberInput("ehp", e.target.value)}
@@ -418,6 +419,7 @@ export function PlayerMetadataModal({
                 <Input
                   id="ehb"
                   type="text"
+                  inputMode="decimal"
                   placeholder="0.0"
                   value={formData.ehb}
                   onChange={(e) => handleNumberInput("ehb", e.target.value)}
@@ -431,7 +433,7 @@ export function PlayerMetadataModal({
             </div>
 
             {/* Combat & Total Level Section - Read-only for self-editing */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label
                   htmlFor="combatLevel"
@@ -448,6 +450,7 @@ export function PlayerMetadataModal({
                 <Input
                   id="combatLevel"
                   type="text"
+                  inputMode="numeric"
                   placeholder="3"
                   value={formData.combatLevel}
                   onChange={(e) =>
@@ -474,6 +477,7 @@ export function PlayerMetadataModal({
                 <Input
                   id="totalLevel"
                   type="text"
+                  inputMode="numeric"
                   placeholder="32"
                   value={formData.totalLevel}
                   onChange={(e) =>
@@ -491,7 +495,7 @@ export function PlayerMetadataModal({
             {/* Timezone Section */}
             <div className="space-y-2">
               <Label htmlFor="timezone">Timezone</Label>
-              <Popover open={timezoneOpen} onOpenChange={setTimezoneOpen}>
+              <Popover open={timezoneOpen} onOpenChange={setTimezoneOpen} modal>
                 <PopoverTrigger asChild>
                   <Button
                     id="timezone"
@@ -515,7 +519,11 @@ export function PlayerMetadataModal({
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0" align="start">
+                <PopoverContent
+                  className="w-(--radix-popover-trigger-width) max-w-[calc(100vw-1rem)] p-0"
+                  align="start"
+                  collisionPadding={8}
+                >
                   <Command>
                     <CommandInput placeholder="Search timezones..." />
                     <CommandList>
@@ -648,6 +656,7 @@ export function PlayerMetadataModal({
               <Input
                 id="dailyHours"
                 type="text"
+                inputMode="decimal"
                 placeholder="0.0"
                 value={formData.dailyHoursAvailable}
                 onChange={(e) =>

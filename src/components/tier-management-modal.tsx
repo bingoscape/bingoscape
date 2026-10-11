@@ -5,11 +5,11 @@ import Image from "next/image"
 import { useState, useEffect } from "react"
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { ResponsiveDialogContent } from "@/components/responsive-dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -283,8 +283,8 @@ export function TierManagementModal({
           Manage Tiers
         </Button>
       </DialogTrigger>
-      <DialogContent
-        className="flex h-[80vh] max-w-4xl flex-col"
+      <ResponsiveDialogContent
+        className="max-w-4xl md:h-[80dvh]"
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
@@ -302,11 +302,10 @@ export function TierManagementModal({
 
           <TabsContent value="tiers" className="min-h-0 flex-1">
             <ScrollArea
-              className="h-full pr-4"
-              style={{ maxHeight: "calc(80vh - 120px)" }}
-            >
+              className="h-full max-h-[calc(100dvh-10rem)] pr-4 md:max-h-[calc(80dvh-120px)]"
+                          >
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h3 className="text-lg font-semibold">Progression Tiers</h3>
                   <Button
                     onClick={handleAddNewTier}
@@ -321,7 +320,7 @@ export function TierManagementModal({
                 {allTiers.map((tier) => (
                   <Card key={tier} className="border border-muted">
                     <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="space-y-2">
                           <CardTitle className="text-lg">
                             Tier {tier}
@@ -401,7 +400,8 @@ export function TierManagementModal({
                                 disabled={loading}
                                 size="sm"
                                 variant="destructive"
-                                className="absolute right-2 top-2 h-6 w-6 p-0 opacity-0 transition-opacity group-hover:opacity-100"
+                                aria-label="Delete tile"
+                                className="absolute right-2 top-2 h-8 w-8 p-0 transition-opacity md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100 pointer-coarse:h-11 pointer-coarse:w-11 pointer-coarse:opacity-100"
                               >
                                 <Trash2 className="h-3 w-3" />
                               </Button>
@@ -435,9 +435,8 @@ export function TierManagementModal({
 
           <TabsContent value="move" className="min-h-0 flex-1">
             <ScrollArea
-              className="h-full pr-4"
-              style={{ maxHeight: "calc(80vh - 120px)" }}
-            >
+              className="h-full max-h-[calc(100dvh-10rem)] pr-4 md:max-h-[calc(80dvh-120px)]"
+                          >
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">
                   Move Tiles Between Tiers
@@ -532,7 +531,7 @@ export function TierManagementModal({
             </ScrollArea>
           </TabsContent>
         </Tabs>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   )
 }

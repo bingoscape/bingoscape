@@ -167,7 +167,11 @@ export function OsrsItemSearch({
           <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[400px] p-0" align="start">
+      <PopoverContent
+        className="w-[400px] max-w-[calc(100vw-1rem)] p-0"
+        align="start"
+        collisionPadding={8}
+      >
         <Command
           shouldFilter={false}
           className="focus:[&_input]:ring-0 focus-visible:[&_input]:ring-0"

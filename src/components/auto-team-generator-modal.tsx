@@ -1,7 +1,7 @@
 /* eslint-disable */
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, type ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -52,6 +52,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+
+// Radix tooltips only open on hover/focus, so tap toggles them for touch users.
+function HelpHint({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <TooltipProvider>
+      <Tooltip open={open} onOpenChange={setOpen}>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label="Help"
+            className="-m-2 p-2"
+            onClick={() => setOpen((prev) => !prev)}
+          >
+            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">{children}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
 
 type Participant = {
   id: string
@@ -420,7 +442,7 @@ export function AutoTeamGeneratorModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Auto-Generate Teams</DialogTitle>
           <DialogDescription>
@@ -554,17 +576,10 @@ export function AutoTeamGeneratorModal({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Label className="text-sm">Iterations</Label>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
+                        <HelpHint>
                               Number of optimization iterations. More iterations
                               = better balance but longer runtime.
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                            </HelpHint>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium">
@@ -591,17 +606,10 @@ export function AutoTeamGeneratorModal({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Label className="text-sm">Initial Temperature</Label>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
+                        <HelpHint>
                               Starting exploration level. Higher = more
                               exploration early.
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                            </HelpHint>
                       </div>
                       <span className="text-sm font-medium">
                         {saConfig.initialTemperature.toFixed(1)}
@@ -623,17 +631,10 @@ export function AutoTeamGeneratorModal({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Label className="text-sm">Final Temperature</Label>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
+                        <HelpHint>
                               Ending precision. Lower = finer adjustments at the
                               end.
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                            </HelpHint>
                       </div>
                       <span className="text-sm font-medium">
                         {saConfig.finalTemperature.toFixed(4)}
@@ -661,17 +662,10 @@ export function AutoTeamGeneratorModal({
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Label className="text-sm">Random Seed (optional)</Label>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
+                      <HelpHint>
                             Set a number for reproducible results. Same seed =
                             same teams.
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                          </HelpHint>
                     </div>
                     <Input
                       type="number"
@@ -691,17 +685,10 @@ export function AutoTeamGeneratorModal({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Label className="text-sm">Stagnation Limit</Label>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
+                        <HelpHint>
                               Stop early if no improvement for this many
                               iterations. Saves time.
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                            </HelpHint>
                       </div>
                       <span className="text-sm font-medium">
                         {saConfig.stagnationLimit}
@@ -725,17 +712,10 @@ export function AutoTeamGeneratorModal({
                     <Label className="text-base font-semibold">
                       Variance Weights
                     </Label>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs">
+                    <HelpHint>
                           Controls how much each metric contributes to team
                           balance optimization.
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                        </HelpHint>
                   </div>
 
                   {/* Visual Balance Bar */}
@@ -895,17 +875,10 @@ export function AutoTeamGeneratorModal({
                     <Label className="text-base font-semibold">
                       Skill Level Mapping Strategy
                     </Label>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs">
+                    <HelpHint>
                           Determines the numerical gap between different
                           categorical skill levels during optimization.
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                        </HelpHint>
                   </div>
                   <Select
                     value={skillMappingStrategy}
@@ -931,7 +904,7 @@ export function AutoTeamGeneratorModal({
                   </Select>
 
                   {skillMappingStrategy === "custom" && (
-                    <div className="mt-2 grid grid-cols-5 gap-2">
+                    <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
                       <div className="space-y-1 text-center">
                         <Label className="text-xs">Beginner</Label>
                         <Input
@@ -1007,17 +980,10 @@ export function AutoTeamGeneratorModal({
                     <Label className="text-base font-semibold">
                       Move Operators
                     </Label>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs">
+                    <HelpHint>
                           Probabilities of different move types during
                           optimization.
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                        </HelpHint>
                   </div>
 
                   {/* Swap Probability */}
