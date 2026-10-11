@@ -22,13 +22,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { GPInput } from "@/components/ui/gp-input"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   Info,
   ArrowRight,
   ArrowLeft,
@@ -39,6 +32,7 @@ import {
 } from "lucide-react"
 import { format, differenceInDays, addDays } from "date-fns"
 import { fromZonedTime } from "date-fns-tz"
+import { TimezoneSelect } from "@/components/timezone-select"
 import { cn } from "@/lib/utils"
 
 interface CreateEventModalProps {
@@ -261,7 +255,7 @@ export function CreateEventModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-[600px]">
+      <DialogContent className="max-sm:data-[state=closed]:slide-out-to-left-0 max-sm:data-[state=closed]:slide-out-to-top-0 max-sm:data-[state=closed]:zoom-out-100 max-sm:data-[state=open]:slide-in-from-left-0 max-sm:data-[state=open]:slide-in-from-top-0 max-sm:data-[state=open]:zoom-in-100 flex max-h-[90dvh] flex-col overflow-hidden max-sm:top-0 max-sm:left-0 max-sm:h-dvh max-sm:max-h-none max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Create New Event</DialogTitle>
           <DialogDescription>
@@ -277,16 +271,16 @@ export function CreateEventModal({
         </DialogHeader>
 
         {/* Progress bar */}
-        <div className="relative my-4 h-2 w-full overflow-hidden rounded-sm bg-muted">
+        <div className="bg-muted relative my-4 h-2 w-full overflow-hidden rounded-sm">
           <motion.div
-            className="h-full bg-primary"
+            className="bg-primary h-full"
             initial={{ width: "25%" }}
             animate={{ width: `${(step / totalSteps) * 100}%` }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           />
         </div>
 
-        <div className="relative min-h-[350px] flex-1">
+        <div className="relative min-h-0 flex-1 sm:min-h-[min(350px,calc(90dvh-16rem))]">
           <AnimatePresence initial={false} custom={direction} mode="wait">
             <motion.div
               key={step}
@@ -313,7 +307,7 @@ export function CreateEventModal({
                       className={cn(errors.title && "border-destructive")}
                     />
                     {errors.title && (
-                      <p className="text-sm text-danger">{errors.title}</p>
+                      <p className="text-danger text-sm">{errors.title}</p>
                     )}
                   </div>
 
@@ -347,7 +341,7 @@ export function CreateEventModal({
                         onClick={() => setGameType("osrs")}
                       >
                         {gameType === "osrs" && (
-                          <div className="absolute right-2 top-2 text-primary">
+                          <div className="text-primary absolute top-2 right-2">
                             <CheckCircle2 className="h-5 w-5" />
                           </div>
                         )}
@@ -362,7 +356,7 @@ export function CreateEventModal({
                         <h4 className="text-sm font-semibold">
                           Old School RuneScape
                         </h4>
-                        <p className="mt-1 text-xs text-muted-foreground">
+                        <p className="text-muted-foreground mt-1 text-xs">
                           The classic 2007 experience
                         </p>
                       </motion.div>
@@ -378,7 +372,7 @@ export function CreateEventModal({
                         onClick={() => setGameType("rs3")}
                       >
                         {gameType === "rs3" && (
-                          <div className="absolute right-2 top-2 text-primary">
+                          <div className="text-primary absolute top-2 right-2">
                             <CheckCircle2 className="h-5 w-5" />
                           </div>
                         )}
@@ -391,7 +385,7 @@ export function CreateEventModal({
                           )}
                         />
                         <h4 className="text-sm font-semibold">RuneScape 3</h4>
-                        <p className="mt-1 text-xs text-muted-foreground">
+                        <p className="text-muted-foreground mt-1 text-xs">
                           The modern evolution
                         </p>
                       </motion.div>
@@ -404,21 +398,13 @@ export function CreateEventModal({
                 <div className="space-y-6">
                   <div className="space-y-2">
                     <Label>Event Timezone</Label>
-                    <Select value={timezone} onValueChange={setTimezone}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select timezone" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Intl.supportedValuesOf("timeZone").map((tz) => (
-                          <SelectItem key={tz} value={tz}>
-                            {tz}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <TimezoneSelect
+                      value={timezone}
+                      onValueChange={setTimezone}
+                    />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>
                         Start Date <span className="text-danger">*</span>
@@ -444,7 +430,7 @@ export function CreateEventModal({
                   </div>
 
                   {eventDuration && !errors.startDate && !errors.endDate && (
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                       <Info className="h-3.5 w-3.5" />
                       <span>Event will run for {eventDuration}</span>
                     </div>
@@ -463,7 +449,7 @@ export function CreateEventModal({
                       error={errors.registrationDeadline}
                     />
                     {errors.registrationDeadline && (
-                      <p className="text-sm text-danger">
+                      <p className="text-danger text-sm">
                         {errors.registrationDeadline}
                       </p>
                     )}
@@ -481,7 +467,7 @@ export function CreateEventModal({
                       onChange={setMinimumBuyIn}
                       error={errors.minimumBuyIn}
                     />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Minimum gold required to participate
                     </p>
                   </div>
@@ -494,12 +480,12 @@ export function CreateEventModal({
                       onChange={setBasePrizePool}
                       error={errors.basePrizePool}
                     />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Starting prize pool before entry fees
                     </p>
                   </div>
 
-                  <div className="flex items-start space-x-3 rounded-xl border bg-muted/20 p-4">
+                  <div className="bg-muted/20 flex items-start space-x-3 rounded-xl border p-4">
                     <Checkbox
                       id="requiresApproval"
                       checked={requiresApproval}
@@ -511,11 +497,11 @@ export function CreateEventModal({
                     <div className="space-y-1">
                       <label
                         htmlFor="requiresApproval"
-                        className="cursor-pointer text-sm font-medium leading-none"
+                        className="cursor-pointer text-sm leading-none font-medium"
                       >
                         Require Admin Approval
                       </label>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         Manually approve each registration request
                       </p>
                     </div>
@@ -525,21 +511,21 @@ export function CreateEventModal({
 
               {step === 4 && (
                 <div className="space-y-6">
-                  <div className="space-y-4 rounded-xl border bg-muted/30 p-6">
+                  <div className="bg-muted/30 space-y-4 rounded-xl border p-6">
                     <h3 className="text-lg font-semibold">
                       {title || "Untitled Event"}
                     </h3>
 
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <p className="mb-1 text-xs text-muted-foreground">
+                        <p className="text-muted-foreground mb-1 text-xs">
                           Game Type
                         </p>
                         <div className="flex items-center gap-2 font-medium">
                           {gameType === "osrs" ? (
-                            <Swords className="h-4 w-4 text-primary" />
+                            <Swords className="text-primary h-4 w-4" />
                           ) : (
-                            <Shield className="h-4 w-4 text-primary" />
+                            <Shield className="text-primary h-4 w-4" />
                           )}
                           {gameType === "osrs"
                             ? "Old School RuneScape"
@@ -548,7 +534,7 @@ export function CreateEventModal({
                       </div>
 
                       <div>
-                        <p className="mb-1 text-xs text-muted-foreground">
+                        <p className="text-muted-foreground mb-1 text-xs">
                           Schedule
                         </p>
                         <p className="font-medium">
@@ -563,16 +549,16 @@ export function CreateEventModal({
                       </div>
 
                       <div>
-                        <p className="mb-1 text-xs text-muted-foreground">
+                        <p className="text-muted-foreground mb-1 text-xs">
                           Buy-In
                         </p>
-                        <p className="flex items-center gap-1 font-medium text-warning">
+                        <p className="text-warning flex items-center gap-1 font-medium">
                           {minimumBuyIn.toLocaleString()} GP
                         </p>
                       </div>
 
                       <div>
-                        <p className="mb-1 text-xs text-muted-foreground">
+                        <p className="text-muted-foreground mb-1 text-xs">
                           Approval
                         </p>
                         <p className="font-medium">
@@ -583,7 +569,7 @@ export function CreateEventModal({
                   </div>
 
                   <div className="text-center">
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Ready to launch your event? You can always edit these
                       settings later.
                     </p>
@@ -594,7 +580,7 @@ export function CreateEventModal({
           </AnimatePresence>
         </div>
 
-        <DialogFooter className="mt-8 flex w-full items-center sm:justify-between">
+        <DialogFooter className="mt-4 flex w-full shrink-0 flex-row items-center justify-between max-sm:pb-[env(safe-area-inset-bottom)] sm:mt-8">
           <Button
             type="button"
             variant="ghost"
@@ -624,7 +610,7 @@ export function CreateEventModal({
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2"
             >
               {isSubmitting ? "Launching..." : "Launch Event"}
               {!isSubmitting && <Rocket className="h-4 w-4" />}

@@ -186,7 +186,7 @@ export function CreateBingoModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-[700px]">
+      <DialogContent className="max-sm:data-[state=closed]:slide-out-to-left-0 max-sm:data-[state=closed]:slide-out-to-top-0 max-sm:data-[state=closed]:zoom-out-100 max-sm:data-[state=open]:slide-in-from-left-0 max-sm:data-[state=open]:slide-in-from-top-0 max-sm:data-[state=open]:zoom-in-100 flex max-h-[90dvh] flex-col overflow-hidden max-sm:top-0 max-sm:left-0 max-sm:h-dvh max-sm:max-h-none max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none sm:max-w-[700px]">
         <DialogHeader>
           <DialogTitle>Create New Bingo Board</DialogTitle>
           <DialogDescription>
@@ -202,9 +202,9 @@ export function CreateBingoModal({
         </DialogHeader>
 
         {/* Progress bar */}
-        <div className="relative my-2 h-2 w-full overflow-hidden rounded-sm bg-muted">
+        <div className="bg-muted relative my-2 h-2 w-full overflow-hidden rounded-sm">
           <motion.div
-            className="h-full bg-primary"
+            className="bg-primary h-full"
             initial={{ width: "25%" }}
             animate={{ width: `${(step / totalSteps) * 100}%` }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
@@ -212,12 +212,12 @@ export function CreateBingoModal({
         </div>
 
         {error && (
-          <div className="mb-4 rounded border border-destructive bg-destructive/10 px-4 py-2 text-sm text-danger">
+          <div className="border-destructive bg-destructive/10 text-danger mb-4 rounded border px-4 py-2 text-sm">
             {error}
           </div>
         )}
 
-        <div className="relative min-h-[400px] flex-1">
+        <div className="relative min-h-0 flex-1 sm:min-h-[min(400px,calc(90dvh-16rem))]">
           <AnimatePresence initial={false} custom={direction} mode="wait">
             <motion.div
               key={step}
@@ -245,8 +245,7 @@ export function CreateBingoModal({
 
                   <div className="space-y-2">
                     <Label htmlFor="codephrase">
-                      Secret Codephrase{" "}
-                      <span className="text-danger">*</span>
+                      Secret Codephrase <span className="text-danger">*</span>
                     </Label>
                     <div className="flex gap-2">
                       <Input
@@ -254,7 +253,7 @@ export function CreateBingoModal({
                         value={codephrase}
                         onChange={(e) => setCodephrase(e.target.value)}
                         required
-                        className="font-mono text-primary"
+                        className="text-primary font-mono"
                       />
                       <Button
                         type="button"
@@ -266,7 +265,7 @@ export function CreateBingoModal({
                         <Dices className="h-4 w-4" />
                       </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Used by players to join this specific board or submit
                       tiles.
                     </p>
@@ -283,12 +282,12 @@ export function CreateBingoModal({
                     />
                   </div>
 
-                  <div className="space-y-4 rounded-xl border bg-muted/20 p-4">
+                  <div className="bg-muted/20 space-y-4 rounded-xl border p-4">
                     <div>
                       <h3 className="text-sm font-semibold">
                         Visibility & Unlock
                       </h3>
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      <p className="text-muted-foreground mt-1 text-xs">
                         Configure when this board will become visible and
                         unlocked for participants.
                       </p>
@@ -325,7 +324,7 @@ export function CreateBingoModal({
                               setDate={setScheduledUnlockDate}
                               placeholder="Select a custom unlock date and time"
                             />
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-muted-foreground text-xs">
                               Uses the same timezone as the event.
                             </p>
                           </div>
@@ -353,7 +352,7 @@ export function CreateBingoModal({
                         onClick={() => setBingoType("standard")}
                       >
                         {bingoType === "standard" && (
-                          <div className="absolute right-2 top-2 text-primary">
+                          <div className="text-primary absolute top-2 right-2">
                             <CheckCircle2 className="h-5 w-5" />
                           </div>
                         )}
@@ -368,7 +367,7 @@ export function CreateBingoModal({
                         <h4 className="text-sm font-semibold">
                           Standard Bingo
                         </h4>
-                        <p className="mt-1 text-xs text-muted-foreground">
+                        <p className="text-muted-foreground mt-1 text-xs">
                           Traditional bingo where all tiles are available from
                           the start.
                         </p>
@@ -386,7 +385,7 @@ export function CreateBingoModal({
                         onClick={() => setBingoType("progression")}
                       >
                         {bingoType === "progression" && (
-                          <div className="absolute right-2 top-2 text-primary">
+                          <div className="text-primary absolute top-2 right-2">
                             <CheckCircle2 className="h-5 w-5" />
                           </div>
                         )}
@@ -401,7 +400,7 @@ export function CreateBingoModal({
                         <h4 className="text-sm font-semibold">
                           Progression Bingo
                         </h4>
-                        <p className="mt-1 text-xs text-muted-foreground">
+                        <p className="text-muted-foreground mt-1 text-xs">
                           Teams unlock tiers progressively. Rows act as tiers.
                         </p>
                       </motion.div>
@@ -457,7 +456,7 @@ export function CreateBingoModal({
                         }
                         required
                       />
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         Amount of XP (weight) that must be earned in each tier
                         before the next tier unlocks.
                       </p>
@@ -469,18 +468,18 @@ export function CreateBingoModal({
               {step === 3 && (
                 <div className="space-y-4">
                   {bingoType === "standard" ? (
-                    <div className="space-y-4 rounded-xl border bg-muted/20 p-4">
+                    <div className="bg-muted/20 space-y-4 rounded-xl border p-4">
                       <div>
                         <h3 className="mb-1 text-sm font-semibold">
                           Pattern Bonuses (Optional)
                         </h3>
-                        <p className="mb-4 text-xs text-muted-foreground">
+                        <p className="text-muted-foreground mb-4 text-xs">
                           Award extra XP when teams complete full rows, columns,
                           or diagonals. Hover over inputs to see affected tiles.
                         </p>
                       </div>
 
-                      <div className="overflow-hidden rounded-lg border bg-background p-2 shadow-xs">
+                      <div className="bg-background overflow-hidden rounded-lg border p-2 shadow-xs">
                         <PatternBonusSchematicEditor
                           rows={rows}
                           columns={columns}
@@ -508,13 +507,13 @@ export function CreateBingoModal({
                       </div>
                     </div>
                   ) : (
-                    <div className="flex h-48 flex-col items-center justify-center space-y-3 rounded-xl border border-dashed bg-muted/20 text-center">
-                      <ArrowUpRight className="h-10 w-10 text-muted-foreground" />
+                    <div className="bg-muted/20 flex h-48 flex-col items-center justify-center space-y-3 rounded-xl border border-dashed text-center">
+                      <ArrowUpRight className="text-muted-foreground h-10 w-10" />
                       <div>
                         <h3 className="text-sm font-semibold">
                           Progression Mechanics
                         </h3>
-                        <p className="mt-1 max-w-sm text-xs text-muted-foreground">
+                        <p className="text-muted-foreground mt-1 max-w-sm text-xs">
                           In Progression Bingo, there are no pattern bonuses.
                           Teams must earn{" "}
                           <strong>{tiersUnlockRequirement} XP</strong> in a tier
@@ -528,21 +527,21 @@ export function CreateBingoModal({
 
               {step === 4 && (
                 <div className="space-y-6">
-                  <div className="space-y-4 rounded-xl border bg-muted/30 p-6">
+                  <div className="bg-muted/30 space-y-4 rounded-xl border p-6">
                     <h3 className="text-lg font-semibold">
                       {title || "Untitled Board"}
                     </h3>
 
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <p className="mb-1 text-xs text-muted-foreground">
+                        <p className="text-muted-foreground mb-1 text-xs">
                           Bingo Type
                         </p>
                         <p className="flex items-center gap-2 font-medium">
                           {bingoType === "standard" ? (
-                            <Grid3X3 className="h-4 w-4 text-primary" />
+                            <Grid3X3 className="text-primary h-4 w-4" />
                           ) : (
-                            <ArrowUpRight className="h-4 w-4 text-primary" />
+                            <ArrowUpRight className="text-primary h-4 w-4" />
                           )}
                           {bingoType === "standard"
                             ? "Standard"
@@ -551,7 +550,7 @@ export function CreateBingoModal({
                       </div>
 
                       <div>
-                        <p className="mb-1 text-xs text-muted-foreground">
+                        <p className="text-muted-foreground mb-1 text-xs">
                           Dimensions
                         </p>
                         <p className="font-medium">
@@ -560,7 +559,7 @@ export function CreateBingoModal({
                       </div>
 
                       <div>
-                        <p className="mb-1 text-xs text-muted-foreground">
+                        <p className="text-muted-foreground mb-1 text-xs">
                           Codephrase
                         </p>
                         <p className="font-mono font-medium">{codephrase}</p>
@@ -568,7 +567,7 @@ export function CreateBingoModal({
 
                       {bingoType === "progression" && (
                         <div>
-                          <p className="mb-1 text-xs text-muted-foreground">
+                          <p className="text-muted-foreground mb-1 text-xs">
                             Tier Requirement
                           </p>
                           <p className="font-medium">
@@ -578,7 +577,7 @@ export function CreateBingoModal({
                       )}
 
                       <div className="col-span-2 mt-2 border-t pt-2">
-                        <p className="mb-1 text-xs text-muted-foreground">
+                        <p className="text-muted-foreground mb-1 text-xs">
                           Unlock Schedule
                         </p>
                         <p className="font-medium">
@@ -593,7 +592,7 @@ export function CreateBingoModal({
                   </div>
 
                   <div className="text-center">
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Ready to create your board? You can manage the
                       board&apos;s tiles from the event dashboard.
                     </p>
@@ -604,7 +603,7 @@ export function CreateBingoModal({
           </AnimatePresence>
         </div>
 
-        <DialogFooter className="mt-8 flex w-full items-center justify-between">
+        <DialogFooter className="mt-4 flex w-full shrink-0 flex-row items-center justify-between max-sm:pb-[env(safe-area-inset-bottom)] sm:mt-8">
           <Button
             type="button"
             variant="ghost"
@@ -634,7 +633,7 @@ export function CreateBingoModal({
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2"
             >
               {isSubmitting ? "Creating..." : "Create Board"}
               {!isSubmitting && <PlusCircle className="h-4 w-4" />}
