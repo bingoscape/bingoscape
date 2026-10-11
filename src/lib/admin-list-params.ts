@@ -60,6 +60,7 @@ export function parseListParams<K extends string>(
 
 /** Clamps a requested page into `1..totalPages` (at least 1). */
 export function clampPage(page: number, totalPages: number): number {
+  if (!Number.isFinite(page)) return 1
   return Math.min(Math.max(page, 1), Math.max(totalPages, 1))
 }
 
@@ -68,9 +69,9 @@ export function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, "\\$&")
 }
 
-/** `%term%` pattern for ILIKE, with the term escaped. */
+/** `%term%` pattern for ILIKE, with the term capped at 100 characters and escaped. */
 export function containsPattern(value: string): string {
-  return `%${escapeLike(value)}%`
+  return `%${escapeLike(value.slice(0, MAX_QUERY_LENGTH))}%`
 }
 
 export interface HrefState {
