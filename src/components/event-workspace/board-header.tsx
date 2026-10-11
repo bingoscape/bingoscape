@@ -36,6 +36,7 @@ import { BingoInfoModal } from "@/components/bingo-info-modal"
 import { DeleteBingoButton } from "@/components/delete-bingo-button"
 import { EditBingoModal } from "@/components/edit-bingo-modal"
 import { QuickSubmissionButton } from "@/components/quick-submission-button"
+import { ShortcutsHelp } from "@/components/event-workspace/shortcuts-help"
 import { StatsDialog } from "@/components/stats-dialog"
 import { TeamSelector } from "@/components/team-selector"
 import { TrackerSettingsModal } from "@/components/tracker-settings-modal"
@@ -69,6 +70,8 @@ interface BoardHeaderProps {
   isUpcoming: boolean
   /** A Board / Team switch is waiting for the server. */
   isSwitching?: boolean
+  /** The side panel can be collapsed (shown in the shortcuts list). */
+  canCollapsePanel?: boolean
 }
 
 /**
@@ -93,6 +96,7 @@ export function BoardHeader({
   onQuickSubmit,
   isUpcoming,
   isSwitching = false,
+  canCollapsePanel = false,
 }: BoardHeaderProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [trackerOpen, setTrackerOpen] = useState(false)
@@ -196,6 +200,11 @@ export function BoardHeader({
           )}
 
           <BingoInfoModal bingo={activeBingo} />
+
+          <ShortcutsHelp
+            hasMultipleBoards={bingos.length > 1}
+            canCollapsePanel={canCollapsePanel}
+          />
 
           {isManagement && !readOnly && (
             <DropdownMenu>

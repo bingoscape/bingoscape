@@ -394,6 +394,7 @@ export function EventWorkspace({
               onQuickSubmit={() => setQuickSubmitOpen(true)}
               isUpcoming={isUpcoming}
               isSwitching={isSwitching}
+              canCollapsePanel={resizable}
             />
 
             {editLayout && isManagement && (
