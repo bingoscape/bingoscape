@@ -303,6 +303,7 @@ export function TrackerSettingsModal({
                       size="icon"
                       className="h-6 w-6"
                       onClick={() => setShowCode(!showCode)}
+                      aria-label={showCode ? "Hide code" : "Show code"}
                     >
                       {showCode ? (
                         <EyeOff className="h-4 w-4" />
@@ -315,6 +316,7 @@ export function TrackerSettingsModal({
                       size="icon"
                       className="h-6 w-6"
                       onClick={handleCopyCode}
+                      aria-label="Copy code"
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
@@ -381,7 +383,7 @@ export function TrackerSettingsModal({
               )}
             </div>
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
               <Button
                 variant="destructive"
                 size="sm"
@@ -414,6 +416,7 @@ export function TrackerSettingsModal({
                   value={competitionId}
                   onChange={(e) => setCompetitionId(e.target.value)}
                   type="number"
+                  inputMode="numeric"
                 />
               </div>
               <div className="space-y-2">

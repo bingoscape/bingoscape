@@ -168,10 +168,14 @@ export function EventDeleteModal({
               placeholder="Enter event title"
               disabled={loading}
               className="font-mono"
+              autoCapitalize="none"
+              autoCorrect="off"
+              autoComplete="off"
+              spellCheck={false}
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
             <Button variant="outline" onClick={handleClose} disabled={loading}>
               Cancel
             </Button>

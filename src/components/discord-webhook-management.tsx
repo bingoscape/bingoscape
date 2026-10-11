@@ -223,7 +223,7 @@ export function DiscordWebhookManagement({
         </Button>
       </DialogTrigger>
       <DialogContent
-        className="max-h-[80vh] max-w-4xl overflow-y-auto"
+        className="max-w-4xl"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>
@@ -247,7 +247,7 @@ export function DiscordWebhookManagement({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="webhook-name">Webhook Name</Label>
                   <Input
@@ -305,12 +305,12 @@ export function DiscordWebhookManagement({
                 {webhooks.map((webhook) => (
                   <Card key={webhook.id}>
                     <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
                           <CardTitle className="text-base">
                             {webhook.name}
                           </CardTitle>
-                          <CardDescription className="font-mono text-xs">
+                          <CardDescription className="break-all font-mono text-xs">
                             {webhook.webhookUrl.substring(0, 50)}...
                           </CardDescription>
                         </div>
@@ -324,7 +324,7 @@ export function DiscordWebhookManagement({
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-4">
                           <div className="flex items-center space-x-2">
                             <Switch

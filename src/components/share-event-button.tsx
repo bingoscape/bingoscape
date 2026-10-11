@@ -95,7 +95,12 @@ export function ShareEventButton({
           </p>
           <div className="flex items-center gap-2">
             <Input value={publicUrl} readOnly className="flex-1" />
-            <Button variant="outline" size="icon" onClick={handleCopy}>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleCopy}
+              aria-label="Copy link"
+            >
               <Copy className="h-4 w-4" />
             </Button>
           </div>

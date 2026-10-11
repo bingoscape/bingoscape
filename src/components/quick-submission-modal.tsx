@@ -209,7 +209,7 @@ export function QuickSubmissionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[80vh] sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Quick Submit</DialogTitle>
         </DialogHeader>

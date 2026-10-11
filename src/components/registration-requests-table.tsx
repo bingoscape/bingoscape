@@ -346,10 +346,11 @@ export function RegistrationRequestsTable({
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">
+              <label htmlFor="approve-response-message" className="text-sm font-medium">
                 Response Message (Optional)
               </label>
               <Textarea
+                id="approve-response-message"
                 placeholder="Add a message to the user about their approval..."
                 value={responseMessage}
                 onChange={(e) => setResponseMessage(e.target.value)}
@@ -403,10 +404,11 @@ export function RegistrationRequestsTable({
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">
+              <label htmlFor="reject-response-message" className="text-sm font-medium">
                 Reason for Rejection (Recommended)
               </label>
               <Textarea
+                id="reject-response-message"
                 placeholder="Explain why this request is being rejected..."
                 value={responseMessage}
                 onChange={(e) => setResponseMessage(e.target.value)}

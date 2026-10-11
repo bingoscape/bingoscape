@@ -1,7 +1,7 @@
 "use server"
 
 import {
-  searchItemsByName,
+  getAllItems,
   getItemById,
   getItemsById,
   getItemByName,
@@ -11,6 +11,9 @@ import {
 } from "osrs-item-data"
 import type { OsrsItem } from "@/types/osrs-items"
 import { logger } from "@/lib/logger"
+import { indexOsrsItems, rankOsrsItems } from "@/lib/osrs-item-ranking"
+
+let itemIndex: ReturnType<typeof indexOsrsItems> | undefined
 
 /**
  * Search for OSRS items by name (autocomplete)
@@ -21,11 +24,13 @@ export async function searchOsrsItems(
   limit = 20
 ): Promise<{ success: boolean; items?: OsrsItem[]; error?: string }> {
   try {
-    if (!query || query.length < 2) {
+    const trimmed = query?.trim() ?? ""
+    if (trimmed.length < 2) {
       return { success: false, error: "Query must be at least 2 characters" }
     }
 
-    const results = searchItemsByName(query, limit)
+    itemIndex ??= indexOsrsItems(getAllItems())
+    const results = rankOsrsItems(itemIndex, trimmed, limit)
 
     return { success: true, items: results }
   } catch (error) {

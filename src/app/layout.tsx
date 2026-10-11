@@ -28,6 +28,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  // Shrink the layout viewport when the on-screen keyboard opens so pinned dialog footers stay visible.
+  interactiveWidget: "resizes-content",
 }
 
 export const metadata: Metadata = {

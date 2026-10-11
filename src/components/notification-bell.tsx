@@ -91,7 +91,7 @@ export function NotificationBell({ userId }: { userId: string }) {
         <div className="border-b p-4">
           <h4 className="font-medium">Notifications</h4>
         </div>
-        <div className="max-h-[400px] overflow-y-auto">
+        <div className="max-h-[min(400px,var(--radix-popover-content-available-height))] overflow-y-auto">
           {notifications.length === 0 ? (
             <div className="p-4 text-center text-muted-foreground">
               <p>No notifications</p>

@@ -3,7 +3,6 @@
 import { useState } from "react"
 import Link from "next/link"
 import {
-  BarChart,
   FileJson,
   LayoutGrid,
   Link as LinkIcon,
@@ -38,7 +37,6 @@ import { EditBingoModal } from "@/components/edit-bingo-modal"
 import { QuickSubmissionButton } from "@/components/quick-submission-button"
 import { BoardFilters } from "@/components/event-workspace/board-filters"
 import { ShortcutsHelp } from "@/components/event-workspace/shortcuts-help"
-import { StatsDialog } from "@/components/stats-dialog"
 import { TeamSelector } from "@/components/team-selector"
 import { TrackerSettingsModal } from "@/components/tracker-settings-modal"
 import type { TileFilter, TileFilterContext } from "@/lib/tile-filter"
@@ -111,7 +109,6 @@ export function BoardHeader({
   const [trackerOpen, setTrackerOpen] = useState(false)
   const [importExportOpen, setImportExportOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [statsOpen, setStatsOpen] = useState(false)
 
   const showTeamStats = !!effectiveTeamId
   const useSelect = bingos.length > MAX_PILLS
@@ -240,10 +237,6 @@ export function BoardHeader({
                   <FileJson aria-hidden="true" className="mr-2 h-4 w-4" />
                   Import / Export
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setStatsOpen(true)}>
-                  <BarChart aria-hidden="true" className="mr-2 h-4 w-4" />
-                  Board stats
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-danger focus:text-danger"
@@ -324,12 +317,6 @@ export function BoardHeader({
             hideTrigger
             open={deleteOpen}
             onOpenChange={setDeleteOpen}
-          />
-          <StatsDialog
-            isOpen={statsOpen}
-            onOpenChange={setStatsOpen}
-            teams={teams}
-            bingoId={activeBingo.id}
           />
         </>
       )}
