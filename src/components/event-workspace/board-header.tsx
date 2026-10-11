@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Progress } from "@/components/ui/progress"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Select,
   SelectContent,
@@ -66,6 +67,8 @@ interface BoardHeaderProps {
   onQuickSubmit: () => void
   /** Board is locked and not yet visible to players ("upcoming"). */
   isUpcoming: boolean
+  /** A Board / Team switch is waiting for the server. */
+  isSwitching?: boolean
 }
 
 /**
@@ -89,6 +92,7 @@ export function BoardHeader({
   onToggleEditLayout,
   onQuickSubmit,
   isUpcoming,
+  isSwitching = false,
 }: BoardHeaderProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [trackerOpen, setTrackerOpen] = useState(false)
@@ -133,8 +137,9 @@ export function BoardHeader({
                     aria-current={active ? "page" : undefined}
                     onClick={() => onSelectBoard(b.id)}
                     className={cn(
-                      "osrs-btn inline-flex h-8 shrink-0 items-center gap-1.5 rounded-sm px-3 text-sm whitespace-nowrap focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden",
-                      active && "osrs-bevel-inset translate-y-px !text-osrs-yellow"
+                      "osrs-btn focus-visible:ring-ring inline-flex h-8 shrink-0 items-center gap-1.5 rounded-sm px-3 text-sm whitespace-nowrap focus-visible:ring-2 focus-visible:outline-hidden",
+                      active &&
+                        "osrs-bevel-inset !text-osrs-yellow translate-y-px"
                     )}
                   >
                     {upcoming && (
@@ -147,15 +152,17 @@ export function BoardHeader({
             </nav>
           ))}
         {bingos.length === 1 && (
-          <h2 className="osrs-heading text-lg text-foreground">
+          <h2 className="osrs-heading text-foreground text-lg">
             {activeBingo.title}
           </h2>
         )}
 
+        {isSwitching && <Spinner aria-label="Loading board" />}
+
         {/* Progress */}
         {showTeamStats && (
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-muted-foreground tabular-nums">
+            <span className="text-muted-foreground text-sm font-medium tabular-nums">
               {stats.percent}%
             </span>
             <Progress
@@ -251,7 +258,7 @@ export function BoardHeader({
           </>
         )}
         {isUpcoming && isManagement && (
-          <span className="flex items-center gap-1 font-medium text-muted-foreground">
+          <span className="text-muted-foreground flex items-center gap-1 font-medium">
             <Lock aria-hidden="true" className="h-3 w-3" />
             Upcoming (locked for players)
           </span>
@@ -259,12 +266,12 @@ export function BoardHeader({
         {isManagement && !readOnly && (
           <Link
             href={`/events/${eventId}/bingos/${activeBingo.id}/submissions`}
-            className="ml-auto inline-flex items-center gap-1 font-medium text-primary underline-offset-2 hover:underline"
+            className="text-primary ml-auto inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline"
           >
             <ListFilter aria-hidden="true" className="h-3 w-3" />
             Submissions
             {pendingSubmissionCount > 0 && (
-              <span className="rounded-sm bg-pending px-1 text-[10px] text-pending-foreground">
+              <span className="bg-pending text-pending-foreground rounded-sm px-1 text-[10px]">
                 {pendingSubmissionCount} pending
               </span>
             )}

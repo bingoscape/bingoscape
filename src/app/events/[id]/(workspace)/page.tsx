@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import { cookies } from "next/headers"
 import { notFound } from "next/navigation"
 import type { UUID } from "crypto"
 import { getServerAuthSession } from "@/server/auth"
@@ -19,6 +20,10 @@ import { PrizePanel } from "@/components/event-workspace/prize-panel"
 import { TeamsPanel } from "@/components/event-workspace/teams-panel"
 import { Skeleton } from "@/components/ui/skeleton"
 import { resolveWorkspaceSelection } from "@/lib/workspace-selection"
+import {
+  WORKSPACE_PREFS_COOKIE,
+  parseWorkspacePrefs,
+} from "@/lib/workspace-prefs"
 
 function firstParam(value: string | string[] | undefined): string | null {
   return (Array.isArray(value) ? value[0] : value) ?? null
@@ -44,6 +49,11 @@ export default async function EventWorkspacePage(props: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const [params, search] = await Promise.all([props.params, props.searchParams])
+
+  const cookieStore = await cookies()
+  const layoutPrefs = parseWorkspacePrefs(
+    cookieStore.get(WORKSPACE_PREFS_COOKIE)?.value
+  )
 
   const session = await getServerAuthSession()
   if (!session?.user) {
@@ -121,6 +131,7 @@ export default async function EventWorkspacePage(props: {
       currentTeam={currentTeam}
       selectableUsers={selectableUsers}
       tierData={tierData}
+      layoutPrefs={layoutPrefs}
       summaryBar={
         <EventSummaryBar
           eventId={event.id}

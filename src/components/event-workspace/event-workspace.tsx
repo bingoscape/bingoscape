@@ -1,18 +1,33 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import type { CSSProperties, ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import { ListFilter, Lock } from "lucide-react"
+import { ListFilter, Lock, PanelRightClose } from "lucide-react"
 import BingoGrid from "@/components/bingogrid"
 import { EventTimeDisplay } from "@/components/event-time-display"
 import { QuickSubmissionModal } from "@/components/quick-submission-modal"
-import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer"
+import { Button } from "@/components/ui/button"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BoardHeader } from "@/components/event-workspace/board-header"
 import { LayoutToolbar } from "@/components/event-workspace/layout-toolbar"
+import { SideRail } from "@/components/event-workspace/side-rail"
+import {
+  isDialogOpen,
+  shouldHandlePageShortcut,
+} from "@/components/event-workspace/keyboard"
+import { SplitHandle } from "@/components/event-workspace/split-handle"
 import { TierLadderView } from "@/components/event-workspace/tier-ladder-view"
-import { TilePanel } from "@/components/event-workspace/tile-panel"
+import {
+  TilePanel,
+  type TileSubTab,
+} from "@/components/event-workspace/tile-panel"
 import { useIsDesktop } from "@/components/event-workspace/use-is-desktop"
 import { useTileWorkspace } from "@/components/event-workspace/use-tile-workspace"
 import {
@@ -23,9 +38,16 @@ import {
 import { reorderTiles } from "@/app/actions/bingo"
 import type { EventRole } from "@/app/actions/events"
 import { toast } from "@/hooks/use-toast"
+import { cn } from "@/lib/utils"
 import { getBoardStats } from "@/lib/tile-status"
 import { getTileTierLock, type BoardTierData } from "@/lib/tiers"
 import { resolveWorkspaceSelection } from "@/lib/workspace-selection"
+import {
+  DEFAULT_WORKSPACE_PREFS,
+  serializeWorkspacePrefsCookie,
+  sideWidthCss,
+  type WorkspacePrefs,
+} from "@/lib/workspace-prefs"
 import type { Bingo, SelectableUser, Team, Tile } from "@/types/model"
 
 /** What the workspace needs from an Event (the public view has no full Event). */
@@ -54,6 +76,11 @@ interface EventWorkspaceProps {
   summaryBar?: ReactNode
   /** Public view: read-only Tile panel and leaderboard, no submissions. */
   readOnly?: boolean
+  /**
+   * Saved split-view layout. Omit for a fixed layout (public view); pass it
+   * to make the side panel resizable and collapsible on desktop.
+   */
+  layoutPrefs?: WorkspacePrefs
 }
 
 const MOBILE_SNAP_POINTS = ["96px", 0.6, 0.92] as const
@@ -78,14 +105,44 @@ export function EventWorkspace({
   infoPanel,
   summaryBar,
   readOnly = false,
+  layoutPrefs,
 }: EventWorkspaceProps) {
   const router = useRouter()
   const isDesktop = useIsDesktop()
-  const { params, selectTile, setPanel, setBoard, setTeamId } =
+  const { params, selectTile, setPanel, setBoard, setTeamId, isSwitching } =
     useWorkspaceParams()
 
   const isManagement =
     !readOnly && (userRole === "admin" || userRole === "management")
+
+  const resizable = !!layoutPrefs
+  const [prefs, setPrefs] = useState(layoutPrefs ?? DEFAULT_WORKSPACE_PREFS)
+  const gridRef = useRef<HTMLDivElement>(null)
+  const sideRef = useRef<HTMLElement>(null)
+  const sideId = useId()
+  const railMode = resizable && isDesktop && prefs.collapsed
+
+  const updatePrefs = useCallback((next: WorkspacePrefs) => {
+    setPrefs(next)
+    document.cookie = serializeWorkspacePrefsCookie(next)
+  }, [])
+  const resizeSide = useCallback((width: number) => {
+    // Written straight to the DOM while dragging so the Board does not
+    // re-render per pointer move; the width is committed to state on release.
+    gridRef.current?.style.setProperty("--side-w", `${width}px`)
+  }, [])
+  const commitSideWidth = useCallback(
+    (sideWidth: number) => updatePrefs({ sideWidth, collapsed: false }),
+    [updatePrefs]
+  )
+  const resetSide = useCallback(
+    () => updatePrefs(DEFAULT_WORKSPACE_PREFS),
+    [updatePrefs]
+  )
+  const toggleCollapsed = useCallback(
+    () => updatePrefs({ ...prefs, collapsed: !prefs.collapsed }),
+    [prefs, updatePrefs]
+  )
 
   const teams: Team[] = useMemo(() => event.teams ?? [], [event.teams])
 
@@ -127,6 +184,9 @@ export function EventWorkspace({
   const [highlightedTiles, setHighlightedTiles] = useState<number[]>([])
   const [quickSubmitOpen, setQuickSubmitOpen] = useState(false)
   const [snap, setSnap] = useState<number | string | null>(0.6)
+  // Lives here (not in the Tile panel) so moving between Tiles keeps the
+  // reviewer on the same sub-tab.
+  const [tileSubTab, setTileSubTab] = useState<TileSubTab>("details")
 
   const activePanelTab = params.panel
   const panelOnTile = activePanelTab === "tile"
@@ -136,7 +196,8 @@ export function EventWorkspace({
     bingo: bingo ?? { locked: false },
     currentTeamId: effectiveTeamId,
     selectableUsers,
-    pasteEnabled: !readOnly && !!selectedTile && isDesktop && panelOnTile,
+    pasteEnabled:
+      !readOnly && !!selectedTile && isDesktop && panelOnTile && !railMode,
   })
 
   const stats = useMemo(
@@ -174,20 +235,7 @@ export function EventWorkspace({
     if (bingos.length < 2) return
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "[" && event.key !== "]") return
-      if (event.ctrlKey || event.metaKey || event.altKey) return
-      const target = event.target as HTMLElement | null
-      if (
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.tagName === "SELECT" ||
-          target.isContentEditable)
-      ) {
-        return
-      }
-      if (document.querySelector('[role="dialog"], [role="alertdialog"]')) {
-        return
-      }
+      if (!shouldHandlePageShortcut(event)) return
       const index = bingos.findIndex((b) => b.id === bingo?.id)
       const next =
         event.key === "]"
@@ -199,6 +247,33 @@ export function EventWorkspace({
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [bingos, bingo?.id, setBoard])
+
+  // Keyboard: Ctrl/Cmd+\ collapses or expands the side panel.
+  useEffect(() => {
+    if (!resizable || !isDesktop) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "\\" || !(event.ctrlKey || event.metaKey)) return
+      if (event.altKey || event.shiftKey) return
+      if (isDialogOpen()) return
+      event.preventDefault()
+      toggleCollapsed()
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [resizable, isDesktop, toggleCollapsed])
+
+  // Keyboard: Esc closes the selected Tile (the drawer handles its own Esc).
+  const hasSelectedTile = !!selectedTile
+  useEffect(() => {
+    if (!hasSelectedTile || !isDesktop) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return
+      if (!shouldHandlePageShortcut(event)) return
+      selectTile(null)
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [hasSelectedTile, isDesktop, selectTile])
 
   const refresh = useCallback(() => router.refresh(), [router])
 
@@ -228,8 +303,10 @@ export function EventWorkspace({
     (tileId: string | null) => {
       selectTile(tileId)
       if (tileId) setSnap(0.6)
+      // The Tile shows in the side panel, so bring it back from the rail.
+      if (tileId && railMode) updatePrefs({ ...prefs, collapsed: false })
     },
-    [selectTile]
+    [selectTile, railMode, prefs, updatePrefs]
   )
 
   const handleSelectBoard = useCallback(
@@ -255,26 +332,28 @@ export function EventWorkspace({
 
   const buildTilePanel = (mobile: boolean) =>
     bingo ? (
-    <TilePanel
-      scrollStyle={mobile ? drawerScrollStyle : undefined}
-      scrollClassName={
-        mobile ? "pb-[calc(env(safe-area-inset-bottom)+0.75rem)]" : undefined
-      }
-      tile={selectedTile}
-      bingo={bingo}
-      workspace={workspace}
-      userRole={userRole}
-      teams={teams}
-      currentTeamId={effectiveTeamId}
-      eventId={event.id}
-      gameType={event.gameType}
-      isProgressionBingo={bingo.bingoType === "progression"}
-      tierLock={tierLock}
-      readOnly={readOnly}
-      onSelectTile={handleSelectTile}
-      onClose={selectedTile ? () => handleSelectTile(null) : undefined}
-    />
-  ) : null
+      <TilePanel
+        scrollStyle={mobile ? drawerScrollStyle : undefined}
+        scrollClassName={
+          mobile ? "pb-[calc(env(safe-area-inset-bottom)+0.75rem)]" : undefined
+        }
+        tile={selectedTile}
+        bingo={bingo}
+        workspace={workspace}
+        userRole={userRole}
+        teams={teams}
+        currentTeamId={effectiveTeamId}
+        eventId={event.id}
+        gameType={event.gameType}
+        isProgressionBingo={bingo.bingoType === "progression"}
+        tierLock={tierLock}
+        readOnly={readOnly}
+        subTab={tileSubTab}
+        onSubTabChange={setTileSubTab}
+        onSelectTile={handleSelectTile}
+        onClose={selectedTile ? () => handleSelectTile(null) : undefined}
+      />
+    ) : null
 
   return (
     <div className="flex flex-col gap-3 px-3 pb-3 sm:px-4 lg:h-[calc(100dvh-var(--nav-h)-var(--nav-gap))] lg:overflow-hidden">
@@ -283,7 +362,16 @@ export function EventWorkspace({
       {!bingo ? (
         <EmptyBoards isManagement={isManagement} />
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_clamp(360px,30vw,480px)]">
+        <div
+          ref={gridRef}
+          style={{ "--side-w": sideWidthCss(prefs) } as CSSProperties}
+          className={cn(
+            "flex min-h-0 flex-1 flex-col gap-3 lg:grid",
+            resizable
+              ? "lg:grid-cols-[minmax(0,1fr)_0.75rem_var(--side-w)] lg:gap-0"
+              : "lg:grid-cols-[minmax(0,1fr)_var(--side-w)]"
+          )}
+        >
           <section
             aria-label="Board"
             className="flex min-h-0 min-w-0 flex-col gap-2"
@@ -305,6 +393,7 @@ export function EventWorkspace({
               onToggleEditLayout={() => setEditLayout((v) => !v)}
               onQuickSubmit={() => setQuickSubmitOpen(true)}
               isUpcoming={isUpcoming}
+              isSwitching={isSwitching}
             />
 
             {editLayout && isManagement && (
@@ -320,7 +409,13 @@ export function EventWorkspace({
               />
             )}
 
-            <div className="flex min-h-0 flex-1 flex-col">
+            <div
+              aria-busy={isSwitching}
+              className={cn(
+                "flex min-h-0 flex-1 flex-col transition-opacity",
+                isSwitching && "opacity-60"
+              )}
+            >
               {isUpcoming && !isManagement ? (
                 <LockedBoard
                   unlockDate={unlockDate}
@@ -358,42 +453,82 @@ export function EventWorkspace({
             </div>
           </section>
 
+          {resizable && !railMode && (
+            <SplitHandle
+              containerRef={gridRef}
+              sideRef={sideRef}
+              controlsId={sideId}
+              onResize={resizeSide}
+              onCommit={commitSideWidth}
+              onReset={resetSide}
+              onToggleCollapse={toggleCollapsed}
+            />
+          )}
+          {resizable && railMode && <div aria-hidden="true" />}
+
           <aside
+            ref={sideRef}
+            id={sideId}
             aria-label="Event details"
-            className="osrs-panel flex min-h-0 flex-col rounded-sm lg:h-full"
+            className="osrs-panel flex min-h-0 min-w-0 flex-col rounded-sm lg:h-full"
           >
-            <Tabs
-              value={panelTabValue}
-              onValueChange={(value) => {
-                if (isPanelTab(value)) setPanel(value)
-              }}
-              className="flex min-h-0 flex-1 flex-col"
-            >
-              <TabsList className="m-2 grid h-auto min-h-11 shrink-0 grid-cols-3 lg:min-h-10 lg:grid-cols-4">
-                <TabsTrigger value="tile" className="hidden lg:inline-flex">
-                  Tile
-                </TabsTrigger>
-                <TabsTrigger value="teams">Teams</TabsTrigger>
-                <TabsTrigger value="prize">Prize</TabsTrigger>
-                <TabsTrigger value="info">Info</TabsTrigger>
-              </TabsList>
-              <div className="min-h-0 flex-1 lg:overflow-y-auto">
-                {isDesktop && (
-                  <TabsContent value="tile" className="mt-0 h-full">
-                    {buildTilePanel(false)}
+            {railMode ? (
+              <SideRail
+                activeTab={activePanelTab}
+                onSelectTab={(tab) => {
+                  setPanel(tab)
+                  updatePrefs({ ...prefs, collapsed: false })
+                }}
+                onExpand={toggleCollapsed}
+              />
+            ) : (
+              <Tabs
+                value={panelTabValue}
+                onValueChange={(value) => {
+                  if (isPanelTab(value)) setPanel(value)
+                }}
+                className="flex min-h-0 flex-1 flex-col"
+              >
+                <div className="flex shrink-0 items-center">
+                  <TabsList className="m-2 grid h-auto min-h-11 flex-1 grid-cols-3 lg:min-h-10 lg:grid-cols-4">
+                    <TabsTrigger value="tile" className="hidden lg:inline-flex">
+                      Tile
+                    </TabsTrigger>
+                    <TabsTrigger value="teams">Teams</TabsTrigger>
+                    <TabsTrigger value="prize">Prize</TabsTrigger>
+                    <TabsTrigger value="info">Info</TabsTrigger>
+                  </TabsList>
+                  {resizable && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="mr-2 hidden shrink-0 lg:inline-flex"
+                      aria-label="Collapse side panel"
+                      title="Collapse side panel (Ctrl/Cmd+\)"
+                      onClick={toggleCollapsed}
+                    >
+                      <PanelRightClose aria-hidden="true" />
+                    </Button>
+                  )}
+                </div>
+                <div className="min-h-0 flex-1 lg:overflow-y-auto">
+                  {isDesktop && (
+                    <TabsContent value="tile" className="mt-0 h-full">
+                      {buildTilePanel(false)}
+                    </TabsContent>
+                  )}
+                  <TabsContent value="teams" className="mt-0 px-3 pb-3">
+                    {teamsPanel}
                   </TabsContent>
-                )}
-                <TabsContent value="teams" className="mt-0 px-3 pb-3">
-                  {teamsPanel}
-                </TabsContent>
-                <TabsContent value="prize" className="mt-0 px-3 pb-3">
-                  {prizePanel}
-                </TabsContent>
-                <TabsContent value="info" className="mt-0 px-3 pb-3">
-                  {infoPanel}
-                </TabsContent>
-              </div>
-            </Tabs>
+                  <TabsContent value="prize" className="mt-0 px-3 pb-3">
+                    {prizePanel}
+                  </TabsContent>
+                  <TabsContent value="info" className="mt-0 px-3 pb-3">
+                    {infoPanel}
+                  </TabsContent>
+                </div>
+              </Tabs>
+            )}
           </aside>
         </div>
       )}
@@ -442,11 +577,14 @@ export function EventWorkspace({
 function EmptyBoards({ isManagement }: { isManagement: boolean }) {
   return (
     <div className="osrs-panel flex flex-1 flex-col items-center justify-center rounded-sm px-6 py-12 text-center">
-      <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-sm bg-muted">
-        <ListFilter aria-hidden="true" className="h-10 w-10 text-muted-foreground" />
+      <div className="bg-muted mb-4 flex h-20 w-20 items-center justify-center rounded-sm">
+        <ListFilter
+          aria-hidden="true"
+          className="text-muted-foreground h-10 w-10"
+        />
       </div>
       <h2 className="osrs-heading mb-2 text-xl">No bingo boards available</h2>
-      <p className="max-w-md text-muted-foreground">
+      <p className="text-muted-foreground max-w-md">
         {isManagement
           ? "Create your first bingo from the Admin menu to get started with this event."
           : "The event organizers haven't created any bingo boards yet. Check back later!"}
@@ -464,16 +602,20 @@ function LockedBoard({
 }) {
   return (
     <div className="osrs-panel flex flex-1 flex-col items-center justify-center rounded-sm p-8 text-center">
-      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-sm bg-muted">
-        <Lock aria-hidden="true" className="h-8 w-8 text-muted-foreground" />
+      <div className="bg-muted mb-4 flex h-16 w-16 items-center justify-center rounded-sm">
+        <Lock aria-hidden="true" className="text-muted-foreground h-8 w-8" />
       </div>
       <h2 className="osrs-heading mb-2 text-xl">Board Locked</h2>
-      <p className="mb-4 max-w-md text-muted-foreground">
+      <p className="text-muted-foreground mb-4 max-w-md">
         This bingo board is currently locked and will become available at:
       </p>
       {unlockDate && (
         <div className="osrs-panel-inset rounded-sm px-4 py-3 text-lg font-medium">
-          <EventTimeDisplay date={unlockDate} label="Unlocks" eventTz={timezone} />
+          <EventTimeDisplay
+            date={unlockDate}
+            label="Unlocks"
+            eventTz={timezone}
+          />
         </div>
       )}
     </div>

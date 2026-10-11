@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, useTransition } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 export const PANEL_TABS = ["tile", "teams", "prize", "info"] as const
@@ -19,7 +19,9 @@ export interface WorkspaceParams {
 
 type ParamReader = { get(name: string): string | null }
 
-export function isPanelTab(value: string | null | undefined): value is PanelTab {
+export function isPanelTab(
+  value: string | null | undefined
+): value is PanelTab {
   return !!value && (PANEL_TABS as readonly string[]).includes(value)
 }
 
@@ -88,6 +90,8 @@ export function useWorkspaceParams() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const router = useRouter()
+  // True while the server re-renders after a Board / Team switch.
+  const [isSwitching, startTransition] = useTransition()
 
   const params = useMemo(
     () => parseWorkspaceParams(searchParams ?? { get: () => null }),
@@ -126,8 +130,10 @@ export function useWorkspaceParams() {
   const setBoard = useCallback(
     (boardId: string) => {
       // A Tile belongs to one Board: switching Boards clears the selection.
-      router.replace(urlFor({ board: boardId, tile: null, panel: "tile" }), {
-        scroll: false,
+      startTransition(() => {
+        router.replace(urlFor({ board: boardId, tile: null, panel: "tile" }), {
+          scroll: false,
+        })
       })
     },
     [router, urlFor]
@@ -135,10 +141,12 @@ export function useWorkspaceParams() {
 
   const setTeamId = useCallback(
     (teamId: string | null) => {
-      router.replace(urlFor({ teamId }), { scroll: false })
+      startTransition(() => {
+        router.replace(urlFor({ teamId }), { scroll: false })
+      })
     },
     [router, urlFor]
   )
 
-  return { params, selectTile, setPanel, setBoard, setTeamId }
+  return { params, selectTile, setPanel, setBoard, setTeamId, isSwitching }
 }
