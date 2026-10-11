@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { describe, expect, it, jest } from "@jest/globals"
+import { describe, expect, it } from "@jest/globals"
 import { eq } from "drizzle-orm"
 
 import { linkRunescapeAccount } from "@/app/actions/user"

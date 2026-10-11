@@ -372,10 +372,7 @@ pwd
 
 ```bash
 # Create all necessary subdirectories
-mkdir -p nginx/conf.d
-mkdir -p nginx/ssl
 mkdir -p uploads
-mkdir -p certbot
 
 # Set proper permissions for uploads
 chmod 755 uploads
@@ -390,11 +387,7 @@ ls -la
 
 ```
 /home/deploy/bingoscape/
-├── nginx/
-│   ├── conf.d/          # Nginx site configuration
-│   └── ssl/             # SSL certificates
 ├── uploads/             # User uploaded files
-├── certbot/             # Let's Encrypt webroot
 ├── docker-compose.yml   # (created during deployment)
 └── .env                 # (created during deployment)
 ```
@@ -834,9 +827,7 @@ ps aux | grep deploy
 ├── bingoscape/                 # Application directory
 │   ├── docker-compose.yml
 │   ├── .env
-│   ├── nginx/
-│   ├── uploads/
-│   └── certbot/
+│   └── uploads/
 └── backups/                    # Database backups (optional)
     ├── database/
     └── uploads/
@@ -855,7 +846,6 @@ ps aux | grep deploy
 # Application files
 docker-compose.yml              # 644 (-rw-r--r--)
 .env                            # 600 (-rw-------)  # Contains secrets!
-nginx/ssl/*.pem                 # 600 (-rw-------)  # SSL private keys
 ```
 
 ---

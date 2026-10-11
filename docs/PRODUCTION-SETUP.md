@@ -35,19 +35,23 @@ Complete step-by-step guide for deploying Bingoscape Next to a Debian server usi
 │  ┌──────────────────────────────────────────────────────┐  │
 │  │                     Docker Host                      │  │
 │  │  ┌────────┐    ┌────────┐    ┌──────────┐          │  │
-│  │  │ nginx  │→   │  App   │→   │ Postgres │          │  │
-│  │  │ :80/443│    │ :3000  │    │  :5432   │          │  │
-│  │  └────────┘    └────────┘    └──────────┘          │  │
+│  │              ┌────────┐    ┌──────────┐          │  │
+│  │              │  App   │→   │ Postgres │          │  │
+│  │              │ :3000  │    │  :5432   │          │  │
+│  │              └────────┘    └──────────┘          │  │
 │  └──────────────────────────────────────────────────────┘  │
+│       ↑ reverse proxy (nginx + certbot on the host)         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Deployment Flow
 
-1. **Code Push** → GitHub automatically builds and pushes Docker image to GHCR
-2. **Manual Deploy** → GitHub Actions deploys image to your server via SSH
-3. **Automatic Setup** → Server pulls image, generates config, starts containers
-4. **Health Check** → Verifies deployment was successful
+1. **Code Push** → GitHub automatically builds and pushes the app and migrator images to GHCR (`:main`, `:sha-<short>`)
+2. **Manual Deploy** → You run the Deploy workflow with an image tag; GitHub Actions deploys it to your server via SSH
+3. **Automatic Setup** → Server pulls the images, generates config, backs up the database, runs migrations, then starts the new app
+4. **Health Check** → Verifies `/api/uptime` answers; on failure the previous version is restored automatically
+
+See [GITHUB-ACTIONS.md](./GITHUB-ACTIONS.md) for details.
 
 ---
 
@@ -259,13 +263,12 @@ Add the following secrets:
 
 #### Optional Secrets
 
-| Secret Name            | Description       | Required For               |
-| ---------------------- | ----------------- | -------------------------- |
-| `GITHUB_CLIENT_ID`     | GitHub OAuth      | GitHub login (optional)    |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth      | GitHub login (optional)    |
-| `GOOGLE_CLIENT_ID`     | Google OAuth      | Google login (optional)    |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth      | Google login (optional)    |
-| `CERTBOT_EMAIL`        | SSL notifications | Let's Encrypt certificates |
+| Secret Name            | Description  | Required For            |
+| ---------------------- | ------------ | ----------------------- |
+| `GITHUB_CLIENT_ID`     | GitHub OAuth | GitHub login (optional) |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth | GitHub login (optional) |
+| `GOOGLE_CLIENT_ID`     | Google OAuth | Google login (optional) |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth | Google login (optional) |
 
 ### Step 3: Generate Required Secrets
 
@@ -343,8 +346,8 @@ Discord authentication is required for user login.
 1. Copy **Client ID**
 2. Click **Generate a new client secret** → Copy secret
 3. Add both to GitHub Secrets:
-   - `GITHUB_CLIENT_ID`
-   - `GITHUB_CLIENT_SECRET`
+   - `GH_OAUTH_CLIENT_ID` (GitHub reserves the `GITHUB_` prefix for secret names; the deploy writes it to `.env` as `GITHUB_CLIENT_ID`)
+   - `GH_OAUTH_CLIENT_SECRET`
 
 ### Google OAuth (Optional)
 
@@ -407,14 +410,14 @@ git push origin main
 
 GitHub Actions will automatically:
 
-1. Run linter and tests
-2. Build Docker image
-3. Push to GHCR at `ghcr.io/YOUR-USERNAME/YOUR-REPO:main`
+1. Run linter, type check and tests
+2. Build the app and migrator Docker images
+3. Push to GHCR as `ghcr.io/YOUR-USERNAME/YOUR-REPO:main` and `...:sha-<short>` (plus `-migrator` for the migration image)
 
 #### Option B: Manual Workflow Trigger
 
 1. Go to **Actions** tab in GitHub
-2. Select **CI/CD - Build and Push to GHCR**
+2. Select **CI/CD**
 3. Click **Run workflow**
 4. Select branch: `main`
 5. Click **Run workflow**
@@ -433,54 +436,38 @@ Once the image is built and pushed to GHCR:
 2. Select **Deploy to Production** workflow
 3. Click **Run workflow**
 4. Configure deployment:
-   - **Environment**: `production`
-   - **Image tag**: `main` (or specific version like `v1.0.0`)
+   - **Image tag**: `main` (or `sha-<short>` / a release tag like `v1.0.0`)
 5. Click **Run workflow**
 
 **The deployment will:**
 
 - Create application directory on server
-- Copy docker-compose.yml and nginx configuration
+- Copy docker-compose.yml and scripts
 - Generate .env file from GitHub Secrets
-- Pull Docker image from GHCR
-- Start all containers (nginx, app, postgres)
-- Perform health checks
-- Display application logs
+- Pull the app and migrator images from GHCR
+- Back up the database (skipped on the very first deploy)
+- Start PostgreSQL and run the database migrations (this initializes the schema on the first deploy)
+- Start the new app and check `/api/uptime`
+- Roll back to the previous version automatically if the new one does not become healthy
 
 ### Step 4: Monitor Deployment
 
 Watch the deployment logs in real-time:
 
 1. Click on the running **Deploy to Production** workflow
-2. Click on **Deploy Application** job
+2. Click on the **Deploy** job
 3. Watch each step complete
 
 **Look for these success indicators:**
 
-- ✅ Configuration files copied
-- ✅ .env file generated
-- ✅ Docker image pulled
-- ✅ Containers started
-- ✅ Application is healthy and responding
-- 🎉 Deployment completed successfully!
+- `Pulling images` finishes without errors
+- `Running migrations` prints the migrator output
+- `Application is healthy`
+- `Deploy of <tag> succeeded`
 
-### Step 5: Run Database Migrations
+### Step 5: Database Migrations
 
-After first deployment, initialize the database:
-
-1. Go to **Actions** tab
-2. Select **Database Migration** workflow
-3. Click **Run workflow**
-4. Configure:
-   - **Environment**: `production`
-   - **Confirmation**: Type `MIGRATE` (in capital letters)
-5. Click **Run workflow**
-
-**Monitor migration:**
-
-- Watch workflow logs
-- Look for "Migration completed successfully"
-- Verify database tables were created
+Migrations run automatically during every deploy, before the new app starts, so the first deploy already initializes the database. The separate **Database Migration** workflow is only needed to run migrations without deploying (type `MIGRATE` to confirm and pick an image tag).
 
 ### Step 6: Verify Deployment
 
@@ -498,129 +485,54 @@ docker compose ps
 
 # Expected output:
 # NAME                   STATUS              PORTS
-# bingoscape-nginx       Up (healthy)        0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp
-# bingoscape-app         Up                  3000/tcp
-# bingoscape-postgres    Up (healthy)        0.0.0.0:5432->5432/tcp
+# bingoscape-app         Up (healthy)        127.0.0.1:3000->3000/tcp
+# bingoscape-postgres    Up (healthy)        127.0.0.1:5432->5432/tcp
 
 # Check application logs
 docker compose logs app --tail 50
-
-# Check nginx logs
-docker compose logs nginx --tail 20
 ```
 
 #### Check via Browser
-
-**Without SSL (temporary):**
-
-```
-http://your-domain.com
-```
-
-You should see the application login page.
-
-**Note:** If you see "502 Bad Gateway" or connection errors, proceed to SSL setup first.
-
----
-
-## SSL Certificate Setup
-
-After your first deployment, you need to set up SSL certificates for HTTPS.
-
-See [SSL-SETUP.md](./SSL-SETUP.md) for detailed instructions. Here's the quick version:
-
-### Quick SSL Setup
-
-```bash
-# SSH into your server
-ssh deploy@your-server-ip
-
-# Navigate to app directory
-cd ~/bingoscape
-
-# Install certbot
-sudo apt install certbot -y
-
-# Create certbot directory
-mkdir -p certbot
-
-# Generate SSL certificates
-sudo certbot certonly \
-  --webroot \
-  --webroot-path ~/bingoscape/certbot \
-  --email your-email@example.com \
-  --agree-tos \
-  --no-eff-email \
-  -d your-domain.com
-
-# Create SSL directory
-mkdir -p nginx/ssl
-
-# Copy certificates
-sudo cp /etc/letsencrypt/live/your-domain.com/fullchain.pem nginx/ssl/
-sudo cp /etc/letsencrypt/live/your-domain.com/privkey.pem nginx/ssl/
-
-# Fix permissions
-sudo chown $USER:$USER nginx/ssl/*.pem
-chmod 644 nginx/ssl/fullchain.pem
-chmod 600 nginx/ssl/privkey.pem
-
-# Restart nginx to apply SSL
-docker compose restart nginx
-
-# Check nginx logs
-docker compose logs nginx
-```
-
-### Verify SSL
-
-Visit your site with HTTPS:
 
 ```
 https://your-domain.com
 ```
 
-You should see:
+You should see the application login page.
 
-- 🔒 Secure connection (padlock icon)
-- Valid certificate
-- Automatic redirect from HTTP to HTTPS
+**Note:** If you see "502 Bad Gateway", check that the app container is healthy and listening on `127.0.0.1:3000`.
 
-### Set Up Certificate Auto-Renewal
+---
+
+## SSL Certificate Setup
+
+TLS is terminated by nginx running on the host (not in Docker), which proxies to the app on `127.0.0.1:3000`. Certificates are issued and renewed by the host's `certbot`.
 
 ```bash
-# Create renewal script
-cat > ~/bingoscape/renew-ssl.sh << 'EOF'
-#!/bin/bash
-set -e
+# Install nginx and certbot
+sudo apt install nginx certbot python3-certbot-nginx -y
 
-echo "🔄 Renewing SSL certificates..."
+# Issue a certificate and let certbot configure nginx
+sudo certbot --nginx -d your-domain.com
 
-# Renew certificates
-sudo certbot renew --quiet
-
-# Copy to nginx directory
-sudo cp /etc/letsencrypt/live/your-domain.com/fullchain.pem ~/bingoscape/nginx/ssl/
-sudo cp /etc/letsencrypt/live/your-domain.com/privkey.pem ~/bingoscape/nginx/ssl/
-
-# Fix permissions
-sudo chown $USER:$USER ~/bingoscape/nginx/ssl/*.pem
-chmod 644 ~/bingoscape/nginx/ssl/fullchain.pem
-chmod 600 ~/bingoscape/nginx/ssl/privkey.pem
-
-# Restart nginx
-cd ~/bingoscape
-docker compose restart nginx
-
-echo "✅ SSL certificates renewed successfully"
-EOF
-
-# Make executable
-chmod +x ~/bingoscape/renew-ssl.sh
-
-# Add to crontab (runs monthly)
-(crontab -l 2>/dev/null; echo "0 2 1 * * ~/bingoscape/renew-ssl.sh >> ~/bingoscape/ssl-renewal.log 2>&1") | crontab -
+# Check that automatic renewal is scheduled
+systemctl list-timers | grep certbot
+sudo certbot renew --dry-run
 ```
+
+In the nginx `server` block, proxy to the app:
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    client_max_body_size 25m;
+}
+```
+
+Then visit `https://your-domain.com` and confirm the certificate is valid.
 
 ---
 
@@ -662,6 +574,8 @@ docker compose exec -T postgres psql -U bingoscapenext bingoscapenext < backup_2
 
 ### Run Migrations (After Code Updates)
 
+Deploys run migrations automatically, before the new app starts. To run migrations on their own:
+
 1. Go to GitHub **Actions** tab
 2. Select **Database Migration** workflow
 3. Click **Run workflow**
@@ -675,8 +589,8 @@ docker compose exec -T postgres psql -U bingoscapenext bingoscapenext < backup_2
 ssh deploy@your-server-ip
 cd ~/bingoscape
 
-# Run migrations
-docker compose run --rm app npm run db:migrate
+# Run migrations (uses the migrator image of the tag in .env)
+docker compose run --rm migrate
 ```
 
 ---
@@ -693,8 +607,8 @@ cd ~/bingoscape
 # View app logs (live)
 docker compose logs -f app
 
-# View nginx logs
-docker compose logs -f nginx
+# View host nginx logs
+sudo journalctl -u nginx -f
 
 # View last 100 lines
 docker compose logs app --tail 100
@@ -708,7 +622,6 @@ docker compose logs app --since 1h
 ```bash
 # Restart specific service
 docker compose restart app
-docker compose restart nginx
 docker compose restart postgres
 
 # Restart all services
@@ -734,24 +647,22 @@ docker compose up -d
 
 ```bash
 # In GitHub Actions Deploy workflow
-Environment: production
-Image tag: v1.2.3  # Or specific commit SHA like: main-abc1234
+Image tag: v1.2.3  # Or specific commit SHA like: sha-abc1234
 ```
 
 #### Rollback to Previous Version
 
-Deploy a previous image tag:
+A failed deploy rolls back to the previous version automatically (the app only; migrations are not reverted). To go back to an older version later, deploy a previous image tag:
 
 ```bash
 # In GitHub Actions Deploy workflow
-Environment: production
 Image tag: v1.2.2  # Previous working version
 ```
 
 Or use commit SHA:
 
 ```bash
-Image tag: main-a1b2c3d  # Specific commit
+Image tag: sha-a1b2c3d  # Specific commit
 ```
 
 ### Monitor System Resources
@@ -841,7 +752,7 @@ docker compose logs app --tail 100
 
 # Common issues:
 # 1. Database connection failed → check .env file
-# 2. Migration needed → run migration workflow
+# 2. Migration failed → the deploy stops before the app is replaced; check the migrator output
 # 3. Port conflict → check if port 3000 is available
 ```
 
@@ -863,19 +774,19 @@ docker compose logs app --tail 50
 # Restart app
 docker compose restart app
 
-# Check nginx configuration
-docker compose exec nginx nginx -t
+# Check host nginx configuration
+sudo nginx -t
 ```
 
 #### Error: Connection Refused
 
-**Problem:** Nginx isn't running or ports aren't open.
+**Problem:** Host nginx isn't running or ports aren't open.
 
 **Solution:**
 
 ```bash
 # Check nginx status
-docker compose ps nginx
+sudo systemctl status nginx
 
 # Check if ports are open
 sudo netstat -tlnp | grep -E '(80|443)'
@@ -884,7 +795,7 @@ sudo netstat -tlnp | grep -E '(80|443)'
 sudo ufw status
 
 # Restart nginx
-docker compose restart nginx
+sudo systemctl restart nginx
 ```
 
 ### Database Issues
@@ -930,43 +841,17 @@ docker compose run --rm app npm run db:migrate
 
 ### SSL Certificate Issues
 
-#### Error: Certificate Not Found
-
-**Problem:** Nginx can't find SSL certificates.
-
-**Solution:**
-
-```bash
-# Check if certificate files exist
-ls -la ~/bingoscape/nginx/ssl/
-
-# Verify files are mounted in container
-docker compose exec nginx ls -la /etc/nginx/ssl/
-
-# Check nginx logs
-docker compose logs nginx | grep -i ssl
-
-# Regenerate certificates (see SSL Setup section)
-```
-
 #### Error: Certificate Expired
 
-**Problem:** SSL certificate is older than 90 days.
+**Problem:** The certificate was not renewed.
 
 **Solution:**
 
 ```bash
-# Renew certificates
+# Check the renewal timer and renew manually
+systemctl list-timers | grep certbot
 sudo certbot renew
-
-# Copy renewed certificates
-sudo cp /etc/letsencrypt/live/your-domain.com/*.pem ~/bingoscape/nginx/ssl/
-
-# Fix permissions
-sudo chown $USER:$USER ~/bingoscape/nginx/ssl/*.pem
-
-# Restart nginx
-docker compose restart nginx
+sudo systemctl reload nginx
 ```
 
 ### Getting Help
@@ -976,12 +861,11 @@ If you encounter issues not covered here:
 1. **Check Logs:**
    - GitHub Actions workflow logs
    - Application logs: `docker compose logs app`
-   - Nginx logs: `docker compose logs nginx`
+   - Nginx logs: `sudo journalctl -u nginx`
 
 2. **Review Documentation:**
    - [GitHub Actions Documentation](./GITHUB-ACTIONS.md)
    - [GitHub Secrets Configuration](./GITHUB-SECRETS.md)
-   - [SSL Setup Guide](./SSL-SETUP.md)
 
 3. **Common Commands:**
 
@@ -1034,13 +918,13 @@ docker compose exec -T postgres pg_dump -U bingoscapenext bingoscapenext > backu
 ### GitHub Actions Workflows
 
 ```bash
-# CI/CD - Build and Push to GHCR
-# Trigger: Automatic on push to main
+# CI/CD (lint, typecheck, tests, build and push images)
+# Trigger: Automatic on pull requests, pushes to main and v*.*.* tags
 # Manual: Actions → CI/CD → Run workflow
 
 # Deploy to Production
 # Trigger: Manual only
-# Actions → Deploy to Production → Run workflow → Select environment and image tag
+# Actions → Deploy to Production → Run workflow → Enter image tag (main, sha-<short>, v1.2.3)
 
 # Database Migration
 # Trigger: Manual only
@@ -1053,20 +937,13 @@ docker compose exec -T postgres pg_dump -U bingoscapenext bingoscapenext > backu
 ~/bingoscape/                       # Application directory
 ├── docker-compose.yml             # Container orchestration
 ├── .env                           # Environment variables
-├── nginx/                         # Nginx configuration
-│   ├── nginx.conf                # Main nginx config
-│   ├── conf.d/default.conf       # Site configuration
-│   └── ssl/                      # SSL certificates
-│       ├── fullchain.pem
-│       └── privkey.pem
-├── uploads/                       # User uploaded files
-└── certbot/                       # Let's Encrypt webroot
+└── uploads/                       # User uploaded files
 ```
 
 ### Useful URLs
 
 - **Application:** `https://your-domain.com`
-- **Health Check:** `https://your-domain.com/api/health`
+- **Health Check:** `https://your-domain.com/api/uptime`
 - **GitHub Packages:** `https://github.com/YOUR-USERNAME/YOUR-REPO/packages`
 - **Discord Developer:** `https://discord.com/developers/applications`
 
@@ -1107,7 +984,6 @@ After completing this setup:
 - [Debian User Setup Guide](./DEBIAN-USER-SETUP.md) - Complete Linux user configuration for hosting
 - [GitHub Actions Documentation](./GITHUB-ACTIONS.md) - Detailed CI/CD workflow reference
 - [GitHub Secrets Configuration](./GITHUB-SECRETS.md) - Complete secrets setup guide
-- [SSL Certificate Setup](./SSL-SETUP.md) - Detailed SSL configuration guide
 - [Docker Documentation](https://docs.docker.com/)
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Let's Encrypt Documentation](https://letsencrypt.org/docs/)

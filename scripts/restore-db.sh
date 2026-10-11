@@ -15,9 +15,10 @@ APP_DIR="$(dirname "$SCRIPT_DIR")"
 BACKUP_BASE_DIR="$APP_DIR/backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
-# Database credentials (from .env or defaults)
-DB_NAME="${DB_NAME:-bingoscapenext}"
-DB_USER="${DB_USER:-bingoscapenext}"
+# Database credentials: environment, then $APP_DIR/.env, then docker-compose defaults
+# shellcheck source=db-env.sh
+. "$SCRIPT_DIR/db-env.sh"
+load_db_env "$APP_DIR"
 CONTAINER_NAME="bingoscape-postgres"
 APP_CONTAINER_NAME="bingoscape-app"
 
