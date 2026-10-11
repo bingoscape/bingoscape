@@ -5,7 +5,8 @@
  *   1. DB-backed super-admin check (never throws, returns a typed result)
  *   2. strict zod parse of the raw input
  *   3. per-admin rate limit
- *   4. the handler, inside one `db.transaction`
+ *   4. the handler, inside one `db.transaction`, which returns the audit
+ *      entry that is written in that same transaction
  *
  * Handlers signal expected failures by throwing `AdminActionError`, which
  * rolls the transaction back and becomes `{ success: false, code, error }`.
@@ -15,8 +16,11 @@ import type { z } from "zod"
 import { logger } from "@/lib/logger"
 import { createRateLimiter } from "@/lib/rate-limit"
 import { checkSuperAdmin, type AdminContext } from "@/lib/super-admin"
+import type { AuditDraft } from "@/lib/super-admin-audit"
+import { maskEmail } from "@/lib/super-admin-email"
 import { formatZodError } from "@/lib/validation/super-admin"
 import { db } from "@/server/db"
+import { writeAuditAttempt, writeAuditSuccess } from "./audit"
 
 export type AdminErrorCode =
   | "forbidden"
@@ -57,13 +61,21 @@ export interface AdminHandlerContext<I> {
   input: I
 }
 
+/** What a handler returns: the audit entry (mandatory) and optional data for the caller. */
+export interface AdminHandlerOutput<T = void> {
+  audit: AuditDraft
+  data?: T
+}
+
 /** 30 mutations / minute per admin. */
 export const adminMutationLimiter = createRateLimiter(30, 60_000)
 
 export function adminAction<S extends z.ZodTypeAny, T = void>(
   name: string,
   schema: S,
-  handler: (ctx: AdminHandlerContext<z.output<S>>) => Promise<T>
+  handler: (
+    ctx: AdminHandlerContext<z.output<S>>
+  ) => Promise<AdminHandlerOutput<T>>
 ): (rawInput: z.input<S>) => Promise<AdminResult<T>> {
   return async (rawInput) => {
     const check = await checkSuperAdmin()
@@ -73,6 +85,12 @@ export function adminAction<S extends z.ZodTypeAny, T = void>(
         { userId: check.userId, action: name },
         "Denied super-admin mutation"
       )
+      await writeAuditAttempt({
+        outcome: "denied",
+        action: name,
+        actor: check.userId ? { id: check.userId } : null,
+        rawInput,
+      })
       return { success: false, code: "forbidden", error: "Forbidden." }
     }
     const admin = check.admin
@@ -96,12 +114,29 @@ export function adminAction<S extends z.ZodTypeAny, T = void>(
     }
 
     try {
-      const data = await db.transaction((tx) =>
-        handler({ tx, admin, input: parsed.data as z.output<S> })
-      )
+      const data = await db.transaction(async (tx) => {
+        const output = await handler({
+          tx,
+          admin,
+          input: parsed.data as z.output<S>,
+        })
+        // Same transaction as the mutation: no audit row, no change.
+        await writeAuditSuccess(tx, admin, output.audit)
+        return output.data
+      })
       return { success: true, data }
     } catch (error) {
       if (error instanceof AdminActionError) {
+        if (error.code === "conflict") {
+          // Refused by an invariant; worth keeping a trace of.
+          await writeAuditAttempt({
+            outcome: "failed",
+            action: name,
+            actor: { id: admin.adminId, label: maskEmail(admin.email) },
+            rawInput,
+            reason: error.message,
+          })
+        }
         return { success: false, code: error.code, error: error.message }
       }
       logger.error(
@@ -109,6 +144,13 @@ export function adminAction<S extends z.ZodTypeAny, T = void>(
         "Super-admin mutation failed",
         error instanceof Error ? error : undefined
       )
+      await writeAuditAttempt({
+        outcome: "failed",
+        action: name,
+        actor: { id: admin.adminId, label: maskEmail(admin.email) },
+        rawInput,
+        reason: "Unexpected error",
+      })
       return {
         success: false,
         code: "failed",

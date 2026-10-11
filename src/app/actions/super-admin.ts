@@ -3,6 +3,13 @@
 import { and, count, eq, ne, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 
+import {
+  clanAuditSnapshot,
+  eventAuditSnapshot,
+  pickKeys,
+  userAuditLabel,
+  userAuditSnapshot,
+} from "@/lib/super-admin-audit"
 import { getSuperAdminEmails, normalizeEmail } from "@/lib/super-admin-email"
 import {
   emailChangeBlocker,
@@ -43,7 +50,7 @@ import {
 /**
  * Super-admin mutations. Only async functions are exported from this
  * "use server" module; everything else (guard, validation, transaction, rate
- * limit) lives in `adminAction`. Reads are server-only queries in
+ * limit, audit row) lives in `adminAction`. Reads are server-only queries in
  * `src/server/super-admin/queries.ts` and are intentionally not exported here.
  *
  * Each field written by an update is listed explicitly below, so columns such
@@ -60,9 +67,15 @@ async function assertUserExists(tx: AdminTx, userId: string, what: string) {
   if (!row) throw notFoundError(what)
 }
 
+interface MembershipGuardResult {
+  parentName: string
+  currentRole: string
+}
+
 /**
  * Locks the membership's parent row for the rest of the transaction, so two
- * concurrent demotions cannot both see "another admin exists".
+ * concurrent demotions cannot both see "another admin exists", then refuses
+ * changes that would orphan the clan owner or the last admin.
  */
 async function guardMembershipChange(
   tx: AdminTx,
@@ -70,10 +83,10 @@ async function guardMembershipChange(
   parentId: string,
   userId: string,
   nextRole: string | null
-) {
+): Promise<MembershipGuardResult> {
   if (scope === "clan") {
     const [clan] = await tx
-      .select({ ownerId: clans.ownerId })
+      .select({ ownerId: clans.ownerId, name: clans.name })
       .from(clans)
       .where(eq(clans.id, parentId))
       .for("update")
@@ -103,11 +116,11 @@ async function guardMembershipChange(
       nextRole,
     })
     if (reason) throw conflictError(reason)
-    return
+    return { parentName: clan.name, currentRole: member.role }
   }
 
   const [event] = await tx
-    .select({ id: events.id })
+    .select({ title: events.title })
     .from(events)
     .where(eq(events.id, parentId))
     .for("update")
@@ -143,6 +156,7 @@ async function guardMembershipChange(
     nextRole,
   })
   if (reason) throw conflictError(reason)
+  return { parentName: event.title, currentRole: participant.role }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -156,23 +170,31 @@ const updateUserAction = adminAction(
     const { userId, data } = input
     if (!hasChanges(data)) throw invalidError("Nothing to change.")
 
-    const set: Partial<typeof users.$inferInsert> = {}
-    if (data.name !== undefined) set.name = data.name
-    if (data.runescapeName !== undefined) set.runescapeName = data.runescapeName
-
     if (data.email !== undefined) {
       // Serialise admin email edits so the uniqueness check below cannot race.
       await tx.execute(
         sql`select pg_advisory_xact_lock(hashtext('super-admin:user-email'))`
       )
-      const [current] = await tx
-        .select({ email: users.email })
-        .from(users)
-        .where(eq(users.id, userId))
-        .for("update")
-        .limit(1)
-      if (!current) throw notFoundError("User")
+    }
 
+    const [current] = await tx
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        runescapeName: users.runescapeName,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .for("update")
+      .limit(1)
+    if (!current) throw notFoundError("User")
+
+    const set: Partial<typeof users.$inferInsert> = {}
+    if (data.name !== undefined) set.name = data.name
+    if (data.runescapeName !== undefined) set.runescapeName = data.runescapeName
+
+    if (data.email !== undefined) {
       const newEmail = normalizeEmail(data.email)
       // An unchanged address (ignoring case/whitespace) is left untouched.
       if (normalizeEmail(current.email) !== newEmail) {
@@ -202,14 +224,26 @@ const updateUserAction = adminAction(
       }
     }
 
-    if (Object.keys(set).length === 0) return
+    if (Object.keys(set).length > 0) {
+      const updated = await tx
+        .update(users)
+        .set(set)
+        .where(eq(users.id, userId))
+        .returning({ id: users.id })
+      if (updated.length === 0) throw notFoundError("User")
+    }
 
-    const updated = await tx
-      .update(users)
-      .set(set)
-      .where(eq(users.id, userId))
-      .returning({ id: users.id })
-    if (updated.length === 0) throw notFoundError("User")
+    const keys = Object.keys(set)
+    return {
+      audit: {
+        action: "user.update",
+        targetType: "user",
+        targetId: userId,
+        targetLabel: userAuditLabel(current),
+        before: pickKeys(userAuditSnapshot(current), keys),
+        after: pickKeys(userAuditSnapshot({ ...current, ...set }), keys),
+      },
+    }
   }
 )
 
@@ -234,7 +268,12 @@ const deleteUserAction = adminAction(
   deleteUserSchema,
   async ({ tx, admin, input }) => {
     const [target] = await tx
-      .select({ id: users.id, email: users.email })
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        runescapeName: users.runescapeName,
+      })
       .from(users)
       .where(eq(users.id, input.userId))
       .for("update")
@@ -253,13 +292,27 @@ const deleteUserAction = adminAction(
     // (their boards, teams and submissions cascade). Everything else owned by
     // the user (team/event/clan memberships, submissions, sessions, accounts)
     // is removed by the schema's ON DELETE CASCADE foreign keys.
-    await tx.delete(events).where(eq(events.creatorId, input.userId))
+    const deletedEvents = await tx
+      .delete(events)
+      .where(eq(events.creatorId, input.userId))
+      .returning({ id: events.id })
 
     const deleted = await tx
       .delete(users)
       .where(eq(users.id, input.userId))
       .returning({ id: users.id })
     if (deleted.length === 0) throw notFoundError("User")
+
+    return {
+      audit: {
+        action: "user.delete",
+        targetType: "user",
+        targetId: input.userId,
+        targetLabel: userAuditLabel(target),
+        before: userAuditSnapshot(target),
+        after: { deletedCreatedEvents: deletedEvents.length },
+      },
+    }
   }
 )
 
@@ -282,14 +335,34 @@ const updateClanAction = adminAction(
     const { clanId, data } = input
     if (!hasChanges(data)) throw invalidError("Nothing to change.")
 
+    const [current] = await tx
+      .select({
+        name: clans.name,
+        description: clans.description,
+        ownerId: clans.ownerId,
+      })
+      .from(clans)
+      .where(eq(clans.id, clanId))
+      .for("update")
+      .limit(1)
+    if (!current) throw notFoundError("Clan")
+
     const set: Partial<typeof clans.$inferInsert> = { updatedAt: new Date() }
-    if (data.name !== undefined) set.name = data.name
-    if (data.description !== undefined) set.description = data.description
+    const changed: string[] = []
+    if (data.name !== undefined) {
+      set.name = data.name
+      changed.push("name")
+    }
+    if (data.description !== undefined) {
+      set.description = data.description
+      changed.push("description")
+    }
     if (data.ownerId !== undefined) {
       if (data.ownerId !== null) {
         await assertUserExists(tx, data.ownerId, "Owner")
       }
       set.ownerId = data.ownerId
+      changed.push("ownerId")
     }
 
     const updated = await tx
@@ -298,6 +371,17 @@ const updateClanAction = adminAction(
       .where(eq(clans.id, clanId))
       .returning({ id: clans.id })
     if (updated.length === 0) throw notFoundError("Clan")
+
+    return {
+      audit: {
+        action: "clan.update",
+        targetType: "clan",
+        targetId: clanId,
+        targetLabel: set.name ?? current.name,
+        before: pickKeys(clanAuditSnapshot(current), changed),
+        after: pickKeys(clanAuditSnapshot({ ...current, ...set }), changed),
+      },
+    }
   }
 )
 
@@ -322,11 +406,33 @@ const deleteClanAction = adminAction(
   deleteClanSchema,
   async ({ tx, input }) => {
     // clan_members cascade; events.clan_id is ON DELETE SET NULL.
+    const [current] = await tx
+      .select({
+        name: clans.name,
+        description: clans.description,
+        ownerId: clans.ownerId,
+      })
+      .from(clans)
+      .where(eq(clans.id, input.clanId))
+      .for("update")
+      .limit(1)
+    if (!current) throw notFoundError("Clan")
+
     const deleted = await tx
       .delete(clans)
       .where(eq(clans.id, input.clanId))
       .returning({ id: clans.id })
     if (deleted.length === 0) throw notFoundError("Clan")
+
+    return {
+      audit: {
+        action: "clan.delete",
+        targetType: "clan",
+        targetId: input.clanId,
+        targetLabel: current.name,
+        before: clanAuditSnapshot(current),
+      },
+    }
   }
 )
 
@@ -342,7 +448,13 @@ const removeClanMemberAction = adminAction(
   "clan.member.remove",
   clanMemberSchema,
   async ({ tx, input }) => {
-    await guardMembershipChange(tx, "clan", input.clanId, input.userId, null)
+    const guard = await guardMembershipChange(
+      tx,
+      "clan",
+      input.clanId,
+      input.userId,
+      null
+    )
     const deleted = await tx
       .delete(clanMembers)
       .where(
@@ -353,6 +465,16 @@ const removeClanMemberAction = adminAction(
       )
       .returning({ id: clanMembers.id })
     if (deleted.length === 0) throw notFoundError("Clan member")
+
+    return {
+      audit: {
+        action: "clan.member.remove",
+        targetType: "clan",
+        targetId: input.clanId,
+        targetLabel: guard.parentName,
+        before: { userId: input.userId, role: guard.currentRole },
+      },
+    }
   }
 )
 
@@ -371,7 +493,7 @@ const updateClanMemberRoleAction = adminAction(
   "clan.member.role",
   updateClanMemberRoleSchema,
   async ({ tx, input }) => {
-    await guardMembershipChange(
+    const guard = await guardMembershipChange(
       tx,
       "clan",
       input.clanId,
@@ -389,6 +511,17 @@ const updateClanMemberRoleAction = adminAction(
       )
       .returning({ id: clanMembers.id })
     if (updated.length === 0) throw notFoundError("Clan member")
+
+    return {
+      audit: {
+        action: "clan.member.role",
+        targetType: "clan",
+        targetId: input.clanId,
+        targetLabel: guard.parentName,
+        before: { userId: input.userId, role: guard.currentRole },
+        after: { userId: input.userId, role: input.role },
+      },
+    }
   }
 )
 
@@ -416,7 +549,15 @@ const updateEventAction = adminAction(
     if (!hasChanges(data)) throw invalidError("Nothing to change.")
 
     const [current] = await tx
-      .select({ startDate: events.startDate, endDate: events.endDate })
+      .select({
+        title: events.title,
+        description: events.description,
+        startDate: events.startDate,
+        endDate: events.endDate,
+        locked: events.locked,
+        public: events.public,
+        clanId: events.clanId,
+      })
       .from(events)
       .where(eq(events.id, eventId))
       .for("update")
@@ -430,12 +571,31 @@ const updateEventAction = adminAction(
     }
 
     const set: Partial<typeof events.$inferInsert> = { updatedAt: new Date() }
-    if (data.title !== undefined) set.title = data.title
-    if (data.description !== undefined) set.description = data.description
-    if (data.startDate !== undefined) set.startDate = data.startDate
-    if (data.endDate !== undefined) set.endDate = data.endDate
-    if (data.locked !== undefined) set.locked = data.locked
-    if (data.public !== undefined) set.public = data.public
+    const changed: string[] = []
+    if (data.title !== undefined) {
+      set.title = data.title
+      changed.push("title")
+    }
+    if (data.description !== undefined) {
+      set.description = data.description
+      changed.push("description")
+    }
+    if (data.startDate !== undefined) {
+      set.startDate = data.startDate
+      changed.push("startDate")
+    }
+    if (data.endDate !== undefined) {
+      set.endDate = data.endDate
+      changed.push("endDate")
+    }
+    if (data.locked !== undefined) {
+      set.locked = data.locked
+      changed.push("locked")
+    }
+    if (data.public !== undefined) {
+      set.public = data.public
+      changed.push("public")
+    }
     if (data.clanId !== undefined) {
       if (data.clanId !== null) {
         const [clan] = await tx
@@ -446,6 +606,7 @@ const updateEventAction = adminAction(
         if (!clan) throw notFoundError("Clan")
       }
       set.clanId = data.clanId
+      changed.push("clanId")
     }
 
     const updated = await tx
@@ -454,6 +615,17 @@ const updateEventAction = adminAction(
       .where(eq(events.id, eventId))
       .returning({ id: events.id })
     if (updated.length === 0) throw notFoundError("Event")
+
+    return {
+      audit: {
+        action: "event.update",
+        targetType: "event",
+        targetId: eventId,
+        targetLabel: set.title ?? current.title,
+        before: pickKeys(eventAuditSnapshot(current), changed),
+        after: pickKeys(eventAuditSnapshot({ ...current, ...set }), changed),
+      },
+    }
   }
 )
 
@@ -483,11 +655,37 @@ const deleteEventAction = adminAction(
   async ({ tx, input }) => {
     // bingos, tiles, teams, team members, submissions, participants and
     // invites are all removed by ON DELETE CASCADE foreign keys.
+    const [current] = await tx
+      .select({
+        title: events.title,
+        description: events.description,
+        startDate: events.startDate,
+        endDate: events.endDate,
+        locked: events.locked,
+        public: events.public,
+        clanId: events.clanId,
+      })
+      .from(events)
+      .where(eq(events.id, input.eventId))
+      .for("update")
+      .limit(1)
+    if (!current) throw notFoundError("Event")
+
     const deleted = await tx
       .delete(events)
       .where(eq(events.id, input.eventId))
       .returning({ id: events.id })
     if (deleted.length === 0) throw notFoundError("Event")
+
+    return {
+      audit: {
+        action: "event.delete",
+        targetType: "event",
+        targetId: input.eventId,
+        targetLabel: current.title,
+        before: eventAuditSnapshot(current),
+      },
+    }
   }
 )
 
@@ -503,7 +701,13 @@ const removeEventParticipantAction = adminAction(
   "event.participant.remove",
   eventParticipantSchema,
   async ({ tx, input }) => {
-    await guardMembershipChange(tx, "event", input.eventId, input.userId, null)
+    const guard = await guardMembershipChange(
+      tx,
+      "event",
+      input.eventId,
+      input.userId,
+      null
+    )
     const deleted = await tx
       .delete(eventParticipants)
       .where(
@@ -514,6 +718,16 @@ const removeEventParticipantAction = adminAction(
       )
       .returning({ id: eventParticipants.id })
     if (deleted.length === 0) throw notFoundError("Participant")
+
+    return {
+      audit: {
+        action: "event.participant.remove",
+        targetType: "event",
+        targetId: input.eventId,
+        targetLabel: guard.parentName,
+        before: { userId: input.userId, role: guard.currentRole },
+      },
+    }
   }
 )
 
@@ -532,7 +746,7 @@ const updateEventParticipantRoleAction = adminAction(
   "event.participant.role",
   updateEventParticipantRoleSchema,
   async ({ tx, input }) => {
-    await guardMembershipChange(
+    const guard = await guardMembershipChange(
       tx,
       "event",
       input.eventId,
@@ -550,6 +764,17 @@ const updateEventParticipantRoleAction = adminAction(
       )
       .returning({ id: eventParticipants.id })
     if (updated.length === 0) throw notFoundError("Participant")
+
+    return {
+      audit: {
+        action: "event.participant.role",
+        targetType: "event",
+        targetId: input.eventId,
+        targetLabel: guard.parentName,
+        before: { userId: input.userId, role: guard.currentRole },
+        after: { userId: input.userId, role: input.role },
+      },
+    }
   }
 )
 
