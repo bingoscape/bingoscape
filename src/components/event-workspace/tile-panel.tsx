@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import type { CSSProperties } from "react"
 import type React from "react"
 import Image from "next/image"
@@ -56,6 +56,9 @@ interface TilePanelProps {
   tierLock?: TierLockInfo | null
   /** Public view: description and progress only, no submissions or editing. */
   readOnly?: boolean
+  /** Active sub-tab; owned by the caller so it survives Tile changes. */
+  subTab: TileSubTab
+  onSubTabChange: (subTab: TileSubTab) => void
   onSelectTile: (tileId: string) => void
   onClose?: () => void
   /** Extra classes for the scroll container (the mobile drawer limits its height). */
@@ -63,7 +66,7 @@ interface TilePanelProps {
   scrollStyle?: CSSProperties
 }
 
-type SubTab = "details" | "submissions" | "goals"
+export type TileSubTab = "details" | "submissions" | "goals"
 
 /**
  * The panel's single scroll owner and its size container: every responsive
@@ -85,7 +88,7 @@ function TilePanelScroll({
       data-tile-scroll
       style={style}
       className={cn(
-        "@container/tile flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pb-3 [scrollbar-gutter:stable]",
+        "@container/tile flex h-full min-h-0 flex-1 [scrollbar-gutter:stable] flex-col overflow-y-auto overscroll-contain px-3 pb-3",
         // Touch: every control in the panel is at least 44px tall.
         "pointer-coarse:[&_button:not([role=checkbox]):not([role=switch]):not([role=radio])]:min-h-11",
         className
@@ -113,12 +116,15 @@ export function TilePanel({
   isProgressionBingo,
   tierLock,
   readOnly = false,
+  subTab,
+  onSubTabChange,
   onSelectTile,
   onClose,
   scrollClassName,
   scrollStyle,
 }: TilePanelProps) {
-  const canEdit = !readOnly && (userRole === "admin" || userRole === "management")
+  const canEdit =
+    !readOnly && (userRole === "admin" || userRole === "management")
 
   if (!tile) {
     return (
@@ -136,22 +142,24 @@ export function TilePanel({
 
   return (
     <TilePanelScroll className={scrollClassName} style={scrollStyle}>
-    <TilePanelBody
-      key={tile.id}
-      tile={tile}
-      bingo={bingo}
-      workspace={workspace}
-      userRole={userRole}
-      teams={teams}
-      currentTeamId={currentTeamId}
-      eventId={eventId}
-      gameType={gameType}
-      isProgressionBingo={isProgressionBingo}
-      tierLock={tierLock}
-      readOnly={readOnly}
-      canEdit={canEdit}
-      onClose={onClose}
-    />
+      <TilePanelBody
+        key={tile.id}
+        tile={tile}
+        bingo={bingo}
+        workspace={workspace}
+        userRole={userRole}
+        teams={teams}
+        currentTeamId={currentTeamId}
+        eventId={eventId}
+        gameType={gameType}
+        isProgressionBingo={isProgressionBingo}
+        tierLock={tierLock}
+        readOnly={readOnly}
+        canEdit={canEdit}
+        subTab={subTab}
+        onSubTabChange={onSubTabChange}
+        onClose={onClose}
+      />
     </TilePanelScroll>
   )
 }
@@ -169,6 +177,8 @@ function TilePanelBody({
   tierLock,
   readOnly,
   canEdit,
+  subTab: requestedSubTab,
+  onSubTabChange,
   onClose,
 }: Omit<
   TilePanelProps,
@@ -177,8 +187,6 @@ function TilePanelBody({
   tile: Tile
   canEdit: boolean
 }) {
-  const [subTab, setSubTab] = useState<SubTab>("details")
-
   const isManagement = userRole === "admin" || userRole === "management"
   const { completion, submissionState } = getTileTeamStatus(tile, currentTeamId)
 
@@ -202,6 +210,13 @@ function TilePanelBody({
     [readOnly, teams, currentTeamId]
   )
 
+  // A remembered sub-tab this view does not offer falls back to Details.
+  const subTab: TileSubTab =
+    (requestedSubTab === "submissions" && readOnly) ||
+    (requestedSubTab === "goals" && !canEdit)
+      ? "details"
+      : requestedSubTab
+
   const showJoinBanner = !readOnly && !isManagement && !currentTeamId
 
   return (
@@ -218,7 +233,7 @@ function TilePanelBody({
               className="object-contain"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-secondary text-xs text-muted-foreground">
+            <div className="bg-secondary text-muted-foreground flex h-full w-full items-center justify-center text-xs">
               No image
             </div>
           )}
@@ -226,13 +241,13 @@ function TilePanelBody({
         <div className="min-w-0 flex-1">
           <h2
             title={tile.title || undefined}
-            className="osrs-heading line-clamp-4 text-base leading-tight wrap-break-word text-foreground @sm/tile:text-lg"
+            className="osrs-heading text-foreground line-clamp-4 text-base leading-tight wrap-break-word @sm/tile:text-lg"
           >
             {tile.title || "Hidden tile"}
           </h2>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <Badge variant="outline" className="gap-1">
-              <Zap aria-hidden="true" className="h-3 w-3 text-warning" />
+              <Zap aria-hidden="true" className="text-warning h-3 w-3" />
               {tile.weight} XP
             </Badge>
             {currentTeamId && completion === "completed" && (
@@ -284,24 +299,30 @@ function TilePanelBody({
       </header>
 
       {tierLock && (
-        <Notice tone="warning" icon={<Lock aria-hidden="true" className="h-4 w-4" />}>
+        <Notice
+          tone="warning"
+          icon={<Lock aria-hidden="true" className="h-4 w-4" />}
+        >
           Locked: need {tierLock.xpNeeded} more XP in Tier {tierLock.tier - 1}{" "}
           to unlock Tier {tierLock.tier}.
         </Notice>
       )}
 
       {showJoinBanner && (
-        <Notice tone="info" icon={<Users aria-hidden="true" className="h-4 w-4" />}>
+        <Notice
+          tone="info"
+          icon={<Users aria-hidden="true" className="h-4 w-4" />}
+        >
           Join a team to submit. Ask an event organizer to add you to one.
         </Notice>
       )}
 
       <Tabs
         value={subTab}
-        onValueChange={(v) => setSubTab(v as SubTab)}
+        onValueChange={(v) => onSubTabChange(v as TileSubTab)}
         className="flex min-h-0 flex-col"
       >
-        <div className="sticky top-0 z-10 -mx-3 bg-card px-3 pt-1 pb-2">
+        <div className="bg-card sticky top-0 z-10 -mx-3 px-3 pt-1 pb-2">
           <TabsList variant="scrollable" className="h-auto">
             <SubTabTrigger
               value="details"
@@ -321,7 +342,7 @@ function TilePanelBody({
                   pendingCount > 0 ? (
                     <span
                       aria-label={`${pendingCount} pending`}
-                      className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm bg-info px-1 text-[10px] font-medium text-info-foreground"
+                      className="bg-info text-info-foreground flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm px-1 text-[10px] font-medium"
                     >
                       {pendingCount > 9 ? "9+" : pendingCount}
                     </span>
@@ -334,9 +355,7 @@ function TilePanelBody({
                 value="goals"
                 label="Goals"
                 accessibleLabel="Goals (edit)"
-                icon={
-                  <Target aria-hidden="true" className="size-4 shrink-0" />
-                }
+                icon={<Target aria-hidden="true" className="size-4 shrink-0" />}
                 active={subTab === "goals"}
               />
             )}
@@ -429,7 +448,7 @@ function SubTabTrigger({
   active,
   badge,
 }: {
-  value: SubTab
+  value: TileSubTab
   label: string
   accessibleLabel?: string
   icon: React.ReactNode
@@ -442,7 +461,7 @@ function SubTabTrigger({
       value={value}
       aria-label={name}
       title={name}
-      className="min-h-9 min-w-0 shrink flex-1 gap-1.5 px-2 pointer-coarse:min-h-11 @sm/tile:px-3"
+      className="min-h-9 min-w-0 flex-1 shrink gap-1.5 px-2 @sm/tile:px-3 pointer-coarse:min-h-11"
     >
       {icon}
       <span className={cn("truncate", !active && "hidden @sm/tile:inline")}>
@@ -484,10 +503,10 @@ function TilePanelEmpty({
   return (
     <div className="flex shrink-0 flex-col gap-4 pt-3">
       <div>
-        <h2 className="osrs-heading text-lg text-foreground">
+        <h2 className="osrs-heading text-foreground text-lg">
           {team ? `${team.name} progress` : "Select a Tile"}
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-sm">
           {readOnly
             ? "Select a Tile on the board to see its description and Goals."
             : "Select a Tile on the board to see its details, Goals and Submissions."}
@@ -501,13 +520,14 @@ function TilePanelEmpty({
             <Stat label="Pending" value={stats.pending} tone="pending" />
             <Stat label="Changes" value={stats.needsReview} tone="warning" />
           </dl>
-          <p className="text-xs text-muted-foreground">
-            {stats.xpEarned} / {stats.xpTotal} XP on this board ({stats.percent}%)
+          <p className="text-muted-foreground text-xs">
+            {stats.xpEarned} / {stats.xpTotal} XP on this board ({stats.percent}
+            %)
           </p>
 
           {attention.length > 0 && (
             <section aria-label="Needs attention">
-              <h3 className="mb-2 text-sm font-semibold text-foreground">
+              <h3 className="text-foreground mb-2 text-sm font-semibold">
                 Needs attention
               </h3>
               <ul className="flex flex-col gap-1.5">
@@ -516,23 +536,23 @@ function TilePanelEmpty({
                     <button
                       type="button"
                       onClick={() => onSelectTile(tile.id)}
-                      className="osrs-panel-inset flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:border-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                      className="osrs-panel-inset hover:border-primary focus-visible:ring-ring flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm focus-visible:ring-2 focus-visible:outline-hidden"
                     >
                       {state === "needs_review" ? (
                         <AlertCircle
                           aria-hidden="true"
-                          className="h-4 w-4 shrink-0 text-warning"
+                          className="text-warning h-4 w-4 shrink-0"
                         />
                       ) : (
                         <Clock
                           aria-hidden="true"
-                          className="h-4 w-4 shrink-0 text-pending"
+                          className="text-pending h-4 w-4 shrink-0"
                         />
                       )}
                       <span className="min-w-0 flex-1 truncate">
                         {tile.title}
                       </span>
-                      <span className="shrink-0 text-xs text-muted-foreground">
+                      <span className="text-muted-foreground shrink-0 text-xs">
                         {state === "needs_review"
                           ? "Changes requested"
                           : "Pending"}
@@ -546,7 +566,10 @@ function TilePanelEmpty({
         </>
       ) : (
         !readOnly && (
-          <Notice tone="info" icon={<Users aria-hidden="true" className="h-4 w-4" />}>
+          <Notice
+            tone="info"
+            icon={<Users aria-hidden="true" className="h-4 w-4" />}
+          >
             Join a team to submit.
           </Notice>
         )
@@ -571,7 +594,9 @@ function Notice({
         tone === "warning" ? "border-warning" : "border-info"
       }`}
     >
-      <span className={`mt-0.5 shrink-0 ${tone === "warning" ? "text-warning" : "text-info"}`}>
+      <span
+        className={`mt-0.5 shrink-0 ${tone === "warning" ? "text-warning" : "text-info"}`}
+      >
         {icon}
       </span>
       <p>{children}</p>
@@ -597,7 +622,7 @@ function Stat({
   return (
     <div className="osrs-panel-inset rounded-sm px-2 py-2">
       <dd className={`osrs-heading text-2xl ${color}`}>{value}</dd>
-      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dt className="text-muted-foreground text-xs">{label}</dt>
     </div>
   )
 }

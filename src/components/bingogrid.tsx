@@ -21,6 +21,8 @@ interface BingoGridProps {
   highlightedTiles: number[]
   onTileUpdated?: () => void
   selectedTileId: string | null
+  /** Tiles that do not match the active Board filter (shown faded). */
+  dimmedTileIds?: ReadonlySet<string>
   onSelectTile: (tileId: string | null) => void
   /** Tier unlock data (progression Boards, layout edit mode). */
   tierData?: BoardTierData | null
@@ -42,6 +44,7 @@ export default function BingoGrid({
   highlightedTiles,
   onTileUpdated,
   selectedTileId,
+  dimmedTileIds,
   onSelectTile,
   tierData,
   readOnly = false,
@@ -182,6 +185,7 @@ export default function BingoGrid({
       highlightedTiles={highlightedTiles}
       isLocked={isLayoutLocked}
       selectedTileId={selectedTileId}
+      dimmedTileIds={isLayoutLocked ? dimmedTileIds : undefined}
       onClearSelection={() => onSelectTile(null)}
       readOnly={readOnly}
     />

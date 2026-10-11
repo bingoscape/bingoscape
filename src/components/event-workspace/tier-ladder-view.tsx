@@ -23,6 +23,8 @@ interface TierLadderViewProps {
   userRole: EventRole
   currentTeamId: string | undefined
   selectedTileId: string | null
+  /** Tiles that do not match the active Board filter (shown faded). */
+  dimmedTileIds?: ReadonlySet<string>
   onSelectTile: (tileId: string | null) => void
 }
 
@@ -41,6 +43,7 @@ export function TierLadderView({
   userRole,
   currentTeamId,
   selectedTileId,
+  dimmedTileIds,
   onSelectTile,
 }: TierLadderViewProps) {
   const isManagement = userRole === "admin" || userRole === "management"
@@ -213,6 +216,7 @@ export function TierLadderView({
                     isLocked
                     readOnly
                     selected={selectedTileId === tile.id}
+                    dimmed={dimmedTileIds?.has(tile.id) ?? false}
                     tabIndex={index === activeIndex ? 0 : -1}
                     row={(cells[index]?.row ?? 0) + 1}
                     column={(cells[index]?.col ?? 0) + 1}

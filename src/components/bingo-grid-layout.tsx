@@ -20,6 +20,8 @@ interface BingoGridLayoutProps {
   highlightedTiles: number[]
   loadingTileId?: string
   selectedTileId?: string | null
+  /** Tiles that do not match the active Board filter (shown faded). */
+  dimmedTileIds?: ReadonlySet<string>
   /** Escape key inside the grid. */
   onClearSelection?: () => void
   readOnly?: boolean
@@ -49,6 +51,7 @@ export const BingoGridLayout = memo(
         highlightedTiles,
         loadingTileId,
         selectedTileId,
+        dimmedTileIds,
         onClearSelection,
         readOnly = false,
       },
@@ -138,6 +141,7 @@ export const BingoGridLayout = memo(
           isLocked={isLocked}
           isLoading={loadingTileId === tile.id}
           selected={selectedTileId === tile.id}
+          dimmed={dimmedTileIds?.has(tile.id) ?? false}
           tabIndex={index === activeIndex ? 0 : -1}
           row={Math.floor(index / columns) + 1}
           column={(index % columns) + 1}
