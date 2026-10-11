@@ -148,6 +148,8 @@ export const authOptions: NextAuthOptions = {
     DiscordProvider({
       clientId: env.DISCORD_CLIENT_ID,
       clientSecret: env.DISCORD_CLIENT_SECRET,
+      // Discord returns `iss` (RFC 9207) on the callback; openid-client requires a matching issuer
+      issuer: "https://discord.com",
     }),
     // GitHub OAuth Provider
     // Configure at: https://github.com/settings/developers
