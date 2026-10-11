@@ -40,18 +40,25 @@ export function DateTimePicker({
         <Button
           variant="outline"
           className={cn(
-            "w-full justify-start text-left font-normal",
+            "w-full min-w-0 justify-start text-left font-normal",
             !date && "text-muted-foreground",
             error && "border-destructive focus-visible:ring-destructive"
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPP 'at' p") : <span>{placeholder}</span>}
+          <span className="truncate">
+            {date ? format(date, "PPP 'at' p") : placeholder}
+          </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent
+        className="max-h-(--radix-popover-content-available-height) w-auto max-w-[calc(100vw-1rem)] overflow-y-auto p-0"
+        align="start"
+        collisionPadding={8}
+      >
         <Calendar
           mode="single"
+          className="pointer-coarse:[--cell-size:2.5rem]"
           selected={date}
           onSelect={(newDate) => {
             if (newDate) {
@@ -76,7 +83,7 @@ export function DateTimePicker({
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden"
             >
-              <div className="border-t border-border p-3">
+              <div className="border-border border-t p-3">
                 <TimePicker date={date} setDate={setDate} />
               </div>
             </motion.div>
