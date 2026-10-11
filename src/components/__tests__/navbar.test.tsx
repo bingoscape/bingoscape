@@ -56,4 +56,25 @@ describe("Navbar", () => {
       screen.queryByRole("link", { name: "My Events" })
     ).not.toBeInTheDocument()
   })
+
+  it("links the wordmark home and shows the Admin Panel only to super admins", () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { id: "u1", name: "Zezima", image: null } },
+      status: "authenticated",
+    })
+    const { rerender } = render(<Navbar />)
+
+    expect(
+      screen.getByRole("link", { name: "BingoScape home" })
+    ).toHaveAttribute("href", "/")
+    expect(
+      screen.queryByRole("link", { name: /Admin Panel/ })
+    ).not.toBeInTheDocument()
+
+    rerender(<Navbar isSuperAdminUser />)
+    expect(screen.getByRole("link", { name: /Admin Panel/ })).toHaveAttribute(
+      "href",
+      "/super-admin"
+    )
+  })
 })
