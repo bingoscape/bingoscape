@@ -1,4 +1,12 @@
-import { SKILLS } from "@wise-old-man/utils"
+import { ACTIVITIES, BOSSES, SKILLS } from "@wise-old-man/utils"
+
+/** Wise Old Man metric ids of a type ("skill", "boss" or "activity"), in Wise Old Man order. */
+export function getMetricIds(metricType: string): readonly string[] {
+  if (metricType === "skill") return SKILLS
+  if (metricType === "boss") return BOSSES
+  if (metricType === "activity") return ACTIVITIES
+  return []
+}
 
 export function getMetricName(metric: string): string {
   const customNames: Record<string, string> = {
@@ -164,6 +172,9 @@ export function getWikiIconUrl(metric: string): string {
     ehp: "Stats_icon.png",
     ehb: "Combat_icon.png",
     overall: "Stats_icon.png",
+
+    // The wiki's skill icon for Runecraft(ing) is not named after the skill id.
+    runecrafting: "Runecraft_icon.png",
   }
 
   if (wikiImageMap[metric]) {

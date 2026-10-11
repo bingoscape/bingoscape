@@ -1,19 +1,14 @@
 "use client"
 
+import { useState } from "react"
 import { TriangleAlert } from "lucide-react"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { getMetricTargetCopy } from "@/lib/osrs-metrics"
 import { parseNumberInput } from "@/lib/number-input"
 import { cn } from "@/lib/utils"
-import { MetricSelectItems } from "./metric-select-items"
+import { MetricCombobox } from "./metric-combobox"
+import { MetricTypeSwitch } from "./metric-type-switch"
 import { NumberField } from "./number-field"
+import { SkillGrid } from "./skill-grid"
 import type { MetricType } from "./types"
 
 interface MetricGoalFormProps {
@@ -28,7 +23,7 @@ interface MetricGoalFormProps {
   womLinked: boolean
   /** Opens the tracker settings, where the competition is linked. */
   onOpenTrackerSettings?: () => void
-  /** Focus the first field on mount. */
+  /** Focus the skill, boss or activity picker on mount. */
   autoFocus?: boolean
 }
 
@@ -46,43 +41,37 @@ export function MetricGoalForm({
 }: MetricGoalFormProps) {
   const copy = getMetricTargetCopy(metricType)
   const parsedTarget = parseNumberInput(targetValue)
+  // Switching type with the arrow keys leaves focus on the switch so the arrow
+  // keys keep working; any other way of switching focuses the new picker.
+  const [focusPicker, setFocusPicker] = useState(autoFocus)
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1.5">
-        <Label htmlFor="metric-type" className="text-sm font-medium">
-          Track
-        </Label>
-        <Select
-          value={metricType}
-          onValueChange={(v) => onMetricTypeChange(v as MetricType)}
-        >
-          <SelectTrigger id="metric-type">
-            <SelectValue placeholder="Select type" />
-          </SelectTrigger>
-          <SelectContent>
-            {(["skill", "boss", "activity"] as const).map((type) => (
-              <SelectItem key={type} value={type}>
-                {getMetricTargetCopy(type).typeOption}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <MetricTypeSwitch
+        value={metricType}
+        onChange={(type, { viaKeyboard }) => {
+          setFocusPicker(!viaKeyboard)
+          onMetricTypeChange(type)
+        }}
+      />
 
-      <div className="space-y-1.5">
-        <Label htmlFor="metric-name" className="text-sm font-medium">
-          {copy.nameLabel}
-        </Label>
-        <Select value={metricName} onValueChange={onMetricNameChange}>
-          <SelectTrigger id="metric-name" autoFocus={autoFocus}>
-            <SelectValue placeholder={copy.namePlaceholder} />
-          </SelectTrigger>
-          <SelectContent className="max-h-[300px]">
-            <MetricSelectItems metricType={metricType} />
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Keyed by type so each picker starts fresh (and takes focus) when switched to. */}
+      {metricType === "skill" ? (
+        <SkillGrid
+          key="skill"
+          value={metricName}
+          onValueChange={onMetricNameChange}
+          autoFocus={focusPicker}
+        />
+      ) : (
+        <MetricCombobox
+          key={metricType}
+          metricType={metricType}
+          value={metricName}
+          onValueChange={onMetricNameChange}
+          autoFocus={focusPicker}
+        />
+      )}
 
       <div className="space-y-2">
         <NumberField

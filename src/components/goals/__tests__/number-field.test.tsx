@@ -120,3 +120,96 @@ describe("NumberField", () => {
     expect(input().getAttribute("aria-describedby")).toContain(hint.id)
   })
 })
+
+describe("NumberField stepper", () => {
+  function StepperHarness({ initial = "1" }: { initial?: string }) {
+    const [value, setValue] = useState(initial)
+    return (
+      <NumberField
+        id="qty"
+        label="Quantity of Whip"
+        hideLabel
+        value={value}
+        onValueChange={setValue}
+        stepper={{
+          decreaseLabel: "Decrease quantity of Whip",
+          increaseLabel: "Increase quantity of Whip",
+        }}
+      />
+    )
+  }
+
+  const qty = () => screen.getByLabelText("Quantity of Whip") as HTMLInputElement
+  const decrease = () =>
+    screen.getByRole("button", { name: "Decrease quantity of Whip" })
+  const increase = () =>
+    screen.getByRole("button", { name: "Increase quantity of Whip" })
+
+  it("steps the value by one with - and +", () => {
+    render(<StepperHarness initial="5" />)
+
+    fireEvent.click(increase())
+    expect(qty().value).toBe("6")
+    fireEvent.click(decrease())
+    fireEvent.click(decrease())
+    expect(qty().value).toBe("4")
+  })
+
+  it("stops at 1 and marks - as unavailable without removing it from the tab order", () => {
+    render(<StepperHarness initial="2" />)
+
+    fireEvent.click(decrease())
+    expect(qty().value).toBe("1")
+    expect(decrease()).toHaveAttribute("aria-disabled", "true")
+    expect(decrease()).not.toBeDisabled()
+
+    fireEvent.click(decrease())
+    expect(qty().value).toBe("1")
+  })
+
+  it("steps from a typed shorthand value", () => {
+    render(<StepperHarness initial="1" />)
+
+    fireEvent.change(qty(), { target: { value: "1k" } })
+    fireEvent.click(increase())
+
+    expect(qty().value).toBe("1001")
+  })
+
+  it("turns unreadable text into 1 with +", () => {
+    render(<StepperHarness initial="abc" />)
+
+    expect(decrease()).toHaveAttribute("aria-disabled", "true")
+    fireEvent.click(increase())
+
+    expect(qty().value).toBe("1")
+  })
+
+  it("stops + at the largest allowed value", () => {
+    render(<StepperHarness initial="2147483647" />)
+
+    expect(increase()).toHaveAttribute("aria-disabled", "true")
+    fireEvent.click(increase())
+
+    expect(qty().value).toBe("2147483647")
+  })
+
+  it("keeps the label for screen readers only", () => {
+    render(<StepperHarness />)
+
+    expect(screen.getByText("Quantity of Whip")).toHaveClass("sr-only")
+  })
+
+  it("gives the buttons type=button so they never submit a form", () => {
+    render(<StepperHarness />)
+
+    expect(increase()).toHaveAttribute("type", "button")
+    expect(decrease()).toHaveAttribute("type", "button")
+  })
+
+  it("shows no buttons without the stepper prop", () => {
+    render(<Harness />)
+
+    expect(screen.queryByRole("button")).not.toBeInTheDocument()
+  })
+})

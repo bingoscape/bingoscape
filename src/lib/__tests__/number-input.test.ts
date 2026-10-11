@@ -1,8 +1,10 @@
 import {
+  canStepNumberInput,
   formatNumber,
   formatNumberPreview,
   parseNumberInput,
   parseTargetInput,
+  stepNumberInput,
   validateNumberInput,
 } from "@/lib/number-input"
 
@@ -156,5 +158,73 @@ describe("formatNumberPreview", () => {
     expect(formatNumberPreview("", "XP")).toBeNull()
     expect(formatNumberPreview("abc", "XP")).toBeNull()
     expect(formatNumberPreview("0", "XP")).toBeNull()
+  })
+})
+
+describe("stepNumberInput", () => {
+  it("steps a number up and down by one", () => {
+    expect(stepNumberInput("5", 1)).toBe("6")
+    expect(stepNumberInput("5", -1)).toBe("4")
+  })
+
+  it("never goes below the minimum of 1", () => {
+    expect(stepNumberInput("1", -1)).toBe("1")
+    expect(stepNumberInput("0", -1)).toBe("1")
+    expect(stepNumberInput("-4", -1)).toBe("1")
+    expect(stepNumberInput("0", 1)).toBe("1")
+  })
+
+  it("never goes above the largest goal target", () => {
+    expect(stepNumberInput("2147483647", 1)).toBe("2147483647")
+    expect(stepNumberInput("3b", -1)).toBe("2147483647")
+  })
+
+  it("reads shorthand and separators", () => {
+    expect(stepNumberInput("500k", 1)).toBe("500001")
+    expect(stepNumberInput("2.5m", -1)).toBe("2499999")
+    expect(stepNumberInput("13,034,431", 1)).toBe("13034432")
+  })
+
+  it("rounds a fraction toward the direction of the step", () => {
+    expect(stepNumberInput("1.5", 1)).toBe("2")
+    expect(stepNumberInput("1.5", -1)).toBe("1")
+    expect(stepNumberInput("2.5", -1)).toBe("2")
+  })
+
+  it("turns empty or unreadable text into the minimum", () => {
+    expect(stepNumberInput("", 1)).toBe("1")
+    expect(stepNumberInput("abc", 1)).toBe("1")
+    expect(stepNumberInput("abc", -1)).toBe("1")
+  })
+
+  it("honours custom bounds", () => {
+    expect(stepNumberInput("5", 1, { max: 5 })).toBe("5")
+    expect(stepNumberInput("5", -1, { min: 5 })).toBe("5")
+    expect(stepNumberInput("", 1, { min: 3 })).toBe("3")
+  })
+})
+
+describe("canStepNumberInput", () => {
+  it("allows stepping inside the bounds", () => {
+    expect(canStepNumberInput("5", 1)).toBe(true)
+    expect(canStepNumberInput("5", -1)).toBe(true)
+    expect(canStepNumberInput("2", -1)).toBe(true)
+  })
+
+  it("blocks stepping down at the minimum and up at the maximum", () => {
+    expect(canStepNumberInput("1", -1)).toBe(false)
+    expect(canStepNumberInput("0", -1)).toBe(false)
+    expect(canStepNumberInput("2147483647", 1)).toBe(false)
+  })
+
+  it("lets a fraction above 1 step down", () => {
+    expect(canStepNumberInput("1.5", -1)).toBe(true)
+  })
+
+  it("only lets unreadable text be reset upwards", () => {
+    expect(canStepNumberInput("", 1)).toBe(true)
+    expect(canStepNumberInput("abc", 1)).toBe(true)
+    expect(canStepNumberInput("", -1)).toBe(false)
+    expect(canStepNumberInput("abc", -1)).toBe(false)
   })
 })

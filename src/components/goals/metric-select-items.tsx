@@ -1,9 +1,8 @@
 "use client"
 
 import Image from "next/image"
-import { SKILLS, BOSSES, ACTIVITIES } from "@wise-old-man/utils"
 import { SelectItem } from "@/components/ui/select"
-import { getMetricName, getWikiIconUrl } from "@/lib/osrs-metrics"
+import { getMetricIds, getMetricName, getWikiIconUrl } from "@/lib/osrs-metrics"
 
 interface MetricSelectItemsProps {
   /** "skill", "boss" or "activity"; any other value renders no options. */
@@ -12,14 +11,7 @@ interface MetricSelectItemsProps {
 
 /** Options for a metric-name `Select`: wiki icon plus display name per metric. */
 export function MetricSelectItems({ metricType }: MetricSelectItemsProps) {
-  const metrics: readonly string[] =
-    metricType === "skill"
-      ? SKILLS
-      : metricType === "boss"
-        ? BOSSES
-        : metricType === "activity"
-          ? ACTIVITIES
-          : []
+  const metrics = getMetricIds(metricType)
 
   return (
     <>
