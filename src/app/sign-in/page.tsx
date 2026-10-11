@@ -1,13 +1,18 @@
 import { LoginCard } from "@/components/login"
 import { getServerAuthSession } from "@/server/auth"
+import { safeCallbackUrl } from "@/lib/safe-callback-url"
 import { redirect } from "next/navigation"
 
-export default async function SignInPage() {
+interface SignInPageProps {
+  searchParams: Promise<{ callbackUrl?: string | string[] }>
+}
+
+export default async function SignInPage({ searchParams }: SignInPageProps) {
   const session = await getServerAuthSession()
 
-  // If already logged in, redirect to home
+  // If already logged in, continue to where they were headed
   if (session) {
-    redirect("/")
+    redirect(safeCallbackUrl((await searchParams).callbackUrl))
   }
 
   return (

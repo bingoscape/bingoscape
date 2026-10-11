@@ -11,7 +11,8 @@ export async function proxy(request: NextRequest) {
     const token = await getToken({ req: request })
     if (!token) {
       const signIn = new URL("/sign-in", request.url)
-      signIn.searchParams.set("callbackUrl", pathname)
+      // Keep the query string so deep links like /clans/join?code=... survive sign-in.
+      signIn.searchParams.set("callbackUrl", pathname + request.nextUrl.search)
       return NextResponse.redirect(signIn)
     }
   }
