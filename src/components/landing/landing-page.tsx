@@ -2,9 +2,17 @@ import Link from "next/link"
 import { Camera, Download, Trophy, Users, type LucideIcon } from "lucide-react"
 
 import TemplatePreviewWithTooltip from "@/components/template-preview-with-tooltip"
+import { parseExportedBingo } from "@/lib/bingo-template-schema"
 import getTemplateBoard from "@/lib/getTemplateBoard"
+import { buildDetailPreview } from "@/lib/template-preview"
 import { BoardPreview } from "./board-preview"
 import { DiscordSignInButton } from "./discord-sign-in-button"
+
+// The showcase board is static, so it is parsed once at module load.
+const showcase = parseExportedBingo(getTemplateBoard())
+const showcasePreview = showcase.success
+  ? buildDetailPreview(showcase.data, { isOwner: true })
+  : null
 
 const PLUGIN_URL = "https://runelite.net/plugin-hub/show/bingoscape-companion"
 
@@ -141,11 +149,12 @@ export function LandingPage() {
           </div>
           <div className="w-full max-w-xl flex-1">
             <div className="osrs-panel rounded-sm p-3 sm:p-4">
-              <TemplatePreviewWithTooltip
-                templateData={getTemplateBoard()}
-                title="Live Bingo Board"
-                isDetailView={true}
-              />
+              {showcasePreview ? (
+                <TemplatePreviewWithTooltip
+                  preview={showcasePreview}
+                  title="Live Bingo Board"
+                />
+              ) : null}
             </div>
           </div>
         </div>

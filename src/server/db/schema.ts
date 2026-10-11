@@ -794,6 +794,10 @@ export const clanMembers = createTable(
       uniqUserMainClan: uniqueIndex("uniq_user_main_clan")
         .on(table.userId)
         .where(sql`${table.isMain} = true`),
+      uniqClanUser: uniqueIndex("uniq_clan_user").on(
+        table.clanId,
+        table.userId
+      ),
     }
   }
 )
@@ -1108,25 +1112,54 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
 // Add this to your existing schema.ts file
 // This creates a new table for bingo templates
 
-export const bingoTemplates = createTable("bingo_templates", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  title: varchar("title", { length: 255 }).notNull(),
-  description: text("description"),
-  previewImage: varchar("preview_image", { length: 255 }),
-  creatorId: uuid("creator_id")
-    // .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  originalBingoId: uuid("original_bingo_id").references(() => bingos.id, {
-    onDelete: "set null",
-  }),
-  category: varchar("category", { length: 100 }),
-  tags: varchar("tags", { length: 255 }),
-  isPublic: boolean("is_public").default(true).notNull(),
-  templateData: text("template_data").notNull(), // Stores the exported JSON data
-  downloadCount: integer("download_count").default(0).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-})
+export const bingoTemplates = createTable(
+  "bingo_templates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    previewImage: varchar("preview_image", { length: 255 }),
+    creatorId: uuid("creator_id")
+      // .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    originalBingoId: uuid("original_bingo_id").references(() => bingos.id, {
+      onDelete: "set null",
+    }),
+    category: varchar("category", { length: 100 }),
+    tags: varchar("tags", { length: 255 }),
+    isPublic: boolean("is_public").default(true).notNull(),
+    templateData: text("template_data").notNull(), // Stores the exported JSON data
+    // Denormalised summary of `templateData` (see summarizeTemplate). All
+    // nullable: NULL means "not summarised yet" (rows saved before these
+    // columns existed, until scripts/backfill-template-metadata.ts has run) and
+    // queries fall back to reading the JSON.
+    schemaVersion: varchar("schema_version", { length: 20 }),
+    bingoType: bingoTypeEnum("bingo_type"),
+    rows: integer("rows"),
+    columns: integer("columns"),
+    tileCount: integer("tile_count"),
+    tierCount: integer("tier_count"),
+    totalXp: bigint("total_xp", { mode: "number" }),
+    hasPatternBonuses: boolean("has_pattern_bonuses"),
+    hasHiddenTiles: boolean("has_hidden_tiles"),
+    downloadCount: integer("download_count").default(0).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    publicCreatedIdx: index("bingo_templates_public_created_idx").on(
+      table.isPublic,
+      table.createdAt
+    ),
+    creatorIdx: index("bingo_templates_creator_idx").on(table.creatorId),
+    categoryIdx: index("bingo_templates_category_idx").on(table.category),
+    publicSizeIdx: index("bingo_templates_public_size_idx").on(
+      table.isPublic,
+      table.rows,
+      table.columns
+    ),
+  })
+)
 
 export const bingoTemplatesRelations = relations(bingoTemplates, ({ one }) => ({
   creator: one(users, {

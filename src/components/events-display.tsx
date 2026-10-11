@@ -8,6 +8,8 @@ import type { EventState } from "@/lib/event-time"
 interface EventDisplayProps {
   categorized: CategorizedEvents
   now: Date
+  /** Optional extra content rendered under each card (e.g. join status). */
+  footer?: (eventData: EventData, state: EventState) => React.ReactNode
 }
 
 function SectionHeading({
@@ -39,11 +41,13 @@ function EventGrid({
   events,
   state,
   now,
+  footer,
 }: {
   labelledBy: string
   events: EventData[]
   state: EventState
   now: Date
+  footer?: EventDisplayProps["footer"]
 }) {
   return (
     <ul
@@ -54,13 +58,14 @@ function EventGrid({
       {events.map((ed) => (
         <li key={ed.event.id}>
           <DashboardEventCard eventData={ed} state={state} now={now} />
+          {footer?.(ed, state)}
         </li>
       ))}
     </ul>
   )
 }
 
-export function EventDisplay({ categorized, now }: EventDisplayProps) {
+export function EventDisplay({ categorized, now, footer }: EventDisplayProps) {
   const { active, upcoming, past } = categorized
 
   return (
@@ -78,6 +83,7 @@ export function EventDisplay({ categorized, now }: EventDisplayProps) {
             events={active}
             state="active"
             now={now}
+            footer={footer}
           />
         </section>
       )}
@@ -97,6 +103,7 @@ export function EventDisplay({ categorized, now }: EventDisplayProps) {
             events={upcoming}
             state="upcoming"
             now={now}
+            footer={footer}
           />
         </section>
       )}
@@ -131,6 +138,7 @@ export function EventDisplay({ categorized, now }: EventDisplayProps) {
                 events={past}
                 state="past"
                 now={now}
+                footer={footer}
               />
             </div>
           </details>

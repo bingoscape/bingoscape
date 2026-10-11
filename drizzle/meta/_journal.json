@@ -246,6 +246,20 @@
       "when": 1791707308963,
       "tag": "0034_green_malice",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1791715915298,
+      "tag": "0035_template_metadata",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1791717038359,
+      "tag": "0036_clan_members_unique",
+      "breakpoints": true
     }
   ]
 }

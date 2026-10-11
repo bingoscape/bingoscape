@@ -1,296 +1,323 @@
-"use client"
+import type { ReactNode } from "react"
+import Link from "next/link"
+import { LayoutGrid, Search, SearchX } from "lucide-react"
 
-import type React from "react"
-
-import { useState } from "react"
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Download, Search, Tag, X, Grid } from "lucide-react"
-import Link from "next/link"
-import { useRouter, usePathname, useSearchParams } from "next/navigation"
-import { TemplatePreviewGrid } from "./template-preview-grid"
-import { Pagination } from "./ui/pagination"
+import { FilterDisclosure } from "@/components/filter-disclosure"
+import { FilterPills, type FilterPill } from "@/components/filter-pills"
+import { TemplateCard } from "@/components/template-card"
+import { TemplatePagination } from "@/components/template-pagination"
 import {
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "./ui/pagination"
-import type { BingoTemplate } from "@/app/actions/templates"
+  TEMPLATE_PAGE_SIZE,
+  buildTemplateListHref,
+  countActiveFilters,
+  type TemplateListParams,
+} from "@/lib/template-list-params"
+import { BINGO_TYPE_LABELS, formatSizeParam } from "@/lib/template-labels"
+import type {
+  FacetOption,
+  TemplateFacets,
+  TemplateListItem,
+} from "@/server/queries/templates"
+
+/** Categories shown as pills before the rest move behind "More". */
+const VISIBLE_CATEGORIES = 6
 
 interface TemplateGalleryProps {
-  templates: BingoTemplate[]
-  totalTemplates: number
-  categories: string[]
-  sizes: string[]
-  currentSearch: string
-  currentCategory: string
-  currentSize: string
-  currentPage: number
-  limit: number
+  params: TemplateListParams
+  templates: TemplateListItem[]
+  total: number
+  facets: TemplateFacets
+  /** "Create template" control for the truly-empty state. */
+  createAction: ReactNode
+}
+
+function allPill(
+  label: string,
+  params: TemplateListParams,
+  key: "category" | "size" | "type"
+): FilterPill {
+  return {
+    label,
+    href: buildTemplateListHref(params, { [key]: "" }),
+    selected: !params[key],
+  }
+}
+
+function optionPills(
+  options: FacetOption[],
+  params: TemplateListParams,
+  key: "category" | "size" | "type",
+  format: (value: string) => string = (value) => value
+): FilterPill[] {
+  return options.map((option) => ({
+    label: format(option.value),
+    count: option.count,
+    href: buildTemplateListHref(params, {
+      [key]: params[key] === option.value ? "" : option.value,
+    }),
+    selected: params[key] === option.value,
+  }))
+}
+
+function pluralTemplates(count: number) {
+  return `${count} ${count === 1 ? "template" : "templates"}`
 }
 
 export function TemplateGallery({
+  params,
   templates,
-  totalTemplates,
-  categories,
-  sizes,
-  currentSearch,
-  currentCategory,
-  currentSize,
-  currentPage,
-  limit,
+  total,
+  facets,
+  createAction,
 }: TemplateGalleryProps) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const [searchInput, setSearchInput] = useState(currentSearch)
+  const totalPages = Math.max(1, Math.ceil(total / TEMPLATE_PAGE_SIZE))
+  const activeFilters = countActiveFilters(params)
 
-  const totalPages = Math.ceil(totalTemplates / limit)
+  const categoryPills = optionPills(facets.categories, params, "category")
+  // Keep the selected category visible even if it is outside the top few.
+  const visibleCategories = categoryPills.filter(
+    (pill, index) => index < VISIBLE_CATEGORIES || pill.selected
+  )
+  const moreCategories = categoryPills.filter(
+    (pill) => !visibleCategories.includes(pill)
+  )
 
-  const createQueryString = (params: Record<string, string | null>) => {
-    const newParams = new URLSearchParams(searchParams?.toString() ?? "")
+  const typePills = optionPills(
+    facets.types,
+    params,
+    "type",
+    (value) =>
+      BINGO_TYPE_LABELS[value as keyof typeof BINGO_TYPE_LABELS] ?? value
+  )
 
-    Object.entries(params).forEach(([key, value]) => {
-      if (value === null) {
-        newParams.delete(key)
-      } else {
-        newParams.set(key, value)
-      }
-    })
+  const clearHref = buildTemplateListHref(params, {
+    search: "",
+    category: "",
+    size: "",
+    type: "",
+  })
 
-    return newParams.toString()
-  }
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    const query = createQueryString({
-      search: searchInput || null,
-      page: "1", // Reset to first page on new search
-    })
-    router.push(`${pathname}?${query}`)
-  }
-
-  const handleCategoryClick = (category: string) => {
-    const isSelected = currentCategory === category
-    const query = createQueryString({
-      category: isSelected ? null : category,
-      page: "1", // Reset to first page on category change
-    })
-    router.push(`${pathname}?${query}`)
-  }
-
-  const handleSizeClick = (size: string) => {
-    const isSelected = currentSize === size
-    const query = createQueryString({
-      size: isSelected ? null : size,
-      page: "1", // Reset to first page on size change
-    })
-    router.push(`${pathname}?${query}`)
-  }
-
-  const handleClearFilters = () => {
-    setSearchInput("")
-    router.push(pathname ?? "")
-  }
-
-  const hasFilters = currentSearch || currentCategory || currentSize
+  const filterSummary = [
+    params.search && `“${params.search}”`,
+    params.category && `category ${params.category}`,
+    params.size && `size ${formatSizeParam(params.size)}`,
+    params.type && `${BINGO_TYPE_LABELS[params.type]} boards`,
+  ].filter(Boolean)
 
   return (
-    <div>
-      <div className="mb-6">
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <div className="relative grow">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search templates..."
-              className="pl-8"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-            />
-          </div>
-          <Button type="submit">Search</Button>
-          {hasFilters && (
-            <Button type="button" variant="ghost" onClick={handleClearFilters}>
-              <X className="mr-2 h-4 w-4" />
-              Clear
+    <div className="space-y-6">
+      <section aria-label="Search and filter templates" className="space-y-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <form
+            action="/templates"
+            method="get"
+            role="search"
+            className="flex flex-1 gap-2 lg:max-w-xl"
+          >
+            {params.category ? (
+              <input type="hidden" name="category" value={params.category} />
+            ) : null}
+            {params.size ? (
+              <input type="hidden" name="size" value={params.size} />
+            ) : null}
+            {params.type ? (
+              <input type="hidden" name="type" value={params.type} />
+            ) : null}
+            {params.sort !== "newest" ? (
+              <input type="hidden" name="sort" value={params.sort} />
+            ) : null}
+            <label htmlFor="template-search" className="sr-only">
+              Search templates by title, description or tag
+            </label>
+            <div className="relative min-w-0 flex-1">
+              <Search
+                aria-hidden="true"
+                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+              />
+              <Input
+                key={params.search}
+                id="template-search"
+                type="search"
+                name="search"
+                maxLength={100}
+                defaultValue={params.search}
+                placeholder="Search templates"
+                enterKeyHint="search"
+                className="pl-9"
+              />
+            </div>
+            <Button type="submit" className="min-h-11">
+              Search
             </Button>
-          )}
-        </form>
-      </div>
+          </form>
 
-      <div className="mb-6 flex flex-col gap-4 md:flex-row">
-        {categories.length > 0 && (
-          <div className="mb-4 flex flex-wrap gap-2 md:mb-0">
-            <div className="mr-2 flex items-center">
-              <Tag className="mr-1 h-4 w-4" />
-              <span className="text-sm font-medium">Categories:</span>
-            </div>
-            {categories.map((category) => (
-              <Badge
-                key={category}
-                variant={currentCategory === category ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => handleCategoryClick(category)}
-              >
-                {category}
-              </Badge>
-            ))}
-          </div>
-        )}
-
-        {sizes.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <div className="mr-2 flex items-center">
-              <Grid className="mr-1 h-4 w-4" />
-              <span className="text-sm font-medium">Size:</span>
-            </div>
-            {sizes.map((size) => (
-              <Badge
-                key={size}
-                variant={currentSize === size ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => handleSizeClick(size)}
-              >
-                {size}
-              </Badge>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {hasFilters && (
-        <div className="mb-6">
-          <p className="text-sm text-muted-foreground">
-            Showing {totalTemplates}{" "}
-            {totalTemplates === 1 ? "result" : "results"}
-            {currentSearch && <span> for &quot;{currentSearch}&quot;</span>}
-            {currentCategory && (
-              <span> in category &quot;{currentCategory}&quot;</span>
-            )}
-            {currentSize && <span> with size &quot;{currentSize}&quot;</span>}
-          </p>
+          <FilterPills
+            label="Sort templates"
+            pills={[
+              {
+                label: "Newest",
+                href: buildTemplateListHref(params, { sort: "newest" }),
+                selected: params.sort === "newest",
+              },
+              {
+                label: "Popular",
+                href: buildTemplateListHref(params, { sort: "popular" }),
+                selected: params.sort === "popular",
+              },
+            ]}
+          />
         </div>
-      )}
+
+        <FilterDisclosure activeCount={activeFilters - (params.search ? 1 : 0)}>
+          {typePills.length > 1 || params.type ? (
+            <FilterGroup title="Board type">
+              <FilterPills
+                label="Filter templates by board type"
+                pills={[allPill("All types", params, "type"), ...typePills]}
+              />
+            </FilterGroup>
+          ) : null}
+
+          {facets.sizes.length > 1 || params.size ? (
+            <FilterGroup title="Size">
+              <FilterPills
+                label="Filter templates by board size"
+                pills={[
+                  allPill("Any size", params, "size"),
+                  ...optionPills(facets.sizes, params, "size", formatSizeParam),
+                ]}
+              />
+            </FilterGroup>
+          ) : null}
+
+          {categoryPills.length > 0 ? (
+            <FilterGroup title="Category">
+              <FilterPills
+                label="Filter templates by category"
+                pills={[
+                  allPill("All categories", params, "category"),
+                  ...visibleCategories,
+                ]}
+              />
+              {moreCategories.length > 0 ? (
+                <details className="group mt-2">
+                  <summary className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex min-h-11 cursor-pointer items-center rounded-sm text-sm font-medium focus-visible:ring-2 focus-visible:outline-hidden">
+                    <span className="group-open:hidden">
+                      More categories ({moreCategories.length})
+                    </span>
+                    <span className="hidden group-open:inline">
+                      Fewer categories
+                    </span>
+                  </summary>
+                  <FilterPills
+                    label="More template categories"
+                    pills={moreCategories}
+                    className="mt-2"
+                  />
+                </details>
+              ) : null}
+            </FilterGroup>
+          ) : null}
+        </FilterDisclosure>
+      </section>
+
+      <div
+        role="status"
+        aria-live="polite"
+        className="text-muted-foreground flex flex-wrap items-center gap-x-3 text-sm"
+      >
+        <p>
+          {pluralTemplates(total)}
+          {filterSummary.length > 0 ? ` for ${filterSummary.join(", ")}` : null}
+          {totalPages > 1 ? ` · page ${params.page} of ${totalPages}` : null}
+        </p>
+        {activeFilters > 0 && templates.length > 0 ? (
+          <Link
+            href={clearHref}
+            className="text-primary inline-flex min-h-11 items-center underline-offset-4 hover:underline"
+          >
+            Clear filters
+          </Link>
+        ) : null}
+      </div>
 
       {templates.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border px-4 py-16 text-center">
-          <Grid className="mb-6 h-20 w-20 text-muted-foreground" />
-          <h2 className="mb-4 text-2xl font-semibold">No templates found</h2>
-          <p className="max-w-md text-base text-muted-foreground">
-            Try adjusting your search or filters to find what you&apos;re
-            looking for.
-          </p>
-        </div>
+        <EmptyState
+          filtered={activeFilters > 0}
+          clearHref={clearHref}
+          createAction={createAction}
+        />
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {templates.map((template) => (
-              <Link
-                key={template.id}
-                href={`/templates/${template.id}`}
-                passHref
-              >
-                <Card className="flex h-full cursor-pointer flex-col transition-shadow hover:shadow-md">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="line-clamp-1">
-                      {template.title}
-                    </CardTitle>
-                    <div className="mt-1 flex items-center">
-                      <Avatar className="mr-2 h-5 w-5">
-                        <AvatarImage
-                          src={template.creatorImage ?? undefined}
-                          alt={template.creatorName ?? ""}
-                        />
-                        <AvatarFallback>
-                          {template.creatorName?.[0] ?? "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs text-muted-foreground">
-                        {template.creatorName}
-                      </span>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="grow pb-2">
-                    <TemplatePreviewGrid
-                      templateData={template.templateData}
-                      title={template.title}
-                      className="mb-2 h-48"
-                    />
-                    <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
-                      {template.description}
-                    </p>
-                  </CardContent>
-                  <CardFooter className="pt-2">
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Download className="mr-1 h-3.5 w-3.5" />
-                      <span>{template.downloadCount} downloads</span>
-                    </div>
-                  </CardFooter>
-                </Card>
-              </Link>
+              <li key={template.id}>
+                <TemplateCard template={template} />
+              </li>
             ))}
-          </div>
-
-          {totalPages > 1 && (
-            <Pagination className="mt-8">
-              <PaginationContent>
-                {currentPage > 1 && (
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href={`${pathname}?${createQueryString({ page: (currentPage - 1).toString() })}`}
-                    />
-                  </PaginationItem>
-                )}
-
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  // Show pages around current page
-                  let pageNum = i + 1
-                  if (totalPages > 5) {
-                    if (currentPage <= 3) {
-                      pageNum = i + 1
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i
-                    } else {
-                      pageNum = currentPage - 2 + i
-                    }
-                  }
-
-                  return (
-                    <PaginationItem key={pageNum}>
-                      <PaginationLink
-                        href={`${pathname}?${createQueryString({ page: pageNum.toString() })}`}
-                        isActive={currentPage === pageNum}
-                      >
-                        {pageNum}
-                      </PaginationLink>
-                    </PaginationItem>
-                  )
-                })}
-
-                {currentPage < totalPages && (
-                  <PaginationItem>
-                    <PaginationNext
-                      href={`${pathname}?${createQueryString({ page: (currentPage + 1).toString() })}`}
-                    />
-                  </PaginationItem>
-                )}
-              </PaginationContent>
-            </Pagination>
-          )}
+          </ul>
+          <TemplatePagination
+            page={Math.min(params.page, totalPages)}
+            totalPages={totalPages}
+            hrefForPage={(page) => buildTemplateListHref(params, { page })}
+          />
         </>
       )}
+    </div>
+  )
+}
+
+function FilterGroup({
+  title,
+  children,
+}: {
+  title: string
+  children: ReactNode
+}) {
+  return (
+    <div>
+      <h2 className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
+        {title}
+      </h2>
+      {children}
+    </div>
+  )
+}
+
+function EmptyState({
+  filtered,
+  clearHref,
+  createAction,
+}: {
+  filtered: boolean
+  clearHref: string
+  createAction: ReactNode
+}) {
+  const Icon = filtered ? SearchX : LayoutGrid
+  return (
+    <div className="osrs-panel mx-auto max-w-2xl rounded-sm p-6 text-center sm:p-10">
+      <div className="osrs-slot mx-auto mb-4 w-fit rounded-sm p-4">
+        <Icon aria-hidden="true" className="text-primary h-10 w-10" />
+      </div>
+      <h2 className="osrs-heading text-2xl font-bold">
+        {filtered ? "No templates match" : "No templates yet"}
+      </h2>
+      <p className="text-muted-foreground mt-2">
+        {filtered
+          ? "Try a different search or remove some filters."
+          : "Be the first to share a board. Save one of your boards as a template and others can start from it."}
+      </p>
+      <div className="mt-6 flex justify-center">
+        {filtered ? (
+          <Button asChild>
+            <Link href={clearHref}>Clear filters</Link>
+          </Button>
+        ) : (
+          createAction
+        )}
+      </div>
     </div>
   )
 }

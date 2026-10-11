@@ -1,147 +1,104 @@
-import { getUserClans } from "../actions/clan"
-import { notFound } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card"
+import { redirect } from "next/navigation"
+import { BowArrow } from "lucide-react"
+
+import { ClanCard } from "@/components/clan-card"
 import CreateClanModal from "@/components/create-clan-modal"
+import { JoinClanDialog } from "@/components/join-clan-dialog"
+import { PageHeader } from "@/components/page-header"
 import { getServerAuthSession } from "@/server/auth"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Crown, Users, BowArrow } from "lucide-react"
-import Link from "next/link"
+import { getUserClanSummaries } from "@/server/queries/clans"
+
+function EmptyClans() {
+  return (
+    <div className="osrs-panel mx-auto max-w-3xl rounded-sm p-6 sm:p-10">
+      <div className="mb-6 text-center">
+        <div className="osrs-slot mx-auto mb-4 w-fit rounded-sm p-4">
+          <BowArrow aria-hidden="true" className="size-10 text-primary" />
+        </div>
+        <h2 className="osrs-heading text-2xl font-bold">No Clans Yet</h2>
+        <p className="mt-2 text-muted-foreground">
+          Start your own clan, or join one with an invite to run bingo events
+          together.
+        </p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <section
+          aria-labelledby="empty-clan-create"
+          className="osrs-slot flex flex-col gap-3 rounded-sm p-4"
+        >
+          <h3 id="empty-clan-create" className="font-semibold">
+            Create a Clan
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            You become its owner, then invite your crew with a link.
+          </p>
+          <CreateClanModal className="mt-auto w-full" />
+        </section>
+        <section
+          aria-labelledby="empty-clan-join"
+          className="osrs-slot flex flex-col gap-3 rounded-sm p-4"
+        >
+          <h3 id="empty-clan-join" className="font-semibold">
+            Got an invite?
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Paste the invite link or code a clan manager sent you.
+          </p>
+          <JoinClanDialog className="mt-auto w-full" />
+        </section>
+      </div>
+    </div>
+  )
+}
 
 export default async function ClansPage() {
   const session = await getServerAuthSession()
-  if (!session || !session.user) {
-    notFound()
+  if (!session?.user) {
+    redirect("/sign-in?callbackUrl=%2Fclans")
   }
 
-  const userClans = await getUserClans()
+  const clans = await getUserClanSummaries(session.user.id)
+  const hasClans = clans.length > 0
 
   return (
-    <div className="container mx-auto py-10">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-4xl font-bold">Your Clans</h1>
-        <CreateClanModal />
+    <main id="main" className="container mx-auto px-4 py-6 sm:py-8">
+      <div className="space-y-5">
+        <PageHeader
+          title="Clans"
+          icon={BowArrow}
+          meta={
+            hasClans ? (
+              <span>
+                {clans.length} {clans.length === 1 ? "clan" : "clans"}
+              </span>
+            ) : undefined
+          }
+          actions={
+            hasClans ? (
+              <>
+                <CreateClanModal size="sm" className="w-full sm:w-auto" />
+                <JoinClanDialog size="sm" className="w-full sm:w-auto" />
+              </>
+            ) : undefined
+          }
+        />
+
+        {hasClans ? (
+          <ul
+            role="list"
+            aria-label="Your clans"
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3"
+          >
+            {clans.map((clan) => (
+              <li key={clan.id}>
+                <ClanCard clan={clan} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyClans />
+        )}
       </div>
-      {userClans.length === 0 ? (
-        <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
-          <div className="relative mb-8">
-            <div className="absolute inset-0 rounded-full bg-linear-to-r from-primary/20 to-accent/20 blur-2xl" />
-            <div className="relative flex h-32 w-32 items-center justify-center rounded-sm bg-linear-to-br from-primary/10 to-accent/10">
-              <Users className="h-16 w-16 text-primary" />
-            </div>
-          </div>
-          <h2 className="mb-4 bg-linear-to-r from-primary to-primary/30 bg-clip-text text-3xl font-bold text-transparent">
-            No Clans Yet
-          </h2>
-          <p className="mb-8 max-w-md text-lg leading-relaxed text-muted-foreground">
-            Join or create a clan to compete with other players and organize
-            bingo events together.
-          </p>
-          <div className="flex flex-col items-center gap-4 sm:flex-row">
-            <CreateClanModal />
-            <Button variant="outline" size="lg" className="min-w-[140px]">
-              Browse Clans
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {userClans.map((userClan) => (
-            <Card
-              key={userClan.clan.id}
-              className="relative overflow-hidden border-2 bg-linear-to-br duration-300 hover:border-primary/20 hover:shadow-md"
-            >
-              <div className="absolute left-0 top-0 h-1 w-full bg-linear-to-r from-primary to-primary/20" />
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-linear-to-br from-primary/10 to-accent/10">
-                      <BowArrow className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">
-                        {userClan.clan.name}
-                      </CardTitle>
-                      <CardDescription className="text-xs">
-                        {userClan.isMain ? "Main Clan" : "Guest Clan"}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <Badge
-                    variant={userClan.isMain ? "default" : "secondary"}
-                    className="shadow-xs"
-                  >
-                    {userClan.isMain ? "Main" : "Guest"}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {userClan.clan.description ?? "No description available"}
-                </p>
-
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="flex items-center space-x-2 rounded-lg bg-secondary/30 p-2">
-                    <Crown className="h-4 w-4 text-warning" />
-                    <span className="text-sm font-medium text-muted-foreground">
-                      Owner:
-                    </span>
-                    <Avatar className="h-6 w-6 ring-2 ring-primary/20">
-                      <AvatarImage
-                        src={userClan.owner.image ?? undefined}
-                        alt={userClan.owner.name ?? ""}
-                      />
-                      <AvatarFallback className="text-xs">
-                        {userClan.owner.runescapeName?.[0] ?? "O"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="truncate text-sm font-medium">
-                      {userClan.owner.runescapeName ?? userClan.owner.name}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-2">
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4 text-info" />
-                      <span className="text-sm font-medium text-muted-foreground">
-                        Members:
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <span className="mr-2 text-sm font-bold">
-                        {userClan.memberCount}
-                      </span>
-                      <Users className="h-4 w-4" />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="pt-2">
-                <Link
-                  href={`/clans/${userClan.clan.id}`}
-                  passHref
-                  className="w-full"
-                >
-                  <Button
-                    variant="outline"
-                    className="w-full transition-colors duration-300 hover:bg-primary hover:text-primary-foreground"
-                  >
-                    View Clan
-                  </Button>
-                </Link>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
+    </main>
   )
 }

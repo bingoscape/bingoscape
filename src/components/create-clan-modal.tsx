@@ -2,47 +2,69 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { Plus } from "lucide-react"
+
+import { createClan } from "@/app/actions/clan"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogFooter,
+} from "@/components/responsive-dialog"
 import { toast } from "@/hooks/use-toast"
-import { createClan } from "@/app/actions/clan"
 
-export default function CreateClanModal() {
+interface CreateClanModalProps {
+  className?: string
+  size?: "default" | "sm" | "lg"
+}
+
+export default function CreateClanModal({
+  className,
+  size = "default",
+}: CreateClanModalProps) {
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
   const router = useRouter()
+
+  const handleOpenChange = (next: boolean) => {
+    if (isLoading) return
+    // Start from a clean form every time the dialog opens.
+    if (next) {
+      setName("")
+      setDescription("")
+    }
+    setOpen(next)
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
-    const formData = new FormData(e.currentTarget)
-    const name = formData.get("name") as string
-    const description = formData.get("description") as string
-
     try {
       const result = await createClan(name, description)
       if (!result.success) {
-        throw new Error(result.error || "Failed to create clan")
+        throw new Error(result.error)
       }
       setOpen(false)
       toast({
         title: "Clan created",
-        description: "Your new clan has been successfully created.",
+        description: `${result.clan.name} is ready. Invite your members next.`,
       })
-      router.refresh()
+      router.push(`/clans/${result.clan.id}?tab=invites`)
     } catch (error) {
       toast({
-        title: "Error",
+        title: "Couldn't create clan",
         description:
           error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
@@ -53,31 +75,64 @@ export default function CreateClanModal() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button>Create New Clan</Button>
+        <Button size={size} className={className}>
+          <Plus aria-hidden="true" />
+          Create clan
+        </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <ResponsiveDialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New Clan</DialogTitle>
+          <DialogTitle>Create a clan</DialogTitle>
           <DialogDescription>
-            Create a new clan for your OSRS adventures.
+            Create a clan for your OSRS crew. You become its owner and admin.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="name">Clan Name</Label>
-            <Input id="name" name="name" required />
-          </div>
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea id="description" name="description" />
-          </div>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Creating..." : "Create Clan"}
-          </Button>
+        <form
+          onSubmit={handleSubmit}
+          className="flex min-h-0 flex-1 flex-col gap-4"
+        >
+          <ResponsiveDialogBody>
+            <div className="space-y-2">
+              <Label htmlFor="clan-name">Clan name</Label>
+              <Input
+                id="clan-name"
+                name="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={255}
+                autoComplete="off"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="clan-description">Description (optional)</Label>
+              <Textarea
+                id="clan-description"
+                name="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={1000}
+                rows={4}
+              />
+            </div>
+          </ResponsiveDialogBody>
+          <ResponsiveDialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isLoading}
+              onClick={() => handleOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading || !name.trim()}>
+              {isLoading ? "Creating…" : "Create clan"}
+            </Button>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   )
 }

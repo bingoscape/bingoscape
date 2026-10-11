@@ -1,0 +1,92 @@
+import { and, asc, desc, eq, exists, inArray, or } from "drizzle-orm"
+
+import { db } from "@/server/db"
+import { bingos, eventParticipants, events } from "@/server/db/schema"
+import { logger } from "@/lib/logger"
+
+/**
+ * Events the user can manage: the creator, or a participant with the `admin`
+ * or `management` role. This mirrors `getUserRole` / `requireEventManager`
+ * (src/server/authz.ts), which is what the import and export actions enforce,
+ * so the pickers never offer an Event the action would then reject.
+ *
+ * Not a "use server" module: it takes the user id as an argument.
+ */
+
+export interface ManageableBoard {
+  id: string
+  title: string
+  rows: number
+  columns: number
+  bingoType: "standard" | "progression"
+}
+
+export interface ManageableEvent {
+  id: string
+  title: string
+  boards: ManageableBoard[]
+}
+
+const MAX_EVENTS = 200
+
+export async function getManageableEvents(
+  userId: string,
+  options: { withBoards?: boolean } = {}
+): Promise<ManageableEvent[]> {
+  try {
+    const rows = await db
+      .select({ id: events.id, title: events.title })
+      .from(events)
+      .where(
+        or(
+          eq(events.creatorId, userId),
+          exists(
+            db
+              .select({ id: eventParticipants.id })
+              .from(eventParticipants)
+              .where(
+                and(
+                  eq(eventParticipants.eventId, events.id),
+                  eq(eventParticipants.userId, userId),
+                  inArray(eventParticipants.role, ["admin", "management"])
+                )
+              )
+          )
+        )
+      )
+      .orderBy(desc(events.createdAt))
+      .limit(MAX_EVENTS)
+
+    if (!options.withBoards || rows.length === 0) {
+      return rows.map((event) => ({ ...event, boards: [] }))
+    }
+
+    const boardRows = await db
+      .select({
+        id: bingos.id,
+        eventId: bingos.eventId,
+        title: bingos.title,
+        rows: bingos.rows,
+        columns: bingos.columns,
+        bingoType: bingos.bingoType,
+      })
+      .from(bingos)
+      .where(
+        inArray(
+          bingos.eventId,
+          rows.map((event) => event.id)
+        )
+      )
+      .orderBy(asc(bingos.createdAt))
+
+    return rows.map((event) => ({
+      ...event,
+      boards: boardRows
+        .filter((board) => board.eventId === event.id)
+        .map(({ eventId: _eventId, ...board }) => board),
+    }))
+  } catch (error) {
+    logger.error({ error }, "Error fetching manageable events:", error)
+    return []
+  }
+}

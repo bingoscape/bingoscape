@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator"
 import { DiscordLogoIcon } from "@radix-ui/react-icons"
 import { signIn, signOut, useSession } from "next-auth/react"
 import Link from "next/link"
+import { safeCallbackUrl } from "@/lib/safe-callback-url"
 
 export function LoginCard() {
   const { data: session } = useSession()
@@ -28,6 +29,9 @@ export function LoginCard() {
     username: "",
     password: "",
   })
+
+  // Where to go after signing in (set by the proxy / protected pages).
+  const callbackUrl = safeCallbackUrl(searchParams.get("callbackUrl"))
 
   // Check if user just registered
   const justRegistered = searchParams.get("registered") === "true"
@@ -47,7 +51,7 @@ export function LoginCard() {
       if (result?.error) {
         setError("Invalid username or password")
       } else if (result?.ok) {
-        router.push("/")
+        router.push(callbackUrl)
         router.refresh()
       }
     } catch (err) {
@@ -153,7 +157,7 @@ export function LoginCard() {
 
         <div className="grid gap-2">
           <Button
-            onClick={() => void signIn("discord")}
+            onClick={() => void signIn("discord", { callbackUrl })}
             className="w-full"
             variant="outline"
           >
