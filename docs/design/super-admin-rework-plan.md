@@ -134,3 +134,19 @@ Recommended order: 0, then 1, then 2 in parallel with 4, then 3, 5, 6, 7, 8, 9.
 3. Is soft delete with a purge window acceptable for users and events, given the storage and privacy implications of keeping deleted user data?
 4. Are bulk actions needed, or is a per-row flow enough?
 5. Should admin email editing be removed entirely, or kept behind verification and a reason?
+
+## Implemented (views rework)
+
+Verified: `eslint` clean on the touched paths, `npm run build` succeeds. `tsc` reports one error in
+`src/app/actions/__tests__/user.test.ts`, which also exists on the branch without this rework.
+Not verified: Jest (needs Docker) and any browser, keyboard or screen-reader check.
+
+- [x] Phase 0: password hash no longer reaches client components (explicit DTO queries in `src/server/super-admin/queries.ts`), owner sentinel bug, `&apos;` toast, local-time event dates with `end > start` validation, real stat aggregates, `?page=` clamping, truthful user-delete copy with real counts (X1 copy only).
+- [x] Phase 2: responsive shell, breadcrumbs and `PageHeader`, nav `aria-current`, `notFound()` for non-admins, nested Link/Button removed.
+- [x] Phase 3: shared `AdminDataTable` with URL state, labeled search, `aria-sort`, `<nav>` pagination, `loading.tsx`, `error.tsx`, empty states.
+- [x] Phase 7 (partly): server-provided options and comboboxes instead of `useEffect` fetches, reset-on-open, inline validation.
+- [x] Phase 8 (partly): `events/[eventId]` page added; user and clan detail pages reworked.
+- [x] Phase 9 (partly): overview with real counts.
+- [x] ConfirmDestructiveDialog with typed-name confirmation.
+- [ ] Not done (backend, separate work): S1, S2, S4 semantics, S5, S6, S7, S8, S9, S12; Phases 1, 4, 5, 6 and the QA phase.
+- Read actions (`getAllUsers`, `getUserDetails`, etc.) were removed from `src/app/actions/super-admin.ts` and replaced by guarded server-only queries, so they are no longer callable as public server actions. Mutation actions are unchanged.
