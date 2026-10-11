@@ -48,35 +48,37 @@ export function OsrsItemSearch({
   const [internalSelectedItems, setInternalSelectedItems] =
     useState<OsrsItem[]>(selectedItems)
 
-  // Debounced search
+  // Debounced search. `cancelled` drops responses for superseded queries so a
+  // slow earlier request can't overwrite newer results.
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (query.length >= 2) {
-        void searchItems(query)
-      } else {
+    let cancelled = false
+
+    const timer = setTimeout(async () => {
+      if (query.trim().length < 2) {
         setResults([])
+        setLoading(false)
+        return
+      }
+
+      setLoading(true)
+      try {
+        const result = await searchOsrsItems(query, 20)
+        if (cancelled) return
+        setResults(result.success && result.items ? result.items : [])
+      } catch (error) {
+        if (cancelled) return
+        console.error("Error searching items:", error)
+        setResults([])
+      } finally {
+        if (!cancelled) setLoading(false)
       }
     }, 300)
 
-    return () => clearTimeout(timer)
-  }, [query])
-
-  const searchItems = async (searchQuery: string) => {
-    setLoading(true)
-    try {
-      const result = await searchOsrsItems(searchQuery, 20)
-      if (result.success && result.items) {
-        setResults(result.items)
-      } else {
-        setResults([])
-      }
-    } catch (error) {
-      console.error("Error searching items:", error)
-      setResults([])
-    } finally {
-      setLoading(false)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
     }
-  }
+  }, [query])
 
   const handleSelect = (item: OsrsItem) => {
     if (multiSelect) {
@@ -191,10 +193,10 @@ export function OsrsItemSearch({
                 </span>
               </div>
             )}
-            {!loading && query.length > 0 && query.length < 2 && (
+            {!loading && query.trim().length > 0 && query.trim().length < 2 && (
               <CommandEmpty>Type at least 2 characters to search</CommandEmpty>
             )}
-            {!loading && query.length >= 2 && results.length === 0 && (
+            {!loading && query.trim().length >= 2 && results.length === 0 && (
               <CommandEmpty>No items found</CommandEmpty>
             )}
             {!loading && results.length > 0 && (
