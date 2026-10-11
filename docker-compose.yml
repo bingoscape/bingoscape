@@ -61,18 +61,8 @@ services:
       SUPER_ADMIN_EMAILS: ${SUPER_ADMIN_EMAILS:-}
       NODE_ENV: production
 
-      # Observability Configuration
-      METRICS_ENABLED: "true"
-      LOG_LEVEL: ${LOG_LEVEL:-info}
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://host.docker.internal:4318"
-
-      # Alert Configuration
-      ALERT_DISCORD_WEBHOOK_URL: ${ALERT_DISCORD_WEBHOOK_URL:-}
-
       # Skip environment validation in container
       SKIP_ENV_VALIDATION: "1"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     # Port 3000 is only exposed to Docker network (nginx proxies to it)
     ports:
       - "127.0.0.1:3000:3000"
@@ -105,43 +95,6 @@ services:
       - bingoscape-network
     profiles:
       - tools # Only run when explicitly specified
-
-  # PostgreSQL Exporter - Database metrics
-  postgres-exporter:
-    image: quay.io/prometheuscommunity/postgres-exporter:latest
-    container_name: bingoscape-postgres-exporter
-    restart: unless-stopped
-    environment:
-      DATA_SOURCE_NAME: "postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@${DB_HOST:-bingoscapedb}:5432/${DB_NAME:-bingoscape}?sslmode=disable"
-      PG_EXPORTER_EXTEND_QUERY_PATH: "/etc/postgres_exporter/queries.yaml"
-    ports:
-      - "127.0.0.1:9187:9187"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - bingoscape-network
-
-  # Node Exporter - System metrics (optional)
-  node-exporter:
-    image: prom/node-exporter:latest
-    container_name: bingoscape-node-exporter
-    restart: unless-stopped
-    command:
-      - "--path.procfs=/host/proc"
-      - "--path.sysfs=/host/sys"
-      - "--path.rootfs=/rootfs"
-      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    ports:
-      - "127.0.0.1:9100:9100"
-    networks:
-      - bingoscape-network
-    profiles:
-      - monitoring # Optional, enable with --profile monitoring
 
 volumes:
   postgres_data:

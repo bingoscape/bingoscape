@@ -29,12 +29,6 @@ sudo chown 1001:1001 "$APP_DIR/uploads" 2>/dev/null || chown 1001:1001 "$APP_DIR
 sudo chmod 775 "$APP_DIR/uploads" 2>/dev/null || chmod 775 "$APP_DIR/uploads"
 echo "✅ Uploads directory created with proper permissions"
 
-# Create observability directory with proper ownership
-echo "📁 Setting up observability directory..."
-mkdir -p "$APP_DIR/observability"
-sudo chown -R $(whoami):$(whoami) "$APP_DIR/observability" 2>/dev/null || chown -R $(whoami):$(whoami) "$APP_DIR/observability"
-echo "✅ Observability directory created"
-
 # Create scripts directory
 echo "📁 Setting up scripts directory..."
 mkdir -p "$APP_DIR/scripts"

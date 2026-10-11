@@ -36,7 +36,6 @@ export default async function globalSetup() {
       SKIP_ENV_VALIDATION: "1",
       DATABASE_URL: dbUrl,
       NEXT_TELEMETRY_DISABLED: "1",
-      OTEL_SDK_DISABLED: "1",
     },
     shell: true,
   });

@@ -175,7 +175,6 @@
 - Use `nanoid()` for ID generation
 - Images stored in `public/uploads/` with absolute paths in DB
 - Console removed in production builds
-- Sentry integration for error tracking
 
 ## Agent skills
 

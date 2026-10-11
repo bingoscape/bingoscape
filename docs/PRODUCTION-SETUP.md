@@ -265,8 +265,6 @@ Add the following secrets:
 | `GITHUB_CLIENT_SECRET` | GitHub OAuth      | GitHub login (optional)    |
 | `GOOGLE_CLIENT_ID`     | Google OAuth      | Google login (optional)    |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth      | Google login (optional)    |
-| `SENTRY_AUTH_TOKEN`    | Sentry monitoring | Error tracking (optional)  |
-| `SENTRY_DSN`           | Sentry DSN        | Error tracking (optional)  |
 | `CERTBOT_EMAIL`        | SSL notifications | Let's Encrypt certificates |
 
 ### Step 3: Generate Required Secrets
@@ -1093,7 +1091,6 @@ After completing this setup:
    - Configure RuneLite integration
 
 4. **Set Up Monitoring:**
-   - Configure Sentry (optional)
    - Set up uptime monitoring
    - Configure backup schedule
 

@@ -15,17 +15,7 @@ const config = {
       proxyBodySizeLimit: "25mb",
     },
   },
-  // Empty turbopack config to indicate we're aware of the Turbopack default
-  // The webpack config below is kept for backwards compatibility
   turbopack: {},
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      config.ignoreWarnings = [
-        { message: /Package import-in-the-middle can't be external/ },
-      ]
-    }
-    return config
-  },
   images: {
     // dangerouslyAllowSVG removed (H7): SVG files with embedded JS could be
     // served through the optimizer.  Only raster formats are needed.

@@ -38,7 +38,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose.yml,nginx/nginx.conf,nginx/conf.d/default-ssl.conf.example,nginx/conf.d/default-dev.conf.example,scripts/,observability/"
+          source: "docker-compose.yml,nginx/nginx.conf,nginx/conf.d/default-ssl.conf.example,nginx/conf.d/default-dev.conf.example,scripts/"
           target: "/tmp/bingoscape-deploy/"
           overwrite: true
 
@@ -100,19 +100,6 @@ jobs:
               echo "⚠️  Warning: scripts directory not found, skipping..."
             fi
 
-            # Copy observability configuration
-            if [ -d "/tmp/bingoscape-deploy/observability" ]; then
-              echo "📋 Copying observability configuration..."
-              # Ensure directory exists with correct ownership before copying
-              mkdir -p "$APP_DIR/observability"
-              sudo chown -R $(whoami):$(whoami) "$APP_DIR/observability" 2>/dev/null || chown -R $(whoami):$(whoami) "$APP_DIR/observability" || true
-              # Now copy files - will succeed since we own the directory
-              cp -r /tmp/bingoscape-deploy/observability/* "$APP_DIR/observability/"
-              echo "✅ Observability configuration copied successfully"
-            else
-              echo "⚠️  Warning: observability directory not found, skipping..."
-            fi
-
             # Backup existing .env file
             if [ -f ".env" ]; then
               echo "📦 Backing up existing .env file..."
@@ -159,23 +146,6 @@ jobs:
             SUPER_ADMIN_EMAILS="${{ secrets.SUPER_ADMIN_EMAILS }}"
             CRON_SECRET="${{ secrets.CRON_SECRET }}"
             NODE_ENV=production
-
-            # ==============================================
-            # OBSERVABILITY & MONITORING
-            # ==============================================
-            GRAFANA_ADMIN_USER="${{ secrets.GRAFANA_ADMIN_USER }}"
-            GRAFANA_ADMIN_PASSWORD="${{ secrets.GRAFANA_ADMIN_PASSWORD }}"
-            GRAFANA_ROOT_URL="${{ secrets.GRAFANA_ROOT_URL }}"
-            ALERT_EMAIL="${{ secrets.ALERT_EMAIL }}"
-            ALERT_EMAIL_FROM="${{ secrets.ALERT_EMAIL_FROM }}"
-            ALERT_DISCORD_WEBHOOK_URL="${{ secrets.ALERT_DISCORD_WEBHOOK_URL }}"
-            SMTP_HOST="${{ secrets.SMTP_HOST }}"
-            SMTP_PORT="${{ secrets.SMTP_PORT }}"
-            SMTP_USER="${{ secrets.SMTP_USER }}"
-            SMTP_PASSWORD="${{ secrets.SMTP_PASSWORD }}"
-            METRICS_ENABLED="true"
-            LOG_LEVEL="${{ secrets.LOG_LEVEL }}"
-            OTEL_EXPORTER_OTLP_ENDPOINT="http://host.docker.internal:4318"
 
             NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}"
 

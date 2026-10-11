@@ -44,8 +44,6 @@ yarn-error.log*
 
 /public/uploads/**/*
 
-# Sentry Config File
-.env.sentry-build-plugin
 /.idea/
 
 # Docker
