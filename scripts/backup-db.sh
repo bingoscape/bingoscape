@@ -17,9 +17,10 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 DATE_ONLY=$(date +%Y-%m-%d)
 MONTH_ONLY=$(date +%Y-%m)
 
-# Database credentials (from .env or defaults)
-DB_NAME="${DB_NAME:-bingoscapenext}"
-DB_USER="${DB_USER:-bingoscapenext}"
+# Database credentials: environment, then $APP_DIR/.env, then docker-compose defaults
+# shellcheck source=db-env.sh
+. "$SCRIPT_DIR/db-env.sh"
+load_db_env "$APP_DIR"
 CONTAINER_NAME="bingoscape-postgres"
 
 # Discord webhook (optional - set in .env)
@@ -35,8 +36,10 @@ RETENTION_WEEKLY=4
 RETENTION_MONTHLY=6
 RETENTION_PRE_DEPLOY=10
 
-# Minimum backup size (KB) - backups smaller than this are considered failed
-MIN_BACKUP_SIZE_KB=100
+# Minimum backup size (KB) - only rejects empty files. A failed pg_dump already
+# fails the pipeline (pipefail) and gzip -t catches corruption, so a fresh,
+# nearly empty database must still be able to pass.
+MIN_BACKUP_SIZE_KB=1
 
 # =============================================================================
 # Helper Functions
@@ -181,14 +184,15 @@ create_backup() {
     # --if-exists: Use IF EXISTS with DROP statements
     # --no-owner: Don't output commands to set ownership
     # --no-privileges: Don't output commands to set privileges
-    if docker exec "$CONTAINER_NAME" pg_dump \
+    # pipefail (in a subshell): a failing pg_dump must fail the backup, not just gzip's exit code
+    if (set -o pipefail; docker exec "$CONTAINER_NAME" pg_dump \
         -U "$DB_USER" \
         -d "$DB_NAME" \
         --clean \
         --if-exists \
         --no-owner \
         --no-privileges \
-        2>/dev/null | gzip > "$backup_file"; then
+        2>/dev/null | gzip > "$backup_file"); then
         
         log_success "Backup created successfully"
         return 0

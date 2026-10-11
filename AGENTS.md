@@ -11,9 +11,13 @@
 - `npm start` - Start production server on port 3344
 - `npm run start:prod` - Start production server on port 3333
 
+### Type checking
+
+- `npx tsc --noEmit` - Type check (also runs in CI; must pass)
+
 ### Testing
 
-- `npm test` - Run all Jest unit tests
+- `npm test` - Run all Jest unit tests (starts a PostgreSQL container via testcontainers, so Docker must be running)
 - `npm run test:watch` - Run Jest in watch mode
 - `npm test -- <path-to-test>` - Run a specific test file
 - `npm test -- --testNamePattern="<pattern>"` - Run tests matching a pattern
@@ -35,7 +39,7 @@
 - `./scripts/backup-db.sh daily` - Create daily backup manually
 - `./scripts/backup-db.sh weekly` - Create weekly backup manually
 - `./scripts/backup-db.sh monthly` - Create monthly backup manually
-- `./scripts/backup-db.sh pre-deploy <git-sha>` - Create pre-deployment backup
+- `./scripts/backup-db.sh pre-deploy <label>` - Create pre-deployment backup (the deploy passes the image tag as label)
 - `./scripts/setup-backup-cron.sh` - Setup automated backups (run once on server)
 
 **Restore Commands:**
@@ -75,11 +79,24 @@
 **Important Notes:**
 
 - ⚠️ **ALWAYS use `db:migrate` for production** - Never use `db:push` which has `--force` flag
-- ✅ Pre-deployment backups are **automatic** via GitHub Actions
+- ✅ Pre-deployment backups are **automatic** via the Deploy workflow (skipped only when the PostgreSQL container is not running yet)
+- ✅ Backup/restore scripts read `DB_NAME`/`DB_USER` from the server's `.env` (defaults match `docker-compose.yml`: `bingoscape` / `postgres`)
 - ✅ All backups are compressed SQL dumps (`.sql.gz` format)
 - ✅ Backups are validated automatically (file size and gzip integrity)
 - ✅ Restore creates safety backup before overwriting data
 - 📊 Monitor logs regularly to ensure backups complete successfully
+
+## CI/CD & Deployment
+
+Workflows are in `.github/workflows/`; details in `docs/GITHUB-ACTIONS.md`, secrets in `docs/GITHUB-SECRETS.md`.
+
+- **CI (`ci-cd.yml`)**: on pull requests, pushes to `main` and `v*.*.*` tags it runs lint, `npx tsc --noEmit`, `npm test` and a Docker build of both targets (`runner` = app, `migrator` = migrations). PRs only build; pushes to `main` publish `:main` and `:sha-<short>`; release tags publish semver tags and `:latest`. Both images (`ghcr.io/bingoscape/bingoscape`, `ghcr.io/bingoscape/bingoscape-migrator`) always get the same tags, so one `IMAGE_TAG` selects both.
+- **Deploys are manual** (`deploy.yml`, `workflow_dispatch`, single `production` environment, no staging). Input `image_tag` is `main`, `sha-<short>` or a release tag. The workflow renders `.env` from GitHub secrets and runs `scripts/deploy.sh` on the server: pull -> pre-deploy backup -> migrations -> replace only the app container -> health check on `http://127.0.0.1:3000/api/uptime`. A failure after the app was replaced rolls back to the previous image automatically. The last good tag is in `~/bingoscape/.deployed-tag`.
+- **Migrations run during every deploy**, before the new app starts. A rollback does not revert the database, so migrations must stay compatible with the previous app version (add first, remove in a later release).
+- `migrate.yml` runs migrations without a deploy (manual, requires typing `MIGRATE`).
+- Secrets: GitHub reserves the `GITHUB_` prefix, so the GitHub OAuth secrets are `GH_OAUTH_CLIENT_ID` / `GH_OAUTH_CLIENT_SECRET`; the server `.env` (and the app) still use `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`.
+- TLS and the reverse proxy are host nginx + certbot (not in this repo); the app listens on `127.0.0.1:3000` only.
+- Dependabot (`.github/dependabot.yml`) opens weekly PRs for GitHub Actions, Docker base images (Node major stays at 24) and npm (minor/patch grouped).
 
 ## Code Style Guidelines
 
