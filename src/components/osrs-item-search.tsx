@@ -30,6 +30,8 @@ interface OsrsItemSearchProps {
   className?: string
   disabled?: boolean
   multiSelect?: boolean
+  /** Focus the trigger button on mount. */
+  autoFocus?: boolean
 }
 
 export function OsrsItemSearch({
@@ -40,6 +42,7 @@ export function OsrsItemSearch({
   className,
   disabled = false,
   multiSelect = false,
+  autoFocus = false,
 }: OsrsItemSearchProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
@@ -138,6 +141,7 @@ export function OsrsItemSearch({
           aria-expanded={open}
           className={cn("w-full justify-between", className)}
           disabled={disabled}
+          autoFocus={autoFocus}
         >
           {multiSelect && selectedItems.length > 0 ? (
             <div className="flex items-center gap-2">

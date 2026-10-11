@@ -184,3 +184,93 @@ export function getWikiIconUrl(metric: string): string {
 
   return `https://oldschool.runescape.wiki/images/${pretty}.png`
 }
+
+/** User-facing name of the "metric" goal type (skills, bosses, activities). */
+export const METRIC_GOAL_LABEL = "XP / Kills"
+
+/** Total XP needed for level 99 in any skill. */
+export const LEVEL_99_XP = 13_034_431
+
+export interface MetricTargetPreset {
+  label: string
+  value: number
+}
+
+export interface MetricTargetCopy {
+  /** Label of the type select option, e.g. "Skill (XP)". */
+  typeOption: string
+  /** Label of the select that picks the skill, boss or activity. */
+  nameLabel: string
+  namePlaceholder: string
+  /** Label of the target field: "XP to gain", "Kills" or "Score". */
+  targetLabel: string
+  targetPlaceholder: string
+  /** Unit shown in the "= 500,000 XP" preview. */
+  unit: string
+  unitSingular: string
+  /** Short badge for a metric goal row. */
+  badge: string
+  helper: string
+  presets: readonly MetricTargetPreset[]
+}
+
+const SKILL_PRESETS: readonly MetricTargetPreset[] = [
+  { label: "100K", value: 100_000 },
+  { label: "500K", value: 500_000 },
+  { label: "1M", value: 1_000_000 },
+  { label: "5M", value: 5_000_000 },
+  { label: "Level 99 (13,034,431 XP)", value: LEVEL_99_XP },
+]
+
+const BOSS_PRESETS: readonly MetricTargetPreset[] = [5, 10, 25, 50, 100].map(
+  (value) => ({ label: String(value), value })
+)
+
+const SKILL_COPY: MetricTargetCopy = {
+  typeOption: "Skill (XP)",
+  nameLabel: "Skill",
+  namePlaceholder: "Select a skill",
+  targetLabel: "XP to gain",
+  targetPlaceholder: "e.g. 500k or 1m",
+  unit: "XP",
+  unitSingular: "XP",
+  badge: "XP",
+  helper:
+    "Counts XP gained by the team during the event window (via Wise Old Man).",
+  presets: SKILL_PRESETS,
+}
+
+const BOSS_COPY: MetricTargetCopy = {
+  typeOption: "Boss (kills)",
+  nameLabel: "Boss",
+  namePlaceholder: "Select a boss",
+  targetLabel: "Kills",
+  targetPlaceholder: "e.g. 25",
+  unit: "kills",
+  unitSingular: "kill",
+  badge: "Kills",
+  helper:
+    "Counts kills by the team during the event window (via Wise Old Man).",
+  presets: BOSS_PRESETS,
+}
+
+const ACTIVITY_COPY: MetricTargetCopy = {
+  typeOption: "Activity (score)",
+  nameLabel: "Activity",
+  namePlaceholder: "Select an activity",
+  targetLabel: "Score",
+  targetPlaceholder: "e.g. 10",
+  unit: "",
+  unitSingular: "",
+  badge: "Activity",
+  helper:
+    "Counts the score gained by the team during the event window (via Wise Old Man).",
+  presets: [],
+}
+
+/** Labels, presets and helper text for the target of a metric goal. */
+export function getMetricTargetCopy(metricType: string): MetricTargetCopy {
+  if (metricType === "boss") return BOSS_COPY
+  if (metricType === "activity") return ACTIVITY_COPY
+  return SKILL_COPY
+}

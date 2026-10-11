@@ -15,9 +15,12 @@ import {
 } from "@/components/ui/select"
 import { OsrsItemSearch } from "@/components/osrs-item-search"
 import { toast } from "@/hooks/use-toast"
+import { getMetricTargetCopy, METRIC_GOAL_LABEL } from "@/lib/osrs-metrics"
+import { parseTargetInput, validateNumberInput } from "@/lib/number-input"
 import { updateGoal, updateItemGoal, updateMetricGoal } from "@/app/actions/bingo"
 import type { OsrsItem } from "@/types/osrs-items"
 import { MetricSelectItems } from "./metric-select-items"
+import { NumberField } from "./number-field"
 import type { GoalNodeData, GroupOperator } from "./types"
 import { resolveItemId } from "./utils"
 
@@ -43,8 +46,9 @@ export function GoalEditForm({
   const isMetricGoal = goalData.goalType === "metric" && goalData.metricGoal
 
   const [editDescription, setEditDescription] = useState(goalData.description)
-  const [editTargetValue, setEditTargetValue] = useState<number>(
-    goalData.targetValue
+  // The raw text of the target field; parsed when saving.
+  const [editTargetValue, setEditTargetValue] = useState(
+    String(goalData.targetValue)
   )
   // For item goals, start from the current item
   const [editSelectedItem, setEditSelectedItem] = useState<OsrsItem | null>(
@@ -74,7 +78,13 @@ export function GoalEditForm({
   )
   const [isSaving, setIsSaving] = useState(false)
 
+  const metricCopy = getMetricTargetCopy(editMetricType)
+  const targetError = validateNumberInput(editTargetValue)
+
   const handleSaveEdit = async () => {
+    const targetValue = parseTargetInput(editTargetValue)
+    if (targetValue === null) return
+
     setIsSaving(true)
 
     try {
@@ -90,7 +100,7 @@ export function GoalEditForm({
           parsed.baseName,
           editSelectedItem.imageUrl,
           parsed.variant ?? null,
-          editTargetValue
+          targetValue
         )
 
         if (result.success) {
@@ -113,14 +123,14 @@ export function GoalEditForm({
           goalId,
           editMetricType,
           editMetricName,
-          editTargetValue,
+          targetValue,
           `${editMetricName} (${editMetricType})`
         )
 
         if (result.success) {
           toast({
             title: "Goal updated",
-            description: "Metric goal has been updated successfully.",
+            description: `${METRIC_GOAL_LABEL} goal has been updated successfully.`,
           })
           onClose()
           onRefresh()
@@ -135,7 +145,7 @@ export function GoalEditForm({
         // Update generic goal
         const result = await updateGoal(goalId, {
           description: editDescription,
-          targetValue: editTargetValue,
+          targetValue,
         })
 
         if (result.success) {
@@ -159,7 +169,14 @@ export function GoalEditForm({
   }
 
   return (
-    <div className="space-y-3">
+    <form
+      noValidate
+      className="space-y-3"
+      onSubmit={(e) => {
+        e.preventDefault()
+        void handleSaveEdit()
+      }}
+    >
       {/* Edit Mode */}
       {isItemGoal ? (
         <>
@@ -182,7 +199,9 @@ export function GoalEditForm({
       ) : isMetricGoal ? (
         <div className="space-y-3">
           <div>
-            <Label className="text-xs">Metric Type</Label>
+            <Label htmlFor={`edit-metric-type-${goalId}`} className="text-xs">
+              Track
+            </Label>
             <Select
               value={editMetricType}
               onValueChange={(v) => {
@@ -190,24 +209,34 @@ export function GoalEditForm({
                 setEditMetricName("")
               }}
             >
-              <SelectTrigger className="h-8 text-sm">
+              <SelectTrigger
+                id={`edit-metric-type-${goalId}`}
+                className="mt-1 h-8 text-sm"
+              >
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="skill">Skill</SelectItem>
-                <SelectItem value="boss">Boss</SelectItem>
-                <SelectItem value="activity">Activity</SelectItem>
+                {(["skill", "boss", "activity"] as const).map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {getMetricTargetCopy(type).typeOption}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label className="text-xs">Metric Name</Label>
+            <Label htmlFor={`edit-metric-name-${goalId}`} className="text-xs">
+              {metricCopy.nameLabel}
+            </Label>
             <Select
               value={editMetricName}
               onValueChange={setEditMetricName}
             >
-              <SelectTrigger className="mt-1 h-8 text-sm">
-                <SelectValue placeholder="Select metric" />
+              <SelectTrigger
+                id={`edit-metric-name-${goalId}`}
+                className="mt-1 h-8 text-sm"
+              >
+                <SelectValue placeholder={metricCopy.namePlaceholder} />
               </SelectTrigger>
               <SelectContent className="max-h-[300px]">
                 <MetricSelectItems metricType={editMetricType} />
@@ -217,8 +246,11 @@ export function GoalEditForm({
         </div>
       ) : (
         <div>
-          <Label className="text-xs">Description</Label>
+          <Label htmlFor={`edit-description-${goalId}`} className="text-xs">
+            Description
+          </Label>
           <Input
+            id={`edit-description-${goalId}`}
             value={editDescription}
             onChange={(e) => setEditDescription(e.target.value)}
             placeholder="Goal description..."
@@ -226,35 +258,38 @@ export function GoalEditForm({
           />
         </div>
       )}
-      <div>
-        <Label className="text-xs">Target Value</Label>
-        <Input
-          type="number"
-          value={editTargetValue}
-          onChange={(e) =>
-            setEditTargetValue(Number.parseInt(e.target.value) || 1)
-          }
-          min="1"
-          className="mt-1 h-8 text-sm"
-        />
-        {parentOperator === "SUM" && (
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            Note: In a SUM group, this target is illustrative and does
-            not cap contributions.
-          </p>
-        )}
-      </div>
+      <NumberField
+        id={`edit-target-${goalId}`}
+        label={
+          isMetricGoal
+            ? metricCopy.targetLabel
+            : isItemGoal
+              ? "Quantity"
+              : "Target"
+        }
+        value={editTargetValue}
+        onValueChange={setEditTargetValue}
+        unit={isMetricGoal ? metricCopy.unit : undefined}
+        unitSingular={isMetricGoal ? metricCopy.unitSingular : undefined}
+        hint={
+          parentOperator === "SUM"
+            ? "In a SUM group, this target is illustrative and does not cap contributions."
+            : undefined
+        }
+        compact
+      />
       <div className="flex gap-2">
         <Button
+          type="submit"
           size="sm"
-          onClick={handleSaveEdit}
           disabled={
             isSaving ||
+            targetError !== null ||
             (isItemGoal && !editSelectedItem) ||
             (isMetricGoal && !editMetricName.trim()) ||
             (!isItemGoal && !isMetricGoal && !editDescription.trim())
           }
-          className="h-7 flex-1 text-xs"
+          className="h-7 flex-1 text-xs pointer-coarse:min-h-11"
         >
           {isSaving ? (
             <>
@@ -269,15 +304,16 @@ export function GoalEditForm({
           )}
         </Button>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={onClose}
           disabled={isSaving}
-          className="h-7 text-xs"
+          className="h-7 text-xs pointer-coarse:min-h-11"
         >
           Cancel
         </Button>
       </div>
-    </div>
+    </form>
   )
 }

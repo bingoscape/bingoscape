@@ -30,7 +30,7 @@ export function MetricSelectItems({ metricType }: MetricSelectItemsProps) {
               <Image
                 fill
                 src={getWikiIconUrl(m)}
-                alt={m}
+                alt={getMetricName(m)}
                 className="object-cover"
                 onError={(e) => {
                   e.currentTarget.style.display = "none"

@@ -16,7 +16,10 @@ interface TreeNodeProps {
   onRefresh: () => void
   hasSufficientRights: boolean
   isSelected: boolean
-  onNodeClick: (nodeId: string, event: React.MouseEvent) => void
+  onNodeClick: (
+    nodeId: string,
+    event: React.MouseEvent | React.KeyboardEvent
+  ) => void
 }
 
 /** Renders one visible tree node as a group row or a goal row. */

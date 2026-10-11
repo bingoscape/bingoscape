@@ -196,6 +196,7 @@ export function EventWorkspace({
   const [editLayout, setEditLayout] = useState(false)
   const [highlightedTiles, setHighlightedTiles] = useState<number[]>([])
   const [quickSubmitOpen, setQuickSubmitOpen] = useState(false)
+  const [trackerOpen, setTrackerOpen] = useState(false)
   const [snap, setSnap] = useState<number | string | null>(0.6)
   // Lives here (not in the Tile panel) so moving between Tiles keeps the
   // reviewer on the same sub-tab.
@@ -379,6 +380,9 @@ export function EventWorkspace({
         onSubTabChange={setTileSubTab}
         onSelectTile={handleSelectTile}
         onClose={selectedTile ? () => handleSelectTile(null) : undefined}
+        onOpenTrackerSettings={
+          isManagement && !readOnly ? () => setTrackerOpen(true) : undefined
+        }
       />
     ) : null
 
@@ -422,6 +426,8 @@ export function EventWorkspace({
               isUpcoming={isUpcoming}
               isSwitching={isSwitching}
               canCollapsePanel={resizable}
+              trackerOpen={trackerOpen}
+              onTrackerOpenChange={setTrackerOpen}
               filters={{
                 context: filterContext,
                 active: activeFilter,
