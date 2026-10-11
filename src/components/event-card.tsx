@@ -31,6 +31,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { requestToJoinEvent } from "@/app/actions/events"
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { EventTimeDisplay } from "./event-time-display"
 
@@ -150,18 +151,19 @@ export function EventCard({
   }
 
   return (
+    // The title is a real link stretched over the whole card (after:inset-0), so
+    // the card is keyboard-focusable, middle-clickable and long-pressable.
+    // Nested interactive elements sit above it with `relative z-10`.
     <Card
-      onClick={() => router.push(`/events/${eventData.event.id}`)}
       className={cn(
-        "group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-sm transition-colors hover:brightness-110",
-        status === "past" && "opacity-90 hover:opacity-100",
+        "group relative flex h-full flex-col overflow-hidden rounded-sm transition-colors hover:brightness-110 has-focus-visible:ring-2 has-focus-visible:ring-ring",
         status === "active" && "border-l-4 border-l-success"
       )}
     >
       <div className="flex w-full flex-1 flex-col lg:flex-row">
         {/* Left/Top Column: Info & Metadata */}
         <div className="flex w-full min-w-0 flex-1 flex-col">
-          <div className="relative">
+          <div>
             {/* Prize pool display */}
             {eventData.totalPrizePool > 0 && (
               <div className="absolute left-4 top-4 z-10">
@@ -179,7 +181,12 @@ export function EventCard({
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <CardTitle className="text-xl font-bold tracking-tight">
-                      {eventData.event.title}
+                      <Link
+                        href={`/events/${eventData.event.id}`}
+                        className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-hidden"
+                      >
+                        {eventData.event.title}
+                      </Link>
                     </CardTitle>
                     <GameTypeBadge gameType={eventData.event.gameType} />
                     {eventData.event.role === "admin" && (
@@ -256,41 +263,44 @@ export function EventCard({
                   </div>
                 )}
 
-                {eventData.managerData && (
-                  <div className="col-span-full mt-2 space-y-2">
-                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Manager Actions
-                    </div>
-                    <div className="flex flex-col gap-2">
+                {eventData.managerData &&
+                  (eventData.managerData.actionItems.pendingRegistrations > 0 ||
+                    eventData.managerData.actionItems.pendingSubmissions >
+                      0) && (
+                    <ul
+                      aria-label="Needs your attention"
+                      className="col-span-full flex flex-wrap gap-2"
+                    >
                       {eventData.managerData.actionItems.pendingRegistrations >
                         0 && (
-                        <div className="osrs-slot flex items-center space-x-2 rounded-sm border-l-4 border-l-pending p-2">
-                          <Users aria-hidden="true" className="h-4 w-4 text-pending" />
-                          <span className="text-sm font-medium">
-                            {
-                              eventData.managerData.actionItems
-                                .pendingRegistrations
-                            }{" "}
-                            pending join request(s)
-                          </span>
-                        </div>
+                        <li className="osrs-slot flex items-center gap-2 rounded-sm border-l-4 border-l-pending px-3 py-1.5 text-sm font-medium">
+                          <Users
+                            aria-hidden="true"
+                            className="h-4 w-4 text-pending"
+                          />
+                          {
+                            eventData.managerData.actionItems
+                              .pendingRegistrations
+                          }{" "}
+                          join request(s)
+                        </li>
                       )}
                       {eventData.managerData.actionItems.pendingSubmissions >
                         0 && (
-                        <div className="osrs-slot flex items-center space-x-2 rounded-sm border-l-4 border-l-pending p-2">
-                          <CheckCircle2 aria-hidden="true" className="h-4 w-4 text-pending" />
-                          <span className="text-sm font-medium">
-                            {
-                              eventData.managerData.actionItems
-                                .pendingSubmissions
-                            }{" "}
-                            pending submission(s)
-                          </span>
-                        </div>
+                        <li className="osrs-slot flex items-center gap-2 rounded-sm border-l-4 border-l-pending px-3 py-1.5 text-sm font-medium">
+                          <CheckCircle2
+                            aria-hidden="true"
+                            className="h-4 w-4 text-pending"
+                          />
+                          {
+                            eventData.managerData.actionItems
+                              .pendingSubmissions
+                          }{" "}
+                          submission(s) to review
+                        </li>
                       )}
-                    </div>
-                  </div>
-                )}
+                    </ul>
+                  )}
 
                 {eventData.participantData &&
                   eventData.participantData.team && (
@@ -337,16 +347,12 @@ export function EventCard({
               <RegistrationStatus />
 
               {showRequestForm && (
-                <div
-                  className="mt-3 space-y-2"
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <div className="relative z-10 mt-3 space-y-2">
                   <Textarea
                     placeholder="Why do you want to join this event? (Optional)"
                     value={requestMessage}
                     onChange={(e) => setRequestMessage(e.target.value)}
                     className="h-24"
-                    onClick={(e) => e.stopPropagation()}
                   />
                   <div className="flex justify-end space-x-2">
                     <Button
@@ -377,11 +383,12 @@ export function EventCard({
         </div>
 
         {/* Right/Bottom Column: Mini Board */}
-        {eventData.event.bingos &&
+        {status !== "past" &&
+          eventData.event.bingos &&
           eventData.event.bingos.length > 0 &&
           eventData.event.bingos[0] && (
             <div className="flex w-full shrink-0 items-center justify-center p-4 pt-0 sm:p-6 lg:w-72 lg:pl-0 lg:pt-6">
-              <div className="osrs-bevel-inset w-[80%] max-w-[20rem] rounded-sm p-1 opacity-90 transition-opacity group-hover:opacity-100 lg:w-full">
+              <div className="osrs-bevel-inset w-[65%] max-w-[20rem] rounded-sm p-1 opacity-90 transition-opacity group-hover:opacity-100 sm:w-[80%] lg:w-full">
                 <MiniBoard
                   bingoId={eventData.event.bingos[0].id}
                   rows={eventData.event.bingos[0].rows}
@@ -394,18 +401,12 @@ export function EventCard({
       </div>
       <CardFooter className="flex flex-col gap-3 border-t pt-4">
         {eventData.event.role === "admin" ? (
-          <div className="flex w-full gap-3">
-            <Button
-              variant="secondary"
-              className="w-full gap-2"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                router.push(`/events/${eventData.event.id}/admin`)
-              }}
-            >
-              <Settings aria-hidden="true" className="h-4 w-4" />
-              Manage Event
+          <div className="relative z-10 flex w-full gap-3">
+            <Button variant="secondary" className="w-full gap-2" asChild>
+              <Link href={`/events/${eventData.event.id}/admin`}>
+                <Settings aria-hidden="true" className="h-4 w-4" />
+                Manage Event
+              </Link>
             </Button>
           </div>
         ) : (!isParticipant &&
@@ -413,32 +414,22 @@ export function EventCard({
             !eventData.event.locked) ||
           (!isParticipant &&
             (isRegistrationClosed ?? eventData.event.locked)) ? (
-          <div className="flex w-full gap-3">
+          <div className="relative z-10 flex w-full gap-3">
             {!isRegistrationClosed &&
               !eventData.event.locked && (
                 <>
                   {eventData.event.requiresApproval ? (
                     registrationStatus?.status === "pending" ? (
-                      <Button
-                        variant="outline"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          router.push(`/events/${eventData.event.id}/status`)
-                        }}
-                      >
-                        View Status
+                      <Button variant="outline" asChild>
+                        <Link href={`/events/${eventData.event.id}/status`}>
+                          View Status
+                        </Link>
                       </Button>
                     ) : registrationStatus?.status === "rejected" ? (
-                      <Button
-                        variant="outline"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          router.push(`/events/${eventData.event.id}/status`)
-                        }}
-                      >
-                        View Status
+                      <Button variant="outline" asChild>
+                        <Link href={`/events/${eventData.event.id}/status`}>
+                          View Status
+                        </Link>
                       </Button>
                     ) : (
                       <Button

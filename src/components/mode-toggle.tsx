@@ -8,6 +8,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
@@ -18,6 +20,33 @@ const options = [
   { value: "system", label: "System", icon: Monitor },
 ] as const
 
+/** Theme choices as plain menu items, for embedding in another menu (mobile account menu). */
+export function ThemeMenuItems({ className }: { className?: string }) {
+  const { theme, setTheme } = useTheme()
+
+  return (
+    <div className={className}>
+      <DropdownMenuSeparator />
+      <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+        Theme
+      </DropdownMenuLabel>
+      {options.map((option) => (
+        <DropdownMenuItem
+          key={option.value}
+          onClick={() => setTheme(option.value)}
+          className={cn(
+            "flex items-center gap-2",
+            theme === option.value && "text-primary"
+          )}
+        >
+          <option.icon aria-hidden="true" className="h-4 w-4" />
+          <span>{option.label}</span>
+        </DropdownMenuItem>
+      ))}
+    </div>
+  )
+}
+
 export default function ModeToggle() {
   const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
@@ -27,8 +56,9 @@ export default function ModeToggle() {
     setMounted(true)
   }, [])
 
+  // Reserve the button's footprint so the navbar doesn't shift on mount.
   if (!mounted) {
-    return null
+    return <div aria-hidden="true" className="size-10" />
   }
 
   const current = options.find((o) => o.value === theme) ?? options[2]

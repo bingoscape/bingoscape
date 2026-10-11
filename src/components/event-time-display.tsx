@@ -7,11 +7,10 @@ import { formatInTimeZone } from "date-fns-tz"
 import { Clock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
 export function EventTimeDisplay({
@@ -42,12 +41,17 @@ export function EventTimeDisplay({
     )
     const tzName = eventTz.split("/").pop()?.replace(/_/g, " ") || eventTz
     return (
-      <div className={cn("flex items-center gap-2", className ?? "mb-1.5 last:mb-0")}>
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-x-2 gap-y-1",
+          className ?? "mb-1.5 last:mb-0"
+        )}
+      >
         <span className="min-w-[36px] text-muted-foreground">{label}:</span>
         <span className="font-medium text-foreground">{formattedTime}</span>
         <Badge
           variant="secondary"
-          className="h-4 px-1.5 py-0 text-[10px] uppercase tracking-wider"
+          className="h-5 px-1.5 py-0 text-xs uppercase tracking-wider"
         >
           {tzName}
         </Badge>
@@ -68,38 +72,47 @@ export function EventTimeDisplay({
   const eventTzName = eventTz.split("/").pop()?.replace(/_/g, " ") || eventTz
 
   return (
-    <div className={cn("flex items-center gap-2", className ?? "mb-1.5 last:mb-0")}>
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-x-2 gap-y-1",
+        className ?? "mb-1.5 last:mb-0"
+      )}
+    >
       <span className="min-w-[36px] text-muted-foreground">{label}:</span>
       <span className="font-medium text-foreground">{localFormatted}</span>
-      <TooltipProvider delayDuration={150}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="osrs-slot flex cursor-help items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground">
-              <Clock aria-hidden="true" className="h-3 w-3" />
-              <span>Your time</span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent
-            side="top"
-            className="flex flex-col gap-1.5 p-3"
+      {/* Popover (not Tooltip) so the official time is reachable by tap and keyboard. */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label={`Your local time. Show official event time for ${label}`}
+            className="osrs-slot relative z-10 flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11 pointer-coarse:px-3"
           >
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Official Event Time
-            </p>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-foreground">
-                {officialFormatted}
-              </span>
-              <Badge
-                variant="secondary"
-                className="h-4 px-1.5 py-0 text-[10px] uppercase tracking-wider"
-              >
-                {eventTzName}
-              </Badge>
-            </div>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+            <Clock aria-hidden="true" className="h-3 w-3" />
+            <span>Your time</span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          side="top"
+          collisionPadding={8}
+          className="flex w-auto max-w-[calc(100vw-1rem)] flex-col gap-1.5 p-3"
+        >
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Official Event Time
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-foreground">
+              {officialFormatted}
+            </span>
+            <Badge
+              variant="secondary"
+              className="h-5 px-1.5 py-0 text-xs uppercase tracking-wider"
+            >
+              {eventTzName}
+            </Badge>
+          </div>
+        </PopoverContent>
+      </Popover>
     </div>
   )
 }
