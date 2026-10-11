@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
 import type { GoalTreeNode } from "@/app/actions/goal-groups"
 import { updateGoalGroup, deleteGoalGroup } from "@/app/actions/goal-groups"
-import type { Goal } from "@/types/model"
 import { AddGoalDrawer } from "@/components/goals/add-goal-drawer"
 import { CreateGroupDialog } from "@/components/goals/create-group-dialog"
 import { DragPreview } from "@/components/goals/drag-preview"
@@ -29,9 +28,10 @@ interface GoalTreeEditorProps {
   hasSufficientRights: boolean
   onRefresh: () => void
   onDeleteGoal: (goalId: string) => void
-  onAddGoal: (parentGroupId?: string | null) => void | Promise<void>
-  newGoal: Partial<Goal>
-  onNewGoalChange: (field: string, value: unknown) => void
+  /** Whether the Board has a Wise Old Man competition (feeds XP / Kills progress). */
+  womLinked: boolean
+  /** Opens the tracker settings, where the competition is linked. */
+  onOpenTrackerSettings?: () => void
 }
 
 export function GoalTreeEditor({
@@ -40,9 +40,8 @@ export function GoalTreeEditor({
   hasSufficientRights,
   onRefresh,
   onDeleteGoal,
-  onAddGoal,
-  newGoal,
-  onNewGoalChange,
+  womLinked,
+  onOpenTrackerSettings,
 }: GoalTreeEditorProps) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   const [showNewGroupDialog, setShowNewGroupDialog] = useState(false)
@@ -125,8 +124,8 @@ export function GoalTreeEditor({
         <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
           <strong>Tip:</strong> Drag goals onto groups to nest them. Drag onto
           other goals to reorder. Groups with AND require all goals, OR requires
-          at least one. <strong>Ctrl/Cmd+Click</strong> to select multiple
-          items.
+          at least one. <strong>Ctrl/Cmd+Click</strong> (or focus a row and
+          press <strong>Space</strong>) to select multiple items.
         </div>
       )}
 
@@ -208,14 +207,9 @@ export function GoalTreeEditor({
             onOpenChange={setIsAddGoalDrawerOpen}
             tileId={tileId}
             parentGroupId={addGoalParentId}
-            newGoal={newGoal}
-            onNewGoalChange={onNewGoalChange}
-            onAddGoal={onAddGoal}
-            onCreated={() => {
-              setIsAddGoalDrawerOpen(false)
-              setAddGoalParentId(null)
-            }}
             onRefresh={onRefresh}
+            womLinked={womLinked}
+            onOpenTrackerSettings={onOpenTrackerSettings}
           />
         </div>
       )}

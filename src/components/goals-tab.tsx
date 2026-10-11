@@ -1,19 +1,18 @@
 "use client"
 
-/* eslint-disable */
 import { useMemo } from "react"
-
-import { GoalTreeEditor } from "./goal-tree-editor"
+import { GoalTreeEditor } from "@/components/goal-tree-editor"
 import { buildGoalTree } from "@/lib/goal-tree"
-import type { Tile, Goal } from "@/types/model"
+import type { Tile } from "@/types/model"
 
 interface GoalsTabProps {
   selectedTile: Tile | null
-  newGoal: Partial<Goal>
   hasSufficientRights: boolean
   onDeleteGoal: (goalId: string) => void
-  onAddGoal: (parentGroupId?: string | null) => void | Promise<void>
-  onNewGoalChange: (field: string, value: any) => void
+  /** Whether the Board has a Wise Old Man competition (feeds XP / Kills progress). */
+  womLinked: boolean
+  /** Opens the tracker settings, where the competition is linked. */
+  onOpenTrackerSettings?: () => void
   /** Called after the editor changed Goals; refreshes the page data. */
   onGoalsChanged?: () => void
   /** Rendered inside the Tile side panel (the panel body scrolls). */
@@ -22,11 +21,10 @@ interface GoalsTabProps {
 
 export function GoalsTab({
   selectedTile,
-  newGoal,
   hasSufficientRights,
   onDeleteGoal,
-  onAddGoal,
-  onNewGoalChange,
+  womLinked,
+  onOpenTrackerSettings,
   onGoalsChanged,
   embedded = false,
 }: GoalsTabProps) {
@@ -59,9 +57,8 @@ export function GoalsTab({
         hasSufficientRights={hasSufficientRights}
         onRefresh={handleRefresh}
         onDeleteGoal={onDeleteGoal}
-        onAddGoal={onAddGoal}
-        newGoal={newGoal}
-        onNewGoalChange={onNewGoalChange}
+        womLinked={womLinked}
+        onOpenTrackerSettings={onOpenTrackerSettings}
       />
     </div>
   )

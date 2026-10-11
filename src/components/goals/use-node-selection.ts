@@ -3,15 +3,23 @@
 import { useEffect, useState } from "react"
 
 /**
- * Multi-selection of tree nodes: Ctrl/Cmd+Click toggles a node, a plain click
- * on an unselected node clears the selection, Escape clears it.
+ * Multi-selection of tree nodes: Ctrl/Cmd+Click (or Enter / Space on a focused
+ * row) toggles a node, a plain click on an unselected node clears the
+ * selection, Escape clears it unless a Sheet or Dialog is open.
  */
 export function useNodeSelection() {
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set())
 
-  const handleNodeClick = (nodeId: string, event: React.MouseEvent) => {
-    // Check if Ctrl (Windows) or Cmd (Mac) is pressed
-    const isModifierPressed = event.ctrlKey || event.metaKey
+  const handleNodeClick = (
+    nodeId: string,
+    event: React.MouseEvent | React.KeyboardEvent
+  ) => {
+    // Ctrl (Windows) or Cmd (Mac); Enter / Space on a focused row act the same
+    // way, since the keyboard has no "plain click".
+    const isKeyboardToggle =
+      "key" in event && (event.key === "Enter" || event.key === " ")
+    const isModifierPressed =
+      event.ctrlKey || event.metaKey || isKeyboardToggle
 
     if (!isModifierPressed) {
       // Regular click - clear selection or do nothing if already selected
@@ -43,9 +51,15 @@ export function useNodeSelection() {
   // Keyboard event handling
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && selectedNodes.size > 0) {
-        setSelectedNodes(new Set())
+      if (e.key !== "Escape" || selectedNodes.size === 0) return
+      // Escape that closes a Sheet, Dialog, Select or Popover is not meant for
+      // the selection: those layers handle it (and mark it as handled) or the
+      // event comes from inside one.
+      if (e.defaultPrevented) return
+      if (e.target instanceof Element && e.target.closest('[role="dialog"], [role="alertdialog"], [role="listbox"], [role="menu"]')) {
+        return
       }
+      setSelectedNodes(new Set())
     }
 
     document.addEventListener("keydown", handleKeyDown)
