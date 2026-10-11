@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useMemo, useTransition } from "react"
+import { isTileFilter, type TileFilter } from "@/lib/tile-filter"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 export const PANEL_TABS = ["tile", "teams", "prize", "info"] as const
@@ -15,6 +16,8 @@ export interface WorkspaceParams {
   panel: PanelTab
   /** Team being viewed (`?teamId=`), null means the caller's own Team. */
   teamId: string | null
+  /** Active Board filter (`?filter=`). */
+  filter: TileFilter | null
 }
 
 type ParamReader = { get(name: string): string | null }
@@ -28,11 +31,13 @@ export function isPanelTab(
 /** Reads the workspace state from the URL search params. Unknown values fall back. */
 export function parseWorkspaceParams(search: ParamReader): WorkspaceParams {
   const panel = search.get("panel")
+  const filter = search.get("filter")
   return {
     board: search.get("board") || null,
     tile: search.get("tile") || null,
     panel: isPanelTab(panel) ? panel : "tile",
     teamId: search.get("teamId") || null,
+    filter: isTileFilter(filter) ? filter : null,
   }
 }
 
@@ -63,6 +68,7 @@ export function buildWorkspaceUrl(
   apply("board", patch.board)
   apply("tile", patch.tile)
   apply("teamId", patch.teamId)
+  apply("filter", patch.filter)
   if (patch.panel !== undefined) {
     apply("panel", patch.panel === "tile" ? null : patch.panel)
   }
@@ -127,6 +133,14 @@ export function useWorkspaceParams() {
     [params.panel, urlFor]
   )
 
+  const setFilter = useCallback(
+    (filter: TileFilter | null) => {
+      if (filter === params.filter) return
+      window.history.replaceState(null, "", urlFor({ filter }))
+    },
+    [params.filter, urlFor]
+  )
+
   const setBoard = useCallback(
     (boardId: string) => {
       // A Tile belongs to one Board: switching Boards clears the selection.
@@ -148,5 +162,13 @@ export function useWorkspaceParams() {
     [router, urlFor]
   )
 
-  return { params, selectTile, setPanel, setBoard, setTeamId, isSwitching }
+  return {
+    params,
+    selectTile,
+    setPanel,
+    setFilter,
+    setBoard,
+    setTeamId,
+    isSwitching,
+  }
 }

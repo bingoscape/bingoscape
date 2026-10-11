@@ -15,6 +15,7 @@ describe("parseWorkspaceParams", () => {
       tile: null,
       panel: "tile",
       teamId: null,
+      filter: null,
     })
   })
 
@@ -27,7 +28,17 @@ describe("parseWorkspaceParams", () => {
       tile: "t1",
       panel: "teams",
       teamId: "team9",
+      filter: null,
     })
+  })
+
+  it("reads a known filter and ignores unknown ones", () => {
+    expect(
+      parseWorkspaceParams(new URLSearchParams("filter=attention")).filter
+    ).toBe("attention")
+    expect(
+      parseWorkspaceParams(new URLSearchParams("filter=nope")).filter
+    ).toBeNull()
   })
 
   it("falls back to the tile panel for unknown values", () => {
@@ -97,7 +108,20 @@ describe("useWorkspaceParams", () => {
       tile: "t1",
       panel: "info",
       teamId: "x",
+      filter: null,
     })
+  })
+
+  it("setFilter replaces history and keeps other params", () => {
+    mockUrl("board=b1&tile=t1")
+    const { result } = renderHook(() => useWorkspaceParams())
+    act(() => result.current.setFilter("incomplete"))
+    expect(replaceState).toHaveBeenCalledWith(
+      null,
+      "",
+      `${PATH}?board=b1&tile=t1&filter=incomplete`
+    )
+    expect(pushState).not.toHaveBeenCalled()
   })
 
   it("selecting a first Tile pushes a history entry (Back deselects)", () => {

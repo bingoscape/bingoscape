@@ -41,6 +41,12 @@ import { toast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { getBoardStats } from "@/lib/tile-status"
 import { getTileTierLock, type BoardTierData } from "@/lib/tiers"
+import {
+  countTilesByFilter,
+  getDimmedTileIds,
+  resolveTileFilter,
+  type TileFilterContext,
+} from "@/lib/tile-filter"
 import { resolveWorkspaceSelection } from "@/lib/workspace-selection"
 import {
   DEFAULT_WORKSPACE_PREFS,
@@ -109,8 +115,15 @@ export function EventWorkspace({
 }: EventWorkspaceProps) {
   const router = useRouter()
   const isDesktop = useIsDesktop()
-  const { params, selectTile, setPanel, setBoard, setTeamId, isSwitching } =
-    useWorkspaceParams()
+  const {
+    params,
+    selectTile,
+    setPanel,
+    setFilter,
+    setBoard,
+    setTeamId,
+    isSwitching,
+  } = useWorkspaceParams()
 
   const isManagement =
     !readOnly && (userRole === "admin" || userRole === "management")
@@ -199,6 +212,20 @@ export function EventWorkspace({
     pasteEnabled:
       !readOnly && !!selectedTile && isDesktop && panelOnTile && !railMode,
   })
+
+  const filterContext = useMemo<TileFilterContext>(
+    () => ({ teamId: effectiveTeamId, isManagement }),
+    [effectiveTeamId, isManagement]
+  )
+  const activeFilter = resolveTileFilter(params.filter, filterContext)
+  const filterCounts = useMemo(
+    () => countTilesByFilter(tiles, filterContext),
+    [tiles, filterContext]
+  )
+  const dimmedTileIds = useMemo(
+    () => getDimmedTileIds(tiles, activeFilter, filterContext),
+    [tiles, activeFilter, filterContext]
+  )
 
   const stats = useMemo(
     () => getBoardStats(tiles, effectiveTeamId),
@@ -395,6 +422,12 @@ export function EventWorkspace({
               isUpcoming={isUpcoming}
               isSwitching={isSwitching}
               canCollapsePanel={resizable}
+              filters={{
+                context: filterContext,
+                active: activeFilter,
+                counts: filterCounts,
+                onChange: setFilter,
+              }}
             />
 
             {editLayout && isManagement && (
@@ -433,6 +466,7 @@ export function EventWorkspace({
                   userRole={readOnly ? "participant" : userRole}
                   currentTeamId={effectiveTeamId}
                   selectedTileId={selectedTile?.id ?? null}
+                  dimmedTileIds={dimmedTileIds}
                   onSelectTile={handleSelectTile}
                 />
               ) : (
@@ -447,6 +481,7 @@ export function EventWorkspace({
                   highlightedTiles={highlightedTiles}
                   onTileUpdated={refresh}
                   selectedTileId={selectedTile?.id ?? null}
+                  dimmedTileIds={dimmedTileIds}
                   onSelectTile={handleSelectTile}
                   readOnly={readOnly}
                 />

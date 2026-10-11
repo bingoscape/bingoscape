@@ -26,6 +26,8 @@ interface BingoTileProps {
   column?: number
   /** Tier ladder: the Tile's Tier is still locked for the viewed Team. */
   tierLocked?: boolean
+  /** Does not match the active Board filter: shown faded. */
+  dimmed?: boolean
   /** Highlight (delete preview in layout edit mode). */
   highlighted?: boolean
   /** Public / read-only view: never toggles placeholders. */
@@ -58,6 +60,7 @@ export const BingoTile = React.memo(function BingoTile({
   row,
   column,
   tierLocked = false,
+  dimmed = false,
   highlighted = false,
   readOnly = false,
   gridIndex,
@@ -136,7 +139,8 @@ export const BingoTile = React.memo(function BingoTile({
                 : ""),
         selected && "z-10 ring-2 ring-osrs-yellow ring-inset",
         highlighted && "ring-2 ring-destructive",
-        tierLocked && "opacity-60 saturate-50"
+        tierLocked && "opacity-60 saturate-50",
+        dimmed && !selected && "opacity-30 saturate-50"
       )}
     >
       {!tile.isHidden && (

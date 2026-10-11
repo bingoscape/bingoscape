@@ -36,10 +36,12 @@ import { BingoInfoModal } from "@/components/bingo-info-modal"
 import { DeleteBingoButton } from "@/components/delete-bingo-button"
 import { EditBingoModal } from "@/components/edit-bingo-modal"
 import { QuickSubmissionButton } from "@/components/quick-submission-button"
+import { BoardFilters } from "@/components/event-workspace/board-filters"
 import { ShortcutsHelp } from "@/components/event-workspace/shortcuts-help"
 import { StatsDialog } from "@/components/stats-dialog"
 import { TeamSelector } from "@/components/team-selector"
 import { TrackerSettingsModal } from "@/components/tracker-settings-modal"
+import type { TileFilter, TileFilterContext } from "@/lib/tile-filter"
 import type { BoardStats } from "@/lib/tile-status"
 import { cn } from "@/lib/utils"
 import type { Bingo, Team } from "@/types/model"
@@ -72,6 +74,12 @@ interface BoardHeaderProps {
   isSwitching?: boolean
   /** The side panel can be collapsed (shown in the shortcuts list). */
   canCollapsePanel?: boolean
+  filters: {
+    context: TileFilterContext
+    active: TileFilter | null
+    counts: Record<TileFilter, number>
+    onChange: (filter: TileFilter | null) => void
+  }
 }
 
 /**
@@ -97,6 +105,7 @@ export function BoardHeader({
   isUpcoming,
   isSwitching = false,
   canCollapsePanel = false,
+  filters,
 }: BoardHeaderProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [trackerOpen, setTrackerOpen] = useState(false)
@@ -266,6 +275,7 @@ export function BoardHeader({
             <Counter tone="muted" label="remaining" value={stats.remaining} />
           </>
         )}
+        <BoardFilters {...filters} />
         {isUpcoming && isManagement && (
           <span className="text-muted-foreground flex items-center gap-1 font-medium">
             <Lock aria-hidden="true" className="h-3 w-3" />
