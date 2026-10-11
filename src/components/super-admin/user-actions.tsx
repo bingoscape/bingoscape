@@ -149,7 +149,7 @@ function UserEditForm({ user }: { user: UserActionsUser }) {
       <FormField
         label="Email"
         error={errors.email}
-        hint="Super admin access is matched on this address. Changing it can grant or remove access."
+        hint="Super admin access is matched on this address, so addresses on the super-admin list cannot be changed here or given to another user."
       >
         {(props) => (
           <Input

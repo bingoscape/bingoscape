@@ -148,5 +148,28 @@ Not verified: Jest (needs Docker) and any browser, keyboard or screen-reader che
 - [x] Phase 8 (partly): `events/[eventId]` page added; user and clan detail pages reworked.
 - [x] Phase 9 (partly): overview with real counts.
 - [x] ConfirmDestructiveDialog with typed-name confirmation.
-- [ ] Not done (backend, separate work): S1, S2, S4 semantics, S5, S6, S7, S8, S9, S12; Phases 1, 4, 5, 6 and the QA phase.
-- Read actions (`getAllUsers`, `getUserDetails`, etc.) were removed from `src/app/actions/super-admin.ts` and replaced by guarded server-only queries, so they are no longer callable as public server actions. Mutation actions are unchanged.
+- [ ] Backend items that were open here (S1, S2, S5, S6, S7, S9, S12) are covered in the hardening section below; still open: S4 semantics, S8, Phases 4 and 6, and the QA phase.
+- Read actions (`getAllUsers`, `getUserDetails`, etc.) were removed from `src/app/actions/super-admin.ts` and replaced by guarded server-only queries, so they are no longer callable as public server actions. Mutation actions were converted in the hardening pass below.
+
+## Implemented (backend hardening, branch `feature/super-admin-hardening`)
+
+Verified: `eslint` clean, `tsc` clean apart from the known `user.test.ts` error, `npm run build` succeeds.
+`src/app/actions/__tests__/super-admin-guard.test.ts` (27 tests, mocked DB and session) passed when run
+with the Docker-backed global setup replaced by a no-op (`jest --globalSetup <noop> --globalTeardown <noop>`).
+Not verified: the rest of the Jest suite (needs Docker), migration `0034` applied to a real database,
+any transaction, lock or audit-row behavior against PostgreSQL, and any browser, keyboard or screen-reader check.
+
+- [x] S1, S2, S15: guard rewritten (`src/lib/super-admin.ts`, `src/lib/super-admin-email.ts`). The env list is trimmed, lower-cased and read per call. The admin is resolved from the DB row of `session.user.id`, never from the JWT email, so a deleted user or changed email loses access on the next request. Denials log the user id only. The `admin@example.com` compose fallback is removed.
+- [x] S5, S10, S12, S14: `adminAction` (`src/server/super-admin/admin-action.ts`) runs guard, strict zod parse, per-admin rate limit (30/min) and the handler in one `db.transaction`, returning `{ success, error, code }`. All ten mutations use it, with explicit field allowlists, id/length/email/enum/date validation, owner and clan existence checks, and 0 rows affected reported as `not_found`. List search is capped at 100 characters, LIKE wildcards are escaped, non-finite pages are clamped.
+- [x] S4 (guards only), S6, S7: no self-delete, no deleting a user on the super-admin list, email edits refused when the old or new address is on the list or already belongs to another user, the clan owner and the only admin of a clan or event cannot be removed or demoted. `deleteUser` still deletes events the user created (unchanged semantics); dependents now rely on `ON DELETE CASCADE`.
+- [x] S9: `admin_audit_log` (migration `0034_green_malice`, additive). Success rows are written in the mutation's transaction with allowlisted, masked before/after. Denied attempts by signed-in non-admins and refused/failed mutations are logged best-effort and rate-limited. Guarded `listAuditLog` query and read-only page at `/super-admin/audit`.
+- [x] S13: `revalidateAdmin` covers admin overview, audit, list and detail paths, and public `/events` and `/clans`.
+- [x] Read actions: `src/app/actions/super-admin.ts` is the only `"use server"` file touching admin data and exports mutations only; reads live in the server-only `queries.ts`.
+- [ ] Deferred, needs a product decision or a risky migration:
+  - DB-backed admin role or `platform_admins` table (replaces the env list; Phase 4).
+  - `sessionVersion` JWT invalidation and a shorter `maxAge`.
+  - Unique `lower(email)` index (needs duplicate cleanup on production data first). Until then two user rows can share an email, and both pass the env-list check.
+  - Soft delete and trash, impact-preview confirm tokens, mandatory reason field, step-up re-auth (Phase 6).
+  - `serverActions.allowedOrigins`.
+  - Changing what `deleteUser` does with the user's created events (open decision 1).
+  - Per-entity History tabs, an audit feed on the overview, and `user_agent` capture.
