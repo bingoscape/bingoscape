@@ -17,7 +17,6 @@ import { DiscordWebhookManagement } from "./discord-webhook-management"
 import { EventDeleteModal } from "./event-delete-modal"
 import type { Event } from "@/types/model"
 
-
 interface EventHeaderActionsProps {
   eventId: string
   userRole: "admin" | "management" | "verified" | "pending"
@@ -37,6 +36,12 @@ export function EventHeaderActions({
 }: EventHeaderActionsProps) {
   const isAdmin = userRole === "admin"
   const [editModalOpen, setEditModalOpen] = useState(false)
+  // Bumped on every open so the modal remounts with fresh form state
+  const [editModalSession, setEditModalSession] = useState(0)
+  const openEditModal = () => {
+    setEditModalSession((n) => n + 1)
+    setEditModalOpen(true)
+  }
   const [createBingoModalOpen, setCreateBingoModalOpen] = useState(false)
   const [importExportModalOpen, setImportExportModalOpen] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
@@ -46,6 +51,7 @@ export function EventHeaderActions({
       {/* Edit Event Modal */}
       {isAdmin && (
         <EditEventModal
+          key={editModalSession}
           event={event}
           isOpen={editModalOpen}
           onClose={() => setEditModalOpen(false)}
@@ -101,7 +107,7 @@ export function EventHeaderActions({
                 <ClipboardList className="h-4 w-4" />
                 <span>Requests</span>
                 {pendingRegistrationsCount > 0 && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-sm bg-warning px-1 text-xs font-medium text-warning-foreground">
+                  <span className="bg-warning text-warning-foreground flex h-5 min-w-5 items-center justify-center rounded-sm px-1 text-xs font-medium">
                     {pendingRegistrationsCount}
                   </span>
                 )}
@@ -129,7 +135,7 @@ export function EventHeaderActions({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setEditModalOpen(true)}
+            onClick={openEditModal}
             className="gap-2"
           >
             <Settings className="h-4 w-4" />
@@ -184,7 +190,7 @@ export function EventHeaderActions({
             <Button
               variant="ghost"
               className="w-full justify-start"
-              onClick={() => setEditModalOpen(true)}
+              onClick={openEditModal}
             >
               <Settings className="mr-2 h-4 w-4" />
               Edit Event Settings
@@ -207,7 +213,7 @@ export function EventHeaderActions({
           isAdmin ? (
             <Button
               variant="ghost"
-              className="w-full justify-start text-danger hover:text-danger"
+              className="text-danger hover:text-danger w-full justify-start"
               onClick={() => setDeleteModalOpen(true)}
             >
               <Trash2 className="mr-2 h-4 w-4" />

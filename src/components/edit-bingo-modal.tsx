@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
@@ -108,15 +108,21 @@ export function EditBingoModal({
     }
   }, [isOpen, bingo.id])
 
+  // Reset only when the modal opens so a refresh of `bingo` mid-edit
+  // doesn't wipe what the user is typing.
+  const wasOpen = useRef(false)
   useEffect(() => {
-    setFormData({
-      title: bingo.title,
-      description: bingo.description ?? "",
-      visible: bingo.visible,
-      locked: bingo.locked,
-      codephrase: bingo.codephrase,
-    })
-  }, [bingo])
+    if (isOpen && !wasOpen.current) {
+      setFormData({
+        title: bingo.title,
+        description: bingo.description ?? "",
+        visible: bingo.visible,
+        locked: bingo.locked,
+        codephrase: bingo.codephrase,
+      })
+    }
+    wasOpen.current = isOpen
+  }, [isOpen, bingo])
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
