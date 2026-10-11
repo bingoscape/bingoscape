@@ -22,9 +22,10 @@ import {
   eventParticipants,
   users,
   events,
+  goalGroups,
 } from "@/server/db/schema"
 import type { UUID } from "crypto"
-import { asc, eq, inArray, and, gt } from "drizzle-orm"
+import { asc, eq, inArray, and, gt, isNull, max } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import fs from "fs/promises"
@@ -46,6 +47,12 @@ import {
 import { createNotification } from "./notifications"
 import { getServerAuthSession } from "@/server/auth"
 import getRandomFrog from "@/lib/getRandomFrog"
+import { getMetricName } from "@/lib/osrs-metrics"
+import {
+  MAX_GOALS_PER_BATCH,
+  validateDescription,
+  validateTargetValue,
+} from "@/lib/goal-validation"
 import {
   sendDiscordWebhook,
   createSubmissionEmbed,
@@ -450,26 +457,266 @@ export async function deleteBingo(bingoId: string) {
   }
 }
 
-export async function addGoal(
+type GoalDbTx = Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+export type NewGoalInput =
+  | { type: "generic"; description: string; targetValue: number }
+  | {
+      type: "item"
+      itemId: number
+      itemName: string
+      baseName: string
+      imageUrl: string
+      targetValue: number
+      exactVariant?: string | null
+    }
+  | {
+      type: "metric"
+      metricType: string
+      metricName: string
+      targetValue: number
+      description?: string
+    }
+
+export interface CreateGoalsOptions {
+  /** Place the goals (or the new group) inside this existing group. */
+  parentGroupId?: string | null
+  /** Wrap the new goals in a new group created in the same transaction. */
+  group?: { operator: "AND" | "OR" | "SUM"; minRequiredGoals?: number }
+}
+
+function metricGoalDescription(metricName: string, description?: string) {
+  return description?.trim() || getMetricName(metricName)
+}
+
+function validateNewGoal(input: NewGoalInput): string | null {
+  const targetError = validateTargetValue(input.targetValue)
+  if (targetError) return targetError
+
+  switch (input.type) {
+    case "generic":
+      return validateDescription(input.description)
+    case "item":
+      if (!Number.isInteger(input.itemId)) return "Invalid item"
+      return validateDescription(input.itemName)
+    case "metric":
+      if (!input.metricType.trim() || !input.metricName.trim()) {
+        return "Please specify a metric"
+      }
+      return null
+  }
+}
+
+/** Next free order index among the goals and groups sharing a parent. */
+async function nextOrderIndex(
+  tx: GoalDbTx,
   tileId: string,
-  goal: { description: string; targetValue: number }
+  parentGroupId: string | null
+) {
+  const [goalMax] = await tx
+    .select({ value: max(goals.orderIndex) })
+    .from(goals)
+    .where(
+      and(
+        eq(goals.tileId, tileId),
+        parentGroupId
+          ? eq(goals.parentGroupId, parentGroupId)
+          : isNull(goals.parentGroupId)
+      )
+    )
+  const [groupMax] = await tx
+    .select({ value: max(goalGroups.orderIndex) })
+    .from(goalGroups)
+    .where(
+      and(
+        eq(goalGroups.tileId, tileId),
+        parentGroupId
+          ? eq(goalGroups.parentGroupId, parentGroupId)
+          : isNull(goalGroups.parentGroupId)
+      )
+    )
+  return Math.max(goalMax?.value ?? -1, groupMax?.value ?? -1) + 1
+}
+
+async function insertGoal(
+  tx: GoalDbTx,
+  tileId: string,
+  parentGroupId: string | null,
+  orderIndex: number,
+  input: NewGoalInput
+) {
+  const description =
+    input.type === "generic"
+      ? input.description.trim()
+      : input.type === "item"
+        ? input.itemName
+        : metricGoalDescription(input.metricName, input.description)
+
+  const [goal] = await tx
+    .insert(goals)
+    .values({
+      tileId,
+      parentGroupId,
+      description,
+      targetValue: input.targetValue,
+      goalType: input.type,
+      orderIndex,
+    })
+    .returning()
+  if (!goal) throw new Error("Failed to insert goal")
+
+  if (input.type === "item") {
+    const [itemGoal] = await tx
+      .insert(itemGoals)
+      .values({
+        goalId: goal.id,
+        itemId: input.itemId,
+        baseName: input.baseName,
+        exactVariant: input.exactVariant ?? null,
+        imageUrl: input.imageUrl,
+      })
+      .returning()
+    return { goal, itemGoal }
+  }
+
+  if (input.type === "metric") {
+    const [metricGoal] = await tx
+      .insert(metricGoals)
+      .values({
+        goalId: goal.id,
+        metricType: input.metricType,
+        metricName: input.metricName,
+      })
+      .returning()
+    return { goal, metricGoal }
+  }
+
+  return { goal }
+}
+
+/**
+ * Create one or more goals on a tile in a single transaction: either all goals
+ * (and the optional wrapping group) are created, or none are.
+ */
+export async function createGoals(
+  tileId: string,
+  inputs: NewGoalInput[],
+  options: CreateGoalsOptions = {}
 ) {
   try {
     await requireBingoAdminForTile(tileId)
-    const [newGoal] = await db
-      .insert(goals)
-      .values({
-        tileId,
+
+    if (!Array.isArray(inputs) || inputs.length === 0) {
+      return { success: false as const, error: "No goals to create" }
+    }
+    if (inputs.length > MAX_GOALS_PER_BATCH) {
+      return {
+        success: false as const,
+        error: `You can create at most ${MAX_GOALS_PER_BATCH} goals at once`,
+      }
+    }
+    for (const [index, input] of inputs.entries()) {
+      const error = validateNewGoal(input)
+      if (error) {
+        return {
+          success: false as const,
+          error: inputs.length > 1 ? `Goal ${index + 1}: ${error}` : error,
+        }
+      }
+    }
+
+    const { group } = options
+    if (group) {
+      const min = group.minRequiredGoals ?? 1
+      if (
+        !Number.isInteger(min) ||
+        min < 1 ||
+        (group.operator === "OR" && min > inputs.length)
+      ) {
+        return {
+          success: false as const,
+          error: "Invalid number of required goals for this group",
+        }
+      }
+    }
+
+    const parentGroupId = options.parentGroupId ?? null
+    if (parentGroupId) {
+      const parent = await db.query.goalGroups.findFirst({
+        where: eq(goalGroups.id, parentGroupId),
+        columns: { tileId: true },
+      })
+      if (!parent || parent.tileId !== tileId) {
+        return { success: false as const, error: "Goal group not found" }
+      }
+    }
+
+    const created = await db.transaction(async (tx) => {
+      let containerId = parentGroupId
+      let startIndex = await nextOrderIndex(tx, tileId, parentGroupId)
+
+      if (group) {
+        const [newGroup] = await tx
+          .insert(goalGroups)
+          .values({
+            tileId,
+            parentGroupId,
+            logicalOperator: group.operator,
+            minRequiredGoals: group.minRequiredGoals ?? 1,
+            orderIndex: startIndex,
+          })
+          .returning()
+        if (!newGroup) throw new Error("Failed to insert goal group")
+        containerId = newGroup.id
+        startIndex = 0
+      }
+
+      const results = []
+      for (const [index, input] of inputs.entries()) {
+        results.push(
+          await insertGoal(tx, tileId, containerId, startIndex + index, input)
+        )
+      }
+      return { groupId: group ? containerId : null, results }
+    })
+
+    revalidatePath("/events/[id]", "layout")
+
+    return {
+      success: true as const,
+      goals: created.results,
+      groupId: created.groupId,
+    }
+  } catch (error) {
+    logger.error({ error }, "Error creating goals")
+    return {
+      success: false as const,
+      error: authzErrorMessage(error, "Failed to create goals"),
+    }
+  }
+}
+
+export async function addGoal(
+  tileId: string,
+  goal: {
+    description: string
+    targetValue: number
+    parentGroupId?: string | null
+  }
+) {
+  const result = await createGoals(
+    tileId,
+    [
+      {
+        type: "generic",
         description: goal.description,
         targetValue: goal.targetValue,
-      })
-      .returning()
-
-    return { success: true, goal: newGoal }
-  } catch (error) {
-    logger.error({ error }, "Error adding goal")
-    return { success: false, error: "Failed to add goal" }
-  }
+      },
+    ],
+    { parentGroupId: goal.parentGroupId }
+  )
+  if (!result.success) return result
+  return { success: true as const, goal: result.goals[0]?.goal }
 }
 
 export async function deleteGoal(goalId: string) {
@@ -496,8 +743,9 @@ export async function updateGoal(
   try {
     await requireBingoAdminForGoal(goalId)
     // Validate inputs
-    if (updates.targetValue !== undefined && updates.targetValue <= 0) {
-      return { success: false, error: "Target value must be greater than 0" }
+    if (updates.targetValue !== undefined) {
+      const targetError = validateTargetValue(updates.targetValue)
+      if (targetError) return { success: false, error: targetError }
     }
 
     if (
@@ -545,50 +793,30 @@ export async function createItemGoal(
   baseName: string,
   imageUrl: string,
   targetValue: number,
-  exactVariant?: string | null
+  exactVariant?: string | null,
+  parentGroupId?: string | null
 ) {
-  try {
-    await requireBingoAdminForTile(tileId)
-
-    // Create the goal and its item metadata atomically
-    const created = await db.transaction(async (tx) => {
-      const [newGoal] = await tx
-        .insert(goals)
-        .values({
-          tileId,
-          description: itemName,
-          targetValue,
-          goalType: "item",
-        })
-        .returning()
-
-      if (!newGoal) return null
-
-      const [itemGoalData] = await tx
-        .insert(itemGoals)
-        .values({
-          goalId: newGoal.id,
-          itemId,
-          baseName,
-          exactVariant: exactVariant ?? null,
-          imageUrl,
-        })
-        .returning()
-
-      return { goal: newGoal, itemGoal: itemGoalData }
-    })
-
-    if (!created) {
-      return { success: false, error: "Failed to create goal" }
-    }
-
-    return { success: true, goal: created.goal, itemGoal: created.itemGoal }
-  } catch (error) {
-    logger.error({ error }, "Error creating item goal")
-    return {
-      success: false,
-      error: authzErrorMessage(error, "Failed to create item goal"),
-    }
+  const result = await createGoals(
+    tileId,
+    [
+      {
+        type: "item",
+        itemId,
+        itemName,
+        baseName,
+        imageUrl,
+        targetValue,
+        exactVariant,
+      },
+    ],
+    { parentGroupId }
+  )
+  if (!result.success) return result
+  const created = result.goals[0]
+  return {
+    success: true as const,
+    goal: created?.goal,
+    itemGoal: created && "itemGoal" in created ? created.itemGoal : undefined,
   }
 }
 
@@ -597,50 +825,21 @@ export async function createMetricGoal(
   metricType: string,
   metricName: string,
   targetValue: number,
-  description?: string
+  description?: string,
+  parentGroupId?: string | null
 ) {
-  try {
-    await requireBingoAdminForTile(tileId)
-
-    const goalDescription = description || `${metricName} (${metricType})`
-
-    // Create the goal and its metric metadata atomically
-    const created = await db.transaction(async (tx) => {
-      const [newGoal] = await tx
-        .insert(goals)
-        .values({
-          tileId,
-          description: goalDescription,
-          targetValue,
-          goalType: "metric",
-        })
-        .returning()
-
-      if (!newGoal) return null
-
-      const [metricGoalData] = await tx
-        .insert(metricGoals)
-        .values({
-          goalId: newGoal.id,
-          metricType,
-          metricName,
-        })
-        .returning()
-
-      return { goal: newGoal, metricGoal: metricGoalData }
-    })
-
-    if (!created) {
-      return { success: false, error: "Failed to create goal" }
-    }
-
-    return { success: true, goal: created.goal, metricGoal: created.metricGoal }
-  } catch (error) {
-    logger.error({ error }, "Error creating metric goal")
-    return {
-      success: false,
-      error: authzErrorMessage(error, "Failed to create metric goal"),
-    }
+  const result = await createGoals(
+    tileId,
+    [{ type: "metric", metricType, metricName, targetValue, description }],
+    { parentGroupId }
+  )
+  if (!result.success) return result
+  const created = result.goals[0]
+  return {
+    success: true as const,
+    goal: created?.goal,
+    metricGoal:
+      created && "metricGoal" in created ? created.metricGoal : undefined,
   }
 }
 
@@ -653,7 +852,9 @@ export async function updateMetricGoal(
 ) {
   try {
     await requireBingoAdminForGoal(goalId)
-    const goalDescription = description || `${metricName} (${metricType})`
+    const targetError = validateTargetValue(targetValue)
+    if (targetError) return { success: false, error: targetError }
+    const goalDescription = metricGoalDescription(metricName, description)
 
     // Update the base goal
     await db
@@ -725,6 +926,10 @@ export async function updateItemGoal(
 ) {
   try {
     await requireBingoAdminForGoal(goalId)
+    if (targetValue !== undefined) {
+      const targetError = validateTargetValue(targetValue)
+      if (targetError) return { success: false, error: targetError }
+    }
     // Build goal update object
     const goalUpdate: Partial<typeof goals.$inferInsert> & { updatedAt: Date } =
       {
@@ -732,7 +937,7 @@ export async function updateItemGoal(
         updatedAt: new Date(),
       }
 
-    if (targetValue !== undefined && targetValue > 0) {
+    if (targetValue !== undefined) {
       goalUpdate.targetValue = targetValue
     }
 

@@ -80,7 +80,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { OsrsItemSearch } from "./osrs-item-search"
-import { createItemGoal, updateGoal, updateItemGoal, createMetricGoal, updateMetricGoal } from "@/app/actions/bingo"
+import { createGoals, updateGoal, updateItemGoal, createMetricGoal, updateMetricGoal } from "@/app/actions/bingo"
 import { parseItemName } from "osrs-item-data"
 import type { OsrsItem } from "@/types/osrs-items"
 import { cn } from "@/lib/utils"
@@ -95,7 +95,7 @@ interface GoalTreeEditorProps {
   hasSufficientRights: boolean
   onRefresh: () => void
   onDeleteGoal: (goalId: string) => void
-  onAddGoal: () => void
+  onAddGoal: (parentGroupId?: string | null) => void | Promise<void>
   newGoal: any
   onNewGoalChange: (field: string, value: any) => void
 }
@@ -213,68 +213,49 @@ export function GoalTreeEditor({
     }
 
     setIsCreatingBulk(true)
-    const results = []
-    let successCount = 0
-    let failCount = 0
-
-    // Create goals for each selected item
-    for (const selectedItem of selectedItems) {
-      const itemId = Array.isArray(selectedItem.id)
-        ? selectedItem.id[0]!
-        : selectedItem.id
-      const parsed = parseItemName(selectedItem.name)
-
-      const result = await createItemGoal(
-        tileId,
-        itemId,
-        selectedItem.name,
-        parsed.baseName,
-        selectedItem.imageUrl,
-        itemGoalTargetValue,
-        parsed.variant ?? null
-      )
-
-      if (result.success) {
-        successCount++
-        if (addGoalParentId && result.goal) {
-          await moveGoalToGroup(result.goal.id, addGoalParentId)
+    const result = await createGoals(
+      tileId,
+      selectedItems.map((selectedItem) => {
+        const itemId = Array.isArray(selectedItem.id)
+          ? selectedItem.id[0]!
+          : selectedItem.id
+        const parsed = parseItemName(selectedItem.name)
+        return {
+          type: "item" as const,
+          itemId,
+          itemName: selectedItem.name,
+          baseName: parsed.baseName,
+          imageUrl: selectedItem.imageUrl,
+          targetValue: itemGoalTargetValue,
+          exactVariant: parsed.variant ?? null,
         }
-      } else {
-        failCount++
-      }
-      results.push({ item: selectedItem.name, success: result.success })
-    }
-
+      }),
+      { parentGroupId: addGoalParentId }
+    )
     setIsCreatingBulk(false)
 
-    // Show summary toast
-    if (failCount === 0) {
-      toast({
-        title: "Item goals created",
-        description: `Successfully created ${successCount} item goal${successCount !== 1 ? "s" : ""}.`,
-      })
-    } else if (successCount === 0) {
+    if (!result.success) {
+      // Nothing was created, so keep the selection for another attempt.
       toast({
         title: "Error",
-        description: `Failed to create all ${failCount} item goals.`,
+        description: result.error || "Failed to create item goals",
         variant: "destructive",
       })
-    } else {
-      toast({
-        title: "Partially completed",
-        description: `Created ${successCount} goal${successCount !== 1 ? "s" : ""}, ${failCount} failed.`,
-        variant: "default",
-      })
+      return
     }
+
+    const count = result.goals.length
+    toast({
+      title: "Item goals created",
+      description: `Successfully created ${count} item goal${count !== 1 ? "s" : ""}.`,
+    })
 
     // Reset form
     setSelectedItems([])
     setItemGoalTargetValue(1)
     setGoalType("generic")
-    if (successCount > 0) {
-      setIsAddGoalDrawerOpen(false)
-      setAddGoalParentId(null)
-    }
+    setIsAddGoalDrawerOpen(false)
+    setAddGoalParentId(null)
 
     // Refresh tree
     onRefresh()
@@ -294,7 +275,8 @@ export function GoalTreeEditor({
       metricType,
       metricName,
       metricTargetValue,
-      `${metricName} (${metricType})`
+      undefined,
+      addGoalParentId
     )
 
     if (result.success) {
@@ -957,7 +939,10 @@ export function GoalTreeEditor({
               {/* Sticky Footer for Actions */}
               <div className="sticky bottom-0 left-0 right-0 border-t bg-background pt-4 pb-2 z-10 -mx-6 px-6 -mb-6">
                 {goalType === "generic" && (
-                  <Button onClick={onAddGoal} className="w-full">
+                  <Button
+                    onClick={() => onAddGoal(addGoalParentId)}
+                    className="w-full"
+                  >
                     <Plus className="mr-2 h-4 w-4" />
                     Add Goal
                   </Button>
