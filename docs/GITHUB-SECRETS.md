@@ -87,14 +87,6 @@ These secrets are optional but recommended for enhanced functionality.
 
 **Note:** If you don't configure these, users simply won't see GitHub/Google login options.
 
-### SSL Certificate Configuration
-
-| Secret Name     | Description                                       | Example Value          |
-| --------------- | ------------------------------------------------- | ---------------------- |
-| `CERTBOT_EMAIL` | Email for Let's Encrypt certificate notifications | `admin@bingoscape.org` |
-
-**Note:** Only needed if you're using the containerized nginx with Let's Encrypt.
-
 ---
 
 ## Auto-Provided Secrets
@@ -151,7 +143,6 @@ Use this checklist to ensure all required secrets are configured:
 - [ ] `GITHUB_CLIENT_SECRET` - (Optional) For GitHub OAuth
 - [ ] `GOOGLE_CLIENT_ID` - (Optional) For Google OAuth
 - [ ] `GOOGLE_CLIENT_SECRET` - (Optional) For Google OAuth
-- [ ] `CERTBOT_EMAIL` - (Optional) For SSL certificates
 
 ---
 
