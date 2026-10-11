@@ -57,7 +57,8 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
 
       # Application Configuration
-      SUPER_ADMIN_EMAILS: ${SUPER_ADMIN_EMAILS:-admin@example.com}
+      # No default: an unset list means nobody is a super admin (never fall back to a guessable address)
+      SUPER_ADMIN_EMAILS: ${SUPER_ADMIN_EMAILS:-}
       NODE_ENV: production
 
       # Observability Configuration
