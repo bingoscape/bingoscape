@@ -31,8 +31,9 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: "BingoScape Next",
-  description: "RuneScape Clan Bingo Management Tool",
+  title: "BingoScape - Old School RuneScape Clan Bingo",
+  description:
+    "Create Boards, run Clan Events and track Team progress for Old School RuneScape bingo, with RuneLite Plugin integration.",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 }
 

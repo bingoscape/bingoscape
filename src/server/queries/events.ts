@@ -304,11 +304,16 @@ export async function getEvents(userId: string): Promise<EventData[]> {
       const completedTiles =
         completedTilesCount.find((r) => r.teamId === t.teamId)?.count ?? 0
 
-      const eventBingos = userEvents.find((e) => e.id === t.eventId)?.bingos
-      const firstBingoId = eventBingos?.[0]?.id
-      const totalTiles = firstBingoId
-        ? (tilesCountMap.get(firstBingoId) ?? 0)
-        : 0
+      const teamEvent = userEvents.find((e) => e.id === t.eventId)
+      const isManager =
+        teamEvent?.creatorId === userId ||
+        teamEvent?.eventParticipants[0]?.role === "admin" ||
+        teamEvent?.eventParticipants[0]?.role === "management"
+      // Progress counts completions across every Board, so the total must too
+      // (hidden Boards only count for managers).
+      const totalTiles = (teamEvent?.bingos ?? [])
+        .filter((b) => isManager || b.visible)
+        .reduce((sum, b) => sum + (tilesCountMap.get(b.id) ?? 0), 0)
 
       participantDataMap.set(t.eventId, {
         team: {

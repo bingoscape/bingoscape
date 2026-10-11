@@ -17,7 +17,6 @@ import {
   Home,
   Users,
   Menu,
-  Calendar,
   FileJson,
   Shield,
   Grid3x3,
@@ -30,7 +29,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import ModeToggle from "./mode-toggle"
+import ModeToggle, { ThemeMenuItems } from "./mode-toggle"
 import { NotificationBell } from "./notification-bell"
 import { cn } from "@/lib/utils"
 
@@ -44,9 +43,8 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   const navItems = [
-    { href: "/", label: "Home", icon: Home },
+    { href: "/", label: "Events", icon: Home },
     { href: "/clans", label: "Clans", icon: Users },
-    { href: "/events/mine", label: "My Events", icon: Calendar },
     { href: "/templates", label: "Templates", icon: FileJson },
     {
       href: "/super-admin",
@@ -57,9 +55,13 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
   ]
 
   return (
-    <nav className="osrs-panel sticky top-0 z-50 mb-(--nav-gap) h-(--nav-h) w-full border-x-0 border-t-0 bg-osrs-stone-800 text-osrs-parchment shadow-md">
-      <div className="container mx-auto flex h-full items-center justify-between px-4">
-        <div className="flex items-center space-x-4">
+    <nav
+      aria-label="Main"
+      className="osrs-panel sticky top-0 z-50 mb-(--nav-gap) h-(--nav-h) w-full border-x-0 border-t-0 bg-osrs-stone-800 text-osrs-parchment shadow-md"
+    >
+      <div className="container mx-auto flex h-full min-w-0 items-center justify-between gap-2 px-4">
+        <div className="flex min-w-0 items-center space-x-2 sm:space-x-4">
+          {session?.user && (
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
               <Button
@@ -67,11 +69,14 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
                 size="icon"
                 className="text-osrs-parchment hover:bg-osrs-stone-600 hover:text-osrs-yellow lg:hidden"
               >
-                <Menu className="h-5 w-5" />
+                <Menu aria-hidden="true" className="h-5 w-5" />
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72">
+            <SheetContent
+              side="left"
+              className="w-72 pb-[max(1.5rem,env(safe-area-inset-bottom))] pl-[max(1.5rem,env(safe-area-inset-left))]"
+            >
               <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <div className="mt-6 flex flex-col space-y-2">
                 <div className="mb-4 flex items-center space-x-2 border-b pb-4">
@@ -86,8 +91,9 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
                     <Link
                       key={item.href}
                       href={item.href}
+                      aria-current={pathname === item.href ? "page" : undefined}
                       className={cn(
-                        "group flex items-center space-x-3 rounded-sm px-3 py-2 hover:bg-accent",
+                        "group flex min-h-11 items-center space-x-3 rounded-sm px-3 py-3 hover:bg-accent",
                         pathname === item.href
                           ? "osrs-btn"
                           : "text-muted-foreground hover:text-foreground"
@@ -108,12 +114,14 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
               </div>
             </SheetContent>
           </Sheet>
+          )}
           <Link
             href="/"
-            className="flex items-center space-x-2 text-xl font-bold"
+            aria-label="BingoScape home"
+            className="flex min-h-11 shrink-0 items-center space-x-2 text-xl font-bold"
           >
-            <Grid3x3 className="h-6 w-6 text-osrs-gold" />
-            <span className="font-display text-2xl text-osrs-gold osrs-text-shadow">
+            <Grid3x3 aria-hidden="true" className="h-6 w-6 text-osrs-gold" />
+            <span className="hidden font-display text-2xl text-osrs-gold osrs-text-shadow min-[360px]:inline">
               BingoScape
             </span>
           </Link>
@@ -125,6 +133,7 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
                   <Link
                     key={item.href}
                     href={item.href}
+                    aria-current={pathname === item.href ? "page" : undefined}
                     className={cn(
                       "group flex items-center gap-2 rounded-sm px-4 py-2 font-display text-sm osrs-text-shadow",
                       pathname === item.href
@@ -153,17 +162,20 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
             <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
           </div>
         ) : session?.user ? (
-          <div className="flex items-center space-x-3 [&_button]:text-osrs-parchment [&_button:hover]:bg-osrs-stone-600 [&_button:hover]:text-osrs-yellow">
+          <div className="flex shrink-0 items-center space-x-1 sm:space-x-3 [&_button]:text-osrs-parchment [&_button:hover]:bg-osrs-stone-600 [&_button:hover]:text-osrs-yellow">
             <span className="hidden max-w-32 truncate text-sm font-medium text-osrs-parchment osrs-text-shadow lg:inline">
               {session.user.runescapeName || session.user.name}
             </span>
-            <ModeToggle />
+            <div className="hidden sm:block">
+              <ModeToggle />
+            </div>
             <NotificationBell userId={session.user.id} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="relative h-9 w-9 rounded-full"
+                  aria-label="Account menu"
+                  className="relative size-10 rounded-full p-0 pointer-coarse:size-11"
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarImage
@@ -201,6 +213,7 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
                     <span>Profile</span>
                   </Link>
                 </DropdownMenuItem>
+                <ThemeMenuItems className="sm:hidden" />
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => signOut()}
@@ -213,11 +226,14 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
             </DropdownMenu>
           </div>
         ) : (
-          <Link href="/sign-in">
-            <Button>
-              Log in
+          <div className="flex shrink-0 items-center gap-2">
+            <Button asChild variant="ghost" className="text-osrs-parchment hover:bg-osrs-stone-600 hover:text-osrs-yellow">
+              <Link href="/sign-in">Log in</Link>
             </Button>
-          </Link>
+            <Button asChild>
+              <Link href="/sign-up">Sign up</Link>
+            </Button>
+          </div>
         )}
       </div>
     </nav>

@@ -67,17 +67,27 @@ export function NotificationBell({ userId }: { userId: string }) {
           variant="ghost"
           size="icon"
           className="relative"
-          aria-label="Notifications"
+          aria-label={
+            unreadCount > 0
+              ? `Notifications, ${unreadCount} unread`
+              : "Notifications"
+          }
         >
-          <Bell className="h-4 w-4" />
+          <Bell aria-hidden="true" className="h-4 w-4" />
           {unreadCount > 0 && (
-            <span className="absolute right-0 top-0 inline-flex -translate-y-1/2 translate-x-1/2 transform items-center justify-center rounded-sm border border-black bg-destructive px-1.5 py-1 text-xs font-bold leading-none text-destructive-foreground">
+            <span
+              aria-hidden="true"
+              className="absolute right-0 top-0 inline-flex -translate-y-1/2 translate-x-1/2 transform items-center justify-center rounded-sm border border-black bg-destructive px-1.5 py-1 text-xs font-bold leading-none text-destructive-foreground"
+            >
               {unreadCount}
             </span>
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-96 p-0">
+      <PopoverContent
+        className="w-[min(24rem,calc(100vw-1rem))] p-0"
+        collisionPadding={8}
+      >
         <div className="border-b p-4">
           <h4 className="font-medium">Notifications</h4>
         </div>
@@ -102,12 +112,12 @@ export function NotificationBell({ userId }: { userId: string }) {
                 )}
                 <div className="flex gap-3 p-3">
                   {/* Tile image placeholder */}
-                  <div className="relative h-24 w-24 shrink-0 osrs-slot">
+                  <div className="relative h-12 w-12 shrink-0 osrs-slot sm:h-24 sm:w-24">
                     <Image
                       src={notification.tileImage ?? getRandomFrog()}
                       alt="Tile"
                       fill
-                      sizes="96px"
+                      sizes="(min-width: 640px) 96px, 48px"
                       style={{ objectFit: "contain" }}
                       priority={false}
                     />
@@ -138,20 +148,19 @@ export function NotificationBell({ userId }: { userId: string }) {
                       className="mt-auto flex gap-2"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <Link
-                        href={`/events/${notification.eventId}`}
-                        className="flex-1"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleNotificationClick(notification.id).catch((e) =>
-                            console.error(e)
-                          )
-                        }}
-                      >
-                        <Button className="w-full" variant="ghost">
+                      <Button asChild className="w-full flex-1" variant="ghost">
+                        <Link
+                          href={`/events/${notification.eventId}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleNotificationClick(notification.id).catch(
+                              (e) => console.error(e)
+                            )
+                          }}
+                        >
                           Event
-                        </Button>
-                      </Link>
+                        </Link>
+                      </Button>
                     </div>
                   </div>
                 </div>

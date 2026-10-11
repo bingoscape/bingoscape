@@ -1,136 +1,139 @@
-import { EventData } from "@/app/actions/events"
-import { EventCard } from "@/components/event-card"
-import { Calendar, Clock, Archive } from "lucide-react"
+import { Calendar, Clock, Archive, ChevronDown } from "lucide-react"
+
+import { DashboardEventCard } from "@/components/dashboard/dashboard-event-card"
+import type { EventData } from "@/app/actions/events"
+import type { CategorizedEvents } from "@/lib/dashboard-events"
+import type { EventState } from "@/lib/event-time"
 
 interface EventDisplayProps {
-  initialEvents: EventData[]
+  categorized: CategorizedEvents
+  now: Date
 }
 
-export function EventDisplay({ initialEvents }: EventDisplayProps) {
-  const events = initialEvents
+function SectionHeading({
+  id,
+  icon,
+  title,
+  count,
+}: {
+  id: string
+  icon: React.ReactNode
+  title: string
+  count: number
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="osrs-slot hidden rounded-sm p-2 sm:block">{icon}</div>
+      <h2 id={id} className="osrs-heading text-xl font-bold tracking-tight">
+        {title}{" "}
+        <span className="text-base font-normal text-muted-foreground">
+          ({count})
+        </span>
+      </h2>
+    </div>
+  )
+}
 
-  const categorizeEvents = (events: EventData[]) => {
-    const now = new Date()
-    return events.reduce(
-      (acc, eventData) => {
-        const startDate = new Date(eventData.event.startDate)
-        const endDate = new Date(eventData.event.endDate)
-        if (now >= startDate && now <= endDate) {
-          acc.active.push(eventData)
-        } else if (now < startDate) {
-          acc.upcoming.push(eventData)
-        } else {
-          acc.past.push(eventData)
-        }
-        return acc
-      },
-      { active: [], upcoming: [], past: [] } as {
-        active: EventData[]
-        upcoming: EventData[]
-        past: EventData[]
-      }
-    )
-  }
+function EventGrid({
+  labelledBy,
+  events,
+  state,
+  now,
+}: {
+  labelledBy: string
+  events: EventData[]
+  state: EventState
+  now: Date
+}) {
+  return (
+    <ul
+      role="list"
+      aria-labelledby={labelledBy}
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3"
+    >
+      {events.map((ed) => (
+        <li key={ed.event.id}>
+          <DashboardEventCard eventData={ed} state={state} now={now} />
+        </li>
+      ))}
+    </ul>
+  )
+}
 
-  const { active, upcoming, past } = categorizeEvents(events)
-
-  if (events.length === 0) {
-    return (
-      <div className="py-16 text-center">
-        <div className="osrs-panel relative mx-auto max-w-2xl overflow-hidden rounded-sm p-8 lg:p-12">
-          <div className="mx-auto max-w-md space-y-6">
-            <div className="osrs-slot mx-auto w-fit rounded-sm p-4">
-              <Calendar aria-hidden="true" className="h-12 w-12 text-primary" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="osrs-heading text-2xl font-bold">
-                No Events Yet
-              </h2>
-              <p className="text-muted-foreground">
-                Get started by creating your first Event. Set up Boards and a
-                Prize Pool, and invite your Clan members!
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
+export function EventDisplay({ categorized, now }: EventDisplayProps) {
+  const { active, upcoming, past } = categorized
 
   return (
-    <div className="space-y-16">
-      {/* 1. Live Now Section */}
+    <div className="space-y-8">
       {active.length > 0 && (
-        <section className="space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="osrs-slot rounded-sm p-2.5">
-              <Clock className="h-6 w-6 text-success" aria-hidden="true" />
-            </div>
-            <h2 className="osrs-heading text-3xl font-bold tracking-tight">
-              Live Now
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            {active.map((ed) => (
-              <EventCard
-                key={ed.event.id}
-                eventData={ed}
-                isParticipant={true}
-                status="active"
-              />
-            ))}
-          </div>
+        <section aria-labelledby="events-live" className="space-y-3">
+          <SectionHeading
+            id="events-live"
+            icon={<Clock className="size-5 text-success" aria-hidden="true" />}
+            title="Live Now"
+            count={active.length}
+          />
+          <EventGrid
+            labelledBy="events-live"
+            events={active}
+            state="active"
+            now={now}
+          />
         </section>
       )}
 
-      {/* 2. On The Horizon (Upcoming) */}
       {upcoming.length > 0 && (
-        <section className="space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="osrs-slot rounded-sm p-2.5">
-              <Calendar className="h-6 w-6 text-pending" aria-hidden="true" />
-            </div>
-            <h2 className="osrs-heading text-2xl font-bold tracking-tight">
-              On The Horizon
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            {upcoming.map((ed) => (
-              <EventCard
-                key={ed.event.id}
-                eventData={ed}
-                isParticipant={true}
-                status="upcoming"
-              />
-            ))}
-          </div>
+        <section aria-labelledby="events-upcoming" className="space-y-3">
+          <SectionHeading
+            id="events-upcoming"
+            icon={
+              <Calendar className="size-5 text-pending" aria-hidden="true" />
+            }
+            title="On The Horizon"
+            count={upcoming.length}
+          />
+          <EventGrid
+            labelledBy="events-upcoming"
+            events={upcoming}
+            state="upcoming"
+            now={now}
+          />
         </section>
       )}
 
-      {/* 3. The Archive (Past) */}
       {past.length > 0 && (
-        <section className="space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="osrs-slot rounded-sm p-2.5">
-              <Archive
-                className="h-6 w-6 text-muted-foreground"
+        <section aria-labelledby="events-archive">
+          {/* Native <details>: collapsed by default, no client JS needed. */}
+          <details
+            className="group/archive"
+            open={active.length + upcoming.length === 0}
+          >
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+              <SectionHeading
+                id="events-archive"
+                icon={
+                  <Archive
+                    className="size-5 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                }
+                title="The Archive"
+                count={past.length}
+              />
+              <ChevronDown
                 aria-hidden="true"
+                className="size-5 shrink-0 text-muted-foreground transition-transform group-open/archive:rotate-180"
+              />
+            </summary>
+            <div className="pt-3">
+              <EventGrid
+                labelledBy="events-archive"
+                events={past}
+                state="past"
+                now={now}
               />
             </div>
-            <h2 className="osrs-heading text-2xl font-bold tracking-tight">
-              The Archive
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {past.map((ed) => (
-              <EventCard
-                key={ed.event.id}
-                eventData={ed}
-                isParticipant={true}
-                status="past"
-              />
-            ))}
-          </div>
+          </details>
         </section>
       )}
     </div>
