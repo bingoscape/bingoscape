@@ -141,22 +141,22 @@ export function PatternBonusSchematicEditor({
   return (
     <div>
       {/* Desktop schematic layout */}
-      <div className="hidden md:block">
+      <div className="hidden lg:block">
         <div className="flex flex-col items-center gap-4">
           {/* Complete Board Bonus - Top Center */}
           <div className="mb-2 flex w-full justify-center">
             <div
               className={cn(
-                "rounded-lg border-2 bg-warning/50 p-3 transition-all",
+                "bg-warning/50 rounded-lg border-2 p-3 transition-all",
                 hoveredPattern.type === "complete"
-                  ? "border-warning ring-2 ring-warning"
+                  ? "border-warning ring-warning ring-2"
                   : "border-warning"
               )}
             >
               <div className="flex items-center gap-3">
                 <Label
                   htmlFor="completeBoardBonus"
-                  className="whitespace-nowrap text-sm font-medium"
+                  className="text-sm font-medium whitespace-nowrap"
                 >
                   Complete Board Bonus:
                 </Label>
@@ -176,7 +176,7 @@ export function PatternBonusSchematicEditor({
                   className="h-10 w-28 text-sm"
                   disabled={disabled}
                 />
-                <span className="text-sm text-muted-foreground">XP</span>
+                <span className="text-muted-foreground text-sm">XP</span>
                 {completeBoardBonus > 0 && (
                   <Badge variant="default" className="bg-warning">
                     {completeBoardBonus} XP
@@ -199,9 +199,9 @@ export function PatternBonusSchematicEditor({
               {isSquare && (
                 <div
                   className={cn(
-                    "rounded-lg border-2 bg-chart-5/50 p-2 transition-all",
+                    "bg-chart-5/50 rounded-lg border-2 p-2 transition-all",
                     hoveredPattern.type === "mainDiag"
-                      ? "border-chart-5 ring-2 ring-chart-5"
+                      ? "border-chart-5 ring-chart-5 ring-2"
                       : "border-chart-5"
                   )}
                 >
@@ -234,7 +234,7 @@ export function PatternBonusSchematicEditor({
                     {mainDiagonalBonus > 0 && (
                       <Badge
                         variant="secondary"
-                        className="bg-chart-5 text-xs text-chart-5-foreground"
+                        className="bg-chart-5 text-chart-5-foreground text-xs"
                       >
                         {mainDiagonalBonus}
                       </Badge>
@@ -247,9 +247,9 @@ export function PatternBonusSchematicEditor({
               {isSquare && (
                 <div
                   className={cn(
-                    "rounded-lg border-2 bg-chart-5/50 p-2 transition-all",
+                    "bg-chart-5/50 rounded-lg border-2 p-2 transition-all",
                     hoveredPattern.type === "antiDiag"
-                      ? "border-chart-5 ring-2 ring-chart-5"
+                      ? "border-chart-5 ring-chart-5 ring-2"
                       : "border-chart-5"
                   )}
                 >
@@ -282,7 +282,7 @@ export function PatternBonusSchematicEditor({
                     {antiDiagonalBonus > 0 && (
                       <Badge
                         variant="secondary"
-                        className="bg-chart-5 text-xs text-chart-5-foreground"
+                        className="bg-chart-5 text-chart-5-foreground text-xs"
                       >
                         {antiDiagonalBonus}
                       </Badge>
@@ -361,7 +361,7 @@ export function PatternBonusSchematicEditor({
                           "h-10 p-1 text-center text-sm transition-all",
                           hoveredPattern.type === "column" &&
                             hoveredPattern.index === colIndex
-                            ? "border-info ring-2 ring-info"
+                            ? "border-info ring-info ring-2"
                             : "border-info"
                         )}
                         disabled={disabled}
@@ -369,7 +369,7 @@ export function PatternBonusSchematicEditor({
                       {(columnBonuses[colIndex] ?? 0) > 0 && (
                         <Badge
                           variant="secondary"
-                          className="justify-center bg-info px-1 py-0 text-[10px] text-info-foreground"
+                          className="bg-info text-info-foreground justify-center px-1 py-0 text-[10px]"
                         >
                           {columnBonuses[colIndex]}
                         </Badge>
@@ -410,7 +410,7 @@ export function PatternBonusSchematicEditor({
                         "h-10 w-24 text-sm transition-all",
                         hoveredPattern.type === "row" &&
                           hoveredPattern.index === rowIndex
-                          ? "border-success ring-2 ring-success"
+                          ? "border-success ring-success ring-2"
                           : "border-success"
                       )}
                       disabled={disabled}
@@ -418,7 +418,7 @@ export function PatternBonusSchematicEditor({
                     {(rowBonuses[rowIndex] ?? 0) > 0 && (
                       <Badge
                         variant="secondary"
-                        className="bg-success text-xs text-success-foreground"
+                        className="bg-success text-success-foreground text-xs"
                       >
                         {rowBonuses[rowIndex]}
                       </Badge>
@@ -430,23 +430,23 @@ export function PatternBonusSchematicEditor({
           </div>
 
           {/* Legend */}
-          <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
+          <div className="text-muted-foreground mt-4 flex flex-wrap gap-4 text-xs">
             <div className="flex items-center gap-2">
-              <div className="h-4 w-4 rounded border-2 border-success bg-success/10" />
+              <div className="border-success bg-success/10 h-4 w-4 rounded border-2" />
               <span>Row Bonus</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-4 w-4 rounded border-2 border-info bg-info/10" />
+              <div className="border-info bg-info/10 h-4 w-4 rounded border-2" />
               <span>Column Bonus</span>
             </div>
             {isSquare && (
               <div className="flex items-center gap-2">
-                <div className="h-4 w-4 rounded border-2 border-chart-5 bg-chart-5/10" />
+                <div className="border-chart-5 bg-chart-5/10 h-4 w-4 rounded border-2" />
                 <span>Diagonal Bonus</span>
               </div>
             )}
             <div className="flex items-center gap-2">
-              <div className="h-4 w-4 rounded border-2 border-warning bg-warning/10" />
+              <div className="border-warning bg-warning/10 h-4 w-4 rounded border-2" />
               <span>Complete Board</span>
             </div>
           </div>
@@ -454,11 +454,11 @@ export function PatternBonusSchematicEditor({
       </div>
 
       {/* Mobile accordion layout */}
-      <div className="md:hidden">
+      <div className="lg:hidden">
         {/* Small Grid Preview */}
         <div className="mb-4 flex justify-center">
-          <div className="inline-block rounded-lg border bg-muted/30 p-3">
-            <div className="mb-2 text-center text-xs text-muted-foreground">
+          <div className="bg-muted/30 inline-block rounded-lg border p-3">
+            <div className="text-muted-foreground mb-2 text-center text-xs">
               {rows}×{columns} Board Preview
             </div>
             <div className="flex flex-col gap-1">
@@ -467,7 +467,7 @@ export function PatternBonusSchematicEditor({
                   {Array.from({ length: columns }).map((_, colIndex) => (
                     <div
                       key={`preview-cell-${rowIndex}-${colIndex}`}
-                      className="h-6 w-6 rounded border bg-muted/20"
+                      className="bg-muted/20 h-6 w-6 rounded border"
                     />
                   ))}
                 </div>
@@ -482,12 +482,12 @@ export function PatternBonusSchematicEditor({
           <AccordionItem value="rows">
             <AccordionTrigger className="text-sm font-medium">
               <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded border-2 border-success bg-success/10" />
+                <div className="border-success bg-success/10 h-3 w-3 rounded border-2" />
                 <span>Row Bonuses</span>
                 {Object.values(rowBonuses).filter((v) => v > 0).length > 0 && (
                   <Badge
                     variant="secondary"
-                    className="ml-2 bg-success text-xs text-success-foreground"
+                    className="bg-success text-success-foreground ml-2 text-xs"
                   >
                     {Object.values(rowBonuses).filter((v) => v > 0).length}
                   </Badge>
@@ -522,7 +522,7 @@ export function PatternBonusSchematicEditor({
                       className="h-10"
                       disabled={disabled}
                     />
-                    <span className="text-sm text-muted-foreground">XP</span>
+                    <span className="text-muted-foreground text-sm">XP</span>
                   </div>
                 ))}
               </div>
@@ -533,13 +533,13 @@ export function PatternBonusSchematicEditor({
           <AccordionItem value="columns">
             <AccordionTrigger className="text-sm font-medium">
               <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded border-2 border-info bg-info/10" />
+                <div className="border-info bg-info/10 h-3 w-3 rounded border-2" />
                 <span>Column Bonuses</span>
                 {Object.values(columnBonuses).filter((v) => v > 0).length >
                   0 && (
                   <Badge
                     variant="secondary"
-                    className="ml-2 bg-info text-xs text-info-foreground"
+                    className="bg-info text-info-foreground ml-2 text-xs"
                   >
                     {Object.values(columnBonuses).filter((v) => v > 0).length}
                   </Badge>
@@ -574,7 +574,7 @@ export function PatternBonusSchematicEditor({
                       className="h-10"
                       disabled={disabled}
                     />
-                    <span className="text-sm text-muted-foreground">XP</span>
+                    <span className="text-muted-foreground text-sm">XP</span>
                   </div>
                 ))}
               </div>
@@ -586,12 +586,12 @@ export function PatternBonusSchematicEditor({
             <AccordionItem value="diagonals">
               <AccordionTrigger className="text-sm font-medium">
                 <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded border-2 border-chart-5 bg-chart-5/10" />
+                  <div className="border-chart-5 bg-chart-5/10 h-3 w-3 rounded border-2" />
                   <span>Diagonal Bonuses</span>
                   {(mainDiagonalBonus > 0 || antiDiagonalBonus > 0) && (
                     <Badge
                       variant="secondary"
-                      className="ml-2 bg-chart-5 text-xs text-chart-5-foreground"
+                      className="bg-chart-5 text-chart-5-foreground ml-2 text-xs"
                     >
                       {
                         [mainDiagonalBonus, antiDiagonalBonus].filter(
@@ -625,7 +625,7 @@ export function PatternBonusSchematicEditor({
                       className="h-10"
                       disabled={disabled}
                     />
-                    <span className="text-sm text-muted-foreground">XP</span>
+                    <span className="text-muted-foreground text-sm">XP</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Label
@@ -648,7 +648,7 @@ export function PatternBonusSchematicEditor({
                       className="h-10"
                       disabled={disabled}
                     />
-                    <span className="text-sm text-muted-foreground">XP</span>
+                    <span className="text-muted-foreground text-sm">XP</span>
                   </div>
                 </div>
               </AccordionContent>
@@ -659,12 +659,12 @@ export function PatternBonusSchematicEditor({
           <AccordionItem value="complete">
             <AccordionTrigger className="text-sm font-medium">
               <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded border-2 border-warning bg-warning/10" />
+                <div className="border-warning bg-warning/10 h-3 w-3 rounded border-2" />
                 <span>Complete Board Bonus</span>
                 {completeBoardBonus > 0 && (
                   <Badge
                     variant="secondary"
-                    className="ml-2 bg-warning text-xs text-warning-foreground"
+                    className="bg-warning text-warning-foreground ml-2 text-xs"
                   >
                     {completeBoardBonus} XP
                   </Badge>
@@ -694,9 +694,9 @@ export function PatternBonusSchematicEditor({
                     className="h-10"
                     disabled={disabled}
                   />
-                  <span className="text-sm text-muted-foreground">XP</span>
+                  <span className="text-muted-foreground text-sm">XP</span>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">
+                <p className="text-muted-foreground mt-2 text-xs">
                   Awarded when all tiles are completed
                 </p>
               </div>
