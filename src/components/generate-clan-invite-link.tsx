@@ -1,6 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { Check, Copy, Link2 } from "lucide-react"
+
+import { createClanInvite } from "@/app/actions/clan"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,252 +16,216 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "@/hooks/use-toast"
-import { type GenerateInviteResponse } from "@/app/api/clans/[clanId]/invite/route"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Link } from "lucide-react"
+import { MAX_INVITE_LABEL_LENGTH, buildClanInviteUrl } from "@/lib/clan"
 
-interface InviteFormData {
-  label: string
-  expiresInDays: string // "0" = permanent, "1", "7", "30", "custom"
-  customDays: string
-  maxUses: string // "0" = unlimited, "1", "10", "custom"
-  customMaxUses: string
+const EXPIRY_OPTIONS = [
+  { value: "0", label: "Never" },
+  { value: "1", label: "1 day" },
+  { value: "7", label: "7 days" },
+  { value: "30", label: "30 days" },
+  { value: "custom", label: "Custom…" },
+]
+
+const USES_OPTIONS = [
+  { value: "0", label: "Unlimited" },
+  { value: "1", label: "Single use" },
+  { value: "10", label: "10 uses" },
+  { value: "25", label: "25 uses" },
+  { value: "custom", label: "Custom…" },
+]
+
+/** `null` means "no limit"; `undefined` means the custom value is invalid. */
+function resolveLimit(
+  choice: string,
+  custom: string,
+  max: number
+): number | null | undefined {
+  if (choice === "0") return null
+  const raw = choice === "custom" ? custom : choice
+  const n = Number(raw)
+  return Number.isInteger(n) && n >= 1 && n <= max ? n : undefined
 }
 
 export function GenerateClanInviteLink({ clanId }: { clanId: string }) {
-  const [inviteLink, setInviteLink] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [isOpen, setIsOpen] = useState(false)
-  const [formData, setFormData] = useState<InviteFormData>({
-    label: "",
-    expiresInDays: "0", // Default to permanent
-    customDays: "",
-    maxUses: "0", // Default to unlimited
-    customMaxUses: "",
-  })
+  const router = useRouter()
+  const [label, setLabel] = useState("")
+  const [expiry, setExpiry] = useState("0")
+  const [customDays, setCustomDays] = useState("")
+  const [uses, setUses] = useState("0")
+  const [customUses, setCustomUses] = useState("")
+  const [pending, setPending] = useState(false)
+  const [createdLink, setCreatedLink] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
-  const generateInvite = async () => {
-    setIsLoading(true)
+  const copy = async (link: string) => {
     try {
-      // Calculate actual values
-      let expiresInDays: number | null = 0
-      if (formData.expiresInDays === "custom") {
-        expiresInDays = parseInt(formData.customDays) || null
-      } else if (formData.expiresInDays !== "0") {
-        expiresInDays = parseInt(formData.expiresInDays)
-      }
-
-      let maxUses: number | null = null
-      if (formData.maxUses === "custom") {
-        maxUses = parseInt(formData.customMaxUses) || null
-      } else if (formData.maxUses !== "0") {
-        maxUses = parseInt(formData.maxUses)
-      }
-
-      const response = await fetch(`/api/clans/${clanId}/invite`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          label: formData.label || undefined,
-          expiresInDays,
-          maxUses,
-        }),
-      })
-
-      const data = (await response.json()) as
-        | GenerateInviteResponse
-        | { error: string }
-
-      if (response.ok && "inviteCode" in data) {
-        const link = `${window.location.origin}/clans/join?code=${data.inviteCode}`
-        setInviteLink(link)
-        toast({
-          title: "Invite link generated",
-          description: "The invite link has been created successfully.",
-        })
-      } else {
-        throw new Error(
-          "error" in data ? data.error : "Failed to generate invite"
-        )
-      }
-    } catch (error) {
+      await navigator.clipboard.writeText(link)
+      setCopied(true)
+      toast({ title: "Copied", description: "Invite link copied to clipboard." })
+    } catch {
       toast({
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to generate invite link",
+        title: "Couldn't copy",
+        description: "Select the link and copy it manually.",
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
     }
   }
 
-  const copyToClipboard = async () => {
-    await navigator.clipboard.writeText(inviteLink)
-    toast({
-      title: "Copied to clipboard",
-      description: "The invite link has been copied to your clipboard.",
-    })
-  }
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const expiresInDays = resolveLimit(expiry, customDays, 365)
+    const maxUses = resolveLimit(uses, customUses, 10000)
+    if (expiresInDays === undefined) {
+      toast({
+        title: "Check the expiry",
+        description: "Enter a whole number of days from 1 to 365.",
+        variant: "destructive",
+      })
+      return
+    }
+    if (maxUses === undefined) {
+      toast({
+        title: "Check the usage limit",
+        description: "Enter a whole number from 1 to 10,000.",
+        variant: "destructive",
+      })
+      return
+    }
 
-  const resetForm = () => {
-    setFormData({
-      label: "",
-      expiresInDays: "0",
-      customDays: "",
-      maxUses: "0",
-      customMaxUses: "",
-    })
-    setInviteLink("")
+    setPending(true)
+    try {
+      const result = await createClanInvite({
+        clanId,
+        label: label.trim() || undefined,
+        expiresInDays,
+        maxUses,
+      })
+      if (!result.success) {
+        toast({
+          title: "Couldn't create invite",
+          description: result.error,
+          variant: "destructive",
+        })
+        return
+      }
+      setCreatedLink(
+        buildClanInviteUrl(window.location.origin, result.invite.inviteCode)
+      )
+      setCopied(false)
+      setLabel("")
+      router.refresh()
+      toast({ title: "Invite created" })
+    } catch {
+      toast({
+        title: "Couldn't create invite",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setPending(false)
+    }
   }
 
   return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={(open) => {
-        setIsOpen(open)
-        if (!open) resetForm()
-      }}
-    >
-      <DialogTrigger asChild>
-        <Button variant="outline">
-          <Link className="mr-2 h-4 w-4" />
-          Generate Invite Link
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Generate Clan Invite Link</DialogTitle>
-          <DialogDescription>
-            Create a customizable invite link for this clan. Configure
-            expiration and usage limits.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          {/* Label Input */}
+    <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
-            <Label htmlFor="label">Label (Optional)</Label>
+            <Label htmlFor="invite-label">Label (optional)</Label>
             <Input
-              id="label"
-              placeholder="e.g., Discord Recruitment, Friends"
-              value={formData.label}
-              onChange={(e) =>
-                setFormData({ ...formData, label: e.target.value })
-              }
-              maxLength={100}
+              id="invite-label"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="e.g. Discord recruitment"
+              maxLength={MAX_INVITE_LABEL_LENGTH}
+              autoComplete="off"
             />
           </div>
-
-          {/* Expiration Select */}
           <div className="space-y-2">
-            <Label htmlFor="expiration">Expiration</Label>
-            <Select
-              value={formData.expiresInDays}
-              onValueChange={(value) =>
-                setFormData({ ...formData, expiresInDays: value })
-              }
-            >
-              <SelectTrigger id="expiration">
-                <SelectValue placeholder="Select expiration" />
+            <Label htmlFor="invite-expiry">Expires</Label>
+            <Select value={expiry} onValueChange={setExpiry}>
+              <SelectTrigger id="invite-expiry">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="0">Never (Permanent)</SelectItem>
-                <SelectItem value="1">1 Day</SelectItem>
-                <SelectItem value="7">7 Days</SelectItem>
-                <SelectItem value="30">30 Days</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
+                {EXPIRY_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-          </div>
-
-          {/* Custom Days Input */}
-          {formData.expiresInDays === "custom" && (
-            <div className="space-y-2">
-              <Label htmlFor="customDays">Custom Days</Label>
+            {expiry === "custom" && (
               <Input
-                id="customDays"
+                aria-label="Custom expiry in days"
                 type="number"
-                min="1"
-                max="365"
-                placeholder="Enter days (1-365)"
-                value={formData.customDays}
-                onChange={(e) =>
-                  setFormData({ ...formData, customDays: e.target.value })
-                }
+                inputMode="numeric"
+                min={1}
+                max={365}
+                placeholder="Days (1-365)"
+                value={customDays}
+                onChange={(e) => setCustomDays(e.target.value)}
               />
-            </div>
-          )}
-
-          {/* Max Uses Select */}
+            )}
+          </div>
           <div className="space-y-2">
-            <Label htmlFor="maxUses">Usage Limit</Label>
-            <Select
-              value={formData.maxUses}
-              onValueChange={(value) =>
-                setFormData({ ...formData, maxUses: value })
-              }
-            >
-              <SelectTrigger id="maxUses">
-                <SelectValue placeholder="Select usage limit" />
+            <Label htmlFor="invite-uses">Usage limit</Label>
+            <Select value={uses} onValueChange={setUses}>
+              <SelectTrigger id="invite-uses">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="0">Unlimited</SelectItem>
-                <SelectItem value="1">Single Use</SelectItem>
-                <SelectItem value="10">10 Uses</SelectItem>
-                <SelectItem value="25">25 Uses</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
+                {USES_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-          </div>
-
-          {/* Custom Max Uses Input */}
-          {formData.maxUses === "custom" && (
-            <div className="space-y-2">
-              <Label htmlFor="customMaxUses">Custom Usage Limit</Label>
+            {uses === "custom" && (
               <Input
-                id="customMaxUses"
+                aria-label="Custom usage limit"
                 type="number"
-                min="1"
-                max="10000"
-                placeholder="Enter max uses (1-10000)"
-                value={formData.customMaxUses}
-                onChange={(e) =>
-                  setFormData({ ...formData, customMaxUses: e.target.value })
-                }
+                inputMode="numeric"
+                min={1}
+                max={10000}
+                placeholder="Uses (1-10000)"
+                value={customUses}
+                onChange={(e) => setCustomUses(e.target.value)}
               />
-            </div>
-          )}
-
-          {/* Generate Button */}
-          <Button
-            onClick={generateInvite}
-            disabled={isLoading}
-            className="w-full"
-          >
-            {isLoading ? "Generating..." : "Generate Invite Link"}
-          </Button>
-
-          {/* Generated Link Display */}
-          {inviteLink && (
-            <div className="space-y-2">
-              <Label>Generated Link</Label>
-              <div className="flex space-x-2">
-                <Input value={inviteLink} readOnly />
-                <Button onClick={copyToClipboard}>Copy</Button>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+        <Button type="submit" disabled={pending} className="w-full sm:w-auto">
+          <Link2 aria-hidden="true" />
+          {pending ? "Creating…" : "Create invite link"}
+        </Button>
+      </form>
+
+      {createdLink && (
+        <div
+          role="status"
+          className="osrs-slot flex flex-col gap-2 rounded-sm p-3 sm:flex-row sm:items-center"
+        >
+          <Label htmlFor="invite-created-link" className="sr-only">
+            New invite link
+          </Label>
+          <Input
+            id="invite-created-link"
+            readOnly
+            value={createdLink}
+            onFocus={(e) => e.currentTarget.select()}
+          />
+          <Button
+            type="button"
+            onClick={() => void copy(createdLink)}
+            className="w-full sm:w-auto"
+          >
+            {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+            {copied ? "Copied" : "Copy"}
+          </Button>
+        </div>
+      )}
+    </div>
   )
 }
