@@ -5,6 +5,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTableCreator,
   primaryKey,
@@ -1186,5 +1187,42 @@ export const discordWebhooksRelations = relations(
       fields: [discordWebhooks.createdBy],
       references: [users.id],
     }),
+  })
+)
+
+/**
+ * Append-only trail of super-admin mutations. `actor_id` deliberately has no
+ * foreign key: rows must survive deletion of the actor (or of the target), so
+ * the log stays readable through `actor_label` / `target_label`.
+ * `before` / `after` hold only allowlisted, non-sensitive fields (never
+ * password hashes or tokens; emails are masked).
+ */
+export const adminAuditLog = createTable(
+  "admin_audit_log",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    actorId: text("actor_id"),
+    actorLabel: text("actor_label"),
+    action: text("action").notNull(),
+    targetType: text("target_type").notNull(),
+    targetId: text("target_id"),
+    targetLabel: text("target_label"),
+    before: jsonb("before").$type<Record<string, unknown> | null>(),
+    after: jsonb("after").$type<Record<string, unknown> | null>(),
+    reason: text("reason"),
+    outcome: text("outcome").$type<"success" | "denied" | "failed">().notNull(),
+    requestId: text("request_id"),
+    ip: text("ip"),
+  },
+  (table) => ({
+    createdAtIdx: index("admin_audit_created_at_idx").on(table.createdAt.desc()),
+    actorIdx: index("admin_audit_actor_idx").on(table.actorId),
+    targetIdx: index("admin_audit_target_idx").on(
+      table.targetType,
+      table.targetId
+    ),
   })
 )
