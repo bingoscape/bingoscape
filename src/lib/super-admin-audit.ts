@@ -1,3 +1,4 @@
+import { isUuid, type RawSearchParams } from "@/lib/admin-list-params"
 import { maskEmail } from "@/lib/super-admin-email"
 import { userLabel } from "@/lib/super-admin-format"
 
@@ -102,4 +103,35 @@ export function targetIdFromInput(input: unknown): string | null {
     if (typeof value === "string") return value.slice(0, 64)
   }
   return null
+}
+
+export interface AuditFilters {
+  action: string | null
+  actorId: string | null
+  targetType: AuditTargetType | null
+  targetId: string | null
+}
+
+const ACTION_RE = /^[a-z]{1,20}(\.[a-z]{1,20}){1,2}$/
+const TARGET_ID_RE = /^[0-9a-zA-Z-]{1,64}$/
+
+function firstParam(value: string | string[] | undefined) {
+  return (Array.isArray(value) ? value[0] : value)?.trim()
+}
+
+/** Reads `?action=&actor=&targetType=&targetId=`; anything malformed is ignored. */
+export function parseAuditFilters(raw: RawSearchParams): AuditFilters {
+  const action = firstParam(raw.action)
+  const actor = firstParam(raw.actor)
+  const targetType = firstParam(raw.targetType)
+  const targetId = firstParam(raw.targetId)
+  return {
+    action: action && ACTION_RE.test(action) ? action : null,
+    actorId: actor && isUuid(actor) ? actor : null,
+    targetType:
+      targetType === "user" || targetType === "clan" || targetType === "event"
+        ? targetType
+        : null,
+    targetId: targetId && TARGET_ID_RE.test(targetId) ? targetId : null,
+  }
 }

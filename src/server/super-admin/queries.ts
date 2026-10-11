@@ -29,6 +29,7 @@ import {
   events,
   submissions,
   teamMembers,
+  adminAuditLog,
   teamTileSubmissions,
   teams,
   tiles,
@@ -44,6 +45,7 @@ import {
   type ListParams,
   type SortDir,
 } from "@/lib/admin-list-params"
+import type { AuditFilters } from "@/lib/super-admin-audit"
 import type { SelectOption, UserRef } from "@/lib/super-admin-format"
 
 /* -------------------------------------------------------------------------- */
@@ -1182,5 +1184,97 @@ export async function getEventStructure(
     boards: boardRows,
     teamTotal: teamTotal?.total ?? 0,
     boardTotal: boardTotal?.total ?? 0,
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Audit log                                                                   */
+/* -------------------------------------------------------------------------- */
+
+export const AUDIT_LIST_CONFIG = {
+  sortKeys: ["time"],
+  defaultSort: "time",
+  defaultDir: "desc",
+  filters: ["success", "denied", "failed"],
+} as const satisfies ListConfig<"time">
+
+export type AuditSortKey = (typeof AUDIT_LIST_CONFIG.sortKeys)[number]
+
+export interface AuditRow {
+  id: string
+  createdAt: Date
+  actorId: string | null
+  actorLabel: string | null
+  action: string
+  targetType: string
+  targetId: string | null
+  targetLabel: string | null
+  outcome: string
+  reason: string | null
+  before: Record<string, unknown> | null
+  after: Record<string, unknown> | null
+}
+
+/** Read-only audit trail. `q` matches the action and the target / actor labels. */
+export async function listAuditLog(
+  params: ListParams<AuditSortKey>,
+  filters: AuditFilters
+): Promise<Paged<AuditRow>> {
+  await requireSuperAdmin()
+
+  const searchFilter = params.q
+    ? or(
+        ilike(adminAuditLog.action, containsPattern(params.q)),
+        ilike(adminAuditLog.targetLabel, containsPattern(params.q)),
+        ilike(adminAuditLog.actorLabel, containsPattern(params.q))
+      )
+    : undefined
+  const where = and(
+    searchFilter,
+    params.filter
+      ? sql`${adminAuditLog.outcome} = ${params.filter}`
+      : undefined,
+    filters.action ? eq(adminAuditLog.action, filters.action) : undefined,
+    filters.actorId ? eq(adminAuditLog.actorId, filters.actorId) : undefined,
+    filters.targetType
+      ? eq(adminAuditLog.targetType, filters.targetType)
+      : undefined,
+    filters.targetId ? eq(adminAuditLog.targetId, filters.targetId) : undefined
+  )
+
+  const [totalRow] = await db
+    .select({ total: count() })
+    .from(adminAuditLog)
+    .where(where)
+  const totalCount = totalRow?.total ?? 0
+  const { totalPages, page, offset } = paginate(totalCount, params.page)
+
+  const rows = await db
+    .select({
+      id: adminAuditLog.id,
+      createdAt: adminAuditLog.createdAt,
+      actorId: adminAuditLog.actorId,
+      actorLabel: adminAuditLog.actorLabel,
+      action: adminAuditLog.action,
+      targetType: adminAuditLog.targetType,
+      targetId: adminAuditLog.targetId,
+      targetLabel: adminAuditLog.targetLabel,
+      outcome: adminAuditLog.outcome,
+      reason: adminAuditLog.reason,
+      before: adminAuditLog.before,
+      after: adminAuditLog.after,
+    })
+    .from(adminAuditLog)
+    .where(where)
+    .orderBy(...orderBy(adminAuditLog.createdAt, params.dir, adminAuditLog.id))
+    .limit(ADMIN_PAGE_SIZE)
+    .offset(offset)
+
+  return {
+    rows,
+    totalCount,
+    totalPages,
+    page,
+    pageSize: ADMIN_PAGE_SIZE,
   }
 }
