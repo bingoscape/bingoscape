@@ -8,13 +8,6 @@ import { updateEvent } from "@/app/actions/events"
 import { toast } from "@/hooks/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { GPInput } from "@/components/ui/gp-input"
 import {
   CalendarIcon,
@@ -27,6 +20,7 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import { toZonedTime, fromZonedTime } from "date-fns-tz"
+import { TimezoneSelect } from "@/components/timezone-select"
 import { SettingsDialogLayout } from "@/components/settings-dialog-layout"
 import type { Event } from "@/types/model"
 
@@ -170,18 +164,11 @@ export function EditEventModal({
             </div>
             <div className="space-y-2">
               <Label htmlFor="timezone">Event Timezone</Label>
-              <Select value={timezone} onValueChange={setTimezone}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select timezone" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Intl.supportedValuesOf("timeZone").map((tz) => (
-                    <SelectItem key={tz} value={tz}>
-                      {tz}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <TimezoneSelect
+                id="timezone"
+                value={timezone}
+                onValueChange={setTimezone}
+              />
             </div>
           </div>
         </div>

@@ -22,13 +22,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { GPInput } from "@/components/ui/gp-input"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   Info,
   ArrowRight,
   ArrowLeft,
@@ -39,6 +32,7 @@ import {
 } from "lucide-react"
 import { format, differenceInDays, addDays } from "date-fns"
 import { fromZonedTime } from "date-fns-tz"
+import { TimezoneSelect } from "@/components/timezone-select"
 import { cn } from "@/lib/utils"
 
 interface CreateEventModalProps {
@@ -404,18 +398,10 @@ export function CreateEventModal({
                 <div className="space-y-6">
                   <div className="space-y-2">
                     <Label>Event Timezone</Label>
-                    <Select value={timezone} onValueChange={setTimezone}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select timezone" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Intl.supportedValuesOf("timeZone").map((tz) => (
-                          <SelectItem key={tz} value={tz}>
-                            {tz}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <TimezoneSelect
+                      value={timezone}
+                      onValueChange={setTimezone}
+                    />
                   </div>
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
