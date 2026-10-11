@@ -25,102 +25,14 @@ import {
   requireEventManager,
 } from "@/server/authz"
 import type { UUID } from "crypto"
-import { z } from "zod"
+import {
+  CURRENT_EXPORT_VERSION,
+  parseExportedBingo,
+} from "@/lib/bingo-template-schema"
+import type { ExportedBingo } from "@/lib/bingo-template-schema"
+import generateOSRSCodePhrase from "@/lib/codephraseGenerator"
 
-// Define Zod schemas for validation
-const GoalGroupSchema = z.object({
-  localId: z.string(),
-  parentLocalId: z.string().nullable().optional(),
-  name: z.string().nullable().optional(),
-  logicalOperator: z.enum(["AND", "OR", "SUM"]),
-  minRequiredGoals: z.number().default(1),
-  orderIndex: z.number().default(0),
-})
-
-const GoalValueSchema = z.object({
-  value: z.number(),
-  description: z.string(),
-})
-
-const ItemGoalSchema = z.object({
-  itemId: z.number(),
-  baseName: z.string(),
-  exactVariant: z.string().nullable().optional(),
-  imageUrl: z.string(),
-})
-
-const MetricGoalSchema = z.object({
-  metricType: z.string(),
-  metricName: z.string(),
-})
-
-const GoalSchema = z.object({
-  localId: z.string().optional(),
-  parentLocalId: z.string().nullable().optional(),
-  description: z.string(),
-  targetValue: z.number(),
-  goalType: z.enum(["generic", "item", "metric"]).default("generic"),
-  orderIndex: z.number().default(0),
-  itemGoal: ItemGoalSchema.optional(),
-  metricGoal: MetricGoalSchema.optional(),
-  goalValues: z.array(GoalValueSchema).optional(),
-})
-
-const TileSchema = z.object({
-  title: z.string(),
-  description: z.string(),
-  headerImage: z.string().nullable().optional(),
-  weight: z.number(),
-  index: z.number(),
-  isHidden: z.boolean().default(true),
-  tier: z.number().default(0),
-  goalGroups: z.array(GoalGroupSchema).optional(),
-  goals: z.array(GoalSchema).optional(),
-})
-
-const ExportedBingoSchema = z.object({
-  version: z.string(),
-  metadata: z.object({
-    title: z.string(),
-    description: z.string().nullable().optional(),
-    rows: z.number(),
-    columns: z.number(),
-    codephrase: z.string(),
-    bingoType: z.enum(["standard", "progression"]),
-    tiersUnlockRequirement: z.number().optional(),
-    mainDiagonalBonusXP: z.number().optional(),
-    antiDiagonalBonusXP: z.number().optional(),
-    completeBoardBonusXP: z.number().optional(),
-  }),
-  tiles: z.array(TileSchema),
-  tierXpRequirements: z
-    .array(
-      z.object({
-        tier: z.number(),
-        xpRequired: z.number(),
-      })
-    )
-    .optional(),
-  rowBonuses: z
-    .array(
-      z.object({
-        rowIndex: z.number(),
-        bonusXP: z.number(),
-      })
-    )
-    .optional(),
-  columnBonuses: z
-    .array(
-      z.object({
-        columnIndex: z.number(),
-        bonusXP: z.number(),
-      })
-    )
-    .optional(),
-})
-
-// Infer the TypeScript type from the Zod schema
-export type ExportedBingo = z.infer<typeof ExportedBingoSchema>
+export type { ExportedBingo }
 
 /**
  * Export a bingo board to a JSON format that can be imported later
@@ -185,13 +97,13 @@ export async function exportBingoBoard(
 
     // Transform the data into our export format
     const exportData: ExportedBingo = {
-      version: "2.0", // Updated version to support unified data schema
+      version: CURRENT_EXPORT_VERSION,
       metadata: {
         title: bingo.title,
         description: bingo.description,
         rows: bingo.rows,
         columns: bingo.columns,
-        codephrase: bingo.codephrase,
+        // The codephrase is a per-Board secret and is deliberately not exported.
         bingoType: bingo.bingoType,
         ...(bingo.bingoType === "progression" && {
           tiersUnlockRequirement: bingo.tiersUnlockRequirement,
@@ -307,21 +219,29 @@ export async function importBingoBoard(
     }
   }
 
-  // Validate the import data using Zod
-  const validationResult = ExportedBingoSchema.safeParse(importData)
-  if (!validationResult.success) {
-    logger.warn({ issues: validationResult.error.issues }, "Invalid import data")
-    return { success: false, error: "Invalid import data format" }
+  const parsed = parseExportedBingo(importData)
+  if (!parsed.success) {
+    logger.warn({ error: parsed.error }, "Invalid import data")
+    return { success: false, error: parsed.error }
   }
-  
-  const validatedData = validationResult.data
 
-  // Set default values for backwards compatibility
-  const bingoType = validatedData.metadata.bingoType ?? "standard"
+  const validatedData = parsed.data
+
+  // Apply the same Board rules as createBingo.
+  const { rows, columns } = validatedData.metadata
+  const bingoType = validatedData.metadata.bingoType
+  const isSquare = rows === columns
   const tiersUnlockRequirement = validatedData.metadata.tiersUnlockRequirement ?? 5
-  const mainDiagonalBonusXP = validatedData.metadata.mainDiagonalBonusXP ?? 0
-  const antiDiagonalBonusXP = validatedData.metadata.antiDiagonalBonusXP ?? 0
-  const completeBoardBonusXP = validatedData.metadata.completeBoardBonusXP ?? 0
+  const mainDiagonalBonusXP = isSquare
+    ? (validatedData.metadata.mainDiagonalBonusXP ?? 0)
+    : 0
+  const antiDiagonalBonusXP = isSquare
+    ? (validatedData.metadata.antiDiagonalBonusXP ?? 0)
+    : 0
+  const completeBoardBonusXP =
+    bingoType === "standard"
+      ? (validatedData.metadata.completeBoardBonusXP ?? 0)
+      : 0
 
   try {
     return await db.transaction(async (tx) => {
@@ -334,7 +254,8 @@ export async function importBingoBoard(
           description: validatedData.metadata.description,
           rows: validatedData.metadata.rows,
           columns: validatedData.metadata.columns,
-          codephrase: validatedData.metadata.codephrase,
+          // Never reuse the source Board's codephrase: it is a per-Board secret.
+          codephrase: generateOSRSCodePhrase(),
           bingoType: bingoType,
           tiersUnlockRequirement: tiersUnlockRequirement,
           mainDiagonalBonusXP: mainDiagonalBonusXP,
@@ -412,14 +333,21 @@ export async function importBingoBoard(
           }
 
           if (pendingGroups.length > 0) {
-            logger.warn("Some goal groups could not be imported due to unresolvable parent references")
+            throw new Error(
+              "Goal groups contain a circular or unresolvable parent reference"
+            )
           }
         }
 
         // Create all the goals for this tile
         if (tileData.goals && tileData.goals.length > 0) {
           for (const goal of tileData.goals) {
-            const parentId = goal.parentLocalId ? localToDbGroupId.get(goal.parentLocalId) : null
+            const parentId = goal.parentLocalId
+              ? localToDbGroupId.get(goal.parentLocalId)
+              : null
+            if (goal.parentLocalId && !parentId) {
+              throw new Error("Goal references a group that could not be imported")
+            }
 
             const [newGoal] = await tx
               .insert(goals)
@@ -467,14 +395,27 @@ export async function importBingoBoard(
       }
 
       // Create tier XP requirements for progression boards
-      if (bingoType === "progression" && validatedData.tierXpRequirements) {
-        const tierXpReqsToInsert = validatedData.tierXpRequirements.map((req) => ({
-          bingoId: newBingo.id,
-          tier: req.tier,
-          xpRequired: req.xpRequired,
-        }))
+      if (bingoType === "progression") {
+        // Templates without explicit requirements fall back to the Board's
+        // unlock requirement for every tier except the last.
+        const tierXpReqsToInsert = validatedData.tierXpRequirements?.length
+          ? validatedData.tierXpRequirements.map((req) => ({
+              bingoId: newBingo.id,
+              tier: req.tier,
+              xpRequired: req.xpRequired,
+            }))
+          : [...new Set(validatedData.tiles.map((t) => t.tier ?? 0))]
+              .sort((a, b) => a - b)
+              .slice(0, -1)
+              .map((tier) => ({
+                bingoId: newBingo.id,
+                tier,
+                xpRequired: tiersUnlockRequirement,
+              }))
 
-        await tx.insert(tierXpRequirements).values(tierXpReqsToInsert)
+        if (tierXpReqsToInsert.length > 0) {
+          await tx.insert(tierXpRequirements).values(tierXpReqsToInsert)
+        }
       }
 
       // Create row bonuses for standard boards
@@ -528,16 +469,8 @@ export async function importBingoBoard(
 export async function validateImportData(
   data: unknown
 ): Promise<{ valid: boolean; error?: string }> {
-  try {
-    const result = ExportedBingoSchema.safeParse(data)
-    if (!result.success) {
-      return { 
-        valid: false, 
-        error: "Invalid import data format: " + result.error.errors.map(e => e.message).join(", ") 
-      }
-    }
-    return { valid: true }
-  } catch (_error) {
-    return { valid: false, error: "Error validating import data" }
-  }
+  const result = parseExportedBingo(data)
+  return result.success
+    ? { valid: true }
+    : { valid: false, error: result.error }
 }
