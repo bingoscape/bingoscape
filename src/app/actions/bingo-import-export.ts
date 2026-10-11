@@ -32,8 +32,6 @@ import {
 import type { ExportedBingo } from "@/lib/bingo-template-schema"
 import generateOSRSCodePhrase from "@/lib/codephraseGenerator"
 
-export type { ExportedBingo }
-
 /**
  * Export a bingo board to a JSON format that can be imported later
  */
