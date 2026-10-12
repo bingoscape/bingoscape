@@ -57,6 +57,11 @@ interface MetricComboboxProps {
   onValueChange: (metric: string) => void
   /** Focus the search field on mount. */
   autoFocus?: boolean
+  /**
+   * Move focus to the Change button after a pick (default). Turn off when the
+   * caller moves focus on itself, e.g. to the target field.
+   */
+  focusChangeAfterPick?: boolean
 }
 
 /**
@@ -70,6 +75,7 @@ export function MetricCombobox({
   value,
   onValueChange,
   autoFocus = false,
+  focusChangeAfterPick = true,
 }: MetricComboboxProps) {
   const copy = getMetricTargetCopy(metricType)
   const noun = copy.nameLabel.toLowerCase()
@@ -137,7 +143,7 @@ export function MetricCombobox({
                   value={metric}
                   keywords={[getMetricName(metric)]}
                   onSelect={() => {
-                    focusChangeButton.current = true
+                    focusChangeButton.current = focusChangeAfterPick
                     setChanging(false)
                     setSearch("")
                     onValueChange(metric)
