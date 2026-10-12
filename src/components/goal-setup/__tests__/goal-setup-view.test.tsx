@@ -645,7 +645,8 @@ describe("GoalSetupView: keyboard", () => {
 
   it("makes a row the tab stop when focus enters it by other means", () => {
     renderView()
-    screen.getByRole("button", { name: "Add goals to Nex" }).focus()
+    const button = screen.getByRole("button", { name: "Add goals to Nex" })
+    act(() => button.focus())
     expect(row("Nex")).toHaveAttribute("tabindex", "0")
     expect(row("Fire cape")).toHaveAttribute("tabindex", "-1")
   })
@@ -774,6 +775,7 @@ describe("GoalSetupView: apply a goal to the selected tiles", () => {
   }
 
   it("opens a dialog titled with the number of tiles, on the new goals tab", async () => {
+    renderView()
     const dialog = await openApplyDialog("Dragon pickaxe", "Nex")
     expect(
       dialog.getByRole("heading", { name: "Apply a goal to 2 selected tiles" })
@@ -788,6 +790,7 @@ describe("GoalSetupView: apply a goal to the selected tiles", () => {
   })
 
   it("collects goals first: nothing is sent while adding", async () => {
+    renderView()
     const dialog = await openApplyDialog("Dragon pickaxe", "Nex")
     await stageTask(dialog, "Get a pet")
 
@@ -801,6 +804,7 @@ describe("GoalSetupView: apply a goal to the selected tiles", () => {
   })
 
   it("lets a collected goal be removed", async () => {
+    renderView()
     const dialog = await openApplyDialog("Nex")
     await stageTask(dialog, "Get a pet")
 
@@ -812,6 +816,7 @@ describe("GoalSetupView: apply a goal to the selected tiles", () => {
   })
 
   it("asks for a goal before reviewing", async () => {
+    renderView()
     const dialog = await openApplyDialog("Nex")
     fireEvent.click(dialog.getByRole("button", { name: "Review" }))
     expect(dialog.getByRole("alert")).toHaveTextContent(
@@ -821,6 +826,7 @@ describe("GoalSetupView: apply a goal to the selected tiles", () => {
   })
 
   it("states exactly what will be added to how many tiles before applying", async () => {
+    renderView()
     const dialog = await openApplyDialog("Dragon pickaxe", "Nex")
     await stageTask(dialog, "Get a pet")
     await stageTask(dialog, "Do a raid")
@@ -851,6 +857,7 @@ describe("GoalSetupView: apply a goal to the selected tiles", () => {
   })
 
   it("says existing goals stay when a selected tile already has some", async () => {
+    renderView()
     const dialog = await openApplyDialog("Fire cape", "Nex")
     await stageTask(dialog)
 
@@ -891,6 +898,7 @@ describe("GoalSetupView: apply a goal to the selected tiles", () => {
 
   it("clears the selection once applied and closes with Done", async () => {
     mockedApply.mockResolvedValue(SUCCESS)
+    renderView()
     const dialog = await openApplyDialog("Dragon pickaxe", "Nex")
     await stageTask(dialog)
     fireEvent.click(dialog.getByRole("button", { name: "Review" }))
@@ -908,6 +916,7 @@ describe("GoalSetupView: apply a goal to the selected tiles", () => {
   it("shows a pending state while the server works and blocks a second click", async () => {
     const pending = deferred<unknown>()
     mockedApply.mockReturnValue(pending.promise)
+    renderView()
     const dialog = await openApplyDialog("Dragon pickaxe", "Nex")
     await stageTask(dialog)
     fireEvent.click(dialog.getByRole("button", { name: "Review" }))
@@ -996,6 +1005,7 @@ describe("GoalSetupView: apply a goal to the selected tiles", () => {
   it("reports an unreachable server without throwing", async () => {
     const consoleError = jest.spyOn(console, "error").mockImplementation()
     mockedApply.mockRejectedValue(new Error("network down"))
+    renderView()
     const dialog = await openApplyDialog("Nex")
     await stageTask(dialog)
     fireEvent.click(dialog.getByRole("button", { name: "Review" }))
@@ -1015,6 +1025,7 @@ describe("GoalSetupView: apply a goal to the selected tiles", () => {
       goalsCreated: 6,
       groupsCreated: 2,
     })
+    renderView()
     const dialog = await openApplyDialog("Dragon pickaxe", "Nex")
     fireEvent.mouseDown(
       dialog.getByRole("tab", { name: "Copy a tile's goals" }),
@@ -1043,6 +1054,7 @@ describe("GoalSetupView: apply a goal to the selected tiles", () => {
   })
 
   it("does not offer a selected tile as the copy source", async () => {
+    renderView()
     const dialog = await openApplyDialog("Fire cape", "Nex")
     fireEvent.mouseDown(
       dialog.getByRole("tab", { name: "Copy a tile's goals" }),
