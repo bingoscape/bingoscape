@@ -10,11 +10,13 @@ import { canReadGoal, canReadTile } from "@/server/authz"
 import {
   applyBlindBoard,
   blindTileTitle,
-  isBingoBlindForViewer,
   isBlindBoard,
-  isTileBlindForViewer,
   redactBlindTile,
 } from "@/server/blind-board"
+import {
+  isBingoBlindForViewer,
+  isTileBlindForViewer,
+} from "@/server/blind-board-viewer"
 import {
   createBlindFixture,
   type BlindFixture,

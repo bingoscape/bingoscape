@@ -38,6 +38,7 @@ import {
   eventRules,
 } from "@/server/db/schema"
 import { logger } from "@/lib/logger"
+import { applyBlindBoard, isBlindBoard } from "@/server/blind-board"
 
 import type { Event } from "@/types/model"
 
@@ -2367,7 +2368,8 @@ export async function getMiniBoardTiles(bingoId: string) {
 
   const bingo = await db.query.bingos.findFirst({
     where: eq(bingos.id, bingoId),
-    columns: { eventId: true, visible: true },
+    columns: { eventId: true, visible: true, bingoType: true },
+    with: { event: { columns: { startDate: true } } },
   })
 
   if (!bingo || !bingo.visible) return []
@@ -2401,11 +2403,19 @@ export async function getMiniBoardTiles(bingoId: string) {
     orderBy: (tiles, { asc }) => [asc(tiles.index)],
   })
 
-  // Hidden Tiles keep their grid cell but never leak their content.
-  const allTiles = rawTiles.map((tile) =>
-    tile.isHidden && !callerIsManager
-      ? { ...tile, title: "", headerImage: null }
-      : tile
+  // Hidden Tiles keep their grid cell but never leak their content, and a
+  // battleship Board is blind until its Event starts.
+  const allTiles = applyBlindBoard(
+    rawTiles.map((tile) =>
+      tile.isHidden && !callerIsManager
+        ? { ...tile, title: "", headerImage: null }
+        : tile
+    ),
+    isBlindBoard({
+      bingoType: bingo.bingoType,
+      startDate: bingo.event.startDate,
+      isManager: callerIsManager,
+    })
   )
 
   if (!teamId) {

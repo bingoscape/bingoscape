@@ -1,9 +1,7 @@
-import { eq, lte, ne, sql, type SQL } from "drizzle-orm"
+import { lte, ne, sql, type SQL } from "drizzle-orm"
 
-import { getUserRole } from "@/app/actions/events"
 import { hasEventStarted } from "@/lib/event-status"
-import { db } from "@/server/db"
-import { bingos, events, tiles, type BingoType } from "@/server/db/schema"
+import { bingos, events, type BingoType } from "@/server/db/schema"
 
 /**
  * Blind boards: until the Event starts, a battleship Board hides the content of
@@ -22,7 +20,9 @@ import { bingos, events, tiles, type BingoType } from "@/server/db/schema"
  * server, before data reaches the client.
  *
  * This file is intentionally not a "use server" module: nothing here is
- * callable from the client.
+ * callable from the client. It is pure (no session, no queries) so routes and
+ * libraries can use it freely; the helpers that resolve the signed-in viewer
+ * from the database live in `blind-board-viewer.ts`.
  */
 
 /** What decides whether a Board is blind for a viewer. */
@@ -110,43 +110,6 @@ export function applyBlindBoard<T extends BlindRedactableTile>(
   return boardTiles.map((tile) =>
     blind ? redactBlindTile(tile) : { ...tile, isBlind: false }
   )
-}
-
-/** True when the signed-in caller manages the Event (admin or management). */
-async function callerManagesEvent(eventId: string): Promise<boolean> {
-  const role = await getUserRole(eventId)
-  return role === "admin" || role === "management"
-}
-
-/** Whether the Board is blind for the signed-in caller. Unknown Boards are not. */
-export async function isBingoBlindForViewer(
-  bingoId: string
-): Promise<boolean> {
-  const bingo = await db.query.bingos.findFirst({
-    where: eq(bingos.id, bingoId),
-    columns: { bingoType: true, eventId: true },
-    with: { event: { columns: { startDate: true } } },
-  })
-  if (!bingo) return false
-
-  const blindForNonManagers = isBlindBoard({
-    bingoType: bingo.bingoType,
-    startDate: bingo.event.startDate,
-    isManager: false,
-  })
-  if (!blindForNonManagers) return false
-
-  return !(await callerManagesEvent(bingo.eventId))
-}
-
-/** Like `isBingoBlindForViewer`, starting from a Tile. Unknown Tiles are not blind. */
-export async function isTileBlindForViewer(tileId: string): Promise<boolean> {
-  const tile = await db.query.tiles.findFirst({
-    where: eq(tiles.id, tileId),
-    columns: { bingoId: true },
-  })
-  if (!tile) return false
-  return isBingoBlindForViewer(tile.bingoId)
 }
 
 /**
