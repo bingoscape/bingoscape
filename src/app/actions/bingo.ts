@@ -3,6 +3,8 @@
 
 import { db } from "@/server/db"
 import {
+  bingoTypeEnum,
+  type BingoType,
   bingos,
   goals,
   itemGoals,
@@ -44,6 +46,17 @@ import {
   requireBingoAdminForTile,
   requireTeamMemberOrManager,
 } from "@/server/authz"
+import {
+  assertBattleshipLayoutEditable,
+  assertEventFitsBattleship,
+  assertTilesCarryNoShip,
+  BattleshipRuleError,
+  battleshipErrorMessage,
+  defaultShipRules,
+  insertBingoShipRules,
+  parseShipRulesJson,
+} from "@/server/battleship"
+import { validateShipRulesFitBoard } from "@/lib/ship-rules"
 import { createNotification } from "./notifications"
 import { getServerAuthSession } from "@/server/auth"
 import getRandomFrog from "@/lib/getRandomFrog"
@@ -238,6 +251,20 @@ export async function updateTile(
       ...safeUpdate
     } = updatedTile
     await db.transaction(async (tx) => {
+      // Moving or hiding a tile must not invalidate battleship ship placements.
+      if (safeUpdate.index !== undefined) {
+        const [tile] = await tx
+          .select({ bingoId: tiles.bingoId, index: tiles.index })
+          .from(tiles)
+          .where(eq(tiles.id, tileId))
+        if (tile && tile.index !== safeUpdate.index) {
+          await assertBattleshipLayoutEditable(tx, tile.bingoId)
+        }
+      }
+      if (safeUpdate.isHidden === true) {
+        await assertTilesCarryNoShip(tx, [tileId])
+      }
+
       await tx
         .update(tiles)
         .set({ ...safeUpdate, updatedAt: new Date() })
@@ -248,7 +275,10 @@ export async function updateTile(
     return { success: true }
   } catch (error) {
     logger.error({ error, tileId, action: "updateTile" }, "Error updating tile")
-    return { success: false, error: "Failed to update tile" }
+    return {
+      success: false,
+      error: battleshipErrorMessage(error, "Failed to update tile"),
+    }
   }
 }
 
@@ -262,6 +292,12 @@ export async function reorderTiles(
     if (!firstTileId) return { success: false, error: "No tiles provided" }
     await requireBingoAdminForTile(firstTileId)
     await db.transaction(async (tx) => {
+      const [first] = await tx
+        .select({ bingoId: tiles.bingoId })
+        .from(tiles)
+        .where(eq(tiles.id, firstTileId))
+      if (first) await assertBattleshipLayoutEditable(tx, first.bingoId)
+
       for (const tile of reorderedTiles) {
         await tx
           .update(tiles)
@@ -272,7 +308,10 @@ export async function reorderTiles(
     return { success: true }
   } catch (error) {
     logger.error({ error }, "Error reordering tiles")
-    return { success: false, error: "Failed to reorder tiles" }
+    return {
+      success: false,
+      error: battleshipErrorMessage(error, "Failed to reorder tiles"),
+    }
   }
 }
 
@@ -296,8 +335,9 @@ export async function createBingo(formData: FormData) {
   const rowsStr = formData.get("rows") as string
   const columnsStr = formData.get("columns") as string
   const codephrase = formData.get("codephrase") as string
-  const bingoType =
-    (formData.get("bingoType") as "standard" | "progression") || "standard"
+  const bingoTypeRaw = (formData.get("bingoType") as string | null) || "standard"
+  const bingoType = bingoTypeEnum.enumValues.find((t) => t === bingoTypeRaw)
+  if (!bingoType) return { success: false, error: "Invalid bingo type" }
   const tiersUnlockRequirementStr = formData.get(
     "tiersUnlockRequirement"
   ) as string
@@ -327,6 +367,16 @@ export async function createBingo(formData: FormData) {
     return { success: false, error: "Event not found" }
   }
 
+  // Battleship boards carry a fleet and play without pattern bonuses.
+  let shipRules = defaultShipRules
+  if (bingoType === "battleship") {
+    const supplied = parseShipRulesJson(formData.get("shipRules"))
+    if (supplied === null) return { success: false, error: "Invalid ship rules" }
+    if (supplied) shipRules = supplied
+    const fitError = validateShipRulesFitBoard(shipRules, rows, columns)
+    if (fitError) return { success: false, error: fitError }
+  }
+
   // Parse pattern bonuses
   const mainDiagonalBonus =
     parseInt((formData.get("mainDiagonalBonus") as string) || "0") || 0
@@ -342,6 +392,10 @@ export async function createBingo(formData: FormData) {
 
   try {
     await db.transaction(async (tx) => {
+      if (bingoType === "battleship") {
+        await assertEventFitsBattleship(tx, eventId)
+      }
+
       const newBingo = await tx
         .insert(bingos)
         .values({
@@ -353,8 +407,14 @@ export async function createBingo(formData: FormData) {
           columns,
           bingoType,
           tiersUnlockRequirement,
-          mainDiagonalBonusXP: rows === columns ? mainDiagonalBonus : 0,
-          antiDiagonalBonusXP: rows === columns ? antiDiagonalBonus : 0,
+          mainDiagonalBonusXP:
+            rows === columns && bingoType !== "battleship"
+              ? mainDiagonalBonus
+              : 0,
+          antiDiagonalBonusXP:
+            rows === columns && bingoType !== "battleship"
+              ? antiDiagonalBonus
+              : 0,
           completeBoardBonusXP:
             bingoType === "standard" ? completeBoardBonus : 0,
           scheduledUnlockDate,
@@ -424,6 +484,10 @@ export async function createBingo(formData: FormData) {
         }
       }
 
+      if (bingoType === "battleship") {
+        await insertBingoShipRules(tx, bingoId, shipRules)
+      }
+
       logger.info(
         {
           eventId,
@@ -440,7 +504,10 @@ export async function createBingo(formData: FormData) {
     return { success: true }
   } catch (error) {
     logger.error({ error }, "Error creating bingo")
-    return { success: false, error: "Failed to create bingo" }
+    return {
+      success: false,
+      error: battleshipErrorMessage(error, "Failed to create bingo"),
+    }
   }
 }
 
@@ -1857,6 +1924,7 @@ export async function addRowOrColumn(
   try {
     await requireBingoAdmin(bingoId)
     return await db.transaction(async (tx) => {
+      await assertBattleshipLayoutEditable(tx, bingoId)
       const [bingo] = await tx
         .select()
         .from(bingos)
@@ -1911,7 +1979,10 @@ export async function addRowOrColumn(
     })
   } catch (error) {
     logger.error({ error }, "Error adding row or column")
-    return { success: false, error: "Failed to add row or column" }
+    return {
+      success: false,
+      error: battleshipErrorMessage(error, "Failed to add row or column"),
+    }
   }
 }
 
@@ -1919,8 +1990,12 @@ export async function deleteTile(tileId: string, bingoId: string) {
   try {
     await requireBingoAdmin(bingoId)
     await db.transaction(async (tx) => {
-      // Delete the tile
-      await tx.delete(tiles).where(eq(tiles.id, tileId))
+      await assertBattleshipLayoutEditable(tx, bingoId)
+
+      // Delete the tile (scoped to the board the caller was authorized for)
+      await tx
+        .delete(tiles)
+        .where(and(eq(tiles.id, tileId), eq(tiles.bingoId, bingoId)))
 
       // Get remaining tiles
       const remainingTiles = await tx
@@ -1953,7 +2028,10 @@ export async function deleteTile(tileId: string, bingoId: string) {
     return { success: true }
   } catch (error) {
     logger.error({ error }, "Error deleting tile")
-    return { success: false, error: "Failed to delete tile" }
+    return {
+      success: false,
+      error: battleshipErrorMessage(error, "Failed to delete tile"),
+    }
   }
 }
 
@@ -1961,6 +2039,7 @@ export async function addTile(bingoId: string): Promise<AddRowOrColumnResult> {
   try {
     await requireBingoAdmin(bingoId)
     return await db.transaction(async (tx) => {
+      await assertBattleshipLayoutEditable(tx, bingoId)
       const [bingo] = await tx
         .select()
         .from(bingos)
@@ -2004,7 +2083,10 @@ export async function addTile(bingoId: string): Promise<AddRowOrColumnResult> {
     })
   } catch (error) {
     logger.error({ error }, "Error adding tile")
-    return { success: false, error: "Failed to add tile" }
+    return {
+      success: false,
+      error: battleshipErrorMessage(error, "Failed to add tile"),
+    }
   }
 }
 
@@ -2015,6 +2097,7 @@ export async function deleteRowOrColumn(
   try {
     await requireBingoAdmin(bingoId)
     return await db.transaction(async (tx) => {
+      await assertBattleshipLayoutEditable(tx, bingoId)
       const [bingo] = await tx
         .select()
         .from(bingos)
@@ -2084,7 +2167,10 @@ export async function deleteRowOrColumn(
     })
   } catch (error) {
     logger.error({ error, type }, `Error deleting ${type}`)
-    return { success: false, error: `Failed to delete ${type}` }
+    return {
+      success: false,
+      error: battleshipErrorMessage(error, `Failed to delete ${type}`),
+    }
   }
 }
 
@@ -2094,7 +2180,7 @@ interface UpdateBingoData {
   visible: boolean
   locked: boolean
   codephrase: string
-  bingoType?: "standard" | "progression"
+  bingoType?: BingoType
   tiersUnlockRequirement?: number
 }
 
@@ -2117,6 +2203,24 @@ export async function updateBingo(
   try {
     await requireBingoAdmin(bingoId)
     await db.transaction(async (tx) => {
+      if (data.bingoType !== undefined) {
+        const [current] = await tx
+          .select({ bingoType: bingos.bingoType })
+          .from(bingos)
+          .where(eq(bingos.id, bingoId))
+          .for("no key update")
+        if (
+          current &&
+          current.bingoType !== data.bingoType &&
+          (current.bingoType === "battleship" ||
+            data.bingoType === "battleship")
+        ) {
+          throw new BattleshipRuleError(
+            "A board cannot be changed to or from the battleship type"
+          )
+        }
+      }
+
       const updateData: any = {
         title: data.title,
         description: data.description,
@@ -2234,7 +2338,10 @@ export async function updateBingo(
     return { success: true }
   } catch (error) {
     logger.error({ error }, "Error updating bingo")
-    return { success: false, error: "Failed to update bingo" }
+    return {
+      success: false,
+      error: battleshipErrorMessage(error, "Failed to update bingo"),
+    }
   }
 }
 
