@@ -86,7 +86,7 @@ export async function GET(req: Request) {
         // Process each bingo to get the correct tiles and data
         const processedBingos = await Promise.all(
           eventData.bingos.map(async (bingo) => {
-            return await formatBingoData(bingo, userTeam ?? null)
+            return await formatBingoData(bingo, userTeam ?? null, { userId })
           })
         )
 

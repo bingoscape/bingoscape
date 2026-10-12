@@ -1,13 +1,17 @@
 import { db } from "@/server/db"
 import {
+  events,
   tiles,
   teamTileSubmissions,
   goalGroups,
   goals,
   teamGoalProgress,
+  eventParticipants,
   type BingoType,
 } from "@/server/db/schema"
 import { eq, asc, and, inArray } from "drizzle-orm"
+import { applyBlindBoard, isBlindBoard } from "@/server/blind-board"
+import { getBattleshipTeamSummary } from "@/server/battleship"
 import { mapStatus } from "@/lib/statusMapping"
 import {
   getTierEarnedXp,
@@ -47,6 +51,12 @@ export interface FormattedBingo {
      * neutral default (no title, description, image, goals or weight).
      */
     tierLocked: boolean
+    /**
+     * Battleship boards before the event starts, for a viewer who does not
+     * manage the event: the Tile's content is redacted (placeholder title, no
+     * description, image, goals, weight or progress). Always false otherwise.
+     */
+    isBlind: boolean
     submission: {
       id: string
       status:
@@ -103,6 +113,22 @@ export interface FormattedBingo {
       xpRequired: number
     }>
   }
+  /** Only on battleship boards; always about the caller's own team. */
+  battleship?: {
+    started: boolean
+    startDate: Date
+    serverNow: Date
+    rules: Array<{ length: number; count: number }>
+    /** Hits, misses and sunk ships of the caller's team; empty before the start. */
+    marks: {
+      hitTileIds: string[]
+      missTileIds: string[]
+      sunkTileIds: string[]
+    }
+    /** Counts only: no position of an opponent ship ever leaves the server. */
+    opponentShipsSunk: number
+    opponentShipsTotal: number
+  }
 }
 
 interface TileWithGoals {
@@ -115,6 +141,7 @@ interface TileWithGoals {
   tier: number
   isHidden: boolean
   tierLocked?: boolean
+  isBlind?: boolean
   teamTileSubmissions?: Array<{ teamId: string; status: string }>
   goals?: Array<{
     id: string
@@ -142,9 +169,43 @@ function toLockedStub(tile: TileWithGoals): TileWithGoals {
   }
 }
 
+/**
+ * Who the board is formatted for: the RuneLite API key's user. Decides whether
+ * a blind battleship board is redacted (managers see it unredacted).
+ */
+export interface BingoViewer {
+  userId: string
+}
+
+/** The event's start date and whether the viewer manages it. */
+async function loadEventViewerContext(eventId: string, userId: string) {
+  const [event, participant] = await Promise.all([
+    db.query.events.findFirst({
+      where: eq(events.id, eventId),
+      columns: { startDate: true, creatorId: true },
+    }),
+    db.query.eventParticipants.findFirst({
+      where: and(
+        eq(eventParticipants.eventId, eventId),
+        eq(eventParticipants.userId, userId)
+      ),
+      columns: { role: true },
+    }),
+  ])
+  if (!event) return null
+  return {
+    startDate: event.startDate,
+    isManager:
+      event.creatorId === userId ||
+      participant?.role === "admin" ||
+      participant?.role === "management",
+  }
+}
+
 export async function formatBingoData(
   bingo: {
     id: string
+    eventId: string
     title: string
     description: string | null
     rows: number
@@ -161,8 +222,22 @@ export async function formatBingoData(
         runescapeName: string | null
       }
     }>
-  } | null
+  } | null,
+  viewer: BingoViewer
 ): Promise<FormattedBingo> {
+  const eventContext =
+    bingo.bingoType === "battleship"
+      ? await loadEventViewerContext(bingo.eventId, viewer.userId)
+      : null
+  // Unknown event: redact, never the other way around.
+  const blind = eventContext
+    ? isBlindBoard({
+        bingoType: bingo.bingoType,
+        startDate: eventContext.startDate,
+        isManager: eventContext.isManager,
+      })
+    : bingo.bingoType === "battleship"
+
   // Get tiles based on bingo type - for progressive bingos, filter by unlocked tiers
   let bingoTiles: TileWithGoals[]
   let tierXpRequirements = null
@@ -187,17 +262,21 @@ export async function formatBingoData(
     bingoTiles = []
   } else {
     // Standard bingo - get all tiles
-    bingoTiles = await db.query.tiles.findMany({
-      where: eq(tiles.bingoId, bingo.id),
-      orderBy: [asc(tiles.index)],
-      with: {
-        goals: true,
-      },
-    })
+    bingoTiles = applyBlindBoard(
+      await db.query.tiles.findMany({
+        where: eq(tiles.bingoId, bingo.id),
+        orderBy: [asc(tiles.index)],
+        with: {
+          goals: true,
+        },
+      }),
+      blind
+    )
   }
 
-  // Get all team tile submissions for this team
-  const teamSubmissions = userTeam
+  // Get all team tile submissions for this team. A blind board shows none:
+  // their status, images and goal progress would give the Tiles away.
+  const teamSubmissions = userTeam && !blind
     ? await db.query.teamTileSubmissions.findMany({
         where: eq(teamTileSubmissions.teamId, userTeam.id),
         with: {
@@ -260,7 +339,7 @@ export async function formatBingoData(
   // Build goal trees for all tiles
   const tileGoalTrees = await Promise.all(
     bingoTiles.map((tile) =>
-      tile.tierLocked
+      tile.tierLocked || tile.isBlind
         ? Promise.resolve([] as GoalTreeNode[])
         : buildGoalTreeForAPI(tile.id, userTeam?.id ?? null)
     )
@@ -293,6 +372,7 @@ export async function formatBingoData(
       tier: tile.tier,
       isHidden: tile.isHidden,
       tierLocked: tile.tierLocked ?? false,
+      isBlind: tile.isBlind ?? false,
       submission: tileSubmissionMap[tile.id]!,
       goals:
         tile.goals?.map((goal) => {
@@ -389,6 +469,26 @@ export async function formatBingoData(
             })),
         },
       }),
+  }
+
+  if (bingo.bingoType === "battleship" && eventContext) {
+    const summary = await getBattleshipTeamSummary({
+      bingoId: bingo.id,
+      teamId: userTeam?.id ?? null,
+      startDate: eventContext.startDate,
+    })
+    formattedBingo.battleship = {
+      started: summary.started,
+      startDate: summary.startDate,
+      serverNow: new Date(),
+      rules: summary.rules.map((rule) => ({
+        length: rule.length,
+        count: rule.count,
+      })),
+      marks: summary.marks,
+      opponentShipsSunk: summary.opponentShipsSunk,
+      opponentShipsTotal: summary.opponentShipsTotal,
+    }
   }
 
   return formattedBingo

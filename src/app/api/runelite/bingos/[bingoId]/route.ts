@@ -62,7 +62,9 @@ export async function GET(
     })
 
     // Format the response using shared utility
-    const formattedBingo = await formatBingoData(bingo, userTeam ?? null)
+    const formattedBingo = await formatBingoData(bingo, userTeam ?? null, {
+      userId,
+    })
 
     return NextResponse.json(formattedBingo)
   } catch (error) {
