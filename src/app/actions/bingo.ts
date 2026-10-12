@@ -77,6 +77,8 @@ import { discordWebhooks } from "@/server/db/schema"
 import { sql } from "drizzle-orm"
 import { completedAtOnComplete } from "@/lib/completed-at"
 import { logger } from "@/lib/logger"
+import { getUnlockedTiers } from "@/lib/tiers"
+import { unlockNextTierForTeam } from "@/server/tier-progression"
 import type { SelectableUser } from "@/types/model"
 import {
   insertGoal,
@@ -2488,106 +2490,28 @@ export async function checkAndUnlockNextTier(teamId: string, bingoId: string) {
   try {
     await requireTeamMemberOrManager(teamId)
 
-    // Get tier-specific XP requirements for this bingo
-    const tierXpReqs = await db.query.tierXpRequirements.findMany({
-      where: eq(tierXpRequirements.bingoId, bingoId),
-    })
-
-    // Get team's current tier progress
-    let tierProgress = await db.query.teamTierProgress.findMany({
-      where: and(
-        eq(teamTierProgress.teamId, teamId),
-        eq(teamTierProgress.bingoId, bingoId)
-      ),
-      orderBy: asc(teamTierProgress.tier),
-    })
-
-    // Tier rows are created here, when a Team's Tile is first reviewed, rather
-    // than while rendering the Board (a GET must not write).
-    if (tierProgress.length === 0) {
-      await initializeTeamTierProgress(teamId, bingoId)
-      tierProgress = await db.query.teamTierProgress.findMany({
-        where: and(
-          eq(teamTierProgress.teamId, teamId),
-          eq(teamTierProgress.bingoId, bingoId)
-        ),
-        orderBy: asc(teamTierProgress.tier),
-      })
-    }
-
-    // Find the highest unlocked tier
-    const highestUnlockedTier = Math.max(
-      ...tierProgress.filter((tp) => tp.isUnlocked).map((tp) => tp.tier)
+    // Unlocking itself needs no session (see unlockNextTierForTeam), which is
+    // what lets RuneLite completions unlock Tiers too.
+    const unlockedTier = await db.transaction((tx) =>
+      unlockNextTierForTeam(tx, teamId, bingoId)
     )
 
-    // Check if we can unlock the next tier
-    const nextTier = highestUnlockedTier + 1
-    const nextTierProgress = tierProgress.find((tp) => tp.tier === nextTier)
-
-    if (!nextTierProgress || nextTierProgress.isUnlocked) {
-      return { success: true, unlockedTier: null } // No next tier or already unlocked
-    }
-
-    // Count completed tiles in current highest tier
-    const currentTierTiles = await db
-      .select({
-        id: tiles.id,
-        weight: tiles.weight,
-        teamTileSubmissions: {
-          status: teamTileSubmissions.status,
-        },
-      })
-      .from(tiles)
-      .leftJoin(
-        teamTileSubmissions,
-        and(
-          eq(teamTileSubmissions.tileId, tiles.id),
-          eq(teamTileSubmissions.teamId, teamId)
-        )
-      )
-      .where(
-        and(eq(tiles.bingoId, bingoId), eq(tiles.tier, highestUnlockedTier))
-      )
-
-    const completedTilesXP = currentTierTiles
-      .filter((tile) => tile.teamTileSubmissions?.status === "completed")
-      .reduce((totalXP, tile) => totalXP + tile.weight, 0)
-
-    // Get XP requirement for current tier to unlock next tier
-    const tierXpReq = tierXpReqs.find((req) => req.tier === highestUnlockedTier)
-    const xpRequired = tierXpReq?.xpRequired ?? 5 // Default to 5 if not found
-
-    // Check if unlock requirement is met (XP-based)
-    if (completedTilesXP >= xpRequired) {
-      // Unlock the next tier
-      await db
-        .update(teamTierProgress)
-        .set({
-          isUnlocked: true,
-          unlockedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(teamTierProgress.teamId, teamId),
-            eq(teamTierProgress.bingoId, bingoId),
-            eq(teamTierProgress.tier, nextTier)
-          )
-        )
-
-      return { success: true, unlockedTier: nextTier }
-    }
-
-    return { success: true, unlockedTier: null }
+    return { success: true, unlockedTier }
   } catch (error) {
     logger.error({ error }, "Error checking tier unlock")
     return { success: false, error: "Failed to check tier unlock" }
   }
 }
 
+/**
+ * The Tiles of a progression Board. With a Team, only the Tiles of Tiers the
+ * Team has unlocked (Tier 0 always counts) are returned, unless
+ * `includeLocked` is set: then every Tile is returned, flagged `tierLocked`.
+ */
 export async function getProgressionBingoTiles(
   bingoId: string,
-  teamId?: string
+  teamId?: string,
+  options: { includeLocked?: boolean } = {}
 ) {
   try {
     // Get bingo info
@@ -2616,21 +2540,21 @@ export async function getProgressionBingoTiles(
 
     // If no team specified, return all tiles
     if (!teamId) {
-      return allTiles
+      return allTiles.map((tile) => ({ ...tile, tierLocked: false }))
     }
 
-    // Get team's tier progress
+    // Tier rows are created lazily, so a fresh Team has none: Tier 0 is
+    // unlocked regardless of what is stored.
     const tierProgress = await getTeamTierProgress(teamId, bingoId)
-    const unlockedTiers = new Set(
-      tierProgress.filter((tp) => tp.isUnlocked).map((tp) => tp.tier)
-    )
+    const unlockedTiers = getUnlockedTiers(tierProgress)
 
-    // Filter tiles based on unlocked tiers
-    const accessibleTiles = allTiles.filter((tile) =>
-      unlockedTiers.has(tile.tier)
-    )
-
-    return accessibleTiles
+    const flagged = allTiles.map((tile) => ({
+      ...tile,
+      tierLocked: !unlockedTiers.has(tile.tier),
+    }))
+    return options.includeLocked
+      ? flagged
+      : flagged.filter((tile) => !tile.tierLocked)
   } catch (error) {
     logger.error({ error }, "Error fetching progression bingo tiles")
     throw new Error("Failed to fetch progression bingo tiles")

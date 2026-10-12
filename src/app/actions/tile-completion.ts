@@ -7,10 +7,12 @@ import {
   goalGroups,
   teamGoalProgress,
   teamTileSubmissions,
+  tiles,
 } from "@/server/db/schema"
 import { eq, and, isNull, sql } from "drizzle-orm"
 import { completedAtOnComplete } from "@/lib/completed-at"
 import { revalidatePath } from "next/cache"
+import { unlockNextTierForTeam } from "@/server/tier-progression"
 
 type DbOrTransaction = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]
 
@@ -185,7 +187,32 @@ export async function evaluateTileCompletion(
 }
 
 /**
- * Check if tile should auto-complete and create submission if needed
+ * Opens the next Tier(s) of a progression Board after a Tile of the Team
+ * completed. Completions that arrive without a session (RuneLite, trackers,
+ * goal progress) have no other place to do this.
+ */
+async function unlockTiersAfterCompletion(
+  tx: DbOrTransaction,
+  tileId: string,
+  teamId: string
+): Promise<number | null> {
+  try {
+    const tile = await tx.query.tiles.findFirst({
+      where: eq(tiles.id, tileId),
+      columns: { bingoId: true },
+    })
+    if (!tile) return null
+    return await unlockNextTierForTeam(tx, teamId, tile.bingoId)
+  } catch (error) {
+    // The completion itself stands; the next completion retries the unlock.
+    logger.error({ error }, "Error unlocking next tier after completion")
+    return null
+  }
+}
+
+/**
+ * Check if tile should auto-complete and create submission if needed.
+ * `tierUnlocked` is the highest Tier this completion opened, if any.
  */
 export async function checkAndAutoCompleteTile(tx: DbOrTransaction, tileId: string, teamId: string) {
   try {
@@ -230,6 +257,8 @@ export async function checkAndAutoCompleteTile(tx: DbOrTransaction, tileId: stri
         .where(eq(teamTileSubmissions.id, existingSubmission.id))
         .returning()
 
+      const tierUnlocked = await unlockTiersAfterCompletion(tx, tileId, teamId)
+
       revalidatePath("/events/[id]", "layout")
 
       return {
@@ -237,6 +266,7 @@ export async function checkAndAutoCompleteTile(tx: DbOrTransaction, tileId: stri
         shouldComplete: true,
         autoCompleted: true,
         wasUpdated: true,
+        tierUnlocked,
         submission: updatedSubmission,
       }
     }
@@ -251,6 +281,8 @@ export async function checkAndAutoCompleteTile(tx: DbOrTransaction, tileId: stri
       })
       .returning()
 
+    const tierUnlocked = await unlockTiersAfterCompletion(tx, tileId, teamId)
+
     revalidatePath("/events/[id]", "layout")
 
     return {
@@ -258,6 +290,7 @@ export async function checkAndAutoCompleteTile(tx: DbOrTransaction, tileId: stri
       shouldComplete: true,
       autoCompleted: true,
       wasCreated: true,
+      tierUnlocked,
       submission: newSubmission,
     }
   } catch (error) {
