@@ -186,3 +186,44 @@ export function summarizeGoalCompletion(tree: GoalTreeNode[]): string | null {
 
   return `Complete all of: ${describeMembers(tree, 0)}`
 }
+
+/** How a batch of new goals is combined: on their own, in an AND group, or in an OR group. */
+export type NewGoalsRule =
+  | { kind: "separate" }
+  | { kind: "all" }
+  | { kind: "any"; min: number }
+
+/** "all 3", "any 1 of 3": the rule of a new group in a few words. */
+export function formatNewGroupRule(
+  rule: Exclude<NewGoalsRule, { kind: "separate" }>,
+  count: number
+): string {
+  return rule.kind === "all" ? `all ${count}` : `any ${rule.min} of ${count}`
+}
+
+/**
+ * Plain-language preview of what adding `names` with the chosen combination
+ * will mean, e.g. "Tile needs any 2 of: Abyssal whip, Dragon warhammer, Zulrah
+ * kills". `nested` is true when the goals go into an existing group, where
+ * "the tile" is no longer the one that is asked. More than three names are
+ * counted instead of listed, like the Tile summary does.
+ */
+export function describeNewGoals(
+  names: string[],
+  rule: NewGoalsRule,
+  { nested = false }: { nested?: boolean } = {}
+): string {
+  const list =
+    names.length > MAX_NAMED_MEMBERS
+      ? `${names.length} items`
+      : names.map(truncate).join(", ")
+
+  if (rule.kind === "separate") {
+    return nested
+      ? `Each item is its own goal in the group: ${list}`
+      : `Each item is its own goal; the tile needs all of: ${list}`
+  }
+  const subject = nested ? "The new group" : "Tile"
+  const lead = rule.kind === "all" ? "all of" : `any ${rule.min} of`
+  return `${subject} needs ${lead}: ${list}`
+}

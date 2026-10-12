@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useId, useRef, useState } from "react"
+import { useId, useRef, useState } from "react"
 import { Plus } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
@@ -11,6 +11,7 @@ import {
   CommandList,
 } from "@/components/ui/command"
 import { ItemOption } from "@/components/osrs-item-option"
+import { useCmdkActiveDescendant } from "@/hooks/use-cmdk-active-descendant"
 import { useOsrsItemSearch } from "@/hooks/use-osrs-item-search"
 import { parseTargetInput, validateNumberInput } from "@/lib/number-input"
 import { cn } from "@/lib/utils"
@@ -104,17 +105,13 @@ export function QuickAddItem({ onAdd, announce }: QuickAddFormProps) {
     : (resultKeys[0] ?? "")
   const activeItem = items.find((item) => itemKey(item) === activeKey)
 
-  // cmdk only sets aria-activedescendant for a highlight it moved itself, not
-  // for the one passed in as `value`, so point the field at the highlight here.
-  useEffect(() => {
-    const field = searchRef.current
-    if (!field) return
-    const option = Array.from(
-      listRef.current?.querySelectorAll<HTMLElement>("[cmdk-item]") ?? []
-    ).find((el) => el.getAttribute("data-value") === activeKey)
-    if (option?.id) field.setAttribute("aria-activedescendant", option.id)
-    else field.removeAttribute("aria-activedescendant")
-  }, [activeKey, items, ready])
+  useCmdkActiveDescendant(
+    searchRef,
+    listRef,
+    activeKey,
+    items,
+    ready && items.length > 0
+  )
 
   const queueTopMatch = () => {
     queuedRef.current = trimmed

@@ -18,10 +18,18 @@ import { METRIC_GOAL_LABEL, getMetricTargetCopy } from "@/lib/osrs-metrics"
 import { MAX_GOALS_PER_BATCH } from "@/lib/goal-validation"
 import { AddedGoalsList, type AddedGoalEntry } from "./added-goals-list"
 import {
+  clampAtLeast,
+  combineAddLabel,
+  INITIAL_COMBINE,
+  planCombine,
+  type CombineState,
+} from "./combine-options"
+import {
   buildGenericGoalInput,
   buildItemGoalInput,
   buildMetricGoalInput,
   formatAddedGoal,
+  formatAddedGroup,
 } from "./goal-inputs"
 import { GoalTypePicker } from "./goal-type-picker"
 import { GenericGoalForm } from "./generic-goal-form"
@@ -70,6 +78,14 @@ export function AddGoalDrawer({
             target instanceof HTMLInputElement &&
             target.hasAttribute("data-escape-clears") &&
             target.value !== ""
+          ) {
+            event.preventDefault()
+          }
+          // Panels that handle Escape themselves (stepping back) mark
+          // themselves, so a pasted list is not lost to a stray Escape.
+          if (
+            target instanceof Element &&
+            target.closest("[data-escape-guard]")
           ) {
             event.preventDefault()
           }
@@ -127,6 +143,8 @@ function AddGoalPanel({
 
   // Item goal state
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([])
+  // How several selected items count: separate goals or one group.
+  const [combine, setCombine] = useState<CombineState>(INITIAL_COMBINE)
 
   // XP / Kills goal state
   const [metricType, setMetricType] = useState<MetricType>("skill")
@@ -134,6 +152,17 @@ function AddGoalPanel({
   const [metricTarget, setMetricTarget] = useState("")
 
   const metricCopy = getMetricTargetCopy(metricType)
+
+  const combinePlan = planCombine(combine, selectedItems.length)
+
+  // Removing items can leave "At least N" above the number of items left.
+  const changeSelectedItems = (items: SelectedItem[]) => {
+    setSelectedItems(items)
+    setCombine((current) => ({
+      ...current,
+      atLeast: clampAtLeast(current.atLeast, items.length),
+    }))
+  }
 
   /** Why the active form cannot be added yet, or null when it can. */
   const blockReason = ((): string | null => {
@@ -154,7 +183,7 @@ function AddGoalPanel({
           const error = validateNumberInput(quantity)
           if (error) return `Quantity for ${getItemDisplayName(item)}: ${error}`
         }
-        return null
+        return combinePlan.error && `At least N of these: ${combinePlan.error}`
       }
       case "metric": {
         if (!metricName) {
@@ -197,13 +226,24 @@ function AddGoalPanel({
       if (targetValue === null) return
       inputs.push(buildItemGoalInput(item, targetValue))
     }
-    const result = await createGoals(tileId, inputs, { parentGroupId })
+    const { group, rule } = combinePlan
+    const result = await createGoals(tileId, inputs, {
+      parentGroupId,
+      ...(group ? { group } : {}),
+    })
     if (!result.success) {
-      // Nothing was created, so keep the selection for another attempt.
+      // Nothing was created, so keep the selection and the choice for another attempt.
       return result.error
     }
-    recordAdded(inputs.map(formatAddedGoal))
+    recordAdded(
+      group && rule.kind !== "separate"
+        ? [formatAddedGroup(inputs, rule)]
+        : inputs.map(formatAddedGoal)
+    )
     setSelectedItems([])
+    // Back to separate goals: a group is a deliberate choice per batch, and the
+    // next batch is most often separate goals again.
+    setCombine(INITIAL_COMBINE)
   }
 
   const createMetric = async () => {
@@ -309,7 +349,10 @@ function AddGoalPanel({
               {goalType === "item" && (
                 <ItemGoalForm
                   selectedItems={selectedItems}
-                  onSelectedItemsChange={setSelectedItems}
+                  onSelectedItemsChange={changeSelectedItems}
+                  combine={combine}
+                  onCombineChange={setCombine}
+                  nested={parentGroupId !== null}
                   autoFocus={focusFirstField}
                 />
               )}
@@ -360,9 +403,7 @@ function AddGoalPanel({
             ) : goalType === "item" ? (
               <>
                 <Package aria-hidden="true" className="mr-2 h-4 w-4" />
-                {selectedCount === 0
-                  ? "Add goals"
-                  : `Add ${selectedCount} ${selectedCount === 1 ? "goal" : "goals"}`}
+                {combineAddLabel(combinePlan, selectedCount)}
               </>
             ) : goalType === "metric" ? (
               <>

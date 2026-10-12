@@ -1,5 +1,9 @@
 import type { GoalTreeNode } from "@/app/actions/goal-groups"
-import { summarizeGoalCompletion } from "@/lib/goal-summary"
+import {
+  describeNewGoals,
+  formatNewGroupRule,
+  summarizeGoalCompletion,
+} from "@/lib/goal-summary"
 
 const now = new Date("2026-01-01T00:00:00Z")
 
@@ -324,5 +328,76 @@ describe("summarizeGoalCompletion", () => {
         "Complete any 1 of: any 1 of (a, a nested group (3 goals)), z"
       )
     })
+  })
+})
+
+describe("formatNewGroupRule", () => {
+  it("names an AND group by its size", () => {
+    expect(formatNewGroupRule({ kind: "all" }, 3)).toBe("all 3")
+  })
+
+  it("names an OR group by how many of its members count", () => {
+    expect(formatNewGroupRule({ kind: "any", min: 1 }, 3)).toBe("any 1 of 3")
+    expect(formatNewGroupRule({ kind: "any", min: 2 }, 5)).toBe("any 2 of 5")
+  })
+})
+
+describe("describeNewGoals", () => {
+  const names = ["Abyssal whip", "Dragon warhammer", "Zulrah kills"]
+
+  it("describes an OR group with a required count", () => {
+    expect(describeNewGoals(names, { kind: "any", min: 2 })).toBe(
+      "Tile needs any 2 of: Abyssal whip, Dragon warhammer, Zulrah kills"
+    )
+  })
+
+  it("describes any one of them", () => {
+    expect(describeNewGoals(names, { kind: "any", min: 1 })).toBe(
+      "Tile needs any 1 of: Abyssal whip, Dragon warhammer, Zulrah kills"
+    )
+  })
+
+  it("describes an AND group", () => {
+    expect(describeNewGoals(names, { kind: "all" })).toBe(
+      "Tile needs all of: Abyssal whip, Dragon warhammer, Zulrah kills"
+    )
+  })
+
+  it("describes separate goals at the top level as all needed", () => {
+    expect(describeNewGoals(names, { kind: "separate" })).toBe(
+      "Each item is its own goal; the tile needs all of: Abyssal whip, Dragon warhammer, Zulrah kills"
+    )
+  })
+
+  it("talks about the new group instead of the tile when nested", () => {
+    expect(describeNewGoals(names, { kind: "all" }, { nested: true })).toBe(
+      "The new group needs all of: Abyssal whip, Dragon warhammer, Zulrah kills"
+    )
+    expect(
+      describeNewGoals(names, { kind: "any", min: 2 }, { nested: true })
+    ).toBe(
+      "The new group needs any 2 of: Abyssal whip, Dragon warhammer, Zulrah kills"
+    )
+    expect(
+      describeNewGoals(names, { kind: "separate" }, { nested: true })
+    ).toBe(
+      "Each item is its own goal in the group: Abyssal whip, Dragon warhammer, Zulrah kills"
+    )
+  })
+
+  it("counts instead of lists more than three names, like the tile summary", () => {
+    const many = ["a", "b", "c", "d", "e"]
+    expect(describeNewGoals(many, { kind: "any", min: 2 })).toBe(
+      "Tile needs any 2 of: 5 items"
+    )
+    expect(describeNewGoals(many.slice(0, 3), { kind: "all" })).toBe(
+      "Tile needs all of: a, b, c"
+    )
+  })
+
+  it("shortens a very long name", () => {
+    const text = describeNewGoals(["x".repeat(60), "y"], { kind: "all" })
+    expect(text).toContain("…")
+    expect(text.length).toBeLessThan(70)
   })
 })

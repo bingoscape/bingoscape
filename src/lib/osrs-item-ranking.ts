@@ -1,6 +1,6 @@
 import type { OsrsItem } from "@/types/osrs-items"
 
-interface IndexedItem {
+export interface IndexedItem {
   item: OsrsItem
   name: string
   baseName: string
@@ -14,6 +14,22 @@ const PARTIAL_PREFIX = 2
 const WORD_PREFIX = 3
 const SUBSTRING = 4
 const VARIANT_ONLY = 5
+
+/** The ranking tiers a result can have, best first. Exported for callers that judge how decisive a top hit is. */
+export const RANK_TIER = {
+  EXACT,
+  PREFIX,
+  PARTIAL_PREFIX,
+  WORD_PREFIX,
+  SUBSTRING,
+  VARIANT_ONLY,
+} as const
+
+/** A ranked item with the tier it was ranked in (lower is better). */
+export interface ScoredOsrsItem {
+  item: OsrsItem
+  tier: number
+}
 
 export function indexOsrsItems(items: OsrsItem[]): IndexedItem[] {
   return items.map((item) => ({
@@ -53,6 +69,15 @@ export function rankOsrsItems(
   rawQuery: string,
   limit: number
 ): OsrsItem[] {
+  return rankOsrsItemsWithTier(indexed, rawQuery, limit).map((s) => s.item)
+}
+
+/** Same as `rankOsrsItems`, but keeps the tier of each result. */
+export function rankOsrsItemsWithTier(
+  indexed: IndexedItem[],
+  rawQuery: string,
+  limit: number
+): ScoredOsrsItem[] {
   const query = rawQuery.trim().toLowerCase().replace(/\s+/g, " ")
   if (!query) return []
   const tokens = query.split(" ")
@@ -78,5 +103,5 @@ export function rankOsrsItems(
   })
 
   const capped = limit > 0 ? scored.slice(0, limit) : scored
-  return capped.map((s) => s.entry.item)
+  return capped.map((s) => ({ item: s.entry.item, tier: s.score }))
 }
