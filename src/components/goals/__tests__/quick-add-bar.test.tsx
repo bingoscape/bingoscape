@@ -71,8 +71,27 @@ async function search(query: string, topResult = "Abyssal whip") {
   )
 }
 
+<<<<<<< HEAD
 const pressEnter = (element: HTMLElement) =>
   fireEvent.keyDown(element, { key: "Enter" })
+=======
+// The add is announced from a promise callback, so each action that can add is
+// wrapped in an async act: React then sees the announcement as part of it.
+const pressEnter = (element: HTMLElement) =>
+  act(async () => {
+    fireEvent.keyDown(element, { key: "Enter" })
+  })
+
+const clickButton = (name: string) =>
+  act(async () => {
+    fireEvent.click(screen.getByRole("button", { name }))
+  })
+
+const submitForm = (form: HTMLElement) =>
+  act(async () => {
+    fireEvent.submit(form)
+  })
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
 const whipInput = {
   type: "item",
@@ -265,7 +284,11 @@ describe("QuickAddBar", () => {
       searchField().focus()
       await search("abyssal")
 
+<<<<<<< HEAD
       pressEnter(searchField())
+=======
+      await pressEnter(searchField())
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(onAdd).toHaveBeenCalledTimes(1)
       expect(onAdd).toHaveBeenCalledWith(whipInput)
@@ -278,7 +301,11 @@ describe("QuickAddBar", () => {
       renderBar()
       await search("abyssal")
 
+<<<<<<< HEAD
       pressEnter(searchField())
+=======
+      await pressEnter(searchField())
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(
         await screen.findByText("Added Abyssal whip x1")
@@ -290,9 +317,15 @@ describe("QuickAddBar", () => {
       searchField().focus()
 
       await search("abyssal")
+<<<<<<< HEAD
       pressEnter(searchField())
       await search("dragon dagger", "Dragon dagger (p)")
       pressEnter(searchField())
+=======
+      await pressEnter(searchField())
+      await search("dragon dagger", "Dragon dagger (p)")
+      await pressEnter(searchField())
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(onAdd).toHaveBeenCalledTimes(2)
       expect(onAdd).toHaveBeenNthCalledWith(1, whipInput)
@@ -318,7 +351,11 @@ describe("QuickAddBar", () => {
           screen.getByRole("option", { name: "Abyssal tentacle" })
         ).toHaveAttribute("aria-selected", "true")
       )
+<<<<<<< HEAD
       pressEnter(searchField())
+=======
+      await pressEnter(searchField())
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(onAdd).toHaveBeenCalledWith(
         expect.objectContaining({ itemId: 12006, itemName: "Abyssal tentacle" })
@@ -331,7 +368,11 @@ describe("QuickAddBar", () => {
       fireEvent.keyDown(searchField(), { key: "ArrowDown" })
 
       await search("dragon", "Dragon dagger (p)")
+<<<<<<< HEAD
       pressEnter(searchField())
+=======
+      await pressEnter(searchField())
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(onAdd).toHaveBeenCalledWith(
         expect.objectContaining({ itemName: "Dragon dagger#(p)" })
@@ -354,7 +395,11 @@ describe("QuickAddBar", () => {
       const { onAdd } = renderBar()
       await search("abyssal")
 
+<<<<<<< HEAD
       fireEvent.click(screen.getByRole("button", { name: "Add item" }))
+=======
+      await clickButton("Add item")
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(onAdd).toHaveBeenCalledWith(whipInput)
     })
@@ -363,7 +408,11 @@ describe("QuickAddBar", () => {
       const { onAdd } = renderBar()
       await search("abyssal")
 
+<<<<<<< HEAD
       fireEvent.submit(quantityField().closest("form")!)
+=======
+      await submitForm(quantityField().closest("form")!)
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(onAdd).toHaveBeenCalledWith(whipInput)
     })
@@ -379,10 +428,17 @@ describe("QuickAddBar", () => {
       ).toHaveAttribute("aria-selected", "true")
     })
 
+<<<<<<< HEAD
     it("asks for more text when Add is pressed with nothing searched, and adds nothing", () => {
       const { onAdd } = renderBar()
 
       fireEvent.click(screen.getByRole("button", { name: "Add item" }))
+=======
+    it("asks for more text when Add is pressed with nothing searched, and adds nothing", async () => {
+      const { onAdd } = renderBar()
+
+      await clickButton("Add item")
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(onAdd).not.toHaveBeenCalled()
       expect(screen.getByRole("status")).toHaveTextContent(
@@ -396,8 +452,13 @@ describe("QuickAddBar", () => {
       fireEvent.change(searchField(), { target: { value: "zzzz" } })
       expect(await screen.findByText(/No items found/)).toBeInTheDocument()
 
+<<<<<<< HEAD
       pressEnter(searchField())
       fireEvent.click(screen.getByRole("button", { name: "Add item" }))
+=======
+      await pressEnter(searchField())
+      await clickButton("Add item")
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(onAdd).not.toHaveBeenCalled()
     })
@@ -430,7 +491,11 @@ describe("QuickAddBar", () => {
         fireEvent.change(quantityField(), { target: { value: "3" } })
         await search("abyssal")
 
+<<<<<<< HEAD
         pressEnter(searchField())
+=======
+        await pressEnter(searchField())
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
         expect(onAdd).toHaveBeenCalledWith({ ...whipInput, targetValue: 3 })
       })
@@ -439,10 +504,17 @@ describe("QuickAddBar", () => {
         const { onAdd } = renderBar()
         fireEvent.change(quantityField(), { target: { value: "2k" } })
         await search("abyssal")
+<<<<<<< HEAD
         pressEnter(searchField())
         fireEvent.change(quantityField(), { target: { value: "1,500" } })
         await search("abyssal")
         pressEnter(searchField())
+=======
+        await pressEnter(searchField())
+        fireEvent.change(quantityField(), { target: { value: "1,500" } })
+        await search("abyssal")
+        await pressEnter(searchField())
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
         expect(onAdd).toHaveBeenNthCalledWith(
           1,
@@ -459,7 +531,11 @@ describe("QuickAddBar", () => {
         fireEvent.change(quantityField(), { target: { value: "25" } })
         await search("abyssal")
 
+<<<<<<< HEAD
         pressEnter(searchField())
+=======
+        await pressEnter(searchField())
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
         expect(quantityField()).toHaveValue("1")
       })
@@ -478,7 +554,11 @@ describe("QuickAddBar", () => {
           await search("abyssal")
           fireEvent.change(quantityField(), { target: { value } })
 
+<<<<<<< HEAD
           pressEnter(searchField())
+=======
+          await pressEnter(searchField())
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
           expect(onAdd).not.toHaveBeenCalled()
           expect(screen.getByRole("alert")).toHaveTextContent(message)
@@ -497,12 +577,20 @@ describe("QuickAddBar", () => {
         const { onAdd } = renderBar()
         await search("abyssal")
         fireEvent.change(quantityField(), { target: { value: "" } })
+<<<<<<< HEAD
         pressEnter(searchField())
+=======
+        await pressEnter(searchField())
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
         expect(screen.getByRole("alert")).toBeInTheDocument()
 
         fireEvent.change(quantityField(), { target: { value: "2" } })
         expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+<<<<<<< HEAD
         fireEvent.click(screen.getByRole("button", { name: "Add item" }))
+=======
+        await clickButton("Add item")
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
         expect(onAdd).toHaveBeenCalledWith({ ...whipInput, targetValue: 2 })
       })
@@ -515,7 +603,11 @@ describe("QuickAddBar", () => {
         const { onAdd } = renderBar()
         fireEvent.change(searchField(), { target: { value: "abyssal" } })
 
+<<<<<<< HEAD
         pressEnter(searchField())
+=======
+        await pressEnter(searchField())
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
         expect(onAdd).not.toHaveBeenCalled()
         expect(screen.getByRole("status")).toHaveTextContent(
           "Searching, then adding the top match..."
@@ -537,7 +629,11 @@ describe("QuickAddBar", () => {
         mockedSearch.mockReturnValue(new Promise<never>(() => undefined))
         fireEvent.change(searchField(), { target: { value: "dragon" } })
 
+<<<<<<< HEAD
         pressEnter(searchField())
+=======
+        await pressEnter(searchField())
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
         expect(onAdd).not.toHaveBeenCalled()
       })
@@ -547,7 +643,11 @@ describe("QuickAddBar", () => {
         mockedSearch.mockReturnValue(answer.promise)
         const { onAdd } = renderBar()
         fireEvent.change(searchField(), { target: { value: "abyssal" } })
+<<<<<<< HEAD
         pressEnter(searchField())
+=======
+        await pressEnter(searchField())
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
         mockedSearch.mockImplementation(async (query) =>
           searchFixtureItems(query)
@@ -570,7 +670,11 @@ describe("QuickAddBar", () => {
         mockedSearch.mockReturnValue(answer.promise)
         const { onAdd } = renderBar()
         fireEvent.change(searchField(), { target: { value: "zzzz" } })
+<<<<<<< HEAD
         pressEnter(searchField())
+=======
+        await pressEnter(searchField())
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
         await waitFor(() => expect(mockedSearch).toHaveBeenCalled())
         await act(async () => {
@@ -587,7 +691,11 @@ describe("QuickAddBar", () => {
         const { onAdd } = renderBar()
         fireEvent.change(searchField(), { target: { value: "abyssal" } })
 
+<<<<<<< HEAD
         fireEvent.click(screen.getByRole("button", { name: "Add item" }))
+=======
+        await clickButton("Add item")
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
         await waitFor(() => expect(mockedSearch).toHaveBeenCalled())
         await act(async () => {
           answer.resolve(searchFixtureItems("abyssal"))
@@ -604,7 +712,11 @@ describe("QuickAddBar", () => {
         fireEvent.change(quantityField(), { target: { value: "4" } })
         await search("abyssal")
 
+<<<<<<< HEAD
         pressEnter(searchField())
+=======
+        await pressEnter(searchField())
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
         await waitFor(() => expect(searchField()).toHaveValue("abyssal"))
         expect(quantityField()).toHaveValue("4")
@@ -616,7 +728,11 @@ describe("QuickAddBar", () => {
         const { onAdd } = renderBar()
         onAdd.mockReturnValue(answer.promise)
         await search("abyssal")
+<<<<<<< HEAD
         pressEnter(searchField())
+=======
+        await pressEnter(searchField())
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
         fireEvent.change(searchField(), { target: { value: "dragon" } })
 
         await act(async () => {
@@ -674,7 +790,11 @@ describe("QuickAddBar", () => {
       fireEvent.click(skill("Attack"))
       fireEvent.change(targetField(), { target: { value: "5m" } })
 
+<<<<<<< HEAD
       fireEvent.submit(targetField().closest("form")!)
+=======
+      await submitForm(targetField().closest("form")!)
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(onAdd).toHaveBeenCalledTimes(1)
       expect(onAdd).toHaveBeenCalledWith({
@@ -690,23 +810,39 @@ describe("QuickAddBar", () => {
       expect(targetField()).toHaveValue("")
     })
 
+<<<<<<< HEAD
     it("adds with the Add button", () => {
+=======
+    it("adds with the Add button", async () => {
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
       const { onAdd } = renderBar()
       fireEvent.click(skill("Mining"))
       fireEvent.change(targetField(), { target: { value: "500000" } })
 
+<<<<<<< HEAD
       fireEvent.click(screen.getByRole("button", { name: "Add skill goal" }))
+=======
+      await clickButton("Add skill goal")
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(onAdd).toHaveBeenCalledWith(
         expect.objectContaining({ metricName: "mining", targetValue: 500_000 })
       )
     })
 
+<<<<<<< HEAD
     it("does not add without a skill and says which one is missing", () => {
       const { onAdd } = renderBar()
       fireEvent.change(targetField(), { target: { value: "1m" } })
 
       fireEvent.click(screen.getByRole("button", { name: "Add skill goal" }))
+=======
+    it("does not add without a skill and says which one is missing", async () => {
+      const { onAdd } = renderBar()
+      fireEvent.change(targetField(), { target: { value: "1m" } })
+
+      await clickButton("Add skill goal")
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(onAdd).not.toHaveBeenCalled()
       expect(screen.getByRole("alert")).toHaveTextContent(
@@ -714,9 +850,15 @@ describe("QuickAddBar", () => {
       )
     })
 
+<<<<<<< HEAD
     it("clears that message once a skill is picked", () => {
       renderBar()
       fireEvent.click(screen.getByRole("button", { name: "Add skill goal" }))
+=======
+    it("clears that message once a skill is picked", async () => {
+      renderBar()
+      await clickButton("Add skill goal")
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
       expect(screen.getByRole("alert")).toBeInTheDocument()
 
       fireEvent.click(skill("Attack"))
@@ -730,12 +872,20 @@ describe("QuickAddBar", () => {
       ["0", "Target value must be greater than 0"],
     ])(
       "blocks a target of %p, shows the reason on the field and focuses it",
+<<<<<<< HEAD
       (value, message) => {
+=======
+      async (value, message) => {
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
         const { onAdd } = renderBar()
         fireEvent.click(skill("Attack"))
         fireEvent.change(targetField(), { target: { value } })
 
+<<<<<<< HEAD
         fireEvent.submit(targetField().closest("form")!)
+=======
+        await submitForm(targetField().closest("form")!)
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
         expect(onAdd).not.toHaveBeenCalled()
         expect(screen.getByRole("alert")).toHaveTextContent(message)
@@ -803,7 +953,11 @@ describe("QuickAddBar", () => {
       fireEvent.click(await screen.findByRole("option", { name: "Zulrah" }))
       expect(targetField("Kills")).toHaveFocus()
       fireEvent.change(targetField("Kills"), { target: { value: "50" } })
+<<<<<<< HEAD
       fireEvent.submit(targetField("Kills").closest("form")!)
+=======
+      await submitForm(targetField("Kills").closest("form")!)
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(onAdd).toHaveBeenCalledWith({
         type: "metric",
@@ -816,22 +970,38 @@ describe("QuickAddBar", () => {
       ).toBeInTheDocument()
     })
 
+<<<<<<< HEAD
     it("asks for a boss, not a skill, when none is chosen", () => {
       renderBar()
       fireEvent.click(screen.getByRole("radio", { name: "Boss" }))
 
       fireEvent.click(screen.getByRole("button", { name: "Add boss goal" }))
+=======
+    it("asks for a boss, not a skill, when none is chosen", async () => {
+      renderBar()
+      fireEvent.click(screen.getByRole("radio", { name: "Boss" }))
+
+      await clickButton("Add boss goal")
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(screen.getByRole("alert")).toHaveTextContent(
         "Select a boss first."
       )
     })
 
+<<<<<<< HEAD
     it("asks for an activity with the right article", () => {
       renderBar()
       fireEvent.click(screen.getByRole("radio", { name: "Activity" }))
 
       fireEvent.click(screen.getByRole("button", { name: "Add activity goal" }))
+=======
+    it("asks for an activity with the right article", async () => {
+      renderBar()
+      fireEvent.click(screen.getByRole("radio", { name: "Activity" }))
+
+      await clickButton("Add activity goal")
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(screen.getByRole("alert")).toHaveTextContent(
         "Select an activity first."
@@ -844,14 +1014,22 @@ describe("QuickAddBar", () => {
       fireEvent.click(skill("Attack"))
       fireEvent.change(targetField(), { target: { value: "5m" } })
 
+<<<<<<< HEAD
       fireEvent.submit(targetField().closest("form")!)
+=======
+      await submitForm(targetField().closest("form")!)
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       await waitFor(() => expect(skill("Attack")).toBeChecked())
       expect(targetField()).toHaveValue("5m")
     })
 
     describe("Wise Old Man notice", () => {
+<<<<<<< HEAD
       it("warns, without blocking, when the Board has no linked competition", () => {
+=======
+      it("warns, without blocking, when the Board has no linked competition", async () => {
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
         const { onAdd } = renderBar({ womLinked: false })
 
         expect(screen.getByRole("note")).toHaveTextContent(
@@ -859,7 +1037,11 @@ describe("QuickAddBar", () => {
         )
         fireEvent.click(skill("Attack"))
         fireEvent.change(targetField(), { target: { value: "1m" } })
+<<<<<<< HEAD
         fireEvent.submit(targetField().closest("form")!)
+=======
+        await submitForm(targetField().closest("form")!)
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
         expect(onAdd).toHaveBeenCalledTimes(1)
       })
 
@@ -913,7 +1095,11 @@ describe("QuickAddBar", () => {
       })
       fireEvent.change(target(), { target: { value: "2" } })
 
+<<<<<<< HEAD
       fireEvent.submit(description().closest("form")!)
+=======
+      await submitForm(description().closest("form")!)
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(onAdd).toHaveBeenCalledWith({
         type: "generic",
@@ -928,11 +1114,19 @@ describe("QuickAddBar", () => {
       expect(description()).toHaveFocus()
     })
 
+<<<<<<< HEAD
     it("adds with the Add button", () => {
       const { onAdd } = renderBar()
       fireEvent.change(description(), { target: { value: "Get a pet" } })
 
       fireEvent.click(screen.getByRole("button", { name: "Add goal" }))
+=======
+    it("adds with the Add button", async () => {
+      const { onAdd } = renderBar()
+      fireEvent.change(description(), { target: { value: "Get a pet" } })
+
+      await clickButton("Add goal")
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(onAdd).toHaveBeenCalledWith({
         type: "generic",
@@ -941,11 +1135,19 @@ describe("QuickAddBar", () => {
       })
     })
 
+<<<<<<< HEAD
     it("blocks an empty description and says so", () => {
       const { onAdd } = renderBar()
       fireEvent.change(description(), { target: { value: "   " } })
 
       fireEvent.click(screen.getByRole("button", { name: "Add goal" }))
+=======
+    it("blocks an empty description and says so", async () => {
+      const { onAdd } = renderBar()
+      fireEvent.change(description(), { target: { value: "   " } })
+
+      await clickButton("Add goal")
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(onAdd).not.toHaveBeenCalled()
       expect(screen.getByRole("alert")).toHaveTextContent(
@@ -955,12 +1157,20 @@ describe("QuickAddBar", () => {
       expect(description()).toHaveFocus()
     })
 
+<<<<<<< HEAD
     it("blocks a bad target without snapping it back to 1", () => {
+=======
+    it("blocks a bad target without snapping it back to 1", async () => {
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
       const { onAdd } = renderBar()
       fireEvent.change(description(), { target: { value: "Get a pet" } })
       fireEvent.change(target(), { target: { value: "" } })
 
+<<<<<<< HEAD
       fireEvent.click(screen.getByRole("button", { name: "Add goal" }))
+=======
+      await clickButton("Add goal")
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       expect(onAdd).not.toHaveBeenCalled()
       expect(screen.getByRole("alert")).toHaveTextContent("Enter a number")
@@ -974,7 +1184,11 @@ describe("QuickAddBar", () => {
       fireEvent.change(description(), { target: { value: "Get a pet" } })
       fireEvent.change(target(), { target: { value: "3" } })
 
+<<<<<<< HEAD
       fireEvent.click(screen.getByRole("button", { name: "Add goal" }))
+=======
+      await clickButton("Add goal")
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 
       await waitFor(() => expect(description()).toHaveValue("Get a pet"))
       expect(target()).toHaveValue("3")

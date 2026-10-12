@@ -11,6 +11,10 @@ import {
   CommandList,
 } from "@/components/ui/command"
 import { ItemOption } from "@/components/osrs-item-option"
+<<<<<<< HEAD
+=======
+import { useCmdkActiveDescendant } from "@/hooks/use-cmdk-active-descendant"
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 import { useOsrsItemSearch } from "@/hooks/use-osrs-item-search"
 import { parseTargetInput, validateNumberInput } from "@/lib/number-input"
 import { cn } from "@/lib/utils"
@@ -50,6 +54,10 @@ export function QuickAddItem({ onAdd, announce }: QuickAddFormProps) {
   const queuedRef = useRef<string | null>(null)
   const [queuedQuery, setQueuedQuery] = useState<string | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+<<<<<<< HEAD
+=======
+  const listRef = useRef<HTMLDivElement>(null)
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
   const quantityRef = useRef<HTMLInputElement>(null)
 
   const quantityError = validateNumberInput(quantity)
@@ -103,6 +111,17 @@ export function QuickAddItem({ onAdd, announce }: QuickAddFormProps) {
     : (resultKeys[0] ?? "")
   const activeItem = items.find((item) => itemKey(item) === activeKey)
 
+<<<<<<< HEAD
+=======
+  useCmdkActiveDescendant(
+    searchRef,
+    listRef,
+    activeKey,
+    items,
+    ready && items.length > 0
+  )
+
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
   const queueTopMatch = () => {
     queuedRef.current = trimmed
     setQueuedQuery(trimmed)
@@ -234,6 +253,10 @@ export function QuickAddItem({ onAdd, announce }: QuickAddFormProps) {
         {ready && items.length > 0 && (
           // Bounded so the on-screen keyboard leaves room for the field above.
           <CommandList
+<<<<<<< HEAD
+=======
+            ref={listRef}
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
             aria-busy={loading}
             className={cn(
               "bg-popover mt-1 max-h-[min(14rem,35dvh)] rounded-sm border",

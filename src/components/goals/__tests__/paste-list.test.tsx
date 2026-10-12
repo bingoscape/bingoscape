@@ -549,7 +549,11 @@ describe("Paste a list", () => {
 
         fireEvent.change(
           screen.getByRole("combobox", {
+<<<<<<< HEAD
             name: "Choose an item for “3x Dragon dagger”",
+=======
+            name: "Choose an item for “Dragon dagger”",
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
           }),
           { target: { value: "1231-Dragon dagger#(p)" } }
         )
@@ -627,6 +631,13 @@ describe("Paste a list", () => {
         await waitFor(() =>
           expect(mockedSearch).toHaveBeenCalledWith("Abysal whip", 30)
         )
+<<<<<<< HEAD
+=======
+        // Let the search settle inside act, so its state update is not stray.
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 0))
+        })
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
       })
 
       it("searches for the text without a quantity", async () => {
@@ -636,6 +647,15 @@ describe("Paste a list", () => {
         fireEvent.click(screen.getByRole("button", { name: "Search instead" }))
 
         expect(searchField()).toHaveValue("Abysal whip")
+<<<<<<< HEAD
+=======
+        await waitFor(() =>
+          expect(mockedSearch).toHaveBeenCalledWith("Abysal whip", 30)
+        )
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 0))
+        })
+>>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
       })
 
       it("removes the line with Remove", async () => {
