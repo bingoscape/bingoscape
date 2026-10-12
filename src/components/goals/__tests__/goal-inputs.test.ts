@@ -3,6 +3,7 @@ import {
   buildItemGoalInput,
   buildMetricGoalInput,
   formatAddedGoal,
+  formatAddedGroup,
 } from "@/components/goals/goal-inputs"
 import { ABYSSAL_WHIP, DRAGON_DAGGER_P } from "./item-fixtures"
 
@@ -91,5 +92,32 @@ describe("formatAddedGoal", () => {
     expect(
       formatAddedGoal(buildMetricGoalInput("activity", "clue_scrolls_all", 10))
     ).toBe("Clue Scrolls (All): 10")
+  })
+})
+
+describe("formatAddedGroup", () => {
+  const inputs = [
+    buildItemGoalInput(ABYSSAL_WHIP, 1),
+    buildItemGoalInput(DRAGON_DAGGER_P, 2),
+    buildMetricGoalInput("boss", "zulrah", 50),
+  ]
+
+  it("names an OR group with its members", () => {
+    expect(formatAddedGroup(inputs, { kind: "any", min: 1 })).toBe(
+      "Group: any 1 of 3 (Abyssal whip x1, Dragon dagger (p) x2, Zulrah: 50 kills)"
+    )
+  })
+
+  it("names an AND group", () => {
+    expect(formatAddedGroup(inputs, { kind: "all" })).toBe(
+      "Group: all 3 (Abyssal whip x1, Dragon dagger (p) x2, Zulrah: 50 kills)"
+    )
+  })
+
+  it("names the first three members and counts the rest", () => {
+    const five = [...inputs, ...inputs.slice(0, 2)]
+    expect(formatAddedGroup(five, { kind: "any", min: 2 })).toBe(
+      "Group: any 2 of 5 (Abyssal whip x1, Dragon dagger (p) x2, Zulrah: 50 kills, +2 more)"
+    )
   })
 })

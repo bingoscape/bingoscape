@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { Check, Plus, X } from "lucide-react"
+import { Check, ClipboardList, Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils"
 import type { OsrsItem } from "@/types/osrs-items"
 import { getItemDisplayName, ItemOption } from "@/components/osrs-item-option"
 import { ItemSearchStatus } from "./item-search-status"
+import { PasteListPanel } from "./paste-list-panel"
+import { mergeSelectedItems, type QuantifiedItem } from "./selected-items"
 import { SelectedItemRow } from "./selected-item-row"
 import type { SelectedItem } from "./types"
 import { itemKey, resolveItemId } from "./utils"
@@ -31,7 +33,8 @@ interface ItemPickerProps {
  * Inline item search with a list of the picked items below it. Picking a
  * result adds it with a quantity of 1 (picking it again removes it) and puts
  * focus back in the search field, so several items can be added in a row
- * with the keyboard: type, arrow keys, Enter.
+ * with the keyboard: type, arrow keys, Enter. "Paste a list" opens a panel
+ * that matches a pasted list of names to items and adds them to the list.
  */
 export function ItemPicker({
   value,
@@ -44,7 +47,9 @@ export function ItemPicker({
   // The result Enter would pick. Controlled, because new results leave the
   // old highlight pointing at an item that is gone and Enter would do nothing.
   const [highlighted, setHighlighted] = useState("")
+  const [pasteOpen, setPasteOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
+  const pasteButtonRef = useRef<HTMLButtonElement>(null)
   const { ready, loading, items, failed } = useOsrsItemSearch(query)
 
   const resultKeys = items.map((item) => itemKey(item))
@@ -94,6 +99,16 @@ export function ItemPicker({
     )
   }
 
+  const addPasted = (items: QuantifiedItem[]) => {
+    const merged = mergeSelectedItems(value, items)
+    onChange(merged)
+    setAnnouncement(
+      `${items.length} ${items.length === 1 ? "item" : "items"} added from your list. ${merged.length} ${merged.length === 1 ? "item" : "items"} selected.`
+    )
+    setPasteOpen(false)
+    focusSearch()
+  }
+
   const clearAll = () => {
     onChange([])
     setAnnouncement("All items removed.")
@@ -103,7 +118,34 @@ export function ItemPicker({
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <p className="text-sm font-medium">Items</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium">Items</p>
+          <Button
+            ref={pasteButtonRef}
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-expanded={pasteOpen}
+            onClick={() => setPasteOpen((open) => !open)}
+            className="-my-1 h-8 px-2 text-xs"
+          >
+            <ClipboardList aria-hidden="true" />
+            Paste a list
+          </Button>
+        </div>
+        {pasteOpen && (
+          <PasteListPanel
+            onConfirm={addPasted}
+            onCancel={() => {
+              setPasteOpen(false)
+              pasteButtonRef.current?.focus()
+            }}
+            onSearchInstead={(text) => {
+              setQuery(text)
+              searchRef.current?.focus()
+            }}
+          />
+        )}
         <Command
           shouldFilter={false}
           loop
@@ -136,7 +178,8 @@ export function ItemPicker({
               aria-busy={loading}
               className={cn(
                 "max-h-[min(16rem,40dvh)]",
-                loading && "opacity-60 transition-opacity motion-reduce:transition-none"
+                loading &&
+                  "opacity-60 transition-opacity motion-reduce:transition-none"
               )}
             >
               <CommandGroup className="p-1">
@@ -159,10 +202,7 @@ export function ItemPicker({
                       <ItemOption item={item} />
                       {selected ? (
                         <>
-                          <Check
-                            aria-hidden="true"
-                            className="text-success"
-                          />
+                          <Check aria-hidden="true" className="text-success" />
                           <span className="sr-only">Added</span>
                         </>
                       ) : (

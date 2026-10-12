@@ -1,6 +1,7 @@
 import { parseItemName } from "osrs-item-data"
 import type { NewGoalInput } from "@/app/actions/bingo"
 import { getItemDisplayName } from "@/components/osrs-item-option"
+import { formatNewGroupRule, type NewGoalsRule } from "@/lib/goal-summary"
 import { formatNumber } from "@/lib/number-input"
 import { getMetricName, getMetricTargetCopy } from "@/lib/osrs-metrics"
 import type { OsrsItem } from "@/types/osrs-items"
@@ -54,4 +55,21 @@ export function formatAddedGoal(input: NewGoalInput): string {
       return `${getMetricName(input.metricName)}: ${target}${unit ? ` ${unit}` : ""}`
     }
   }
+}
+
+/** Items named in the confirmation of a group; the rest is counted. */
+const MAX_NAMED_IN_GROUP_TEXT = 3
+
+/**
+ * What a new group reads as in confirmations:
+ * "Group: any 1 of 3 (Abyssal whip x1, Dragon warhammer x1, Zulrah's fang x1)".
+ */
+export function formatAddedGroup(
+  inputs: NewGoalInput[],
+  rule: Exclude<NewGoalsRule, { kind: "separate" }>
+): string {
+  const named = inputs.slice(0, MAX_NAMED_IN_GROUP_TEXT).map(formatAddedGoal)
+  const more = inputs.length - named.length
+  if (more > 0) named.push(`+${more} more`)
+  return `Group: ${formatNewGroupRule(rule, inputs.length)} (${named.join(", ")})`
 }
