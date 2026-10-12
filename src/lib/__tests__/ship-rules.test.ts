@@ -1,6 +1,7 @@
 import {
   aggregateShipRuleCounts,
   mergeShipRulesByLength,
+  shipRulesEqual,
   totalShipTiles,
   validateShipRulesFitBoard,
 } from "../ship-rules"
@@ -61,5 +62,27 @@ describe("ship-rules", () => {
     expect(
       validateShipRulesFitBoard([{ length: 6, count: 1 }], 5, 5)
     ).toMatch(/exceeds board dimensions/)
+  })
+
+  it("compares fleets after merging duplicate lengths", () => {
+    expect(
+      shipRulesEqual(
+        [
+          { length: 2, count: 1 },
+          { length: 2, count: 1 },
+          { length: 3, count: 1 },
+        ],
+        [
+          { length: 3, count: 1 },
+          { length: 2, count: 2 },
+        ]
+      )
+    ).toBe(true)
+    expect(
+      shipRulesEqual([{ length: 2, count: 1 }], [{ length: 2, count: 2 }])
+    ).toBe(false)
+    expect(
+      shipRulesEqual([{ length: 2, count: 1 }], [{ length: 3, count: 1 }])
+    ).toBe(false)
   })
 })

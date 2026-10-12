@@ -12,6 +12,7 @@ import {
 } from "@/lib/ship-fleet-presets"
 import {
   mergeShipRulesByLength,
+  shipRulesEqual,
   totalShipTiles,
   validateShipRulesFitBoard,
 } from "@/lib/ship-rules"
@@ -37,18 +38,6 @@ function nextDefaultLength(rules: ShipRule[]): number {
     if (!used.has(length)) return length
   }
   return MIN_SHIP_LENGTH
-}
-
-function sameRules(a: ShipRule[], b: ShipRule[]): boolean {
-  const left = mergeShipRulesByLength(a)
-  const right = mergeShipRulesByLength(b)
-  return (
-    left.length === right.length &&
-    left.every(
-      (rule, i) =>
-        rule.length === right[i]?.length && rule.count === right[i]?.count
-    )
-  )
 }
 
 interface NumberStepperProps {
@@ -197,7 +186,7 @@ export function ShipRulesEditor({
                 key={preset.id}
                 type="button"
                 size="sm"
-                aria-pressed={sameRules(rules, preset.rules)}
+                aria-pressed={shipRulesEqual(rules, preset.rules)}
                 className="aria-pressed:text-osrs-yellow aria-pressed:osrs-bevel-inset h-auto flex-col items-start gap-0.5 px-3 py-2"
                 onClick={() => applyPreset(preset)}
               >

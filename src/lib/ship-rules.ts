@@ -54,3 +54,16 @@ export function validateShipRulesFitBoard(
 export function totalShipTiles(rules: ShipRule[]): number {
   return rules.reduce((sum, rule) => sum + rule.length * rule.count, 0)
 }
+
+/** Whether two fleets are the same once merged by length. */
+export function shipRulesEqual(a: ShipRule[], b: ShipRule[]): boolean {
+  const left = mergeShipRulesByLength(a)
+  const right = mergeShipRulesByLength(b)
+  return (
+    left.length === right.length &&
+    left.every(
+      (rule, i) =>
+        rule.length === right[i]?.length && rule.count === right[i]?.count
+    )
+  )
+}

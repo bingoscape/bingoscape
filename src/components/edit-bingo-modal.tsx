@@ -6,12 +6,19 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
 import { updateBingo, getBingoWithPatternBonuses } from "@/app/actions/bingo"
-import { Loader2, Info, Eye, Grid3X3, Lock } from "lucide-react"
+import { Loader2, Info, Eye, Grid3X3, Lock, Ship } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { PatternBonusSchematicEditor } from "./pattern-bonus-schematic-editor"
 import { SettingsDialogLayout } from "./settings-dialog-layout"
-import type { BingoType } from "@/server/db/schema"
+import { ShipRulesEditor } from "./ship-rules-editor"
+import AlertBanner from "@/components/ui/alert-banner"
+import {
+  mergeShipRulesByLength,
+  shipRulesEqual,
+  validateShipRulesFitBoard,
+} from "@/lib/ship-rules"
+import type { BingoType, ShipRule } from "@/server/db/schema"
 
 interface Bingo {
   id: string
@@ -20,12 +27,25 @@ interface Bingo {
   visible: boolean
   locked: boolean
   codephrase: string
+  bingoType: BingoType
+  rows: number
+  columns: number
+}
+
+/** What the edit dialog needs to edit the fleet of a battleship board. */
+export interface EditBingoBattleship {
+  /** The fleet as saved; loaded by the Server Component, not by the dialog. */
+  rules: ShipRule[]
+  /** The event has started: the fleet can no longer change. */
+  started: boolean
 }
 
 interface EditBingoModalProps {
   bingo: Bingo
   isOpen: boolean
   onClose: () => void
+  /** Given for battleship boards; enables the Ship rules tab. */
+  battleship?: EditBingoBattleship
 }
 
 interface BingoPatternData {
@@ -43,12 +63,14 @@ const TABS = [
   { id: "general", label: "General Details", icon: Info },
   { id: "visibility", label: "Visibility & State", icon: Eye },
   { id: "patterns", label: "Pattern Bonuses", icon: Grid3X3 },
+  { id: "ships", label: "Ship rules", icon: Ship },
 ]
 
 export function EditBingoModal({
   bingo,
   isOpen,
   onClose,
+  battleship,
 }: EditBingoModalProps) {
   const [activeTab, setActiveTab] = useState("general")
   const [formData, setFormData] = useState({
@@ -67,10 +89,16 @@ export function EditBingoModal({
   const [antiDiagonalBonus, setAntiDiagonalBonus] = useState(0)
   const [completeBoardBonus, setCompleteBoardBonus] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [shipRules, setShipRules] = useState<ShipRule[]>(
+    battleship?.rules ?? []
+  )
+  const isBattleship = bingo.bingoType === "battleship" && !!battleship
+  const rulesLocked = battleship?.started ?? false
 
-  // Fetch pattern bonus data when modal opens
+  // Fetch pattern bonus data when modal opens. Only standard boards have
+  // pattern bonuses.
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && bingo.bingoType === "standard") {
       setIsLoadingPattern(true)
       void getBingoWithPatternBonuses(bingo.id).then((result) => {
         if (result.success && result.data) {
@@ -107,7 +135,7 @@ export function EditBingoModal({
         setIsLoadingPattern(false)
       })
     }
-  }, [isOpen, bingo.id])
+  }, [isOpen, bingo.id, bingo.bingoType])
 
   // Reset only when the modal opens so a refresh of `bingo` mid-edit
   // doesn't wipe what the user is typing.
@@ -121,9 +149,10 @@ export function EditBingoModal({
         locked: bingo.locked,
         codephrase: bingo.codephrase,
       })
+      setShipRules(battleship?.rules ?? [])
     }
     wasOpen.current = isOpen
-  }, [isOpen, bingo])
+  }, [isOpen, bingo, battleship])
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -137,6 +166,27 @@ export function EditBingoModal({
   }
 
   const handleSubmit = async () => {
+    const rulesChanged =
+      isBattleship &&
+      !rulesLocked &&
+      !shipRulesEqual(shipRules, battleship.rules)
+    if (rulesChanged) {
+      const fitError = validateShipRulesFitBoard(
+        shipRules,
+        bingo.rows,
+        bingo.columns
+      )
+      if (fitError) {
+        setActiveTab("ships")
+        toast({
+          title: "The fleet does not fit this board",
+          description: fitError,
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
     setIsSubmitting(true)
     try {
       const updateData = {
@@ -151,13 +201,20 @@ export function EditBingoModal({
                 completeBoardBonus,
               }
             : undefined,
+        // Saved with the other settings, in one transaction.
+        shipRules: rulesChanged ? mergeShipRulesByLength(shipRules) : undefined,
       }
 
       const result = await updateBingo(bingo.id, updateData)
       if (result.success) {
+        const cleared = result.clearedTeams ?? 0
         toast({
           title: "Success",
-          description: "Bingo board updated successfully",
+          description: rulesChanged
+            ? cleared > 0
+              ? `Bingo board updated. The ships of ${cleared} ${cleared === 1 ? "team were" : "teams were"} cleared, the team leaders need to place them again.`
+              : "Bingo board updated. No team had placed ships yet."
+            : "Bingo board updated successfully",
         })
         onClose()
       } else {
@@ -167,7 +224,10 @@ export function EditBingoModal({
       console.error(error)
       toast({
         title: "Error",
-        description: "Failed to update bingo board",
+        description:
+          error instanceof Error && error.message
+            ? error.message
+            : "Failed to update bingo board",
         variant: "destructive",
       })
     } finally {
@@ -175,9 +235,10 @@ export function EditBingoModal({
     }
   }
 
+  // Pattern bonuses are a standard board feature; the fleet is a battleship one.
   const visibleTabs = TABS.filter((tab) => {
-    if (tab.id === "patterns" && patternData?.bingoType === "progression")
-      return false
+    if (tab.id === "patterns") return bingo.bingoType === "standard"
+    if (tab.id === "ships") return isBattleship
     return true
   })
 
@@ -335,6 +396,31 @@ export function EditBingoModal({
               />
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === "ships" && isBattleship && (
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-lg font-medium">Ship rules</h3>
+            <p className="text-muted-foreground text-sm">
+              The fleet every team has to place on this board.
+            </p>
+          </div>
+          {rulesLocked ? (
+            <AlertBanner
+              icon={<Lock className="size-5" />}
+              message="The event has started, so the fleet can no longer change. Teams keep the ships they placed."
+            />
+          ) : (
+            <AlertBanner message="Changing the ship rules clears the placed fleet of every team. Team leaders have to place their ships again." />
+          )}
+          <ShipRulesEditor
+            rules={shipRules}
+            onChange={setShipRules}
+            board={{ rows: bingo.rows, columns: bingo.columns }}
+            readOnly={rulesLocked}
+          />
         </div>
       )}
     </SettingsDialogLayout>
