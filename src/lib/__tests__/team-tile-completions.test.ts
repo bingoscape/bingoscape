@@ -82,7 +82,12 @@ describe("fetchTeamTileCompletions", () => {
     expect(q.sql).toContain('"completed_at"')
     expect(q.params).toEqual(expect.arrayContaining([after.t, after.id]))
     expect(q.sql).not.toContain("submitted_by")
-    expect(q.sql).not.toContain("<>")
+    // The caller's own completions are included: nothing is compared to a user.
+    expect(q.sql).not.toMatch(/"(user_id|team_id)" <>/)
+    // Blind battleship boards (before their event starts) are left out.
+    expect(q.sql).toContain('"bingo_type" <> $')
+    expect(q.params).toContain("battleship")
+    expect(q.sql).toContain('"start_date" <= $')
   })
 })
 

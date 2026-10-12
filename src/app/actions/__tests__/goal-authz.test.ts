@@ -63,6 +63,13 @@ const q = mockDb.query as Record<
   { findFirst: jest.Mock; findMany: jest.Mock }
 >
 
+/** The Board a Tile is read from, as `canReadTile` loads it. */
+const standardBingo = (eventId: string) => ({
+  eventId,
+  bingoType: "standard",
+  event: { startDate: new Date(0) },
+})
+
 const goalInEvent = (eventId: string) => ({
   tileId: "tile-1",
   tile: { bingoId: "bingo-1", bingo: { eventId } },
@@ -84,7 +91,7 @@ beforeEach(() => {
   q.tiles!.findFirst.mockResolvedValue({
     bingoId: "bingo-1",
     isHidden: false,
-    bingo: { eventId: "event-1" },
+    bingo: standardBingo("event-1"),
   })
   q.goalGroups!.findMany.mockResolvedValue([])
   q.goals!.findMany.mockResolvedValue([])
@@ -213,7 +220,7 @@ describe("hidden Tile Goals are not readable by non-managers", () => {
     q.tiles!.findFirst.mockResolvedValue({
       isHidden: true,
       bingoId: "bingo-1",
-      bingo: { eventId: "event-1" },
+      bingo: standardBingo("event-1"),
     })
     q.goals!.findFirst.mockResolvedValue({ tileId: "tile-1" })
   })
