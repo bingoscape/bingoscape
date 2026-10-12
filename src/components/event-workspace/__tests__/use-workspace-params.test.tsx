@@ -16,6 +16,7 @@ describe("parseWorkspaceParams", () => {
       panel: "tile",
       teamId: null,
       filter: null,
+      view: null,
     })
   })
 
@@ -29,7 +30,18 @@ describe("parseWorkspaceParams", () => {
       panel: "teams",
       teamId: "team9",
       filter: null,
+      view: null,
     })
+  })
+
+  it("reads the goal setup view and ignores unknown views", () => {
+    expect(parseWorkspaceParams(new URLSearchParams("view=goals")).view).toBe(
+      "goals"
+    )
+    expect(
+      parseWorkspaceParams(new URLSearchParams("view=nope")).view
+    ).toBeNull()
+    expect(parseWorkspaceParams(new URLSearchParams("view=")).view).toBeNull()
   })
 
   it("reads a known filter and ignores unknown ones", () => {
@@ -62,6 +74,15 @@ describe("buildWorkspaceUrl", () => {
     expect(buildWorkspaceUrl(PATH, "panel=teams", { panel: "tile" })).toBe(PATH)
     expect(buildWorkspaceUrl(PATH, "", { panel: "prize" })).toBe(
       `${PATH}?panel=prize`
+    )
+  })
+
+  it("sets and clears the view, keeping the rest", () => {
+    expect(buildWorkspaceUrl(PATH, "board=b1", { view: "goals" })).toBe(
+      `${PATH}?board=b1&view=goals`
+    )
+    expect(buildWorkspaceUrl(PATH, "board=b1&view=goals", { view: null })).toBe(
+      `${PATH}?board=b1`
     )
   })
 
@@ -109,6 +130,54 @@ describe("useWorkspaceParams", () => {
       panel: "info",
       teamId: "x",
       filter: null,
+      view: null,
+    })
+  })
+
+  it("setView pushes a history entry (Back returns to the Board) and keeps other params", () => {
+    mockUrl("board=b1&tile=t1")
+    const { result } = renderHook(() => useWorkspaceParams())
+    act(() => result.current.setView("goals"))
+    expect(pushState).toHaveBeenCalledWith(
+      null,
+      "",
+      `${PATH}?board=b1&tile=t1&view=goals`
+    )
+    expect(replaceState).not.toHaveBeenCalled()
+  })
+
+  it("setView(null) removes the view", () => {
+    mockUrl("board=b1&view=goals")
+    const { result } = renderHook(() => useWorkspaceParams())
+    expect(result.current.params.view).toBe("goals")
+    act(() => result.current.setView(null))
+    expect(pushState).toHaveBeenCalledWith(null, "", `${PATH}?board=b1`)
+  })
+
+  it("setView does nothing when the view is already shown", () => {
+    mockUrl("view=goals")
+    const { result } = renderHook(() => useWorkspaceParams())
+    act(() => result.current.setView("goals"))
+    expect(pushState).not.toHaveBeenCalled()
+  })
+
+  it("selecting a Tile keeps the goal setup view", () => {
+    mockUrl("view=goals")
+    const { result } = renderHook(() => useWorkspaceParams())
+    act(() => result.current.selectTile("t1"))
+    expect(pushState).toHaveBeenCalledWith(
+      null,
+      "",
+      `${PATH}?view=goals&tile=t1`
+    )
+  })
+
+  it("switching Board keeps the goal setup view", () => {
+    mockUrl("board=b1&view=goals")
+    const { result } = renderHook(() => useWorkspaceParams())
+    act(() => result.current.setBoard("b2"))
+    expect(replace).toHaveBeenCalledWith(`${PATH}?board=b2&view=goals`, {
+      scroll: false,
     })
   })
 

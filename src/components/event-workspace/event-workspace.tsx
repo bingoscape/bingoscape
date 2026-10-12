@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/drawer"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BoardHeader } from "@/components/event-workspace/board-header"
+import { GoalSetupView } from "@/components/goal-setup/goal-setup-view"
 import { LayoutToolbar } from "@/components/event-workspace/layout-toolbar"
 import { SideRail } from "@/components/event-workspace/side-rail"
 import {
@@ -120,6 +121,7 @@ export function EventWorkspace({
     selectTile,
     setPanel,
     setFilter,
+    setView,
     setBoard,
     setTeamId,
     isSwitching,
@@ -182,6 +184,9 @@ export function EventWorkspace({
   )
 
   const tiles = useMemo(() => bingo?.tiles ?? [], [bingo?.tiles])
+
+  // ?view=goals only means something to people who can manage Goals.
+  const setupMode = isManagement && params.view === "goals" && !!bingo
 
   // ?tile= must point at a Tile of this Board; hidden Tiles are ignored for
   // players.
@@ -421,7 +426,11 @@ export function EventWorkspace({
               onTeamChange={setTeamId}
               pendingSubmissionCount={pendingSubmissionCount}
               editLayout={editLayout}
-              onToggleEditLayout={() => setEditLayout((v) => !v)}
+              onToggleEditLayout={() => {
+                // Editing the layout happens on the Board itself.
+                if (!editLayout) setView(null)
+                setEditLayout((v) => !v)
+              }}
               onQuickSubmit={() => setQuickSubmitOpen(true)}
               isUpcoming={isUpcoming}
               isSwitching={isSwitching}
@@ -434,8 +443,11 @@ export function EventWorkspace({
                 counts: filterCounts,
                 onChange: setFilter,
               }}
+              onSetUpGoals={
+                isManagement && !setupMode ? () => setView("goals") : undefined
+              }
               goalHealth={
-                isManagement
+                isManagement && !setupMode
                   ? {
                       tiles,
                       selectedTileId: selectedTile?.id ?? null,
@@ -465,7 +477,18 @@ export function EventWorkspace({
                 isSwitching && "opacity-60"
               )}
             >
-              {isUpcoming && !isManagement ? (
+              {setupMode ? (
+                <GoalSetupView
+                  key={bingo.id}
+                  bingoId={bingo.id}
+                  tiles={tiles}
+                  womLinked={bingo.womCompetitionId != null}
+                  onBack={() => setView(null)}
+                  onOpenTile={handleSelectTile}
+                  onRefresh={refresh}
+                  onOpenTrackerSettings={() => setTrackerOpen(true)}
+                />
+              ) : isUpcoming && !isManagement ? (
                 <LockedBoard
                   unlockDate={unlockDate}
                   timezone={event.timezone || "UTC"}

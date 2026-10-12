@@ -7,6 +7,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 export const PANEL_TABS = ["tile", "teams", "prize", "info"] as const
 export type PanelTab = (typeof PANEL_TABS)[number]
 
+/** Alternative views of the Board area; the Board itself is the default (no param). */
+export const WORKSPACE_VIEWS = ["goals"] as const
+export type WorkspaceView = (typeof WORKSPACE_VIEWS)[number]
+
 export interface WorkspaceParams {
   /** Selected Board id (`?board=`), null means "first Board". */
   board: string | null
@@ -18,9 +22,17 @@ export interface WorkspaceParams {
   teamId: string | null
   /** Active Board filter (`?filter=`). */
   filter: TileFilter | null
+  /** Alternative view of the Board area (`?view=goals`), null means the Board. */
+  view: WorkspaceView | null
 }
 
 type ParamReader = { get(name: string): string | null }
+
+export function isWorkspaceView(
+  value: string | null | undefined
+): value is WorkspaceView {
+  return !!value && (WORKSPACE_VIEWS as readonly string[]).includes(value)
+}
 
 export function isPanelTab(
   value: string | null | undefined
@@ -32,12 +44,14 @@ export function isPanelTab(
 export function parseWorkspaceParams(search: ParamReader): WorkspaceParams {
   const panel = search.get("panel")
   const filter = search.get("filter")
+  const view = search.get("view")
   return {
     board: search.get("board") || null,
     tile: search.get("tile") || null,
     panel: isPanelTab(panel) ? panel : "tile",
     teamId: search.get("teamId") || null,
     filter: isTileFilter(filter) ? filter : null,
+    view: isWorkspaceView(view) ? view : null,
   }
 }
 
@@ -69,6 +83,7 @@ export function buildWorkspaceUrl(
   apply("tile", patch.tile)
   apply("teamId", patch.teamId)
   apply("filter", patch.filter)
+  apply("view", patch.view)
   if (patch.panel !== undefined) {
     apply("panel", patch.panel === "tile" ? null : patch.panel)
   }
@@ -89,6 +104,8 @@ interface ParamReaderWithToString extends ParamReader {
  *   Tile. Switching between Tiles replaces the entry, so one Back always
  *   clears the selection. Next.js syncs `useSearchParams` with native
  *   pushState/replaceState, so no server round trip happens.
+ * - `view` (the goal setup view) also uses pushState, so Back returns to the
+ *   Board.
  * - `board` / `teamId` change what the server renders (Board data, "view as"
  *   Team), so they use `router.replace(..., { scroll: false })`.
  */
@@ -133,6 +150,14 @@ export function useWorkspaceParams() {
     [params.panel, urlFor]
   )
 
+  const setView = useCallback(
+    (view: WorkspaceView | null) => {
+      if (view === params.view) return
+      window.history.pushState(null, "", urlFor({ view }))
+    },
+    [params.view, urlFor]
+  )
+
   const setFilter = useCallback(
     (filter: TileFilter | null) => {
       if (filter === params.filter) return
@@ -167,6 +192,7 @@ export function useWorkspaceParams() {
     selectTile,
     setPanel,
     setFilter,
+    setView,
     setBoard,
     setTeamId,
     isSwitching,
