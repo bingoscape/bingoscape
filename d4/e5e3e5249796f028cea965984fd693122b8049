@@ -1,0 +1,19 @@
+src/components/goals/__tests__/paste-list.test.tsx
+  s_c5534c06f8f6d8::t_9f95f3c2a1cb76 552,554-556,634-640,650-658
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d4e5e3e5249796f028cea965984fd693122b8049",
+  "prompts": {},
+  "sessions": {
+    "s_c5534c06f8f6d8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3e1e651a-819a-4c74-bcbd-b174f837fb01",
+        "model": "unknown"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
