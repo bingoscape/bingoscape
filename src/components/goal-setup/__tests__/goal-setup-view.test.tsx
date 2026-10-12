@@ -69,6 +69,8 @@ const rowTitles = (container: HTMLElement) =>
         ?.textContent
   )
 const row = (title: string) => screen.getByRole("listitem", { name: title })
+/** Focusing makes the row the tab stop, a state update React must see in act. */
+const focusRow = (title: string) => act(() => row(title).focus())
 
 const checkbox = (title: string) =>
   screen.getByRole("checkbox", { name: `Select ${title}` })
@@ -519,7 +521,7 @@ describe("GoalSetupView: keyboard", () => {
 
   it("moves between rows with the arrow keys and hands the tab stop on", () => {
     renderView()
-    row("Fire cape").focus()
+    focusRow("Fire cape")
 
     key(row("Fire cape"), "ArrowDown")
     expect(row("Zulrah")).toHaveFocus()
@@ -535,7 +537,7 @@ describe("GoalSetupView: keyboard", () => {
 
   it("stops at the first and last row", () => {
     renderView()
-    row("Fire cape").focus()
+    focusRow("Fire cape")
     key(row("Fire cape"), "ArrowUp")
     expect(row("Fire cape")).toHaveFocus()
 
@@ -551,14 +553,14 @@ describe("GoalSetupView: keyboard", () => {
   it("moves only through the listed rows while the filter is on", () => {
     renderView()
     toggleFilter()
-    row("Dragon pickaxe").focus()
+    focusRow("Dragon pickaxe")
     key(row("Dragon pickaxe"), "ArrowDown")
     expect(row("Nex")).toHaveFocus()
   })
 
   it("opens the row's quick-add bar with Enter and puts the cursor in it", () => {
     renderView()
-    row("Dragon pickaxe").focus()
+    focusRow("Dragon pickaxe")
 
     key(row("Dragon pickaxe"), "Enter")
 
@@ -570,9 +572,9 @@ describe("GoalSetupView: keyboard", () => {
 
   it("puts the cursor back into an already open bar with Enter", () => {
     renderView()
-    row("Dragon pickaxe").focus()
+    focusRow("Dragon pickaxe")
     key(row("Dragon pickaxe"), "Enter")
-    row("Dragon pickaxe").focus()
+    focusRow("Dragon pickaxe")
 
     key(row("Dragon pickaxe"), "Enter")
 
@@ -582,7 +584,7 @@ describe("GoalSetupView: keyboard", () => {
 
   it("closes the bar with Escape and returns to the row", () => {
     renderView()
-    row("Dragon pickaxe").focus()
+    focusRow("Dragon pickaxe")
     key(row("Dragon pickaxe"), "Enter")
 
     key(screen.getByLabelText("Description"), "Escape")
@@ -594,7 +596,7 @@ describe("GoalSetupView: keyboard", () => {
   it("lets the first Escape empty the item search instead of closing the bar", async () => {
     window.localStorage.setItem("bingoscape:goals:quick-add-type", "item")
     renderView()
-    row("Nex").focus()
+    focusRow("Nex")
     key(row("Nex"), "Enter")
     const search = screen.getByRole("combobox", { name: "Search items" })
     fireEvent.change(search, { target: { value: "aby" } })
@@ -610,9 +612,9 @@ describe("GoalSetupView: keyboard", () => {
 
   it("closes an open bar with Escape on the row itself", () => {
     renderView()
-    row("Dragon pickaxe").focus()
+    focusRow("Dragon pickaxe")
     key(row("Dragon pickaxe"), "Enter")
-    row("Dragon pickaxe").focus()
+    focusRow("Dragon pickaxe")
 
     key(row("Dragon pickaxe"), "Escape")
 
@@ -621,7 +623,7 @@ describe("GoalSetupView: keyboard", () => {
 
   it("selects the row with Space", () => {
     renderView()
-    row("Zulrah").focus()
+    focusRow("Zulrah")
     key(row("Zulrah"), " ")
     expect(checkbox("Zulrah")).toBeChecked()
     expect(screen.getByText("1 tile selected")).toBeInTheDocument()
@@ -632,7 +634,7 @@ describe("GoalSetupView: keyboard", () => {
 
   it("leaves keys typed in the quick-add bar alone", () => {
     renderView()
-    row("Dragon pickaxe").focus()
+    focusRow("Dragon pickaxe")
     key(row("Dragon pickaxe"), "Enter")
     const description = screen.getByLabelText("Description")
 

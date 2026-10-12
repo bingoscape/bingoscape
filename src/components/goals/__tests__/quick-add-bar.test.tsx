@@ -378,7 +378,11 @@ describe("QuickAddBar", () => {
       const { onAdd } = renderBar()
       await search("abyssal")
 
-      fireEvent.click(screen.getByRole("option", { name: "Abyssal tentacle" }))
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("option", { name: "Abyssal tentacle" })
+        )
+      })
 
       expect(onAdd).toHaveBeenCalledWith(
         expect.objectContaining({ itemName: "Abyssal tentacle" })
