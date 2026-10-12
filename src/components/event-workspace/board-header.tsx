@@ -39,6 +39,7 @@ import { EditBingoModal } from "@/components/edit-bingo-modal"
 import { QuickSubmissionButton } from "@/components/quick-submission-button"
 import { BoardFilters } from "@/components/event-workspace/board-filters"
 import { BoardHealthIndicator } from "@/components/event-workspace/board-health-indicator"
+import { BattleshipMarkBadge } from "@/components/battleship-mark-badge"
 import { ShortcutsHelp } from "@/components/event-workspace/shortcuts-help"
 import { TeamSelector } from "@/components/team-selector"
 import { TrackerSettingsModal } from "@/components/tracker-settings-modal"
@@ -46,6 +47,7 @@ import {
   placeShipsTeamId,
   type BattleshipWorkspaceInfo,
 } from "@/lib/battleship-workspace"
+import { MARK_LABEL } from "@/lib/battleship-marks"
 import type { TileFilter, TileFilterContext } from "@/lib/tile-filter"
 import type { BoardStats } from "@/lib/tile-status"
 import { cn } from "@/lib/utils"
@@ -109,6 +111,8 @@ interface BoardHeaderProps {
    */
   battleship?: BattleshipWorkspaceInfo | null
 }
+
+const BATTLESHIP_LEGEND = ["hit", "miss", "sunk"] as const
 
 /**
  * One dense header above the Board: Board pills, progress and counters, the
@@ -348,6 +352,29 @@ export function BoardHeader({
             Battleship: team leaders place their ships before the event starts.
             The tiles stay blind until then.
           </span>
+        )}
+        {boardBattleship?.started && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <ul
+              role="list"
+              aria-label="Battleship legend"
+              className="flex items-center gap-3"
+            >
+              {BATTLESHIP_LEGEND.map((mark) => (
+                <li
+                  key={mark}
+                  className="text-foreground flex items-center gap-1.5 font-medium"
+                >
+                  <BattleshipMarkBadge mark={mark} className="size-4" />
+                  {MARK_LABEL[mark]}
+                </li>
+              ))}
+            </ul>
+            <span className="text-muted-foreground">
+              You learn whether you hit when a tile is approved. Only your own
+              team&apos;s results are shown.
+            </span>
+          </div>
         )}
         {isUpcoming && isManagement && (
           <span className="text-muted-foreground flex items-center gap-1 font-medium">

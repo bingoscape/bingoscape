@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import { BoardHeader } from "@/components/event-workspace/board-header"
 import type { Bingo, Tile } from "@/types/model"
 
@@ -167,6 +167,7 @@ describe("BoardHeader: battleship", () => {
     rules: [{ length: 2, count: 1 }],
     started: false,
     ledTeamId: null,
+    marks: { hitTileIds: [], missTileIds: [], sunkTileIds: [] },
     ...overrides,
   })
   const placeShips = () => screen.queryByRole("link", { name: "Place ships" })
@@ -251,5 +252,55 @@ describe("BoardHeader: battleship", () => {
       battleship: info(),
     })
     expect(placeShips()).toHaveClass("pointer-coarse:min-h-11")
+  })
+
+  describe("legend", () => {
+    const legend = () =>
+      screen.queryByRole("list", { name: "Battleship legend" })
+
+    it("lists Hit, Miss and Sunk with the marker glyphs once the event has started", () => {
+      renderBattleship({
+        isManagement: false,
+        effectiveTeamId: "t1",
+        battleship: info({ started: true, ledTeamId: "t1" }),
+      })
+      const items = within(legend()!).getAllByRole("listitem")
+      expect(items.map((item) => item.textContent)).toEqual([
+        "Hit",
+        "Miss",
+        "Sunk",
+      ])
+      expect(
+        items.map((item) =>
+          item.querySelector("[data-mark]")?.getAttribute("data-mark")
+        )
+      ).toEqual(["hit", "miss", "sunk"])
+      expect(
+        screen.getByText(/You learn whether you hit when a tile is approved/)
+      ).toBeInTheDocument()
+    })
+
+    it("keeps the blind-board note and no legend before the start", () => {
+      renderBattleship({
+        isManagement: false,
+        battleship: info({ started: false, ledTeamId: null }),
+      })
+      expect(note()).toBeInTheDocument()
+      expect(legend()).not.toBeInTheDocument()
+    })
+
+    it("has no legend on other boards or in the read-only view", () => {
+      renderHeader({
+        teams,
+        battleship: info({ started: true }),
+      })
+      expect(legend()).not.toBeInTheDocument()
+
+      renderBattleship({
+        readOnly: true,
+        battleship: info({ started: true }),
+      })
+      expect(legend()).not.toBeInTheDocument()
+    })
   })
 })
