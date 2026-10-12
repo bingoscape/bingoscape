@@ -11,8 +11,10 @@ interface BattleshipMarkBadgeProps {
 }
 
 const TONE: Record<BattleshipMark, string> = {
-  hit: "bg-danger text-destructive-foreground",
-  miss: "bg-secondary text-muted-foreground",
+  // `danger` is a pale pink on Stone (it is made for text there), so the glyph
+  // turns dark; on Parchment it is a deep red with the light foreground.
+  hit: "bg-danger text-destructive-foreground dark:text-black",
+  miss: "bg-secondary text-muted-foreground ring-1 ring-muted-foreground",
   sunk: "bg-destructive text-destructive-foreground ring-1 ring-osrs-yellow",
 }
 

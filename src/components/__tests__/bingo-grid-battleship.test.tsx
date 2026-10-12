@@ -108,7 +108,7 @@ describe("battleship markers on the Board", () => {
     expect(hit).toHaveClass("absolute", "bottom-[4%]", "left-[4%]", "osrs-mark")
     expect(sunk).toHaveClass("ring-osrs-yellow", "bg-destructive")
     expect(miss).toHaveClass("bg-secondary", "text-muted-foreground")
-    expect(hit).toHaveClass("bg-danger", "text-destructive-foreground")
+    expect(hit).toHaveClass("bg-danger")
   })
 
   it("lets a sunk ship win over its hit Tiles and keeps the completed check", () => {
@@ -126,14 +126,20 @@ describe("battleship markers on the Board", () => {
     renderGrid(tiles, {
       marks: marks({ hit: ["tile-0"], miss: ["tile-1"], sunk: ["tile-2"] }),
     })
-    expect(cell(/Objective 1/)).toHaveClass("ring-2", "ring-destructive")
-    expect(cell(/Objective 3/)).toHaveClass("ring-2", "ring-destructive")
+    expect(
+      cell(/Objective 1/).querySelector('[data-result-ring="hit"]')
+    ).toBeInTheDocument()
+    expect(
+      cell(/Objective 3/).querySelector('[data-result-ring="sunk"]')
+    ).toBeInTheDocument()
     expect(cell(/Objective 2/)).toHaveClass("saturate-50")
-    expect(cell(/Objective 2/)).not.toHaveClass("ring-destructive")
-    expect(cell(/Objective 4/)).not.toHaveClass(
-      "saturate-50",
-      "ring-destructive"
-    )
+    expect(
+      cell(/Objective 2/).querySelector("[data-result-ring]")
+    ).not.toBeInTheDocument()
+    expect(cell(/Objective 4/)).not.toHaveClass("saturate-50")
+    expect(
+      cell(/Objective 4/).querySelector("[data-result-ring]")
+    ).not.toBeInTheDocument()
   })
 
   it("keeps the selection ring on a selected hit Tile", () => {
@@ -142,7 +148,12 @@ describe("battleship markers on the Board", () => {
       selectedTileId: "tile-0",
     })
     expect(cell(/Objective 1/)).toHaveClass("ring-osrs-yellow")
-    expect(cell(/Objective 1/)).not.toHaveClass("ring-destructive")
+    expect(
+      cell(/Objective 1/).querySelector("[data-result-ring]")
+    ).not.toBeInTheDocument()
+    expect(
+      within(cell(/Objective 1/)).getByRole("img", { name: "Hit" })
+    ).toBeInTheDocument()
   })
 
   it("extends the accessible name with the result", () => {
@@ -212,7 +223,9 @@ describe("blind Tiles on the Board", () => {
       marks: marks({ hit: ["tile-0"], miss: ["tile-1"], sunk: ["tile-0"] }),
     })
     expect(container.querySelector("[data-mark]")).not.toBeInTheDocument()
-    expect(cell(/Tile 1,/)).not.toHaveClass("ring-destructive")
+    expect(
+      container.querySelector("[data-result-ring]")
+    ).not.toBeInTheDocument()
   })
 
   it("cannot be opened by click, Enter or Space", () => {

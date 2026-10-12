@@ -108,18 +108,19 @@ export const BingoTile = React.memo(function BingoTile({
         data-blind="true"
         className={cn(
           "osrs-tile osrs-slot relative flex h-full w-full cursor-default items-center justify-center overflow-hidden rounded-sm border-[3px]",
-          "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring focus-visible:outline-solid",
+          "focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-solid",
           dimmed && "opacity-30 saturate-50"
         )}
       >
-        <span className="osrs-tile-text text-muted-foreground line-clamp-2 px-[6%] text-center font-display leading-tight @max-[43px]/tile:hidden">
+        <span className="osrs-tile-text text-muted-foreground font-display line-clamp-2 px-[6%] text-center leading-tight @max-[43px]/tile:hidden">
           {tile.title}
         </span>
       </div>
     )
   }
 
-  const canToggleReveal = tile.isHidden && !isLocked && isManagement && !readOnly
+  const canToggleReveal =
+    tile.isHidden && !isLocked && isManagement && !readOnly
 
   const handleActivate = () => {
     if (canToggleReveal) {
@@ -161,9 +162,9 @@ export const BingoTile = React.memo(function BingoTile({
       }}
       className={cn(
         "osrs-tile group relative h-full w-full cursor-pointer touch-manipulation overflow-hidden rounded-sm transition-[filter] duration-150",
-        "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring focus-visible:outline-solid",
+        "focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-solid",
         tile.isHidden
-          ? "border-2 border-dashed border-muted-foreground/50 bg-field hover:border-primary"
+          ? "border-muted-foreground/50 bg-field hover:border-primary border-2 border-dashed"
           : "osrs-slot border-[3px] hover:brightness-110 active:brightness-95",
         !tile.isHidden &&
           (completion === "completed"
@@ -173,11 +174,9 @@ export const BingoTile = React.memo(function BingoTile({
               : submissionState
                 ? "border-pending"
                 : ""),
-        (mark === "hit" || mark === "sunk") &&
-          "ring-2 ring-inset ring-destructive",
         mark === "miss" && "saturate-50",
-        selected && "z-10 ring-2 ring-osrs-yellow ring-inset",
-        highlighted && "ring-2 ring-destructive",
+        selected && "ring-osrs-yellow z-10 ring-2 ring-inset",
+        highlighted && "ring-destructive ring-2",
         tierLocked && "opacity-60 saturate-50",
         dimmed && !selected && "opacity-30 saturate-50"
       )}
@@ -213,7 +212,7 @@ export const BingoTile = React.memo(function BingoTile({
                       : "bg-secondary"
               )}
             >
-              <span className="osrs-text-shadow osrs-tile-text line-clamp-3 px-[6%] text-center font-display leading-tight font-semibold text-osrs-gold @max-[43px]/tile:hidden">
+              <span className="osrs-text-shadow osrs-tile-text font-display text-osrs-gold line-clamp-3 px-[6%] text-center leading-tight font-semibold @max-[43px]/tile:hidden">
                 {tile.title}
               </span>
             </div>
@@ -222,7 +221,7 @@ export const BingoTile = React.memo(function BingoTile({
           {/* Completed check (bottom-right, inventory style) */}
           {completion === "completed" && (
             <div
-              className="absolute right-[4%] bottom-[4%] z-10 flex size-[max(12px,22cqw)] items-center justify-center rounded-sm border border-black bg-success text-success-foreground shadow-sm"
+              className="bg-success text-success-foreground absolute right-[4%] bottom-[4%] z-10 flex size-[max(12px,22cqw)] items-center justify-center rounded-sm border border-black shadow-sm"
               title="Completed"
             >
               <CheckCircle2 className="size-[75%]" aria-hidden="true" />
@@ -230,7 +229,7 @@ export const BingoTile = React.memo(function BingoTile({
           )}
           {submissionState === "needs_review" && completion !== "completed" && (
             <div
-              className="absolute top-[4%] right-[4%] z-10 flex size-[max(12px,22cqw)] items-center justify-center rounded-sm border border-black bg-warning text-warning-foreground shadow-sm"
+              className="bg-warning text-warning-foreground absolute top-[4%] right-[4%] z-10 flex size-[max(12px,22cqw)] items-center justify-center rounded-sm border border-black shadow-sm"
               title="Changes requested"
             >
               <span className="osrs-tile-text leading-none font-bold">!</span>
@@ -238,14 +237,24 @@ export const BingoTile = React.memo(function BingoTile({
           )}
           {submissionState === "pending" && completion !== "completed" && (
             <div
-              className="absolute top-[4%] right-[4%] z-10 flex size-[max(12px,22cqw)] items-center justify-center rounded-sm border border-black bg-pending text-pending-foreground shadow-sm"
+              className="bg-pending text-pending-foreground absolute top-[4%] right-[4%] z-10 flex size-[max(12px,22cqw)] items-center justify-center rounded-sm border border-black shadow-sm"
               title="Pending review"
             >
               <Clock className="size-[70%]" aria-hidden="true" />
             </div>
           )}
 
-          {/* Battleship result (bottom-left; top-left is the XP number) */}
+          {/* Battleship result: a ring around hit and sunk Tiles (an overlay,
+              because the face would hide an inset ring of the slot itself; the
+              selection ring wins) and the marker bottom-left (top-left is the
+              XP number) */}
+          {(mark === "hit" || mark === "sunk") && !selected && (
+            <span
+              aria-hidden="true"
+              data-result-ring={mark}
+              className="ring-danger pointer-events-none absolute inset-0 z-[5] ring-2 ring-inset"
+            />
+          )}
           {mark && (
             <BattleshipMarkBadge
               mark={mark}
@@ -260,23 +269,23 @@ export const BingoTile = React.memo(function BingoTile({
           </span>
 
           {tierLocked && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/40">
+            <div className="bg-background/40 absolute inset-0 z-20 flex items-center justify-center">
               <Lock
-                className="size-[35%] text-osrs-gold drop-shadow"
+                className="text-osrs-gold size-[35%] drop-shadow"
                 aria-hidden="true"
               />
             </div>
           )}
 
           {isLoading && (
-            <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/80">
-              <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-primary" />
+            <div className="bg-background/80 absolute inset-0 z-30 flex items-center justify-center">
+              <div className="border-primary h-4 w-4 animate-spin rounded-full border-b-2" />
             </div>
           )}
         </>
       )}
       {tile.isHidden && (
-        <div className="osrs-tile-text absolute inset-0 flex items-center justify-center p-1 text-center text-muted-foreground @max-[43px]/tile:hidden">
+        <div className="osrs-tile-text text-muted-foreground absolute inset-0 flex items-center justify-center p-1 text-center @max-[43px]/tile:hidden">
           {canToggleReveal ? "Click to reveal" : "Hidden"}
         </div>
       )}
