@@ -9,10 +9,12 @@ import {
 import { AddGoalDrawer } from "@/components/goals/add-goal-drawer"
 import "./dom-polyfills"
 import { addGoal, createGoals, createMetricGoal } from "@/app/actions/bingo"
-import { searchOsrsItems } from "@/app/actions/osrs-items"
+import { resolveOsrsItemNames, searchOsrsItems } from "@/app/actions/osrs-items"
+import { toast } from "@/hooks/use-toast"
 import {
   ABYSSAL_TENTACLE,
   ABYSSAL_WHIP,
+  DRAGON_DAGGER_P,
   searchFixtureItems,
 } from "./item-fixtures"
 
@@ -21,7 +23,11 @@ jest.mock("@/app/actions/bingo", () => ({
   createGoals: jest.fn(),
   createMetricGoal: jest.fn(),
 }))
-jest.mock("@/app/actions/osrs-items", () => ({ searchOsrsItems: jest.fn() }))
+jest.mock("@/app/actions/osrs-items", () => ({
+  searchOsrsItems: jest.fn(),
+  resolveOsrsItemNames: jest.fn(),
+}))
+jest.mock("@/hooks/use-toast", () => ({ toast: jest.fn() }))
 
 const mockedAddGoal = addGoal as jest.Mock
 const mockedCreateGoals = createGoals as jest.Mock
@@ -29,6 +35,10 @@ const mockedCreateMetricGoal = createMetricGoal as jest.Mock
 const mockedSearch = searchOsrsItems as jest.MockedFunction<
   typeof searchOsrsItems
 >
+const mockedResolve = resolveOsrsItemNames as jest.MockedFunction<
+  typeof resolveOsrsItemNames
+>
+const mockedToast = toast as jest.Mock
 
 function renderDrawer(
   props: Partial<React.ComponentProps<typeof AddGoalDrawer>> = {}
@@ -229,9 +239,7 @@ describe("AddGoalDrawer", () => {
       fireEvent.change(quantityInput("Abyssal tentacle"), {
         target: { value: "500k" },
       })
-      expect(
-        screen.getByRole("button", { name: "Add 2 goals" })
-      ).toBeEnabled()
+      expect(screen.getByRole("button", { name: "Add 2 goals" })).toBeEnabled()
       submit()
 
       await waitFor(() =>
@@ -511,6 +519,578 @@ describe("AddGoalDrawer", () => {
 
       await pickItem("tentacle", "Abyssal tentacle")
       expect(screen.getByRole("button", { name: "Add 2 goals" })).toBeEnabled()
+    })
+  })
+
+  describe("How should these count?", () => {
+    const heading = () => screen.getByText("How should these count?")
+    const queryHeading = () => screen.queryByText("How should these count?")
+    const option = (name: string) => screen.getByRole("radio", { name })
+    const atLeastField = () =>
+      screen.getByRole("textbox", { name: "At least" }) as HTMLInputElement
+    const addButton = (name: string | RegExp) =>
+      screen.getByRole("button", { name })
+
+    /** Selects whip, tentacle and dagger (p): three items. */
+    async function pickThree() {
+      await pickItem("whip", "Abyssal whip")
+      await pickItem("tentacle", "Abyssal tentacle")
+      await pickItem("dragon dagger", "Dragon dagger (p)")
+    }
+
+    /** The options passed to the first createGoals call. */
+    const createOptions = () => mockedCreateGoals.mock.calls[0]![2]
+
+    it("is hidden with no or one selected item and shown from two", async () => {
+      renderDrawer()
+      expect(queryHeading()).not.toBeInTheDocument()
+
+      await pickItem("whip", "Abyssal whip")
+      expect(queryHeading()).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("radiogroup", { name: "How should these count?" })
+      ).not.toBeInTheDocument()
+
+      await pickItem("tentacle", "Abyssal tentacle")
+      expect(heading()).toBeInTheDocument()
+      const group = screen.getByRole("radiogroup", {
+        name: "How should these count?",
+      })
+      expect(
+        within(group)
+          .getAllByRole("radio")
+          .map((radio) => radio.textContent)
+      ).toEqual([
+        "Separate goals",
+        "All of these",
+        "Any one of these",
+        "At least N of these",
+      ])
+    })
+
+    it("hides again when the selection drops back to one item", async () => {
+      renderDrawer()
+      await pickItem("whip", "Abyssal whip")
+      await pickItem("tentacle", "Abyssal tentacle")
+      expect(heading()).toBeInTheDocument()
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Remove Abyssal tentacle" })
+      )
+
+      expect(queryHeading()).not.toBeInTheDocument()
+      expect(addButton("Add 1 goal")).toBeEnabled()
+    })
+
+    it("preselects separate goals, so the common case costs no extra click", async () => {
+      renderDrawer({ parentGroupId: "g1" })
+      await pickThree()
+
+      expect(option("Separate goals")).toBeChecked()
+      expect(option("All of these")).not.toBeChecked()
+      expect(addButton("Add 3 goals")).toBeEnabled()
+      submit()
+
+      await waitFor(() => expect(mockedCreateGoals).toHaveBeenCalledTimes(1))
+      expect(createOptions()).toEqual({ parentGroupId: "g1" })
+      expect(createOptions()).not.toHaveProperty("group")
+    })
+
+    it("has touch targets of at least 44px on coarse pointers", async () => {
+      renderDrawer()
+      await pickThree()
+
+      for (const radio of screen.getAllByRole("radio", {
+        name: /Separate goals|All of these|Any one of these|At least N of these/,
+      })) {
+        expect(radio.className).toContain("pointer-coarse:min-h-11")
+      }
+    })
+
+    it("moves the choice with the arrow keys", async () => {
+      renderDrawer()
+      await pickThree()
+      const separate = option("Separate goals")
+      act(() => separate.focus())
+
+      fireEvent.keyDown(separate, { key: "ArrowRight" })
+
+      await waitFor(() => expect(option("All of these")).toBeChecked())
+    })
+
+    it("adds all of them as an AND group", async () => {
+      mockedCreateGoals.mockResolvedValue({
+        success: true,
+        goals: [{}, {}, {}],
+      })
+      renderDrawer()
+      await pickThree()
+
+      fireEvent.click(option("All of these"))
+      expect(addButton("Add group: all 3")).toBeEnabled()
+      fireEvent.click(addButton("Add group: all 3"))
+
+      await waitFor(() => expect(mockedCreateGoals).toHaveBeenCalledTimes(1))
+      expect(mockedCreateGoals).toHaveBeenCalledWith(
+        "t1",
+        [
+          expect.objectContaining({ itemName: "Abyssal whip", targetValue: 1 }),
+          expect.objectContaining({
+            itemName: "Abyssal tentacle",
+            targetValue: 1,
+          }),
+          expect.objectContaining({
+            itemName: "Dragon dagger#(p)",
+            targetValue: 1,
+          }),
+        ],
+        { parentGroupId: null, group: { operator: "AND" } }
+      )
+    })
+
+    it("adds any one of them as an OR group that needs 1", async () => {
+      mockedCreateGoals.mockResolvedValue({
+        success: true,
+        goals: [{}, {}, {}],
+      })
+      renderDrawer()
+      await pickThree()
+
+      fireEvent.click(option("Any one of these"))
+      fireEvent.click(addButton("Add group: any 1 of 3"))
+
+      await waitFor(() => expect(mockedCreateGoals).toHaveBeenCalledTimes(1))
+      expect(createOptions()).toEqual({
+        parentGroupId: null,
+        group: { operator: "OR", minRequiredGoals: 1 },
+      })
+    })
+
+    it("adds at least N of them as an OR group that needs N", async () => {
+      mockedCreateGoals.mockResolvedValue({
+        success: true,
+        goals: [{}, {}, {}],
+      })
+      renderDrawer()
+      await pickThree()
+
+      fireEvent.click(option("At least N of these"))
+      expect(atLeastField()).toHaveValue("2")
+      expect(addButton("Add group: any 2 of 3")).toBeEnabled()
+      fireEvent.change(atLeastField(), { target: { value: "3" } })
+      expect(addButton("Add group: any 3 of 3")).toBeEnabled()
+      fireEvent.change(atLeastField(), { target: { value: "2" } })
+      fireEvent.click(addButton("Add group: any 2 of 3"))
+
+      await waitFor(() => expect(mockedCreateGoals).toHaveBeenCalledTimes(1))
+      expect(createOptions()).toEqual({
+        parentGroupId: null,
+        group: { operator: "OR", minRequiredGoals: 2 },
+      })
+    })
+
+    it("keeps each item's own quantity inside a group", async () => {
+      mockedCreateGoals.mockResolvedValue({
+        success: true,
+        goals: [{}, {}, {}],
+      })
+      renderDrawer()
+      await pickThree()
+      fireEvent.change(quantityInput("Abyssal whip"), {
+        target: { value: "2" },
+      })
+      fireEvent.change(quantityInput("Abyssal tentacle"), {
+        target: { value: "500k" },
+      })
+
+      fireEvent.click(option("At least N of these"))
+      fireEvent.click(addButton("Add group: any 2 of 3"))
+
+      await waitFor(() => expect(mockedCreateGoals).toHaveBeenCalledTimes(1))
+      const [, inputs, options] = mockedCreateGoals.mock.calls[0]!
+      expect(inputs.map((i: { targetValue: number }) => i.targetValue)).toEqual(
+        [2, 500_000, 1]
+      )
+      expect(options.group).toEqual({ operator: "OR", minRequiredGoals: 2 })
+    })
+
+    it("nests the group inside the parent group the drawer was opened for", async () => {
+      mockedCreateGoals.mockResolvedValue({
+        success: true,
+        goals: [{}, {}, {}],
+      })
+      renderDrawer({ parentGroupId: "g1" })
+      await pickThree()
+
+      fireEvent.click(option("All of these"))
+      fireEvent.click(addButton("Add group: all 3"))
+
+      await waitFor(() => expect(mockedCreateGoals).toHaveBeenCalledTimes(1))
+      expect(createOptions()).toEqual({
+        parentGroupId: "g1",
+        group: { operator: "AND" },
+      })
+    })
+
+    describe("number for at least N", () => {
+      async function openAtLeast() {
+        renderDrawer()
+        await pickThree()
+        fireEvent.click(option("At least N of these"))
+      }
+
+      it.each([["0"], ["4"], [""], ["abc"], ["1.5"]])(
+        "shows an inline error and blocks Add for %j",
+        async (value) => {
+          await openAtLeast()
+
+          fireEvent.change(atLeastField(), { target: { value } })
+
+          expect(screen.getByRole("alert")).toHaveTextContent(
+            "Enter a number from 1 to 3"
+          )
+          expect(atLeastField()).toHaveAttribute("aria-invalid", "true")
+          const button = addButton("Add group")
+          expect(button).toBeDisabled()
+          expect(button).toHaveAccessibleDescription(
+            /At least N of these: Enter a number from 1 to 3/
+          )
+          fireEvent.submit(atLeastField().closest("form")!)
+          expect(mockedCreateGoals).not.toHaveBeenCalled()
+        }
+      )
+
+      it("enables Add again once N is fixed", async () => {
+        await openAtLeast()
+        fireEvent.change(atLeastField(), { target: { value: "9" } })
+        expect(addButton("Add group")).toBeDisabled()
+
+        fireEvent.change(atLeastField(), { target: { value: "1" } })
+
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+        expect(atLeastField()).toHaveAttribute("aria-invalid", "false")
+        expect(addButton("Add group: any 1 of 3")).toBeEnabled()
+      })
+
+      it("only checks N while at least N is the choice", async () => {
+        await openAtLeast()
+        fireEvent.change(atLeastField(), { target: { value: "9" } })
+        expect(addButton("Add group")).toBeDisabled()
+
+        fireEvent.click(option("All of these"))
+
+        expect(addButton("Add group: all 3")).toBeEnabled()
+      })
+
+      it("lowers N when items are removed so it stays valid", async () => {
+        await openAtLeast()
+        fireEvent.change(atLeastField(), { target: { value: "3" } })
+        expect(screen.getByText("of 3 items")).toBeInTheDocument()
+
+        fireEvent.click(
+          screen.getByRole("button", { name: "Remove Dragon dagger (p)" })
+        )
+
+        expect(atLeastField()).toHaveValue("2")
+        expect(screen.getByText("of 2 items")).toBeInTheDocument()
+        expect(addButton("Add group: any 2 of 2")).toBeEnabled()
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      })
+
+      it("keeps N when items are added", async () => {
+        await openAtLeast()
+        fireEvent.change(atLeastField(), { target: { value: "3" } })
+        fireEvent.click(
+          screen.getByRole("button", { name: "Remove Abyssal whip" })
+        )
+        expect(atLeastField()).toHaveValue("2")
+
+        await pickItem("whip", "Abyssal whip")
+
+        expect(atLeastField()).toHaveValue("2")
+        expect(addButton("Add group: any 2 of 3")).toBeEnabled()
+      })
+
+      it("does not drift while the first items are being picked", async () => {
+        renderDrawer()
+        await pickItem("whip", "Abyssal whip")
+        await pickItem("tentacle", "Abyssal tentacle")
+
+        fireEvent.click(option("At least N of these"))
+
+        expect(atLeastField()).toHaveValue("2")
+      })
+    })
+
+    describe("preview", () => {
+      const preview = (text: string) => screen.getByText(text)
+
+      it("says what each choice means in plain language", async () => {
+        renderDrawer()
+        await pickThree()
+        const names = "Abyssal whip, Abyssal tentacle, Dragon dagger (p)"
+
+        expect(
+          preview(`Each item is its own goal; the tile needs all of: ${names}`)
+        ).toBeInTheDocument()
+
+        fireEvent.click(option("All of these"))
+        expect(preview(`Tile needs all of: ${names}`)).toBeInTheDocument()
+
+        fireEvent.click(option("Any one of these"))
+        expect(preview(`Tile needs any 1 of: ${names}`)).toBeInTheDocument()
+
+        fireEvent.click(option("At least N of these"))
+        expect(preview(`Tile needs any 2 of: ${names}`)).toBeInTheDocument()
+        fireEvent.change(atLeastField(), { target: { value: "3" } })
+        expect(preview(`Tile needs any 3 of: ${names}`)).toBeInTheDocument()
+      })
+
+      it("shows a quantity above one", async () => {
+        renderDrawer()
+        await pickThree()
+        fireEvent.change(quantityInput("Abyssal whip"), {
+          target: { value: "100" },
+        })
+
+        fireEvent.click(option("All of these"))
+
+        expect(
+          preview(
+            "Tile needs all of: Abyssal whip x100, Abyssal tentacle, Dragon dagger (p)"
+          )
+        ).toBeInTheDocument()
+      })
+
+      it("talks about the new group when adding into a group", async () => {
+        renderDrawer({ parentGroupId: "g1" })
+        await pickThree()
+
+        fireEvent.click(option("All of these"))
+
+        expect(
+          preview(
+            "The new group needs all of: Abyssal whip, Abyssal tentacle, Dragon dagger (p)"
+          )
+        ).toBeInTheDocument()
+      })
+
+      it("counts instead of lists more than three items", async () => {
+        renderDrawer()
+        await pickThree()
+        mockedSearch.mockResolvedValue({
+          success: true,
+          items: [{ ...ABYSSAL_WHIP, id: 1, name: "Extra item" }],
+        })
+        await pickItem("extra", "Extra item")
+
+        fireEvent.click(option("All of these"))
+
+        expect(preview("Tile needs all of: 4 items")).toBeInTheDocument()
+      })
+    })
+
+    describe("after adding", () => {
+      it("says what was added as a group and resets to separate goals", async () => {
+        mockedCreateGoals.mockResolvedValue({
+          success: true,
+          goals: [{}, {}, {}],
+        })
+        renderDrawer()
+        await pickThree()
+        fireEvent.click(option("Any one of these"))
+        fireEvent.click(addButton("Add group: any 1 of 3"))
+
+        await waitFor(() =>
+          expect(
+            screen.getByText(
+              "Group: any 1 of 3 (Abyssal whip x1, Abyssal tentacle x1, Dragon dagger (p) x1)"
+            )
+          ).toBeInTheDocument()
+        )
+        // The selection is empty and the choice is hidden...
+        expect(queryHeading()).not.toBeInTheDocument()
+        expect(addButton("Add goals")).toBeDisabled()
+
+        // ...and the next batch starts from separate goals again.
+        await pickItem("whip", "Abyssal whip")
+        await pickItem("tentacle", "Abyssal tentacle")
+        expect(option("Separate goals")).toBeChecked()
+        expect(addButton("Add 2 goals")).toBeEnabled()
+      })
+
+      it("resets N as well", async () => {
+        mockedCreateGoals.mockResolvedValue({
+          success: true,
+          goals: [{}, {}, {}],
+        })
+        renderDrawer()
+        await pickThree()
+        fireEvent.click(option("At least N of these"))
+        fireEvent.change(atLeastField(), { target: { value: "3" } })
+        fireEvent.click(addButton("Add group: any 3 of 3"))
+        await waitFor(() => expect(mockedCreateGoals).toHaveBeenCalled())
+        await waitFor(() => expect(queryHeading()).not.toBeInTheDocument())
+
+        await pickItem("whip", "Abyssal whip")
+        await pickItem("tentacle", "Abyssal tentacle")
+        fireEvent.click(option("At least N of these"))
+
+        expect(atLeastField()).toHaveValue("2")
+      })
+
+      it("lists separate goals one by one, as before", async () => {
+        mockedCreateGoals.mockResolvedValue({ success: true, goals: [{}, {}] })
+        renderDrawer()
+        await pickItem("whip", "Abyssal whip")
+        await pickItem("tentacle", "Abyssal tentacle")
+        submit()
+
+        await waitFor(() =>
+          expect(screen.getByText("Abyssal whip x1")).toBeInTheDocument()
+        )
+        expect(screen.getByText("Abyssal tentacle x1")).toBeInTheDocument()
+        expect(screen.queryByText(/^Group:/)).not.toBeInTheDocument()
+      })
+
+      it("keeps the selection and the choice when the server rejects the group, and shows its error", async () => {
+        mockedCreateGoals.mockResolvedValue({
+          success: false,
+          error: "Goal 2: Nope",
+        })
+        renderDrawer()
+        await pickThree()
+        fireEvent.change(quantityInput("Abyssal whip"), {
+          target: { value: "3" },
+        })
+        fireEvent.click(option("At least N of these"))
+        fireEvent.change(atLeastField(), { target: { value: "3" } })
+        fireEvent.click(addButton("Add group: any 3 of 3"))
+
+        await waitFor(() =>
+          expect(mockedToast).toHaveBeenCalledWith(
+            expect.objectContaining({
+              description: "Goal 2: Nope",
+              variant: "destructive",
+            })
+          )
+        )
+        await waitFor(() =>
+          expect(addButton("Add group: any 3 of 3")).toBeEnabled()
+        )
+        expect(screen.getByText("Selected (3)")).toBeInTheDocument()
+        expect(quantityInput("Abyssal whip")).toHaveValue("3")
+        expect(option("At least N of these")).toBeChecked()
+        expect(atLeastField()).toHaveValue("3")
+        expect(screen.queryByText(/^Group:/)).not.toBeInTheDocument()
+      })
+    })
+  })
+
+  describe("Paste a list", () => {
+    const pasteButton = () =>
+      screen.getByRole("button", { name: "Paste a list" })
+    const pasteBox = () =>
+      screen.getByRole("textbox", { name: "One item per line" })
+
+    beforeEach(() => {
+      mockedResolve.mockImplementation(async (entries) => ({
+        success: true,
+        results: entries.map(({ name, quantity }) => {
+          const item = [ABYSSAL_WHIP, ABYSSAL_TENTACLE, DRAGON_DAGGER_P].find(
+            (candidate) =>
+              candidate.name.replace("#", " ").toLowerCase() ===
+              name.toLowerCase()
+          )
+          return item
+            ? { input: name, quantity, status: "matched" as const, item }
+            : { input: name, quantity, status: "unmatched" as const }
+        }),
+      }))
+    })
+
+    it("adds a reviewed list to the selection, then groups it like any selection", async () => {
+      mockedCreateGoals.mockResolvedValue({ success: true, goals: [{}, {}] })
+      renderDrawer()
+
+      fireEvent.click(pasteButton())
+      fireEvent.change(pasteBox(), {
+        target: {
+          value: "3x Abyssal whip\nAbyssal tentacle x500k\nDragon dagger (p)",
+        },
+      })
+      fireEvent.click(screen.getByRole("button", { name: "Review list" }))
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Add 3 items to selection" })
+      )
+
+      // Pasting creates nothing; the items are in the selection with their quantities.
+      expect(mockedCreateGoals).not.toHaveBeenCalled()
+      expect(screen.getByText("Selected (3)")).toBeInTheDocument()
+      expect(quantityInput("Abyssal whip")).toHaveValue("3")
+      expect(quantityInput("Abyssal tentacle")).toHaveValue("500000")
+      expect(
+        screen.getByRole("radio", { name: "Separate goals" })
+      ).toBeChecked()
+
+      fireEvent.click(
+        screen.getByRole("radio", { name: "At least N of these" })
+      )
+      fireEvent.click(
+        screen.getByRole("button", { name: "Add group: any 2 of 3" })
+      )
+
+      await waitFor(() => expect(mockedCreateGoals).toHaveBeenCalledTimes(1))
+      const [, inputs, options] = mockedCreateGoals.mock.calls[0]!
+      expect(inputs.map((i: { targetValue: number }) => i.targetValue)).toEqual(
+        [3, 500_000, 1]
+      )
+      expect(options).toEqual({
+        parentGroupId: null,
+        group: { operator: "OR", minRequiredGoals: 2 },
+      })
+    })
+
+    it("does not close the drawer on Escape inside the paste panel, but steps back", async () => {
+      const { onOpenChange } = renderDrawer()
+      fireEvent.click(pasteButton())
+      fireEvent.change(pasteBox(), { target: { value: "Abyssal whip" } })
+
+      // First the text is cleared, then the panel closes; the drawer stays open.
+      fireEvent.keyDown(pasteBox(), { key: "Escape" })
+      expect(pasteBox()).toHaveValue("")
+      fireEvent.keyDown(pasteBox(), { key: "Escape" })
+
+      expect(
+        screen.queryByRole("textbox", { name: "One item per line" })
+      ).not.toBeInTheDocument()
+      expect(onOpenChange).not.toHaveBeenCalled()
+    })
+
+    it("does not add goals when Enter is pressed in a pasted quantity", async () => {
+      renderDrawer()
+      await pickItem("tentacle", "Abyssal tentacle")
+      fireEvent.click(pasteButton())
+      fireEvent.change(pasteBox(), { target: { value: "Abyssal whip" } })
+      fireEvent.click(screen.getByRole("button", { name: "Review list" }))
+      const quantity = await screen.findByRole("textbox", {
+        name: "Pasted quantity of Abyssal whip",
+      })
+
+      // false means preventDefault was called, so the form is not submitted.
+      expect(fireEvent.keyDown(quantity, { key: "Enter" })).toBe(false)
+      expect(mockedCreateGoals).not.toHaveBeenCalled()
+    })
+
+    it("still closes the drawer with Escape elsewhere", () => {
+      const { onOpenChange } = renderDrawer()
+      fireEvent.click(pasteButton())
+
+      fireEvent.keyDown(screen.getByRole("radio", { name: "Item" }), {
+        key: "Escape",
+      })
+
+      expect(onOpenChange).toHaveBeenCalledWith(false)
     })
   })
 
