@@ -42,9 +42,7 @@ export async function GET(req: Request) {
         },
         clan: true,
         bingos: {
-          //where: (bingos, { eq, and }) => eq(bingos.visible, true),
-          where: (bingos, { eq, and }) =>
-            and(eq(bingos.visible, true), eq(bingos.bingoType, "standard")),
+          where: (bingos, { eq }) => eq(bingos.visible, true),
         },
       },
       orderBy: events.createdAt,

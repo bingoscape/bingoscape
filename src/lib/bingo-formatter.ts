@@ -26,7 +26,11 @@ import type {
   GroupProgressData,
 } from "@/types/runelite-api"
 
+/** Version of the board payload below; 2.1 added bingoType, tiers and battleship. */
+export const BOARD_API_VERSION = "2.1"
+
 export interface FormattedBingo {
+  apiVersion: typeof BOARD_API_VERSION
   id: string
   title: string
   description: string | null
@@ -353,6 +357,7 @@ export async function formatBingoData(
 
   // Format the bingo data
   const formattedBingo: FormattedBingo = {
+    apiVersion: BOARD_API_VERSION,
     id: bingo.id,
     title: bingo.title,
     description: bingo.description,
