@@ -46,6 +46,8 @@ import {
   requireBingoAdminForTile,
   requireTeamMemberOrManager,
 } from "@/server/authz"
+import { isBlindBoard } from "@/server/blind-board"
+import { isBingoBlindForViewer } from "@/server/blind-board-viewer"
 import {
   assertBattleshipLayoutEditable,
   assertEventFitsBattleship,
@@ -1013,6 +1015,10 @@ export async function getAllSubmissionsForTeam(
     // and to managers of the Event.
     await requireTeamMemberOrManager(teamId)
 
+    // A blind battleship board (before its Event starts) has nothing to show
+    // to non-managers: the Tiles carried in these records would reveal it.
+    if (await isBingoBlindForViewer(bingoId)) return {}
+
     // First, get all tiles for this bingo
     const bingoTiles = await db
       .select({ id: tiles.id })
@@ -1218,7 +1224,14 @@ export async function submitImage(formData: FormData) {
     }
     const callerIsManager = await isEventManager(bingoResult.eventId)
     if (!callerIsManager) {
-      if (tile.isHidden) {
+      // Hidden Tiles, and the Tiles of a blind battleship board (before its
+      // Event starts), are indistinguishable from missing ones.
+      const blind = isBlindBoard({
+        bingoType: bingoResult.bingoType,
+        startDate: bingoResult.event.startDate,
+        isManager: false,
+      })
+      if (tile.isHidden || blind) {
         throw new Error("Tile not found")
       }
       const callerMembership = await db.query.teamMembers.findFirst({

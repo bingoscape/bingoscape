@@ -14,6 +14,7 @@ import {
 } from "@/server/db/schema"
 import { eq, and, isNotNull, inArray } from "drizzle-orm"
 import { getItemAveragePrices } from "@/lib/osrs-ge-prices"
+import { isBingoBlindForViewer } from "@/server/blind-board-viewer"
 
 // Type definitions for item statistics
 export interface ItemValueSubmission {
@@ -155,12 +156,35 @@ export interface ItemStatistics {
   userStreaks: UserStreakStats[]
 }
 
+function emptyItemStatistics(): ItemStatistics {
+  return {
+    totalValue: 0,
+    uniqueItemsCount: 0,
+    totalSubmissions: 0,
+    mvp: null,
+    topUsers: [],
+    teamStats: [],
+    mostValuableItem: null,
+    profitPerHour: null,
+    allSubmissions: [],
+    dailyValueTimeline: [],
+    teamTimelineComparison: [],
+    itemDiversityByTeam: [],
+    efficiencyTrends: [],
+    userStreaks: [],
+  }
+}
+
 /**
- * Get comprehensive item statistics for a bingo board
+ * Get comprehensive item statistics for a bingo board. A blind battleship
+ * board (before its Event starts) has none: the item names and tile titles
+ * would reveal its Goals.
  */
 export async function getBingoItemStatistics(
   bingoId: string
 ): Promise<ItemStatistics> {
+  if (await isBingoBlindForViewer(bingoId)) return emptyItemStatistics()
+
   // Get all approved submissions with item goals for this bingo
   const itemSubmissions = await db
     .select({
@@ -200,22 +224,7 @@ export async function getBingoItemStatistics(
     )
 
   if (itemSubmissions.length === 0) {
-    return {
-      totalValue: 0,
-      uniqueItemsCount: 0,
-      totalSubmissions: 0,
-      mvp: null,
-      topUsers: [],
-      teamStats: [],
-      mostValuableItem: null,
-      profitPerHour: null,
-      allSubmissions: [],
-      dailyValueTimeline: [],
-      teamTimelineComparison: [],
-      itemDiversityByTeam: [],
-      efficiencyTrends: [],
-      userStreaks: [],
-    }
+    return emptyItemStatistics()
   }
 
   // Extract unique item IDs and fetch prices
@@ -526,29 +535,18 @@ export async function getBingoItemStatistics(
 export async function getEventItemStatistics(
   eventId: string
 ): Promise<ItemStatistics> {
-  // Get all bingo IDs for this event
-  const eventBingos = await db
+  // Get all bingo IDs for this event, except the blind battleship boards.
+  const allEventBingos = await db
     .select({ id: bingos.id })
     .from(bingos)
     .where(eq(bingos.eventId, eventId))
+  const blindFlags = await Promise.all(
+    allEventBingos.map((b) => isBingoBlindForViewer(b.id))
+  )
+  const eventBingos = allEventBingos.filter((_, i) => !blindFlags[i])
 
   if (eventBingos.length === 0) {
-    return {
-      totalValue: 0,
-      uniqueItemsCount: 0,
-      totalSubmissions: 0,
-      mvp: null,
-      topUsers: [],
-      teamStats: [],
-      mostValuableItem: null,
-      profitPerHour: null,
-      allSubmissions: [],
-      dailyValueTimeline: [],
-      teamTimelineComparison: [],
-      itemDiversityByTeam: [],
-      efficiencyTrends: [],
-      userStreaks: [],
-    }
+    return emptyItemStatistics()
   }
 
   const bingoIds = eventBingos.map((b) => b.id)
@@ -592,22 +590,7 @@ export async function getEventItemStatistics(
     )
 
   if (itemSubmissions.length === 0) {
-    return {
-      totalValue: 0,
-      uniqueItemsCount: 0,
-      totalSubmissions: 0,
-      mvp: null,
-      topUsers: [],
-      teamStats: [],
-      mostValuableItem: null,
-      profitPerHour: null,
-      allSubmissions: [],
-      dailyValueTimeline: [],
-      teamTimelineComparison: [],
-      itemDiversityByTeam: [],
-      efficiencyTrends: [],
-      userStreaks: [],
-    }
+    return emptyItemStatistics()
   }
 
   // Extract unique item IDs and fetch prices
