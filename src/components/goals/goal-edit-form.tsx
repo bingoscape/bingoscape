@@ -183,13 +183,7 @@ export function GoalEditForm({
           <div>
             <Label className="text-xs">OSRS Item</Label>
             <OsrsItemSearch
-              onItemSelect={(item) => {
-                if (Array.isArray(item)) {
-                  setEditSelectedItem(item[0] || null)
-                } else {
-                  setEditSelectedItem(item)
-                }
-              }}
+              onItemSelect={setEditSelectedItem}
               selectedItem={editSelectedItem}
               placeholder="Select item..."
               className="mt-1"

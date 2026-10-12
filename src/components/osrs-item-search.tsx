@@ -2,11 +2,10 @@
 
 import Image from "next/image"
 
-import { useState, useEffect } from "react"
-import { Search, Loader2, CheckSquare, Square, X } from "lucide-react"
+import { useState } from "react"
+import { Loader2, Search } from "lucide-react"
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
@@ -18,118 +17,42 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
-import { searchOsrsItems } from "@/app/actions/osrs-items"
+import { getItemDisplayName, ItemOption } from "@/components/osrs-item-option"
+import { MIN_ITEM_QUERY_LENGTH, useOsrsItemSearch } from "@/hooks/use-osrs-item-search"
 import type { OsrsItem } from "@/types/osrs-items"
 import { cn } from "@/lib/utils"
 
 interface OsrsItemSearchProps {
-  onItemSelect: (item: OsrsItem | OsrsItem[]) => void
+  onItemSelect: (item: OsrsItem) => void
   selectedItem?: OsrsItem | null
-  selectedItems?: OsrsItem[]
   placeholder?: string
   className?: string
   disabled?: boolean
-  multiSelect?: boolean
   /** Focus the trigger button on mount. */
   autoFocus?: boolean
 }
 
+/**
+ * Popover item picker that selects a single item, for places that change one
+ * item (e.g. editing an item goal). Adding several items to a goal uses the
+ * inline `ItemPicker` instead.
+ */
 export function OsrsItemSearch({
   onItemSelect,
   selectedItem,
-  selectedItems = [],
   placeholder = "Search for an item...",
   className,
   disabled = false,
-  multiSelect = false,
   autoFocus = false,
 }: OsrsItemSearchProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
-  const [results, setResults] = useState<OsrsItem[]>([])
-  const [loading, setLoading] = useState(false)
-
-  // Debounced search. `cancelled` drops responses for superseded queries so a
-  // slow earlier request can't overwrite newer results.
-  useEffect(() => {
-    let cancelled = false
-
-    const timer = setTimeout(async () => {
-      if (query.trim().length < 2) {
-        setResults([])
-        setLoading(false)
-        return
-      }
-
-      setLoading(true)
-      try {
-        const result = await searchOsrsItems(query, 20)
-        if (cancelled) return
-        setResults(result.success && result.items ? result.items : [])
-      } catch (error) {
-        if (cancelled) return
-        console.error("Error searching items:", error)
-        setResults([])
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }, 300)
-
-    return () => {
-      cancelled = true
-      clearTimeout(timer)
-    }
-  }, [query])
+  const { ready, loading, items, failed } = useOsrsItemSearch(query)
 
   const handleSelect = (item: OsrsItem) => {
-    if (multiSelect) {
-      // Toggle item in multi-select mode
-      const itemId = Array.isArray(item.id) ? item.id[0] : item.id
-      const isSelected = selectedItems.some((selectedItem) => {
-        const selectedId = Array.isArray(selectedItem.id)
-          ? selectedItem.id[0]
-          : selectedItem.id
-        return selectedId === itemId
-      })
-
-      const newSelection = isSelected
-        ? selectedItems.filter((selectedItem) => {
-            const selectedId = Array.isArray(selectedItem.id)
-              ? selectedItem.id[0]
-              : selectedItem.id
-            return selectedId !== itemId
-          })
-        : [...selectedItems, item]
-
-      onItemSelect(newSelection)
-    } else {
-      // Single select mode
-      onItemSelect(item)
-      setOpen(false)
-      setQuery("")
-      setResults([])
-    }
-  }
-
-  const isItemSelected = (item: OsrsItem): boolean => {
-    if (!multiSelect) return false
-    const itemId = Array.isArray(item.id) ? item.id[0] : item.id
-    return selectedItems.some((selectedItem) => {
-      const selectedId = Array.isArray(selectedItem.id)
-        ? selectedItem.id[0]
-        : selectedItem.id
-      return selectedId === itemId
-    })
-  }
-
-  const handleClearAll = () => {
-    onItemSelect([])
-  }
-
-  const handleDone = () => {
+    onItemSelect(item)
     setOpen(false)
     setQuery("")
-    setResults([])
   }
 
   return (
@@ -143,25 +66,17 @@ export function OsrsItemSearch({
           disabled={disabled}
           autoFocus={autoFocus}
         >
-          {multiSelect && selectedItems.length > 0 ? (
-            <div className="flex items-center gap-2">
-              <CheckSquare className="h-4 w-4 text-info" />
-              <span className="truncate">
-                {selectedItems.length} item
-                {selectedItems.length !== 1 ? "s" : ""} selected
-              </span>
-            </div>
-          ) : selectedItem && !multiSelect ? (
+          {selectedItem ? (
             <div className="flex items-center gap-2">
               <div className="relative h-6 w-6 shrink-0">
                 <Image
                   fill
                   src={selectedItem.imageUrl}
                   alt={selectedItem.name}
-                  className="object-cover"
+                  className="object-contain"
                 />
               </div>
-              <span className="truncate">{selectedItem.name}</span>
+              <span className="truncate">{getItemDisplayName(selectedItem)}</span>
             </div>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
@@ -193,82 +108,40 @@ export function OsrsItemSearch({
                 </span>
               </div>
             )}
-            {!loading && query.trim().length > 0 && query.trim().length < 2 && (
-              <CommandEmpty>Type at least 2 characters to search</CommandEmpty>
+            {!loading && query.trim().length > 0 && !ready && (
+              <div className="py-6 text-center text-sm">
+                Type at least {MIN_ITEM_QUERY_LENGTH} characters to search
+              </div>
             )}
-            {!loading && query.trim().length >= 2 && results.length === 0 && (
-              <CommandEmpty>No items found</CommandEmpty>
+            {!loading && ready && failed && (
+              <div className="py-6 text-center text-sm">
+                The search failed. Try again.
+              </div>
             )}
-            {!loading && results.length > 0 && (
+            {!loading && ready && !failed && items.length === 0 && (
+              <div className="py-6 text-center text-sm">No items found</div>
+            )}
+            {!loading && items.length > 0 && (
               <CommandGroup heading="Items">
-                {results.map((item) => {
-                  // Handle items with multiple IDs (use first ID as unique key)
+                {items.map((item) => {
+                  // Items with several ids use the first as their key.
                   const itemId = Array.isArray(item.id) ? item.id[0] : item.id
-                  const uniqueKey = `${itemId}-${item.name}`
-                  const selected = isItemSelected(item)
+                  const key = `${itemId}-${item.name}`
 
                   return (
                     <CommandItem
-                      key={uniqueKey}
-                      value={item.name}
+                      key={key}
+                      value={key}
                       onSelect={() => handleSelect(item)}
-                      className="cursor-pointer"
+                      className="cursor-pointer gap-3"
                     >
-                      <div className="flex w-full items-center gap-3">
-                        {multiSelect &&
-                          (selected ? (
-                            <CheckSquare className="h-5 w-5 shrink-0 text-info" />
-                          ) : (
-                            <Square className="h-5 w-5 shrink-0 text-muted-foreground" />
-                          ))}
-                        <div className="relative h-8 w-8 shrink-0">
-                          <Image
-                            fill
-                            src={item.imageUrl}
-                            alt={item.name}
-                            className="object-cover"
-                          />
-                        </div>
-                        <div className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate font-medium">
-                            {item.name}
-                          </span>
-                          {item.variant && (
-                            <span className="text-xs text-muted-foreground">
-                              {item.baseName} ({item.variant})
-                            </span>
-                          )}
-                        </div>
-                        <span className="shrink-0 text-xs text-muted-foreground">
-                          ID: {itemId}
-                        </span>
-                      </div>
+                      <ItemOption item={item} />
                     </CommandItem>
                   )
                 })}
               </CommandGroup>
             )}
           </CommandList>
-          {multiSelect && selectedItems.length > 0 && (
-            <div className="flex items-center gap-2 border-t bg-muted/30 p-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearAll}
-                className="h-8 flex-1 text-xs"
-              >
-                <X className="mr-1 h-3 w-3" />
-                Clear All
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleDone}
-                className="h-8 flex-1 text-xs"
-              >
-                Done
-              </Button>
-            </div>
-          )}
         </Command>
       </PopoverContent>
     </Popover>
@@ -296,10 +169,8 @@ export function OsrsItemSearchCompact({
       <div className={className}>
         <OsrsItemSearch
           onItemSelect={(item) => {
-            if (!Array.isArray(item)) {
-              onItemSelect(item)
-              setShowSearch(false)
-            }
+            onItemSelect(item)
+            setShowSearch(false)
           }}
           placeholder="Select an item..."
         />
@@ -312,10 +183,8 @@ export function OsrsItemSearchCompact({
       <div className={className}>
         <OsrsItemSearch
           onItemSelect={(item) => {
-            if (!Array.isArray(item)) {
-              onItemSelect(item)
-              setShowSearch(false)
-            }
+            onItemSelect(item)
+            setShowSearch(false)
           }}
           selectedItem={selectedItem}
         />

@@ -128,9 +128,7 @@ describe("GoalTreeEditor", () => {
   it("switches the drawer form and footer by goal type", () => {
     renderEditor()
     fireEvent.click(screen.getByRole("button", { name: /add new goal/i }))
-    expect(
-      screen.getByRole("button", { name: /add item goal/i })
-    ).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Add goals" })).toBeDisabled()
 
     fireEvent.click(screen.getByRole("radio", { name: "XP / Kills" }))
     expect(
