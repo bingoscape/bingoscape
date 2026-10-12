@@ -45,8 +45,6 @@ export function OsrsItemSearch({
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<OsrsItem[]>([])
   const [loading, setLoading] = useState(false)
-  const [internalSelectedItems, setInternalSelectedItems] =
-    useState<OsrsItem[]>(selectedItems)
 
   // Debounced search. `cancelled` drops responses for superseded queries so a
   // slow earlier request can't overwrite newer results.
@@ -84,7 +82,7 @@ export function OsrsItemSearch({
     if (multiSelect) {
       // Toggle item in multi-select mode
       const itemId = Array.isArray(item.id) ? item.id[0] : item.id
-      const isSelected = internalSelectedItems.some((selectedItem) => {
+      const isSelected = selectedItems.some((selectedItem) => {
         const selectedId = Array.isArray(selectedItem.id)
           ? selectedItem.id[0]
           : selectedItem.id
@@ -92,15 +90,14 @@ export function OsrsItemSearch({
       })
 
       const newSelection = isSelected
-        ? internalSelectedItems.filter((selectedItem) => {
+        ? selectedItems.filter((selectedItem) => {
             const selectedId = Array.isArray(selectedItem.id)
               ? selectedItem.id[0]
               : selectedItem.id
             return selectedId !== itemId
           })
-        : [...internalSelectedItems, item]
+        : [...selectedItems, item]
 
-      setInternalSelectedItems(newSelection)
       onItemSelect(newSelection)
     } else {
       // Single select mode
@@ -114,7 +111,7 @@ export function OsrsItemSearch({
   const isItemSelected = (item: OsrsItem): boolean => {
     if (!multiSelect) return false
     const itemId = Array.isArray(item.id) ? item.id[0] : item.id
-    return internalSelectedItems.some((selectedItem) => {
+    return selectedItems.some((selectedItem) => {
       const selectedId = Array.isArray(selectedItem.id)
         ? selectedItem.id[0]
         : selectedItem.id
@@ -123,7 +120,6 @@ export function OsrsItemSearch({
   }
 
   const handleClearAll = () => {
-    setInternalSelectedItems([])
     onItemSelect([])
   }
 
@@ -143,12 +139,12 @@ export function OsrsItemSearch({
           className={cn("w-full justify-between", className)}
           disabled={disabled}
         >
-          {multiSelect && internalSelectedItems.length > 0 ? (
+          {multiSelect && selectedItems.length > 0 ? (
             <div className="flex items-center gap-2">
               <CheckSquare className="h-4 w-4 text-info" />
               <span className="truncate">
-                {internalSelectedItems.length} item
-                {internalSelectedItems.length !== 1 ? "s" : ""} selected
+                {selectedItems.length} item
+                {selectedItems.length !== 1 ? "s" : ""} selected
               </span>
             </div>
           ) : selectedItem && !multiSelect ? (
@@ -249,7 +245,7 @@ export function OsrsItemSearch({
               </CommandGroup>
             )}
           </CommandList>
-          {multiSelect && internalSelectedItems.length > 0 && (
+          {multiSelect && selectedItems.length > 0 && (
             <div className="flex items-center gap-2 border-t bg-muted/30 p-2">
               <Button
                 variant="ghost"

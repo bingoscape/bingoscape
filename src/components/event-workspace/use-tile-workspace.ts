@@ -148,27 +148,31 @@ export function useTileWorkspace({
     }
   }, [tile, editedTile, refresh])
 
-  const onAddGoal = useCallback(async () => {
-    if (!tile || !newGoal.description || newGoal.targetValue == null) return
-    const result = await addGoal(tile.id, {
-      description: newGoal.description,
-      targetValue: newGoal.targetValue,
-    })
-    if (result.success) {
-      setNewGoal({ targetValue: 1 })
-      toast({
-        title: "Goal added",
-        description: "The goal has been successfully added to the tile.",
+  const onAddGoal = useCallback(
+    async (parentGroupId?: string | null) => {
+      if (!tile) return
+      const result = await addGoal(tile.id, {
+        description: newGoal.description ?? "",
+        targetValue: newGoal.targetValue ?? Number.NaN,
+        parentGroupId,
       })
-      refresh()
-    } else {
-      toast({
-        title: "Error",
-        description: result.error ?? "Failed to add goal",
-        variant: "destructive",
-      })
-    }
-  }, [tile, newGoal, refresh])
+      if (result.success) {
+        setNewGoal({ targetValue: 1 })
+        toast({
+          title: "Goal added",
+          description: "The goal has been successfully added to the tile.",
+        })
+        refresh()
+      } else {
+        toast({
+          title: "Error",
+          description: result.error ?? "Failed to add goal",
+          variant: "destructive",
+        })
+      }
+    },
+    [tile, newGoal, refresh]
+  )
 
   const onNewGoalChange = useCallback((field: string, value: unknown) => {
     setNewGoal((prev) => ({ ...prev, [field]: value }))
@@ -260,7 +264,8 @@ export function useTileWorkspace({
           setPastedImage(null)
           toast({
             title: "Image submitted",
-            description: "Your image has been successfully submitted for review",
+            description:
+              "Your image has been successfully submitted for review",
           })
           refresh()
         } else {

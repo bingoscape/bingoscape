@@ -12,7 +12,7 @@ interface GoalsTabProps {
   newGoal: Partial<Goal>
   hasSufficientRights: boolean
   onDeleteGoal: (goalId: string) => void
-  onAddGoal: () => void
+  onAddGoal: (parentGroupId?: string | null) => void | Promise<void>
   onNewGoalChange: (field: string, value: any) => void
   /** Called after the editor changed Goals; refreshes the page data. */
   onGoalsChanged?: () => void
