@@ -158,7 +158,11 @@ export const registrationStatusEnum = pgEnum("registration_status", [
   "approved",
   "rejected",
 ])
-export const bingoTypeEnum = pgEnum("bingo_type", ["standard", "progression"])
+export const bingoTypeEnum = pgEnum("bingo_type", [
+  "standard",
+  "progression",
+  "battleship",
+])
 export const gameTypeEnum = pgEnum("game_type", ["osrs", "rs3"])
 export const logicalOperatorEnum = pgEnum("logical_operator", [
   "AND",
@@ -368,6 +372,8 @@ export const bingosRelations = relations(bingos, ({ one, many }) => ({
   tierXpRequirements: many(tierXpRequirements),
   rowBonuses: many(rowBonuses),
   columnBonuses: many(columnBonuses),
+  shipRules: one(bingoShipRules),
+  ships: many(battleshipShips),
 }))
 
 export const teams = createTable("teams", {
@@ -389,6 +395,7 @@ export const teamsRelations = relations(teams, ({ many, one }) => ({
   }),
   goalProgress: many(teamGoalProgress),
   tierProgress: many(teamTierProgress),
+  battleshipShips: many(battleshipShips),
 }))
 
 export const teamMembers = createTable("team_members", {
@@ -439,6 +446,7 @@ export const tilesRelations = relations(tiles, ({ one, many }) => ({
   goals: many(goals),
   goalGroups: many(goalGroups),
   teamTileSubmissions: many(teamTileSubmissions),
+  shipTiles: many(battleshipShipTiles),
 }))
 
 export const goalGroups = createTable("goal_groups", {
@@ -1257,5 +1265,96 @@ export const adminAuditLog = createTable(
       table.targetType,
       table.targetId
     ),
+  })
+)
+
+export type ShipRule = {
+  length: number
+  count: number
+}
+
+export const bingoShipRules = createTable("bingo_ship_rules", {
+  bingoId: uuid("bingo_id")
+    .primaryKey()
+    .references(() => bingos.id, { onDelete: "cascade" }),
+  rulesJson: jsonb("rules_json").$type<ShipRule[]>().notNull().default([]),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const bingoShipRulesRelations = relations(bingoShipRules, ({ one }) => ({
+  bingo: one(bingos, {
+    fields: [bingoShipRules.bingoId],
+    references: [bingos.id],
+  }),
+}))
+
+export const battleshipShips = createTable("battleship_ships", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  bingoId: uuid("bingo_id")
+    .notNull()
+    .references(() => bingos.id, { onDelete: "cascade" }),
+  teamId: uuid("team_id")
+    .notNull()
+    .references(() => teams.id, { onDelete: "cascade" }),
+  shipLength: integer("ship_length").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const battleshipShipsRelations = relations(
+  battleshipShips,
+  ({ one, many }) => ({
+    bingo: one(bingos, {
+      fields: [battleshipShips.bingoId],
+      references: [bingos.id],
+    }),
+    team: one(teams, {
+      fields: [battleshipShips.teamId],
+      references: [teams.id],
+    }),
+    tiles: many(battleshipShipTiles),
+  })
+)
+
+// teamId is denormalised from the ship so the database itself guarantees that
+// a team can never place two ships on the same tile, even under concurrent
+// saves.
+export const battleshipShipTiles = createTable(
+  "battleship_ship_tiles",
+  {
+    shipId: uuid("ship_id")
+      .notNull()
+      .references(() => battleshipShips.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    tileId: uuid("tile_id")
+      .notNull()
+      .references(() => tiles.id, { onDelete: "cascade" }),
+  },
+  (table) => ({
+    shipTileUnique: uniqueIndex("battleship_ship_tiles_ship_tile_unique").on(
+      table.shipId,
+      table.tileId
+    ),
+    teamTileUnique: uniqueIndex("battleship_ship_tiles_team_tile_unique").on(
+      table.teamId,
+      table.tileId
+    ),
+  })
+)
+
+export const battleshipShipTilesRelations = relations(
+  battleshipShipTiles,
+  ({ one }) => ({
+    ship: one(battleshipShips, {
+      fields: [battleshipShipTiles.shipId],
+      references: [battleshipShips.id],
+    }),
+    tile: one(tiles, {
+      fields: [battleshipShipTiles.tileId],
+      references: [tiles.id],
+    }),
   })
 )
