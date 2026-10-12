@@ -62,11 +62,13 @@ export function BoardHealthIndicator({
         <button
           type="button"
           onClick={jump}
+          // Spelled out, rather than built from hidden text, so the name has no
+          // stray spacing; it starts with the visible text.
+          aria-label={`${formatTilesWithoutGoals(count)}. Select the next one.`}
           className="border-border text-muted-foreground hover:border-primary hover:text-foreground focus-visible:ring-ring inline-flex min-h-6 items-center gap-1.5 rounded-sm border border-dashed px-2 text-xs font-medium focus-visible:ring-2 focus-visible:outline-hidden pointer-coarse:min-h-11"
         >
           <CircleDashed aria-hidden="true" className="text-info h-3.5 w-3.5" />
           {formatTilesWithoutGoals(count)}
-          <span className="sr-only">. Select the next one.</span>
         </button>
       )}
       <div role="status" aria-live="polite" className="sr-only">
