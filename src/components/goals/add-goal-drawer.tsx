@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react"
 import { Plus, Target, Package, Loader2, BarChart2 } from "lucide-react"
-import { parseItemName } from "osrs-item-data"
 import { Button } from "@/components/ui/button"
 import { getItemDisplayName } from "@/components/osrs-item-option"
 import {
@@ -14,24 +13,21 @@ import {
 } from "@/components/ui/sheet"
 import { toast } from "@/hooks/use-toast"
 import { addGoal, createGoals, createMetricGoal } from "@/app/actions/bingo"
-import {
-  formatNumber,
-  parseTargetInput,
-  validateNumberInput,
-} from "@/lib/number-input"
-import {
-  METRIC_GOAL_LABEL,
-  getMetricName,
-  getMetricTargetCopy,
-} from "@/lib/osrs-metrics"
+import { parseTargetInput, validateNumberInput } from "@/lib/number-input"
+import { METRIC_GOAL_LABEL, getMetricTargetCopy } from "@/lib/osrs-metrics"
 import { MAX_GOALS_PER_BATCH } from "@/lib/goal-validation"
 import { AddedGoalsList, type AddedGoalEntry } from "./added-goals-list"
+import {
+  buildGenericGoalInput,
+  buildItemGoalInput,
+  buildMetricGoalInput,
+  formatAddedGoal,
+} from "./goal-inputs"
 import { GoalTypePicker } from "./goal-type-picker"
 import { GenericGoalForm } from "./generic-goal-form"
 import { ItemGoalForm } from "./item-goal-form"
 import { MetricGoalForm } from "./metric-goal-form"
 import type { GoalType, MetricType, SelectedItem } from "./types"
-import { resolveItemId } from "./utils"
 
 /** How many of the most recently added goals the drawer lists. */
 const MAX_ADDED_SHOWN = 3
@@ -182,13 +178,14 @@ function AddGoalPanel({
   const createGeneric = async () => {
     const targetValue = parseTargetInput(genericTarget)
     if (targetValue === null) return
+    const input = buildGenericGoalInput(description, targetValue)
     const result = await addGoal(tileId, {
-      description: description.trim(),
+      description: input.description,
       targetValue,
       parentGroupId,
     })
     if (!result.success) return result.error
-    recordAdded([`${description.trim()} x${formatNumber(targetValue)}`])
+    recordAdded([formatAddedGoal(input)])
     setDescription("")
     setGenericTarget("1")
   }
@@ -198,28 +195,14 @@ function AddGoalPanel({
     for (const { item, quantity } of selectedItems) {
       const targetValue = parseTargetInput(quantity)
       if (targetValue === null) return
-      const parsed = parseItemName(item.name)
-      inputs.push({
-        type: "item" as const,
-        itemId: resolveItemId(item),
-        itemName: item.name,
-        baseName: parsed.baseName,
-        imageUrl: item.imageUrl,
-        targetValue,
-        exactVariant: parsed.variant ?? null,
-      })
+      inputs.push(buildItemGoalInput(item, targetValue))
     }
     const result = await createGoals(tileId, inputs, { parentGroupId })
     if (!result.success) {
       // Nothing was created, so keep the selection for another attempt.
       return result.error
     }
-    recordAdded(
-      inputs.map(
-        (input) =>
-          `${getItemDisplayName({ name: input.itemName })} x${formatNumber(input.targetValue)}`
-      )
-    )
+    recordAdded(inputs.map(formatAddedGoal))
     setSelectedItems([])
   }
 
@@ -235,9 +218,10 @@ function AddGoalPanel({
       parentGroupId
     )
     if (!result.success) return result.error
-    const unit = targetValue === 1 ? metricCopy.unitSingular : metricCopy.unit
     recordAdded([
-      `${getMetricName(metricName)}: ${formatNumber(targetValue)}${unit ? ` ${unit}` : ""}`,
+      formatAddedGoal(
+        buildMetricGoalInput(metricType, metricName, targetValue)
+      ),
     ])
     setMetricName("")
     setMetricTarget("")
@@ -306,7 +290,7 @@ function AddGoalPanel({
           }}
         />
 
-        <div className="rounded-lg border bg-card p-4 shadow-sm">
+        <div className="bg-card rounded-lg border p-4 shadow-sm">
           <div
             key={goalType}
             className="animate-in fade-in-0 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none"
@@ -352,12 +336,9 @@ function AddGoalPanel({
         </div>
       </div>
 
-      <div className="shrink-0 space-y-2 border-t bg-background px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="bg-background shrink-0 space-y-2 border-t px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         {blockReason && !isSubmitting && (
-          <p
-            id="add-goal-reason"
-            className="text-xs text-muted-foreground"
-          >
+          <p id="add-goal-reason" className="text-muted-foreground text-xs">
             {blockReason}
           </p>
         )}
@@ -370,7 +351,10 @@ function AddGoalPanel({
           >
             {isSubmitting ? (
               <>
-                <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2
+                  aria-hidden="true"
+                  className="mr-2 h-4 w-4 animate-spin"
+                />
                 Adding...
               </>
             ) : goalType === "item" ? (

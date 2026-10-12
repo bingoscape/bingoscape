@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { searchOsrsItems } from "@/app/actions/osrs-items"
 import type { OsrsItem } from "@/types/osrs-items"
 
@@ -39,11 +39,21 @@ export interface OsrsItemSearchState {
  */
 export function useOsrsItemSearch(
   query: string,
-  limit = ITEM_SEARCH_LIMIT
+  limit = ITEM_SEARCH_LIMIT,
+  /**
+   * Called with the trimmed query and its items when a search for the current
+   * query finished successfully (not for superseded ones). Lets a caller act
+   * on arriving results, e.g. add the top match.
+   */
+  onResults?: (query: string, items: OsrsItem[]) => void
 ): OsrsItemSearchState {
   const trimmed = query.trim()
   const ready = trimmed.length >= MIN_ITEM_QUERY_LENGTH
   const [completed, setCompleted] = useState<CompletedSearch | null>(null)
+  const onResultsRef = useRef(onResults)
+  useEffect(() => {
+    onResultsRef.current = onResults
+  })
 
   useEffect(() => {
     if (!ready) return
@@ -53,11 +63,9 @@ export function useOsrsItemSearch(
       try {
         const result = await searchOsrsItems(trimmed, limit)
         if (cancelled) return
-        setCompleted({
-          query: trimmed,
-          items: result.success && result.items ? result.items : [],
-          failed: !result.success,
-        })
+        const found = result.success && result.items ? result.items : []
+        setCompleted({ query: trimmed, items: found, failed: !result.success })
+        if (result.success) onResultsRef.current?.(trimmed, found)
       } catch (error) {
         if (cancelled) return
         console.error("Error searching items:", error)
@@ -71,7 +79,12 @@ export function useOsrsItemSearch(
     }
   }, [trimmed, ready, limit])
 
-  if (!ready) return { ready, loading: false, items: [], failed: false }
+  if (!ready) {
+    // Forget the last results, so typing again after clearing the field does
+    // not flash the results of the old query.
+    if (completed) setCompleted(null)
+    return { ready, loading: false, items: [], failed: false }
+  }
 
   const settled = completed?.query === trimmed
   return {

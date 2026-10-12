@@ -1,22 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import Image from "next/image"
-import {
-  Trash2,
-  GripVertical,
-  Target,
-  Package,
-  Pencil,
-  BarChart2,
-} from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { Trash2, GripVertical, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { formatNumber } from "@/lib/number-input"
-import { METRIC_GOAL_LABEL, getMetricTargetCopy } from "@/lib/osrs-metrics"
 import { cn } from "@/lib/utils"
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog"
 import { GoalEditForm } from "./goal-edit-form"
+import { GoalRowContent } from "./goal-row-content"
 import type { FlatGoalNode } from "./types"
 import { useSortableNode } from "./use-sortable-node"
 
@@ -117,47 +107,12 @@ export function GoalRow({
                 }}
                 className="flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
               >
-                {itemGoal ? (
-                  <>
-                    <Image
-                      src={itemGoal.imageUrl}
-                      alt={itemGoal.baseName}
-                      width={24}
-                      height={24}
-                      className="h-6 w-6 shrink-0 object-contain"
-                    />
-                    <Badge
-                      variant="secondary"
-                      className="shrink-0 text-xs"
-                    >
-                      <Package className="mr-1 h-3 w-3" />
-                      Item
-                    </Badge>
-                  </>
-                ) : metricGoal ? (
-                  <>
-                    <BarChart2
-                      aria-hidden="true"
-                      className="h-4 w-4 shrink-0 text-info"
-                    />
-                    <Badge
-                      variant="secondary"
-                      className="shrink-0 text-xs"
-                      title={METRIC_GOAL_LABEL}
-                    >
-                      {getMetricTargetCopy(metricGoal.metricType).badge}
-                    </Badge>
-                  </>
-                ) : (
-                  <Target
-                    aria-hidden="true"
-                    className="h-4 w-4 shrink-0 text-success"
-                  />
-                )}
-                <span className="min-w-0 text-sm wrap-anywhere">{goalData.description}</span>
-                <Badge variant="outline" className="shrink-0 text-xs">
-                  Target: {formatNumber(goalData.targetValue)}
-                </Badge>
+                <GoalRowContent
+                  description={goalData.description}
+                  targetValue={goalData.targetValue}
+                  item={itemGoal}
+                  metric={metricGoal}
+                />
               </div>
               {hasSufficientRights && (
                 <div className="flex shrink-0 gap-1">
