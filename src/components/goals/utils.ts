@@ -53,3 +53,8 @@ export function flattenGoalTree(
 export function resolveItemId(item: OsrsItem): number {
   return Array.isArray(item.id) ? item.id[0]! : item.id
 }
+
+/** Unique per search result: an item can have several ids and variants share a name. */
+export function itemKey(item: OsrsItem): string {
+  return `${resolveItemId(item)}-${item.name}`
+}

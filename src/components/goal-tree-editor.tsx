@@ -1,13 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import {
-  DndContext,
-  closestCenter,
-  DragOverlay,
-} from "@dnd-kit/core"
+import { DndContext, closestCenter, DragOverlay } from "@dnd-kit/core"
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
-import { Layers, Target } from "lucide-react"
+import { Layers, ListChecks, Target } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
 import type { GoalTreeNode } from "@/app/actions/goal-groups"
@@ -15,12 +11,21 @@ import { updateGoalGroup, deleteGoalGroup } from "@/app/actions/goal-groups"
 import { AddGoalDrawer } from "@/components/goals/add-goal-drawer"
 import { CreateGroupDialog } from "@/components/goals/create-group-dialog"
 import { DragPreview } from "@/components/goals/drag-preview"
+import { GoalsEmptyState } from "@/components/goals/goals-empty-state"
+import { GoalsHelp } from "@/components/goals/goals-help"
+import { PendingGoalRow } from "@/components/goals/pending-goal-row"
+import { QuickAddBar } from "@/components/goals/quick-add-bar"
 import { SelectionToolbar } from "@/components/goals/selection-toolbar"
 import { TreeNode } from "@/components/goals/tree-node"
 import type { GroupOperator } from "@/components/goals/types"
 import { useGoalTreeDnd } from "@/components/goals/use-goal-tree-dnd"
 import { useNodeSelection } from "@/components/goals/use-node-selection"
+import {
+  pendingGoalToNode,
+  usePendingGoals,
+} from "@/components/goals/use-pending-goals"
 import { flattenGoalTree } from "@/components/goals/utils"
+import { summarizeGoalCompletion } from "@/lib/goal-summary"
 
 interface GoalTreeEditorProps {
   tileId: string
@@ -48,6 +53,18 @@ export function GoalTreeEditor({
   const [isAddGoalDrawerOpen, setIsAddGoalDrawerOpen] = useState(false)
   const [addGoalParentId, setAddGoalParentId] = useState<string | null>(null)
 
+  // The Goals added from the quick-add bar that the tree does not show yet.
+  const { pendingGoals, addGoal } = usePendingGoals({ tileId, tree, onRefresh })
+  const isEmpty = tree.length === 0 && pendingGoals.length === 0
+  // Decided once, when the editor appears: an empty Tile invites the first add.
+  const [focusQuickAddOnMount] = useState(
+    () => hasSufficientRights && tree.length === 0
+  )
+  const completionSummary = summarizeGoalCompletion([
+    ...tree,
+    ...pendingGoals.map(pendingGoalToNode),
+  ])
+
   const openAddGoalDrawer = (parentId: string | null = null) => {
     setAddGoalParentId(parentId)
     setIsAddGoalDrawerOpen(true)
@@ -65,9 +82,12 @@ export function GoalTreeEditor({
   // Flatten tree for drag and drop
   const flatTree = flattenGoalTree(tree, expandedGroups)
 
-  const { sensors, activeId, handleDragStart, handleDragEnd } = useGoalTreeDnd(
-    { flatTree, selectedNodes, setSelectedNodes, onRefresh }
-  )
+  const { sensors, activeId, handleDragStart, handleDragEnd } = useGoalTreeDnd({
+    flatTree,
+    selectedNodes,
+    setSelectedNodes,
+    onRefresh,
+  })
 
   const toggleGroup = (groupId: string) => {
     setExpandedGroups((prev) => {
@@ -120,14 +140,32 @@ export function GoalTreeEditor({
 
   return (
     <div className="space-y-4">
-      {hasSufficientRights && (flatTree.length > 0 || tree.length > 0) && (
-        <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-          <strong>Tip:</strong> Drag goals onto groups to nest them. Drag onto
-          other goals to reorder. Groups with AND require all goals, OR requires
-          at least one. <strong>Ctrl/Cmd+Click</strong> (or focus a row and
-          press <strong>Space</strong>) to select multiple items.
+      {hasSufficientRights && (
+        <QuickAddBar
+          onAdd={addGoal}
+          womLinked={womLinked}
+          onOpenTrackerSettings={onOpenTrackerSettings}
+          focusOnMount={focusQuickAddOnMount}
+          prominent={isEmpty}
+        />
+      )}
+
+      {(completionSummary || (hasSufficientRights && !isEmpty)) && (
+        <div className="space-y-1">
+          {completionSummary && (
+            <div className="bg-muted/40 flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+              <ListChecks
+                aria-hidden="true"
+                className="text-primary mt-0.5 h-4 w-4 shrink-0"
+              />
+              <p>{completionSummary}</p>
+            </div>
+          )}
+          {hasSufficientRights && !isEmpty && <GoalsHelp />}
         </div>
       )}
+
+      {isEmpty && <GoalsEmptyState canManage={hasSufficientRights} />}
 
       {/* Selection Action Toolbar */}
       {selectedNodes.size > 0 && (
@@ -147,30 +185,42 @@ export function GoalTreeEditor({
           items={flatTree.map((n) => n.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="relative ml-1 space-y-2 border-l border-border pl-2 [--goal-indent:0.75rem] @sm:ml-2 @sm:pl-4 @sm:[--goal-indent:1.25rem]">
-            {flatTree.map((node) => (
-              <TreeNode
-                key={node.id}
-                node={node}
-                expanded={expandedGroups.has(node.id)}
-                onToggle={() => toggleGroup(node.id)}
-                onUpdateOperator={handleUpdateGroupOperator}
-                onDeleteGroup={handleDeleteGroup}
-                onDeleteGoal={onDeleteGoal}
-                onOpenAddGoal={openAddGoalDrawer}
-                onRefresh={onRefresh}
-                hasSufficientRights={hasSufficientRights}
-                isSelected={isNodeSelected(node.id)}
-                onNodeClick={handleNodeClick}
-              />
-            ))}
-          </div>
+          {!isEmpty && (
+            <div className="border-border relative ml-1 space-y-2 border-l pl-2 [--goal-indent:0.75rem] @sm:ml-2 @sm:pl-4 @sm:[--goal-indent:1.25rem]">
+              {flatTree.map((node) => (
+                <TreeNode
+                  key={node.id}
+                  node={node}
+                  expanded={expandedGroups.has(node.id)}
+                  onToggle={() => toggleGroup(node.id)}
+                  onUpdateOperator={handleUpdateGroupOperator}
+                  onDeleteGroup={handleDeleteGroup}
+                  onDeleteGoal={onDeleteGoal}
+                  onOpenAddGoal={openAddGoalDrawer}
+                  onRefresh={onRefresh}
+                  hasSufficientRights={hasSufficientRights}
+                  isSelected={isNodeSelected(node.id)}
+                  onNodeClick={handleNodeClick}
+                />
+              ))}
+              {/* Not sortable: pending Goals can't be dragged or edited yet. */}
+              {pendingGoals.map((pending) => (
+                <PendingGoalRow
+                  key={pending.key}
+                  pending={pending}
+                  hasHandleSpace={hasSufficientRights}
+                />
+              ))}
+            </div>
+          )}
         </SortableContext>
 
         <DragOverlay>
           {activeId ? (
             <DragPreview
-              isGroup={flatTree.find((n) => n.id === activeId)?.type === "group"}
+              isGroup={
+                flatTree.find((n) => n.id === activeId)?.type === "group"
+              }
               selectedCount={
                 selectedNodes.size > 1 && selectedNodes.has(activeId)
                   ? selectedNodes.size
@@ -199,7 +249,7 @@ export function GoalTreeEditor({
             className="w-full"
           >
             <Target className="mr-2 h-4 w-4" />
-            Add New Goal
+            Add several goals
           </Button>
 
           <AddGoalDrawer

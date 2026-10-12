@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { Check, Loader2, Plus, X } from "lucide-react"
+import { Check, Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -10,22 +10,14 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
-import {
-  ITEM_SEARCH_LIMIT,
-  MIN_ITEM_QUERY_LENGTH,
-  useOsrsItemSearch,
-} from "@/hooks/use-osrs-item-search"
+import { useOsrsItemSearch } from "@/hooks/use-osrs-item-search"
 import { cn } from "@/lib/utils"
 import type { OsrsItem } from "@/types/osrs-items"
 import { getItemDisplayName, ItemOption } from "@/components/osrs-item-option"
+import { ItemSearchStatus } from "./item-search-status"
 import { SelectedItemRow } from "./selected-item-row"
 import type { SelectedItem } from "./types"
-import { resolveItemId } from "./utils"
-
-/** Unique per search result: an item can have several ids and variants share a name. */
-function itemKey(item: OsrsItem): string {
-  return `${resolveItemId(item)}-${item.name}`
-}
+import { itemKey, resolveItemId } from "./utils"
 
 interface ItemPickerProps {
   /** The items picked so far, each with the raw text of its quantity. */
@@ -134,30 +126,9 @@ export function ItemPicker({
               if (event.key === "Escape" && query !== "") setQuery("")
             }}
           />
-          <p
-            role="status"
-            className="text-muted-foreground flex min-h-9 items-center gap-2 border-b px-3 py-1.5 text-xs"
-          >
-            {!ready ? (
-              `Type at least ${MIN_ITEM_QUERY_LENGTH} characters, like “whip” or “dragon boots”.`
-            ) : loading ? (
-              <>
-                <Loader2
-                  aria-hidden="true"
-                  className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none"
-                />
-                Searching...
-              </>
-            ) : failed ? (
-              "The search failed. Try again."
-            ) : items.length === 0 ? (
-              "No items found. Check the spelling or try a shorter name."
-            ) : items.length >= ITEM_SEARCH_LIMIT ? (
-              `Showing the first ${ITEM_SEARCH_LIMIT} matches. Type more to narrow them down.`
-            ) : (
-              `${items.length} ${items.length === 1 ? "match" : "matches"}`
-            )}
-          </p>
+          <ItemSearchStatus
+            search={{ ready, loading, failed, count: items.length }}
+          />
           {ready && items.length > 0 && (
             // Bounded so the on-screen keyboard leaves room; it scrolls on its
             // own and hands over to the drawer once it reaches its end.

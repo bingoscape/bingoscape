@@ -38,6 +38,11 @@ interface NumberFieldProps {
   stepper?: { decreaseLabel: string; increaseLabel: string }
   /** Extra classes for the input itself. */
   inputClassName?: string
+  /** An element in the same row after the input, e.g. an Add button. */
+  action?: React.ReactNode
+  /** Show a validation error before the user has left the field (e.g. after a rejected submit). */
+  forceShowError?: boolean
+  inputRef?: React.Ref<HTMLInputElement>
   autoFocus?: boolean
   className?: string
 }
@@ -63,13 +68,16 @@ export function NumberField({
   hideLabel = false,
   stepper,
   inputClassName,
+  action,
+  forceShowError = false,
+  inputRef,
   autoFocus,
   className,
 }: NumberFieldProps) {
   const [touched, setTouched] = useState(false)
 
   const error = validateNumberInput(value)
-  const showError = touched && error !== null
+  const showError = (touched || forceShowError) && error !== null
   // "= 1" next to a typed "1" adds nothing; show the preview when it tells the
   // user something (shorthand, separators or a number of 1,000 or more).
   const parsedValue = parseTargetInput(value)
@@ -93,6 +101,7 @@ export function NumberField({
 
   const input = (
     <Input
+      ref={inputRef}
       id={id}
       type="text"
       inputMode="numeric"
@@ -111,6 +120,7 @@ export function NumberField({
       className={cn(
         compact && "h-8 text-sm",
         stepper && "w-20 text-center tabular-nums",
+        action && "min-w-0 flex-1",
         showError && "border-danger focus-visible:ring-danger",
         inputClassName
       )}
@@ -145,6 +155,11 @@ export function NumberField({
             disabled={!canStepNumberInput(value, 1)}
             onClick={() => onValueChange(stepNumberInput(value, 1))}
           />
+        </div>
+      ) : action ? (
+        <div className="flex items-center gap-2">
+          {input}
+          {action}
         </div>
       ) : (
         input

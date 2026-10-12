@@ -118,7 +118,9 @@ describe("SkillGrid", () => {
   it("shows no selected name while nothing is selected", () => {
     render(<Harness />)
 
-    expect(screen.queryByText("Mining", { selector: "p" })).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("Mining", { selector: "p" })
+    ).not.toBeInTheDocument()
   })
 
   it("starts with the given skill selected", () => {
@@ -163,5 +165,65 @@ describe("SkillGrid", () => {
     render(<Harness />)
 
     expect(radio("Overall")).not.toHaveFocus()
+  })
+
+  describe("strip variant", () => {
+    it("is still a radiogroup labelled Skill with every skill, but shows no heading", () => {
+      render(
+        <SkillGrid value="" onValueChange={() => undefined} variant="strip" />
+      )
+
+      const group = screen.getByRole("radiogroup", { name: "Skill" })
+      expect(within(group).getAllByRole("radio")).toHaveLength(
+        getMetricIds("skill").length
+      )
+      expect(screen.getByText("Skill", { selector: "p" })).toHaveClass(
+        "sr-only"
+      )
+    })
+
+    it("scrolls horizontally instead of wrapping into a grid", () => {
+      render(
+        <SkillGrid value="" onValueChange={() => undefined} variant="strip" />
+      )
+
+      const group = screen.getByRole("radiogroup", { name: "Skill" })
+      expect(group.className).toContain("overflow-x-auto")
+      expect(group.className).not.toContain("grid")
+    })
+  })
+
+  describe("viaKeyboard", () => {
+    it("is false for a click and true when an arrow key moved the selection", async () => {
+      const onValueChange = jest.fn()
+      render(<SkillGrid value="" onValueChange={onValueChange} />)
+
+      fireEvent.click(radio("Attack"))
+      expect(onValueChange).toHaveBeenLastCalledWith("attack", {
+        viaKeyboard: false,
+      })
+
+      act(() => radio("Overall").focus())
+      fireEvent.keyDown(radio("Overall"), { key: "ArrowRight" })
+      await waitFor(() =>
+        expect(onValueChange).toHaveBeenLastCalledWith("attack", {
+          viaKeyboard: true,
+        })
+      )
+    })
+  })
+
+  it("gives two grids on one page their own labels", () => {
+    render(
+      <>
+        <SkillGrid value="" onValueChange={() => undefined} />
+        <SkillGrid value="" onValueChange={() => undefined} variant="strip" />
+      </>
+    )
+
+    const ids = screen
+      .getAllByRole("radiogroup")
+      .map((group) => group.getAttribute("aria-labelledby"))
+    expect(new Set(ids).size).toBe(2)
   })
 })

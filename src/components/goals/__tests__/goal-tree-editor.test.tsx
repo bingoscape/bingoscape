@@ -1,7 +1,14 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import "./dom-polyfills"
 import type { GoalTreeNode } from "@/app/actions/goal-groups"
 import { GoalTreeEditor } from "@/components/goal-tree-editor"
+import { resetQuickAddMemory } from "@/components/goals/quick-add-bar"
 
 jest.mock("@/app/actions/goal-groups", () => ({
   createGoalGroup: jest.fn(),
@@ -76,6 +83,11 @@ function renderEditor(
 }
 
 describe("GoalTreeEditor", () => {
+  beforeEach(() => {
+    // The quick-add bar remembers its type in localStorage.
+    resetQuickAddMemory()
+  })
+
   afterEach(() => {
     jest.clearAllMocks()
   })
@@ -93,10 +105,14 @@ describe("GoalTreeEditor", () => {
 
     expect(screen.getByText("Kill a boss")).toBeInTheDocument()
     expect(
-      screen.queryByRole("button", { name: /add new goal/i })
+      screen.queryByRole("button", { name: /add several goals/i })
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("button", { name: /create group/i })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("search")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /how do groups work/i })
     ).not.toBeInTheDocument()
   })
 
@@ -104,16 +120,17 @@ describe("GoalTreeEditor", () => {
     renderEditor()
     expect(screen.queryByText("Goal type")).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole("button", { name: /add new goal/i }))
+    fireEvent.click(screen.getByRole("button", { name: /add several goals/i }))
 
-    const radios = screen.getAllByRole("radio")
+    const dialog = screen.getByRole("dialog")
+    const radios = within(dialog).getAllByRole("radio")
     expect(radios.map((r) => r.getAttribute("aria-label"))).toEqual([
       "Item",
       "XP / Kills",
       "Other",
     ])
-    expect(screen.getByRole("radio", { name: "Item" })).toBeChecked()
-    expect(screen.getByRole("dialog")).toHaveTextContent(/^Add New Goal/)
+    expect(within(dialog).getByRole("radio", { name: "Item" })).toBeChecked()
+    expect(dialog).toHaveTextContent(/^Add New Goal/)
     expect(screen.queryByText(/Metric/)).not.toBeInTheDocument()
   })
 
@@ -127,16 +144,17 @@ describe("GoalTreeEditor", () => {
 
   it("switches the drawer form and footer by goal type", () => {
     renderEditor()
-    fireEvent.click(screen.getByRole("button", { name: /add new goal/i }))
-    expect(screen.getByRole("button", { name: "Add goals" })).toBeDisabled()
+    fireEvent.click(screen.getByRole("button", { name: /add several goals/i }))
+    const dialog = within(screen.getByRole("dialog"))
+    expect(dialog.getByRole("button", { name: "Add goals" })).toBeDisabled()
 
-    fireEvent.click(screen.getByRole("radio", { name: "XP / Kills" }))
+    fireEvent.click(dialog.getByRole("radio", { name: "XP / Kills" }))
     expect(
-      screen.getByRole("button", { name: /add xp \/ kills goal/i })
+      dialog.getByRole("button", { name: /add xp \/ kills goal/i })
     ).toBeDisabled()
 
-    fireEvent.click(screen.getByRole("radio", { name: "Other" }))
-    expect(screen.getByLabelText("Description")).toBeInTheDocument()
+    fireEvent.click(dialog.getByRole("radio", { name: "Other" }))
+    expect(dialog.getByLabelText("Description")).toBeInTheDocument()
   })
 
   describe("deleting", () => {

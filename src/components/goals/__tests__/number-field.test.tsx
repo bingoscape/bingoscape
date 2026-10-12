@@ -139,7 +139,8 @@ describe("NumberField stepper", () => {
     )
   }
 
-  const qty = () => screen.getByLabelText("Quantity of Whip") as HTMLInputElement
+  const qty = () =>
+    screen.getByLabelText("Quantity of Whip") as HTMLInputElement
   const decrease = () =>
     screen.getByRole("button", { name: "Decrease quantity of Whip" })
   const increase = () =>
@@ -211,5 +212,84 @@ describe("NumberField stepper", () => {
     render(<Harness />)
 
     expect(screen.queryByRole("button")).not.toBeInTheDocument()
+  })
+
+  describe("action, forceShowError and inputRef", () => {
+    it("renders the action in the same row, after the input", () => {
+      render(
+        <NumberField
+          id="t"
+          label="Target"
+          value="1"
+          onValueChange={() => undefined}
+          action={<button type="submit">Add</button>}
+        />
+      )
+
+      const field = screen.getByLabelText("Target")
+      expect(field.nextElementSibling).toBe(
+        screen.getByRole("button", { name: "Add" })
+      )
+      expect(field.parentElement).toBe(
+        screen.getByRole("button", { name: "Add" }).parentElement
+      )
+    })
+
+    it("shows the error before the field was left when asked to, and only while invalid", () => {
+      const { rerender } = render(
+        <NumberField
+          id="t"
+          label="Target"
+          value=""
+          onValueChange={() => undefined}
+          forceShowError
+        />
+      )
+
+      expect(screen.getByRole("alert")).toHaveTextContent("Enter a number")
+      expect(screen.getByLabelText("Target")).toHaveAttribute(
+        "aria-invalid",
+        "true"
+      )
+
+      rerender(
+        <NumberField
+          id="t"
+          label="Target"
+          value="5"
+          onValueChange={() => undefined}
+          forceShowError
+        />
+      )
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    })
+
+    it("shows no error before the field was left by default", () => {
+      render(
+        <NumberField
+          id="t"
+          label="Target"
+          value=""
+          onValueChange={() => undefined}
+        />
+      )
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    })
+
+    it("hands the input element to inputRef", () => {
+      const ref = { current: null as HTMLInputElement | null }
+      render(
+        <NumberField
+          id="t"
+          label="Target"
+          value="1"
+          onValueChange={() => undefined}
+          inputRef={ref}
+        />
+      )
+
+      expect(ref.current).toBe(screen.getByLabelText("Target"))
+    })
   })
 })

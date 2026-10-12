@@ -216,4 +216,75 @@ describe("useOsrsItemSearch", () => {
 
     expect(result.current.failed).toBe(false)
   })
+
+  it("does not bring back the old results when typing again after clearing the field", async () => {
+    mockedSearch.mockResolvedValue({ success: true, items: [whip] })
+    const { result, rerender } = renderHook(
+      ({ query }) => useOsrsItemSearch(query),
+      { initialProps: { query: "whip" } }
+    )
+    await flushSearch()
+
+    rerender({ query: "" })
+    rerender({ query: "dagger" })
+
+    expect(result.current.loading).toBe(true)
+    expect(result.current.items).toEqual([])
+  })
+
+  describe("onResults", () => {
+    it("is called with the query and its items once a search succeeds", async () => {
+      mockedSearch.mockResolvedValue({ success: true, items: [whip] })
+      const onResults = jest.fn()
+      renderHook(() => useOsrsItemSearch("  whip ", undefined, onResults))
+
+      expect(onResults).not.toHaveBeenCalled()
+      await flushSearch()
+
+      expect(onResults).toHaveBeenCalledTimes(1)
+      expect(onResults).toHaveBeenCalledWith("whip", [whip])
+    })
+
+    it("is not called for a failed search or a superseded response", async () => {
+      const first = deferred<SearchResult>()
+      const second = deferred<SearchResult>()
+      mockedSearch
+        .mockReturnValueOnce(first.promise)
+        .mockReturnValueOnce(second.promise)
+      const onResults = jest.fn()
+      const { rerender } = renderHook(
+        ({ query }) => useOsrsItemSearch(query, undefined, onResults),
+        { initialProps: { query: "whip" } }
+      )
+      await flushSearch()
+      rerender({ query: "dagger" })
+      await flushSearch()
+
+      await act(async () => {
+        first.resolve({ success: true, items: [whip] })
+      })
+      expect(onResults).not.toHaveBeenCalled()
+
+      await act(async () => {
+        second.resolve({ success: false, error: "Nope" })
+      })
+      expect(onResults).not.toHaveBeenCalled()
+    })
+
+    it("calls the latest callback, not the one from the first render", async () => {
+      mockedSearch.mockResolvedValue({ success: true, items: [whip] })
+      const stale = jest.fn()
+      const latest = jest.fn()
+      const { rerender } = renderHook(
+        ({ onResults }) => useOsrsItemSearch("whip", undefined, onResults),
+        { initialProps: { onResults: stale } }
+      )
+      rerender({ onResults: latest })
+
+      await flushSearch()
+
+      expect(stale).not.toHaveBeenCalled()
+      expect(latest).toHaveBeenCalledTimes(1)
+    })
+  })
 })

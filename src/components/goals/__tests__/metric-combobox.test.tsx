@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MetricCombobox } from "@/components/goals/metric-combobox"
 import "./dom-polyfills"
 
@@ -50,7 +50,9 @@ describe("MetricCombobox", () => {
     expect(
       screen.getByRole("option", { name: "Clue Scrolls (All)" })
     ).toBeInTheDocument()
-    expect(screen.queryByRole("option", { name: "Zulrah" })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("option", { name: "Zulrah" })
+    ).not.toBeInTheDocument()
   })
 
   it("filters the list as the user types", async () => {
@@ -148,7 +150,9 @@ describe("MetricCombobox", () => {
   it("reopens the search from Change, with the search focused and the current boss marked", async () => {
     render(<Harness initial="vorkath" />)
 
-    fireEvent.click(screen.getByRole("button", { name: "Change boss: Vorkath" }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Change boss: Vorkath" })
+    )
 
     expect(search()).toHaveFocus()
     expect(
@@ -160,7 +164,9 @@ describe("MetricCombobox", () => {
     const onValueChange = jest.fn()
     render(<Harness initial="vorkath" onValueChange={onValueChange} />)
 
-    fireEvent.click(screen.getByRole("button", { name: "Change boss: Vorkath" }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Change boss: Vorkath" })
+    )
     fireEvent.click(screen.getByRole("option", { name: "Zulrah" }))
 
     expect(onValueChange).toHaveBeenCalledWith("zulrah")
@@ -176,7 +182,9 @@ describe("MetricCombobox", () => {
     const onValueChange = jest.fn()
     render(<Harness initial="vorkath" onValueChange={onValueChange} />)
 
-    fireEvent.click(screen.getByRole("button", { name: "Change boss: Vorkath" }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Change boss: Vorkath" })
+    )
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
 
     expect(onValueChange).not.toHaveBeenCalled()
@@ -191,7 +199,9 @@ describe("MetricCombobox", () => {
   it("does not offer Cancel before anything was chosen", () => {
     render(<Harness />)
 
-    expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Cancel" })
+    ).not.toBeInTheDocument()
   })
 
   it("focuses the search on mount when asked to", () => {
@@ -216,7 +226,9 @@ describe("MetricCombobox", () => {
     expect(option.querySelector("img")).not.toBeInTheDocument()
     expect(option.querySelector("svg")).toBeInTheDocument()
     // The other rows keep their icons.
-    expect(container.querySelectorAll("[cmdk-item] img").length).toBeGreaterThan(10)
+    expect(
+      container.querySelectorAll("[cmdk-item] img").length
+    ).toBeGreaterThan(10)
   })
 
   it("clears the typed text with Escape and marks the field so the drawer lets it", () => {
@@ -227,5 +239,48 @@ describe("MetricCombobox", () => {
     fireEvent.keyDown(search(), { key: "Escape" })
 
     expect(search()).toHaveValue("")
+  })
+
+  describe("focusChangeAfterPick", () => {
+    function Controlled({
+      focusChangeAfterPick,
+    }: {
+      focusChangeAfterPick: boolean
+    }) {
+      const [value, setValue] = useState("")
+      return (
+        <MetricCombobox
+          metricType="boss"
+          value={value}
+          onValueChange={setValue}
+          focusChangeAfterPick={focusChangeAfterPick}
+        />
+      )
+    }
+
+    it("does not move focus to the Change button after a pick when turned off", async () => {
+      render(<Controlled focusChangeAfterPick={false} />)
+      fireEvent.click(screen.getByRole("option", { name: "Zulrah" }))
+
+      const change = await screen.findByRole("button", {
+        name: "Change boss: Zulrah",
+      })
+      await act(async () => {
+        await Promise.resolve()
+      })
+
+      expect(change).not.toHaveFocus()
+    })
+
+    it("moves focus to the Change button by default", async () => {
+      render(<Controlled focusChangeAfterPick />)
+      fireEvent.click(screen.getByRole("option", { name: "Zulrah" }))
+
+      const change = await screen.findByRole("button", {
+        name: "Change boss: Zulrah",
+      })
+
+      await waitFor(() => expect(change).toHaveFocus())
+    })
   })
 })

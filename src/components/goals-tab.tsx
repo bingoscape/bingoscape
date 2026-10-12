@@ -51,7 +51,9 @@ export function GoalsTab({
         <h3 className="min-w-0 text-base font-semibold @sm:text-lg">Goals Management</h3>
       </div>
 
+      {/* Keyed by Tile: a Tile change starts with fresh quick-add and pending state. */}
       <GoalTreeEditor
+        key={selectedTile?.id}
         tileId={selectedTile?.id || ""}
         tree={goalTree}
         hasSufficientRights={hasSufficientRights}
