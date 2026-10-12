@@ -6,6 +6,7 @@ import {
   FileJson,
   LayoutGrid,
   Link as LinkIcon,
+  ListChecks,
   ListFilter,
   Lock,
   MoreVertical,
@@ -91,6 +92,11 @@ interface BoardHeaderProps {
     selectedTileId: string | null
     onSelectTile: (tileId: string) => void
   }
+  /**
+   * Opens the board-level goal setup view. Only pass it to people who can
+   * manage Goals, and not while that view is already open.
+   */
+  onSetUpGoals?: () => void
 }
 
 /**
@@ -120,6 +126,7 @@ export function BoardHeader({
   onTrackerOpenChange,
   filters,
   goalHealth,
+  onSetUpGoals,
 }: BoardHeaderProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [importExportOpen, setImportExportOpen] = useState(false)
@@ -285,6 +292,16 @@ export function BoardHeader({
         )}
         <BoardFilters {...filters} />
         {goalHealth && <BoardHealthIndicator {...goalHealth} />}
+        {onSetUpGoals && (
+          <button
+            type="button"
+            onClick={onSetUpGoals}
+            className="border-border text-foreground hover:border-primary focus-visible:ring-ring inline-flex min-h-6 items-center gap-1.5 rounded-sm border px-2 text-xs font-medium focus-visible:ring-2 focus-visible:outline-hidden pointer-coarse:min-h-11"
+          >
+            <ListChecks aria-hidden="true" className="h-3.5 w-3.5" />
+            Set up goals
+          </button>
+        )}
         {isUpcoming && isManagement && (
           <span className="text-muted-foreground flex items-center gap-1 font-medium">
             <Lock aria-hidden="true" className="h-3 w-3" />

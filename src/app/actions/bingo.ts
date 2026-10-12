@@ -25,7 +25,7 @@ import {
   goalGroups,
 } from "@/server/db/schema"
 import type { UUID } from "crypto"
-import { asc, eq, inArray, and, gt, isNull, max } from "drizzle-orm"
+import { asc, eq, inArray, and, gt } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import fs from "fs/promises"
@@ -47,10 +47,8 @@ import {
 import { createNotification } from "./notifications"
 import { getServerAuthSession } from "@/server/auth"
 import getRandomFrog from "@/lib/getRandomFrog"
-import { getMetricName } from "@/lib/osrs-metrics"
 import {
   MAX_GOALS_PER_BATCH,
-  validateDescription,
   validateTargetValue,
 } from "@/lib/goal-validation"
 import {
@@ -62,6 +60,14 @@ import { sql } from "drizzle-orm"
 import { completedAtOnComplete } from "@/lib/completed-at"
 import { logger } from "@/lib/logger"
 import type { SelectableUser } from "@/types/model"
+import {
+  insertGoal,
+  metricGoalDescription,
+  nextOrderIndex,
+  validateNewGoal,
+  type CreateGoalsOptions as SharedCreateGoalsOptions,
+  type NewGoalInput as SharedNewGoalInput,
+} from "@/server/goal-create"
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
 
@@ -457,142 +463,11 @@ export async function deleteBingo(bingoId: string) {
   }
 }
 
-type GoalDbTx = Parameters<Parameters<typeof db.transaction>[0]>[0]
-
-export type NewGoalInput =
-  | { type: "generic"; description: string; targetValue: number }
-  | {
-      type: "item"
-      itemId: number
-      itemName: string
-      baseName: string
-      imageUrl: string
-      targetValue: number
-      exactVariant?: string | null
-    }
-  | {
-      type: "metric"
-      metricType: string
-      metricName: string
-      targetValue: number
-      description?: string
-    }
-
-export interface CreateGoalsOptions {
-  /** Place the goals (or the new group) inside this existing group. */
-  parentGroupId?: string | null
-  /** Wrap the new goals in a new group created in the same transaction. */
-  group?: { operator: "AND" | "OR" | "SUM"; minRequiredGoals?: number }
-}
-
-function metricGoalDescription(metricName: string, description?: string) {
-  return description?.trim() || getMetricName(metricName)
-}
-
-function validateNewGoal(input: NewGoalInput): string | null {
-  const targetError = validateTargetValue(input.targetValue)
-  if (targetError) return targetError
-
-  switch (input.type) {
-    case "generic":
-      return validateDescription(input.description)
-    case "item":
-      if (!Number.isInteger(input.itemId)) return "Invalid item"
-      return validateDescription(input.itemName)
-    case "metric":
-      if (!input.metricType.trim() || !input.metricName.trim()) {
-        return "Please specify a metric"
-      }
-      return null
-  }
-}
-
-/** Next free order index among the goals and groups sharing a parent. */
-async function nextOrderIndex(
-  tx: GoalDbTx,
-  tileId: string,
-  parentGroupId: string | null
-) {
-  const [goalMax] = await tx
-    .select({ value: max(goals.orderIndex) })
-    .from(goals)
-    .where(
-      and(
-        eq(goals.tileId, tileId),
-        parentGroupId
-          ? eq(goals.parentGroupId, parentGroupId)
-          : isNull(goals.parentGroupId)
-      )
-    )
-  const [groupMax] = await tx
-    .select({ value: max(goalGroups.orderIndex) })
-    .from(goalGroups)
-    .where(
-      and(
-        eq(goalGroups.tileId, tileId),
-        parentGroupId
-          ? eq(goalGroups.parentGroupId, parentGroupId)
-          : isNull(goalGroups.parentGroupId)
-      )
-    )
-  return Math.max(goalMax?.value ?? -1, groupMax?.value ?? -1) + 1
-}
-
-async function insertGoal(
-  tx: GoalDbTx,
-  tileId: string,
-  parentGroupId: string | null,
-  orderIndex: number,
-  input: NewGoalInput
-) {
-  const description =
-    input.type === "generic"
-      ? input.description.trim()
-      : input.type === "item"
-        ? input.itemName
-        : metricGoalDescription(input.metricName, input.description)
-
-  const [goal] = await tx
-    .insert(goals)
-    .values({
-      tileId,
-      parentGroupId,
-      description,
-      targetValue: input.targetValue,
-      goalType: input.type,
-      orderIndex,
-    })
-    .returning()
-  if (!goal) throw new Error("Failed to insert goal")
-
-  if (input.type === "item") {
-    const [itemGoal] = await tx
-      .insert(itemGoals)
-      .values({
-        goalId: goal.id,
-        itemId: input.itemId,
-        baseName: input.baseName,
-        exactVariant: input.exactVariant ?? null,
-        imageUrl: input.imageUrl,
-      })
-      .returning()
-    return { goal, itemGoal }
-  }
-
-  if (input.type === "metric") {
-    const [metricGoal] = await tx
-      .insert(metricGoals)
-      .values({
-        goalId: goal.id,
-        metricType: input.metricType,
-        metricName: input.metricName,
-      })
-      .returning()
-    return { goal, metricGoal }
-  }
-
-  return { goal }
-}
+// Declared here (not re-exported with `export type { ... }`): the "use server"
+// transform only erases type declarations, and would treat a re-export as a
+// value export that does not exist.
+export type NewGoalInput = SharedNewGoalInput
+export type CreateGoalsOptions = SharedCreateGoalsOptions
 
 /**
  * Create one or more goals on a tile in a single transaction: either all goals

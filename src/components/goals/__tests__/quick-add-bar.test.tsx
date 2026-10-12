@@ -177,6 +177,28 @@ describe("QuickAddBar", () => {
       tab.remove()
     })
 
+    it('takes focus on a touch device when forced ("force"), because the user asked for the bar', () => {
+      window.matchMedia = jest.fn().mockReturnValue({ matches: true })
+      renderBar({ focusOnMount: "force" })
+
+      expect(searchField()).toHaveFocus()
+    })
+
+    it('takes focus from a user moving with the keyboard when forced ("force")', () => {
+      const tab = document.createElement("button")
+      document.body.appendChild(tab)
+      tab.focus()
+      const matches = jest
+        .spyOn(tab, "matches")
+        .mockImplementation((selector) => selector === ":focus-visible")
+
+      renderBar({ focusOnMount: "force" })
+
+      expect(searchField()).toHaveFocus()
+      matches.mockRestore()
+      tab.remove()
+    })
+
     it("takes focus from a control that was focused with the mouse", () => {
       const tab = document.createElement("button")
       document.body.appendChild(tab)
@@ -356,7 +378,11 @@ describe("QuickAddBar", () => {
       const { onAdd } = renderBar()
       await search("abyssal")
 
-      fireEvent.click(screen.getByRole("option", { name: "Abyssal tentacle" }))
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("option", { name: "Abyssal tentacle" })
+        )
+      })
 
       expect(onAdd).toHaveBeenCalledWith(
         expect.objectContaining({ itemName: "Abyssal tentacle" })

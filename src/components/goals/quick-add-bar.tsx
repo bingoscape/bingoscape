@@ -34,7 +34,7 @@ const TYPE_OPTIONS = [
 ] as const
 
 /** The form control to focus first: the first one inside an element marked as primary. */
-const PRIMARY_FIELD_SELECTOR =
+export const QUICK_ADD_PRIMARY_SELECTOR =
   '[data-quick-add-primary] [role="radio"], [data-quick-add-primary] input:not([aria-hidden="true"])'
 
 interface QuickAddBarProps {
@@ -44,8 +44,12 @@ interface QuickAddBarProps {
   womLinked: boolean
   /** Opens the tracker settings, where the competition is linked. */
   onOpenTrackerSettings?: () => void
-  /** Focus the main field when the bar appears (a Tile without Goals). */
-  focusOnMount?: boolean
+  /**
+   * Focus the main field when the bar appears. `true` only does so when that
+   * will not be a surprise (see `canAutoFocus`); `"force"` always does, for a
+   * bar the user just asked for.
+   */
+  focusOnMount?: boolean | "force"
   /** Stronger outline, to make the bar the obvious next step on an empty Tile. */
   prominent?: boolean
 }
@@ -71,10 +75,14 @@ export function QuickAddBar({
   const focusBodyAfterSwitch = useRef(false)
 
   const focusPrimaryField = () =>
-    bodyRef.current?.querySelector<HTMLElement>(PRIMARY_FIELD_SELECTOR)?.focus()
+    bodyRef.current
+      ?.querySelector<HTMLElement>(QUICK_ADD_PRIMARY_SELECTOR)
+      ?.focus()
 
   useEffect(() => {
-    if (focusOnMount && canAutoFocus()) focusPrimaryField()
+    if (focusOnMount && (focusOnMount === "force" || canAutoFocus())) {
+      focusPrimaryField()
+    }
   }, [focusOnMount])
 
   // After a click on another type, move to its main field. Arrow keys leave
