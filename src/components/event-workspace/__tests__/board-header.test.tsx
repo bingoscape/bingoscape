@@ -150,3 +150,106 @@ describe("BoardHeader: set up goals", () => {
     expect(setUpGoals()).toHaveClass("pointer-coarse:min-h-11")
   })
 })
+
+describe("BoardHeader: battleship", () => {
+  const battleshipBingo = {
+    ...bingo,
+    bingoType: "battleship",
+  } as unknown as Bingo
+  const teams = [
+    { id: "t1", name: "Team 1" },
+    { id: "t2", name: "Team 2" },
+  ] as unknown as React.ComponentProps<typeof BoardHeader>["teams"]
+  const info = (
+    overrides: Partial<{ started: boolean; ledTeamId: string | null }> = {}
+  ) => ({
+    bingoId: "b1",
+    rules: [{ length: 2, count: 1 }],
+    started: false,
+    ledTeamId: null,
+    ...overrides,
+  })
+  const placeShips = () => screen.queryByRole("link", { name: "Place ships" })
+  const note = () => screen.queryByText(/team leaders place their ships/)
+
+  function renderBattleship(
+    props: Partial<React.ComponentProps<typeof BoardHeader>>
+  ) {
+    return renderHeader({
+      bingos: [battleshipBingo],
+      activeBingo: battleshipBingo,
+      teams,
+      ...props,
+    })
+  }
+
+  it("links a team leader to the placement page of their own team", () => {
+    renderBattleship({
+      isManagement: false,
+      effectiveTeamId: "t2",
+      battleship: info({ ledTeamId: "t1" }),
+    })
+    expect(placeShips()).toHaveAttribute(
+      "href",
+      "/events/e1/bingos/b1/ships?teamId=t1"
+    )
+    expect(note()).not.toBeInTheDocument()
+  })
+
+  it("links a manager to the team they are looking at", () => {
+    renderBattleship({
+      isManagement: true,
+      effectiveTeamId: "t2",
+      battleship: info(),
+    })
+    expect(placeShips()).toHaveAttribute(
+      "href",
+      "/events/e1/bingos/b1/ships?teamId=t2"
+    )
+  })
+
+  it("explains instead of linking for everybody else", () => {
+    renderBattleship({
+      isManagement: false,
+      battleship: info({ ledTeamId: null }),
+    })
+    expect(placeShips()).not.toBeInTheDocument()
+    expect(note()).toBeInTheDocument()
+  })
+
+  it("shows neither the link nor the note once the event has started", () => {
+    renderBattleship({
+      isManagement: true,
+      effectiveTeamId: "t1",
+      battleship: info({ started: true, ledTeamId: "t1" }),
+    })
+    expect(placeShips()).not.toBeInTheDocument()
+    expect(note()).not.toBeInTheDocument()
+  })
+
+  it("does not show the link on other boards or in the read-only view", () => {
+    renderHeader({
+      isManagement: true,
+      teams,
+      effectiveTeamId: "t1",
+      battleship: info(),
+    })
+    expect(placeShips()).not.toBeInTheDocument()
+
+    renderBattleship({
+      isManagement: false,
+      readOnly: true,
+      battleship: info({ ledTeamId: "t1" }),
+    })
+    expect(placeShips()).not.toBeInTheDocument()
+  })
+
+  it("has a 44px target on coarse pointers", () => {
+    renderBattleship({
+      isManagement: true,
+      effectiveTeamId: "t1",
+      battleship: info(),
+    })
+    expect(placeShips()).toHaveClass("pointer-coarse:min-h-11")
+  })
+})

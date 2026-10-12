@@ -55,6 +55,7 @@ import {
   sideWidthCss,
   type WorkspacePrefs,
 } from "@/lib/workspace-prefs"
+import type { BattleshipWorkspaceInfo } from "@/lib/battleship-workspace"
 import type { Bingo, SelectableUser, Team, Tile } from "@/types/model"
 
 /** What the workspace needs from an Event (the public view has no full Event). */
@@ -75,6 +76,8 @@ interface EventWorkspaceProps {
   selectableUsers: SelectableUser[]
   /** Tier unlock data for the active Board (progression Boards only). */
   tierData: BoardTierData | null
+  /** Fleet info of the active Board when it is a battleship Board. */
+  battleship?: BattleshipWorkspaceInfo | null
   /** Server-rendered panels. */
   teamsPanel: ReactNode
   prizePanel: ReactNode
@@ -107,6 +110,7 @@ export function EventWorkspace({
   currentTeam,
   selectableUsers,
   tierData,
+  battleship,
   teamsPanel,
   prizePanel,
   infoPanel,
@@ -443,6 +447,7 @@ export function EventWorkspace({
                 counts: filterCounts,
                 onChange: setFilter,
               }}
+              battleship={battleship}
               onSetUpGoals={
                 isManagement && !setupMode ? () => setView("goals") : undefined
               }

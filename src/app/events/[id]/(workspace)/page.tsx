@@ -13,6 +13,8 @@ import {
 import { getSelectableUsersForSubmission } from "@/app/actions/bingo"
 import { getUserClans } from "@/app/actions/clan"
 import { getCurrentTeamForUser } from "@/app/actions/team"
+import { getBingoShipRules, getLedTeamId } from "@/server/battleship"
+import { hasEventStarted } from "@/lib/event-status"
 import { EventWorkspace } from "@/components/event-workspace/event-workspace"
 import { EventSummaryBar } from "@/components/event-workspace/event-summary-bar"
 import { InfoPanel } from "@/components/event-workspace/info-panel"
@@ -99,6 +101,7 @@ export default async function EventWorkspacePage(props: {
     userClans,
     selectableUsers,
     tierData,
+    battleshipFleet,
   ] = await Promise.all([
     calculateEventPrizePool(event.id),
     getEventRules(event.id),
@@ -108,6 +111,12 @@ export default async function EventWorkspacePage(props: {
       ? getSelectableUsersForSubmission(event.id, currentTeam?.id ?? "")
       : Promise.resolve([]),
     getBoardTierData(bingo, effectiveTeamId),
+    bingo?.bingoType === "battleship"
+      ? Promise.all([
+          getBingoShipRules(bingo.id),
+          getLedTeamId(event.id, session.user.id),
+        ])
+      : Promise.resolve(null),
   ])
 
   // Only the active Board's Tiles are needed on the client; switching Boards
@@ -131,6 +140,16 @@ export default async function EventWorkspacePage(props: {
       currentTeam={currentTeam}
       selectableUsers={selectableUsers}
       tierData={tierData}
+      battleship={
+        bingo && battleshipFleet
+          ? {
+              bingoId: bingo.id,
+              rules: battleshipFleet[0],
+              started: hasEventStarted(event.startDate),
+              ledTeamId: battleshipFleet[1],
+            }
+          : null
+      }
       layoutPrefs={layoutPrefs}
       summaryBar={
         <EventSummaryBar
