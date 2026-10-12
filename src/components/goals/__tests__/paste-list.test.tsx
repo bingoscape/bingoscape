@@ -549,7 +549,7 @@ describe("Paste a list", () => {
 
         fireEvent.change(
           screen.getByRole("combobox", {
-            name: "Choose an item for “Dragon dagger”",
+            name: "Choose an item for “3x Dragon dagger”",
           }),
           { target: { value: "1231-Dragon dagger#(p)" } }
         )
