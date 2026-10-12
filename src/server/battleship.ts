@@ -15,7 +15,7 @@ import {
   tiles,
   type ShipRule,
 } from "@/server/db/schema"
-import { getSunkShipTileIds } from "@/lib/battleship-sunk"
+import { getSunkShips } from "@/lib/battleship-sunk"
 import { hasEventStarted } from "@/lib/event-status"
 import type { BattleshipWorkspaceInfo } from "@/lib/battleship-workspace"
 import {
@@ -289,38 +289,110 @@ export type BattleshipBoardState = {
 /**
  * Hits, misses and sunk ships for the SIGNED-IN viewer's own team.
  *
- * State is derived from the team's completed tiles, so it works for every
- * completion path and disappears again when a tile is un-completed. Anonymous
- * users, non-members (including event managers who are on no team) and
- * non-battleship boards get an empty state. Opponent ship tiles are never
- * returned unless the viewer completed them, so nothing here is derived from
- * the opponent's perspective.
+ * Anonymous users, non-members (including event managers who are on no team)
+ * and non-battleship boards get an empty state, and so does everybody before
+ * the event starts. See `getBattleshipBoardStateForTeam` for the rules.
  */
 export async function getBattleshipBoardState(
   bingoId: string
 ): Promise<BattleshipBoardState> {
-  const session = await getServerAuthSession()
-  if (!session?.user) return emptyState()
-
   const bingo = await db.query.bingos.findFirst({
     where: eq(bingos.id, bingoId),
-    columns: { eventId: true, bingoType: true },
+    columns: { eventId: true },
   })
-  if (!bingo || bingo.bingoType !== "battleship") return emptyState()
+  if (!bingo) return emptyState()
 
-  const [membership] = await db
-    .select({ teamId: teamMembers.teamId })
-    .from(teamMembers)
-    .innerJoin(teams, eq(teams.id, teamMembers.teamId))
-    .where(
-      and(
-        eq(teamMembers.userId, session.user.id),
-        eq(teams.eventId, bingo.eventId)
-      )
-    )
-    .limit(1)
-  if (!membership) return emptyState()
-  const viewerTeamId = membership.teamId
+  const viewerTeamId = await getViewerTeamId(bingo.eventId)
+  if (!viewerTeamId) return emptyState()
+  return getBattleshipBoardStateForTeam(bingoId, viewerTeamId)
+}
+
+/**
+ * Hits, misses and sunk ships for one team, from that team's own completed
+ * tiles. Session-free, for callers that already know who the team is (the
+ * RuneLite routes); they must pass the CALLER's team, never one taken from
+ * request input.
+ *
+ * State is derived from the team's completed tiles, so it works for every
+ * completion path and disappears again when a tile is un-completed. Marks are
+ * only handed out from the event's start on: before it ships can still move,
+ * so a hit or miss caused by an early completion would tell the team where
+ * the opponent's ships are. Non-battleship boards and teams of another event
+ * get an empty state. Opponent ship tiles are never returned unless the team
+ * completed them, so nothing here is derived from the opponent's perspective.
+ */
+export async function getBattleshipBoardStateForTeam(
+  bingoId: string,
+  teamId: string
+): Promise<BattleshipBoardState> {
+  const bingo = await db.query.bingos.findFirst({
+    where: eq(bingos.id, bingoId),
+    columns: { bingoType: true },
+    with: { event: { columns: { startDate: true } } },
+  })
+  if (
+    bingo?.bingoType !== "battleship" ||
+    !hasEventStarted(bingo.event.startDate)
+  ) {
+    return emptyState()
+  }
+  return (await loadTeamMarks(bingoId, teamId)).marks
+}
+
+/**
+ * The `battleship` block of the RuneLite board payload, for the caller's own
+ * team (or null: caller on no team). Everything about the opponent is a count:
+ * `opponentShipsTotal` comes from the public fleet rules, never from what the
+ * opponent placed, and `opponentShipsSunk` is a number, so neither can carry
+ * a position. Marks are empty before the start.
+ */
+export async function getBattleshipTeamSummary({
+  bingoId,
+  teamId,
+  startDate,
+}: {
+  bingoId: string
+  teamId: string | null
+  startDate: Date | string | number
+}): Promise<{
+  started: boolean
+  startDate: Date
+  rules: ShipRule[]
+  marks: BattleshipBoardState
+  opponentShipsSunk: number
+  opponentShipsTotal: number
+}> {
+  const started = hasEventStarted(startDate)
+  const [rules, team] = await Promise.all([
+    getBingoShipRules(bingoId),
+    started && teamId ? loadTeamMarks(bingoId, teamId) : null,
+  ])
+  return {
+    started,
+    startDate: new Date(startDate),
+    rules,
+    marks: team?.marks ?? emptyState(),
+    opponentShipsSunk: team?.sunkShipCount ?? 0,
+    opponentShipsTotal: rules.reduce((sum, rule) => sum + rule.count, 0),
+  }
+}
+
+/**
+ * Marks and the number of sunk opponent ships of a team, ignoring the clock.
+ * Callers gate on the event start. Empty for a team of another event.
+ */
+async function loadTeamMarks(
+  bingoId: string,
+  viewerTeamId: string
+): Promise<{ marks: BattleshipBoardState; sunkShipCount: number }> {
+  const empty = { marks: emptyState(), sunkShipCount: 0 }
+
+  const [row] = await db
+    .select({ teamId: teams.id })
+    .from(teams)
+    .innerJoin(bingos, eq(bingos.eventId, teams.eventId))
+    .where(and(eq(teams.id, viewerTeamId), eq(bingos.id, bingoId)))
+  if (!row) return empty
 
   const [completedRows, opponentShipRows] = await Promise.all([
     db
@@ -373,13 +445,20 @@ export async function getBattleshipBoardState(
   const missTileIds = [...completed].filter(
     (id) => !opponentShipTileIds.has(id)
   )
-  const sunk = getSunkShipTileIds(
+  const sunkShips = getSunkShips(
     [...shipsById.values()],
     hitTileIds.map((tileId) => ({ tileId, attackerTeamId: viewerTeamId })),
     viewerTeamId
   )
 
-  return { hitTileIds, missTileIds, sunkTileIds: [...sunk] }
+  return {
+    marks: {
+      hitTileIds,
+      missTileIds,
+      sunkTileIds: sunkShips.flatMap((ship) => ship.tileIds),
+    },
+    sunkShipCount: sunkShips.length,
+  }
 }
 
 function emptyState(): BattleshipBoardState {
