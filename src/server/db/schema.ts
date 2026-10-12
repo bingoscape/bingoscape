@@ -163,6 +163,7 @@ export const bingoTypeEnum = pgEnum("bingo_type", [
   "progression",
   "battleship",
 ])
+export type BingoType = (typeof bingoTypeEnum.enumValues)[number]
 export const gameTypeEnum = pgEnum("game_type", ["osrs", "rs3"])
 export const logicalOperatorEnum = pgEnum("logical_operator", [
   "AND",

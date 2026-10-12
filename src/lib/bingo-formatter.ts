@@ -5,6 +5,7 @@ import {
   goalGroups,
   goals,
   teamGoalProgress,
+  type BingoType,
 } from "@/server/db/schema"
 import { eq, asc, and, inArray } from "drizzle-orm"
 import { mapStatus } from "@/lib/statusMapping"
@@ -25,7 +26,7 @@ export interface FormattedBingo {
   codephrase: string | null
   locked: boolean
   visible: boolean
-  bingoType: "standard" | "progression"
+  bingoType: BingoType
   tiles: Array<{
     id: string
     title: string
@@ -109,7 +110,7 @@ export async function formatBingoData(
     codephrase: string | null
     locked: boolean
     visible: boolean
-    bingoType: "standard" | "progression"
+    bingoType: BingoType
   },
   userTeam: {
     id: string

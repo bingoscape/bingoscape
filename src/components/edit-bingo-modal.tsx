@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { PatternBonusSchematicEditor } from "./pattern-bonus-schematic-editor"
 import { SettingsDialogLayout } from "./settings-dialog-layout"
+import type { BingoType } from "@/server/db/schema"
 
 interface Bingo {
   id: string
@@ -28,7 +29,7 @@ interface EditBingoModalProps {
 }
 
 interface BingoPatternData {
-  bingoType: "standard" | "progression"
+  bingoType: BingoType
   rows: number
   columns: number
   mainDiagonalBonusXP: number

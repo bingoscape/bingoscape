@@ -3,6 +3,7 @@ import type { TemplateSummary } from "@/lib/template-summary"
 export const BINGO_TYPE_LABELS = {
   standard: "Standard",
   progression: "Progression",
+  battleship: "Battleship",
 } as const
 
 /** `5×5`, using the multiplication sign shown to users. */

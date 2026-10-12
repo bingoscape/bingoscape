@@ -1,7 +1,12 @@
 import { and, asc, desc, eq, exists, inArray, or } from "drizzle-orm"
 
 import { db } from "@/server/db"
-import { bingos, eventParticipants, events } from "@/server/db/schema"
+import {
+  bingos,
+  eventParticipants,
+  events,
+  type BingoType,
+} from "@/server/db/schema"
 import { logger } from "@/lib/logger"
 
 /**
@@ -18,7 +23,7 @@ export interface ManageableBoard {
   title: string
   rows: number
   columns: number
-  bingoType: "standard" | "progression"
+  bingoType: BingoType
 }
 
 export interface ManageableEvent {

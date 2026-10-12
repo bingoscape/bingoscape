@@ -74,6 +74,11 @@ export async function exportBingoBoard(
       return { error: "Bingo board not found" }
     }
 
+    // Ship rules and placements are not part of the export format yet.
+    if (bingo.bingoType === "battleship") {
+      return { error: "Battleship boards cannot be exported yet" }
+    }
+
     let groupCounter = 1
     let goalCounter = 1
     const groupIdMap = new Map<string, string>()
