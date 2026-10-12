@@ -216,6 +216,38 @@ export async function requireTeamMemberOrManager(
 }
 
 /**
+ * Requires that the caller leads the Team, or is admin/management of the Event
+ * that owns the Team (derived from the Team row). Plain Team members and
+ * members of other Teams are denied. Returns eventId.
+ */
+export async function assertTeamLeaderOrManager(
+  teamId: string
+): Promise<string> {
+  const { userId } = await requireSession()
+
+  const team = await db.query.teams.findFirst({
+    where: eq(teams.id, teamId),
+    columns: { eventId: true },
+  })
+  if (!team) throw new AuthzError("Team not found")
+
+  if (await isEventManager(team.eventId)) return team.eventId
+
+  const membership = await db.query.teamMembers.findFirst({
+    where: and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId)),
+    columns: { isLeader: true },
+  })
+  if (!membership) throw new AuthzError("Forbidden: not a member of this team")
+  if (!membership.isLeader) {
+    throw new AuthzError(
+      "Forbidden: only the team leader or an event manager can do this"
+    )
+  }
+
+  return team.eventId
+}
+
+/**
  * Whether the caller may read the content of the Tile. Hidden Tiles are only
  * readable by admin/management of the owning Event. Unknown Tiles are not
  * readable.

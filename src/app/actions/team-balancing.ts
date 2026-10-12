@@ -3,6 +3,10 @@
 import { getServerAuthSession } from "@/server/auth"
 import { logger } from "@/lib/logger"
 import { db } from "@/server/db"
+import {
+  assertTeamLimitForBattleship,
+  battleshipErrorMessage,
+} from "@/server/battleship"
 import { teams, eventParticipants, teamMembers } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
@@ -863,6 +867,9 @@ export async function generateBalancedTeams(
   // Execute bulk inserts inside a transaction
   try {
     await db.transaction(async (tx) => {
+      // Battleship events are played by exactly two teams.
+      await assertTeamLimitForBattleship(tx, eventId, numberOfTeams)
+
       // 1. Prepare and insert teams
       const teamInsertData = Array.from({ length: numberOfTeams }).map(
         (_, i) => ({
@@ -928,7 +935,10 @@ export async function generateBalancedTeams(
     }
   } catch (error) {
     logger.error({ error }, "Error in generateBalancedTeams")
-    return { success: false, error: "Failed to generate balanced teams" }
+    return {
+      success: false,
+      error: battleshipErrorMessage(error, "Failed to generate balanced teams"),
+    }
   }
 }
 

@@ -6,6 +6,7 @@ import { getServerAuthSession } from "@/server/auth"
 import { getUserRole } from "@/app/actions/events"
 import {
   AuthzError,
+  assertTeamLeaderOrManager,
   authzErrorMessage,
   canReadTile,
   requireBingoAdmin,
@@ -118,7 +119,9 @@ describe("event is derived from the database, never from the client", () => {
   })
 
   it("requireBingoAdminForSubmission resolves through team tile submission and Tile", async () => {
-    q.submissions!.findFirst.mockResolvedValue({ teamTileSubmissionId: "tts-1" })
+    q.submissions!.findFirst.mockResolvedValue({
+      teamTileSubmissionId: "tts-1",
+    })
     q.teamTileSubmissions!.findFirst.mockResolvedValue({ tileId: "tile-1" })
     q.tiles!.findFirst.mockResolvedValue({
       bingoId: "bingo-1",
@@ -186,6 +189,54 @@ describe("requireTeamMemberOrManager", () => {
     role.mockResolvedValue("participant")
     q.teamMembers!.findFirst.mockResolvedValue(undefined)
     await expect(requireTeamMemberOrManager("team-1")).rejects.toThrow(
+      /not a member/
+    )
+  })
+})
+
+describe("assertTeamLeaderOrManager", () => {
+  beforeEach(() => {
+    q.teams!.findFirst.mockResolvedValue({ eventId: EVENT_ID })
+  })
+
+  it("rejects anonymous callers", async () => {
+    session.mockResolvedValue(null)
+    await expect(assertTeamLeaderOrManager("team-1")).rejects.toThrow(
+      "Unauthorized"
+    )
+  })
+
+  it("rejects unknown teams", async () => {
+    q.teams!.findFirst.mockResolvedValue(undefined)
+    await expect(assertTeamLeaderOrManager("team-1")).rejects.toThrow(
+      "Team not found"
+    )
+  })
+
+  it("allows managers without membership", async () => {
+    role.mockResolvedValue("management")
+    await expect(assertTeamLeaderOrManager("team-1")).resolves.toBe(EVENT_ID)
+    expect(q.teamMembers!.findFirst).not.toHaveBeenCalled()
+  })
+
+  it("allows the team leader", async () => {
+    role.mockResolvedValue("participant")
+    q.teamMembers!.findFirst.mockResolvedValue({ isLeader: true })
+    await expect(assertTeamLeaderOrManager("team-1")).resolves.toBe(EVENT_ID)
+  })
+
+  it("rejects plain team members", async () => {
+    role.mockResolvedValue("participant")
+    q.teamMembers!.findFirst.mockResolvedValue({ isLeader: false })
+    await expect(assertTeamLeaderOrManager("team-1")).rejects.toThrow(
+      /team leader/
+    )
+  })
+
+  it("rejects users who are not in the team", async () => {
+    role.mockResolvedValue("participant")
+    q.teamMembers!.findFirst.mockResolvedValue(undefined)
+    await expect(assertTeamLeaderOrManager("team-1")).rejects.toThrow(
       /not a member/
     )
   })

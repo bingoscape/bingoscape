@@ -26,7 +26,9 @@ export async function GET(
       where: eq(bingos.id, bingoId),
     })
 
-    if (!bingo) {
+    // Battleship boards hide their tiles until the event starts and are not
+    // supported by the plugin, so they are not exposed here.
+    if (!bingo || bingo.bingoType === "battleship") {
       return NextResponse.json({ error: "Bingo not found" }, { status: 404 })
     }
 

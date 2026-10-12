@@ -12,6 +12,10 @@ import {
 import { eq, and, not, exists } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getUserRole } from "./events"
+import {
+  assertTeamLimitForBattleship,
+  battleshipErrorMessage,
+} from "@/server/battleship"
 
 export async function createTeam(eventId: string, name: string) {
   try {
@@ -19,7 +23,15 @@ export async function createTeam(eventId: string, name: string) {
     if (role !== "admin" && role !== "management") {
       return { success: false, error: "Unauthorized" }
     }
-    const [team] = await db.insert(teams).values({ eventId, name }).returning()
+    const team = await db.transaction(async (tx) => {
+      // Battleship events are played by exactly two teams.
+      await assertTeamLimitForBattleship(tx, eventId)
+      const [created] = await tx
+        .insert(teams)
+        .values({ eventId, name })
+        .returning()
+      return created
+    })
     revalidatePath(`/events/${eventId}`)
 
     if (team) {
@@ -37,7 +49,10 @@ export async function createTeam(eventId: string, name: string) {
     return { success: true, data: team }
   } catch (error) {
     logger.error({ error }, "Error creating team", error)
-    return { success: false, error: "Failed to create team" }
+    return {
+      success: false,
+      error: battleshipErrorMessage(error, "Failed to create team"),
+    }
   }
 }
 

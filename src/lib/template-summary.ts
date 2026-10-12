@@ -1,3 +1,4 @@
+import type { BingoType } from "@/server/db/schema"
 import {
   parseExportedBingo,
   type ExportedBingo,
@@ -10,7 +11,7 @@ import {
  */
 export interface TemplateSummary {
   schemaVersion: string
-  bingoType: "standard" | "progression"
+  bingoType: BingoType
   rows: number
   columns: number
   tileCount: number
