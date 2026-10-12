@@ -227,7 +227,8 @@ export function ShipPlacementBoard({
           ship &&
             "border-info bg-info text-info-foreground hover:brightness-110",
           ship?.building && "border-dashed",
-          ship?.selected && "ring-osrs-yellow z-10 ring-2 ring-inset"
+          ship?.selected &&
+            "ring-osrs-yellow z-10 shadow-[inset_0_0_0_4px_#000] ring-2 ring-inset"
         )}
       >
         {ship ? (

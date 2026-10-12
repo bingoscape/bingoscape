@@ -109,3 +109,11 @@ Below 1024px a selected Tile opens the Tile panel in a **non-modal** vaul `Drawe
 ### Side panel
 
 Only the panel body scrolls (`overflow-y-auto`), never the page. Fixed width `clamp(360px, 30vw, 480px)`. The Tile tab has sub-tabs Details | Submissions (| Goals (edit) for managers). Without a selection it shows the viewed Team's progress and a "needs attention" list (changes requested first, then pending).
+
+## Battleship ship placement
+
+`/events/[id]/bingos/[bingoId]/ships?teamId=` (a Server Component under the `(manage)` layout) places one team's fleet on the fit board.
+
+- **Cells** are laid out by each Tile's `index` (hidden Tiles keep their cell, shown as a dashed, disabled "Hidden" slot). Same keyboard model as the Board: one tab stop, arrows via `moveGridFocusSkipping`, Enter/Space place, Escape cancels the ship being built. Accessible name: "Row 2, column 3, Tile 8, ship of length 3" / "empty".
+- **Ships are never told apart by colour.** Every ship uses the `info` / `info-foreground` pair (about 13:1 on Stone and 8:1 on Parchment against the slot), each segment shows the ship length as a numeral, neighbouring segments are joined by a bar, and the ship being built has a dashed border. A selected ship gets `ring-2 ring-inset ring-osrs-yellow` plus a 2px black inner frame, because yellow on the Stone `info` cyan is only 1.3:1.
+- **Fleet palette**: a native radio group, one entry per ship length with the aggregated required count; progress is a `success`/`pending` badge with a check or clock and the text "1/2 placed".
