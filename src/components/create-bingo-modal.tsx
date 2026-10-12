@@ -20,6 +20,8 @@ import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { Checkbox } from "@/components/ui/checkbox"
 import generateOSRSCodePhrase from "@/lib/codephraseGenerator"
 import { PatternBonusSchematicEditor } from "./pattern-bonus-schematic-editor"
+import { BingoTypeCard } from "./bingo-type-card"
+import { ShipRulesEditor } from "./ship-rules-editor"
 import {
   ArrowLeft,
   ArrowRight,
@@ -27,14 +29,29 @@ import {
   Grid3X3,
   ArrowUpRight,
   PlusCircle,
-  CheckCircle2,
+  Ship,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { SHIP_FLEET_PRESETS } from "@/lib/ship-fleet-presets"
+import {
+  mergeShipRulesByLength,
+  totalShipTiles,
+  validateShipRulesFitBoard,
+} from "@/lib/ship-rules"
+import type { ShipRule } from "@/server/db/schema"
+
+type BingoKind = "standard" | "progression" | "battleship"
+
+/** A battleship board is played by exactly two teams. */
+const BATTLESHIP_TEAMS = 2
+
+const DEFAULT_SHIP_RULES: ShipRule[] = SHIP_FLEET_PRESETS[0]!.rules
 
 interface CreateBingoModalProps {
   eventId: string
   isOpen: boolean
   onClose: () => void
+  /** Teams the event has now; a battleship board needs at most two. */
+  teamCount?: number
 }
 
 const slideVariants = {
@@ -58,6 +75,7 @@ export function CreateBingoModal({
   eventId,
   isOpen,
   onClose,
+  teamCount = 0,
 }: CreateBingoModalProps) {
   const router = useRouter()
   const [step, setStep] = useState(1)
@@ -76,12 +94,11 @@ export function CreateBingoModal({
   >(undefined)
 
   // Step 2
-  const [bingoType, setBingoType] = useState<"standard" | "progression">(
-    "standard"
-  )
+  const [bingoType, setBingoType] = useState<BingoKind>("standard")
   const [rows, setRows] = useState(5)
   const [columns, setColumns] = useState(5)
   const [tiersUnlockRequirement, setTiersUnlockRequirement] = useState(5)
+  const [shipRules, setShipRules] = useState<ShipRule[]>(DEFAULT_SHIP_RULES)
 
   // Step 3
   const [rowBonuses, setRowBonuses] = useState<Record<number, number>>({})
@@ -103,6 +120,7 @@ export function CreateBingoModal({
       setRows(5)
       setColumns(5)
       setTiersUnlockRequirement(5)
+      setShipRules(DEFAULT_SHIP_RULES)
       setRowBonuses({})
       setColumnBonuses({})
       setMainDiagonalBonus(0)
@@ -119,6 +137,13 @@ export function CreateBingoModal({
     if (step === 1 && !title) {
       setError("Title is required")
       return
+    }
+    if (step === 3 && bingoType === "battleship") {
+      const fitError = validateShipRulesFitBoard(shipRules, rows, columns)
+      if (fitError) {
+        setError(fitError)
+        return
+      }
     }
     setError(null)
     setDirection(1)
@@ -153,6 +178,11 @@ export function CreateBingoModal({
 
     if (bingoType === "progression") {
       formData.append("tiersUnlockRequirement", String(tiersUnlockRequirement))
+    } else if (bingoType === "battleship") {
+      formData.append(
+        "shipRules",
+        JSON.stringify(mergeShipRulesByLength(shipRules))
+      )
     } else {
       for (let i = 0; i < rows; i++) {
         formData.append(`rowBonus-${i}`, String(rowBonuses[i] ?? 0))
@@ -196,7 +226,9 @@ export function CreateBingoModal({
               : step === 2
                 ? "Format & Dimensions"
                 : step === 3
-                  ? "Mechanics"
+                  ? bingoType === "battleship"
+                    ? "Fleet Rules"
+                    : "Mechanics"
                   : "Review & Create"}
           </DialogDescription>
         </DialogHeader>
@@ -337,75 +369,56 @@ export function CreateBingoModal({
 
               {step === 2 && (
                 <div className="space-y-6">
-                  <div className="space-y-3">
-                    <Label>Bingo Type</Label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className={cn(
-                          "group relative cursor-pointer overflow-hidden rounded-xl border-2 p-4 transition-colors",
-                          bingoType === "standard"
-                            ? "border-primary bg-primary/10"
-                            : "border-border hover:border-primary/50"
-                        )}
-                        onClick={() => setBingoType("standard")}
-                      >
-                        {bingoType === "standard" && (
-                          <div className="text-primary absolute top-2 right-2">
-                            <CheckCircle2 className="h-5 w-5" />
-                          </div>
-                        )}
-                        <Grid3X3
-                          className={cn(
-                            "mb-3 h-8 w-8",
-                            bingoType === "standard"
-                              ? "text-primary"
-                              : "text-muted-foreground"
-                          )}
-                        />
-                        <h4 className="text-sm font-semibold">
-                          Standard Bingo
-                        </h4>
-                        <p className="text-muted-foreground mt-1 text-xs">
-                          Traditional bingo where all tiles are available from
-                          the start.
-                        </p>
-                      </motion.div>
-
-                      <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className={cn(
-                          "group relative cursor-pointer overflow-hidden rounded-xl border-2 p-4 transition-colors",
-                          bingoType === "progression"
-                            ? "border-primary bg-primary/10"
-                            : "border-border hover:border-primary/50"
-                        )}
-                        onClick={() => setBingoType("progression")}
-                      >
-                        {bingoType === "progression" && (
-                          <div className="text-primary absolute top-2 right-2">
-                            <CheckCircle2 className="h-5 w-5" />
-                          </div>
-                        )}
-                        <ArrowUpRight
-                          className={cn(
-                            "mb-3 h-8 w-8",
-                            bingoType === "progression"
-                              ? "text-primary"
-                              : "text-muted-foreground"
-                          )}
-                        />
-                        <h4 className="text-sm font-semibold">
-                          Progression Bingo
-                        </h4>
-                        <p className="text-muted-foreground mt-1 text-xs">
-                          Teams unlock tiers progressively. Rows act as tiers.
-                        </p>
-                      </motion.div>
+                  <fieldset className="space-y-3">
+                    <legend className="text-sm leading-none font-medium">
+                      Bingo Type
+                    </legend>
+                    <div
+                      role="radiogroup"
+                      aria-label="Bingo Type"
+                      className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+                    >
+                      <BingoTypeCard
+                        name="bingoType"
+                        value="standard"
+                        checked={bingoType === "standard"}
+                        onSelect={() => setBingoType("standard")}
+                        icon={Grid3X3}
+                        title="Standard Bingo"
+                        description="Traditional bingo where all tiles are available from the start."
+                      />
+                      <BingoTypeCard
+                        name="bingoType"
+                        value="progression"
+                        checked={bingoType === "progression"}
+                        onSelect={() => setBingoType("progression")}
+                        icon={ArrowUpRight}
+                        title="Progression Bingo"
+                        description="Teams unlock tiers progressively. Rows act as tiers."
+                      />
+                      <BingoTypeCard
+                        name="bingoType"
+                        value="battleship"
+                        checked={bingoType === "battleship"}
+                        onSelect={() => setBingoType("battleship")}
+                        icon={Ship}
+                        title="Battleship Bingo"
+                        description="Two teams share one board and hide a fleet on it. Completing a tile fires at the opponent's ships."
+                        disabledReason={
+                          teamCount > BATTLESHIP_TEAMS
+                            ? `This event has ${teamCount} teams. Battleship is played by exactly ${BATTLESHIP_TEAMS}.`
+                            : undefined
+                        }
+                      />
                     </div>
-                  </div>
+                    {bingoType === "battleship" && (
+                      <p className="text-muted-foreground text-xs">
+                        Tiles stay blind to players until the event starts. Team
+                        leaders place their ships before then, and each team
+                        only ever sees its own fleet.
+                      </p>
+                    )}
+                  </fieldset>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -467,7 +480,13 @@ export function CreateBingoModal({
 
               {step === 3 && (
                 <div className="space-y-4">
-                  {bingoType === "standard" ? (
+                  {bingoType === "battleship" ? (
+                    <ShipRulesEditor
+                      rules={shipRules}
+                      onChange={setShipRules}
+                      board={{ rows, columns }}
+                    />
+                  ) : bingoType === "standard" ? (
                     <div className="bg-muted/20 space-y-4 rounded-xl border p-4">
                       <div>
                         <h3 className="mb-1 text-sm font-semibold">
@@ -540,12 +559,16 @@ export function CreateBingoModal({
                         <p className="flex items-center gap-2 font-medium">
                           {bingoType === "standard" ? (
                             <Grid3X3 className="text-primary h-4 w-4" />
+                          ) : bingoType === "battleship" ? (
+                            <Ship className="text-primary h-4 w-4" />
                           ) : (
                             <ArrowUpRight className="text-primary h-4 w-4" />
                           )}
                           {bingoType === "standard"
                             ? "Standard"
-                            : "Progression"}
+                            : bingoType === "battleship"
+                              ? "Battleship"
+                              : "Progression"}
                         </p>
                       </div>
 
@@ -572,6 +595,22 @@ export function CreateBingoModal({
                           </p>
                           <p className="font-medium">
                             {tiersUnlockRequirement} XP
+                          </p>
+                        </div>
+                      )}
+
+                      {bingoType === "battleship" && (
+                        <div className="col-span-2">
+                          <p className="text-muted-foreground mb-1 text-xs">
+                            Fleet per team
+                          </p>
+                          <p className="font-medium">
+                            {mergeShipRulesByLength(shipRules)
+                              .map(
+                                (rule) => `${rule.count} × ${rule.length}-tile`
+                              )
+                              .join(", ")}{" "}
+                            ({totalShipTiles(shipRules)} tiles)
                           </p>
                         </div>
                       )}
