@@ -10,10 +10,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
-<<<<<<< HEAD
-=======
 import { useCmdkActiveDescendant } from "@/hooks/use-cmdk-active-descendant"
->>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
 import { useOsrsItemSearch } from "@/hooks/use-osrs-item-search"
 import { cn } from "@/lib/utils"
 import type { OsrsItem } from "@/types/osrs-items"
@@ -53,10 +50,7 @@ export function ItemPicker({
   const [highlighted, setHighlighted] = useState("")
   const [pasteOpen, setPasteOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
-<<<<<<< HEAD
-=======
   const listRef = useRef<HTMLDivElement>(null)
->>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
   const pasteButtonRef = useRef<HTMLButtonElement>(null)
   const { ready, loading, items, failed } = useOsrsItemSearch(query)
 
@@ -65,8 +59,6 @@ export function ItemPicker({
     ? highlighted
     : (resultKeys[0] ?? "")
 
-<<<<<<< HEAD
-=======
   useCmdkActiveDescendant(
     searchRef,
     listRef,
@@ -75,7 +67,6 @@ export function ItemPicker({
     ready && items.length > 0
   )
 
->>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
   const selectedIds = new Set(value.map((entry) => resolveItemId(entry.item)))
 
   const focusSearch = () => {
@@ -194,10 +185,7 @@ export function ItemPicker({
             // Bounded so the on-screen keyboard leaves room; it scrolls on its
             // own and hands over to the drawer once it reaches its end.
             <CommandList
-<<<<<<< HEAD
-=======
               ref={listRef}
->>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
               aria-busy={loading}
               className={cn(
                 "max-h-[min(16rem,40dvh)]",

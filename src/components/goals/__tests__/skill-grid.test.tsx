@@ -177,15 +177,9 @@ describe("SkillGrid", () => {
       expect(within(group).getAllByRole("radio")).toHaveLength(
         getMetricIds("skill").length
       )
-<<<<<<< HEAD
-      expect(screen.getByText("Skill", { selector: "p" })).toHaveClass(
-        "sr-only"
-      )
-=======
       expect(
         screen.getByText("Skill", { selector: "p" }).closest(".sr-only")
       ).toBeInTheDocument()
->>>>>>> a137aaca4c2e21773b851236b1f44129933f7ade
     })
 
     it("scrolls horizontally instead of wrapping into a grid", () => {
