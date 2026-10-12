@@ -10,9 +10,11 @@ import {
   eventParticipants,
   tiles,
   bingos,
+  events,
 } from "@/server/db/schema"
 import { eq, and, inArray } from "drizzle-orm"
 import { validateApiKey } from "@/lib/api-auth"
+import { boardContentUnlockedSql } from "@/server/blind-board"
 import { z } from "zod"
 import { doesItemMatchBaseName } from "@/app/actions/osrs-items"
 import { checkAndAutoCompleteTile } from "@/app/actions/tile-completion"
@@ -184,7 +186,16 @@ export async function POST(req: Request) {
       .innerJoin(goals, eq(itemGoals.goalId, goals.id))
       .innerJoin(tiles, eq(goals.tileId, tiles.id))
       .innerJoin(bingos, eq(tiles.bingoId, bingos.id))
-      .where(inArray(bingos.eventId, userEventIds))
+      .innerJoin(events, eq(bingos.eventId, events.id))
+      .where(
+        and(
+          inArray(bingos.eventId, userEventIds),
+          // Matching items against the Goals of a blind battleship board
+          // (before its Event starts) would tell a player which items they
+          // are, so those Goals neither match nor progress.
+          boardContentUnlockedSql()
+        )
+      )
 
     if (allItemGoals.length === 0) {
       return NextResponse.json({
