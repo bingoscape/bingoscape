@@ -11,6 +11,7 @@ import {
   Lock,
   MoreVertical,
   Pencil,
+  Ship,
   Trash2,
 } from "lucide-react"
 import type { UUID } from "crypto"
@@ -38,9 +39,15 @@ import { EditBingoModal } from "@/components/edit-bingo-modal"
 import { QuickSubmissionButton } from "@/components/quick-submission-button"
 import { BoardFilters } from "@/components/event-workspace/board-filters"
 import { BoardHealthIndicator } from "@/components/event-workspace/board-health-indicator"
+import { BattleshipMarkBadge } from "@/components/battleship-mark-badge"
 import { ShortcutsHelp } from "@/components/event-workspace/shortcuts-help"
 import { TeamSelector } from "@/components/team-selector"
 import { TrackerSettingsModal } from "@/components/tracker-settings-modal"
+import {
+  placeShipsTeamId,
+  type BattleshipWorkspaceInfo,
+} from "@/lib/battleship-workspace"
+import { MARK_LABEL } from "@/lib/battleship-marks"
 import type { TileFilter, TileFilterContext } from "@/lib/tile-filter"
 import type { BoardStats } from "@/lib/tile-status"
 import { cn } from "@/lib/utils"
@@ -97,7 +104,15 @@ interface BoardHeaderProps {
    * manage Goals, and not while that view is already open.
    */
   onSetUpGoals?: () => void
+  /**
+   * The active Board is a battleship Board: its fleet rules, whether the Event
+   * started and the Team the viewer leads. Absent for other Boards and in the
+   * public view.
+   */
+  battleship?: BattleshipWorkspaceInfo | null
 }
+
+const BATTLESHIP_LEGEND = ["hit", "miss", "sunk"] as const
 
 /**
  * One dense header above the Board: Board pills, progress and counters, the
@@ -127,6 +142,7 @@ export function BoardHeader({
   filters,
   goalHealth,
   onSetUpGoals,
+  battleship,
 }: BoardHeaderProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [importExportOpen, setImportExportOpen] = useState(false)
@@ -134,6 +150,24 @@ export function BoardHeader({
 
   const showTeamStats = !!effectiveTeamId
   const useSelect = bingos.length > MAX_PILLS
+
+  // Ships can be placed before the Event starts, by the leader of a Team (for
+  // that Team) and by managers (for the Team they look at).
+  const boardBattleship =
+    !readOnly &&
+    activeBingo.bingoType === "battleship" &&
+    battleship?.bingoId === activeBingo.id
+      ? battleship
+      : null
+  const placeTeamId =
+    boardBattleship && !boardBattleship.started
+      ? placeShipsTeamId({
+          isManagement,
+          ledTeamId: boardBattleship.ledTeamId,
+          viewedTeamId: effectiveTeamId,
+          teamIds: teams.map((t) => t.id),
+        })
+      : null
 
   return (
     <div className="flex flex-col gap-2">
@@ -216,6 +250,16 @@ export function BoardHeader({
                 onTeamChange(id && id !== ownTeam?.id ? id : null)
               }
             />
+          )}
+
+          {placeTeamId && (
+            <Link
+              href={`/events/${eventId}/bingos/${activeBingo.id}/ships?teamId=${encodeURIComponent(placeTeamId)}`}
+              className="osrs-btn focus-visible:ring-ring inline-flex h-9 items-center gap-1.5 rounded-sm px-3 text-sm whitespace-nowrap focus-visible:ring-2 focus-visible:outline-hidden pointer-coarse:min-h-11"
+            >
+              <Ship aria-hidden="true" className="size-4" />
+              Place ships
+            </Link>
           )}
 
           {!readOnly && (
@@ -302,6 +346,36 @@ export function BoardHeader({
             Set up goals
           </button>
         )}
+        {boardBattleship && !boardBattleship.started && !placeTeamId && (
+          <span className="text-muted-foreground flex items-center gap-1 font-medium">
+            <Ship aria-hidden="true" className="h-3 w-3" />
+            Battleship: team leaders place their ships before the event starts.
+            The tiles stay blind until then.
+          </span>
+        )}
+        {boardBattleship?.started && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <ul
+              role="list"
+              aria-label="Battleship legend"
+              className="flex items-center gap-3"
+            >
+              {BATTLESHIP_LEGEND.map((mark) => (
+                <li
+                  key={mark}
+                  className="text-foreground flex items-center gap-1.5 font-medium"
+                >
+                  <BattleshipMarkBadge mark={mark} className="size-4" />
+                  {MARK_LABEL[mark]}
+                </li>
+              ))}
+            </ul>
+            <span className="text-muted-foreground">
+              You learn whether you hit when a tile is approved. Only your own
+              team&apos;s results are shown.
+            </span>
+          </div>
+        )}
         {isUpcoming && isManagement && (
           <span className="text-muted-foreground flex items-center gap-1 font-medium">
             <Lock aria-hidden="true" className="h-3 w-3" />
@@ -330,6 +404,14 @@ export function BoardHeader({
             bingo={activeBingo}
             isOpen={editOpen}
             onClose={() => setEditOpen(false)}
+            battleship={
+              boardBattleship
+                ? {
+                    rules: boardBattleship.rules,
+                    started: boardBattleship.started,
+                  }
+                : undefined
+            }
           />
           <TrackerSettingsModal
             bingoId={activeBingo.id}

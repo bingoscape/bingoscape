@@ -4,6 +4,7 @@ import { db } from "@/server/db"
 import { notifications, eventParticipants } from "@/server/db/schema"
 import { eq, and, desc, or } from "drizzle-orm"
 import { events, teams, tiles } from "@/server/db/schema"
+import { getServerAuthSession } from "@/server/auth"
 
 export async function createNotification(
   eventId: string,
@@ -38,6 +39,10 @@ export async function createNotification(
 }
 
 export async function getNotifications(userId: string, limit = 10) {
+  // Notifications carry Tile titles: only the signed-in user may read their own.
+  const session = await getServerAuthSession()
+  if (!session?.user || session.user.id !== userId) return []
+
   return db
     .select({
       id: notifications.id,

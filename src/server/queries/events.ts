@@ -18,6 +18,9 @@ import {
 } from "@/server/db/schema"
 import { logger } from "@/lib/logger"
 import { redactHiddenTiles } from "@/lib/hidden-tiles"
+import { applyBlindBoard, isBlindBoard } from "@/server/blind-board"
+import { getViewerTeamId } from "@/server/battleship"
+import { keepOwnTeamRecords } from "@/lib/battleship-privacy"
 import { EventData, GetEventByIdResult } from "@/app/actions/events"
 import { getUserRole } from "@/app/actions/events"
 
@@ -38,7 +41,9 @@ export const getEventById = cache(async function getEventById(
                   submissions: {
                     with: {
                       image: true,
-                      user: { columns: { id: true, name: true, runescapeName: true } },
+                      user: {
+                        columns: { id: true, name: true, runescapeName: true },
+                      },
                     },
                   },
                   team: true,
@@ -70,15 +75,43 @@ export const getEventById = cache(async function getEventById(
 
   // Filter out non-visible bingos if the user is not admin or management, and
   // strip the content of hidden Tiles server-side (the cell itself stays).
-  if (userRole !== "admin" && userRole !== "management") {
+  // Battleship boards are blind until the Event starts: every Tile keeps its id
+  // and grid position but loses its content (see `blind-board.ts`). Every Tile
+  // carries an explicit `isBlind`.
+  const isManager = userRole === "admin" || userRole === "management"
+  if (!isManager) {
+    // Battleship: only the viewer's own Team's records, so nobody can read what
+    // the opponent completed (and therefore hit) from the page data.
+    const ownTeamId = event.bingos.some((b) => b.bingoType === "battleship")
+      ? await getViewerTeamId(eventId)
+      : null
     event.bingos = event.bingos
       .filter((b) => b.visible === true)
-      .map((b) => ({
-        ...b,
-        // The tracker verification code lets its holder edit the competition.
-        womVerificationCode: null,
-        tiles: redactHiddenTiles(b.tiles),
-      }))
+      .map((b) => {
+        const blind = isBlindBoard({
+          bingoType: b.bingoType,
+          startDate: event.startDate,
+          isManager,
+        })
+        return {
+          ...b,
+          // The tracker verification code lets its holder edit the competition.
+          womVerificationCode: null,
+          tiles: applyBlindBoard(
+            redactHiddenTiles(
+              b.bingoType === "battleship"
+                ? b.tiles.map((t) => keepOwnTeamRecords(t, ownTeamId))
+                : b.tiles
+            ),
+            blind
+          ),
+        }
+      })
+  } else {
+    event.bingos = event.bingos.map((b) => ({
+      ...b,
+      tiles: applyBlindBoard(b.tiles, false),
+    }))
   }
 
   return {

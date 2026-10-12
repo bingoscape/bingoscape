@@ -61,6 +61,7 @@ export function EventHeaderActions({
       {/* Create Bingo Modal */}
       <CreateBingoModal
         eventId={event.id}
+        teamCount={event.teams?.length ?? 0}
         isOpen={createBingoModalOpen}
         onClose={() => setCreateBingoModalOpen(false)}
       />

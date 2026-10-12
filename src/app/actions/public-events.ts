@@ -6,13 +6,16 @@ import { eq, and, count, asc } from "drizzle-orm"
 import type { UUID } from "crypto"
 import { logger } from "@/lib/logger"
 import { redactHiddenTiles } from "@/lib/hidden-tiles"
+import { applyBlindBoard, isBlindBoard } from "@/server/blind-board"
 import type { Bingo, Team, Tile } from "@/types/model"
 
 /**
  * Public (unauthenticated) read access. Every function first checks that the
  * Event is marked public; Boards must additionally be visible. Hidden Tiles
- * keep their cell but are redacted, and secrets (codephrase, tracker
- * verification code) never leave the server.
+ * keep their cell but are redacted, battleship Boards are blind (redacted, with
+ * `isBlind`) until the Event starts, and secrets (codephrase, tracker
+ * verification code) never leave the server. A public viewer is never a
+ * manager, whatever session they may have.
  */
 
 export interface PublicEventData {
@@ -153,17 +156,30 @@ export async function getPublicBingoDetails(bingoId: string) {
       return null
     }
 
-    const bingoTiles = await db.query.tiles.findMany({
-      where: eq(tiles.bingoId, bingoId as UUID),
-      orderBy: [asc(tiles.index)],
-      with: {
-        goals: true,
-      },
+    const [bingoEvent, bingoTiles] = await Promise.all([
+      db.query.events.findFirst({
+        where: eq(events.id, bingo.eventId),
+        columns: { startDate: true },
+      }),
+      db.query.tiles.findMany({
+        where: eq(tiles.bingoId, bingoId as UUID),
+        orderBy: [asc(tiles.index)],
+        with: {
+          goals: true,
+        },
+      }),
+    ])
+    if (!bingoEvent) return null
+
+    const blind = isBlindBoard({
+      bingoType: bingo.bingoType,
+      startDate: bingoEvent.startDate,
+      isManager: false,
     })
 
     return {
       ...sanitizeBingo(bingo),
-      tiles: redactHiddenTiles(bingoTiles),
+      tiles: applyBlindBoard(redactHiddenTiles(bingoTiles), blind),
     }
   } catch (error) {
     logger.error({ error, bingoId }, "Error fetching public bingo details")
@@ -188,7 +204,12 @@ export async function getPublicWorkspaceData(
   board: string | null
 ): Promise<PublicWorkspaceData | null> {
   try {
-    if (!(await isPublicEvent(eventId))) return null
+    const publicEvent = await db.query.events.findFirst({
+      where: and(eq(events.id, eventId as UUID), eq(events.public, true)),
+      columns: { startDate: true },
+    })
+    if (!publicEvent) return null
+    const eventStart = publicEvent.startDate
 
     const [boards, eventTeams] = await Promise.all([
       db.query.bingos.findMany({
@@ -252,7 +273,14 @@ export async function getPublicWorkspaceData(
         }),
       }))
 
-      active.tiles = redactHiddenTiles(publicTiles)
+      active.tiles = applyBlindBoard(
+        redactHiddenTiles(publicTiles),
+        isBlindBoard({
+          bingoType: active.bingoType,
+          startDate: eventStart,
+          isManager: false,
+        })
+      )
     }
 
     return { bingos: safeBoards, teams: eventTeams }

@@ -39,6 +39,8 @@ export type DbEventParticipant = typeof eventParticipants.$inferSelect
 export type GoalData = DbGoal
 
 export type TileData = DbTile & {
+  /** True when the tile's content was withheld from this viewer (blind board). */
+  isBlind?: boolean
   goals?: GoalData[]
 }
 
@@ -77,6 +79,13 @@ export type Goal = DbGoal & {
 }
 
 export type Tile = DbTile & {
+  /**
+   * True when this viewer may not see the tile's content yet: a battleship
+   * board before the event starts. Title is then a "Tile N" placeholder and
+   * description, image, goals and submissions are empty, but the tile keeps
+   * its id and grid position so ships can still be placed on it.
+   */
+  isBlind?: boolean
   teamTileSubmissions?: TeamTileSubmission[]
   goals?: Goal[]
   goalGroups?: DbGoalGroup[]

@@ -674,6 +674,27 @@
   text-shadow: 1px 1px 0 #000;
 }
 
+/*
+ * Small square marker on a Tile (battleship hit / miss / sunk). Modelled on the
+ * completed-check box: 1px black edge, hard pixel highlight. Colours and size
+ * come from utilities; the meaning is carried by the glyph, not the colour.
+ */
+@utility osrs-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  line-height: 1;
+  border: 1px solid #000;
+  border-radius: 2px;
+  --tw-inset-shadow:
+    inset 1px 1px 0 0 rgb(255 255 255 / 0.25),
+    inset -1px -1px 0 0 rgb(0 0 0 / 0.35);
+  box-shadow:
+    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
+    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}
+
 /* Stone game button (theme independent; orange text). */
 @utility osrs-btn {
   font-family: var(--font-display);

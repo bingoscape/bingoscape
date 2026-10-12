@@ -21,6 +21,7 @@ import {
   sendDiscordWebhook,
 } from "@/lib/discord-webhook"
 import { formatBingoData } from "@/lib/bingo-formatter"
+import { isBlindBoard } from "@/server/blind-board"
 import { checkAndAutoCompleteTile } from "@/app/actions/tile-completion"
 
 // Type definition for auto-submission metadata
@@ -134,6 +135,22 @@ export async function POST(
         { error: "Not a participant in this event" },
         { status: 403 }
       )
+    }
+
+    // The Tiles of a battleship board are blind until its Event starts: they
+    // look like missing Tiles to everybody but the Event's managers.
+    const callerIsManager =
+      participant.role === "admin" ||
+      participant.role === "management" ||
+      tile.bingo.event.creatorId === userId
+    if (
+      isBlindBoard({
+        bingoType: tile.bingo.bingoType,
+        startDate: tile.bingo.event.startDate,
+        isManager: callerIsManager,
+      })
+    ) {
+      return NextResponse.json({ error: "Tile not found" }, { status: 404 })
     }
 
     // Get user's team for this event

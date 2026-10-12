@@ -243,19 +243,57 @@ describe("assertTeamLeaderOrManager", () => {
 })
 
 describe("canReadTile", () => {
+  const DAY = 24 * 60 * 60 * 1000
+  const tileOn = (
+    overrides: {
+      isHidden?: boolean
+      bingoType?: "standard" | "battleship"
+      startDate?: Date
+    } = {}
+  ) => ({
+    isHidden: overrides.isHidden ?? false,
+    bingo: {
+      eventId: EVENT_ID,
+      bingoType: overrides.bingoType ?? "standard",
+      event: { startDate: overrides.startDate ?? new Date(Date.now() - DAY) },
+    },
+  })
+
   it("allows everyone to read visible Tiles", async () => {
-    q.tiles!.findFirst.mockResolvedValue({
-      isHidden: false,
-      bingo: { eventId: EVENT_ID },
-    })
+    q.tiles!.findFirst.mockResolvedValue(tileOn())
+    await expect(canReadTile("tile-1")).resolves.toBe(true)
+  })
+
+  it("hides the Tiles of a battleship board from non-managers until the start", async () => {
+    q.tiles!.findFirst.mockResolvedValue(
+      tileOn({ bingoType: "battleship", startDate: new Date(Date.now() + DAY) })
+    )
+    role.mockResolvedValue("participant")
+    await expect(canReadTile("tile-1")).resolves.toBe(false)
+    role.mockResolvedValue(null)
+    await expect(canReadTile("tile-1")).resolves.toBe(false)
+    role.mockResolvedValue("management")
+    await expect(canReadTile("tile-1")).resolves.toBe(true)
+  })
+
+  it("shows the Tiles of a started battleship board to everyone", async () => {
+    q.tiles!.findFirst.mockResolvedValue(
+      tileOn({ bingoType: "battleship", startDate: new Date(Date.now() - DAY) })
+    )
+    role.mockResolvedValue(null)
+    await expect(canReadTile("tile-1")).resolves.toBe(true)
+  })
+
+  it("never blinds a standard board, whatever its start date", async () => {
+    q.tiles!.findFirst.mockResolvedValue(
+      tileOn({ startDate: new Date(Date.now() + DAY) })
+    )
+    role.mockResolvedValue(null)
     await expect(canReadTile("tile-1")).resolves.toBe(true)
   })
 
   it("hides hidden Tiles from non-managers", async () => {
-    q.tiles!.findFirst.mockResolvedValue({
-      isHidden: true,
-      bingo: { eventId: EVENT_ID },
-    })
+    q.tiles!.findFirst.mockResolvedValue(tileOn({ isHidden: true }))
     role.mockResolvedValue("participant")
     await expect(canReadTile("tile-1")).resolves.toBe(false)
     role.mockResolvedValue(null)
@@ -263,10 +301,7 @@ describe("canReadTile", () => {
   })
 
   it("shows hidden Tiles to managers", async () => {
-    q.tiles!.findFirst.mockResolvedValue({
-      isHidden: true,
-      bingo: { eventId: EVENT_ID },
-    })
+    q.tiles!.findFirst.mockResolvedValue(tileOn({ isHidden: true }))
     role.mockResolvedValue("admin")
     await expect(canReadTile("tile-1")).resolves.toBe(true)
   })

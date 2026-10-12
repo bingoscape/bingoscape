@@ -12,6 +12,8 @@ import {
 } from "@/server/db/schema"
 import { eq, and, sql, count, inArray, desc, asc, gte, lte } from "drizzle-orm"
 import { calculateBonusXP } from "./pattern-completion"
+import { redactBlindTile } from "@/server/blind-board"
+import { isBingoBlindForViewer } from "@/server/blind-board-viewer"
 
 export interface TeamPointsOverTime {
   date: string
@@ -444,10 +446,13 @@ export async function getAllTeamPointsAndTotal(
     }
   }
 
-  // Get tile completion statistics
+  // Get tile completion statistics. A blind battleship board lists its Tiles
+  // by position only (no title, no XP).
+  const blind = await isBingoBlindForViewer(bingoId)
   const tileCompletions = await db
     .select({
       tileId: tiles.id,
+      index: tiles.index,
       title: tiles.title,
       weight: tiles.weight,
       completionCount: count(teamTileSubmissions.id),
@@ -461,15 +466,18 @@ export async function getAllTeamPointsAndTotal(
       )
     )
     .where(eq(tiles.bingoId, bingoId))
-    .groupBy(tiles.id, tiles.title, tiles.weight)
+    .groupBy(tiles.id, tiles.index, tiles.title, tiles.weight)
     .orderBy(desc(count(teamTileSubmissions.id)))
     .then((results) =>
-      results.map((r) => ({
-        tileId: r.tileId,
-        title: r.title,
-        weight: r.weight,
-        completionCount: Number(r.completionCount),
-      }))
+      results.map((r) => {
+        const visible = blind ? redactBlindTile(r) : r
+        return {
+          tileId: visible.tileId,
+          title: visible.title,
+          weight: visible.weight,
+          completionCount: Number(visible.completionCount),
+        }
+      })
     )
 
   // Get activity timeline (submissions per day)

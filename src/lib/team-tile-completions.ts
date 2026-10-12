@@ -2,11 +2,13 @@ import { and, eq, inArray, isNotNull, sql } from "drizzle-orm"
 import { db } from "@/server/db"
 import {
   bingos,
+  events,
   teams,
   teamTileSubmissions,
   tiles,
 } from "@/server/db/schema"
 import { LAG, TS_FORMAT, type DropCursor } from "@/lib/team-drops"
+import { boardContentUnlockedSql } from "@/server/blind-board"
 
 export interface TeamTileCompletion {
   id: string
@@ -50,12 +52,15 @@ export async function fetchTeamTileCompletions(params: {
     .innerJoin(teams, eq(teams.id, teamTileSubmissions.teamId))
     .innerJoin(tiles, eq(tiles.id, teamTileSubmissions.tileId))
     .innerJoin(bingos, eq(bingos.id, tiles.bingoId))
+    .innerJoin(events, eq(events.id, bingos.eventId))
     .where(
       and(
         inArray(teamTileSubmissions.teamId, teamIds),
         eq(teamTileSubmissions.status, "completed"),
         isNotNull(teamTileSubmissions.completedAt),
         eq(bingos.visible, true),
+        // No tile titles of a blind battleship board (before its Event starts).
+        boardContentUnlockedSql(),
         sql`${teamTileSubmissions.completedAt} < now() - ${LAG}`,
         sql`(${teamTileSubmissions.completedAt}, ${teamTileSubmissions.id}) > (${after.t}::timestamp, ${after.id}::uuid)`
       )

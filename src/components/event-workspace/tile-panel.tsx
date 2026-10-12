@@ -33,6 +33,8 @@ import {
   getTileTeamStatus,
 } from "@/lib/tile-status"
 import getRandomFrog from "@/lib/getRandomFrog"
+import { BattleshipMarkBadge } from "@/components/battleship-mark-badge"
+import { MARK_RESULT, type BattleshipMark } from "@/lib/battleship-marks"
 import type { Bingo, Team, Tile } from "@/types/model"
 
 export interface TierLockInfo {
@@ -54,6 +56,11 @@ interface TilePanelProps {
   isProgressionBingo: boolean
   /** Set when the selected Tile's Tier is still locked for the viewed Team. */
   tierLock?: TierLockInfo | null
+  /**
+   * Battleship: how the viewer's own Team's attack on this Tile went. Shown
+   * for completed Tiles only.
+   */
+  battleshipMark?: BattleshipMark | null
   /** Public view: description and progress only, no submissions or editing. */
   readOnly?: boolean
   /** Active sub-tab; owned by the caller so it survives Tile changes. */
@@ -117,6 +124,7 @@ export function TilePanel({
   gameType,
   isProgressionBingo,
   tierLock,
+  battleshipMark,
   readOnly = false,
   subTab,
   onSubTabChange,
@@ -157,6 +165,7 @@ export function TilePanel({
         gameType={gameType}
         isProgressionBingo={isProgressionBingo}
         tierLock={tierLock}
+        battleshipMark={battleshipMark}
         readOnly={readOnly}
         canEdit={canEdit}
         subTab={subTab}
@@ -179,6 +188,7 @@ function TilePanelBody({
   gameType,
   isProgressionBingo,
   tierLock,
+  battleshipMark,
   readOnly,
   canEdit,
   subTab: requestedSubTab,
@@ -289,6 +299,12 @@ function TilePanelBody({
               </Badge>
             )}
           </div>
+          {currentTeamId && completion === "completed" && battleshipMark && (
+            <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium">
+              <BattleshipMarkBadge mark={battleshipMark} className="size-5" />
+              {MARK_RESULT[battleshipMark]}
+            </p>
+          )}
         </div>
         {onClose && (
           <Button

@@ -21,17 +21,15 @@ import {
   type ShipRule,
 } from "@/server/db/schema"
 import {
+  applyShipRulesUpdate,
+  BattleshipRuleError,
   isShipRuleList,
   isUniqueViolation,
-  upsertBingoShipRules,
 } from "@/server/battleship"
 import { hasEventStarted } from "@/lib/event-status"
 import { logger } from "@/lib/logger"
 import { indexToCoord } from "@/lib/ship-placement"
-import {
-  mergeShipRulesByLength,
-  validateShipRulesFitBoard,
-} from "@/lib/ship-rules"
+import { mergeShipRulesByLength } from "@/lib/ship-rules"
 import { validateShipPlacements } from "@/lib/validate-ship-placements"
 
 /**
@@ -219,6 +217,9 @@ export async function saveTeamShipPlacements(
  * Replaces the fleet rules of a board. Event managers only, battleship boards
  * only, before the event starts. Every team's placements were made against the
  * old fleet, so they are all cleared in the same transaction.
+ *
+ * The board edit dialog goes through `updateBingo`, which runs the same
+ * `applyShipRulesUpdate` in the transaction of the other board settings.
  */
 export async function updateBingoShipRules(
   bingoId: string,
@@ -230,69 +231,19 @@ export async function updateBingoShipRules(
     if (!isShipRuleList(rules)) {
       return { success: false, error: "Invalid ship rules" }
     }
-    const merged = mergeShipRulesByLength(rules)
 
-    const result = await db.transaction(
-      async (
-        tx
-      ): Promise<
-        ActionResult & { clearedTeams?: number; eventId?: string }
-      > => {
-        const [bingo] = await tx
-          .select({
-            eventId: bingos.eventId,
-            bingoType: bingos.bingoType,
-            rows: bingos.rows,
-            columns: bingos.columns,
-          })
-          .from(bingos)
-          .where(eq(bingos.id, bingoId))
-          .for("no key update")
-        if (!bingo || bingo.eventId !== eventId) {
-          return { success: false, error: "Bingo not found" }
-        }
-        if (bingo.bingoType !== "battleship") {
-          return { success: false, error: NOT_BATTLESHIP }
-        }
-
-        const event = await tx.query.events.findFirst({
-          where: eq(events.id, bingo.eventId),
-          columns: { startDate: true },
-        })
-        if (!event) return { success: false, error: "Event not found" }
-        if (hasEventStarted(event.startDate)) {
-          return { success: false, error: LOCKED }
-        }
-
-        const fitError = validateShipRulesFitBoard(
-          merged,
-          bingo.rows,
-          bingo.columns
-        )
-        if (fitError) return { success: false, error: fitError }
-
-        await upsertBingoShipRules(tx, bingoId, merged)
-
-        const cleared = await tx
-          .delete(battleshipShips)
-          .where(eq(battleshipShips.bingoId, bingoId))
-          .returning({ teamId: battleshipShips.teamId })
-
-        return {
-          success: true,
-          eventId: bingo.eventId,
-          clearedTeams: new Set(cleared.map((s) => s.teamId)).size,
-        }
-      }
+    const { clearedTeams } = await db.transaction((tx) =>
+      applyShipRulesUpdate(tx, bingoId, rules)
     )
 
-    if (!result.success) return { success: false, error: result.error }
-
-    revalidatePath(`/events/${result.eventId}`, "layout")
-    return { success: true, clearedTeams: result.clearedTeams ?? 0 }
+    revalidatePath(`/events/${eventId}`, "layout")
+    return { success: true, clearedTeams }
   } catch (error) {
     if (error instanceof AuthzError) {
       return { success: false, error: authzErrorMessage(error, "Forbidden") }
+    }
+    if (error instanceof BattleshipRuleError) {
+      return { success: false, error: error.message }
     }
     logger.error({ error, bingoId }, "Error updating ship rules")
     return { success: false, error: "Failed to update ship rules" }

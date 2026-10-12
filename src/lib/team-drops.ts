@@ -1,7 +1,9 @@
 import { and, eq, inArray, sql } from "drizzle-orm"
 import { db } from "@/server/db"
+import { boardContentUnlockedSql } from "@/server/blind-board"
 import {
   bingos,
+  events,
   images,
   submissions,
   teamMembers,
@@ -143,6 +145,7 @@ export async function fetchTeamDrops(params: {
     .innerJoin(teams, eq(teams.id, teamTileSubmissions.teamId))
     .innerJoin(tiles, eq(tiles.id, teamTileSubmissions.tileId))
     .innerJoin(bingos, eq(bingos.id, tiles.bingoId))
+    .innerJoin(events, eq(events.id, bingos.eventId))
     .innerJoin(users, eq(users.id, submissions.submittedBy))
     .innerJoin(images, eq(images.id, submissions.imageId))
     .where(
@@ -150,6 +153,8 @@ export async function fetchTeamDrops(params: {
         inArray(teamTileSubmissions.teamId, teamIds),
         sql`${submissions.submittedBy} <> ${userId}`,
         eq(bingos.visible, true),
+        // No tile titles of a blind battleship board (before its Event starts).
+        boardContentUnlockedSql(),
         sql`${submissions.createdAt} < now() - ${LAG}`,
         sql`(${submissions.createdAt}, ${submissions.id}) > (${after.t}::timestamp, ${after.id}::uuid)`
       )

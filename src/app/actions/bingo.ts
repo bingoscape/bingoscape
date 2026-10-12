@@ -25,6 +25,7 @@ import {
   users,
   events,
   goalGroups,
+  type ShipRule,
 } from "@/server/db/schema"
 import type { UUID } from "crypto"
 import { asc, eq, inArray, and, gt } from "drizzle-orm"
@@ -46,7 +47,10 @@ import {
   requireBingoAdminForTile,
   requireTeamMemberOrManager,
 } from "@/server/authz"
+import { isBlindBoard } from "@/server/blind-board"
+import { isBingoBlindForViewer } from "@/server/blind-board-viewer"
 import {
+  applyShipRulesUpdate,
   assertBattleshipLayoutEditable,
   assertEventFitsBattleship,
   assertTilesCarryNoShip,
@@ -54,6 +58,7 @@ import {
   battleshipErrorMessage,
   defaultShipRules,
   insertBingoShipRules,
+  isShipRuleList,
   parseShipRulesJson,
 } from "@/server/battleship"
 import { validateShipRulesFitBoard } from "@/lib/ship-rules"
@@ -1013,6 +1018,10 @@ export async function getAllSubmissionsForTeam(
     // and to managers of the Event.
     await requireTeamMemberOrManager(teamId)
 
+    // A blind battleship board (before its Event starts) has nothing to show
+    // to non-managers: the Tiles carried in these records would reveal it.
+    if (await isBingoBlindForViewer(bingoId)) return {}
+
     // First, get all tiles for this bingo
     const bingoTiles = await db
       .select({ id: tiles.id })
@@ -1218,7 +1227,14 @@ export async function submitImage(formData: FormData) {
     }
     const callerIsManager = await isEventManager(bingoResult.eventId)
     if (!callerIsManager) {
-      if (tile.isHidden) {
+      // Hidden Tiles, and the Tiles of a blind battleship board (before its
+      // Event starts), are indistinguishable from missing ones.
+      const blind = isBlindBoard({
+        bingoType: bingoResult.bingoType,
+        startDate: bingoResult.event.startDate,
+        isManager: false,
+      })
+      if (tile.isHidden || blind) {
         throw new Error("Tile not found")
       }
       const callerMembership = await db.query.teamMembers.findFirst({
@@ -2194,6 +2210,11 @@ interface PatternBonusData {
 
 interface UpdateBingoDataWithBonuses extends UpdateBingoData {
   patternBonuses?: PatternBonusData
+  /**
+   * New fleet rules of a battleship board. Applied in the same transaction as
+   * the other settings and clears every team's placed fleet.
+   */
+  shipRules?: ShipRule[]
 }
 
 export async function updateBingo(
@@ -2202,6 +2223,10 @@ export async function updateBingo(
 ) {
   try {
     await requireBingoAdmin(bingoId)
+    if (data.shipRules !== undefined && !isShipRuleList(data.shipRules)) {
+      return { success: false, error: "Invalid ship rules" }
+    }
+    let clearedTeams: number | undefined
     await db.transaction(async (tx) => {
       if (data.bingoType !== undefined) {
         const [current] = await tx
@@ -2330,12 +2355,20 @@ export async function updateBingo(
           }
         }
       }
+
+      if (data.shipRules !== undefined) {
+        ;({ clearedTeams } = await applyShipRulesUpdate(
+          tx,
+          bingoId,
+          data.shipRules
+        ))
+      }
     })
 
     // Revalidate the bingo page
     revalidatePath("/events/[id]", "layout")
 
-    return { success: true }
+    return { success: true, clearedTeams }
   } catch (error) {
     logger.error({ error }, "Error updating bingo")
     return {

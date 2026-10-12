@@ -17,7 +17,11 @@ import {
 } from "@/server/db/schema"
 import { getSunkShipTileIds } from "@/lib/battleship-sunk"
 import { hasEventStarted } from "@/lib/event-status"
-import { mergeShipRulesByLength } from "@/lib/ship-rules"
+import type { BattleshipWorkspaceInfo } from "@/lib/battleship-workspace"
+import {
+  mergeShipRulesByLength,
+  validateShipRulesFitBoard,
+} from "@/lib/ship-rules"
 
 /**
  * Battleship board helpers shared by server actions and Server Components.
@@ -108,6 +112,61 @@ export async function upsertBingoShipRules(
     })
 }
 
+/**
+ * Replaces the fleet rules of a battleship board and clears every team's
+ * placed fleet (those were made against the old rules). Call inside the
+ * transaction of the caller, after authorizing it as a board manager.
+ *
+ * Throws a BattleshipRuleError when the board is not a battleship board, the
+ * event already started or the fleet does not fit the board. Returns how many
+ * teams lost their fleet.
+ */
+export async function applyShipRulesUpdate(
+  tx: BattleshipDbTx,
+  bingoId: string,
+  rules: ShipRule[]
+): Promise<{ clearedTeams: number }> {
+  const merged = mergeShipRulesByLength(rules)
+
+  const [bingo] = await tx
+    .select({
+      eventId: bingos.eventId,
+      bingoType: bingos.bingoType,
+      rows: bingos.rows,
+      columns: bingos.columns,
+    })
+    .from(bingos)
+    .where(eq(bingos.id, bingoId))
+    .for("no key update")
+  if (!bingo) throw new BattleshipRuleError("Bingo not found")
+  if (bingo.bingoType !== "battleship") {
+    throw new BattleshipRuleError("Not a battleship board")
+  }
+
+  const event = await tx.query.events.findFirst({
+    where: eq(events.id, bingo.eventId),
+    columns: { startDate: true },
+  })
+  if (!event) throw new BattleshipRuleError("Event not found")
+  if (hasEventStarted(event.startDate)) {
+    throw new BattleshipRuleError(
+      "Ship setup is only allowed before the event starts"
+    )
+  }
+
+  const fitError = validateShipRulesFitBoard(merged, bingo.rows, bingo.columns)
+  if (fitError) throw new BattleshipRuleError(fitError)
+
+  await upsertBingoShipRules(tx, bingoId, merged)
+
+  const cleared = await tx
+    .delete(battleshipShips)
+    .where(eq(battleshipShips.bingoId, bingoId))
+    .returning({ teamId: battleshipShips.teamId })
+
+  return { clearedTeams: new Set(cleared.map((s) => s.teamId)).size }
+}
+
 /** Parses the optional `shipRules` JSON field of the create board form. */
 export function parseShipRulesJson(
   raw: FormDataEntryValue | null
@@ -174,6 +233,48 @@ export async function getTeamShipPlacements(
     length: ship.shipLength,
     tileIds: ship.tiles.map((t) => t.tileId),
   }))
+}
+
+/**
+ * The team of the event the user leads, or null. Used to decide whether the
+ * "Place ships" entry point is shown; the placement page and the save action
+ * authorize again with `assertTeamLeaderOrManager`.
+ */
+export async function getLedTeamId(
+  eventId: string,
+  userId: string
+): Promise<string | null> {
+  const [row] = await db
+    .select({ teamId: teamMembers.teamId })
+    .from(teamMembers)
+    .innerJoin(teams, eq(teams.id, teamMembers.teamId))
+    .where(
+      and(
+        eq(teamMembers.userId, userId),
+        eq(teamMembers.isLeader, true),
+        eq(teams.eventId, eventId)
+      )
+    )
+    .limit(1)
+  return row?.teamId ?? null
+}
+
+/**
+ * The Team the signed-in user plays in for this Event, or null (anonymous,
+ * not on a Team). Derived from the session, never from caller input.
+ */
+export async function getViewerTeamId(eventId: string): Promise<string | null> {
+  const session = await getServerAuthSession()
+  if (!session?.user) return null
+  const [row] = await db
+    .select({ teamId: teamMembers.teamId })
+    .from(teamMembers)
+    .innerJoin(teams, eq(teams.id, teamMembers.teamId))
+    .where(
+      and(eq(teamMembers.userId, session.user.id), eq(teams.eventId, eventId))
+    )
+    .limit(1)
+  return row?.teamId ?? null
 }
 
 export type BattleshipBoardState = {
@@ -283,6 +384,35 @@ export async function getBattleshipBoardState(
 
 function emptyState(): BattleshipBoardState {
   return { hitTileIds: [], missTileIds: [], sunkTileIds: [] }
+}
+
+/**
+ * Everything the event workspace needs about a battleship Board, fetched in
+ * parallel on the server: the fleet rules, the Team the viewer leads and the
+ * viewer's own hits/misses/sunk ships.
+ *
+ * Marks are only handed out from the start on. Before it, ships can still
+ * move, so a hit or miss caused by an early completion (e.g. a manager's
+ * override) would tell a leader where the opponent's ships are.
+ */
+export async function getBattleshipWorkspaceInfo({
+  bingoId,
+  eventId,
+  startDate,
+  userId,
+}: {
+  bingoId: string
+  eventId: string
+  startDate: Date | string | number
+  userId: string
+}): Promise<BattleshipWorkspaceInfo> {
+  const started = hasEventStarted(startDate)
+  const [rules, ledTeamId, marks] = await Promise.all([
+    getBingoShipRules(bingoId),
+    getLedTeamId(eventId, userId),
+    started ? getBattleshipBoardState(bingoId) : Promise.resolve(emptyState()),
+  ])
+  return { bingoId, rules, started, ledTeamId, marks }
 }
 
 // ---------------------------------------------------------------------------
