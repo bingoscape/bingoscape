@@ -1,6 +1,6 @@
 "use client"
 
-import { useId, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { Plus } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
@@ -50,6 +50,7 @@ export function QuickAddItem({ onAdd, announce }: QuickAddFormProps) {
   const queuedRef = useRef<string | null>(null)
   const [queuedQuery, setQueuedQuery] = useState<string | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
   const quantityRef = useRef<HTMLInputElement>(null)
 
   const quantityError = validateNumberInput(quantity)
@@ -102,6 +103,18 @@ export function QuickAddItem({ onAdd, announce }: QuickAddFormProps) {
     ? highlighted
     : (resultKeys[0] ?? "")
   const activeItem = items.find((item) => itemKey(item) === activeKey)
+
+  // cmdk only sets aria-activedescendant for a highlight it moved itself, not
+  // for the one passed in as `value`, so point the field at the highlight here.
+  useEffect(() => {
+    const field = searchRef.current
+    if (!field) return
+    const option = Array.from(
+      listRef.current?.querySelectorAll<HTMLElement>("[cmdk-item]") ?? []
+    ).find((el) => el.getAttribute("data-value") === activeKey)
+    if (option?.id) field.setAttribute("aria-activedescendant", option.id)
+    else field.removeAttribute("aria-activedescendant")
+  }, [activeKey, items, ready])
 
   const queueTopMatch = () => {
     queuedRef.current = trimmed
@@ -234,6 +247,7 @@ export function QuickAddItem({ onAdd, announce }: QuickAddFormProps) {
         {ready && items.length > 0 && (
           // Bounded so the on-screen keyboard leaves room for the field above.
           <CommandList
+            ref={listRef}
             aria-busy={loading}
             className={cn(
               "bg-popover mt-1 max-h-[min(14rem,35dvh)] rounded-sm border",
