@@ -22,6 +22,9 @@ import {
 } from "@/lib/discord-webhook"
 import { formatBingoData } from "@/lib/bingo-formatter"
 import { isBlindBoard } from "@/server/blind-board"
+import { hasEventStarted } from "@/lib/event-status"
+import { battleshipShot } from "@/lib/battleship-marks"
+import { getBattleshipBoardStateForTeam } from "@/server/battleship"
 import { getTierLockForSubmit, tierLockedBody } from "@/server/tier-progression"
 import { checkAndAutoCompleteTile } from "@/app/actions/tile-completion"
 
@@ -151,7 +154,26 @@ export async function POST(
         isManager: callerIsManager,
       })
     ) {
-      return NextResponse.json({ error: "Tile not found" }, { status: 404 })
+      return NextResponse.json(
+        { error: "Tile not found", code: "BOARD_BLIND" },
+        { status: 404 }
+      )
+    }
+
+    // Nobody shoots before the start, not even a manager the blind check lets
+    // through: an early hit or miss would show where the opponent's ships are.
+    if (
+      tile.bingo.bingoType === "battleship" &&
+      !hasEventStarted(tile.bingo.event.startDate)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "This battleship board can only be played once the event has started",
+          code: "EVENT_NOT_STARTED",
+        },
+        { status: 403 }
+      )
     }
 
     // Get user's team for this event
@@ -410,6 +432,11 @@ export async function POST(
     // This evaluates the complete goal tree and updates tile status to "approved"
     // ONLY if all root-level goals/groups are complete
     let tierUnlocked: number | null = null
+    const isBattleship = tile.bingo.bingoType === "battleship"
+    const marksBefore =
+      isBattleship && matchedGoalId
+        ? await getBattleshipBoardStateForTeam(tile.bingoId, userTeam.id)
+        : null
     if (matchedGoalId) {
       try {
         const completionResult = await checkAndAutoCompleteTile(
@@ -513,13 +540,23 @@ export async function POST(
     }
 
     // Format the response using shared utility
-    const formattedBingo = await formatBingoData(tile.bingo, userTeam ?? null)
+    const formattedBingo = await formatBingoData(tile.bingo, userTeam ?? null, {
+      userId,
+    })
+
+    // The shot is what the completion above did to the Team's marks. The
+    // response's own marks were read after it, so they are the "after".
+    const shot =
+      marksBefore && formattedBingo.battleship
+        ? battleshipShot(tileId, marksBefore, formattedBingo.battleship.marks)
+        : null
 
     return NextResponse.json({
       ...formattedBingo,
       autoApproved: result.autoApproved,
       matchedGoalId: matchedGoalId,
       tierUnlocked,
+      shot,
     })
   } catch (error) {
     logger.error({ error }, "Error submitting auto-submission")
