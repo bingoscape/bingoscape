@@ -434,6 +434,15 @@ export function EventWorkspace({
                 counts: filterCounts,
                 onChange: setFilter,
               }}
+              goalHealth={
+                isManagement
+                  ? {
+                      tiles,
+                      selectedTileId: selectedTile?.id ?? null,
+                      onSelectTile: handleSelectTile,
+                    }
+                  : undefined
+              }
             />
 
             {editLayout && isManagement && (

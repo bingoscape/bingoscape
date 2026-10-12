@@ -36,13 +36,14 @@ import { DeleteBingoButton } from "@/components/delete-bingo-button"
 import { EditBingoModal } from "@/components/edit-bingo-modal"
 import { QuickSubmissionButton } from "@/components/quick-submission-button"
 import { BoardFilters } from "@/components/event-workspace/board-filters"
+import { BoardHealthIndicator } from "@/components/event-workspace/board-health-indicator"
 import { ShortcutsHelp } from "@/components/event-workspace/shortcuts-help"
 import { TeamSelector } from "@/components/team-selector"
 import { TrackerSettingsModal } from "@/components/tracker-settings-modal"
 import type { TileFilter, TileFilterContext } from "@/lib/tile-filter"
 import type { BoardStats } from "@/lib/tile-status"
 import { cn } from "@/lib/utils"
-import type { Bingo, Team } from "@/types/model"
+import type { Bingo, Team, Tile } from "@/types/model"
 
 /** More Boards than this switch from pills to a Select. */
 const MAX_PILLS = 6
@@ -81,6 +82,15 @@ interface BoardHeaderProps {
     counts: Record<TileFilter, number>
     onChange: (filter: TileFilter | null) => void
   }
+  /**
+   * The "N tiles have no goals" hint. Only pass it to people who can manage
+   * Goals: for everyone else the hint is not shown at all.
+   */
+  goalHealth?: {
+    tiles: Tile[]
+    selectedTileId: string | null
+    onSelectTile: (tileId: string) => void
+  }
 }
 
 /**
@@ -109,6 +119,7 @@ export function BoardHeader({
   trackerOpen,
   onTrackerOpenChange,
   filters,
+  goalHealth,
 }: BoardHeaderProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [importExportOpen, setImportExportOpen] = useState(false)
@@ -273,6 +284,7 @@ export function BoardHeader({
           </>
         )}
         <BoardFilters {...filters} />
+        {goalHealth && <BoardHealthIndicator {...goalHealth} />}
         {isUpcoming && isManagement && (
           <span className="text-muted-foreground flex items-center gap-1 font-medium">
             <Lock aria-hidden="true" className="h-3 w-3" />
