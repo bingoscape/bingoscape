@@ -20,6 +20,10 @@ _Avoid_: Grid, Card, Bingo
 An individual square or challenge on a Board.
 _Avoid_: Task, Drop, Square
 
+**Blind Tile**:
+A Tile of a battleship Board before its Event starts, as seen by anyone who does not manage the Event. It keeps its id and grid position (so ships can still be placed on it) but has no title, description, image, Goals or Submissions; the server marks it `isBlind`. From the start on, and forever after (also once the Event ended), nothing is blind. Not the same as a hidden Tile (`isHidden`), which can never hold a ship.
+_Avoid_: Hidden Tile, Masked Tile
+
 **Submission**:
 A claim by a Team that they have completed a Tile. Can be manual (requiring admin approval) or automatic (instantly approved).
 _Avoid_: Proof, Drop
