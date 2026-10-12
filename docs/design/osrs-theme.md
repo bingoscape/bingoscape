@@ -58,6 +58,7 @@ Utilities (all in `src/styles/globals.css`, compose with `shadow-*`/`ring-*`):
 | `osrs-text-shadow`   | 1px black text shadow                                |
 | `osrs-heading`       | Display face + theme-aware shadow                    |
 | `osrs-qty`           | Item-quantity number (yellow, shadowed)              |
+| `osrs-mark`          | Small bevelled marker box on a Tile (battleship result) |
 | `osrs-divider`       | Two-tone etched rule                                 |
 | `osrs-tooltip`       | Pale-yellow examine box (Tooltip, HoverCard)         |
 | `osrs-board-pane`    | Size container the Board is fitted into (see below)  |
@@ -117,3 +118,17 @@ Only the panel body scrolls (`overflow-y-auto`), never the page. Fixed width `cl
 - **Cells** are laid out by each Tile's `index` (hidden Tiles keep their cell, shown as a dashed, disabled "Hidden" slot). Same keyboard model as the Board: one tab stop, arrows via `moveGridFocusSkipping`, Enter/Space place, Escape cancels the ship being built. Accessible name: "Row 2, column 3, Tile 8, ship of length 3" / "empty".
 - **Ships are never told apart by colour.** Every ship uses the `info` / `info-foreground` pair (about 13:1 on Stone and 8:1 on Parchment against the slot), each segment shows the ship length as a numeral, neighbouring segments are joined by a bar, and the ship being built has a dashed border. A selected ship gets `ring-2 ring-inset ring-osrs-yellow` plus a 2px black inner frame, because yellow on the Stone `info` cyan is only 1.3:1.
 - **Fleet palette**: a native radio group, one entry per ship length with the aggregated required count; progress is a `success`/`pending` badge with a check or clock and the text "1/2 placed".
+
+## Battleship board markers
+
+On a battleship Board the viewer's own Team sees the result of its attacks on the main Board. Data comes from the Server Component (`getBattleshipWorkspaceInfo`, only from the start on) as `Set`s built once in `EventWorkspace`; nothing is fetched on the client.
+
+- **Placement**: bottom-left of the Tile (top-left is the `osrs-qty` XP number, top-right is pending / changes requested, bottom-right is the completed check). Size `max(12px, 22cqw)`, same as the check. `osrs-mark` is the box (1px black edge, hard 1px highlight); colours come from utilities. The marker has `role="img"`, an `aria-label` and `data-mark="hit|miss|sunk"`.
+- **Shapes, never colour alone**: hit = solid X on `bg-danger` (dark glyph on Stone, where `danger` is pale pink; light glyph on Parchment), miss = hollow dot on `bg-secondary` with a `ring-muted-foreground` outline, sunk = ship glyph on `bg-destructive` with `ring-osrs-yellow`. One `BattleshipMarkBadge` draws all three for the Tile, the legend and the Tile panel.
+- **Priority**: the completed check stays. Sunk wins over hit. Hit and sunk add a `ring-2 ring-danger` overlay on the Tile (an overlay, because the Tile face would cover an inset ring of the slot; the yellow selection ring wins while selected). A miss dims the face with `saturate-50`.
+- **Contrast** (sampled from screenshots): marker edge against the Tile face, hit 3.7:1 Stone / 4.4:1 Parchment, miss ring 4.4:1 / 6.4:1, sunk edged by the yellow ring (8.7:1 on Stone) and 4.1:1 on Parchment; glyph against the fill at least 3.7:1.
+- **Accessible name**: the Tile name gains ", hit", ", miss" or ", sunk" ("Row 1, column 1: Title, 3 XP, completed, hit").
+- **Blind Tile** (`isBlind`): a neutral `osrs-slot` with its "Tile N" text, name "Row 1, column 1: Tile 7, objective hidden until the event starts", `aria-disabled`. It keeps its place in the roving focus order (unlike a hidden Tile it is not skipped), cannot be opened (no `?tile=`), and never carries a marker.
+- **Legend**: in the Board header info row after the start, a `role="list"` with the same glyphs and labels (Hit / Miss / Sunk) and one line on when the result is learned. Before the start the blind-board note stays.
+- **Sunk announcement**: when a refresh of the page props brings newly sunk Tiles, a default (not destructive) toast "Ship sunk!" and a polite live region. Nothing on first render. No motion is used.
+- **Tile panel**: a completed Tile shows "Hit", "Miss" or "Ship sunk" with the same glyph.
