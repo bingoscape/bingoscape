@@ -21,6 +21,7 @@ import {
 } from "@/lib/discord-webhook"
 import { formatBingoData } from "@/lib/bingo-formatter"
 import { isBlindBoard } from "@/server/blind-board"
+import { getTierLockForSubmit, tierLockedBody } from "@/server/tier-progression"
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
 
@@ -149,6 +150,16 @@ export async function POST(
         { error: "This bingo is locked. No submission possible" },
         { status: 403 }
       )
+    }
+
+    const tierLock = await getTierLockForSubmit(
+      db,
+      tile,
+      tile.bingo.bingoType,
+      userTeam.id
+    )
+    if (tierLock) {
+      return NextResponse.json(tierLockedBody(tierLock), { status: 403 })
     }
 
     const teamSubmissionForTile = tile.teamTileSubmissions.find(
@@ -323,7 +334,8 @@ export async function POST(
     // Format the response using shared utility
     const formattedBingo = await formatBingoData(tile.bingo, userTeam ?? null)
 
-    return NextResponse.json(formattedBingo)
+    // A plain image submission never completes a Tile, so it opens no Tier.
+    return NextResponse.json({ ...formattedBingo, tierUnlocked: null })
   } catch (error) {
     logger.error({ error }, "Error submitting image")
     return NextResponse.json(

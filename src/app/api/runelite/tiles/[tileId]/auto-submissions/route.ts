@@ -22,6 +22,7 @@ import {
 } from "@/lib/discord-webhook"
 import { formatBingoData } from "@/lib/bingo-formatter"
 import { isBlindBoard } from "@/server/blind-board"
+import { getTierLockForSubmit, tierLockedBody } from "@/server/tier-progression"
 import { checkAndAutoCompleteTile } from "@/app/actions/tile-completion"
 
 // Type definition for auto-submission metadata
@@ -195,6 +196,16 @@ export async function POST(
         { error: "This bingo is locked. No submission possible" },
         { status: 403 }
       )
+    }
+
+    const tierLock = await getTierLockForSubmit(
+      db,
+      tile,
+      tile.bingo.bingoType,
+      userTeam.id
+    )
+    if (tierLock) {
+      return NextResponse.json(tierLockedBody(tierLock), { status: 403 })
     }
 
     const teamSubmissionForTile = tile.teamTileSubmissions.find(
@@ -398,6 +409,7 @@ export async function POST(
     // ALWAYS check tile completion after updating goal progress
     // This evaluates the complete goal tree and updates tile status to "approved"
     // ONLY if all root-level goals/groups are complete
+    let tierUnlocked: number | null = null
     if (matchedGoalId) {
       try {
         const completionResult = await checkAndAutoCompleteTile(
@@ -405,6 +417,7 @@ export async function POST(
           tileId,
           userTeam.id
         )
+        tierUnlocked = completionResult.tierUnlocked ?? null
         logger.info(
           { tileId, autoCompleted: completionResult.autoCompleted },
           "Tile completion check"
@@ -506,6 +519,7 @@ export async function POST(
       ...formattedBingo,
       autoApproved: result.autoApproved,
       matchedGoalId: matchedGoalId,
+      tierUnlocked,
     })
   } catch (error) {
     logger.error({ error }, "Error submitting auto-submission")
