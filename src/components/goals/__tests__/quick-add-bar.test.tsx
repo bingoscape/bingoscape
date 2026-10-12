@@ -85,7 +85,7 @@ const clickButton = (name: string) =>
 
 const submitForm = (form: HTMLElement) =>
   act(async () => {
-    await submitForm(form)
+    fireEvent.submit(form)
   })
 
 const whipInput = {
