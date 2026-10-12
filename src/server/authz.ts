@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm"
 import { db } from "@/server/db"
 import { getServerAuthSession } from "@/server/auth"
 import { getUserRole } from "@/app/actions/events"
+import { isBlindBoard } from "@/server/blind-board"
 import {
   bingos,
   goalGroups,
@@ -248,7 +249,8 @@ export async function assertTeamLeaderOrManager(
 }
 
 /**
- * Whether the caller may read the content of the Tile. Hidden Tiles are only
+ * Whether the caller may read the content of the Tile. Hidden Tiles, and the
+ * Tiles of a battleship Board before its Event starts (blind Tiles), are only
  * readable by admin/management of the owning Event. Unknown Tiles are not
  * readable.
  */
@@ -256,10 +258,21 @@ export async function canReadTile(tileId: string): Promise<boolean> {
   const tile = await db.query.tiles.findFirst({
     where: eq(tiles.id, tileId),
     columns: { isHidden: true },
-    with: { bingo: { columns: { eventId: true } } },
+    with: {
+      bingo: {
+        columns: { eventId: true, bingoType: true },
+        with: { event: { columns: { startDate: true } } },
+      },
+    },
   })
   if (!tile) return false
-  if (!tile.isHidden) return true
+
+  const blind = isBlindBoard({
+    bingoType: tile.bingo.bingoType,
+    startDate: tile.bingo.event.startDate,
+    isManager: false,
+  })
+  if (!tile.isHidden && !blind) return true
   return isEventManager(tile.bingo.eventId)
 }
 
