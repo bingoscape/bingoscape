@@ -1,0 +1,14 @@
+src/components/goals/__tests__/item-picker.test.tsx
+  h_315b6e20f58a79 55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "90117caaf32b9b18294464bbcbf2e9b70cdf9ed6",
+  "prompts": {},
+  "humans": {
+    "h_315b6e20f58a79": {
+      "author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
