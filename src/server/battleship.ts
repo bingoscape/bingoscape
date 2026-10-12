@@ -17,6 +17,7 @@ import {
 } from "@/server/db/schema"
 import { getSunkShipTileIds } from "@/lib/battleship-sunk"
 import { hasEventStarted } from "@/lib/event-status"
+import type { BattleshipWorkspaceInfo } from "@/lib/battleship-workspace"
 import {
   mergeShipRulesByLength,
   validateShipRulesFitBoard,
@@ -365,6 +366,35 @@ export async function getBattleshipBoardState(
 
 function emptyState(): BattleshipBoardState {
   return { hitTileIds: [], missTileIds: [], sunkTileIds: [] }
+}
+
+/**
+ * Everything the event workspace needs about a battleship Board, fetched in
+ * parallel on the server: the fleet rules, the Team the viewer leads and the
+ * viewer's own hits/misses/sunk ships.
+ *
+ * Marks are only handed out from the start on. Before it, ships can still
+ * move, so a hit or miss caused by an early completion (e.g. a manager's
+ * override) would tell a leader where the opponent's ships are.
+ */
+export async function getBattleshipWorkspaceInfo({
+  bingoId,
+  eventId,
+  startDate,
+  userId,
+}: {
+  bingoId: string
+  eventId: string
+  startDate: Date | string | number
+  userId: string
+}): Promise<BattleshipWorkspaceInfo> {
+  const started = hasEventStarted(startDate)
+  const [rules, ledTeamId, marks] = await Promise.all([
+    getBingoShipRules(bingoId),
+    getLedTeamId(eventId, userId),
+    started ? getBattleshipBoardState(bingoId) : Promise.resolve(emptyState()),
+  ])
+  return { bingoId, rules, started, ledTeamId, marks }
 }
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,5 @@
 import type { ShipRule } from "@/server/db/schema"
+import type { BattleshipMarkIds } from "@/lib/battleship-marks"
 
 /**
  * What the event workspace needs to know about the active Board when it is a
@@ -13,6 +14,12 @@ export interface BattleshipWorkspaceInfo {
   started: boolean
   /** The Team the viewer leads in this Event, if any. */
   ledTeamId: string | null
+  /**
+   * Hits, misses and sunk ships of the VIEWER's own Team (never an opponent's
+   * view, never ship positions). Empty before the start, for managers who are
+   * on no Team and for anonymous viewers.
+   */
+  marks: BattleshipMarkIds
 }
 
 /**
