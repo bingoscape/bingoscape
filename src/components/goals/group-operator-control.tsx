@@ -29,7 +29,10 @@ export function GroupOperatorControl({
         value={operator}
         onValueChange={(v) => onChange(v as GroupOperator)}
       >
-        <SelectTrigger className="h-7 w-auto min-w-[70px] px-2 gap-1.5 [&>span]:hidden">
+        <SelectTrigger
+          aria-label={`Group logic: ${operator}`}
+          className="h-7 w-auto min-w-[70px] gap-1.5 px-2 pointer-coarse:min-h-11 [&>span]:hidden"
+        >
           <div className="flex items-center gap-1 text-[10px] font-medium">
             {operator === "AND" && <><CheckCheck className="h-3 w-3 text-info" /> AND</>}
             {operator === "OR" && <><Shuffle className="h-3 w-3 text-chart-5" /> OR</>}

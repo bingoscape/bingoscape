@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input"
 import { toast } from "@/hooks/use-toast"
 import { updateGoalGroup } from "@/app/actions/goal-groups"
 import { cn } from "@/lib/utils"
+import { ConfirmDeleteDialog } from "./confirm-delete-dialog"
 import { GroupOperatorControl } from "./group-operator-control"
 import type { FlatGroupNode, GroupOperator } from "./types"
 import { useSortableNode } from "./use-sortable-node"
@@ -34,7 +35,10 @@ interface GroupRowProps {
   onRefresh: () => void
   hasSufficientRights: boolean
   isSelected: boolean
-  onNodeClick: (nodeId: string, event: React.MouseEvent) => void
+  onNodeClick: (
+    nodeId: string,
+    event: React.MouseEvent | React.KeyboardEvent
+  ) => void
 }
 
 export function GroupRow({
@@ -50,6 +54,7 @@ export function GroupRow({
   onNodeClick,
 }: GroupRowProps) {
   const [isSaving, setIsSaving] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   // Group name editing state
   const [isEditingGroupName, setIsEditingGroupName] = useState(false)
@@ -166,13 +171,15 @@ export function GroupRow({
         )} />
       )}
       {hasSufficientRights && (
-        <div
+        <button
+          type="button"
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing"
+          aria-label={`Reorder group: ${groupData.name || "Group"}`}
+          className="flex cursor-grab touch-none items-center justify-center rounded-sm p-1 active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden pointer-coarse:min-h-11 pointer-coarse:min-w-11"
         >
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
-        </div>
+          <GripVertical aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
+        </button>
       )}
       <div
         className={cn(
@@ -203,6 +210,7 @@ export function GroupRow({
                   value={editGroupName}
                   onChange={(e) => setEditGroupName(e.target.value)}
                   placeholder="Group name (optional)"
+                  aria-label="Group name"
                   className="h-7 flex-1"
                   autoFocus
                   onKeyDown={(e) => {
@@ -214,10 +222,12 @@ export function GroupRow({
                   }}
                 />
                 <Button
+                  type="button"
                   size="sm"
+                  aria-label="Save group name"
                   onClick={handleSaveGroupName}
                   disabled={isSaving}
-                  className="h-7"
+                  className="h-7 pointer-coarse:min-w-11"
                 >
                   {isSaving ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -226,51 +236,76 @@ export function GroupRow({
                   )}
                 </Button>
                 <Button
+                  type="button"
                   size="sm"
                   variant="ghost"
+                  aria-label="Cancel renaming group"
                   onClick={handleCancelGroupEdit}
-                  className="h-7"
+                  className="h-7 pointer-coarse:min-w-11"
                 >
-                  <X className="h-4 w-4" />
+                  <X aria-hidden="true" className="h-4 w-4" />
                 </Button>
               </div>
             ) : (
               <>
                 <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                   <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
+                    aria-label={`${expanded ? "Collapse" : "Expand"} group: ${groupData.name || "Group"}`}
+                    aria-expanded={expanded}
                     onClick={onToggle}
-                    className="h-6 w-6 p-0"
+                    className="h-6 w-6 p-0 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                   >
                     {expanded ? (
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown aria-hidden="true" className="h-4 w-4" />
                     ) : (
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRight aria-hidden="true" className="h-4 w-4" />
                     )}
                   </Button>
-                  <Layers
-                    className={cn(
-                      "h-4 w-4",
-                      groupData.logicalOperator === "SUM"
-                        ? "text-chart-5"
-                        : "text-info"
-                    )}
-                  />
-                  <span className="min-w-0 font-medium wrap-anywhere">
-                    {groupData.name || "Group"}
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
+                    onKeyDown={(e) => {
+                      // Keyboard equivalent of Ctrl/Cmd+Click: toggle the selection.
+                      if (
+                        e.target === e.currentTarget &&
+                        (e.key === "Enter" || e.key === " ")
+                      ) {
+                        e.preventDefault()
+                        onNodeClick(node.id, e)
+                      }
+                    }}
+                    className="flex min-w-0 items-center gap-2 rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
+                  >
+                    <Layers
+                      aria-hidden="true"
+                      className={cn(
+                        "h-4 w-4 shrink-0",
+                        groupData.logicalOperator === "SUM"
+                          ? "text-chart-5"
+                          : "text-info"
+                      )}
+                    />
+                    <span className="min-w-0 font-medium wrap-anywhere">
+                      {groupData.name || "Group"}
+                    </span>
                   </span>
                   {hasSufficientRights && (
                     <Button
+                      type="button"
                       variant="ghost"
                       size="sm"
+                      aria-label={`Rename group: ${groupData.name || "Group"}`}
                       onClick={(e) => {
                         e.stopPropagation()
                         handleStartGroupEdit()
                       }}
-                      className="h-6 w-6 p-0"
+                      className="h-6 w-6 p-0 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                     >
-                      <Pencil className="h-3 w-3" />
+                      <Pencil aria-hidden="true" className="h-3 w-3" />
                     </Button>
                   )}
                   <GroupOperatorControl
@@ -297,6 +332,7 @@ export function GroupRow({
                                 )
                               )
                             }
+                            aria-label="Minimum required goals"
                             className="h-7 w-16 text-xs"
                             autoFocus
                             onClick={(e) => e.stopPropagation()}
@@ -310,30 +346,34 @@ export function GroupRow({
                             }}
                           />
                           <Button
+                            type="button"
                             size="sm"
+                            aria-label="Save minimum required goals"
                             onClick={(e) => {
                               e.stopPropagation()
                               void handleSaveMinRequired()
                             }}
                             disabled={isSaving}
-                            className="h-7 w-7 p-0"
+                            className="h-7 w-7 p-0 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                           >
                             {isSaving ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
+                              <Loader2 aria-hidden="true" className="h-3 w-3 animate-spin" />
                             ) : (
-                              <Save className="h-3 w-3" />
+                              <Save aria-hidden="true" className="h-3 w-3" />
                             )}
                           </Button>
                           <Button
+                            type="button"
                             size="sm"
                             variant="ghost"
+                            aria-label="Cancel editing minimum required goals"
                             onClick={(e) => {
                               e.stopPropagation()
                               handleCancelMinRequiredEdit()
                             }}
-                            className="h-7 w-7 p-0"
+                            className="h-7 w-7 p-0 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                           >
-                            <X className="h-3 w-3" />
+                            <X aria-hidden="true" className="h-3 w-3" />
                           </Button>
                         </div>
                       ) : (
@@ -346,15 +386,21 @@ export function GroupRow({
                           </Badge>
                           {hasSufficientRights && (
                             <Button
+                              type="button"
                               variant="ghost"
                               size="sm"
+                              aria-label={
+                                groupData.logicalOperator === "SUM"
+                                  ? "Edit group target"
+                                  : "Edit minimum required goals"
+                              }
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleStartMinRequiredEdit()
                               }}
-                              className="h-6 w-6 p-0"
+                              className="h-6 w-6 p-0 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                             >
-                              <Pencil className="h-3 w-3" />
+                              <Pencil aria-hidden="true" className="h-3 w-3" />
                             </Button>
                           )}
                         </div>
@@ -365,24 +411,30 @@ export function GroupRow({
                 {hasSufficientRights && (
                   <div className="ml-auto flex items-center gap-1">
                     <Button
+                      type="button"
                       variant="ghost"
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation()
                         onOpenAddGoal(node.id)
                       }}
-                      className="h-7 text-primary hover:text-primary/80"
+                      className="h-7 text-primary hover:text-primary/80 pointer-coarse:min-h-11"
                     >
-                      <Plus className="h-4 w-4 mr-1" />
+                      <Plus aria-hidden="true" className="h-4 w-4 mr-1" />
                       <span className="text-xs">Add</span>
                     </Button>
                     <Button
+                      type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => onDeleteGroup(node.id)}
-                      className="h-7 text-danger hover:text-danger p-2"
+                      aria-label={`Delete group: ${groupData.name || "Group"}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setConfirmingDelete(true)
+                      }}
+                      className="h-7 text-danger hover:text-danger p-2 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 aria-hidden="true" className="h-4 w-4" />
                     </Button>
                   </div>
                 )}
@@ -391,6 +443,14 @@ export function GroupRow({
           </div>
         </div>
       </div>
+      <ConfirmDeleteDialog
+        open={confirmingDelete}
+        onOpenChange={setConfirmingDelete}
+        title={`Delete group "${groupData.name || "Group"}"?`}
+        description="Only the group is deleted. The goals and groups inside it are kept and move up to the level above."
+        confirmLabel="Delete group"
+        onConfirm={() => onDeleteGroup(node.id)}
+      />
     </div>
   )
 }

@@ -1,20 +1,30 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Plus, Target, Package, Loader2, BarChart2 } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
 import { parseItemName } from "osrs-item-data"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
 import { toast } from "@/hooks/use-toast"
-import { createGoals, createMetricGoal } from "@/app/actions/bingo"
-import type { Goal } from "@/types/model"
+import { addGoal, createGoals, createMetricGoal } from "@/app/actions/bingo"
+import {
+  formatNumber,
+  parseTargetInput,
+  validateNumberInput,
+} from "@/lib/number-input"
+import {
+  METRIC_GOAL_LABEL,
+  getMetricName,
+  getMetricTargetCopy,
+} from "@/lib/osrs-metrics"
 import type { OsrsItem } from "@/types/osrs-items"
+import { AddedGoalsList, type AddedGoalEntry } from "./added-goals-list"
 import { GoalTypePicker } from "./goal-type-picker"
 import { GenericGoalForm } from "./generic-goal-form"
 import { ItemGoalForm } from "./item-goal-form"
@@ -22,236 +32,354 @@ import { MetricGoalForm } from "./metric-goal-form"
 import type { GoalType, MetricType } from "./types"
 import { resolveItemId } from "./utils"
 
+/** How many of the most recently added goals the drawer lists. */
+const MAX_ADDED_SHOWN = 3
+
 interface AddGoalDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   tileId: string
-  /** Group the new Goal is added to; null adds it at the top level. */
+  /** Group the new Goals are added to; null adds them at the top level. */
   parentGroupId: string | null
-  newGoal: Partial<Goal>
-  onNewGoalChange: (field: string, value: unknown) => void
-  /** Creates the generic Goal described by `newGoal`. */
-  onAddGoal: (parentGroupId?: string | null) => void | Promise<void>
-  /** Called after an item or metric Goal was created: close the drawer and clear its parent group. */
-  onCreated: () => void
+  /** Called after Goals were created, to refresh the tree behind the drawer. */
   onRefresh: () => void
+  /** Whether the Board has a Wise Old Man competition (feeds XP / Kills progress). */
+  womLinked: boolean
+  /** Opens the tracker settings, where the competition is linked. */
+  onOpenTrackerSettings?: () => void
 }
 
+/**
+ * Side drawer for adding Goals. It stays open after each add (so several can
+ * be added in a row) and closes with Done. Its state lives in
+ * `AddGoalPanel`, which is unmounted while the drawer is closed, so every
+ * opening starts fresh on the Item type.
+ */
 export function AddGoalDrawer({
   open,
   onOpenChange,
+  onOpenTrackerSettings,
+  ...panelProps
+}: AddGoalDrawerProps) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="z-50 flex w-[min(100vw,540px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[540px]"
+      >
+        <AddGoalPanel
+          {...panelProps}
+          onDone={() => onOpenChange(false)}
+          onOpenTrackerSettings={
+            onOpenTrackerSettings
+              ? () => {
+                  onOpenChange(false)
+                  onOpenTrackerSettings()
+                }
+              : undefined
+          }
+        />
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+interface AddGoalPanelProps {
+  tileId: string
+  parentGroupId: string | null
+  onRefresh: () => void
+  womLinked: boolean
+  onOpenTrackerSettings?: () => void
+  onDone: () => void
+}
+
+function AddGoalPanel({
   tileId,
   parentGroupId,
-  newGoal,
-  onNewGoalChange,
-  onAddGoal,
-  onCreated,
   onRefresh,
-}: AddGoalDrawerProps) {
-  const [goalType, setGoalType] = useState<GoalType>("generic")
+  womLinked,
+  onOpenTrackerSettings,
+  onDone,
+}: AddGoalPanelProps) {
+  const [goalType, setGoalType] = useState<GoalType>("item")
+  // Bumped after each add: remounts the fields so they are empty and the first
+  // one is focused again.
+  const [formVersion, setFormVersion] = useState(0)
+  // A type change made with the arrow keys leaves focus on the radio group so
+  // the arrow keys keep working; every other change focuses the first field.
+  const [focusFirstField, setFocusFirstField] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [added, setAdded] = useState<AddedGoalEntry[]>([])
+  const nextEntryId = useRef(0)
+
+  // Other goal state
+  const [description, setDescription] = useState("")
+  const [genericTarget, setGenericTarget] = useState("1")
 
   // Item goal state
   const [selectedItems, setSelectedItems] = useState<OsrsItem[]>([])
-  const [itemGoalTargetValue, setItemGoalTargetValue] = useState<number>(1)
-  const [isCreatingBulk, setIsCreatingBulk] = useState(false)
+  const [itemTarget, setItemTarget] = useState("1")
 
-  // Metric goal state
+  // XP / Kills goal state
   const [metricType, setMetricType] = useState<MetricType>("skill")
   const [metricName, setMetricName] = useState("")
-  const [metricTargetValue, setMetricTargetValue] = useState<number>(1)
+  const [metricTarget, setMetricTarget] = useState("")
 
-  const handleAddItemGoal = async () => {
-    if (!tileId || selectedItems.length === 0) {
-      toast({
-        title: "Error",
-        description: "Please select at least one item",
-        variant: "destructive",
-      })
-      return
+  const metricCopy = getMetricTargetCopy(metricType)
+
+  /** Why the active form cannot be added yet, or null when it can. */
+  const blockReason = ((): string | null => {
+    switch (goalType) {
+      case "generic": {
+        if (!description.trim()) return "Enter a description to add this goal."
+        const error = validateNumberInput(genericTarget)
+        return error && `Target: ${error}`
+      }
+      case "item": {
+        if (selectedItems.length === 0) {
+          return "Select at least one item to add."
+        }
+        const error = validateNumberInput(itemTarget)
+        return error && `Quantity: ${error}`
+      }
+      case "metric": {
+        if (!metricName) {
+          return `Select a ${metricCopy.nameLabel.toLowerCase()} to add.`
+        }
+        const error = validateNumberInput(metricTarget)
+        return error && `${metricCopy.targetLabel}: ${error}`
+      }
     }
+  })()
 
-    setIsCreatingBulk(true)
+  const recordAdded = (texts: string[]) => {
+    const entries = texts.map((text) => ({ id: nextEntryId.current++, text }))
+    setAdded((prev) => [...entries, ...prev].slice(0, MAX_ADDED_SHOWN))
+    setFormVersion((version) => version + 1)
+    setFocusFirstField(true)
+    onRefresh()
+  }
+
+  const createGeneric = async () => {
+    const targetValue = parseTargetInput(genericTarget)
+    if (targetValue === null) return
+    const result = await addGoal(tileId, {
+      description: description.trim(),
+      targetValue,
+      parentGroupId,
+    })
+    if (!result.success) return result.error
+    recordAdded([`${description.trim()} x${formatNumber(targetValue)}`])
+    setDescription("")
+    setGenericTarget("1")
+  }
+
+  const createItems = async () => {
+    const targetValue = parseTargetInput(itemTarget)
+    if (targetValue === null) return
     const result = await createGoals(
       tileId,
       selectedItems.map((selectedItem) => {
-        const itemId = resolveItemId(selectedItem)
         const parsed = parseItemName(selectedItem.name)
         return {
           type: "item" as const,
-          itemId,
+          itemId: resolveItemId(selectedItem),
           itemName: selectedItem.name,
           baseName: parsed.baseName,
           imageUrl: selectedItem.imageUrl,
-          targetValue: itemGoalTargetValue,
+          targetValue,
           exactVariant: parsed.variant ?? null,
         }
       }),
       { parentGroupId }
     )
-    setIsCreatingBulk(false)
-
     if (!result.success) {
       // Nothing was created, so keep the selection for another attempt.
-      toast({
-        title: "Error",
-        description: result.error || "Failed to create item goals",
-        variant: "destructive",
-      })
-      return
+      return result.error
     }
-
-    const count = result.goals.length
-    toast({
-      title: "Item goals created",
-      description: `Successfully created ${count} item goal${count !== 1 ? "s" : ""}.`,
-    })
-
-    // Reset form
+    recordAdded(
+      selectedItems.map(
+        (item) => `${item.name} x${formatNumber(targetValue)}`
+      )
+    )
     setSelectedItems([])
-    setItemGoalTargetValue(1)
-    setGoalType("generic")
-    onCreated()
-
-    // Refresh tree
-    onRefresh()
+    setItemTarget("1")
   }
 
-  const handleAddMetricGoal = async () => {
-    if (!metricName.trim()) {
-      toast({
-        title: "Error",
-        description: "Please specify a metric name",
-        variant: "destructive",
-      })
-      return
-    }
-
+  const createMetric = async () => {
+    const targetValue = parseTargetInput(metricTarget)
+    if (targetValue === null) return
     const result = await createMetricGoal(
       tileId,
       metricType,
       metricName,
-      metricTargetValue,
+      targetValue,
       undefined,
       parentGroupId
     )
+    if (!result.success) return result.error
+    const unit = targetValue === 1 ? metricCopy.unitSingular : metricCopy.unit
+    recordAdded([
+      `${getMetricName(metricName)}: ${formatNumber(targetValue)}${unit ? ` ${unit}` : ""}`,
+    ])
+    setMetricName("")
+    setMetricTarget("")
+  }
 
-    if (result.success) {
-      toast({
-        title: "Metric goal created",
-        description: "Successfully created a new metric goal.",
-      })
-      setMetricName("")
-      setMetricTargetValue(1)
-      setGoalType("generic")
-      onCreated()
-      onRefresh()
-    } else {
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    // The drawer is portaled; keep the submit from reaching forms further up the React tree.
+    event.stopPropagation()
+    if (isSubmitting || blockReason) return
+
+    setIsSubmitting(true)
+    try {
+      const error =
+        goalType === "generic"
+          ? await createGeneric()
+          : goalType === "item"
+            ? await createItems()
+            : await createMetric()
+      if (error) {
+        toast({
+          title: "Error",
+          description: error,
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error adding goal:", error)
       toast({
         title: "Error",
-        description: result.error || "Failed to create metric goal",
+        description: "Failed to add the goal",
         variant: "destructive",
       })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
+  const selectedCount = selectedItems.length
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[min(100vw,540px)] overflow-y-auto z-50">
-        <SheetHeader className="mb-6">
-          <SheetTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            Add New Goal {parentGroupId ? "to Group" : ""}
-          </SheetTitle>
-        </SheetHeader>
-        <div className="space-y-6 pt-2 pb-6">
-          <GoalTypePicker value={goalType} onChange={setGoalType} />
+    <form
+      onSubmit={handleSubmit}
+      noValidate
+      className="flex min-h-0 flex-1 flex-col"
+    >
+      <SheetHeader className="px-6 pt-6 pr-14 pb-3 text-left">
+        <SheetTitle className="flex items-center gap-2">
+          <Target aria-hidden="true" className="h-5 w-5" />
+          Add New Goal {parentGroupId ? "to Group" : ""}
+        </SheetTitle>
+        <SheetDescription>
+          Add as many goals as you like, then press Done.
+        </SheetDescription>
+      </SheetHeader>
 
-          <div className="rounded-lg border bg-card p-4 shadow-sm">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={goalType}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-6"
-              >
-                {goalType === "generic" && (
-                  <GenericGoalForm
-                    newGoal={newGoal}
-                    onNewGoalChange={onNewGoalChange}
-                  />
-                )}
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 pt-1 pb-4">
+        {/* Above the form, so it stays in view on a short or narrow screen. */}
+        <AddedGoalsList entries={added} />
 
-                {goalType === "item" && (
-                  <ItemGoalForm
-                    selectedItems={selectedItems}
-                    onSelectedItemsChange={setSelectedItems}
-                    targetValue={itemGoalTargetValue}
-                    onTargetValueChange={setItemGoalTargetValue}
-                  />
-                )}
+        <GoalTypePicker
+          value={goalType}
+          onChange={(type, { viaKeyboard }) => {
+            setGoalType(type)
+            setFocusFirstField(!viaKeyboard)
+          }}
+        />
 
-                {goalType === "metric" && (
-                  <MetricGoalForm
-                    metricType={metricType}
-                    onMetricTypeChange={(type) => {
-                      setMetricType(type)
-                      setMetricName("")
-                    }}
-                    metricName={metricName}
-                    onMetricNameChange={setMetricName}
-                    targetValue={metricTargetValue}
-                    onTargetValueChange={setMetricTargetValue}
-                  />
-                )}
-              </motion.div>
-            </AnimatePresence>
+        <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <div
+            key={goalType}
+            className="animate-in fade-in-0 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none"
+          >
+            <div key={formVersion}>
+              {goalType === "generic" && (
+                <GenericGoalForm
+                  description={description}
+                  onDescriptionChange={setDescription}
+                  targetValue={genericTarget}
+                  onTargetValueChange={setGenericTarget}
+                  autoFocus={focusFirstField}
+                />
+              )}
+
+              {goalType === "item" && (
+                <ItemGoalForm
+                  selectedItems={selectedItems}
+                  onSelectedItemsChange={setSelectedItems}
+                  targetValue={itemTarget}
+                  onTargetValueChange={setItemTarget}
+                  autoFocus={focusFirstField}
+                />
+              )}
+
+              {goalType === "metric" && (
+                <MetricGoalForm
+                  metricType={metricType}
+                  onMetricTypeChange={(type) => {
+                    setMetricType(type)
+                    setMetricName("")
+                    setMetricTarget("")
+                  }}
+                  metricName={metricName}
+                  onMetricNameChange={setMetricName}
+                  targetValue={metricTarget}
+                  onTargetValueChange={setMetricTarget}
+                  womLinked={womLinked}
+                  onOpenTrackerSettings={onOpenTrackerSettings}
+                  autoFocus={focusFirstField}
+                />
+              )}
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Sticky Footer for Actions */}
-        <div className="sticky bottom-0 left-0 right-0 border-t bg-background pt-4 pb-2 z-10 -mx-6 px-6 -mb-6">
-          {goalType === "generic" && (
-            <Button
-              onClick={() => onAddGoal(parentGroupId)}
-              className="w-full"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Goal
-            </Button>
-          )}
-          {goalType === "item" && (
-            <Button
-              onClick={handleAddItemGoal}
-              disabled={selectedItems.length === 0 || isCreatingBulk}
-              className="w-full"
-            >
-              {isCreatingBulk ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating {selectedItems.length} Goal{selectedItems.length !== 1 ? "s" : ""}...
-                </>
-              ) : (
-                <>
-                  <Package className="mr-2 h-4 w-4" />
-                  Add Item Goal{selectedItems.length > 1 ? "s" : ""}
-                </>
-              )}
-            </Button>
-          )}
-          {goalType === "metric" && (
-            <Button
-              onClick={handleAddMetricGoal}
-              disabled={!metricName.trim()}
-              className="w-full"
-            >
-              <BarChart2 className="mr-2 h-4 w-4" />
-              Add Metric Goal
-            </Button>
-          )}
+      <div className="shrink-0 space-y-2 border-t bg-background px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        {blockReason && !isSubmitting && (
+          <p
+            id="add-goal-reason"
+            className="text-xs text-muted-foreground"
+          >
+            {blockReason}
+          </p>
+        )}
+        <div className="flex gap-2">
+          <Button
+            type="submit"
+            disabled={!!blockReason || isSubmitting}
+            aria-describedby={blockReason ? "add-goal-reason" : undefined}
+            className="flex-1"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
+                Adding...
+              </>
+            ) : goalType === "item" ? (
+              <>
+                <Package aria-hidden="true" className="mr-2 h-4 w-4" />
+                Add Item Goal{selectedCount > 1 ? `s (${selectedCount})` : ""}
+              </>
+            ) : goalType === "metric" ? (
+              <>
+                <BarChart2 aria-hidden="true" className="mr-2 h-4 w-4" />
+                Add {METRIC_GOAL_LABEL} Goal
+              </>
+            ) : (
+              <>
+                <Plus aria-hidden="true" className="mr-2 h-4 w-4" />
+                Add Goal
+              </>
+            )}
+          </Button>
+          <Button type="button" variant="outline" onClick={onDone}>
+            Done
+          </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </div>
+    </form>
   )
 }

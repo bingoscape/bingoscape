@@ -72,6 +72,9 @@ interface BoardHeaderProps {
   isSwitching?: boolean
   /** The side panel can be collapsed (shown in the shortcuts list). */
   canCollapsePanel?: boolean
+  /** The tracker settings modal is open; owned by the workspace so the Goals tab can open it too. */
+  trackerOpen: boolean
+  onTrackerOpenChange: (open: boolean) => void
   filters: {
     context: TileFilterContext
     active: TileFilter | null
@@ -103,10 +106,11 @@ export function BoardHeader({
   isUpcoming,
   isSwitching = false,
   canCollapsePanel = false,
+  trackerOpen,
+  onTrackerOpenChange,
   filters,
 }: BoardHeaderProps) {
   const [editOpen, setEditOpen] = useState(false)
-  const [trackerOpen, setTrackerOpen] = useState(false)
   const [importExportOpen, setImportExportOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
@@ -229,7 +233,7 @@ export function BoardHeader({
                   <LayoutGrid aria-hidden="true" className="mr-2 h-4 w-4" />
                   {editLayout ? "Done editing layout" : "Edit layout"}
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setTrackerOpen(true)}>
+                <DropdownMenuItem onSelect={() => onTrackerOpenChange(true)}>
                   <LinkIcon aria-hidden="true" className="mr-2 h-4 w-4" />
                   Tracker settings
                 </DropdownMenuItem>
@@ -303,7 +307,7 @@ export function BoardHeader({
             womCompetitionId={activeBingo.womCompetitionId}
             womVerificationCode={activeBingo.womVerificationCode}
             isOpen={trackerOpen}
-            onClose={() => setTrackerOpen(false)}
+            onClose={() => onTrackerOpenChange(false)}
           />
           <BingoImportExportModal
             eventId={eventId}

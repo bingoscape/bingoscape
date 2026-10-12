@@ -5,7 +5,6 @@ import type React from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
 import {
-  addGoal,
   deleteGoal,
   deleteSubmission,
   submitImage,
@@ -14,7 +13,7 @@ import {
   updateTeamTileSubmissionStatus,
   updateTile,
 } from "@/app/actions/bingo"
-import type { Bingo, Goal, SelectableUser, Tile } from "@/types/model"
+import type { Bingo, SelectableUser, Tile } from "@/types/model"
 
 type EditableField =
   | "title"
@@ -47,7 +46,7 @@ interface UseTileWorkspaceArgs {
 }
 
 /**
- * Holds the transient UI state of the Tile panel (edit buffer, new Goal draft,
+ * Holds the transient UI state of the Tile panel (edit buffer,
  * image upload, on-behalf-of selection) and the mutation handlers. The Tile
  * itself always comes from server props; after every mutation the route is
  * refreshed (`router.refresh()`), so there is a single source of truth.
@@ -76,7 +75,6 @@ export function useTileWorkspace({
     [tile, activeEdits]
   )
 
-  const [newGoal, setNewGoal] = useState<Partial<Goal>>({ targetValue: 1 })
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [pastedImage, setPastedImage] = useState<File | null>(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
@@ -147,36 +145,6 @@ export function useTileWorkspace({
       })
     }
   }, [tile, editedTile, refresh])
-
-  const onAddGoal = useCallback(
-    async (parentGroupId?: string | null) => {
-      if (!tile) return
-      const result = await addGoal(tile.id, {
-        description: newGoal.description ?? "",
-        targetValue: newGoal.targetValue ?? Number.NaN,
-        parentGroupId,
-      })
-      if (result.success) {
-        setNewGoal({ targetValue: 1 })
-        toast({
-          title: "Goal added",
-          description: "The goal has been successfully added to the tile.",
-        })
-        refresh()
-      } else {
-        toast({
-          title: "Error",
-          description: result.error ?? "Failed to add goal",
-          variant: "destructive",
-        })
-      }
-    },
-    [tile, newGoal, refresh]
-  )
-
-  const onNewGoalChange = useCallback((field: string, value: unknown) => {
-    setNewGoal((prev) => ({ ...prev, [field]: value }))
-  }, [])
 
   const onDeleteGoal = useCallback(
     async (goalId: string) => {
@@ -430,9 +398,6 @@ export function useTileWorkspace({
     onEditTile,
     onEditorChange,
     onUpdateTile,
-    newGoal,
-    onNewGoalChange,
-    onAddGoal,
     onDeleteGoal,
     onUpdateProgress,
     selectedImage,

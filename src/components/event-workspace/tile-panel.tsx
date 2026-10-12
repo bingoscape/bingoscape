@@ -61,6 +61,8 @@ interface TilePanelProps {
   onSubTabChange: (subTab: TileSubTab) => void
   onSelectTile: (tileId: string) => void
   onClose?: () => void
+  /** Opens the Board's tracker settings (where the Wise Old Man competition is linked). */
+  onOpenTrackerSettings?: () => void
   /** Extra classes for the scroll container (the mobile drawer limits its height). */
   scrollClassName?: string
   scrollStyle?: CSSProperties
@@ -120,6 +122,7 @@ export function TilePanel({
   onSubTabChange,
   onSelectTile,
   onClose,
+  onOpenTrackerSettings,
   scrollClassName,
   scrollStyle,
 }: TilePanelProps) {
@@ -159,6 +162,7 @@ export function TilePanel({
         subTab={subTab}
         onSubTabChange={onSubTabChange}
         onClose={onClose}
+        onOpenTrackerSettings={onOpenTrackerSettings}
       />
     </TilePanelScroll>
   )
@@ -180,6 +184,7 @@ function TilePanelBody({
   subTab: requestedSubTab,
   onSubTabChange,
   onClose,
+  onOpenTrackerSettings,
 }: Omit<
   TilePanelProps,
   "onSelectTile" | "tile" | "scrollClassName" | "scrollStyle"
@@ -414,11 +419,10 @@ function TilePanelBody({
             <GoalsTab
               embedded
               selectedTile={tile}
-              newGoal={workspace.newGoal}
               hasSufficientRights={isManagement}
               onDeleteGoal={workspace.onDeleteGoal}
-              onAddGoal={workspace.onAddGoal}
-              onNewGoalChange={workspace.onNewGoalChange}
+              womLinked={bingo.womCompetitionId != null}
+              onOpenTrackerSettings={onOpenTrackerSettings}
               onGoalsChanged={workspace.refresh}
             />
           </TabsContent>
