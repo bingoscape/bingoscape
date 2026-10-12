@@ -70,9 +70,7 @@ describe("ItemPicker", () => {
     it("shows a friendly hint instead of results below two characters", async () => {
       render(<Harness />)
 
-      expect(
-        screen.getByText(/Type at least 2 characters/)
-      ).toBeInTheDocument()
+      expect(screen.getByText(/Type at least 2 characters/)).toBeInTheDocument()
 
       fireEvent.change(searchField(), { target: { value: "a" } })
       await act(async () => {
@@ -81,9 +79,7 @@ describe("ItemPicker", () => {
 
       expect(mockedSearch).not.toHaveBeenCalled()
       expect(screen.queryByRole("option")).not.toBeInTheDocument()
-      expect(
-        screen.getByText(/Type at least 2 characters/)
-      ).toBeInTheDocument()
+      expect(screen.getByText(/Type at least 2 characters/)).toBeInTheDocument()
     })
 
     it("searches once for a burst of typing, asking for 30 results", async () => {
@@ -107,7 +103,7 @@ describe("ItemPicker", () => {
         "Abyssal whip",
         "Abyssal tentacle",
       ])
-      expect(container.querySelectorAll('[cmdk-item] img')).toHaveLength(2)
+      expect(container.querySelectorAll("[cmdk-item] img")).toHaveLength(2)
       expect(screen.queryByText(/ID:/)).not.toBeInTheDocument()
       expect(screen.queryByText(/4151/)).not.toBeInTheDocument()
     })
@@ -140,9 +136,7 @@ describe("ItemPicker", () => {
       await search("test")
 
       expect(screen.getAllByRole("option")).toHaveLength(30)
-      expect(screen.getByRole("status")).toHaveTextContent(
-        /first 30 matches/i
-      )
+      expect(screen.getByRole("status")).toHaveTextContent(/first 30 matches/i)
     })
 
     it("says when nothing matches", async () => {
@@ -160,9 +154,7 @@ describe("ItemPicker", () => {
 
       fireEvent.change(searchField(), { target: { value: "whip" } })
 
-      expect(
-        await screen.findByText(/The search failed/)
-      ).toBeInTheDocument()
+      expect(await screen.findByText(/The search failed/)).toBeInTheDocument()
     })
 
     it("shows that it is searching until the results arrive", async () => {
@@ -247,8 +239,12 @@ describe("ItemPicker", () => {
       fireEvent.click(screen.getByRole("option", { name: "Abyssal whip" }))
       fireEvent.click(screen.getByRole("option", { name: /^Abyssal whip/ }))
 
-      expect(screen.queryByRole("heading", { name: /Selected/ })).not.toBeInTheDocument()
-      expect(screen.getByRole("option", { name: "Abyssal whip" })).toBeInTheDocument()
+      expect(
+        screen.queryByRole("heading", { name: /Selected/ })
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByRole("option", { name: "Abyssal whip" })
+      ).toBeInTheDocument()
     })
 
     it("keeps several items, in the order they were picked", async () => {
@@ -311,7 +307,9 @@ describe("ItemPicker", () => {
       fireEvent.click(
         screen.getByRole("button", { name: "Remove Abyssal whip" })
       )
-      expect(live()).toHaveTextContent("Abyssal whip removed. 0 items selected.")
+      expect(live()).toHaveTextContent(
+        "Abyssal whip removed. 0 items selected."
+      )
     })
   })
 
@@ -322,6 +320,20 @@ describe("ItemPicker", () => {
       button.focus()
       return button
     }
+
+    it("names the highlighted result as the active descendant of the search field", async () => {
+      render(<Harness />)
+      await search("abyssal")
+
+      const listbox = screen.getByRole("listbox")
+      expect(searchField()).toHaveAttribute("aria-controls", listbox.id)
+      await waitFor(() =>
+        expect(searchField()).toHaveAttribute(
+          "aria-activedescendant",
+          screen.getByRole("option", { name: /^Abyssal whip/ }).id
+        )
+      )
+    })
 
     it("selects the highlighted result with Enter and returns focus to the search", async () => {
       render(<Harness />)
@@ -358,7 +370,9 @@ describe("ItemPicker", () => {
       fireEvent.keyDown(searchField(), { key: "Enter" })
 
       expect(quantityInput("Abyssal tentacle")).toHaveValue("1")
-      expect(screen.queryByRole("textbox", { name: "Quantity of Abyssal whip" })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("textbox", { name: "Quantity of Abyssal whip" })
+      ).not.toBeInTheDocument()
     })
 
     it("highlights the first result of a new search, so Enter works after typing", async () => {
@@ -417,7 +431,9 @@ describe("ItemPicker", () => {
       expect(screen.getByRole("status")).toHaveTextContent("Searching...")
       fireEvent.keyDown(searchField(), { key: "Enter" })
 
-      expect(screen.queryByRole("heading", { name: /Selected/ })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("heading", { name: /Selected/ })
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -450,7 +466,9 @@ describe("ItemPicker", () => {
       fireEvent.click(screen.getByRole("option", { name: "Abyssal whip" }))
       fireEvent.click(screen.getByRole("option", { name: /^Abyssal tentacle/ }))
 
-      fireEvent.change(quantityInput("Abyssal whip"), { target: { value: "2" } })
+      fireEvent.change(quantityInput("Abyssal whip"), {
+        target: { value: "2" },
+      })
       fireEvent.change(quantityInput("Abyssal tentacle"), {
         target: { value: "7" },
       })
@@ -497,7 +515,9 @@ describe("ItemPicker", () => {
       })
 
       fireEvent.click(
-        screen.getByRole("button", { name: "Increase quantity of Abyssal whip" })
+        screen.getByRole("button", {
+          name: "Increase quantity of Abyssal whip",
+        })
       )
 
       expect(quantityInput("Abyssal whip")).toHaveValue("2001")
@@ -506,11 +526,16 @@ describe("ItemPicker", () => {
     it("shows an inline error for an invalid quantity once the field is left", async () => {
       await withWhip()
 
-      fireEvent.change(quantityInput("Abyssal whip"), { target: { value: "0" } })
+      fireEvent.change(quantityInput("Abyssal whip"), {
+        target: { value: "0" },
+      })
       fireEvent.blur(quantityInput("Abyssal whip"))
 
       expect(screen.getByRole("alert")).toHaveTextContent(/greater than 0/)
-      expect(quantityInput("Abyssal whip")).toHaveAttribute("aria-invalid", "true")
+      expect(quantityInput("Abyssal whip")).toHaveAttribute(
+        "aria-invalid",
+        "true"
+      )
     })
 
     it("names the quantity field for screen readers without a visible label", async () => {
@@ -518,7 +543,9 @@ describe("ItemPicker", () => {
 
       const input = quantityInput("Abyssal whip")
       expect(input).toHaveAttribute("inputmode", "numeric")
-      expect(screen.getByText("Quantity of Abyssal whip")).toHaveClass("sr-only")
+      expect(screen.getByText("Quantity of Abyssal whip")).toHaveClass(
+        "sr-only"
+      )
     })
   })
 
@@ -532,7 +559,9 @@ describe("ItemPicker", () => {
       document.body.appendChild(stray)
       stray.focus()
 
-      fireEvent.click(screen.getByRole("button", { name: "Remove Abyssal whip" }))
+      fireEvent.click(
+        screen.getByRole("button", { name: "Remove Abyssal whip" })
+      )
 
       expect(
         screen.queryByRole("textbox", { name: "Quantity of Abyssal whip" })
@@ -558,8 +587,12 @@ describe("ItemPicker", () => {
       fireEvent.click(screen.getByRole("button", { name: "Clear all" }))
 
       expect(onChange).toHaveBeenLastCalledWith([])
-      expect(screen.queryByRole("heading", { name: /Selected/ })).not.toBeInTheDocument()
-      expect(screen.queryByRole("button", { name: "Clear all" })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("heading", { name: /Selected/ })
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", { name: "Clear all" })
+      ).not.toBeInTheDocument()
       expect(searchField()).toHaveFocus()
       stray.remove()
     })
@@ -567,14 +600,22 @@ describe("ItemPicker", () => {
     it("shows the count and Clear all only while something is selected", async () => {
       render(<Harness />)
 
-      expect(screen.queryByRole("heading", { name: /Selected/ })).not.toBeInTheDocument()
-      expect(screen.queryByRole("button", { name: "Clear all" })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("heading", { name: /Selected/ })
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", { name: "Clear all" })
+      ).not.toBeInTheDocument()
 
       await search("whip")
       fireEvent.click(screen.getByRole("option", { name: "Abyssal whip" }))
 
-      expect(screen.getByRole("heading", { name: "Selected (1)" })).toBeInTheDocument()
-      expect(screen.getByRole("button", { name: "Clear all" })).toBeInTheDocument()
+      expect(
+        screen.getByRole("heading", { name: "Selected (1)" })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: "Clear all" })
+      ).toBeInTheDocument()
     })
   })
 
@@ -594,9 +635,13 @@ describe("ItemPicker", () => {
       const first = within(rows[0]!)
       expect(first.getByText("Abyssal whip")).toBeInTheDocument()
       expect(first.getByRole("textbox")).toHaveValue("4")
-      expect(first.getByRole("button", { name: "Remove Abyssal whip" })).toBeInTheDocument()
       expect(
-        within(rows[1]!).getByRole("button", { name: "Remove Dragon dagger (p)" })
+        first.getByRole("button", { name: "Remove Abyssal whip" })
+      ).toBeInTheDocument()
+      expect(
+        within(rows[1]!).getByRole("button", {
+          name: "Remove Dragon dagger (p)",
+        })
       ).toBeInTheDocument()
     })
   })

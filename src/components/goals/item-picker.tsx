@@ -10,6 +10,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
+import { useCmdkActiveDescendant } from "@/hooks/use-cmdk-active-descendant"
 import { useOsrsItemSearch } from "@/hooks/use-osrs-item-search"
 import { cn } from "@/lib/utils"
 import type { OsrsItem } from "@/types/osrs-items"
@@ -49,6 +50,7 @@ export function ItemPicker({
   const [highlighted, setHighlighted] = useState("")
   const [pasteOpen, setPasteOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
   const pasteButtonRef = useRef<HTMLButtonElement>(null)
   const { ready, loading, items, failed } = useOsrsItemSearch(query)
 
@@ -56,6 +58,14 @@ export function ItemPicker({
   const activeKey = resultKeys.includes(highlighted)
     ? highlighted
     : (resultKeys[0] ?? "")
+
+  useCmdkActiveDescendant(
+    searchRef,
+    listRef,
+    activeKey,
+    items,
+    ready && items.length > 0
+  )
 
   const selectedIds = new Set(value.map((entry) => resolveItemId(entry.item)))
 
@@ -175,6 +185,7 @@ export function ItemPicker({
             // Bounded so the on-screen keyboard leaves room; it scrolls on its
             // own and hands over to the drawer once it reaches its end.
             <CommandList
+              ref={listRef}
               aria-busy={loading}
               className={cn(
                 "max-h-[min(16rem,40dvh)]",

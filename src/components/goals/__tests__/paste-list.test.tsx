@@ -627,6 +627,10 @@ describe("Paste a list", () => {
         await waitFor(() =>
           expect(mockedSearch).toHaveBeenCalledWith("Abysal whip", 30)
         )
+        // Let the search settle inside act, so its state update is not stray.
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 0))
+        })
       })
 
       it("searches for the text without a quantity", async () => {
@@ -636,6 +640,12 @@ describe("Paste a list", () => {
         fireEvent.click(screen.getByRole("button", { name: "Search instead" }))
 
         expect(searchField()).toHaveValue("Abysal whip")
+        await waitFor(() =>
+          expect(mockedSearch).toHaveBeenCalledWith("Abysal whip", 30)
+        )
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 0))
+        })
       })
 
       it("removes the line with Remove", async () => {
