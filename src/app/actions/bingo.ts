@@ -25,6 +25,7 @@ import {
   users,
   events,
   goalGroups,
+  type ShipRule,
 } from "@/server/db/schema"
 import type { UUID } from "crypto"
 import { asc, eq, inArray, and, gt } from "drizzle-orm"
@@ -49,6 +50,7 @@ import {
 import { isBlindBoard } from "@/server/blind-board"
 import { isBingoBlindForViewer } from "@/server/blind-board-viewer"
 import {
+  applyShipRulesUpdate,
   assertBattleshipLayoutEditable,
   assertEventFitsBattleship,
   assertTilesCarryNoShip,
@@ -56,6 +58,7 @@ import {
   battleshipErrorMessage,
   defaultShipRules,
   insertBingoShipRules,
+  isShipRuleList,
   parseShipRulesJson,
 } from "@/server/battleship"
 import { validateShipRulesFitBoard } from "@/lib/ship-rules"
@@ -2207,6 +2210,11 @@ interface PatternBonusData {
 
 interface UpdateBingoDataWithBonuses extends UpdateBingoData {
   patternBonuses?: PatternBonusData
+  /**
+   * New fleet rules of a battleship board. Applied in the same transaction as
+   * the other settings and clears every team's placed fleet.
+   */
+  shipRules?: ShipRule[]
 }
 
 export async function updateBingo(
@@ -2215,6 +2223,10 @@ export async function updateBingo(
 ) {
   try {
     await requireBingoAdmin(bingoId)
+    if (data.shipRules !== undefined && !isShipRuleList(data.shipRules)) {
+      return { success: false, error: "Invalid ship rules" }
+    }
+    let clearedTeams: number | undefined
     await db.transaction(async (tx) => {
       if (data.bingoType !== undefined) {
         const [current] = await tx
@@ -2343,12 +2355,20 @@ export async function updateBingo(
           }
         }
       }
+
+      if (data.shipRules !== undefined) {
+        ;({ clearedTeams } = await applyShipRulesUpdate(
+          tx,
+          bingoId,
+          data.shipRules
+        ))
+      }
     })
 
     // Revalidate the bingo page
     revalidatePath("/events/[id]", "layout")
 
-    return { success: true }
+    return { success: true, clearedTeams }
   } catch (error) {
     logger.error({ error }, "Error updating bingo")
     return {

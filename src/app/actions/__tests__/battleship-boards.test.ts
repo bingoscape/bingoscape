@@ -22,6 +22,7 @@ import {
   getBingoShipRules,
 } from "@/server/battleship"
 import {
+  battleshipShips,
   bingos,
   columnBonuses,
   rowBonuses,
@@ -90,6 +91,14 @@ async function boardSize(bingoId: string) {
     columns: board!.columns,
     tiles: boardTiles.length,
   }
+}
+
+async function shipCount(bingoId: string) {
+  const ships = await db
+    .select()
+    .from(battleshipShips)
+    .where(eq(battleshipShips.bingoId, bingoId))
+  return ships.length
 }
 
 let fx: BattleshipFixture
@@ -243,6 +252,115 @@ describe("updateBingo and the battleship type", () => {
     } finally {
       await standard.cleanup()
     }
+  })
+
+  describe("with shipRules", () => {
+    const newRules = [
+      { length: 2, count: 1 },
+      { length: 2, count: 1 },
+      { length: 3, count: 1 },
+    ]
+
+    it("saves the settings and the rules together and clears every fleet", async () => {
+      signInAs(fx.leaderAId)
+      await saveTeamShipPlacements(
+        fx.bingoId,
+        fx.teamAId,
+        validFleet(fx.tileIds)
+      )
+      signInAs(fx.managerId)
+
+      const result = await updateBingo(fx.bingoId, {
+        ...data(undefined),
+        shipRules: newRules,
+      })
+      expect(result).toEqual({ success: true, clearedTeams: 1 })
+
+      expect(await getBingoShipRules(fx.bingoId)).toEqual([
+        { length: 2, count: 2 },
+        { length: 3, count: 1 },
+      ])
+      const board = await db.query.bingos.findFirst({
+        where: eq(bingos.id, fx.bingoId),
+      })
+      expect(board?.title).toBe("Renamed")
+      expect(await shipCount(fx.bingoId)).toBe(0)
+    })
+
+    it("rolls back the other settings when the rules are refused", async () => {
+      signInAs(fx.leaderAId)
+      await saveTeamShipPlacements(
+        fx.bingoId,
+        fx.teamAId,
+        validFleet(fx.tileIds)
+      )
+      signInAs(fx.managerId)
+
+      const result = await updateBingo(fx.bingoId, {
+        ...data(undefined),
+        shipRules: [{ length: 3, count: 4 }],
+      })
+      expect(result.success).toBe(false)
+
+      const board = await db.query.bingos.findFirst({
+        where: eq(bingos.id, fx.bingoId),
+      })
+      expect(board?.title).toBe("Battleship")
+      expect(await getBingoShipRules(fx.bingoId)).toEqual([
+        { length: 2, count: 1 },
+        { length: 3, count: 1 },
+      ])
+      expect(await shipCount(fx.bingoId)).toBe(2)
+    })
+
+    it("refuses new rules once the event started, and keeps the other settings", async () => {
+      setClock(new Date(fx.startDate.getTime()))
+      const result = await updateBingo(fx.bingoId, {
+        ...data(undefined),
+        shipRules: newRules,
+      })
+      expect(result.success).toBe(false)
+      expect(result).toMatchObject({
+        error: expect.stringMatching(/before the event starts/),
+      })
+      const board = await db.query.bingos.findFirst({
+        where: eq(bingos.id, fx.bingoId),
+      })
+      expect(board?.title).toBe("Battleship")
+    })
+
+    it("rejects malformed rules and rules for another board type", async () => {
+      expect(
+        await updateBingo(fx.bingoId, {
+          ...data(undefined),
+          shipRules: [{ length: 0, count: 1 }],
+        })
+      ).toEqual({ success: false, error: "Invalid ship rules" })
+
+      const standard = await createBattleshipFixture({ bingoType: "standard" })
+      try {
+        signInAs(standard.managerId)
+        const result = await updateBingo(standard.bingoId, {
+          ...data(undefined),
+          shipRules: newRules,
+        })
+        expect(result).toEqual({
+          success: false,
+          error: "Not a battleship board",
+        })
+      } finally {
+        await standard.cleanup()
+      }
+    })
+
+    it("is manager-only", async () => {
+      signInAs(fx.leaderAId)
+      const result = await updateBingo(fx.bingoId, {
+        ...data(undefined),
+        shipRules: newRules,
+      })
+      expect(result.success).toBe(false)
+    })
   })
 
   it("allows editing a battleship board without changing its type", async () => {
