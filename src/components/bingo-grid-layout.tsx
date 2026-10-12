@@ -4,6 +4,7 @@ import React, { memo, useCallback, useMemo, useState } from "react"
 import { BingoTile } from "./bingo-tile"
 import { FitBoard } from "@/components/event-workspace/fit-board"
 import { moveGridFocusSkipping } from "@/lib/board-fit"
+import { markForTile, type BattleshipMarkSets } from "@/lib/battleship-marks"
 import type { EventRole } from "@/app/actions/events"
 import type { Tile } from "@/types/model"
 
@@ -25,6 +26,11 @@ interface BingoGridLayoutProps {
   /** Escape key inside the grid. */
   onClearSelection?: () => void
   readOnly?: boolean
+  /**
+   * Battleship: hits, misses and sunk ships of the viewed Team, precomputed by
+   * the workspace. Absent on every other Board.
+   */
+  marks?: BattleshipMarkSets
 }
 
 /**
@@ -54,6 +60,7 @@ export const BingoGridLayout = memo(
         dimmedTileIds,
         onClearSelection,
         readOnly = false,
+        marks,
       },
       ref
     ) => {
@@ -148,6 +155,7 @@ export const BingoGridLayout = memo(
           highlighted={highlightedTiles.includes(tile.index)}
           readOnly={readOnly}
           gridIndex={index}
+          mark={markForTile(tile.id, marks)}
         />
       )
 

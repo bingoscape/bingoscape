@@ -4,6 +4,8 @@ import React from "react"
 import Image from "next/image"
 import { CheckCircle2, Clock, Lock } from "lucide-react"
 import type { Tile } from "@/types/model"
+import { BattleshipMarkBadge } from "@/components/battleship-mark-badge"
+import { MARK_LABEL, type BattleshipMark } from "@/lib/battleship-marks"
 import getRandomFrog from "@/lib/getRandomFrog"
 import { getTileTeamStatus } from "@/lib/tile-status"
 import { cn } from "@/lib/utils"
@@ -34,6 +36,11 @@ interface BingoTileProps {
   readOnly?: boolean
   /** Index in the tiles array, used by the grid for roving focus. */
   gridIndex?: number
+  /**
+   * Battleship: the viewer's Team hit, missed or sank here. Ignored for blind
+   * Tiles, which can never carry a marker.
+   */
+  mark?: BattleshipMark | null
 }
 
 const STATUS_LABEL = {
@@ -64,6 +71,7 @@ export const BingoTile = React.memo(function BingoTile({
   highlighted = false,
   readOnly = false,
   gridIndex,
+  mark = null,
 }: BingoTileProps) {
   const isManagement = userRole === "management" || userRole === "admin"
 
@@ -80,6 +88,34 @@ export const BingoTile = React.memo(function BingoTile({
         data-grid-index={gridIndex}
         className="rounded-sm"
       />
+    )
+  }
+
+  // Blind Tiles (battleship, before the start) keep their cell and their place
+  // in the keyboard order, but have nothing to open: no content, no status.
+  if (tile.isBlind) {
+    const position =
+      row !== undefined && column !== undefined
+        ? `Row ${row}, column ${column}: `
+        : ""
+    return (
+      <div
+        role="gridcell"
+        aria-label={`${position}${tile.title}, objective hidden until the event starts`}
+        aria-disabled="true"
+        tabIndex={tabIndex}
+        data-grid-index={gridIndex}
+        data-blind="true"
+        className={cn(
+          "osrs-tile osrs-slot relative flex h-full w-full cursor-default items-center justify-center overflow-hidden rounded-sm border-[3px]",
+          "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring focus-visible:outline-solid",
+          dimmed && "opacity-30 saturate-50"
+        )}
+      >
+        <span className="osrs-tile-text text-muted-foreground line-clamp-2 px-[6%] text-center font-display leading-tight @max-[43px]/tile:hidden">
+          {tile.title}
+        </span>
+      </div>
     )
   }
 
@@ -105,7 +141,7 @@ export const BingoTile = React.memo(function BingoTile({
       : ""
   const label = tile.isHidden
     ? `${position}Hidden tile${canToggleReveal ? ", activate to reveal" : ""}`
-    : `${position}${tile.title}, ${tile.weight} XP, ${statusText}${tierLocked ? ", locked" : ""}`
+    : `${position}${tile.title}, ${tile.weight} XP, ${statusText}${tierLocked ? ", locked" : ""}${mark ? `, ${MARK_LABEL[mark].toLowerCase()}` : ""}`
 
   return (
     <div
@@ -137,6 +173,9 @@ export const BingoTile = React.memo(function BingoTile({
               : submissionState
                 ? "border-pending"
                 : ""),
+        (mark === "hit" || mark === "sunk") &&
+          "ring-2 ring-inset ring-destructive",
+        mark === "miss" && "saturate-50",
         selected && "z-10 ring-2 ring-osrs-yellow ring-inset",
         highlighted && "ring-2 ring-destructive",
         tierLocked && "opacity-60 saturate-50",
@@ -204,6 +243,15 @@ export const BingoTile = React.memo(function BingoTile({
             >
               <Clock className="size-[70%]" aria-hidden="true" />
             </div>
+          )}
+
+          {/* Battleship result (bottom-left; top-left is the XP number) */}
+          {mark && (
+            <BattleshipMarkBadge
+              mark={mark}
+              labelled
+              className="absolute bottom-[4%] left-[4%] z-10 size-[max(12px,22cqw)]"
+            />
           )}
 
           {/* XP shown like an item quantity; dropped on very small slots */}

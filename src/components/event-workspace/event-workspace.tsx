@@ -56,6 +56,8 @@ import {
   type WorkspacePrefs,
 } from "@/lib/workspace-prefs"
 import type { BattleshipWorkspaceInfo } from "@/lib/battleship-workspace"
+import { SunkAnnouncement } from "@/components/event-workspace/sunk-announcement"
+import { markForTile, marksForViewedTeam } from "@/lib/battleship-marks"
 import type { Bingo, SelectableUser, Team, Tile } from "@/types/model"
 
 /** What the workspace needs from an Event (the public view has no full Event). */
@@ -199,8 +201,28 @@ export function EventWorkspace({
     const tile = tiles.find((t) => t.id === params.tile)
     if (!tile) return null
     if (tile.isHidden && !isManagement) return null
+    // Blind Tiles (battleship before the start) have nothing to show.
+    if (tile.isBlind) return null
     return tile
   }, [params.tile, tiles, isManagement])
+
+  // Hits, misses and sunk ships belong to the viewer's own Team and are only
+  // drawn on that Team's view (see `marksForViewedTeam`).
+  const battleshipBoard =
+    !readOnly &&
+    bingo?.bingoType === "battleship" &&
+    battleship?.bingoId === bingo.id
+      ? battleship
+      : null
+  const markSets = useMemo(
+    () =>
+      marksForViewedTeam(
+        battleshipBoard?.marks,
+        currentTeam?.id,
+        effectiveTeamId
+      ),
+    [battleshipBoard, currentTeam?.id, effectiveTeamId]
+  )
 
   const [editLayout, setEditLayout] = useState(false)
   const [highlightedTiles, setHighlightedTiles] = useState<number[]>([])
@@ -384,6 +406,11 @@ export function EventWorkspace({
         gameType={event.gameType}
         isProgressionBingo={bingo.bingoType === "progression"}
         tierLock={tierLock}
+        battleshipMark={
+          battleshipBoard && selectedTile
+            ? markForTile(selectedTile.id, markSets)
+            : null
+        }
         readOnly={readOnly}
         subTab={tileSubTab}
         onSubTabChange={setTileSubTab}
@@ -462,6 +489,13 @@ export function EventWorkspace({
               }
             />
 
+            {battleshipBoard && (
+              <SunkAnnouncement
+                key={battleshipBoard.bingoId}
+                sunkTileIds={battleshipBoard.marks.sunkTileIds}
+              />
+            )}
+
             {editLayout && isManagement && (
               <LayoutToolbar
                 bingoId={bingo.id}
@@ -527,6 +561,7 @@ export function EventWorkspace({
                   dimmedTileIds={dimmedTileIds}
                   onSelectTile={handleSelectTile}
                   readOnly={readOnly}
+                  marks={battleshipBoard ? markSets : undefined}
                 />
               )}
             </div>

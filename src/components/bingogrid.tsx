@@ -10,6 +10,7 @@ import Sortable, { type SortableEvent } from "sortablejs"
 import { BingoGridLayout } from "./bingo-grid-layout"
 import { ProgressionBingoGrid } from "./progression-bingo-grid"
 import type { BoardTierData } from "@/lib/tiers"
+import type { BattleshipMarkSets } from "@/lib/battleship-marks"
 
 interface BingoGridProps {
   bingo: Bingo
@@ -28,6 +29,8 @@ interface BingoGridProps {
   tierData?: BoardTierData | null
   /** Public view: no placeholder toggling. */
   readOnly?: boolean
+  /** Battleship: the viewed Team's hits, misses and sunk ships. */
+  marks?: BattleshipMarkSets
 }
 
 /**
@@ -48,6 +51,7 @@ export default function BingoGrid({
   onSelectTile,
   tierData,
   readOnly = false,
+  marks,
 }: BingoGridProps) {
   const [tiles, setTiles] = useState<Tile[]>(bingo.tiles ?? [])
   // Re-sync local tiles (needed for drag-to-swap) when fresh data arrives.
@@ -141,6 +145,8 @@ export default function BingoGrid({
 
   const handleTileClick = useCallback(
     async (tile: Tile) => {
+      // Blind Tiles have nothing to open.
+      if (tile.isBlind) return
       if (tile.isHidden && !isLayoutLocked && hasSufficientRights) {
         await handleTogglePlaceholder(tile)
         return
@@ -188,6 +194,7 @@ export default function BingoGrid({
       dimmedTileIds={isLayoutLocked ? dimmedTileIds : undefined}
       onClearSelection={() => onSelectTile(null)}
       readOnly={readOnly}
+      marks={marks}
     />
   )
 }
