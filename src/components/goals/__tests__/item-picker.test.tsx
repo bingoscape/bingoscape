@@ -52,7 +52,7 @@ const searchField = () =>
 /** Types a query and waits for the debounced search to show its results. */
 async function search(query: string) {
   fireEvent.change(searchField(), { target: { value: query } })
-  return screen.findByRole("option", {}, { timeout: 2000 })
+  return screen.findAllByRole("option", {}, { timeout: 2000 })
 }
 
 const quantityInput = (itemName: string) =>
