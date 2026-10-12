@@ -259,6 +259,24 @@ export async function getLedTeamId(
   return row?.teamId ?? null
 }
 
+/**
+ * The Team the signed-in user plays in for this Event, or null (anonymous,
+ * not on a Team). Derived from the session, never from caller input.
+ */
+export async function getViewerTeamId(eventId: string): Promise<string | null> {
+  const session = await getServerAuthSession()
+  if (!session?.user) return null
+  const [row] = await db
+    .select({ teamId: teamMembers.teamId })
+    .from(teamMembers)
+    .innerJoin(teams, eq(teams.id, teamMembers.teamId))
+    .where(
+      and(eq(teamMembers.userId, session.user.id), eq(teams.eventId, eventId))
+    )
+    .limit(1)
+  return row?.teamId ?? null
+}
+
 export type BattleshipBoardState = {
   /** Tiles the viewer's team completed that carry an opponent ship. */
   hitTileIds: string[]

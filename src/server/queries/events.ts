@@ -19,6 +19,8 @@ import {
 import { logger } from "@/lib/logger"
 import { redactHiddenTiles } from "@/lib/hidden-tiles"
 import { applyBlindBoard, isBlindBoard } from "@/server/blind-board"
+import { getViewerTeamId } from "@/server/battleship"
+import { keepOwnTeamRecords } from "@/lib/battleship-privacy"
 import { EventData, GetEventByIdResult } from "@/app/actions/events"
 import { getUserRole } from "@/app/actions/events"
 
@@ -39,7 +41,9 @@ export const getEventById = cache(async function getEventById(
                   submissions: {
                     with: {
                       image: true,
-                      user: { columns: { id: true, name: true, runescapeName: true } },
+                      user: {
+                        columns: { id: true, name: true, runescapeName: true },
+                      },
                     },
                   },
                   team: true,
@@ -76,6 +80,11 @@ export const getEventById = cache(async function getEventById(
   // carries an explicit `isBlind`.
   const isManager = userRole === "admin" || userRole === "management"
   if (!isManager) {
+    // Battleship: only the viewer's own Team's records, so nobody can read what
+    // the opponent completed (and therefore hit) from the page data.
+    const ownTeamId = event.bingos.some((b) => b.bingoType === "battleship")
+      ? await getViewerTeamId(eventId)
+      : null
     event.bingos = event.bingos
       .filter((b) => b.visible === true)
       .map((b) => {
@@ -88,7 +97,14 @@ export const getEventById = cache(async function getEventById(
           ...b,
           // The tracker verification code lets its holder edit the competition.
           womVerificationCode: null,
-          tiles: applyBlindBoard(redactHiddenTiles(b.tiles), blind),
+          tiles: applyBlindBoard(
+            redactHiddenTiles(
+              b.bingoType === "battleship"
+                ? b.tiles.map((t) => keepOwnTeamRecords(t, ownTeamId))
+                : b.tiles
+            ),
+            blind
+          ),
         }
       })
   } else {
