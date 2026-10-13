@@ -1,6 +1,11 @@
 import { fireEvent, render, screen, within } from "@testing-library/react"
 import { BingoGridLayout } from "@/components/bingo-grid-layout"
-import { toMarkSets, type BattleshipMarkSets } from "@/lib/battleship-marks"
+import {
+  shipSegmentsByTile,
+  toMarkSets,
+  type BattleshipMarkSets,
+  type BattleshipOwnShip,
+} from "@/lib/battleship-marks"
 import type { Tile } from "@/types/model"
 
 const TEAM = "team-a"
@@ -278,5 +283,191 @@ describe("blind Tiles on the Board", () => {
     const { onTileClick } = renderGrid([blind(0), tile(1, { completed: true })])
     fireEvent.click(cell(/Objective 2/))
     expect(onTileClick).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("own ships on the Board", () => {
+  // 3 columns: a horizontal ship of 3 on row 1, a vertical ship of 2 below its
+  // right end, and a single-tile ship.
+  const tiles = Array.from({ length: 9 }, (_, index) => tile(index))
+  const fleet: BattleshipOwnShip[] = [
+    { length: 3, tileIds: ["tile-0", "tile-1", "tile-2"] },
+    { length: 2, tileIds: ["tile-5", "tile-8"] },
+    { length: 1, tileIds: ["tile-6"] },
+  ]
+  const segments = shipSegmentsByTile(fleet, 3, tiles)
+  const hull = (name: RegExp | string) =>
+    cell(name).querySelector<HTMLElement>("[data-own-ship]")
+
+  const renderFleet = (
+    props: Partial<React.ComponentProps<typeof BingoGridLayout>> = {}
+  ) =>
+    renderGrid(tiles, {
+      columns: 3,
+      rows: 3,
+      ownShips: segments,
+      showOwnShips: true,
+      ...props,
+    })
+
+  it("draws a decorative hull only on ship tiles and only while the toggle is on", () => {
+    const { container, unmount } = renderFleet()
+    expect(container.querySelectorAll("[data-own-ship]")).toHaveLength(6)
+    const first = hull(/Objective 1,/)!
+    expect(first).toHaveAttribute("aria-hidden", "true")
+    expect(first).toHaveClass(
+      "pointer-events-none",
+      "absolute",
+      "inset-[3px]",
+      "z-[4]",
+      "border-2",
+      "border-info",
+      "bg-info/15",
+      "@max-[43px]/tile:hidden"
+    )
+    expect(first.className).not.toMatch(/transition|animate/)
+    expect(hull(/Objective 4,/)).not.toBeInTheDocument()
+    unmount()
+
+    const off = renderFleet({ showOwnShips: false })
+    expect(
+      off.container.querySelector("[data-own-ship]")
+    ).not.toBeInTheDocument()
+  })
+
+  it("draws no hull on a board without own ships", () => {
+    const { container } = renderGrid(tiles, { columns: 3, rows: 3 })
+    expect(container.querySelector("[data-own-ship]")).not.toBeInTheDocument()
+  })
+
+  it("appends the ship to the accessible name, with the toggle on or off", () => {
+    const { unmount } = renderFleet()
+    expect(
+      screen.getByRole("gridcell", {
+        name: "Row 1, column 1: Objective 1, 10 XP, not started, your ship (length 3)",
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("gridcell", {
+        name: "Row 2, column 1: Objective 4, 10 XP, not started",
+      })
+    ).toBeInTheDocument()
+    unmount()
+
+    renderFleet({ showOwnShips: false })
+    expect(
+      screen.getByRole("gridcell", {
+        name: "Row 3, column 1: Objective 7, 10 XP, not started, your ship (length 1)",
+      })
+    ).toBeInTheDocument()
+    expect(document.querySelector("[data-own-ship]")).not.toBeInTheDocument()
+  })
+
+  it("puts the ship text after the result text", () => {
+    renderGrid([tile(0, { completed: true }), tile(1)], {
+      columns: 2,
+      rows: 1,
+      marks: marks({ hit: ["tile-0"] }),
+      ownShips: shipSegmentsByTile(
+        [{ length: 2, tileIds: ["tile-0", "tile-1"] }],
+        2,
+        [tile(0), tile(1)]
+      ),
+      showOwnShips: true,
+    })
+    expect(
+      screen.getByRole("gridcell", {
+        name: "Row 1, column 1: Objective 1, 10 XP, completed, hit, your ship (length 2)",
+      })
+    ).toBeInTheDocument()
+  })
+
+  it("omits the border on sides that face the same ship", () => {
+    renderFleet()
+    // Horizontal ship: left end, middle, right end.
+    const left = hull(/Objective 1,/)!
+    expect(left).toHaveClass(
+      "border-r-0",
+      "right-0",
+      "rounded-tl-sm",
+      "rounded-bl-sm"
+    )
+    expect(left).not.toHaveClass("border-l-0")
+    expect(left).not.toHaveClass("rounded-tr-sm")
+    expect(left).not.toHaveClass("rounded-br-sm")
+
+    const middle = hull(/Objective 2,/)!
+    expect(middle).toHaveClass("border-l-0", "border-r-0")
+    expect(middle).not.toHaveClass("border-t-0")
+    expect(middle).not.toHaveClass("border-b-0")
+    expect(middle.className).not.toMatch(/rounded-/)
+
+    const right = hull(/Objective 3,/)!
+    expect(right).toHaveClass("border-l-0", "rounded-tr-sm")
+    expect(right).not.toHaveClass("border-r-0")
+
+    // Vertical ship (tile 5 above tile 8).
+    const top = hull(/Objective 6,/)!
+    expect(top).toHaveClass("border-b-0", "rounded-tl-sm", "rounded-tr-sm")
+    expect(top).not.toHaveClass("border-t-0")
+    const bottom = hull(/Objective 9,/)!
+    expect(bottom).toHaveClass("border-t-0", "rounded-bl-sm", "rounded-br-sm")
+    expect(bottom).not.toHaveClass("border-b-0")
+  })
+
+  it("draws a one-tile ship as a full frame", () => {
+    renderFleet()
+    const single = hull(/Objective 7,/)!
+    expect(single.className).not.toMatch(/border-[lrtb]-0/)
+    expect(single).toHaveClass(
+      "rounded-tl-sm",
+      "rounded-tr-sm",
+      "rounded-bl-sm",
+      "rounded-br-sm"
+    )
+    // Black edge on every open side, none where the hull continues.
+    expect(single.style.boxShadow.match(/inset/g)).toHaveLength(4)
+    expect(hull(/Objective 2,/)!.style.boxShadow.match(/inset/g)).toHaveLength(
+      2
+    )
+  })
+
+  it("coexists with the hit ring and the result marker", () => {
+    renderFleet({
+      tiles: tiles.map((t) =>
+        t.id === "tile-0" ? tile(0, { completed: true }) : t
+      ),
+      marks: marks({ hit: ["tile-0"], sunk: ["tile-1"] }),
+    })
+    const hitCell = cell(/Objective 1,/)
+    expect(hitCell.querySelector("[data-own-ship]")).toBeInTheDocument()
+    expect(
+      hitCell.querySelector('[data-result-ring="hit"]')
+    ).toBeInTheDocument()
+    expect(
+      within(hitCell).getByRole("img", { name: "Hit" })
+    ).toBeInTheDocument()
+    expect(
+      within(cell(/Objective 2,/)).getByRole("img", { name: "Sunk" })
+    ).toBeInTheDocument()
+    // The hull sits below the ring (z-[5]) and the marker (z-10).
+    expect(hull(/Objective 1,/)).toHaveClass("z-[4]")
+    expect(hitCell.querySelector('[data-result-ring="hit"]')).toHaveClass(
+      "z-[5]"
+    )
+  })
+
+  it("keeps hidden Tiles free of hulls", () => {
+    const withHidden = tiles.map((t) =>
+      t.id === "tile-1" ? tile(1, { isHidden: true }) : t
+    )
+    const { container } = renderFleet({
+      tiles: withHidden,
+      userRole: "management",
+    })
+    expect(container.querySelectorAll("[data-own-ship]")).toHaveLength(5)
+    expect(
+      screen.getByRole("gridcell", { name: /Hidden tile$/ })
+    ).toBeInTheDocument()
   })
 })

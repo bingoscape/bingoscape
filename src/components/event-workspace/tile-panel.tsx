@@ -34,7 +34,12 @@ import {
 } from "@/lib/tile-status"
 import getRandomFrog from "@/lib/getRandomFrog"
 import { BattleshipMarkBadge } from "@/components/battleship-mark-badge"
-import { MARK_RESULT, type BattleshipMark } from "@/lib/battleship-marks"
+import { OwnShipGlyph } from "@/components/own-ship-glyph"
+import {
+  MARK_RESULT,
+  type BattleshipMark,
+  type ShipSegment,
+} from "@/lib/battleship-marks"
 import type { Bingo, Team, Tile } from "@/types/model"
 
 export interface TierLockInfo {
@@ -61,6 +66,12 @@ interface TilePanelProps {
    * for completed Tiles only.
    */
   battleshipMark?: BattleshipMark | null
+  /**
+   * Battleship: the selected Tile carries a segment of the viewer's own ship.
+   * Always shown (not tied to the "My ships" toggle): it is the way to read the
+   * layout on touch and with a screen reader.
+   */
+  ownShip?: ShipSegment | null
   /** Public view: description and progress only, no submissions or editing. */
   readOnly?: boolean
   /** Active sub-tab; owned by the caller so it survives Tile changes. */
@@ -125,6 +136,7 @@ export function TilePanel({
   isProgressionBingo,
   tierLock,
   battleshipMark,
+  ownShip,
   readOnly = false,
   subTab,
   onSubTabChange,
@@ -166,6 +178,7 @@ export function TilePanel({
         isProgressionBingo={isProgressionBingo}
         tierLock={tierLock}
         battleshipMark={battleshipMark}
+        ownShip={ownShip}
         readOnly={readOnly}
         canEdit={canEdit}
         subTab={subTab}
@@ -189,6 +202,7 @@ function TilePanelBody({
   isProgressionBingo,
   tierLock,
   battleshipMark,
+  ownShip,
   readOnly,
   canEdit,
   subTab: requestedSubTab,
@@ -303,6 +317,12 @@ function TilePanelBody({
             <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium">
               <BattleshipMarkBadge mark={battleshipMark} className="size-5" />
               {MARK_RESULT[battleshipMark]}
+            </p>
+          )}
+          {ownShip && (
+            <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium">
+              <OwnShipGlyph />
+              Your ship, length {ownShip.length}
             </p>
           )}
         </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useId, useState } from "react"
 import Link from "next/link"
 import {
   FileJson,
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Progress } from "@/components/ui/progress"
 import { Spinner } from "@/components/ui/spinner"
+import { Toggle } from "@/components/ui/toggle"
 import {
   Select,
   SelectContent,
@@ -40,6 +41,7 @@ import { QuickSubmissionButton } from "@/components/quick-submission-button"
 import { BoardFilters } from "@/components/event-workspace/board-filters"
 import { BoardHealthIndicator } from "@/components/event-workspace/board-health-indicator"
 import { BattleshipMarkBadge } from "@/components/battleship-mark-badge"
+import { OwnShipGlyph } from "@/components/own-ship-glyph"
 import { ShortcutsHelp } from "@/components/event-workspace/shortcuts-help"
 import { TeamSelector } from "@/components/team-selector"
 import { TrackerSettingsModal } from "@/components/tracker-settings-modal"
@@ -110,6 +112,13 @@ interface BoardHeaderProps {
    * public view.
    */
   battleship?: BattleshipWorkspaceInfo | null
+  /**
+   * Battleship: the "My ships" toggle (own ships drawn on the Board). The
+   * toggle is only offered when this handler is given, the Event has started
+   * and the viewer's own Team is on screen.
+   */
+  showOwnShips?: boolean
+  onShowOwnShipsChange?: (show: boolean) => void
 }
 
 const BATTLESHIP_LEGEND = ["hit", "miss", "sunk"] as const
@@ -143,10 +152,13 @@ export function BoardHeader({
   goalHealth,
   onSetUpGoals,
   battleship,
+  showOwnShips = false,
+  onShowOwnShipsChange,
 }: BoardHeaderProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [importExportOpen, setImportExportOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const noShipsId = useId()
 
   const showTeamStats = !!effectiveTeamId
   const useSelect = bingos.length > MAX_PILLS
@@ -167,6 +179,35 @@ export function BoardHeader({
           viewedTeamId: effectiveTeamId,
           teamIds: teams.map((t) => t.id),
         })
+      : null
+
+  // The own ships are the viewer's own Team's: only offered while that Team is
+  // the one on screen (a manager looking at another Team never sees them).
+  const ownShips = boardBattleship?.ownShips ?? []
+  const viewingOwnTeam = !!ownTeam && ownTeam.id === effectiveTeamId
+  const canToggleOwnShips =
+    !!boardBattleship?.started && viewingOwnTeam && !!onShowOwnShipsChange
+  const hasOwnShips = ownShips.length > 0
+  const ownShipsOn = canToggleOwnShips && hasOwnShips && showOwnShips
+  const ownShipTiles = ownShips.reduce(
+    (total, ship) => total + ship.tileIds.length,
+    0
+  )
+
+  // After the start the Place ships link is gone. Managers (on a Team or not)
+  // can still read every fleet on the read-only ships page, which authorizes
+  // them itself; the link only offers the route.
+  const viewFleetsTeamId =
+    effectiveTeamId && teams.some((t) => t.id === effectiveTeamId)
+      ? effectiveTeamId
+      : null
+  const viewFleetsHref =
+    boardBattleship?.started && isManagement
+      ? `/events/${eventId}/bingos/${activeBingo.id}/ships${
+          viewFleetsTeamId
+            ? `?teamId=${encodeURIComponent(viewFleetsTeamId)}`
+            : ""
+        }`
       : null
 
   return (
@@ -369,7 +410,48 @@ export function BoardHeader({
                   {MARK_LABEL[mark]}
                 </li>
               ))}
+              {ownShipsOn && (
+                <li className="text-foreground flex items-center gap-1.5 font-medium">
+                  <OwnShipGlyph />
+                  Your ship
+                  <span className="text-muted-foreground font-normal">
+                    Your fleet: {ownShips.length}{" "}
+                    {ownShips.length === 1 ? "ship" : "ships"}, {ownShipTiles}{" "}
+                    {ownShipTiles === 1 ? "tile" : "tiles"}
+                  </span>
+                </li>
+              )}
             </ul>
+            {canToggleOwnShips && (
+              <>
+                <Toggle
+                  variant="outline"
+                  size="sm"
+                  pressed={ownShipsOn}
+                  onPressedChange={onShowOwnShipsChange}
+                  disabled={!hasOwnShips}
+                  aria-describedby={hasOwnShips ? undefined : noShipsId}
+                  className="h-7 gap-1.5 px-2 text-xs pointer-coarse:min-h-11"
+                >
+                  <Ship aria-hidden="true" className="size-3.5" />
+                  My ships
+                </Toggle>
+                {!hasOwnShips && (
+                  <span id={noShipsId} className="text-muted-foreground">
+                    Your team has no ships placed
+                  </span>
+                )}
+              </>
+            )}
+            {viewFleetsHref && (
+              <Link
+                href={viewFleetsHref}
+                className="osrs-btn focus-visible:ring-ring inline-flex h-7 items-center gap-1.5 rounded-sm px-2 text-xs whitespace-nowrap focus-visible:ring-2 focus-visible:outline-hidden pointer-coarse:min-h-11"
+              >
+                <Ship aria-hidden="true" className="size-3.5" />
+                View fleets
+              </Link>
+            )}
             <span className="text-muted-foreground">
               You learn whether you hit when a tile is approved. Only your own
               team&apos;s results are shown.

@@ -10,7 +10,7 @@ import Sortable, { type SortableEvent } from "sortablejs"
 import { BingoGridLayout } from "./bingo-grid-layout"
 import { ProgressionBingoGrid } from "./progression-bingo-grid"
 import type { BoardTierData } from "@/lib/tiers"
-import type { BattleshipMarkSets } from "@/lib/battleship-marks"
+import type { BattleshipMarkSets, ShipSegment } from "@/lib/battleship-marks"
 
 interface BingoGridProps {
   bingo: Bingo
@@ -31,6 +31,10 @@ interface BingoGridProps {
   readOnly?: boolean
   /** Battleship: the viewed Team's hits, misses and sunk ships. */
   marks?: BattleshipMarkSets
+  /** Battleship: segments of the viewer's own ships, by Tile id. */
+  ownShips?: ReadonlyMap<string, ShipSegment>
+  /** Draw the own ships' hulls (the "My ships" toggle). */
+  showOwnShips?: boolean
 }
 
 /**
@@ -52,6 +56,8 @@ export default function BingoGrid({
   tierData,
   readOnly = false,
   marks,
+  ownShips,
+  showOwnShips = false,
 }: BingoGridProps) {
   const [tiles, setTiles] = useState<Tile[]>(bingo.tiles ?? [])
   // Re-sync local tiles (needed for drag-to-swap) when fresh data arrives.
@@ -114,7 +120,8 @@ export default function BingoGrid({
       if (isLayoutLocked) {
         toast({
           title: "Layout locked",
-          description: "The bingo board layout is currently locked for editing.",
+          description:
+            "The bingo board layout is currently locked for editing.",
           variant: "destructive",
         })
         return
@@ -195,6 +202,8 @@ export default function BingoGrid({
       onClearSelection={() => onSelectTile(null)}
       readOnly={readOnly}
       marks={marks}
+      ownShips={ownShips}
+      showOwnShips={showOwnShips}
     />
   )
 }

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import { TilePanel } from "@/components/event-workspace/tile-panel"
 import type { TileWorkspace } from "@/components/event-workspace/use-tile-workspace"
-import type { BattleshipMark } from "@/lib/battleship-marks"
+import type { BattleshipMark, ShipSegment } from "@/lib/battleship-marks"
 import type { Bingo, Team, Tile } from "@/types/model"
 
 // The tabs are not what these tests are about.
@@ -42,7 +42,8 @@ function tile(completed: boolean): Tile {
 function renderPanel(
   completed: boolean,
   battleshipMark: BattleshipMark | null,
-  currentTeamId: string | null = "t1"
+  currentTeamId: string | null = "t1",
+  ownShip?: ShipSegment | null
 ) {
   return render(
     <TilePanel
@@ -56,6 +57,7 @@ function renderPanel(
       gameType="osrs"
       isProgressionBingo={false}
       battleshipMark={battleshipMark}
+      ownShip={ownShip}
       subTab="details"
       onSubTabChange={jest.fn()}
       onSelectTile={jest.fn()}
@@ -86,6 +88,36 @@ describe("TilePanel battleship result", () => {
     const second = renderPanel(true, "hit", null)
     expect(
       second.container.querySelector("[data-mark]")
+    ).not.toBeInTheDocument()
+  })
+})
+
+describe("TilePanel own ship", () => {
+  const segment: ShipSegment = {
+    length: 3,
+    hasLeft: false,
+    hasRight: true,
+    hasUp: false,
+    hasDown: false,
+  }
+
+  it("tells the viewer the Tile is part of their ship, with a hull glyph", () => {
+    const { container } = renderPanel(false, null, "t1", segment)
+    expect(screen.getByText("Your ship, length 3")).toBeInTheDocument()
+    expect(container.querySelector("[data-own-ship-glyph]")).toBeInTheDocument()
+  })
+
+  it("sits next to a hit result without replacing it", () => {
+    renderPanel(true, "hit", "t1", segment)
+    expect(screen.getByText("Your ship, length 3")).toBeInTheDocument()
+    expect(screen.getByText("Hit")).toBeInTheDocument()
+  })
+
+  it("shows nothing for a Tile that is not part of a ship", () => {
+    const { container } = renderPanel(false, null, "t1", undefined)
+    expect(screen.queryByText(/Your ship/)).not.toBeInTheDocument()
+    expect(
+      container.querySelector("[data-own-ship-glyph]")
     ).not.toBeInTheDocument()
   })
 })

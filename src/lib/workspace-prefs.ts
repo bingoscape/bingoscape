@@ -8,6 +8,11 @@ export interface WorkspacePrefs {
   sideWidth: number | null
   /** Side panel shrunk to an icon rail. */
   collapsed: boolean
+  /**
+   * Battleship: draw the viewer's own ships on the Board (after the Event
+   * started). Off until the player turns it on.
+   */
+  showOwnShips: boolean
 }
 
 export const WORKSPACE_PREFS_COOKIE = "bs-workspace"
@@ -15,6 +20,7 @@ export const WORKSPACE_PREFS_COOKIE = "bs-workspace"
 export const DEFAULT_WORKSPACE_PREFS: WorkspacePrefs = {
   sideWidth: null,
   collapsed: false,
+  showOwnShips: false,
 }
 
 export const MIN_SIDE_WIDTH = 320
@@ -38,7 +44,10 @@ export function parseWorkspacePrefs(raw: string | undefined): WorkspacePrefs {
     if (typeof value !== "object" || value === null) {
       return DEFAULT_WORKSPACE_PREFS
     }
-    const { sideWidth, collapsed } = value as Record<string, unknown>
+    const { sideWidth, collapsed, showOwnShips } = value as Record<
+      string,
+      unknown
+    >
     return {
       sideWidth:
         typeof sideWidth === "number" &&
@@ -47,6 +56,7 @@ export function parseWorkspacePrefs(raw: string | undefined): WorkspacePrefs {
           ? Math.round(sideWidth)
           : null,
       collapsed: collapsed === true,
+      showOwnShips: showOwnShips === true,
     }
   } catch {
     return DEFAULT_WORKSPACE_PREFS

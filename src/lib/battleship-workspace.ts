@@ -1,5 +1,8 @@
 import type { ShipRule } from "@/server/db/schema"
-import type { BattleshipMarkIds } from "@/lib/battleship-marks"
+import type {
+  BattleshipMarkIds,
+  BattleshipOwnShip,
+} from "@/lib/battleship-marks"
 
 /**
  * What the event workspace needs to know about the active Board when it is a
@@ -20,6 +23,13 @@ export interface BattleshipWorkspaceInfo {
    * on no Team and for anonymous viewers.
    */
   marks: BattleshipMarkIds
+  /**
+   * The placed (intact) ships of the VIEWER's own Team, for every member, never
+   * another Team's. Empty before the start, for managers who are on no Team and
+   * for anonymous viewers. Draw them only while the viewer's own Team is the
+   * one on screen (see `shipsForViewedTeam`).
+   */
+  ownShips: BattleshipOwnShip[]
 }
 
 /**

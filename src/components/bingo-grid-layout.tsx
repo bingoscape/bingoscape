@@ -4,7 +4,11 @@ import React, { memo, useCallback, useMemo, useState } from "react"
 import { BingoTile } from "./bingo-tile"
 import { FitBoard } from "@/components/event-workspace/fit-board"
 import { moveGridFocusSkipping } from "@/lib/board-fit"
-import { markForTile, type BattleshipMarkSets } from "@/lib/battleship-marks"
+import {
+  markForTile,
+  type BattleshipMarkSets,
+  type ShipSegment,
+} from "@/lib/battleship-marks"
 import type { EventRole } from "@/app/actions/events"
 import type { Tile } from "@/types/model"
 
@@ -31,6 +35,13 @@ interface BingoGridLayoutProps {
    * the workspace. Absent on every other Board.
    */
   marks?: BattleshipMarkSets
+  /**
+   * Battleship: segments of the viewer's own ships by Tile id, precomputed by
+   * the workspace for the Team on screen. Absent on every other Board.
+   */
+  ownShips?: ReadonlyMap<string, ShipSegment>
+  /** Draw the own ships' hulls (the "My ships" toggle). */
+  showOwnShips?: boolean
 }
 
 /**
@@ -61,6 +72,8 @@ export const BingoGridLayout = memo(
         onClearSelection,
         readOnly = false,
         marks,
+        ownShips,
+        showOwnShips = false,
       },
       ref
     ) => {
@@ -112,9 +125,14 @@ export const BingoGridLayout = memo(
             isSkippable
           )
           if (
-            ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"].includes(
-              event.key
-            )
+            [
+              "ArrowUp",
+              "ArrowDown",
+              "ArrowLeft",
+              "ArrowRight",
+              "Home",
+              "End",
+            ].includes(event.key)
           ) {
             event.preventDefault()
             if (next !== current) {
@@ -129,13 +147,16 @@ export const BingoGridLayout = memo(
         [columns, isSkippable, onClearSelection, tiles.length]
       )
 
-      const handleFocus = useCallback((event: React.FocusEvent<HTMLDivElement>) => {
-        const target = (event.target as HTMLElement).closest<HTMLElement>(
-          "[data-grid-index]"
-        )
-        const index = target ? Number(target.dataset.gridIndex) : NaN
-        if (!Number.isNaN(index)) setFocusIndex(index)
-      }, [])
+      const handleFocus = useCallback(
+        (event: React.FocusEvent<HTMLDivElement>) => {
+          const target = (event.target as HTMLElement).closest<HTMLElement>(
+            "[data-grid-index]"
+          )
+          const index = target ? Number(target.dataset.gridIndex) : NaN
+          if (!Number.isNaN(index)) setFocusIndex(index)
+        },
+        []
+      )
 
       const renderTile = (tile: Tile, index: number) => (
         <BingoTile
@@ -156,6 +177,8 @@ export const BingoGridLayout = memo(
           readOnly={readOnly}
           gridIndex={index}
           mark={markForTile(tile.id, marks)}
+          ownShip={ownShips?.get(tile.id)}
+          showOwnShip={showOwnShips}
         />
       )
 

@@ -39,8 +39,22 @@ describe("parseWorkspacePrefs", () => {
   })
 
   it("round-trips through the serialized cookie", () => {
-    const prefs = { sideWidth: 512, collapsed: true }
+    const prefs = { sideWidth: 512, collapsed: true, showOwnShips: true }
     expect(parseWorkspacePrefs(cookieValue(prefs))).toEqual(prefs)
+  })
+
+  it("keeps the own-ships toggle off by default and for anything but true", () => {
+    expect(DEFAULT_WORKSPACE_PREFS.showOwnShips).toBe(false)
+    expect(parseWorkspacePrefs(undefined).showOwnShips).toBe(false)
+    // A cookie saved before the toggle existed.
+    const legacy = encodeURIComponent(
+      JSON.stringify({ sideWidth: 400, collapsed: false })
+    )
+    expect(parseWorkspacePrefs(legacy).showOwnShips).toBe(false)
+    const text = encodeURIComponent(JSON.stringify({ showOwnShips: "yes" }))
+    expect(parseWorkspacePrefs(text).showOwnShips).toBe(false)
+    const on = encodeURIComponent(JSON.stringify({ showOwnShips: true }))
+    expect(parseWorkspacePrefs(on).showOwnShips).toBe(true)
   })
 
   it("drops invalid widths but keeps the rest", () => {
@@ -50,6 +64,7 @@ describe("parseWorkspacePrefs", () => {
     expect(parseWorkspacePrefs(raw)).toEqual({
       sideWidth: null,
       collapsed: true,
+      showOwnShips: false,
     })
     const text = encodeURIComponent(JSON.stringify({ sideWidth: "wide" }))
     expect(parseWorkspacePrefs(text)).toEqual(DEFAULT_WORKSPACE_PREFS)
@@ -73,14 +88,14 @@ describe("sideWidthCss", () => {
   })
 
   it("re-clamps a saved width in CSS", () => {
-    expect(sideWidthCss({ sideWidth: 500, collapsed: false })).toBe(
-      "min(60%, max(320px, 500px))"
-    )
+    expect(
+      sideWidthCss({ sideWidth: 500, collapsed: false, showOwnShips: false })
+    ).toBe("min(60%, max(320px, 500px))")
   })
 
   it("collapses to the rail width", () => {
-    expect(sideWidthCss({ sideWidth: 500, collapsed: true })).toBe(
-      `${COLLAPSED_SIDE_WIDTH}px`
-    )
+    expect(
+      sideWidthCss({ sideWidth: 500, collapsed: true, showOwnShips: false })
+    ).toBe(`${COLLAPSED_SIDE_WIDTH}px`)
   })
 })

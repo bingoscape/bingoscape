@@ -57,7 +57,12 @@ import {
 } from "@/lib/workspace-prefs"
 import type { BattleshipWorkspaceInfo } from "@/lib/battleship-workspace"
 import { SunkAnnouncement } from "@/components/event-workspace/sunk-announcement"
-import { markForTile, marksForViewedTeam } from "@/lib/battleship-marks"
+import {
+  markForTile,
+  marksForViewedTeam,
+  shipSegmentsByTile,
+  shipsForViewedTeam,
+} from "@/lib/battleship-marks"
 import type { Bingo, SelectableUser, Team, Tile } from "@/types/model"
 
 /** What the workspace needs from an Event (the public view has no full Event). */
@@ -153,12 +158,21 @@ export function EventWorkspace({
     gridRef.current?.style.setProperty("--side-w", `${width}px`)
   }, [])
   const commitSideWidth = useCallback(
-    (sideWidth: number) => updatePrefs({ sideWidth, collapsed: false }),
-    [updatePrefs]
+    (sideWidth: number) =>
+      updatePrefs({ ...prefs, sideWidth, collapsed: false }),
+    [prefs, updatePrefs]
   )
   const resetSide = useCallback(
-    () => updatePrefs(DEFAULT_WORKSPACE_PREFS),
-    [updatePrefs]
+    () =>
+      updatePrefs({
+        ...DEFAULT_WORKSPACE_PREFS,
+        showOwnShips: prefs.showOwnShips,
+      }),
+    [prefs.showOwnShips, updatePrefs]
+  )
+  const setShowOwnShips = useCallback(
+    (showOwnShips: boolean) => updatePrefs({ ...prefs, showOwnShips }),
+    [prefs, updatePrefs]
   )
   const toggleCollapsed = useCallback(
     () => updatePrefs({ ...prefs, collapsed: !prefs.collapsed }),
@@ -222,6 +236,22 @@ export function EventWorkspace({
         effectiveTeamId
       ),
     [battleshipBoard, currentTeam?.id, effectiveTeamId]
+  )
+
+  // The viewer's own ships, as Tile segments, for the same Team only. Hidden
+  // Tiles never carry a hull.
+  const ownShipSegments = useMemo(
+    () =>
+      shipSegmentsByTile(
+        shipsForViewedTeam(
+          battleshipBoard?.ownShips,
+          currentTeam?.id,
+          effectiveTeamId
+        ),
+        bingo?.columns ?? 0,
+        tiles.filter((tile) => !tile.isHidden && !tile.isBlind)
+      ),
+    [battleshipBoard, currentTeam?.id, effectiveTeamId, bingo?.columns, tiles]
   )
 
   const [editLayout, setEditLayout] = useState(false)
@@ -411,6 +441,9 @@ export function EventWorkspace({
             ? markForTile(selectedTile.id, markSets)
             : null
         }
+        ownShip={
+          selectedTile ? ownShipSegments.get(selectedTile.id) : undefined
+        }
         readOnly={readOnly}
         subTab={tileSubTab}
         onSubTabChange={setTileSubTab}
@@ -475,6 +508,8 @@ export function EventWorkspace({
                 onChange: setFilter,
               }}
               battleship={battleship}
+              showOwnShips={prefs.showOwnShips}
+              onShowOwnShipsChange={setShowOwnShips}
               onSetUpGoals={
                 isManagement && !setupMode ? () => setView("goals") : undefined
               }
@@ -562,6 +597,8 @@ export function EventWorkspace({
                   onSelectTile={handleSelectTile}
                   readOnly={readOnly}
                   marks={battleshipBoard ? markSets : undefined}
+                  ownShips={battleshipBoard ? ownShipSegments : undefined}
+                  showOwnShips={prefs.showOwnShips}
                 />
               )}
             </div>
