@@ -1,0 +1,26 @@
+src/components/event-workspace/board-header.tsx
+  s_68822e2d462a1f::t_8b244d50d5fceb 197-212
+  s_68822e2d462a1f::t_64a24d08c0bef8 446-454
+src/components/event-workspace/__tests__/board-header.test.tsx
+  s_68822e2d462a1f::t_c6888aa12cec4f 408-484
+CHANGELOG.md
+  s_68822e2d462a1f::t_c134cec09e86ff 20-21
+docs/design/osrs-theme.md
+  s_68822e2d462a1f::t_c134cec09e86ff 135-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ed2ce05c0b46b6d1ee79efe48c09c04227f5169b",
+  "prompts": {},
+  "sessions": {
+    "s_68822e2d462a1f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2fae12c2-5cf2-486a-b015-d4ff345796c9",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
