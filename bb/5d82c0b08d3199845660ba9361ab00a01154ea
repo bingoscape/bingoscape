@@ -1,0 +1,31 @@
+src/server/tier-progression.ts
+  s_d4aac989be5a27::t_8f85cb128089a2 12,132,134
+src/components/tier-management-modal.tsx
+  s_d4aac989be5a27::t_800b0f87aca2e1 204-205,211,216,332,345
+src/server/__tests__/tier-progression.test.ts
+  s_d4aac989be5a27::t_4bdb36ad025741 7,44-59
+src/lib/__tests__/tiers.test.ts
+  s_d4aac989be5a27::t_4bdb36ad025741 6-7,65-102
+src/lib/tiers.ts
+  s_d4aac989be5a27::t_8f85cb128089a2 51-76,144-148
+src/components/event-workspace/tier-ladder-view.tsx
+  s_d4aac989be5a27::t_0a66d8151a46d9 11,156-160
+src/components/progression-bingo-grid.tsx
+  s_d4aac989be5a27::t_800b0f87aca2e1 817-821,989,994,1290,1308
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bb5d82c0b08d3199845660ba9361ab00a01154ea",
+  "prompts": {},
+  "sessions": {
+    "s_d4aac989be5a27": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "483a3a1c-3a71-4388-b221-1c804474fccd",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
