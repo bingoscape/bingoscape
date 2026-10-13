@@ -1,0 +1,31 @@
+src/server/queries/tiers.ts
+  s_d4aac989be5a27::t_79ff0c28a71071 34-35,37
+src/lib/__tests__/tiers.test.ts
+  s_d4aac989be5a27::t_0078b414ecfd14 166-185
+src/server/tier-progression.ts
+  s_d4aac989be5a27::t_79ff0c28a71071 8,161-185
+src/app/actions/bingo.ts
+  s_d4aac989be5a27::t_79ff0c28a71071 31,82,279,283-291,2601-2609,2638-2644,2646-2663,2798-2800,2803,2810-2818,2830,2833,2840-2851,2865
+src/server/__tests__/board-tier-data.test.ts
+  s_d4aac989be5a27::t_0078b414ecfd14 1-31
+src/lib/tiers.ts
+  s_d4aac989be5a27::t_79ff0c28a71071 143-149,153
+src/app/actions/__tests__/tier-board-edits.test.ts
+  s_d4aac989be5a27::t_0078b414ecfd14 1-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "20f103c6311951c0172efe3ae3f610a22f3699f0",
+  "prompts": {},
+  "sessions": {
+    "s_d4aac989be5a27": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "483a3a1c-3a71-4388-b221-1c804474fccd",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
