@@ -15,7 +15,7 @@ import { goalGroups, goals, itemGoals, metricGoals } from "@/server/db/schema"
 
 jest.mock("@/server/auth", () => ({ getServerAuthSession: jest.fn() }))
 jest.mock("@/app/actions/events", () => ({ getUserRole: jest.fn() }))
-jest.mock("@/app/actions/notifications", () => ({
+jest.mock("@/server/notifications", () => ({
   createNotification: jest.fn(),
 }))
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))

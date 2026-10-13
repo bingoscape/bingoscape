@@ -40,6 +40,8 @@ import {
   canReadGoal,
   canReadTile,
   isEventManager,
+  assertGoalInEvent,
+  AuthzError,
   requireBingoAdmin,
   requireBingoAdminForGoal,
   requireBingoAdminForSubmission,
@@ -62,7 +64,7 @@ import {
   parseShipRulesJson,
 } from "@/server/battleship"
 import { validateShipRulesFitBoard } from "@/lib/ship-rules"
-import { createNotification } from "./notifications"
+import { createNotification } from "@/server/notifications"
 import { getServerAuthSession } from "@/server/auth"
 import getRandomFrog from "@/lib/getRandomFrog"
 import {
@@ -77,7 +79,7 @@ import { discordWebhooks } from "@/server/db/schema"
 import { sql } from "drizzle-orm"
 import { completedAtOnComplete } from "@/lib/completed-at"
 import { logger } from "@/lib/logger"
-import { getUnlockedTiers } from "@/lib/tiers"
+import { loadTierXpRequirements } from "@/server/progression"
 import {
   reevaluateTierUnlocks,
   unlockNextTierForTeam,
@@ -306,23 +308,41 @@ export async function reorderTiles(
   reorderedTiles: Array<{ id: string; index: number }>
 ) {
   try {
-    // Guard: verify caller is admin/management for the bingo that owns these tiles.
-    // We check the first tile; all tiles in a reorder call belong to the same bingo.
     const firstTileId = reorderedTiles[0]?.id
     if (!firstTileId) return { success: false, error: "No tiles provided" }
+    // Guard: verify caller is admin/management for the bingo that owns the
+    // first tile, then require every other tile to belong to that same bingo.
     await requireBingoAdminForTile(firstTileId)
     await db.transaction(async (tx) => {
       const [first] = await tx
         .select({ bingoId: tiles.bingoId })
         .from(tiles)
         .where(eq(tiles.id, firstTileId))
-      if (first) await assertBattleshipLayoutEditable(tx, first.bingoId)
+      if (!first) throw new AuthzError("Tile not found")
+
+      const owned = await tx
+        .select({ id: tiles.id })
+        .from(tiles)
+        .where(
+          and(
+            eq(tiles.bingoId, first.bingoId),
+            inArray(
+              tiles.id,
+              reorderedTiles.map((tile) => tile.id)
+            )
+          )
+        )
+      if (owned.length !== new Set(reorderedTiles.map((t) => t.id)).size) {
+        throw new AuthzError("Tile not found")
+      }
+
+      await assertBattleshipLayoutEditable(tx, first.bingoId)
 
       for (const tile of reorderedTiles) {
         await tx
           .update(tiles)
           .set({ index: tile.index })
-          .where(eq(tiles.id, tile.id))
+          .where(and(eq(tiles.id, tile.id), eq(tiles.bingoId, first.bingoId)))
       }
     })
     return { success: true }
@@ -330,7 +350,10 @@ export async function reorderTiles(
     logger.error({ error }, "Error reordering tiles")
     return {
       success: false,
-      error: battleshipErrorMessage(error, "Failed to reorder tiles"),
+      error: battleshipErrorMessage(
+        error,
+        authzErrorMessage(error, "Failed to reorder tiles")
+      ),
     }
   }
 }
@@ -1491,6 +1514,7 @@ export async function updateSubmissionStatus(
     if (callerRole !== "admin" && callerRole !== "management") {
       throw new Error("Forbidden: admin or management role required")
     }
+    if (goalId) await assertGoalInEvent(goalId, eventId)
 
     logger.info(
       { submissionId, newStatus, goalId, submissionValue },
@@ -1754,6 +1778,7 @@ export async function updateSubmissionStatusWithComment(
     if (callerRole !== "admin" && callerRole !== "management") {
       throw new Error("Forbidden: admin or management role required")
     }
+    if (goalId) await assertGoalInEvent(goalId, eventId)
 
     logger.info(
       { submissionId, newStatus, comment },
@@ -2416,6 +2441,9 @@ export async function updateBingo(
 
 export async function getBingoWithPatternBonuses(bingoId: string) {
   try {
+    // Includes the codephrase: managers only (the edit modal is the sole caller).
+    await requireBingoAdmin(bingoId)
+
     const bingo = await db.query.bingos.findFirst({
       where: eq(bingos.id, bingoId),
       with: {
@@ -2449,28 +2477,14 @@ export async function getBingoWithPatternBonuses(bingoId: string) {
     }
   } catch (error) {
     logger.error({ error }, "Error fetching bingo with pattern bonuses")
-    return { success: false, error: "Failed to fetch bingo data" }
+    return {
+      success: false,
+      error: authzErrorMessage(error, "Failed to fetch bingo data"),
+    }
   }
 }
 
 // Progression Bingo Functions
-
-export async function getTeamTierProgress(teamId: string, bingoId: string) {
-  try {
-    const tierProgress = await db.query.teamTierProgress.findMany({
-      where: and(
-        eq(teamTierProgress.teamId, teamId),
-        eq(teamTierProgress.bingoId, bingoId)
-      ),
-      orderBy: asc(teamTierProgress.tier),
-    })
-
-    return tierProgress
-  } catch (error) {
-    logger.error({ error }, "Error fetching team tier progress")
-    throw new Error("Failed to fetch team tier progress")
-  }
-}
 
 export async function initializeTeamTierProgress(
   teamId: string,
@@ -2537,64 +2551,6 @@ export async function checkAndUnlockNextTier(teamId: string, bingoId: string) {
   }
 }
 
-/**
- * The Tiles of a progression Board. With a Team, only the Tiles of Tiers the
- * Team has unlocked (Tier 0 always counts) are returned, unless
- * `includeLocked` is set: then every Tile is returned, flagged `tierLocked`.
- */
-export async function getProgressionBingoTiles(
-  bingoId: string,
-  teamId?: string,
-  options: { includeLocked?: boolean } = {}
-) {
-  try {
-    // Get bingo info
-    const [bingo] = await db
-      .select({ bingoType: bingos.bingoType })
-      .from(bingos)
-      .where(eq(bingos.id, bingoId))
-
-    if (!bingo || bingo.bingoType !== "progression") {
-      throw new Error("Not a progression bingo")
-    }
-
-    // Get all tiles
-    const allTiles = await db.query.tiles.findMany({
-      where: eq(tiles.bingoId, bingoId),
-      with: {
-        goals: true,
-        teamTileSubmissions: teamId
-          ? {
-              where: eq(teamTileSubmissions.teamId, teamId),
-            }
-          : undefined,
-      },
-      orderBy: [asc(tiles.tier), asc(tiles.index)],
-    })
-
-    // If no team specified, return all tiles
-    if (!teamId) {
-      return allTiles.map((tile) => ({ ...tile, tierLocked: false }))
-    }
-
-    // Tier rows are created lazily, so a fresh Team has none: Tier 0 is
-    // unlocked regardless of what is stored.
-    const tierProgress = await getTeamTierProgress(teamId, bingoId)
-    const unlockedTiers = getUnlockedTiers(tierProgress)
-
-    const flagged = allTiles.map((tile) => ({
-      ...tile,
-      tierLocked: !unlockedTiers.has(tile.tier),
-    }))
-    return options.includeLocked
-      ? flagged
-      : flagged.filter((tile) => !tile.tierLocked)
-  } catch (error) {
-    logger.error({ error }, "Error fetching progression bingo tiles")
-    throw new Error("Failed to fetch progression bingo tiles")
-  }
-}
-
 export async function updateTileTier(tileId: string, newTier: number) {
   try {
     await requireBingoAdminForTile(tileId)
@@ -2616,16 +2572,10 @@ export async function updateTileTier(tileId: string, newTier: number) {
 }
 
 export async function getTierXpRequirements(bingoId: string) {
-  try {
-    const requirements = await db.query.tierXpRequirements.findMany({
-      where: eq(tierXpRequirements.bingoId, bingoId),
-      orderBy: asc(tierXpRequirements.tier),
-    })
-    return requirements
-  } catch (error) {
-    logger.error({ error }, "Error fetching tier XP requirements")
-    throw new Error("Failed to fetch tier XP requirements")
-  }
+  // Tier configuration is editable by managers only; the page and RuneLite
+  // read it through `@/server/progression`, which has no client entry point.
+  await requireBingoAdmin(bingoId)
+  return loadTierXpRequirements(bingoId)
 }
 
 export async function setTierXpRequirement(

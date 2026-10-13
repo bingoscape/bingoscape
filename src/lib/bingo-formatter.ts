@@ -18,7 +18,7 @@ import {
   getTierXpRequired,
   getUnlockedTiers,
 } from "@/lib/tiers"
-import { getProgressionBingoTiles, getTeamTierProgress, getTierXpRequirements } from "@/app/actions/bingo"
+import { loadProgressionBingoTiles, loadTeamTierProgress, loadTierXpRequirements } from "@/server/progression"
 import type {
   GoalTreeNode,
   GoalNode,
@@ -252,14 +252,14 @@ export async function formatBingoData(
 
   if (bingo.bingoType === "progression" && userTeam) {
     // For progression bingo, locked Tiers come back too, as content-free stubs
-    allProgressionTiles = await getProgressionBingoTiles(bingo.id, userTeam.id, {
+    allProgressionTiles = await loadProgressionBingoTiles(bingo.id, userTeam.id, {
       includeLocked: true,
     })
     bingoTiles = allProgressionTiles.map((tile) =>
       tile.tierLocked ? toLockedStub(tile) : tile
     )
-    tierXpRequirements = await getTierXpRequirements(bingo.id)
-    tierProgress = await getTeamTierProgress(userTeam.id, bingo.id)
+    tierXpRequirements = await loadTierXpRequirements(bingo.id)
+    tierProgress = await loadTeamTierProgress(userTeam.id, bingo.id)
     for (const tier of getUnlockedTiers(tierProgress)) unlockedTiers.add(tier)
   } else if (bingo.bingoType === "progression" && !userTeam) {
     // No team found - return empty tiles for progression bingo

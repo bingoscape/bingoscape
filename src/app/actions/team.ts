@@ -3,6 +3,7 @@ import { getServerAuthSession } from "@/server/auth"
 import { logger } from "@/lib/logger"
 import { db } from "@/server/db"
 import {
+  events,
   teams,
   teamMembers,
   eventParticipants,
@@ -57,6 +58,18 @@ export async function createTeam(eventId: string, name: string) {
 }
 
 export async function getTeamsByEventId(eventId: string) {
+  // Members get the teams with the skill badges the roster shows. Visitors of
+  // a public Event get the teams only, without any player metadata.
+  const role = await getUserRole(eventId)
+  if (!role) {
+    const event = await db.query.events.findFirst({
+      where: eq(events.id, eventId),
+      columns: { public: true },
+    })
+    if (!event?.public) return []
+  }
+  const withMetadata = role !== null
+
   const eventTeams = await db.query.teams.findMany({
     where: eq(teams.eventId, eventId),
     with: {
@@ -72,9 +85,11 @@ export async function getTeamsByEventId(eventId: string) {
   })
 
   // Fetch metadata status for all team members
-  const metadataRecords = await db.query.playerMetadata.findMany({
-    where: and(eq(playerMetadata.eventId, eventId)),
-  })
+  const metadataRecords = withMetadata
+    ? await db.query.playerMetadata.findMany({
+        where: and(eq(playerMetadata.eventId, eventId)),
+      })
+    : []
 
   const metadataMap = new Map(metadataRecords.map((m) => [m.userId, m]))
 
@@ -214,6 +229,9 @@ export async function deleteTeam(teamId: string) {
 }
 
 export async function getEventParticipants(eventId: string) {
+  const callerRole = await getUserRole(eventId)
+  if (callerRole !== "admin" && callerRole !== "management") return []
+
   const participants = await db
     .select({
       id: users.id,

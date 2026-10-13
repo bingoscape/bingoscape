@@ -57,16 +57,25 @@ export default function EventParticipantsPage(props: {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [participantsData, teamsData, eventData] = await Promise.all([
-          getEventParticipants(params.id as string),
+        const [teamsData, eventData] = await Promise.all([
           getTeamsByEventId(params.id as string),
           getEventById(params.id as string),
         ])
 
+        // Buy-ins and donations are on this page: managers only.
+        const callerRole = eventData?.userRole ?? null
+        if (callerRole !== "admin" && callerRole !== "management") {
+          router.replace(`/events/${params.id as string}`)
+          return
+        }
+        const participantsData = await getEventParticipants(
+          params.id as string
+        )
+
         const userParticipant = participantsData.find(
           (p) => p.id === data?.user.id
         )
-        const userRole = userParticipant?.role ?? "participant"
+        const userRole = callerRole
         const isCreator = eventData?.event.creatorId === data?.user.id
 
         setCurrentUserRole(userRole)
@@ -108,7 +117,7 @@ export default function EventParticipantsPage(props: {
 
     setLoading(true)
     fetchData().catch((err) => console.error(err))
-  }, [params.id, data?.user.id])
+  }, [params.id, data?.user.id, router])
 
   const handleTabChange = (value: string) => {
     setSelectedTab(value)

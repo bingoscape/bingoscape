@@ -26,7 +26,7 @@ import {
 
 jest.mock("@/server/auth", () => ({ getServerAuthSession: jest.fn() }))
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
-jest.mock("@/app/actions/notifications", () => ({
+jest.mock("@/server/notifications", () => ({
   createNotification: jest.fn(),
 }))
 jest.mock("@/lib/discord-webhook", () => ({

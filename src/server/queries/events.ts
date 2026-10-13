@@ -3,6 +3,7 @@
 import { cache } from "react"
 import { eq, and, asc, inArray, sql } from "drizzle-orm"
 import { db } from "@/server/db"
+import { getServerAuthSession } from "@/server/auth"
 import {
   events,
   tiles,
@@ -121,6 +122,10 @@ export const getEventById = cache(async function getEventById(
 })
 
 export async function getEvents(userId: string): Promise<EventData[]> {
+  // Only the signed-in user may list their own events.
+  const session = await getServerAuthSession()
+  if (!session?.user || session.user.id !== userId) return []
+
   try {
     const userEvents = await db.query.events.findMany({
       where: (events, { or, eq, exists }) =>

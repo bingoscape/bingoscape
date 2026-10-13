@@ -65,6 +65,50 @@ export async function requireEventManager(eventId: string): Promise<string> {
   return eventId
 }
 
+/**
+ * Requires a signed-in admin of the given Event (the creator counts as admin).
+ * Returns the eventId on success.
+ */
+export async function requireEventAdmin(eventId: string): Promise<string> {
+  await requireSession()
+  const role = await getUserRole(eventId)
+  if (role !== "admin") throw new AuthzError("Forbidden: admin role required")
+  return eventId
+}
+
+/**
+ * Requires a signed-in member of the given Event (any role, creator included).
+ * Returns the caller's role.
+ */
+export async function requireEventMember(
+  eventId: string
+): Promise<NonNullable<Awaited<ReturnType<typeof getUserRole>>>> {
+  await requireSession()
+  const role = await getUserRole(eventId)
+  if (!role) throw new AuthzError("Forbidden: not a member of this event")
+  return role
+}
+
+/** Throws unless the Goal belongs to a Tile of the given Event. */
+export async function assertGoalInEvent(
+  goalId: string,
+  eventId: string
+): Promise<void> {
+  const goal = await db.query.goals.findFirst({
+    where: eq(goals.id, goalId),
+    columns: { id: true },
+    with: {
+      tile: {
+        columns: { id: true },
+        with: { bingo: { columns: { eventId: true } } },
+      },
+    },
+  })
+  if (!goal || goal.tile.bingo.eventId !== eventId) {
+    throw new AuthzError("Goal not found")
+  }
+}
+
 /** True when the signed-in caller manages the Event (admin or management). */
 export async function isEventManager(eventId: string): Promise<boolean> {
   const role = await getUserRole(eventId)
@@ -246,6 +290,48 @@ export async function assertTeamLeaderOrManager(
   }
 
   return team.eventId
+}
+
+/**
+ * Who may read the review comments of a Submission: the managers of the Event
+ * that owns it, and the members of the Team the Submission belongs to (the
+ * comments tell them why a Tile was not accepted). The Tile must also be
+ * readable for the caller (hidden Tiles, Blind Tiles). Everybody else, other
+ * Teams included, gets "not found". Returns whether the caller is a manager.
+ */
+export async function requireSubmissionCommentReader(
+  submissionId: string
+): Promise<{ isManager: boolean }> {
+  const { userId } = await requireSession()
+
+  const submission = await db.query.submissions.findFirst({
+    where: eq(submissions.id, submissionId),
+    columns: { id: true },
+    with: {
+      teamTileSubmission: {
+        columns: { teamId: true, tileId: true },
+        with: {
+          tile: {
+            columns: { id: true },
+            with: { bingo: { columns: { eventId: true } } },
+          },
+        },
+      },
+    },
+  })
+  if (!submission) throw new AuthzError("Submission not found")
+
+  const { teamId, tileId, tile } = submission.teamTileSubmission
+  if (await isEventManager(tile.bingo.eventId)) return { isManager: true }
+
+  const membership = await db.query.teamMembers.findFirst({
+    where: and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId)),
+    columns: { id: true },
+  })
+  if (!membership || !(await canReadTile(tileId))) {
+    throw new AuthzError("Submission not found")
+  }
+  return { isManager: false }
 }
 
 /**

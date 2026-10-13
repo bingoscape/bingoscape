@@ -1,5 +1,7 @@
 "use server"
 
+import { isEventManager } from "@/server/authz"
+import { getUserRole } from "./events"
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
 import { playerMetadata, eventParticipants } from "@/server/db/schema"
@@ -11,6 +13,17 @@ import { fetchPlayerDataFromWOM } from "./wiseoldman"
  * Get player metadata for a specific user in a specific event
  */
 export async function getPlayerMetadata(userId: string, eventId: string) {
+  // Managers read anyone's metadata. A participant reads their own, without the
+  // management-only notes. Everybody else gets nothing.
+  const callerIsManager = await isEventManager(eventId)
+  let isOwnRecord = false
+  if (!callerIsManager) {
+    const session = await getServerAuthSession()
+    if (!session?.user || session.user.id !== userId) return null
+    if (!(await getUserRole(eventId))) return null
+    isOwnRecord = true
+  }
+
   const metadata = await db.query.playerMetadata.findFirst({
     where: and(
       eq(playerMetadata.userId, userId),
@@ -27,6 +40,7 @@ export async function getPlayerMetadata(userId: string, eventId: string) {
     },
   })
 
+  if (isOwnRecord && metadata) return { ...metadata, notes: null }
   return metadata
 }
 
@@ -34,6 +48,8 @@ export async function getPlayerMetadata(userId: string, eventId: string) {
  * Get all player metadata for an event (used for team balancing)
  */
 export async function getEventParticipantMetadata(eventId: string) {
+  if (!(await isEventManager(eventId))) return []
+
   const metadata = await db.query.playerMetadata.findMany({
     where: eq(playerMetadata.eventId, eventId),
     with: {
@@ -260,6 +276,8 @@ export async function deletePlayerMetadata(userId: string, eventId: string) {
  * Returns the percentage of participants that have metadata
  */
 export async function calculateMetadataCoverage(eventId: string) {
+  if (!(await isEventManager(eventId))) return 0
+
   // Get total participants
   const participants = await db.query.eventParticipants.findMany({
     where: eq(eventParticipants.eventId, eventId),

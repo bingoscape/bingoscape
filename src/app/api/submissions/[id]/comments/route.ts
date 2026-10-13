@@ -3,6 +3,11 @@ import { logger } from "@/lib/logger"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/server/auth"
 import { db } from "@/server/db"
+import {
+  AuthzError,
+  requireBingoAdminForSubmission,
+  requireSubmissionCommentReader,
+} from "@/server/authz"
 import { submissionComments, submissions, users } from "@/server/db/schema"
 import { eq, desc } from "drizzle-orm"
 import { z } from "zod"
@@ -13,6 +18,27 @@ const createCommentSchema = z.object({
     .min(10, "Comment must be at least 10 characters")
     .max(500, "Comment must be at most 500 characters"),
 })
+
+/**
+ * Writing comments is a review action: only admin/management of the Event that
+ * owns the Submission. The Event is derived from the Submission. Returns an
+ * error response when the caller is not allowed.
+ */
+async function authorizeWrite(submissionId: string): Promise<NextResponse | null> {
+  try {
+    await requireBingoAdminForSubmission(submissionId)
+    return null
+  } catch (error) {
+    return authzFailure(error)
+  }
+}
+
+/** Unknown and forbidden Submissions look the same: no enumeration. */
+function authzFailure(error: unknown): NextResponse {
+  if (!(error instanceof AuthzError)) throw error
+  const status = error.message === "Unauthorized" ? 401 : 404
+  return NextResponse.json({ error: "Not found" }, { status })
+}
 
 export async function GET(
   request: NextRequest,
@@ -26,6 +52,14 @@ export async function GET(
     }
 
     const submissionId = params.id
+
+    // Managers, and the members of the owning Team, may read the comments.
+    let isManager: boolean
+    try {
+      ;({ isManager } = await requireSubmissionCommentReader(submissionId))
+    } catch (error) {
+      return authzFailure(error)
+    }
 
     // Fetch comments for the submission
     const comments = await db
@@ -46,7 +80,19 @@ export async function GET(
       .where(eq(submissionComments.submissionId, submissionId))
       .orderBy(desc(submissionComments.createdAt))
 
-    return NextResponse.json(comments)
+    // Players see who reviewed them by in-game name only.
+    return NextResponse.json(
+      isManager
+        ? comments
+        : comments.map((comment) => ({
+            ...comment,
+            author: {
+              id: "",
+              name: null,
+              runescapeName: comment.author.runescapeName,
+            },
+          }))
+    )
   } catch (error) {
     logger.error({ error }, "Error fetching submission comments")
     return NextResponse.json(
@@ -68,6 +114,10 @@ export async function POST(
     }
 
     const submissionId = params.id
+
+    const denied = await authorizeWrite(submissionId)
+    if (denied) return denied
+
     const body = await request.json()
 
     // Validate request body
@@ -91,9 +141,6 @@ export async function POST(
         { status: 404 }
       )
     }
-
-    // TODO: Add permission check to ensure user can comment on this submission
-    // This should check if the user is an admin/management role for the event
 
     // Create the comment
     const [newComment] = await db

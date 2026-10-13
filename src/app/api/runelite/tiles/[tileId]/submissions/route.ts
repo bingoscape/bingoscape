@@ -82,7 +82,7 @@ export async function POST(
         eq(eventParticipants.userId, userId)
       ),
       with: {
-        user: true,
+        user: { columns: { id: true, name: true, runescapeName: true } },
       },
     })
 

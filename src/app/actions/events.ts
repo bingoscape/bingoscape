@@ -1,9 +1,8 @@
 "use server"
 
-import { eq, and, asc, sum, sql, desc, inArray } from "drizzle-orm"
+import { eq, and, asc, sum, sql, desc, inArray, ne } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { revalidatePath } from "next/cache"
-import { getEventById } from "@/server/queries/events"
 
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
@@ -251,38 +250,80 @@ export async function getUserRole(eventId: string): Promise<EventRole | null> {
   }
 }
 
-export async function assignEventToClan(eventId: string, clanId: string) {
+/**
+ * Resolves the signed-in caller and checks their role in the Event (the
+ * creator counts as admin). Not exported: every export of a "use server" file
+ * is a public endpoint.
+ */
+async function checkEventRole(
+  eventId: string,
+  allowed: readonly EventRole[]
+): Promise<
+  { ok: true; userId: string; role: EventRole } | { ok: false; error: string }
+> {
   const session = await getServerAuthSession()
-  if (!session || !session.user) {
-    throw new Error("You must be logged in to assign events to clans")
+  if (!session?.user) return { ok: false, error: "Unauthorized" }
+
+  const role = await getUserRole(eventId)
+  if (!role || !allowed.includes(role)) {
+    return { ok: false, error: "Forbidden: insufficient permissions" }
+  }
+  return { ok: true, userId: session.user.id, role }
+}
+
+const EVENT_MANAGERS: readonly EventRole[] = ["admin", "management"]
+const EVENT_ADMINS: readonly EventRole[] = ["admin"]
+
+/** Never load a full users row for a response: it carries the password hash. */
+const USER_PUBLIC_COLUMNS = {
+  columns: {
+    id: true,
+    name: true,
+    email: true,
+    image: true,
+    runescapeName: true,
+  },
+} as const
+
+/** Subquery: the participant rows of one event. */
+function eventParticipantIds(eventId: string) {
+  return db
+    .select({ id: eventParticipants.id })
+    .from(eventParticipants)
+    .where(eq(eventParticipants.eventId, eventId))
+}
+
+export async function assignEventToClan(eventId: string, clanId: string) {
+  // Only an admin of the event may attach it to a clan, and only to a clan in
+  // which they hold a managing role (a plain member or guest must not be able
+  // to attach events to the clan).
+  const access = await checkEventRole(eventId, EVENT_ADMINS)
+  if (!access.ok) {
+    throw new Error("You don't have permission to assign this event to a clan")
   }
 
-  // Check if the user is the event creator or a clan admin
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
-    with: {
-      clan: true,
-    },
+    columns: { id: true },
   })
 
   if (!event) {
     throw new Error("Event not found")
   }
 
-  if (event.creatorId !== session.user.id) {
-    // Check if the user is a clan admin
-    const userClanMembership = await db.query.clanMembers.findFirst({
-      where: and(
-        eq(clanMembers.clanId, clanId),
-        eq(clanMembers.userId, session.user.id)
-      ),
-    })
+  const userClanMembership = await db.query.clanMembers.findFirst({
+    where: and(
+      eq(clanMembers.clanId, clanId),
+      eq(clanMembers.userId, access.userId)
+    ),
+  })
 
-    if (!userClanMembership) {
-      throw new Error(
-        "You don't have permission to assign this event to a clan"
-      )
-    }
+  if (
+    !userClanMembership ||
+    (userClanMembership.role !== "admin" &&
+      userClanMembership.role !== "management")
+  ) {
+    throw new Error("You don't have permission to assign this event to a clan")
   }
 
   // Assign the event to the clan
@@ -333,6 +374,10 @@ export async function getUserCreatedEvents() {
 }
 
 export async function getEvents(userId: string): Promise<EventData[]> {
+  // Only the signed-in user may list their own events.
+  const session = await getServerAuthSession()
+  if (!session?.user || session.user.id !== userId) return []
+
   try {
     const userEvents = await db.query.events.findMany({
       where: (events, { or, eq, exists }) =>
@@ -618,6 +663,9 @@ export async function updateEvent(
   }
 ) {
   try {
+    const access = await checkEventRole(eventId, EVENT_ADMINS)
+    if (!access.ok) throw new Error(access.error)
+
     await db
       .update(events)
       .set({
@@ -894,8 +942,6 @@ export async function joinEvent(eventId: string, override = false) {
 }
 
 export async function generateEventInviteLink(eventId: string) {
-  const session = await getServerAuthSession()
-
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
   })
@@ -904,14 +950,8 @@ export async function generateEventInviteLink(eventId: string) {
     throw new Error("Event does not exist!")
   }
 
-  const userRoleInEvent = (await getEventParticipants(event.id)).find(
-    (p) => p.id === session?.user.id
-  )?.role
-
-  const hasPermission =
-    userRoleInEvent === "admin" || event.creatorId === session?.user.id
-
-  if (!hasPermission) {
+  const access = await checkEventRole(event.id, EVENT_ADMINS)
+  if (!access.ok) {
     throw new Error("Unauthorized to generate invite link for this event")
   }
 
@@ -976,6 +1016,10 @@ export async function joinEventViaInvite(inviteCode: string) {
 }
 
 export async function getEventParticipants(eventId: string) {
+  // Carries buy-ins, donations and skill levels: managers only.
+  const access = await checkEventRole(eventId, EVENT_MANAGERS)
+  if (!access.ok) throw new Error(access.error)
+
   try {
     // First, get all unique participants for this event
     const eventParticipantsList = await db
@@ -1077,32 +1121,72 @@ export async function getEventParticipants(eventId: string) {
   }
 }
 
+class ParticipantChangeError extends Error {}
+
 export async function updateParticipantRole(
   eventId: string,
   userId: string,
   newRole: "admin" | "management" | "participant"
 ) {
+  // The caller is derived from the session, never from the target arguments.
+  const access = await checkEventRole(eventId, EVENT_ADMINS)
+  if (!access.ok) {
+    throw new Error("You don't have permission to update participant roles")
+  }
+
   try {
-    const userRoleInEvent = await getUserRole(eventId)
-    const event = await getEventById(eventId)
-    const hasPermission =
-      userRoleInEvent === "admin" || event?.event.creatorId === userId
+    await db.transaction(async (tx) => {
+      const event = await tx.query.events.findFirst({
+        where: eq(events.id, eventId),
+        columns: { creatorId: true },
+      })
+      if (!event) throw new ParticipantChangeError("Event not found")
 
-    if (!hasPermission) {
-      throw new Error("You don't have permission to update participant roles")
-    }
-
-    await db
-      .update(eventParticipants)
-      .set({ role: newRole })
-      .where(
-        and(
+      const target = await tx.query.eventParticipants.findFirst({
+        where: and(
           eq(eventParticipants.eventId, eventId),
           eq(eventParticipants.userId, userId)
+        ),
+        columns: { id: true, role: true },
+      })
+      if (!target) throw new ParticipantChangeError("Participant not found")
+
+      // The creator is an admin whatever their participant row says.
+      if (event.creatorId === userId && newRole !== "admin") {
+        throw new ParticipantChangeError(
+          "The event creator can't be demoted from admin"
         )
-      )
+      }
+
+      // An event always keeps at least one admin.
+      if (target.role === "admin" && newRole !== "admin") {
+        const [otherAdmins] = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(eventParticipants)
+          .where(
+            and(
+              eq(eventParticipants.eventId, eventId),
+              eq(eventParticipants.role, "admin"),
+              ne(eventParticipants.userId, userId)
+            )
+          )
+        const creatorIsOtherAdmin =
+          event.creatorId !== null && event.creatorId !== userId
+        if ((otherAdmins?.count ?? 0) === 0 && !creatorIsOtherAdmin) {
+          throw new ParticipantChangeError(
+            "An event needs at least one admin"
+          )
+        }
+      }
+
+      await tx
+        .update(eventParticipants)
+        .set({ role: newRole })
+        .where(eq(eventParticipants.id, target.id))
+    })
   } catch (error) {
     logger.error({ error }, "Error updating participant role")
+    if (error instanceof ParticipantChangeError) throw error
     throw new Error("Failed to update participant role")
   }
 }
@@ -1112,54 +1196,81 @@ export async function assignParticipantToTeam(
   userId: string,
   teamId: string
 ) {
+  const access = await checkEventRole(eventId, EVENT_MANAGERS)
+  if (!access.ok) {
+    throw new Error("You don't have permission to manage teams")
+  }
+
   try {
-    // First, remove the user from any existing team in this event
-    const existingTeamMember = await db.query.teamMembers.findFirst({
-      where: eq(teamMembers.userId, userId),
-      with: {
-        team: true,
-      },
-    })
-
-    if (existingTeamMember && existingTeamMember.team.eventId === eventId) {
-      await db
-        .delete(teamMembers)
-        .where(eq(teamMembers.id, existingTeamMember.id))
-    }
-
-    // Then, add the user to the new team
-    if (teamId) {
-      // Verify that the new team belongs to the correct event
-      const newTeam = await db.query.teams.findFirst({
-        where: and(eq(teams.id, teamId), eq(teams.eventId, eventId)),
+    await db.transaction(async (tx) => {
+      // The target must take part in this event.
+      const participant = await tx.query.eventParticipants.findFirst({
+        where: and(
+          eq(eventParticipants.eventId, eventId),
+          eq(eventParticipants.userId, userId)
+        ),
+        columns: { id: true },
       })
-
-      if (!newTeam) {
-        throw new Error("Invalid team for this event")
+      if (!participant) {
+        throw new ParticipantChangeError("User is not a participant")
       }
 
-      await db.insert(teamMembers).values({
-        teamId,
-        userId,
-        isLeader: false,
-      })
-    }
+      // Verify that the new team belongs to the correct event
+      if (teamId) {
+        const newTeam = await tx.query.teams.findFirst({
+          where: and(eq(teams.id, teamId), eq(teams.eventId, eventId)),
+        })
+        if (!newTeam) {
+          throw new ParticipantChangeError("Invalid team for this event")
+        }
+      }
+
+      // Remove the user from every team of this event (and only this event)
+      const eventTeamIds = tx
+        .select({ id: teams.id })
+        .from(teams)
+        .where(eq(teams.eventId, eventId))
+      await tx
+        .delete(teamMembers)
+        .where(
+          and(
+            eq(teamMembers.userId, userId),
+            inArray(teamMembers.teamId, eventTeamIds)
+          )
+        )
+
+      if (teamId) {
+        await tx.insert(teamMembers).values({
+          teamId,
+          userId,
+          isLeader: false,
+        })
+      }
+    })
   } catch (error) {
     logger.error({ error }, "Error assigning participant to team")
+    if (error instanceof ParticipantChangeError) throw error
     throw new Error("Failed to assign participant to team")
   }
 }
 
 export async function getEventParticipantsWithTeams(eventId: string) {
+  const access = await checkEventRole(eventId, EVENT_MANAGERS)
+  if (!access.ok) throw new Error(access.error)
+
   try {
     const participants = await db.query.eventParticipants.findMany({
       where: eq(eventParticipants.eventId, eventId),
       with: {
-        user: true,
+        user: { columns: { name: true, email: true } },
       },
     })
 
     const teamMemberships = await db.query.teamMembers.findMany({
+      where: inArray(
+        teamMembers.teamId,
+        db.select({ id: teams.id }).from(teams).where(eq(teams.eventId, eventId))
+      ),
       with: {
         team: true,
       },
@@ -1224,6 +1335,9 @@ export async function updateParticipantBuyIn(
   participantId: string,
   hasPaid: boolean
 ) {
+  const access = await checkEventRole(eventId, EVENT_MANAGERS)
+  if (!access.ok) return { success: false, error: access.error }
+
   try {
     const buyInAmount = await db.transaction(async (tx) => {
       // First, get the minimum buy-in for the event
@@ -1534,9 +1648,9 @@ export async function getRegistrationRequests(
         return and(...conditions)
       },
       with: {
-        user: true,
+        user: USER_PUBLIC_COLUMNS,
         event: true,
-        reviewer: true,
+        reviewer: USER_PUBLIC_COLUMNS,
       },
       orderBy: [desc(eventRegistrationRequests.createdAt)],
     })
@@ -1718,6 +1832,9 @@ export async function getUserRegistrationStatus(eventId: string): Promise<{
 export async function getPendingRegistrationCount(
   eventId: string
 ): Promise<number> {
+  const access = await checkEventRole(eventId, EVENT_MANAGERS)
+  if (!access.ok) return 0
+
   try {
     const result = await db
       .select({ count: sql<number>`count(*)` })
@@ -1730,7 +1847,7 @@ export async function getPendingRegistrationCount(
       )
       .limit(1)
 
-    return result[0]?.count ?? 0
+    return Number(result[0]?.count ?? 0)
   } catch (error) {
     logger.error({ error }, "Error counting pending registrations:", error)
     return 0
@@ -1814,7 +1931,12 @@ export async function updateParticipantDonation(
         description,
         updatedAt: sql`CURRENT_TIMESTAMP`,
       })
-      .where(eq(eventDonations.id, donationId))
+      .where(
+        and(
+          eq(eventDonations.id, donationId),
+          inArray(eventDonations.eventParticipantId, eventParticipantIds(eventId))
+        )
+      )
       .returning()
 
     if (!donation) {
@@ -1848,7 +1970,15 @@ export async function removeParticipantDonation(
     }
 
     // Remove donation record
-    await db.delete(eventDonations).where(eq(eventDonations.id, donationId))
+    // Scoped to this event: a manager can't touch another event's donations
+    await db
+      .delete(eventDonations)
+      .where(
+        and(
+          eq(eventDonations.id, donationId),
+          inArray(eventDonations.eventParticipantId, eventParticipantIds(eventId))
+        )
+      )
 
     revalidatePath(`/events/${eventId}/participants`)
     revalidatePath(`/events/${eventId}`)
@@ -1864,6 +1994,9 @@ export async function getParticipantDonations(
   eventId: string,
   participantId: string
 ) {
+  const access = await checkEventRole(eventId, EVENT_MANAGERS)
+  if (!access.ok) return []
+
   try {
     // Find the eventParticipant
     const eventParticipant = await db.query.eventParticipants.findFirst({

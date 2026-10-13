@@ -1,4 +1,4 @@
-import { getTeamTierProgress, getTierXpRequirements } from "@/app/actions/bingo"
+import { loadTeamTierProgress, loadTierXpRequirements } from "@/server/progression"
 import { logger } from "@/lib/logger"
 import type { BoardTierData } from "@/lib/tiers"
 
@@ -16,8 +16,8 @@ export async function getBoardTierData(
 
   try {
     const [requirements, progress] = await Promise.all([
-      getTierXpRequirements(bingo.id),
-      teamId ? getTeamTierProgress(teamId, bingo.id) : Promise.resolve([]),
+      loadTierXpRequirements(bingo.id),
+      teamId ? loadTeamTierProgress(teamId, bingo.id) : Promise.resolve([]),
     ])
     return {
       requirements: requirements.map((r) => ({
