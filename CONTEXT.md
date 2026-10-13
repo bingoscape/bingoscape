@@ -38,6 +38,16 @@ _Avoid_: User, Account
 **Wise Old Man**:
 The external OSRS group and stat tracking service integrated with Bingoscape.
 
+**Owner**:
+The Player who owns an Event (`events.creator_id`, always also an `admin` participant) or a Clan (`clans.owner_id`, always an `admin` member). Only the Event owner can delete the Event, grant the admin role and transfer ownership; all other admin permissions belong to every admin. If an Event's creator account no longer exists, its oldest admin acts as the owner. The owner can be neither demoted nor removed; ownership is handed over by an explicit transfer, after which the previous owner remains an admin.
+_Avoid_: Creator (for the permission concept), Host
+
+**Last admin**:
+An Event and a Clan always keep at least one admin. A demotion or removal that would leave none is refused, also when two admins are demoted at the same moment (the Event or Clan row is locked while a role changes).
+
+**Role change**:
+Every change of an Event or Clan membership (join, add, role change, removal, ownership transfer) goes through `changeRole()` and its siblings in `src/server/authz/membership.ts`, in one transaction. Each writes one row to the `role_change_log` ledger (who, whom, old and new role, source, reason); replaying the ledger must give the live roles, which a daily reconciliation checks. Nobody grants or adds a role above their own.
+
 **Clan**:
 A persistent, long-term group of Players outside of any specific Event.
 _Avoid_: Group, Guild

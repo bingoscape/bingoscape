@@ -15,6 +15,8 @@ export const PERMISSIONS = [
   "event:invite",
   "event:assign-clan",
   "event:manage-rules",
+  "event:grant-admin",
+  "event:transfer-ownership",
   // Participants
   "participant:list",
   "participant:add",
@@ -75,6 +77,8 @@ const ADMIN_PERMISSIONS = [
   "event:invite",
   "event:assign-clan",
   "event:manage-rules",
+  "event:grant-admin",
+  "event:transfer-ownership",
   "participant:set-role",
 ] as const satisfies readonly Permission[]
 
@@ -91,12 +95,18 @@ export const ROLE_PERMISSIONS: Record<EventRole, readonly Permission[]> = {
 }
 
 /**
- * Permissions only the Event owner (the creator) may use even though other
- * admins hold the role permission. Empty on purpose: today an admin may do
- * everything the creator may. Delete Event, grant admin and transfer ownership
- * are the candidates (see the RBAC epic), to be decided separately.
+ * Permissions only the Event owner may use even though every admin holds the
+ * role permission: delete the Event, grant the admin role (to a new or an
+ * existing participant) and transfer ownership. The owner is `events.creator_id`
+ * (or, for an Event whose creator account is gone, its oldest admin: see
+ * `buildEventActor`). Other admins keep every other admin permission.
  */
-export const OWNER_ONLY_PERMISSIONS: ReadonlySet<Permission> = new Set()
+export const OWNER_ONLY_PERMISSIONS: ReadonlySet<Permission> =
+  new Set<Permission>([
+    "event:delete",
+    "event:grant-admin",
+    "event:transfer-ownership",
+  ])
 
 /**
  * Team scoped permissions a plain Team member (or leader) holds for their own

@@ -22,8 +22,9 @@ type Inserter = Pick<typeof db, "insert">
 /**
  * Appends one row to `event_audit_log`. Pass the transaction handle to make the
  * entry part of the change it records; pass `db` to record a denial or failure
- * outside any transaction. The wiring into the guards and changeRole() is
- * done in later phases.
+ * outside any transaction. changeRole() and its siblings
+ * (`membership.ts`) use it for denials and sensitive changes; wiring it into
+ * the guards follows in a later phase.
  */
 export async function recordEventAudit(
   executor: Inserter,

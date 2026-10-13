@@ -1,6 +1,6 @@
 "use server"
 
-import { and, count, eq, ne, sql } from "drizzle-orm"
+import { and, eq, ne, sql } from "drizzle-orm"
 
 import {
   clanAuditSnapshot,
@@ -12,7 +12,6 @@ import {
 import { getSuperAdminEmails, normalizeEmail } from "@/lib/super-admin-email"
 import {
   emailChangeBlocker,
-  membershipChangeBlocker,
   userDeleteBlocker,
 } from "@/lib/super-admin-invariants"
 import {
@@ -31,12 +30,12 @@ import {
   type EVENT_ROLES,
 } from "@/lib/validation/super-admin"
 import {
-  clanMembers,
-  clans,
-  eventParticipants,
-  events,
-  users,
-} from "@/server/db/schema"
+  changeRole,
+  removeMember,
+  transferOwnership,
+  type MembershipResult,
+} from "@/server/authz/membership"
+import { clans, events, users } from "@/server/db/schema"
 import { revalidateAdmin } from "@/server/super-admin/revalidate"
 import {
   adminAction,
@@ -67,96 +66,45 @@ async function assertUserExists(tx: AdminTx, userId: string, what: string) {
   if (!row) throw notFoundError(what)
 }
 
-interface MembershipGuardResult {
-  parentName: string
-  currentRole: string
+/**
+ * Maps a refused membership change to the admin error that rolls the
+ * transaction back. The invariants (owner stays, last admin stays) live in
+ * `changeRole()`/`removeMember()`; super-admin changes use source
+ * `super_admin` and skip the role-ladder policy but not the invariants.
+ */
+function membershipOutcome<T extends object>(
+  result: MembershipResult<T>,
+  what: string
+): asserts result is Extract<MembershipResult<T>, { success: true }> {
+  if (result.success) return
+  if (result.code === "NOT_FOUND" || result.code === "NOT_A_MEMBER") {
+    throw notFoundError(what)
+  }
+  if (result.code === "FAILED" || result.code === "UNAUTHENTICATED") {
+    throw new Error(result.error)
+  }
+  throw conflictError(result.error)
 }
 
-/**
- * Locks the membership's parent row for the rest of the transaction, so two
- * concurrent demotions cannot both see "another admin exists", then refuses
- * changes that would orphan the clan owner or the last admin.
- */
-async function guardMembershipChange(
+async function parentName(
   tx: AdminTx,
   scope: "clan" | "event",
-  parentId: string,
-  userId: string,
-  nextRole: string | null
-): Promise<MembershipGuardResult> {
+  parentId: string
+): Promise<string> {
   if (scope === "clan") {
     const [clan] = await tx
-      .select({ ownerId: clans.ownerId, name: clans.name })
+      .select({ name: clans.name })
       .from(clans)
       .where(eq(clans.id, parentId))
-      .for("update")
       .limit(1)
-    if (!clan) throw notFoundError("Clan")
-
-    const [member] = await tx
-      .select({ role: clanMembers.role })
-      .from(clanMembers)
-      .where(
-        and(eq(clanMembers.clanId, parentId), eq(clanMembers.userId, userId))
-      )
-      .limit(1)
-    if (!member) throw notFoundError("Clan member")
-
-    const [admins] = await tx
-      .select({ total: count() })
-      .from(clanMembers)
-      .where(
-        and(eq(clanMembers.clanId, parentId), eq(clanMembers.role, "admin"))
-      )
-    const reason = membershipChangeBlocker({
-      scope,
-      isOwner: clan.ownerId === userId,
-      currentRole: member.role,
-      adminCount: admins?.total ?? 0,
-      nextRole,
-    })
-    if (reason) throw conflictError(reason)
-    return { parentName: clan.name, currentRole: member.role }
+    return clan?.name ?? ""
   }
-
   const [event] = await tx
     .select({ title: events.title })
     .from(events)
     .where(eq(events.id, parentId))
-    .for("update")
     .limit(1)
-  if (!event) throw notFoundError("Event")
-
-  const [participant] = await tx
-    .select({ role: eventParticipants.role })
-    .from(eventParticipants)
-    .where(
-      and(
-        eq(eventParticipants.eventId, parentId),
-        eq(eventParticipants.userId, userId)
-      )
-    )
-    .limit(1)
-  if (!participant) throw notFoundError("Participant")
-
-  const [admins] = await tx
-    .select({ total: count() })
-    .from(eventParticipants)
-    .where(
-      and(
-        eq(eventParticipants.eventId, parentId),
-        eq(eventParticipants.role, "admin")
-      )
-    )
-  const reason = membershipChangeBlocker({
-    scope,
-    isOwner: false,
-    currentRole: participant.role,
-    adminCount: admins?.total ?? 0,
-    nextRole,
-  })
-  if (reason) throw conflictError(reason)
-  return { parentName: event.title, currentRole: participant.role }
+  return event?.title ?? ""
 }
 
 /* -------------------------------------------------------------------------- */
@@ -331,7 +279,7 @@ export async function deleteUser(userId: string): Promise<AdminResult> {
 const updateClanAction = adminAction(
   "clan.update",
   updateClanSchema,
-  async ({ tx, input }) => {
+  async ({ tx, admin, input }) => {
     const { clanId, data } = input
     if (!hasChanges(data)) throw invalidError("Nothing to change.")
 
@@ -357,11 +305,16 @@ const updateClanAction = adminAction(
       set.description = data.description
       changed.push("description")
     }
+    // A new owner goes through the membership helper (must be a member, is
+    // made an admin, logged in the ledger); clearing the owner is a plain write.
+    let newOwnerId: string | null = null
     if (data.ownerId !== undefined) {
       if (data.ownerId !== null) {
         await assertUserExists(tx, data.ownerId, "Owner")
+        newOwnerId = data.ownerId
+      } else {
+        set.ownerId = null
       }
-      set.ownerId = data.ownerId
       changed.push("ownerId")
     }
 
@@ -371,6 +324,20 @@ const updateClanAction = adminAction(
       .where(eq(clans.id, clanId))
       .returning({ id: clans.id })
     if (updated.length === 0) throw notFoundError("Clan")
+
+    if (newOwnerId !== null) {
+      const transfer = await transferOwnership({
+        scope: "clan",
+        parentId: clanId,
+        newOwnerId,
+        actor: { kind: "system", userId: admin.adminId },
+        source: "super_admin",
+        reason: "super-admin: clan.update",
+        tx,
+      })
+      membershipOutcome(transfer, "Clan")
+      set.ownerId = newOwnerId
+    }
 
     return {
       audit: {
@@ -446,32 +413,25 @@ export async function deleteClan(clanId: string): Promise<AdminResult> {
 const removeClanMemberAction = adminAction(
   "clan.member.remove",
   clanMemberSchema,
-  async ({ tx, input }) => {
-    const guard = await guardMembershipChange(
+  async ({ tx, admin, input }) => {
+    const result = await removeMember({
+      scope: "clan",
+      parentId: input.clanId,
+      userId: input.userId,
+      actor: { kind: "system", userId: admin.adminId },
+      source: "super_admin",
+      reason: "super-admin: clan.member.remove",
       tx,
-      "clan",
-      input.clanId,
-      input.userId,
-      null
-    )
-    const deleted = await tx
-      .delete(clanMembers)
-      .where(
-        and(
-          eq(clanMembers.clanId, input.clanId),
-          eq(clanMembers.userId, input.userId)
-        )
-      )
-      .returning({ id: clanMembers.id })
-    if (deleted.length === 0) throw notFoundError("Clan member")
+    })
+    membershipOutcome(result, "Clan member")
 
     return {
       audit: {
         action: "clan.member.remove",
         targetType: "clan",
         targetId: input.clanId,
-        targetLabel: guard.parentName,
-        before: { userId: input.userId, role: guard.currentRole },
+        targetLabel: await parentName(tx, "clan", input.clanId),
+        before: { userId: input.userId, role: result.oldRole },
       },
     }
   }
@@ -491,33 +451,26 @@ export async function removeClanMember(
 const updateClanMemberRoleAction = adminAction(
   "clan.member.role",
   updateClanMemberRoleSchema,
-  async ({ tx, input }) => {
-    const guard = await guardMembershipChange(
+  async ({ tx, admin, input }) => {
+    const result = await changeRole({
+      scope: "clan",
+      parentId: input.clanId,
+      userId: input.userId,
+      newRole: input.role,
+      actor: { kind: "system", userId: admin.adminId },
+      source: "super_admin",
+      reason: "super-admin: clan.member.role",
       tx,
-      "clan",
-      input.clanId,
-      input.userId,
-      input.role
-    )
-    const updated = await tx
-      .update(clanMembers)
-      .set({ role: input.role })
-      .where(
-        and(
-          eq(clanMembers.clanId, input.clanId),
-          eq(clanMembers.userId, input.userId)
-        )
-      )
-      .returning({ id: clanMembers.id })
-    if (updated.length === 0) throw notFoundError("Clan member")
+    })
+    membershipOutcome(result, "Clan member")
 
     return {
       audit: {
         action: "clan.member.role",
         targetType: "clan",
         targetId: input.clanId,
-        targetLabel: guard.parentName,
-        before: { userId: input.userId, role: guard.currentRole },
+        targetLabel: await parentName(tx, "clan", input.clanId),
+        before: { userId: input.userId, role: result.oldRole },
         after: { userId: input.userId, role: input.role },
       },
     }
@@ -698,32 +651,25 @@ export async function deleteEvent(eventId: string): Promise<AdminResult> {
 const removeEventParticipantAction = adminAction(
   "event.participant.remove",
   eventParticipantSchema,
-  async ({ tx, input }) => {
-    const guard = await guardMembershipChange(
+  async ({ tx, admin, input }) => {
+    const result = await removeMember({
+      scope: "event",
+      parentId: input.eventId,
+      userId: input.userId,
+      actor: { kind: "system", userId: admin.adminId },
+      source: "super_admin",
+      reason: "super-admin: event.participant.remove",
       tx,
-      "event",
-      input.eventId,
-      input.userId,
-      null
-    )
-    const deleted = await tx
-      .delete(eventParticipants)
-      .where(
-        and(
-          eq(eventParticipants.eventId, input.eventId),
-          eq(eventParticipants.userId, input.userId)
-        )
-      )
-      .returning({ id: eventParticipants.id })
-    if (deleted.length === 0) throw notFoundError("Participant")
+    })
+    membershipOutcome(result, "Participant")
 
     return {
       audit: {
         action: "event.participant.remove",
         targetType: "event",
         targetId: input.eventId,
-        targetLabel: guard.parentName,
-        before: { userId: input.userId, role: guard.currentRole },
+        targetLabel: await parentName(tx, "event", input.eventId),
+        before: { userId: input.userId, role: result.oldRole },
       },
     }
   }
@@ -743,33 +689,26 @@ export async function removeEventParticipant(
 const updateEventParticipantRoleAction = adminAction(
   "event.participant.role",
   updateEventParticipantRoleSchema,
-  async ({ tx, input }) => {
-    const guard = await guardMembershipChange(
+  async ({ tx, admin, input }) => {
+    const result = await changeRole({
+      scope: "event",
+      parentId: input.eventId,
+      userId: input.userId,
+      newRole: input.role,
+      actor: { kind: "system", userId: admin.adminId },
+      source: "super_admin",
+      reason: "super-admin: event.participant.role",
       tx,
-      "event",
-      input.eventId,
-      input.userId,
-      input.role
-    )
-    const updated = await tx
-      .update(eventParticipants)
-      .set({ role: input.role, updatedAt: new Date() })
-      .where(
-        and(
-          eq(eventParticipants.eventId, input.eventId),
-          eq(eventParticipants.userId, input.userId)
-        )
-      )
-      .returning({ id: eventParticipants.id })
-    if (updated.length === 0) throw notFoundError("Participant")
+    })
+    membershipOutcome(result, "Participant")
 
     return {
       audit: {
         action: "event.participant.role",
         targetType: "event",
         targetId: input.eventId,
-        targetLabel: guard.parentName,
-        before: { userId: input.userId, role: guard.currentRole },
+        targetLabel: await parentName(tx, "event", input.eventId),
+        before: { userId: input.userId, role: result.oldRole },
         after: { userId: input.userId, role: input.role },
       },
     }

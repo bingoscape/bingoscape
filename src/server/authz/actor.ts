@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, eq } from "drizzle-orm"
+import { and, asc, eq } from "drizzle-orm"
 import { cache } from "react"
 
 import { buildEventActor, type EventActor } from "@/lib/authz/policy"
@@ -14,6 +14,22 @@ import {
   teamMembers,
   teams,
 } from "@/server/db/schema"
+
+/** The admin participant with the oldest row, or null when there is none. */
+export async function oldestAdminId(eventId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ userId: eventParticipants.userId })
+    .from(eventParticipants)
+    .where(
+      and(
+        eq(eventParticipants.eventId, eventId),
+        eq(eventParticipants.role, "admin")
+      )
+    )
+    .orderBy(asc(eventParticipants.createdAt), asc(eventParticipants.id))
+    .limit(1)
+  return row?.userId ?? null
+}
 
 /** Outcome of looking up the signed-in user's standing in one Event. */
 export type EventActorLookup =
@@ -88,12 +104,17 @@ export const getEventActor = cache(
       }
     }
 
+    // An Event whose creator account is gone is owned by its oldest admin.
+    const ownerFallbackId =
+      first.creatorId === null ? await oldestAdminId(eventId) : null
+
     return {
       status: "ok",
       actor: buildEventActor({
         userId,
         eventId,
         creatorId: first.creatorId,
+        ownerFallbackId,
         participantRole,
         teams: [...teamsById].map(([teamId, isLeader]) => ({
           teamId,

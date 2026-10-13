@@ -53,7 +53,7 @@ The defaults are those of `docker-compose.yml`. `scripts/backup-db.sh` and `scri
 | Secret Name                          | Description                                                                                                                                         | Example Value                          |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
 | `SUPER_ADMIN_EMAILS`                 | Comma-separated admin emails                                                                                                                        | `admin@example.com,admin2@example.com` |
-| `CRON_SECRET`                        | Bearer secret for `/api/cron/unlock` (scheduled bingo unlock). The endpoint answers 401 while it is unset (recommended)                             | `openssl rand -hex 32`                 |
+| `CRON_SECRET`                        | Bearer secret for `/api/cron/unlock` (scheduled bingo unlock) and `/api/cron/rbac-reconcile` (daily RBAC reconciliation). Both endpoints answer 401 while it is unset (recommended)                             | `openssl rand -hex 32`                 |
 | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | Stable key for Next.js server action IDs/closures (recommended). Without it, every build gets a new key and open browser tabs break after a deploy. | `openssl rand -base64 32`              |
 
 ### SSH Access (For Deployments & Migrations)

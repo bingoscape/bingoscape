@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Transfer Event ownership (`transferEventOwnership` server action, owner-only): the new owner must be a participant, becomes the creator and an admin; the previous owner stays an admin
+- Migration 0039: safety-net trigger on `event_participants` / `clan_members` that logs writes outside the membership helper to `role_change_log` with source `trigger`, plus a catch-up of ledger entries missing since 0038. See `docs/DATABASE-MIGRATION.md`, "RBAC 3/8 rollout"
+- Daily RBAC reconciliation: `GET /api/cron/rbac-reconcile` (bearer `CRON_SECRET`) runs the verification queries and answers 500 on findings; `scripts/rbac-reconcile.sh` and `scripts/setup-rbac-reconcile-cron.sh` run it from host cron and alert via the backup Discord webhook
 - **RuneLite API 2.1 (progression and battleship boards)** - All changes are additive
   - `apiVersion: "2.1"` on every board payload
   - `/api/runelite/events` lists boards of every type (standard, progression, battleship); hidden boards stay excluded
@@ -26,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Behaviour change (owner-only actions):** deleting an Event, granting the admin role (by changing a role or adding a participant) and the new ownership transfer are now reserved to the Event owner (the creator). Before, every admin could do these. Other admins keep all other admin permissions. If the creator account no longer exists, the Event's oldest admin counts as the owner. Super-admin actions are unchanged.
+- Event and Clan memberships are written in one place (`src/server/authz/membership.ts`): joining, invites, registration approval, adding Clan members, role changes, removal, leaving a Clan, creating an Event or Clan, and the super-admin member actions. The Event or Clan row is locked while a role changes, so two simultaneous demotions can no longer remove the last admin; an Event and a Clan always keep an admin, and the owner cannot be demoted or removed. Every change is recorded in `role_change_log` (and refusals in `event_audit_log`).
+- Removing an Event participant as super admin now also removes their Team place, buy-ins and donations, and refuses to remove or demote the Event creator (transfer ownership first). Setting a Clan owner as super admin requires the new owner to be a Clan member and makes them an admin.
 - Database: event participants and team memberships are now unique per Event (duplicates are removed into quarantine tables by migration 0038), `team_members` gets an `event_id`, creators always have an admin participant row, and `role_change_log` / `event_audit_log` tables are added (not written yet). See `docs/DATABASE-MIGRATION.md`, "RBAC 2/8 rollout"
 - Adding a Player to a Team now fails with "User is already on a team in this event" when they are on another Team of that Event
 - `GET /api/runelite/bingos/{bingoId}` now serves battleship boards and requires the caller to be a participant or manager of the event (hidden boards: managers only); every other case answers `404`

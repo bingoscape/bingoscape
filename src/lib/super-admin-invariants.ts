@@ -43,39 +43,3 @@ export function emailChangeBlocker(input: {
   }
   return null
 }
-
-export interface MembershipChange {
-  scope: "clan" | "event"
-  /** Clans only: the member is the clan's owner. */
-  isOwner: boolean
-  currentRole: string
-  /** Members/participants with the admin role, including the target. */
-  adminCount: number
-  /** The role after the change, or null when the member is removed. */
-  nextRole: string | null
-}
-
-/**
- * Never leave a clan without its owner, or a clan/event without any admin,
- * through a removal or demotion.
- */
-export function membershipChangeBlocker(
-  change: MembershipChange
-): string | null {
-  const noun = change.scope === "clan" ? "clan" : "event"
-  const keepsAdmin = change.nextRole === "admin"
-
-  if (change.scope === "clan" && change.isOwner && !keepsAdmin) {
-    return "This member is the clan owner. Transfer ownership first (Edit clan, then choose a new owner), then try again."
-  }
-  if (
-    change.currentRole === "admin" &&
-    !keepsAdmin &&
-    change.adminCount <= 1
-  ) {
-    return `This is the only admin of the ${noun}. Promote another ${
-      change.scope === "clan" ? "member" : "participant"
-    } to admin first.`
-  }
-  return null
-}

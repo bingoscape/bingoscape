@@ -20,9 +20,9 @@ import {
 } from "@/lib/super-admin-email"
 import {
   emailChangeBlocker,
-  membershipChangeBlocker,
   userDeleteBlocker,
 } from "@/lib/super-admin-invariants"
+import { removeMember } from "@/server/authz/membership"
 import { logger } from "@/lib/logger"
 import { updateUserSchema } from "@/lib/validation/super-admin"
 import { getServerAuthSession } from "@/server/auth"
@@ -34,6 +34,13 @@ jest.mock("@/server/db", () => ({
 }))
 jest.mock("@/lib/logger", () => ({
   logger: { warn: jest.fn(), error: jest.fn(), info: jest.fn() },
+}))
+// The owner and last-admin rules live in the membership helper (covered by
+// src/server/__tests__/membership.test.ts); here only the mapping is tested.
+jest.mock("@/server/authz/membership", () => ({
+  changeRole: jest.fn(),
+  removeMember: jest.fn(),
+  transferOwnership: jest.fn(),
 }))
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
 jest.mock("next/headers", () => ({ headers: async () => new Headers() }))
@@ -249,13 +256,26 @@ describe("adminAction", () => {
     expect(tx.update).not.toHaveBeenCalled()
   })
 
-  it("refuses to remove the clan owner", async () => {
+  it("turns a refused membership change into a conflict, as source super_admin", async () => {
     signInAsAdmin()
-    const tx = fakeTx([{ ownerId: OTHER_ID, name: "Clan", role: "admin", total: 2 }])
+    const tx = fakeTx([])
     useTransaction(tx)
+    ;(removeMember as jest.Mock).mockResolvedValue({
+      success: false,
+      code: "OWNER_PROTECTED",
+      error: "The clan owner can't be removed. Transfer ownership first.",
+    })
     const result = await removeClanMember(CLAN_ID, OTHER_ID)
     expect(result).toMatchObject({ success: false, code: "conflict" })
-    expect(tx.delete).not.toHaveBeenCalled()
+    expect(removeMember).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: "clan",
+        parentId: CLAN_ID,
+        userId: OTHER_ID,
+        source: "super_admin",
+        actor: { kind: "system", userId: ADMIN_ID },
+      })
+    )
   })
 })
 
@@ -329,22 +349,6 @@ describe("invariant predicates", () => {
     ).not.toBeNull()
     expect(
       emailChangeBlocker({ ...base, oldEmail: "o@x.com", newEmail: "n@x.com" })
-    ).toBeNull()
-  })
-
-  it("membershipChangeBlocker protects the owner and the only admin", () => {
-    const base = { scope: "clan" as const, isOwner: false, adminCount: 2 }
-    expect(
-      membershipChangeBlocker({ ...base, isOwner: true, currentRole: "admin", nextRole: null })
-    ).toMatch(/transfer ownership/i)
-    expect(
-      membershipChangeBlocker({ ...base, adminCount: 1, currentRole: "admin", nextRole: "member" })
-    ).toMatch(/only admin/i)
-    expect(
-      membershipChangeBlocker({ ...base, adminCount: 1, currentRole: "admin", nextRole: "admin" })
-    ).toBeNull()
-    expect(
-      membershipChangeBlocker({ ...base, currentRole: "admin", nextRole: null })
     ).toBeNull()
   })
 })

@@ -41,6 +41,11 @@ interface ActorFacts {
   userId: string
   eventId: string
   creatorId: string | null
+  /**
+   * Owner stand-in for an Event whose creator account is gone
+   * (`creatorId === null`): the oldest admin. Ignored while a creator exists.
+   */
+  ownerFallbackId?: string | null
   /** The user's `event_participants.role`, if they have a row. */
   participantRole: EventRole | null
   teams?: readonly ActorTeam[]
@@ -49,10 +54,13 @@ interface ActorFacts {
 /**
  * The one place that normalises "the creator counts as admin": whatever the
  * creator's participant row says (or even if they have none), the effective
- * role is `admin` and `isOwner` is set.
+ * role is `admin` and `isOwner` is set. Without a creator the oldest admin
+ * (`ownerFallbackId`) is the owner, so owner-only actions never become
+ * unreachable.
  */
 export function buildEventActor(facts: ActorFacts): EventActor {
-  const isOwner = facts.creatorId !== null && facts.creatorId === facts.userId
+  const ownerId = facts.creatorId ?? facts.ownerFallbackId ?? null
+  const isOwner = ownerId !== null && ownerId === facts.userId
   return {
     userId: facts.userId,
     eventId: facts.eventId,
@@ -69,6 +77,14 @@ function roleRulesHold(
   resource: PolicyResource
 ): boolean {
   const rank = EVENT_ROLE_RANK[role]
+  if (
+    permission === "participant:add" &&
+    resource.newRole !== undefined &&
+    EVENT_ROLE_RANK[resource.newRole] > rank
+  ) {
+    // Nobody adds a participant with a role above their own.
+    return false
+  }
   if (
     (permission === "participant:remove" ||
       permission === "participant:set-role") &&
@@ -132,6 +148,16 @@ export function evaluatePolicy(
 ): boolean {
   if (!actor) return false
   if (ownerOnly.has(permission) && !actor.isOwner) return false
+  if (
+    (permission === "participant:set-role" ||
+      permission === "participant:add") &&
+    resource.newRole === "admin" &&
+    ownerOnly.has("event:grant-admin") &&
+    !actor.isOwner
+  ) {
+    // Granting the admin role is owner-only, whichever way it is granted.
+    return false
+  }
 
   if (
     actor.role !== null &&
