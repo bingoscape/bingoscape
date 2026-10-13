@@ -1,5 +1,5 @@
-import type { EventStatsData } from "@/app/actions/stats"
-import type { ItemStatistics } from "@/app/actions/item-statistics"
+import type { EventStatsData } from "@/server/queries/stats"
+import type { ItemStatistics } from "@/server/queries/item-statistics"
 import { formatGPValue } from "@/lib/format-gp"
 
 export function generateEventMarkdown(

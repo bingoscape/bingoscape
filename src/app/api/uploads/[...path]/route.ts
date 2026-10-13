@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import path from "path"
 import fs from "fs/promises"
 
+import { getUploadAccess } from "@/server/authz/uploads"
+
 // Canonical absolute path to the uploads directory – used as the trust boundary.
 // path.resolve handles OS separators correctly on both Linux and Windows.
 const UPLOADS_DIR = path.resolve(process.cwd(), "public", "uploads")
@@ -28,13 +30,19 @@ export async function GET(request: NextRequest) {
     return new NextResponse("Not found", { status: 404 })
   }
 
+  // Decision 4 of the RBAC epic: public URL (default) or the Event's visibility.
+  const access = await getUploadAccess(rawRelative)
+  if (!access.allowed) {
+    return new NextResponse("Not found", { status: 404 })
+  }
+
   try {
     const file = await fs.readFile(resolvedPath)
     const contentType = getContentType(resolvedPath)
     return new NextResponse(file, {
       headers: {
         "Content-Type": contentType,
-        "Cache-Control": "public, max-age=31536000, immutable",
+        "Cache-Control": access.cacheControl,
       },
     })
   } catch {

@@ -1,4 +1,4 @@
-"use server"
+import "server-only"
 
 import { db } from "@/server/db"
 import {
@@ -11,9 +11,9 @@ import {
   bingos,
 } from "@/server/db/schema"
 import { eq, and, sql, count, inArray, desc, asc, gte, lte } from "drizzle-orm"
-import { calculateBonusXP } from "./pattern-completion"
+import { calculateBonusXP } from "@/server/pattern-completion"
 import { redactBlindTile } from "@/server/blind-board"
-import { isBingoBlindForViewer } from "@/server/blind-board-viewer"
+import { getBoardReadAccess, getEventReadAccessFor } from "@/server/authz/read"
 
 export interface TeamPointsOverTime {
   date: string
@@ -101,12 +101,30 @@ export interface StatsData {
   totalPossibleXP: number
 }
 
+function emptyStats(): StatsData {
+  return {
+    teamPoints: [],
+    teamSubmissions: [],
+    teamUserSubmissions: [],
+    teamUserWeightedSubmissions: [],
+    teamEfficiency: [],
+    tileCompletions: [],
+    activityTimeline: [],
+    totalPossibleXP: 0,
+  }
+}
+
 /**
- * Get comprehensive statistics for a bingo
+ * Get comprehensive statistics for a bingo. It carries per player data, so it
+ * is for participants and managers of the Event that owns a visible Board (a
+ * draft Board: managers only); everybody else gets empty statistics.
  */
 export async function getAllTeamPointsAndTotal(
   bingoId: string
 ): Promise<StatsData> {
+  const boardAccess = await getBoardReadAccess(bingoId, "member-data")
+  if (!boardAccess) return emptyStats()
+
   // Get all teams that have submissions for this bingo
   const participatingTeams = await db
     .select({
@@ -448,13 +466,14 @@ export async function getAllTeamPointsAndTotal(
 
   // Get tile completion statistics. A blind battleship board lists its Tiles
   // by position only (no title, no XP).
-  const blind = await isBingoBlindForViewer(bingoId)
+  const blind = boardAccess.blind
   const tileCompletions = await db
     .select({
       tileId: tiles.id,
       index: tiles.index,
       title: tiles.title,
       weight: tiles.weight,
+      isHidden: tiles.isHidden,
       completionCount: count(teamTileSubmissions.id),
     })
     .from(tiles)
@@ -466,14 +485,15 @@ export async function getAllTeamPointsAndTotal(
       )
     )
     .where(eq(tiles.bingoId, bingoId))
-    .groupBy(tiles.id, tiles.index, tiles.title, tiles.weight)
+    .groupBy(tiles.id, tiles.index, tiles.title, tiles.weight, tiles.isHidden)
     .orderBy(desc(count(teamTileSubmissions.id)))
     .then((results) =>
       results.map((r) => {
         const visible = blind ? redactBlindTile(r) : r
         return {
           tileId: visible.tileId,
-          title: visible.title,
+          // A hidden Tile keeps its cell and XP but not its title.
+          title: r.isHidden && !boardAccess.isManager ? "" : visible.title,
           weight: visible.weight,
           completionCount: Number(visible.completionCount),
         }
@@ -563,17 +583,32 @@ export interface EventStatsData {
 }
 
 /**
- * Get comprehensive statistics for an entire event across all bingo boards
+ * Get comprehensive statistics for an entire event across all bingo boards:
+ * the leaderboard the public Event page also shows, so anybody who may read the
+ * Event content. Draft (not visible) Boards count for managers only.
  */
 export async function getEventStats(eventId: string): Promise<EventStatsData> {
+  const access = await getEventReadAccessFor(eventId, "content")
+  if (!access) {
+    return {
+      eventTeamPoints: [],
+      bingoSummary: [],
+      totalEventXP: 0,
+      totalPossibleEventXP: 0,
+    }
+  }
+
   // Get all bingos for this event
-  const eventBingos = await db.query.bingos.findMany({
+  const allBingos = await db.query.bingos.findMany({
     where: eq(bingos.eventId, eventId),
     with: {
       tiles: true,
     },
     orderBy: [asc(bingos.createdAt)],
   })
+  const eventBingos = access.isManager
+    ? allBingos
+    : allBingos.filter((b) => b.visible)
 
   if (eventBingos.length === 0) {
     return {
@@ -594,7 +629,15 @@ export async function getEventStats(eventId: string): Promise<EventStatsData> {
     .innerJoin(teamTileSubmissions, eq(teamTileSubmissions.teamId, teams.id))
     .innerJoin(tiles, eq(tiles.id, teamTileSubmissions.tileId))
     .innerJoin(bingos, eq(bingos.id, tiles.bingoId))
-    .where(eq(bingos.eventId, eventId))
+    .where(
+      and(
+        eq(bingos.eventId, eventId),
+        inArray(
+          bingos.id,
+          eventBingos.map((b) => b.id)
+        )
+      )
+    )
     .groupBy(teams.id, teams.name)
 
   const eventTeamPoints: EventTeamPoints[] = []

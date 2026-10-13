@@ -3,7 +3,6 @@ import { getServerAuthSession } from "@/server/auth"
 import { logger } from "@/lib/logger"
 import { db } from "@/server/db"
 import {
-  events,
   teams,
   teamMembers,
   eventParticipants,
@@ -13,6 +12,8 @@ import {
 import { eq, and, inArray, not, exists } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getUserRole } from "./events"
+import { levelAllows } from "@/lib/authz/read-policy"
+import { getEventReadAccessFor } from "@/server/authz/read"
 import {
   assertTeamLimitForBattleship,
   battleshipErrorMessage,
@@ -58,17 +59,13 @@ export async function createTeam(eventId: string, name: string) {
 }
 
 export async function getTeamsByEventId(eventId: string) {
-  // Members get the teams with the skill badges the roster shows. Visitors of
-  // a public Event get the teams only, without any player metadata.
-  const role = await getUserRole(eventId)
-  if (!role) {
-    const event = await db.query.events.findFirst({
-      where: eq(events.id, eventId),
-      columns: { public: true },
-    })
-    if (!event?.public) return []
-  }
-  const withMetadata = role !== null
+  // Anybody who may read the Event content gets the Teams (a public Event shows
+  // its rosters). Only members also get the skill badges the roster shows;
+  // visitors of a public Event get no player metadata. Judged on the strict
+  // level, so the relaxed read policy never hands metadata to non-members.
+  const access = await getEventReadAccessFor(eventId, "content")
+  if (!access) return []
+  const withMetadata = levelAllows(access.strictLevel, "member-data")
 
   const eventTeams = await db.query.teams.findMany({
     where: eq(teams.eventId, eventId),

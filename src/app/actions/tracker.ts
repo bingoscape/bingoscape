@@ -14,7 +14,7 @@ import {
 import { fetchCompetitionFromWOM } from "./wiseoldman"
 import { WOMClient } from "@wise-old-man/utils"
 import { logger } from "@/lib/logger"
-import { checkAndAutoCompleteTile } from "@/app/actions/tile-completion"
+import { checkAndAutoCompleteTile } from "@/server/tile-completion"
 import { authzErrorMessage, requireBingoAdmin } from "@/server/authz"
 import { unstable_noStore as noStore } from "next/cache"
 import {

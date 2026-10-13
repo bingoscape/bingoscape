@@ -1,4 +1,4 @@
-"use server"
+import "server-only"
 
 import { db } from "@/server/db"
 import {
@@ -14,7 +14,8 @@ import {
 } from "@/server/db/schema"
 import { eq, and, isNotNull, inArray } from "drizzle-orm"
 import { getItemAveragePrices } from "@/lib/osrs-ge-prices"
-import { isBingoBlindForViewer } from "@/server/blind-board-viewer"
+import { isBlindBoard } from "@/server/blind-board"
+import { getBoardReadAccess, getEventReadAccessFor } from "@/server/authz/read"
 
 // Type definitions for item statistics
 export interface ItemValueSubmission {
@@ -176,14 +177,17 @@ function emptyItemStatistics(): ItemStatistics {
 }
 
 /**
- * Get comprehensive item statistics for a bingo board. A blind battleship
- * board (before its Event starts) has none: the item names and tile titles
- * would reveal its Goals.
+ * Get comprehensive item statistics for a bingo board. It carries per player
+ * data, so it is for participants and managers of the Event that owns a visible
+ * Board (a draft Board: managers only). A blind battleship board (before its
+ * Event starts) has none: the item names and tile titles would reveal its
+ * Goals. The Goals of hidden Tiles are left out for non-managers.
  */
 export async function getBingoItemStatistics(
   bingoId: string
 ): Promise<ItemStatistics> {
-  if (await isBingoBlindForViewer(bingoId)) return emptyItemStatistics()
+  const boardAccess = await getBoardReadAccess(bingoId, "member-data")
+  if (!boardAccess || boardAccess.blind) return emptyItemStatistics()
 
   // Get all approved submissions with item goals for this bingo
   const itemSubmissions = await db
@@ -219,7 +223,8 @@ export async function getBingoItemStatistics(
       and(
         eq(tiles.bingoId, bingoId),
         eq(submissions.status, "approved"),
-        isNotNull(submissions.goalId)
+        isNotNull(submissions.goalId),
+        boardAccess.isManager ? undefined : eq(tiles.isHidden, false)
       )
     )
 
@@ -530,20 +535,35 @@ export async function getBingoItemStatistics(
 }
 
 /**
- * Get comprehensive item statistics for an entire event (all bingos)
+ * Get comprehensive item statistics for an entire event (all bingos). For
+ * participants and managers; draft (not visible) Boards count for managers
+ * only, blind battleship boards for nobody but managers, and the Goals of
+ * hidden Tiles are left out for non-managers.
  */
 export async function getEventItemStatistics(
   eventId: string
 ): Promise<ItemStatistics> {
-  // Get all bingo IDs for this event, except the blind battleship boards.
+  const access = await getEventReadAccessFor(eventId, "member-data")
+  if (!access) return emptyItemStatistics()
+
+  // Get all bingo IDs for this event the viewer may read.
   const allEventBingos = await db
-    .select({ id: bingos.id })
+    .select({
+      id: bingos.id,
+      visible: bingos.visible,
+      bingoType: bingos.bingoType,
+    })
     .from(bingos)
     .where(eq(bingos.eventId, eventId))
-  const blindFlags = await Promise.all(
-    allEventBingos.map((b) => isBingoBlindForViewer(b.id))
+  const eventBingos = allEventBingos.filter(
+    (b) =>
+      (access.isManager || b.visible) &&
+      !isBlindBoard({
+        bingoType: b.bingoType,
+        startDate: access.startDate,
+        isManager: access.isManager,
+      })
   )
-  const eventBingos = allEventBingos.filter((_, i) => !blindFlags[i])
 
   if (eventBingos.length === 0) {
     return emptyItemStatistics()
@@ -585,7 +605,8 @@ export async function getEventItemStatistics(
       and(
         inArray(tiles.bingoId, bingoIds),
         eq(submissions.status, "approved"),
-        isNotNull(submissions.goalId)
+        isNotNull(submissions.goalId),
+        access.isManager ? undefined : eq(tiles.isHidden, false)
       )
     )
 

@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { PatternCompletionGrid } from "./pattern-completion-grid"
-import type { EventPatternCompletionData } from "@/app/actions/event-pattern-completion"
+import type { EventPatternCompletionData } from "@/server/queries/event-pattern-completion"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 

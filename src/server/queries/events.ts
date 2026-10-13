@@ -1,4 +1,4 @@
-"use server"
+import "server-only"
 
 import { cache } from "react"
 import { eq, and, asc, inArray, sql } from "drizzle-orm"
@@ -22,12 +22,46 @@ import { redactHiddenTiles } from "@/lib/hidden-tiles"
 import { applyBlindBoard, isBlindBoard } from "@/server/blind-board"
 import { getViewerTeamId } from "@/server/battleship"
 import { keepOwnTeamRecords } from "@/lib/battleship-privacy"
-import { EventData, GetEventByIdResult } from "@/app/actions/events"
-import { getUserRole } from "@/app/actions/events"
+import type { EventData, GetEventByIdResult } from "@/app/actions/events"
+import { levelAllows } from "@/lib/authz/read-policy"
+import { getEventReadAccess, redactBoardForViewer } from "@/server/authz/read"
 
+/**
+ * The Event a viewer opens. What they get depends on the read policy
+ * (`@/lib/authz/read-policy`):
+ *
+ * - participants and managers: the Event with its Boards, Tiles, Teams and
+ *   Clan. Non-managers see visible Boards only, hidden Tiles are redacted,
+ *   battleship Boards are blind until the Event starts and keep only the
+ *   viewer's own Team's records; secrets (tracker verification code,
+ *   codephrase) follow the policy.
+ * - everybody else who may see that the Event exists (decision 3: the holder of
+ *   the link of a non-public Event, anybody for a public one): the Event row
+ *   only, no Boards, Teams or Clan, and `userRole: null`. This is the join
+ *   card the Event page shows.
+ * - nobody else (no such Event, or `members-only` and the viewer is no member):
+ *   null.
+ *
+ * Not a "use server" module: every export of one is a public endpoint, and
+ * this is only called by server components.
+ */
 export const getEventById = cache(async function getEventById(
   eventId: string
 ): Promise<GetEventByIdResult | null> {
+  const access = await getEventReadAccess(eventId)
+  if (!access || !levelAllows(access.level, "summary")) return null
+
+  if (!levelAllows(access.level, "member-data")) {
+    const summary = await db.query.events.findFirst({
+      where: eq(events.id, eventId),
+    })
+    if (!summary) return null
+    return {
+      event: { ...summary, bingos: [], teams: [], clan: null },
+      userRole: access.role,
+    }
+  }
+
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
     with: {
@@ -72,14 +106,12 @@ export const getEventById = cache(async function getEventById(
     return null
   }
 
-  const userRole = await getUserRole(eventId)
-
   // Filter out non-visible bingos if the user is not admin or management, and
   // strip the content of hidden Tiles server-side (the cell itself stays).
   // Battleship boards are blind until the Event starts: every Tile keeps its id
   // and grid position but loses its content (see `blind-board.ts`). Every Tile
   // carries an explicit `isBlind`.
-  const isManager = userRole === "admin" || userRole === "management"
+  const isManager = access.isManager
   if (!isManager) {
     // Battleship: only the viewer's own Team's records, so nobody can read what
     // the opponent completed (and therefore hit) from the page data.
@@ -95,9 +127,7 @@ export const getEventById = cache(async function getEventById(
           isManager,
         })
         return {
-          ...b,
-          // The tracker verification code lets its holder edit the competition.
-          womVerificationCode: null,
+          ...redactBoardForViewer(b, access),
           tiles: applyBlindBoard(
             redactHiddenTiles(
               b.bingoType === "battleship"
@@ -117,7 +147,7 @@ export const getEventById = cache(async function getEventById(
 
   return {
     event,
-    userRole,
+    userRole: access.role,
   }
 })
 

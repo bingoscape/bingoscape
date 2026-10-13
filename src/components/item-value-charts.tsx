@@ -23,7 +23,7 @@ import {
 import type {
   TeamItemStats,
   UserItemStats,
-} from "@/app/actions/item-statistics"
+} from "@/server/queries/item-statistics"
 import { formatGPValue } from "@/lib/format-gp"
 
 interface ItemValueChartsProps {

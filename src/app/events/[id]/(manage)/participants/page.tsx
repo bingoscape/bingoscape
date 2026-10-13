@@ -19,7 +19,7 @@ import { ParticipantsTab } from "@/components/participants-tab"
 import { RegistrationsTab } from "@/components/registrations-tab"
 import type { Participant, Team } from "./types"
 import { RegistrationRequest } from "@/app/actions/events"
-import { getEventById } from "@/server/queries/events"
+import { getEventSummary } from "@/app/actions/event-summary"
 
 export default function EventParticipantsPage(props: {
   params: Promise<{ id: UUID }>
@@ -59,7 +59,7 @@ export default function EventParticipantsPage(props: {
       try {
         const [teamsData, eventData] = await Promise.all([
           getTeamsByEventId(params.id as string),
-          getEventById(params.id as string),
+          getEventSummary(params.id as string),
         ])
 
         // Buy-ins and donations are on this page: managers only.

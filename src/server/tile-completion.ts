@@ -1,4 +1,4 @@
-"use server"
+import "server-only"
 
 import { db } from "@/server/db"
 import { logger } from "@/lib/logger"
@@ -13,6 +13,12 @@ import { eq, and, isNull, sql } from "drizzle-orm"
 import { completedAtOnComplete } from "@/lib/completed-at"
 import { revalidatePath } from "next/cache"
 import { unlockNextTierForTeam } from "@/server/tier-progression"
+
+/**
+ * Goal and Tile completion rules. Not a "use server" module: these helpers take
+ * a transaction and decide completion, so they must never be callable from the
+ * client.
+ */
 
 type DbOrTransaction = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]
 

@@ -39,7 +39,9 @@ import {
   authzErrorMessage,
   canReadGoal,
   canReadTile,
+  getTileReadAccess,
   isEventManager,
+  keepViewerTeamProgress,
   assertGoalInEvent,
   AuthzError,
   requireBingoAdmin,
@@ -51,6 +53,8 @@ import {
 } from "@/server/authz"
 import { isBlindBoard } from "@/server/blind-board"
 import { isBingoBlindForViewer } from "@/server/blind-board-viewer"
+import { recalculateGoalProgress } from "@/server/goal-progress"
+import { checkAndAutoCompleteTile } from "@/server/tile-completion"
 import {
   applyShipRulesUpdate,
   assertBattleshipLayoutEditable,
@@ -1009,8 +1013,6 @@ export async function updateGoalProgress(
       })
 
       if (goal) {
-        // Import the auto-completion function
-        const { checkAndAutoCompleteTile } = await import("./tile-completion")
         await checkAndAutoCompleteTile(tx, goal.tileId, teamId)
       }
 
@@ -1030,8 +1032,10 @@ export async function updateGoalProgress(
 }
 
 export async function getTileGoalsAndProgress(tileId: string) {
-  // Hidden Tiles must not leak their Goals to non-managers.
-  if (!(await canReadTile(tileId))) return []
+  // The Tile must be on a Board the viewer may read, and hidden Tiles must not
+  // leak their Goals to non-managers.
+  const tileAccess = await getTileReadAccess(tileId)
+  if (!tileAccess) return []
 
   const tileGoals = await db.query.goals.findMany({
     where: eq(goals.tileId, tileId),
@@ -1041,7 +1045,11 @@ export async function getTileGoalsAndProgress(tileId: string) {
     },
   })
 
-  return tileGoals
+  // Battleship: only the viewer's own Team's progress.
+  return tileGoals.map((goal) => ({
+    ...goal,
+    teamProgress: keepViewerTeamProgress(goal.teamProgress, tileAccess),
+  }))
 }
 
 // Types GoalData, TileData, BingoData are imported from @/types/model
@@ -1605,7 +1613,6 @@ export async function updateSubmissionStatus(
     }
 
     // If submission has a goal assignment, recalculate goal progress
-    const { recalculateGoalProgress } = await import("./goals")
     const oldGoalId = oldSubmissionRecord.goalId
     const teamId = oldSubmissionRecord.teamTileSubmission.teamId
 
@@ -1696,7 +1703,6 @@ export async function updateTeamTileSubmissionStatus(
           )
 
         // Recalculate goal progress for updated submissions
-        const { recalculateGoalProgress } = await import("./goals")
         const teamId = updatedTeamTileSubmission.teamId
         for (const sub of pendingSubmissions) {
           if (sub.goalId) {
@@ -1868,7 +1874,6 @@ export async function updateSubmissionStatusWithComment(
       }
 
       // If submission has a goal assignment, recalculate goal progress
-      const { recalculateGoalProgress } = await import("./goals")
       const oldGoalId = submissionRecord.goalId
       const teamId = submissionRecord.teamTileSubmission.teamId
 
@@ -1964,7 +1969,6 @@ export async function deleteSubmission(submissionId: string) {
 
       // Recalculate goal progress if it had a goal
       if (submission.goalId && teamSubmission?.teamId) {
-        const { recalculateGoalProgress } = await import("./goals")
         await recalculateGoalProgress(tx, submission.goalId, teamSubmission.teamId)
       }
 

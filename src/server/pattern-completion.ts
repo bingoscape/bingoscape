@@ -1,4 +1,4 @@
-"use server"
+import "server-only"
 
 import { db } from "@/server/db"
 import {
@@ -7,6 +7,13 @@ import {
   bingos,
 } from "@/server/db/schema"
 import { eq, and, inArray } from "drizzle-orm"
+
+/**
+ * Pattern Bonus (row, column, diagonal, complete Board) maths. Not a "use
+ * server" module: these helpers take any Team id and do no authorization, so
+ * they must never be callable from the client. Their callers (event statistics,
+ * `getEventPatternCompletion`) authorize first.
+ */
 
 export interface TilePosition {
   row: number

@@ -7,7 +7,9 @@ import { eq, and, isNull, inArray } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import {
   authzErrorMessage,
-  canReadTile,
+  canReadTeam,
+  getTileReadAccess,
+  keepViewerTeamProgress,
   requireBingoAdminForGoal,
   requireBingoAdminForGoalGroup,
   requireBingoAdminForTile,
@@ -481,15 +483,17 @@ export async function moveMultipleItems(
  */
 export async function getGoalTree(tileId: string): Promise<GoalTreeNode[]> {
   try {
-    // Hidden Tiles must not leak their Goals to non-managers.
-    if (!(await canReadTile(tileId))) return []
+    // The Tile must be on a Board the viewer may read, and hidden Tiles must
+    // not leak their Goals to non-managers.
+    const tileAccess = await getTileReadAccess(tileId)
+    if (!tileAccess) return []
 
     // Fetch all groups and goals for this tile
     const allGroups = await db.query.goalGroups.findMany({
       where: eq(goalGroups.tileId, tileId),
     })
 
-    const allGoals = await db.query.goals.findMany({
+    const goalRows = await db.query.goals.findMany({
       where: eq(goals.tileId, tileId),
       with: {
         goalValues: true,
@@ -498,6 +502,11 @@ export async function getGoalTree(tileId: string): Promise<GoalTreeNode[]> {
         metricGoal: true,
       },
     })
+    // Battleship: only the viewer's own Team's progress.
+    const allGoals = goalRows.map((goal) => ({
+      ...goal,
+      teamProgress: keepViewerTeamProgress(goal.teamProgress, tileAccess),
+    }))
 
     // Build tree structure
     const buildTree = (parentId: string | null): GoalTreeNode[] => {
@@ -545,9 +554,18 @@ export async function getGoalTree(tileId: string): Promise<GoalTreeNode[]> {
  */
 export async function getGoalTreeWithProgress(tileId: string, teamId: string) {
   try {
-    if (!(await canReadTile(tileId))) return { tree: [], teamProgress: [] }
+    const tileAccess = await getTileReadAccess(tileId)
+    if (!tileAccess) return { tree: [], teamProgress: [] }
 
     const tree = await getGoalTree(tileId)
+
+    // The progress of a Team is for its members and managers, and for other
+    // participants except on a battleship Board; the Goals themselves stay.
+    if (
+      !(await canReadTeam(teamId, "records", { bingoId: tileAccess.board.id }))
+    ) {
+      return { tree, teamProgress: [] }
+    }
 
     // Get all team progress for this team and tile's goals
     const tileGoals = await db.query.goals.findMany({

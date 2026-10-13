@@ -1,12 +1,13 @@
-"use server"
+import "server-only"
 
 import { db } from "@/server/db"
 import { bingos, teams, tiles, teamTileSubmissions } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
+import { getEventReadAccessFor } from "@/server/authz/read"
 import {
   getCompletedPatterns,
   type PatternCompletionResult,
-} from "./pattern-completion"
+} from "@/server/pattern-completion"
 
 export interface TeamPatternData {
   team: {
@@ -70,13 +71,18 @@ function calculateTotalPossibleBonusXP(bingo: {
 }
 
 /**
- * Get pattern completion data for all teams and boards in an event
+ * Get pattern completion data for all teams and boards in an event. It lists
+ * every Team's completed Tiles, so it is for participants and managers; draft
+ * (not visible) Boards are for managers only.
  */
 export async function getEventPatternCompletion(
   eventId: string
 ): Promise<EventPatternCompletionData> {
+  const access = await getEventReadAccessFor(eventId, "member-data")
+  if (!access) return { boards: [] }
+
   // Fetch all bingos for the event with pattern bonus data
-  const eventBingos = await db.query.bingos.findMany({
+  const allBingos = await db.query.bingos.findMany({
     where: eq(bingos.eventId, eventId),
     with: {
       rowBonuses: true,
@@ -84,6 +90,9 @@ export async function getEventPatternCompletion(
     },
     orderBy: (bingos, { asc }) => [asc(bingos.createdAt)],
   })
+  const eventBingos = access.isManager
+    ? allBingos
+    : allBingos.filter((b) => b.visible)
 
   // Fetch all teams for the event
   const eventTeams = await db.query.teams.findMany({

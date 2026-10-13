@@ -25,7 +25,7 @@ import type {
   ItemDiversityStats,
   EfficiencyTrend,
   UserStreakStats,
-} from "@/app/actions/item-statistics"
+} from "@/server/queries/item-statistics"
 import { formatGPValue } from "@/lib/format-gp"
 import { TrendingUp, Activity, Award, Target } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
