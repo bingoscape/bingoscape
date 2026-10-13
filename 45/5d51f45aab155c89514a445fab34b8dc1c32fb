@@ -1,0 +1,34 @@
+src/lib/battleship-marks.ts
+  s_68822e2d462a1f::t_09f67b87c0081a 114-189
+src/lib/battleship-workspace.ts
+  s_68822e2d462a1f::t_09f67b87c0081a 2-5,26-32
+src/lib/__tests__/battleship-marks.test.ts
+  s_68822e2d462a1f::t_e4c0b51c8e6619 3-5
+  s_68822e2d462a1f::t_5334845b1f79af 61-163
+src/server/battleship.ts
+  s_68822e2d462a1f::t_09f67b87c0081a 280-329,520-521,523-527,541,544,546-552
+src/components/event-workspace/__tests__/board-header.test.tsx
+  s_68822e2d462a1f::t_09f67b87c0081a 171
+src/server/__tests__/battleship-workspace-info.test.ts
+  s_68822e2d462a1f::t_a025686773e2e2 12-15
+  s_68822e2d462a1f::t_d6e255fbda842d 163
+  s_68822e2d462a1f::t_0713aa6ce42fbe 169-266
+  s_68822e2d462a1f::t_160ee4d6dc51e0 119-120,124-127
+  s_68822e2d462a1f::t_245ebf04a30994 150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "455d51f45aab155c89514a445fab34b8dc1c32fb",
+  "prompts": {},
+  "sessions": {
+    "s_68822e2d462a1f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2fae12c2-5cf2-486a-b015-d4ff345796c9",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
