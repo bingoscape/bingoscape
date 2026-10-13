@@ -28,7 +28,7 @@ import {
   type ShipRule,
 } from "@/server/db/schema"
 import type { UUID } from "crypto"
-import { asc, eq, inArray, and, gt } from "drizzle-orm"
+import { asc, eq, inArray, and, gt, lt } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import fs from "fs/promises"
@@ -79,6 +79,7 @@ import { completedAtOnComplete } from "@/lib/completed-at"
 import { logger } from "@/lib/logger"
 import { getUnlockedTiers } from "@/lib/tiers"
 import {
+  reevaluateTierUnlocks,
   unlockNextTierForTeam,
   type DbOrTransaction,
 } from "@/server/tier-progression"
@@ -275,10 +276,19 @@ export async function updateTile(
         await assertTilesCarryNoShip(tx, [tileId])
       }
 
-      await tx
+      const [updated] = await tx
         .update(tiles)
         .set({ ...safeUpdate, updatedAt: new Date() })
         .where(eq(tiles.id, tileId))
+        .returning({ bingoId: tiles.bingoId })
+
+      // A new weight or Tier changes what the Teams have earned per Tier.
+      if (
+        updated &&
+        (safeUpdate.weight !== undefined || safeUpdate.tier !== undefined)
+      ) {
+        await reevaluateTierUnlocks(tx, updated.bingoId)
+      }
     })
     revalidatePath("/events/[id]", "layout")
     logger.info({ tileId, action: "updateTile" }, "Tile updated successfully")
@@ -2588,10 +2598,15 @@ export async function getProgressionBingoTiles(
 export async function updateTileTier(tileId: string, newTier: number) {
   try {
     await requireBingoAdminForTile(tileId)
-    await db
-      .update(tiles)
-      .set({ tier: newTier, updatedAt: new Date() })
-      .where(eq(tiles.id, tileId))
+    await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(tiles)
+        .set({ tier: newTier, updatedAt: new Date() })
+        .where(eq(tiles.id, tileId))
+        .returning({ bingoId: tiles.bingoId })
+      if (updated) await reevaluateTierUnlocks(tx, updated.bingoId)
+    })
+    revalidatePath("/events/[id]", "layout")
 
     return { success: true }
   } catch (error) {
@@ -2620,26 +2635,32 @@ export async function setTierXpRequirement(
 ) {
   try {
     await requireBingoAdmin(bingoId)
-    // Try to update existing record
-    const existingReq = await db.query.tierXpRequirements.findFirst({
-      where: and(
-        eq(tierXpRequirements.bingoId, bingoId),
-        eq(tierXpRequirements.tier, tier)
-      ),
-    })
-
-    if (existingReq) {
-      await db
-        .update(tierXpRequirements)
-        .set({ xpRequired, updatedAt: new Date() })
-        .where(eq(tierXpRequirements.id, existingReq.id))
-    } else {
-      await db.insert(tierXpRequirements).values({
-        bingoId,
-        tier,
-        xpRequired,
+    await db.transaction(async (tx) => {
+      // Try to update existing record
+      const existingReq = await tx.query.tierXpRequirements.findFirst({
+        where: and(
+          eq(tierXpRequirements.bingoId, bingoId),
+          eq(tierXpRequirements.tier, tier)
+        ),
       })
-    }
+
+      if (existingReq) {
+        await tx
+          .update(tierXpRequirements)
+          .set({ xpRequired, updatedAt: new Date() })
+          .where(eq(tierXpRequirements.id, existingReq.id))
+      } else {
+        await tx.insert(tierXpRequirements).values({
+          bingoId,
+          tier,
+          xpRequired,
+        })
+      }
+
+      // A lower requirement can already be met by Teams.
+      await reevaluateTierUnlocks(tx, bingoId)
+    })
+    revalidatePath("/events/[id]", "layout")
 
     return { success: true }
   } catch (error) {
@@ -2774,16 +2795,25 @@ export async function deleteTier(bingoId: string, tierToDelete: number) {
         .where(and(eq(tiles.bingoId, bingoId), gt(tiles.tier, tierToDelete)))
         .returning()
 
-      // Shift all XP requirements for higher tiers down by one
+      // Shift all XP requirements for higher tiers down by one. The unique
+      // index is checked row by row, so a single `tier - 1` fails when a row
+      // is moved onto a tier that is not moved yet. Go through negative tiers.
       await tx
         .update(tierXpRequirements)
-        .set({
-          tier: sql`${tierXpRequirements.tier} - 1`,
-        })
+        .set({ tier: sql`-${tierXpRequirements.tier}` })
         .where(
           and(
             eq(tierXpRequirements.bingoId, bingoId),
             gt(tierXpRequirements.tier, tierToDelete)
+          )
+        )
+      await tx
+        .update(tierXpRequirements)
+        .set({ tier: sql`-${tierXpRequirements.tier} - 1` })
+        .where(
+          and(
+            eq(tierXpRequirements.bingoId, bingoId),
+            lt(tierXpRequirements.tier, 0)
           )
         )
 
@@ -2797,18 +2827,28 @@ export async function deleteTier(bingoId: string, tierToDelete: number) {
           )
         )
 
-      // Shift team tier progress for higher tiers down by one
+      // Shift team tier progress for higher tiers down by one (see above)
       await tx
         .update(teamTierProgress)
-        .set({
-          tier: sql`${teamTierProgress.tier} - 1`,
-        })
+        .set({ tier: sql`-${teamTierProgress.tier}` })
         .where(
           and(
             eq(teamTierProgress.bingoId, bingoId),
             gt(teamTierProgress.tier, tierToDelete)
           )
         )
+      await tx
+        .update(teamTierProgress)
+        .set({ tier: sql`-${teamTierProgress.tier} - 1` })
+        .where(
+          and(
+            eq(teamTierProgress.bingoId, bingoId),
+            lt(teamTierProgress.tier, 0)
+          )
+        )
+
+      // Tiers moved closer together, which may complete a requirement.
+      await reevaluateTierUnlocks(tx, bingoId)
 
       return {
         success: true,
@@ -2822,5 +2862,6 @@ export async function deleteTier(bingoId: string, tierToDelete: number) {
   } finally {
     // Revalidate the page to refresh cached data
     revalidatePath("/events")
+    revalidatePath("/events/[id]", "layout")
   }
 }

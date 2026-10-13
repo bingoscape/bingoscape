@@ -140,11 +140,17 @@ export function getTierStatus(
       xpNeeded: 0,
     }
   }
-  const earned = getTierEarnedXp(tiles, teamId, tier - 1)
+  // The Tier below is the closest one with Tiles, as in the unlock: a Board
+  // may skip Tier numbers.
+  const previousTier = Math.max(
+    0,
+    ...tiles.map((t) => t.tier).filter((t) => t < tier)
+  )
+  const earned = getTierEarnedXp(tiles, teamId, previousTier)
   const required = getEffectiveTierXpRequired(
     data.requirements,
     tiles,
-    tier - 1
+    previousTier
   )
   return {
     tier,

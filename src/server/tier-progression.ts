@@ -5,6 +5,7 @@ import {
   bingos,
   teamTierProgress,
   teamTileSubmissions,
+  teams,
   tierXpRequirements,
   tiles,
 } from "@/server/db/schema"
@@ -155,6 +156,31 @@ export async function unlockNextTierForTeam(
   }
 
   return newlyUnlocked
+}
+
+/**
+ * Opens the Tiers every Team of the Board's Event has earned. Editing the
+ * Board (a requirement, a Tile's weight or Tier, a deleted Tier) can make Teams
+ * qualify without any completion, so these edits call this afterwards.
+ * Unlocks are only ever added, never taken back.
+ */
+export async function reevaluateTierUnlocks(
+  tx: DbOrTransaction,
+  bingoId: string
+): Promise<void> {
+  const [bingo] = await tx
+    .select({ bingoType: bingos.bingoType, eventId: bingos.eventId })
+    .from(bingos)
+    .where(eq(bingos.id, bingoId))
+  if (bingo?.bingoType !== "progression") return
+
+  const eventTeams = await tx
+    .select({ id: teams.id })
+    .from(teams)
+    .where(eq(teams.eventId, bingo.eventId))
+  for (const team of eventTeams) {
+    await unlockNextTierForTeam(tx, team.id, bingoId)
+  }
 }
 
 /** Tier unlock data of a Team on a progression Board (reads only). */

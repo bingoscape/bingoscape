@@ -163,6 +163,26 @@ describe("getTierStatus / getTileTierLock", () => {
     ).toBe(0)
   })
 
+  it("measures against the closest tier below when the board skips a number", () => {
+    // Tier 0 (a, b, c) and Tier 2 (d, e); there is no Tier 1.
+    const gap = [
+      tile("a", 0, 2, 0, ["t1"]),
+      tile("b", 0, 3, 1),
+      tile("d", 2, 3, 2),
+    ]
+    const withGap: BoardTierData = {
+      requirements: [{ tier: 0, xpRequired: 4 }],
+      progress: [],
+    }
+    expect(getTierStatus(2, gap, "t1", withGap)).toEqual({
+      tier: 2,
+      unlocked: false,
+      earnedInPrevious: 2,
+      requiredInPrevious: 4,
+      xpNeeded: 2,
+    })
+  })
+
   it("no tier data (standard board) means no lock", () => {
     expect(getTileTierLock(tiles[5]!, tiles, "t1", null)).toBeNull()
   })

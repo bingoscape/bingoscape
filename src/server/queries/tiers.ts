@@ -31,7 +31,9 @@ export async function getBoardTierData(
       })),
     }
   } catch (error) {
+    // No fallback: empty data would render every Tier above 0 as locked and
+    // hide the failure.
     logger.error({ error, bingoId: bingo.id }, "Failed to load tier data")
-    return { requirements: [], progress: [] }
+    throw error
   }
 }
