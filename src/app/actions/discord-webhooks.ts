@@ -7,6 +7,7 @@ import { discordWebhooks, eventParticipants, events } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { testDiscordWebhook } from "@/lib/discord-webhook"
+import { isDiscordWebhookUrl } from "@/lib/discord-webhook-url"
 
 export interface DiscordWebhook {
   id: string
@@ -71,21 +72,11 @@ export async function createDiscordWebhook(
 
   try {
     // Validate webhook URL format
-    if (!webhookUrl.includes("discord.com/api/webhooks/")) {
+    if (!isDiscordWebhookUrl(webhookUrl)) {
       return { success: false, error: "Invalid Discord webhook URL" }
     }
 
-    // Test the webhook first
-    const testResult = await testDiscordWebhook(webhookUrl)
-    if (!testResult) {
-      logger.warn(
-        { eventId, action: "createDiscordWebhook" },
-        "Webhook test failed during creation"
-      )
-      return { success: false, error: `Webhook test failed` }
-    }
-
-    // Check permissions
+    // Check permissions before anything leaves the server
     const event = await db.query.events.findFirst({
       where: eq(events.id, eventId),
       with: {
@@ -107,6 +98,16 @@ export async function createDiscordWebhook(
 
     if (!hasPermission) {
       return { success: false, error: "Insufficient permissions" }
+    }
+
+    // Test the webhook
+    const testResult = await testDiscordWebhook(webhookUrl)
+    if (!testResult) {
+      logger.warn(
+        { eventId, action: "createDiscordWebhook" },
+        "Webhook test failed during creation"
+      )
+      return { success: false, error: `Webhook test failed` }
     }
 
     // Create the webhook
@@ -178,7 +179,7 @@ export async function updateDiscordWebhook(
 
     // If updating webhook URL, test it first
     if (updates.webhookUrl && updates.webhookUrl !== webhook.webhookUrl) {
-      if (!updates.webhookUrl.includes("discord.com/api/webhooks/")) {
+      if (!isDiscordWebhookUrl(updates.webhookUrl)) {
         return { success: false, error: "Invalid Discord webhook URL" }
       }
 
@@ -196,7 +197,15 @@ export async function updateDiscordWebhook(
     await db
       .update(discordWebhooks)
       .set({
-        ...updates,
+        // Explicit allowlist: the types are compile-time only, so never spread
+        // client input into the update.
+        ...(updates.name !== undefined ? { name: updates.name } : {}),
+        ...(updates.webhookUrl !== undefined
+          ? { webhookUrl: updates.webhookUrl }
+          : {}),
+        ...(updates.isActive !== undefined
+          ? { isActive: updates.isActive }
+          : {}),
         updatedAt: new Date(),
       })
       .where(eq(discordWebhooks.id, webhookId))
@@ -286,10 +295,29 @@ export async function testWebhook(
   try {
     const webhook = await db.query.discordWebhooks.findFirst({
       where: eq(discordWebhooks.id, webhookId),
+      with: {
+        event: {
+          with: {
+            eventParticipants: {
+              where: eq(eventParticipants.userId, session.user.id),
+            },
+          },
+        },
+      },
     })
 
     if (!webhook) {
       return { success: false, error: "Webhook not found" }
+    }
+
+    const userParticipant = webhook.event.eventParticipants[0]
+    const hasPermission =
+      webhook.event.creatorId === session.user.id ||
+      userParticipant?.role === "admin" ||
+      userParticipant?.role === "management"
+
+    if (!hasPermission) {
+      return { success: false, error: "Insufficient permissions" }
     }
 
     const success = await testDiscordWebhook(webhook.webhookUrl)

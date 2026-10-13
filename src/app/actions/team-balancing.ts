@@ -1,5 +1,6 @@
 "use server"
 
+import { isEventManager } from "@/server/authz"
 import { getServerAuthSession } from "@/server/auth"
 import { logger } from "@/lib/logger"
 import { db } from "@/server/db"
@@ -760,7 +761,7 @@ export async function generateBalancedTeams(
     with: {
       teamMembers: {
         with: {
-          user: true,
+          user: { columns: { id: true, name: true, runescapeName: true } },
         },
       },
     },
@@ -946,12 +947,14 @@ export async function generateBalancedTeams(
  * Calculate balance metrics for existing teams
  */
 export async function calculateTeamBalanceMetrics(eventId: string) {
+  if (!(await isEventManager(eventId))) return null
+
   const existingTeams = await db.query.teams.findMany({
     where: eq(teams.eventId, eventId),
     with: {
       teamMembers: {
         with: {
-          user: true,
+          user: { columns: { id: true, name: true, runescapeName: true } },
         },
       },
     },

@@ -1,12 +1,12 @@
 /**
  * @jest-environment node
  */
-import { getTierXpRequirements } from "@/app/actions/bingo"
+import { loadTierXpRequirements } from "@/server/progression"
 import { getBoardTierData } from "@/server/queries/tiers"
 
-jest.mock("@/app/actions/bingo", () => ({
-  getTierXpRequirements: jest.fn(),
-  getTeamTierProgress: jest.fn(),
+jest.mock("@/server/progression", () => ({
+  loadTierXpRequirements: jest.fn(),
+  loadTeamTierProgress: jest.fn(),
 }))
 jest.mock("@/lib/logger", () => ({
   logger: { error: jest.fn(), info: jest.fn(), warn: jest.fn() },
@@ -20,7 +20,7 @@ describe("getBoardTierData", () => {
   })
 
   it("fails instead of reporting every tier as locked", async () => {
-    ;(getTierXpRequirements as jest.Mock).mockRejectedValue(
+    ;(loadTierXpRequirements as jest.Mock).mockRejectedValue(
       new Error("db down")
     )
 

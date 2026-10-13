@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { logger } from "@/lib/logger"
 import {
+  assertGoalInEvent,
   authzErrorMessage,
   canReadGoal,
   requireBingoAdminForGoal,
@@ -164,7 +165,9 @@ export async function updateSubmissionGoalAndValue(
   try {
     // Re-assigning a Submission to a Goal is a review action: managers only.
     // The Event is derived from the Submission, never supplied by the client.
-    await requireBingoAdminForSubmission(submissionId)
+    const eventId = await requireBingoAdminForSubmission(submissionId)
+    // The new Goal must belong to the same Event as the Submission.
+    if (goalId) await assertGoalInEvent(goalId, eventId)
 
     const result = await db.transaction(async (tx) => {
       // 1. Fetch current submission to get the old goalId

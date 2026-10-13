@@ -1,42 +1,10 @@
 "use server"
 
 import { db } from "@/server/db"
-import { notifications, eventParticipants } from "@/server/db/schema"
-import { eq, and, desc, or } from "drizzle-orm"
+import { notifications } from "@/server/db/schema"
+import { eq, and, desc } from "drizzle-orm"
 import { events, teams, tiles } from "@/server/db/schema"
 import { getServerAuthSession } from "@/server/auth"
-
-export async function createNotification(
-  eventId: string,
-  tileId: string,
-  teamId: string,
-  message: string
-) {
-  // Get all admin and management users for the event
-  const usersToNotify = await db
-    .select({ userId: eventParticipants.userId })
-    .from(eventParticipants)
-    .where(
-      and(
-        eq(eventParticipants.eventId, eventId),
-        or(
-          eq(eventParticipants.role, "admin"),
-          eq(eventParticipants.role, "management")
-        )
-      )
-    )
-
-  // Create notifications for each admin/management user
-  for (const user of usersToNotify) {
-    await db.insert(notifications).values({
-      userId: user.userId,
-      eventId,
-      tileId,
-      teamId,
-      message,
-    })
-  }
-}
 
 export async function getNotifications(userId: string, limit = 10) {
   // Notifications carry Tile titles: only the signed-in user may read their own.
@@ -65,8 +33,17 @@ export async function getNotifications(userId: string, limit = 10) {
 }
 
 export async function markNotificationAsRead(notificationId: string) {
+  // Only the owner of a notification may mark it as read.
+  const session = await getServerAuthSession()
+  if (!session?.user) return
+
   await db
     .update(notifications)
     .set({ isRead: true })
-    .where(eq(notifications.id, notificationId))
+    .where(
+      and(
+        eq(notifications.id, notificationId),
+        eq(notifications.userId, session.user.id)
+      )
+    )
 }

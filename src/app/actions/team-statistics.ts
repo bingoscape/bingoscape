@@ -1,5 +1,6 @@
 "use server"
 
+import { isEventManager } from "@/server/authz"
 import { db } from "@/server/db"
 import { teams, playerMetadata } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
@@ -74,6 +75,11 @@ export interface EventTeamStatistics {
 export async function getEventTeamStatistics(
   eventId: string
 ): Promise<EventTeamStatistics> {
+  // Includes per-player metadata: managers only.
+  if (!(await isEventManager(eventId))) {
+    throw new Error("Forbidden: admin or management role required")
+  }
+
   // Fetch all teams for the event with their members and metadata
   const eventTeams = await db.query.teams.findMany({
     where: eq(teams.eventId, eventId),

@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger"
+import { isDiscordWebhookUrl } from "@/lib/discord-webhook-url"
 
 interface DiscordEmbed {
   title?: string
@@ -30,6 +31,12 @@ export async function sendDiscordWebhook(
   webhookUrl: string,
   payload: DiscordWebhookPayload
 ): Promise<boolean> {
+  // Stored URLs are user supplied: never POST anywhere but Discord.
+  if (!isDiscordWebhookUrl(webhookUrl)) {
+    logger.warn("Refusing to send to a non-Discord webhook URL")
+    return false
+  }
+
   try {
     const formData = new FormData()
 
@@ -60,6 +67,7 @@ export async function sendDiscordWebhook(
     const response = await fetch(webhookUrl, {
       method: "POST",
       body: formData,
+      redirect: "error",
     })
 
     if (!response.ok) {

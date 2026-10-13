@@ -438,8 +438,17 @@ describe("battleship board over the RuneLite API", () => {
       }
     }
 
+    // Scoped to this fixture's teams: other suites commit submissions to the
+    // shared database while this one runs.
     const submissionCount = async () => {
-      const [row] = await db.select({ value: count() }).from(submissions)
+      const [row] = await db
+        .select({ value: count() })
+        .from(submissions)
+        .innerJoin(
+          teamTileSubmissions,
+          eq(submissions.teamTileSubmissionId, teamTileSubmissions.id)
+        )
+        .where(inArray(teamTileSubmissions.teamId, [fx.teamAId, fx.teamBId]))
       return row!.value
     }
 
