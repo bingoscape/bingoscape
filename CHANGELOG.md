@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `tierUnlocked` on submission, auto-submission and item-check responses, and `shot` on battleship (auto-)submission responses
   - Error codes `TIER_LOCKED`, `BOARD_BLIND` and `EVENT_NOT_STARTED`
   - `ETag` / `If-None-Match` (`304`) on `GET /api/runelite/bingos/{bingoId}`, with a rate limit of 60 requests per minute per user
+- Battleship boards: after the event has started, players can draw their own team's ships on the board with a "My ships" toggle (off by default, remembered per device). The hull is shown as placed and never shows damage; tiles also announce "your ship (length N)" to screen readers, and the legend and tile panel explain it. Only the viewer's own team is shown, the layout comes from the server, and nothing is exposed before the event starts
+- Battleship boards: managers (also those on no team) get a "View fleets" link to the read-only fleet page once the event has started
 - Comprehensive project documentation overhaul
 - Detailed API documentation for RuneLite plugin integration
 - Architecture documentation with technical specifications

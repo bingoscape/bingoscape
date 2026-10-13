@@ -132,3 +132,17 @@ On a battleship Board the viewer's own Team sees the result of its attacks on th
 - **Legend**: in the Board header info row after the start, a `role="list"` with the same glyphs and labels (Hit / Miss / Sunk) and one line on when the result is learned. Before the start the blind-board note stays.
 - **Sunk announcement**: when a refresh of the page props brings newly sunk Tiles, a default (not destructive) toast "Ship sunk!" and a polite live region. Nothing on first render. No motion is used.
 - **Tile panel**: a completed Tile shows "Hit", "Miss" or "Ship sunk" with the same glyph.
+
+### Own-ship hull overlay
+
+After the start a team member can draw their own team's ships on the Board with the "My ships" toggle in the Board header info row.
+
+- **Privacy**: only the signed-in viewer's own Team, derived on the server from the session (never from request input), and nothing at all before the event starts (the Board is still blind then). A manager looking at another Team, or on no Team, gets no toggle and no hull. The read-only public view has none either.
+- **Toggle**: a `Toggle` button "My ships" (`aria-pressed`), **off by default**. The choice is a per-device preference (`showOwnShips` in the `bs-workspace` cookie, see `workspace-prefs.ts`), so the server renders it on the first paint. It is disabled with the note "Your team has no ships placed" when the fleet is empty. While on, the legend gains a "Your ship" entry (`OwnShipGlyph`) and the fleet summary ("Your fleet: 3 ships, 7 tiles").
+- **Hull** (`OwnShipHull` in `bingo-tile.tsx`): a `border-2 border-info` frame with a `bg-info/15` wash, inset `3px` from the slot edge, plus a 1px black inner edge (as a `box-shadow`, so the frame holds up on image faces). It uses the `info` colour like the placement page, and it is a frame, never a filled marker, so it cannot be confused with hit, miss or sunk.
+- **Joined sides**: a side that faces the next segment of the same ship loses its border, black edge and the inset (that edge runs flush to the slot), so a ship reads as one hull. The open corners of the end caps are rounded (`rounded-sm`); a one-tile ship is a closed frame.
+- **Z-order**: the hull is `z-[4]`, below the hit/sunk ring (`z-[5]`) and the marker and status badges (`z-10`), and above the Tile face. It is `pointer-events-none` and static (no motion). Dropped on very small slots (`@max-[43px]/tile:hidden`) like the XP number.
+- **Accessible name**: independent of the toggle, so screen reader users always get it: the Tile name gains ", your ship (length 3)" (after the result: "Row 1, column 1: Title, 3 XP, not started, hit, your ship (length 3)"). The hull itself is `aria-hidden`; the Tile panel shows "Your ship, length N" with the same glyph.
+- **Intact only, never damage**: the overlay is the layout as placed. It never marks which of your segments were hit or sunk, because that would reveal the other team's attacks, which the Board does not show ("Only your own team's results are shown"). Hit, miss and sunk markers keep meaning "the result of your team's attacks" and are not mixed with your own fleet.
+- **Not drawn on** hidden and blind Tiles.
+- **Managers**: once the event has started, managers (also those on no Team) get a "View fleets" link in the same info row to the read-only fleet page (`/events/[id]/bingos/[bingoId]/ships`, the Team on screen when there is one). That page authorizes managers itself; the link only offers the route.

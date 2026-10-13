@@ -194,6 +194,22 @@ export function BoardHeader({
     0
   )
 
+  // After the start the Place ships link is gone. Managers (on a Team or not)
+  // can still read every fleet on the read-only ships page, which authorizes
+  // them itself; the link only offers the route.
+  const viewFleetsTeamId =
+    effectiveTeamId && teams.some((t) => t.id === effectiveTeamId)
+      ? effectiveTeamId
+      : null
+  const viewFleetsHref =
+    boardBattleship?.started && isManagement
+      ? `/events/${eventId}/bingos/${activeBingo.id}/ships${
+          viewFleetsTeamId
+            ? `?teamId=${encodeURIComponent(viewFleetsTeamId)}`
+            : ""
+        }`
+      : null
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -426,6 +442,15 @@ export function BoardHeader({
                   </span>
                 )}
               </>
+            )}
+            {viewFleetsHref && (
+              <Link
+                href={viewFleetsHref}
+                className="osrs-btn focus-visible:ring-ring inline-flex h-7 items-center gap-1.5 rounded-sm px-2 text-xs whitespace-nowrap focus-visible:ring-2 focus-visible:outline-hidden pointer-coarse:min-h-11"
+              >
+                <Ship aria-hidden="true" className="size-3.5" />
+                View fleets
+              </Link>
             )}
             <span className="text-muted-foreground">
               You learn whether you hit when a tile is approved. Only your own

@@ -405,4 +405,81 @@ describe("BoardHeader: battleship", () => {
       expect(toggle()).not.toBeInTheDocument()
     })
   })
+
+  describe("View fleets link", () => {
+    const viewFleets = () => screen.queryByRole("link", { name: "View fleets" })
+
+    it("links managers to the read-only fleet page of the team on screen after the start", () => {
+      renderBattleship({
+        isManagement: true,
+        effectiveTeamId: "t2",
+        battleship: info({ started: true }),
+      })
+      expect(viewFleets()).toHaveAttribute(
+        "href",
+        "/events/e1/bingos/b1/ships?teamId=t2"
+      )
+      expect(viewFleets()).toHaveClass("pointer-coarse:min-h-11")
+      expect(placeShips()).not.toBeInTheDocument()
+    })
+
+    it("works for a manager on no team and on screen with no team selected", () => {
+      renderBattleship({
+        isManagement: true,
+        ownTeam: null,
+        effectiveTeamId: undefined,
+        battleship: info({ started: true }),
+      })
+      expect(viewFleets()).toHaveAttribute(
+        "href",
+        "/events/e1/bingos/b1/ships"
+      )
+    })
+
+    it("leaves out a team that is not part of the event", () => {
+      renderBattleship({
+        isManagement: true,
+        effectiveTeamId: "gone",
+        battleship: info({ started: true }),
+      })
+      expect(viewFleets()).toHaveAttribute(
+        "href",
+        "/events/e1/bingos/b1/ships"
+      )
+    })
+
+    it("is hidden for people who are not managers", () => {
+      renderBattleship({
+        isManagement: false,
+        effectiveTeamId: "t1",
+        battleship: info({ started: true, ledTeamId: "t1" }),
+      })
+      expect(viewFleets()).not.toBeInTheDocument()
+    })
+
+    it("is hidden before the event starts", () => {
+      renderBattleship({
+        isManagement: true,
+        effectiveTeamId: "t1",
+        battleship: info({ started: false }),
+      })
+      expect(viewFleets()).not.toBeInTheDocument()
+    })
+
+    it("is hidden in the read-only view and on other boards", () => {
+      renderBattleship({
+        isManagement: true,
+        readOnly: true,
+        battleship: info({ started: true }),
+      })
+      expect(viewFleets()).not.toBeInTheDocument()
+
+      renderHeader({
+        isManagement: true,
+        teams,
+        battleship: info({ started: true }),
+      })
+      expect(viewFleets()).not.toBeInTheDocument()
+    })
+  })
 })
