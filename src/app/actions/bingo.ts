@@ -78,7 +78,10 @@ import { sql } from "drizzle-orm"
 import { completedAtOnComplete } from "@/lib/completed-at"
 import { logger } from "@/lib/logger"
 import { getUnlockedTiers } from "@/lib/tiers"
-import { unlockNextTierForTeam } from "@/server/tier-progression"
+import {
+  unlockNextTierForTeam,
+  type DbOrTransaction,
+} from "@/server/tier-progression"
 import type { SelectableUser } from "@/types/model"
 import {
   insertGoal,
@@ -1413,6 +1416,42 @@ export async function submitImage(formData: FormData) {
   }
 }
 
+/**
+ * Completes a Tile without goals once one of its submissions is approved (with
+ * goals, goal progress decides) and opens the Tiers that completion earned on a
+ * progression Board.
+ */
+async function completeGoallessTileOnApproval(
+  tx: DbOrTransaction,
+  tileId: string,
+  teamTileSubmissionId: string,
+  reviewerId: string
+) {
+  const tileGoals = await tx.query.goals.findMany({
+    where: eq(goals.tileId, tileId),
+  })
+  if (tileGoals.length > 0) return
+
+  const [completed] = await tx
+    .update(teamTileSubmissions)
+    .set({
+      status: "completed",
+      completedAt: completedAtOnComplete,
+      reviewedBy: reviewerId,
+      updatedAt: new Date(),
+    })
+    .where(eq(teamTileSubmissions.id, teamTileSubmissionId))
+    .returning({ teamId: teamTileSubmissions.teamId })
+
+  const tile = await tx.query.tiles.findFirst({
+    where: eq(tiles.id, tileId),
+    columns: { bingoId: true },
+  })
+  if (completed && tile) {
+    await unlockNextTierForTeam(tx, completed.teamId, tile.bingoId)
+  }
+}
+
 // Add new server action for updating individual submission status and assigning a goal
 export async function updateSubmissionStatus(
   submissionId: string,
@@ -1523,20 +1562,12 @@ export async function updateSubmissionStatus(
 
     // Goal-less tile auto-completion
     if (newStatus === "approved") {
-      const goalsResult = await db.query.goals.findMany({
-        where: eq(goals.tileId, oldSubmissionRecord.teamTileSubmission.tileId)
-      });
-      
-      if (goalsResult.length === 0) {
-        await db.update(teamTileSubmissions)
-          .set({
-            status: "completed",
-            completedAt: completedAtOnComplete,
-            reviewedBy: session.user.id,
-            updatedAt: new Date(),
-          })
-          .where(eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId));
-      }
+      await completeGoallessTileOnApproval(
+        db,
+        oldSubmissionRecord.teamTileSubmission.tileId,
+        updatedSubmission.teamTileSubmissionId,
+        session.user.id
+      )
     }
 
     // If submission has a goal assignment, recalculate goal progress
@@ -1551,8 +1582,8 @@ export async function updateSubmissionStatus(
       await recalculateGoalProgress(db, updatedSubmission.goalId, teamId)
     }
 
-    // Revalidate the submissions page
-    revalidatePath("/bingo")
+    // Tier locks live in the event layout, so revalidate that
+    revalidatePath("/events/[id]", "layout")
 
     logger.info(
       {
@@ -1647,15 +1678,16 @@ export async function updateTeamTileSubmissionStatus(
       })
 
       if (tile && tile.bingo.bingoType === "progression") {
-        await checkAndUnlockNextTier(
+        await unlockNextTierForTeam(
+          db,
           updatedTeamTileSubmission.teamId,
           tile.bingoId
         )
       }
     }
 
-    // Revalidate the submissions page
-    revalidatePath("/bingo")
+    // Tier locks live in the event layout, so revalidate that
+    revalidatePath("/events/[id]", "layout")
 
     logger.info(
       {
@@ -1792,20 +1824,12 @@ export async function updateSubmissionStatusWithComment(
 
       // Goal-less tile auto-completion
       if (newStatus === "approved") {
-        const goalsResult = await tx.query.goals.findMany({
-          where: eq(goals.tileId, submissionRecord.teamTileSubmission.tileId)
-        });
-        
-        if (goalsResult.length === 0) {
-          await tx.update(teamTileSubmissions)
-            .set({
-              status: "completed",
-              completedAt: completedAtOnComplete,
-              reviewedBy: session.user.id,
-              updatedAt: new Date(),
-            })
-            .where(eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId));
-        }
+        await completeGoallessTileOnApproval(
+          tx,
+          submissionRecord.teamTileSubmission.tileId,
+          updatedSubmission.teamTileSubmissionId,
+          session.user.id
+        )
       }
 
       // If submission has a goal assignment, recalculate goal progress
@@ -1820,8 +1844,8 @@ export async function updateSubmissionStatusWithComment(
         await recalculateGoalProgress(tx, updatedSubmission.goalId, teamId)
       }
 
-      // Revalidate the submissions page
-      revalidatePath("/bingo")
+      // Tier locks live in the event layout, so revalidate that
+      revalidatePath("/events/[id]", "layout")
 
       logger.info(
         {
