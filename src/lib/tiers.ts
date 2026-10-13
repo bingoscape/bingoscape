@@ -48,6 +48,32 @@ export function getTierXpRequired(
   )
 }
 
+/** XP all Tiles of one Tier are worth together: the most a Team can earn there. */
+export function getTierCapacity(
+  tiles: Array<Pick<TierTile, "tier" | "weight">>,
+  tier: number
+): number {
+  return tiles
+    .filter((t) => t.tier === tier)
+    .reduce((sum, t) => sum + t.weight, 0)
+}
+
+/**
+ * The XP requirement of a Tier, capped at what the Tier can ever yield. A
+ * requirement above that (a fixed default on a small Tier, or weights lowered
+ * later) would otherwise keep the next Tier locked forever.
+ */
+export function getEffectiveTierXpRequired(
+  requirements: TierRequirement[],
+  tiles: Array<Pick<TierTile, "tier" | "weight">>,
+  tier: number
+): number {
+  return Math.min(
+    getTierXpRequired(requirements, tier),
+    getTierCapacity(tiles, tier)
+  )
+}
+
 /** XP the Team has earned from completed Tiles of one Tier. */
 export function getTierEarnedXp(
   tiles: TierTile[],
@@ -114,8 +140,18 @@ export function getTierStatus(
       xpNeeded: 0,
     }
   }
-  const earned = getTierEarnedXp(tiles, teamId, tier - 1)
-  const required = getTierXpRequired(data.requirements, tier - 1)
+  // The Tier below is the closest one with Tiles, as in the unlock: a Board
+  // may skip Tier numbers.
+  const previousTier = Math.max(
+    0,
+    ...tiles.map((t) => t.tier).filter((t) => t < tier)
+  )
+  const earned = getTierEarnedXp(tiles, teamId, previousTier)
+  const required = getEffectiveTierXpRequired(
+    data.requirements,
+    tiles,
+    previousTier
+  )
   return {
     tier,
     unlocked,

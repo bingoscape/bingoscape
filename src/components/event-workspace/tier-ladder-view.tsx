@@ -8,7 +8,7 @@ import { moveLadderFocus, tierLadderMetrics } from "@/lib/board-fit"
 import {
   getTierEarnedXp,
   getTierStatus,
-  getTierXpRequired,
+  getEffectiveTierXpRequired,
   groupTilesByTier,
   type BoardTierData,
 } from "@/lib/tiers"
@@ -153,7 +153,11 @@ export function TierLadderView({
       {bands.map((band) => {
         const status = getTierStatus(band.tier, tiles, currentTeamId, tierData)
         const earnedHere = getTierEarnedXp(tiles, currentTeamId, band.tier)
-        const requiredHere = getTierXpRequired(tierData.requirements, band.tier)
+        const requiredHere = getEffectiveTierXpRequired(
+          tierData.requirements,
+          tiles,
+          band.tier
+        )
         const nextTier = bands.find((b) => b.tier > band.tier)?.tier
         const startIndex = running
         running += band.tiles.length

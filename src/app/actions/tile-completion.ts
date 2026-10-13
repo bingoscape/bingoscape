@@ -241,9 +241,14 @@ export async function checkAndAutoCompleteTile(tx: DbOrTransaction, tileId: stri
       return { success: true, shouldComplete: false }
     }
 
-    // If submission exists and is already completed, nothing to do
+    // If submission exists and is already completed, only the Tier unlock can
+    // still be missing (the unlock is idempotent)
     if (existingSubmission?.status === "completed") {
-      return { success: true, alreadyApproved: true }
+      const tierUnlocked = await unlockTiersAfterCompletion(tx, tileId, teamId)
+      if (tierUnlocked !== null) {
+        revalidatePath("/events/[id]", "layout")
+      }
+      return { success: true, alreadyApproved: true, tierUnlocked }
     }
 
     // If submission exists but not completed, update it to completed

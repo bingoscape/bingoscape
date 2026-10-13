@@ -201,30 +201,19 @@ export function TierManagementModal({
     }
   }
 
-  const getTotalPrecedingXP = (targetTier: number) => {
-    return allTiers
-      .filter((tier) => tier < targetTier)
-      .reduce((total, tier) => {
-        return (
-          total +
-          (tilesByTier[tier] ?? []).reduce(
-            (tierTotal, tile) => tierTotal + tile.weight,
-            0
-          )
-        )
-      }, 0)
-  }
+  const getTierTotalXP = (tier: number) =>
+    (tilesByTier[tier] ?? []).reduce((total, tile) => total + tile.weight, 0)
 
   const handleUpdateXpRequirement = async (
     tier: number,
     xpRequired: number
   ) => {
-    const maxAllowedXP = getTotalPrecedingXP(tier + 1)
+    const maxAllowedXP = getTierTotalXP(tier)
 
     if (xpRequired > maxAllowedXP) {
       toast({
         title: "Invalid XP requirement",
-        description: `XP requirement cannot exceed ${maxAllowedXP} (total XP available from all preceding tiers)`,
+        description: `XP requirement cannot exceed ${maxAllowedXP} (total XP available in this tier)`,
         variant: "destructive",
       })
       return
@@ -340,7 +329,7 @@ export function TierManagementModal({
                                 id={`xp-req-${tier}`}
                                 type="number"
                                 min="1"
-                                max={getTotalPrecedingXP(tier + 1)}
+                                max={getTierTotalXP(tier)}
                                 value={tierXpRequirements[tier] ?? 5}
                                 onChange={(e) => {
                                   const newValue = Number(e.target.value)
@@ -353,7 +342,7 @@ export function TierManagementModal({
                                 }}
                                 className="w-20"
                                 disabled={loading}
-                                title={`Maximum XP: ${getTotalPrecedingXP(tier + 1)} (total XP from preceding tiers)`}
+                                title={`Maximum XP: ${getTierTotalXP(tier)} (total XP in this tier)`}
                               />
                             </div>
                           )}

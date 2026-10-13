@@ -28,7 +28,7 @@ import {
   type ShipRule,
 } from "@/server/db/schema"
 import type { UUID } from "crypto"
-import { asc, eq, inArray, and, gt } from "drizzle-orm"
+import { asc, eq, inArray, and, gt, lt } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { nanoid } from "nanoid"
 import fs from "fs/promises"
@@ -78,7 +78,11 @@ import { sql } from "drizzle-orm"
 import { completedAtOnComplete } from "@/lib/completed-at"
 import { logger } from "@/lib/logger"
 import { getUnlockedTiers } from "@/lib/tiers"
-import { unlockNextTierForTeam } from "@/server/tier-progression"
+import {
+  reevaluateTierUnlocks,
+  unlockNextTierForTeam,
+  type DbOrTransaction,
+} from "@/server/tier-progression"
 import type { SelectableUser } from "@/types/model"
 import {
   insertGoal,
@@ -272,10 +276,19 @@ export async function updateTile(
         await assertTilesCarryNoShip(tx, [tileId])
       }
 
-      await tx
+      const [updated] = await tx
         .update(tiles)
         .set({ ...safeUpdate, updatedAt: new Date() })
         .where(eq(tiles.id, tileId))
+        .returning({ bingoId: tiles.bingoId })
+
+      // A new weight or Tier changes what the Teams have earned per Tier.
+      if (
+        updated &&
+        (safeUpdate.weight !== undefined || safeUpdate.tier !== undefined)
+      ) {
+        await reevaluateTierUnlocks(tx, updated.bingoId)
+      }
     })
     revalidatePath("/events/[id]", "layout")
     logger.info({ tileId, action: "updateTile" }, "Tile updated successfully")
@@ -1413,6 +1426,42 @@ export async function submitImage(formData: FormData) {
   }
 }
 
+/**
+ * Completes a Tile without goals once one of its submissions is approved (with
+ * goals, goal progress decides) and opens the Tiers that completion earned on a
+ * progression Board.
+ */
+async function completeGoallessTileOnApproval(
+  tx: DbOrTransaction,
+  tileId: string,
+  teamTileSubmissionId: string,
+  reviewerId: string
+) {
+  const tileGoals = await tx.query.goals.findMany({
+    where: eq(goals.tileId, tileId),
+  })
+  if (tileGoals.length > 0) return
+
+  const [completed] = await tx
+    .update(teamTileSubmissions)
+    .set({
+      status: "completed",
+      completedAt: completedAtOnComplete,
+      reviewedBy: reviewerId,
+      updatedAt: new Date(),
+    })
+    .where(eq(teamTileSubmissions.id, teamTileSubmissionId))
+    .returning({ teamId: teamTileSubmissions.teamId })
+
+  const tile = await tx.query.tiles.findFirst({
+    where: eq(tiles.id, tileId),
+    columns: { bingoId: true },
+  })
+  if (completed && tile) {
+    await unlockNextTierForTeam(tx, completed.teamId, tile.bingoId)
+  }
+}
+
 // Add new server action for updating individual submission status and assigning a goal
 export async function updateSubmissionStatus(
   submissionId: string,
@@ -1523,20 +1572,12 @@ export async function updateSubmissionStatus(
 
     // Goal-less tile auto-completion
     if (newStatus === "approved") {
-      const goalsResult = await db.query.goals.findMany({
-        where: eq(goals.tileId, oldSubmissionRecord.teamTileSubmission.tileId)
-      });
-      
-      if (goalsResult.length === 0) {
-        await db.update(teamTileSubmissions)
-          .set({
-            status: "completed",
-            completedAt: completedAtOnComplete,
-            reviewedBy: session.user.id,
-            updatedAt: new Date(),
-          })
-          .where(eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId));
-      }
+      await completeGoallessTileOnApproval(
+        db,
+        oldSubmissionRecord.teamTileSubmission.tileId,
+        updatedSubmission.teamTileSubmissionId,
+        session.user.id
+      )
     }
 
     // If submission has a goal assignment, recalculate goal progress
@@ -1551,8 +1592,8 @@ export async function updateSubmissionStatus(
       await recalculateGoalProgress(db, updatedSubmission.goalId, teamId)
     }
 
-    // Revalidate the submissions page
-    revalidatePath("/bingo")
+    // Tier locks live in the event layout, so revalidate that
+    revalidatePath("/events/[id]", "layout")
 
     logger.info(
       {
@@ -1647,15 +1688,16 @@ export async function updateTeamTileSubmissionStatus(
       })
 
       if (tile && tile.bingo.bingoType === "progression") {
-        await checkAndUnlockNextTier(
+        await unlockNextTierForTeam(
+          db,
           updatedTeamTileSubmission.teamId,
           tile.bingoId
         )
       }
     }
 
-    // Revalidate the submissions page
-    revalidatePath("/bingo")
+    // Tier locks live in the event layout, so revalidate that
+    revalidatePath("/events/[id]", "layout")
 
     logger.info(
       {
@@ -1792,20 +1834,12 @@ export async function updateSubmissionStatusWithComment(
 
       // Goal-less tile auto-completion
       if (newStatus === "approved") {
-        const goalsResult = await tx.query.goals.findMany({
-          where: eq(goals.tileId, submissionRecord.teamTileSubmission.tileId)
-        });
-        
-        if (goalsResult.length === 0) {
-          await tx.update(teamTileSubmissions)
-            .set({
-              status: "completed",
-              completedAt: completedAtOnComplete,
-              reviewedBy: session.user.id,
-              updatedAt: new Date(),
-            })
-            .where(eq(teamTileSubmissions.id, updatedSubmission.teamTileSubmissionId));
-        }
+        await completeGoallessTileOnApproval(
+          tx,
+          submissionRecord.teamTileSubmission.tileId,
+          updatedSubmission.teamTileSubmissionId,
+          session.user.id
+        )
       }
 
       // If submission has a goal assignment, recalculate goal progress
@@ -1820,8 +1854,8 @@ export async function updateSubmissionStatusWithComment(
         await recalculateGoalProgress(tx, updatedSubmission.goalId, teamId)
       }
 
-      // Revalidate the submissions page
-      revalidatePath("/bingo")
+      // Tier locks live in the event layout, so revalidate that
+      revalidatePath("/events/[id]", "layout")
 
       logger.info(
         {
@@ -2564,10 +2598,15 @@ export async function getProgressionBingoTiles(
 export async function updateTileTier(tileId: string, newTier: number) {
   try {
     await requireBingoAdminForTile(tileId)
-    await db
-      .update(tiles)
-      .set({ tier: newTier, updatedAt: new Date() })
-      .where(eq(tiles.id, tileId))
+    await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(tiles)
+        .set({ tier: newTier, updatedAt: new Date() })
+        .where(eq(tiles.id, tileId))
+        .returning({ bingoId: tiles.bingoId })
+      if (updated) await reevaluateTierUnlocks(tx, updated.bingoId)
+    })
+    revalidatePath("/events/[id]", "layout")
 
     return { success: true }
   } catch (error) {
@@ -2596,26 +2635,32 @@ export async function setTierXpRequirement(
 ) {
   try {
     await requireBingoAdmin(bingoId)
-    // Try to update existing record
-    const existingReq = await db.query.tierXpRequirements.findFirst({
-      where: and(
-        eq(tierXpRequirements.bingoId, bingoId),
-        eq(tierXpRequirements.tier, tier)
-      ),
-    })
-
-    if (existingReq) {
-      await db
-        .update(tierXpRequirements)
-        .set({ xpRequired, updatedAt: new Date() })
-        .where(eq(tierXpRequirements.id, existingReq.id))
-    } else {
-      await db.insert(tierXpRequirements).values({
-        bingoId,
-        tier,
-        xpRequired,
+    await db.transaction(async (tx) => {
+      // Try to update existing record
+      const existingReq = await tx.query.tierXpRequirements.findFirst({
+        where: and(
+          eq(tierXpRequirements.bingoId, bingoId),
+          eq(tierXpRequirements.tier, tier)
+        ),
       })
-    }
+
+      if (existingReq) {
+        await tx
+          .update(tierXpRequirements)
+          .set({ xpRequired, updatedAt: new Date() })
+          .where(eq(tierXpRequirements.id, existingReq.id))
+      } else {
+        await tx.insert(tierXpRequirements).values({
+          bingoId,
+          tier,
+          xpRequired,
+        })
+      }
+
+      // A lower requirement can already be met by Teams.
+      await reevaluateTierUnlocks(tx, bingoId)
+    })
+    revalidatePath("/events/[id]", "layout")
 
     return { success: true }
   } catch (error) {
@@ -2750,16 +2795,25 @@ export async function deleteTier(bingoId: string, tierToDelete: number) {
         .where(and(eq(tiles.bingoId, bingoId), gt(tiles.tier, tierToDelete)))
         .returning()
 
-      // Shift all XP requirements for higher tiers down by one
+      // Shift all XP requirements for higher tiers down by one. The unique
+      // index is checked row by row, so a single `tier - 1` fails when a row
+      // is moved onto a tier that is not moved yet. Go through negative tiers.
       await tx
         .update(tierXpRequirements)
-        .set({
-          tier: sql`${tierXpRequirements.tier} - 1`,
-        })
+        .set({ tier: sql`-${tierXpRequirements.tier}` })
         .where(
           and(
             eq(tierXpRequirements.bingoId, bingoId),
             gt(tierXpRequirements.tier, tierToDelete)
+          )
+        )
+      await tx
+        .update(tierXpRequirements)
+        .set({ tier: sql`-${tierXpRequirements.tier} - 1` })
+        .where(
+          and(
+            eq(tierXpRequirements.bingoId, bingoId),
+            lt(tierXpRequirements.tier, 0)
           )
         )
 
@@ -2773,18 +2827,28 @@ export async function deleteTier(bingoId: string, tierToDelete: number) {
           )
         )
 
-      // Shift team tier progress for higher tiers down by one
+      // Shift team tier progress for higher tiers down by one (see above)
       await tx
         .update(teamTierProgress)
-        .set({
-          tier: sql`${teamTierProgress.tier} - 1`,
-        })
+        .set({ tier: sql`-${teamTierProgress.tier}` })
         .where(
           and(
             eq(teamTierProgress.bingoId, bingoId),
             gt(teamTierProgress.tier, tierToDelete)
           )
         )
+      await tx
+        .update(teamTierProgress)
+        .set({ tier: sql`-${teamTierProgress.tier} - 1` })
+        .where(
+          and(
+            eq(teamTierProgress.bingoId, bingoId),
+            lt(teamTierProgress.tier, 0)
+          )
+        )
+
+      // Tiers moved closer together, which may complete a requirement.
+      await reevaluateTierUnlocks(tx, bingoId)
 
       return {
         success: true,
@@ -2798,5 +2862,6 @@ export async function deleteTier(bingoId: string, tierToDelete: number) {
   } finally {
     // Revalidate the page to refresh cached data
     revalidatePath("/events")
+    revalidatePath("/events/[id]", "layout")
   }
 }

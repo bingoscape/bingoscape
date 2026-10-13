@@ -814,16 +814,11 @@ export function ProgressionBingoGrid({
   }
 
   // Calculate total XP for validation
-  const getTotalPrecedingXP = (targetTier: number) => {
-    return tierData
-      .filter((td) => td.tier < targetTier)
-      .reduce((total, tierInfo) => {
-        return (
-          total +
-          tierInfo.tiles.reduce((tierTotal, tile) => tierTotal + tile.weight, 0)
-        )
-      }, 0)
-  }
+  const getTierTotalXP = (tier: number) =>
+    (tierData.find((td) => td.tier === tier)?.tiles ?? []).reduce(
+      (total, tile) => total + tile.weight,
+      0
+    )
 
   // Event handlers
   const handleDragStart = (event: DragStartEvent) => {
@@ -991,12 +986,12 @@ export function ProgressionBingoGrid({
     tier: number,
     xpRequired: number
   ) => {
-    const maxAllowedXP = getTotalPrecedingXP(tier + 1)
+    const maxAllowedXP = getTierTotalXP(tier)
 
     if (xpRequired > maxAllowedXP) {
       toast({
         title: "Invalid XP requirement",
-        description: `XP requirement cannot exceed ${maxAllowedXP} (total XP from all preceding tiers)`,
+        description: `XP requirement cannot exceed ${maxAllowedXP} (total XP in this tier)`,
         variant: "destructive",
       })
       return
@@ -1292,7 +1287,7 @@ export function ProgressionBingoGrid({
                           <Input
                             type="number"
                             min="1"
-                            max={getTotalPrecedingXP(tierInfo.tier + 1)}
+                            max={getTierTotalXP(tierInfo.tier)}
                             value={
                               localTierXpRequirements[tierInfo.tier] ??
                               tierXpRequirements.find(
@@ -1310,7 +1305,7 @@ export function ProgressionBingoGrid({
                               }
                             }}
                             className="h-7 w-20"
-                            title={`Maximum XP: ${getTotalPrecedingXP(tierInfo.tier + 1)} (total XP from preceding tiers)`}
+                            title={`Maximum XP: ${getTierTotalXP(tierInfo.tier)} (total XP in this tier)`}
                           />
                         </div>
                       </div>
