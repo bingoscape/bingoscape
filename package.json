@@ -11,6 +11,7 @@
     "db:push": "env-cmd npx drizzle-kit push --force",
     "db:studio": "env-cmd npx drizzle-kit studio",
     "db:backfill-templates": "esbuild scripts/backfill-template-metadata.ts --bundle --platform=node --format=esm --packages=external --log-level=warning --outfile=.backfill/backfill-template-metadata.mjs && env-cmd node .backfill/backfill-template-metadata.mjs",
+    "db:verify-rbac": "esbuild scripts/rbac-verification.ts --bundle --platform=node --format=esm --packages=external --log-level=warning --outfile=.backfill/rbac-verification.mjs && env-cmd node .backfill/rbac-verification.mjs",
     "dev": "env-cmd next dev",
     "dbg": "NODE_OPTIONS='--inspect' env-cmd next dev",
     "lint": "eslint . --format compact",

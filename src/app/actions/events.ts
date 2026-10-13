@@ -181,11 +181,14 @@ export async function createEvent(formData: FormData) {
         .returning()
 
       // Add the user as an admin participant
-      await tx.insert(eventParticipants).values({
-        eventId: createdEvent!.id,
-        userId: session.user.id,
-        role: "admin",
-      })
+      await tx
+        .insert(eventParticipants)
+        .values({
+          eventId: createdEvent!.id,
+          userId: session.user.id,
+          role: "admin",
+        })
+        .onConflictDoNothing()
 
       return createdEvent
     })
@@ -899,11 +902,16 @@ export async function joinEvent(eventId: string, override = false) {
       }
     }
 
-    await db.insert(eventParticipants).values({
-      eventId,
-      userId: session.user.id,
-      role: "participant",
-    })
+    // A concurrent join may have won the race: the unique (event, user) index
+    // makes the second insert a no-op instead of a duplicate row.
+    await db
+      .insert(eventParticipants)
+      .values({
+        eventId,
+        userId: session.user.id,
+        role: "participant",
+      })
+      .onConflictDoNothing()
 
     return { success: true }
   } catch (error) {
@@ -980,11 +988,14 @@ export async function joinEventViaInvite(inviteCode: string) {
     return { ...invite.event, pendingApproval: true }
   }
 
-  await db.insert(eventParticipants).values({
-    eventId: invite.eventId,
-    userId: session!.user.id,
-    role: "participant",
-  })
+  await db
+    .insert(eventParticipants)
+    .values({
+      eventId: invite.eventId,
+      userId: session!.user.id,
+      role: "participant",
+    })
+    .onConflictDoNothing()
 
   return { ...invite.event, pendingApproval: false }
 }
@@ -1216,6 +1227,7 @@ export async function assignParticipantToTeam(
       if (teamId) {
         await tx.insert(teamMembers).values({
           teamId,
+          eventId,
           userId,
           isLeader: false,
         })
@@ -1558,13 +1570,16 @@ export async function addClanMembersToEvent(
 
     // Add new participants
     if (newUserIds.length > 0) {
-      await db.insert(eventParticipants).values(
-        newUserIds.map((userId) => ({
-          eventId,
-          userId,
-          role: "participant" as const,
-        }))
-      )
+      await db
+        .insert(eventParticipants)
+        .values(
+          newUserIds.map((userId) => ({
+            eventId,
+            userId,
+            role: "participant" as const,
+          }))
+        )
+        .onConflictDoNothing()
     }
 
     revalidatePath(`/events/${eventId}/participants`)
@@ -1698,11 +1713,14 @@ export async function approveRegistrationRequest(
     })
 
     if (!existingParticipant) {
-      await tx.insert(eventParticipants).values({
-        eventId: request.eventId,
-        userId: request.userId,
-        role: "participant",
-      })
+      await tx
+        .insert(eventParticipants)
+        .values({
+          eventId: request.eventId,
+          userId: request.userId,
+          role: "participant",
+        })
+        .onConflictDoNothing()
     }
 
     revalidatePath(`/events/${request.eventId}`)

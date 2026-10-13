@@ -888,6 +888,7 @@ export async function generateBalancedTeams(
       const teamMemberInsertData: {
         teamId: string
         userId: string
+        eventId: string
         isLeader: boolean
       }[] = []
       for (
@@ -899,7 +900,12 @@ export async function generateBalancedTeams(
         const teamId = createdTeams[teamIdx]!.id
 
         for (const userId of teamUsers) {
-          teamMemberInsertData.push({ teamId, userId, isLeader: false })
+          teamMemberInsertData.push({
+            teamId,
+            eventId,
+            userId,
+            isLeader: false,
+          })
         }
       }
 

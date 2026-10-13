@@ -10,7 +10,7 @@ import {
   users,
   playerMetadata,
 } from "@/server/db/schema"
-import { eq, and, not, exists } from "drizzle-orm"
+import { eq, and, inArray, not, exists } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getUserRole } from "./events"
 import {
@@ -131,10 +131,25 @@ export async function addUserToTeam(teamId: string, userId: string) {
       return { success: false, error: "Unauthorized" }
     }
 
+    // A Player is on at most one Team per Event (unique event_id + user_id).
+    const [existing] = await db
+      .select({ id: teamMembers.id })
+      .from(teamMembers)
+      .innerJoin(teams, eq(teams.id, teamMembers.teamId))
+      .where(and(eq(teams.eventId, teamInfo.eventId), eq(teamMembers.userId, userId)))
+      .limit(1)
+    if (existing) {
+      return { success: false, error: "User is already on a team in this event" }
+    }
+
     const [member] = await db
       .insert(teamMembers)
-      .values({ teamId, userId })
+      .values({ teamId, eventId: teamInfo.eventId, userId })
+      .onConflictDoNothing()
       .returning()
+    if (!member) {
+      return { success: false, error: "User is already on a team in this event" }
+    }
     revalidatePath(`/events/${teamInfo.event.id}`)
     logger.info(
       {
@@ -406,19 +421,20 @@ export async function assignParticipantToTeam(
     }
 
     await db.transaction(async (tx) => {
-      // First, remove the user from any existing team in this event
-      const existingTeamMember = await tx.query.teamMembers.findFirst({
-        where: eq(teamMembers.userId, userId),
-        with: {
-          team: true,
-        },
-      })
-
-      if (existingTeamMember && existingTeamMember.team.eventId === eventId) {
-        await tx
-          .delete(teamMembers)
-          .where(eq(teamMembers.id, existingTeamMember.id))
-      }
+      // First, remove the user from every team of this event (and only this
+      // event)
+      const eventTeamIds = tx
+        .select({ id: teams.id })
+        .from(teams)
+        .where(eq(teams.eventId, eventId))
+      await tx
+        .delete(teamMembers)
+        .where(
+          and(
+            eq(teamMembers.userId, userId),
+            inArray(teamMembers.teamId, eventTeamIds)
+          )
+        )
 
       // Then, add the user to the new team
       if (teamId) {
@@ -433,6 +449,7 @@ export async function assignParticipantToTeam(
 
         await tx.insert(teamMembers).values({
           teamId,
+          eventId,
           userId,
           isLeader: false,
         })
