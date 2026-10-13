@@ -1,0 +1,43 @@
+src/components/event-workspace/__tests__/board-header.test.tsx
+  s_68822e2d462a1f::t_8a5b258dd9a3fd 164-168,311-406
+  s_68822e2d462a1f::t_ca33e21f523d76 407
+src/components/event-workspace/board-header.tsx
+  s_68822e2d462a1f::t_b5b0343dd7e1d5 3,28,44,115-121,155-156,161,184-196,397-407,409-429
+src/components/bingogrid.tsx
+  s_68822e2d462a1f::t_aa8d2d89b92508 13,34-37,59-60,123-124,205-206
+src/lib/workspace-prefs.ts
+  s_68822e2d462a1f::t_aa8d2d89b92508 11-15,23,47-50,59
+src/components/bingo-grid-layout.tsx
+  s_68822e2d462a1f::t_aa8d2d89b92508 7-11,38-44,75-76,128-135,150-159,180-181
+src/lib/__tests__/workspace-prefs.test.ts
+  s_68822e2d462a1f::t_4e8c984f96e1b0 42,46-59,67,91-93,97-99
+src/components/event-workspace/__tests__/tile-panel-battleship.test.tsx
+  s_68822e2d462a1f::t_8a5b258dd9a3fd 4,45-46,60,94-120,122
+  s_68822e2d462a1f::t_91d3f5a41f1ae1 121,123
+src/components/event-workspace/tile-panel.tsx
+  s_68822e2d462a1f::t_266e5a97233b0b 37-42,69-74,139,181,205,322-327
+src/components/__tests__/bingo-grid-battleship.test.tsx
+  s_68822e2d462a1f::t_8a5b258dd9a3fd 3-8,288-473
+src/components/own-ship-glyph.tsx
+  s_68822e2d462a1f::t_ca8fb26e3757a9 1-23
+src/components/event-workspace/event-workspace.tsx
+  s_68822e2d462a1f::t_aa8d2d89b92508 60-65,161-163,166-175,241-256,444-446,511-512,600-601
+src/components/bingo-tile.tsx
+  s_68822e2d462a1f::t_ca8fb26e3757a9 8-12,48-55,65-99,122-123,194,307
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e345b33581e639a65682551c902d137ea3ffb4dc",
+  "prompts": {},
+  "sessions": {
+    "s_68822e2d462a1f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2fae12c2-5cf2-486a-b015-d4ff345796c9",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
