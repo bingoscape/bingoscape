@@ -1,0 +1,23 @@
+src/app/actions/__tests__/tier-unlock-completion.test.ts
+  s_d4aac989be5a27::t_a494de803a2f24 1-172
+src/app/actions/tile-completion.ts
+  s_d4aac989be5a27::t_5c1ced92048c61 244-245,247-251
+src/app/actions/bingo.ts
+  s_d4aac989be5a27::t_5c1ced92048c61 81-84,1419-1454,1565-1570,1585-1586,1681-1682,1689-1690,1827-1832,1847-1848
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "acd6efe5dc29eae2010987ff59d4d145fc0babce",
+  "prompts": {},
+  "sessions": {
+    "s_d4aac989be5a27": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "483a3a1c-3a71-4388-b221-1c804474fccd",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
