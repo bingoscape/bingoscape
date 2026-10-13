@@ -18,6 +18,7 @@ import { boardContentUnlockedSql } from "@/server/blind-board"
 import { z } from "zod"
 import { doesItemMatchBaseName } from "@/app/actions/osrs-items"
 import { checkAndAutoCompleteTile } from "@/app/actions/tile-completion"
+import { getTierLockForSubmit, tierLockedBody } from "@/server/tier-progression"
 
 // Zod schema for item data from RuneLite
 const ItemDataSchema = z.object({
@@ -178,6 +179,9 @@ export async function POST(req: Request) {
         exactVariant: itemGoals.exactVariant,
         imageUrl: itemGoals.imageUrl,
         tileId: goals.tileId,
+        tileTier: tiles.tier,
+        bingoId: bingos.id,
+        bingoType: bingos.bingoType,
         targetValue: goals.targetValue,
         description: goals.description,
         eventId: bingos.eventId,
@@ -212,6 +216,37 @@ export async function POST(req: Request) {
     const matchedGoals: MatchedGoal[] = []
     const tilesNeedingCheck = new Set<{ tileId: string; teamId: string }>()
 
+    // Goals of a Tile in a locked Tier do not progress. The lock is looked up
+    // once per Tile and Team, however many items match it.
+    const tierLocks = new Map<
+      string,
+      Promise<{ tier: number; xpNeeded: number } | null>
+    >()
+    const tierLockOf = (
+      itemGoal: (typeof allItemGoals)[number],
+      teamId: string
+    ) => {
+      const key = `${itemGoal.tileId}:${teamId}`
+      let lock = tierLocks.get(key)
+      if (!lock) {
+        lock = getTierLockForSubmit(
+          db,
+          {
+            id: itemGoal.tileId,
+            tier: itemGoal.tileTier,
+            bingoId: itemGoal.bingoId,
+          },
+          itemGoal.bingoType,
+          teamId
+        )
+        tierLocks.set(key, lock)
+      }
+      return lock
+    }
+    let lockedMatches = 0
+    let openMatches = 0
+    let firstLock: { tier: number; xpNeeded: number } | null = null
+
     for (const item of items) {
       for (const itemGoal of allItemGoals) {
         // Check if item matches the goal's base name
@@ -230,6 +265,14 @@ export async function POST(req: Request) {
           if (team.eventId !== itemGoal.eventId) {
             continue
           }
+
+          const tierLock = await tierLockOf(itemGoal, team.id)
+          if (tierLock) {
+            lockedMatches++
+            firstLock ??= tierLock
+            continue
+          }
+          openMatches++
 
           // Get current progress
           const existingProgress = await db.query.teamGoalProgress.findFirst({
@@ -282,12 +325,25 @@ export async function POST(req: Request) {
       }
     }
 
+    // Every matching Goal sits in a locked Tier: the scan is a submit that
+    // cannot count. When some matches are open the locked ones are skipped.
+    if (firstLock && lockedMatches > 0 && openMatches === 0) {
+      return NextResponse.json(
+        { success: false, ...tierLockedBody(firstLock) },
+        { status: 403 }
+      )
+    }
+
     // Check and auto-complete tiles
     const tilesAutoCompleted: string[] = []
+    let tierUnlocked: number | null = null
     for (const { tileId, teamId } of tilesNeedingCheck) {
       const result = await checkAndAutoCompleteTile(db, tileId, teamId)
       if (result.success && result.autoCompleted) {
         tilesAutoCompleted.push(tileId)
+      }
+      if (result.tierUnlocked != null) {
+        tierUnlocked = Math.max(tierUnlocked ?? 0, result.tierUnlocked)
       }
     }
 
@@ -305,6 +361,7 @@ export async function POST(req: Request) {
         eventId: m.eventId,
       })),
       tilesAutoCompleted,
+      tierUnlocked,
       scannedItems: items.length,
       matchedGoals: matchedGoals.length,
     })

@@ -21,6 +21,8 @@ import {
 } from "@/lib/discord-webhook"
 import { formatBingoData } from "@/lib/bingo-formatter"
 import { isBlindBoard } from "@/server/blind-board"
+import { hasEventStarted } from "@/lib/event-status"
+import { getTierLockForSubmit, tierLockedBody } from "@/server/tier-progression"
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
 
@@ -104,7 +106,26 @@ export async function POST(
         isManager: callerIsManager,
       })
     ) {
-      return NextResponse.json({ error: "Tile not found" }, { status: 404 })
+      return NextResponse.json(
+        { error: "Tile not found", code: "BOARD_BLIND" },
+        { status: 404 }
+      )
+    }
+
+    // Nobody shoots before the start, not even a manager the blind check lets
+    // through: an early hit or miss would show where the opponent's ships are.
+    if (
+      tile.bingo.bingoType === "battleship" &&
+      !hasEventStarted(tile.bingo.event.startDate)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "This battleship board can only be played once the event has started",
+          code: "EVENT_NOT_STARTED",
+        },
+        { status: 403 }
+      )
     }
 
     // Get user's team for this event
@@ -149,6 +170,16 @@ export async function POST(
         { error: "This bingo is locked. No submission possible" },
         { status: 403 }
       )
+    }
+
+    const tierLock = await getTierLockForSubmit(
+      db,
+      tile,
+      tile.bingo.bingoType,
+      userTeam.id
+    )
+    if (tierLock) {
+      return NextResponse.json(tierLockedBody(tierLock), { status: 403 })
     }
 
     const teamSubmissionForTile = tile.teamTileSubmissions.find(
@@ -321,9 +352,17 @@ export async function POST(
     }
 
     // Format the response using shared utility
-    const formattedBingo = await formatBingoData(tile.bingo, userTeam ?? null)
+    const formattedBingo = await formatBingoData(tile.bingo, userTeam ?? null, {
+      userId,
+    })
 
-    return NextResponse.json(formattedBingo)
+    // A plain image submission never completes a Tile, so it opens no Tier
+    // and fires no shot.
+    return NextResponse.json({
+      ...formattedBingo,
+      tierUnlocked: null,
+      shot: null,
+    })
   } catch (error) {
     logger.error({ error }, "Error submitting image")
     return NextResponse.json(

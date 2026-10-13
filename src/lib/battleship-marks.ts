@@ -86,3 +86,28 @@ export function newlySunkTileIds(
 ): string[] {
   return next.filter((id) => !previous.has(id))
 }
+
+/** What a RuneLite submission response reports about the shot it caused. */
+export interface BattleshipShot {
+  tileId: string
+  result: BattleshipMark
+}
+
+/**
+ * The shot a completion of `tileId` fired, from the Team's marks before and
+ * after it. Null when the Tile was not newly marked (no completion happened,
+ * or it was already marked). A shot that sinks a ship reports "sunk".
+ */
+export function battleshipShot(
+  tileId: string,
+  before: BattleshipMarkIds,
+  after: BattleshipMarkIds
+): BattleshipShot | null {
+  const marked = (ids: BattleshipMarkIds) =>
+    ids.hitTileIds.includes(tileId) || ids.missTileIds.includes(tileId)
+  if (marked(before) || !marked(after)) return null
+
+  if (after.sunkTileIds.includes(tileId)) return { tileId, result: "sunk" }
+  if (after.hitTileIds.includes(tileId)) return { tileId, result: "hit" }
+  return { tileId, result: "miss" }
+}

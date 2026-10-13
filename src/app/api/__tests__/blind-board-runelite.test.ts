@@ -145,7 +145,10 @@ describe.each([
       const { status, body } = await submit(fx.memberAId)
       if (isBattleship) {
         expect(status).toBe(404)
-        expect(body).toEqual({ error: "Tile not found" })
+        expect(body).toEqual({
+          error: "Tile not found",
+          code: "BOARD_BLIND",
+        })
         expectNoSecrets(body, fx.secrets)
       } else {
         expect(status).toBe(200)
@@ -184,7 +187,10 @@ describe.each([
       const { status, body } = await autoSubmit(fx.memberAId)
       if (isBattleship) {
         expect(status).toBe(404)
-        expect(body).toEqual({ error: "Tile not found" })
+        expect(body).toEqual({
+          error: "Tile not found",
+          code: "BOARD_BLIND",
+        })
       } else {
         expect(status).not.toBe(404)
       }

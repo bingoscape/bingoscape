@@ -10,10 +10,13 @@ import {
 } from "@/server/db/schema"
 import {
   getBattleshipBoardState,
+  getBattleshipBoardStateForTeam,
   getTeamShipPlacements,
 } from "@/server/battleship"
 import {
   createBattleshipFixture,
+  DAY_MS,
+  setClock,
   validFleet,
   type BattleshipFixture,
 } from "@/server/__tests__/helpers/battleship-fixture"
@@ -75,9 +78,12 @@ beforeEach(async () => {
   await placeFleet(fx.teamAId, fx.bingoId, validFleet(t, 0))
   await placeFleet(fx.teamBId, fx.bingoId, validFleet(t, 1))
   signInAs(fx.memberAId)
+  // Marks are only handed out from the start on.
+  setClock(new Date(fx.startDate.getTime() + DAY_MS / 24))
 })
 
 afterEach(async () => {
+  jest.useRealTimers()
   await fx.cleanup()
 })
 
@@ -227,6 +233,56 @@ describe("getBattleshipBoardState does not leak the opponent", () => {
       })
     } finally {
       await other.cleanup()
+    }
+  })
+})
+
+describe("getBattleshipBoardStateForTeam", () => {
+  const empty = { hitTileIds: [], missTileIds: [], sunkTileIds: [] }
+
+  it("answers for the given team without a session", async () => {
+    signInAs(null)
+    await setStatus(fx.teamAId, t[2]!, "completed")
+    await setStatus(fx.teamBId, t[0]!, "completed")
+
+    expect(
+      (await getBattleshipBoardStateForTeam(fx.bingoId, fx.teamAId)).hitTileIds
+    ).toEqual([t[2]!])
+    expect(
+      (await getBattleshipBoardStateForTeam(fx.bingoId, fx.teamBId)).hitTileIds
+    ).toEqual([t[0]!])
+  })
+
+  it("is empty before the event starts, for the wrapper too", async () => {
+    await setStatus(fx.teamAId, t[2]!, "completed")
+    setClock(new Date(fx.startDate.getTime() - DAY_MS / 24))
+
+    expect(
+      await getBattleshipBoardStateForTeam(fx.bingoId, fx.teamAId)
+    ).toEqual(empty)
+    expect(await getBattleshipBoardState(fx.bingoId)).toEqual(empty)
+
+    setClock(fx.startDate)
+    expect(
+      (await getBattleshipBoardStateForTeam(fx.bingoId, fx.teamAId)).hitTileIds
+    ).toEqual([t[2]!])
+  })
+
+  it("is empty for a team of another event and for other board types", async () => {
+    await setStatus(fx.teamAId, t[2]!, "completed")
+    const other = await createBattleshipFixture()
+    const standard = await createBattleshipFixture({ bingoType: "standard" })
+    try {
+      await setStatus(standard.teamAId, standard.tileIds[0]!, "completed")
+      expect(
+        await getBattleshipBoardStateForTeam(fx.bingoId, other.teamAId)
+      ).toEqual(empty)
+      expect(
+        await getBattleshipBoardStateForTeam(standard.bingoId, standard.teamAId)
+      ).toEqual(empty)
+    } finally {
+      await other.cleanup()
+      await standard.cleanup()
     }
   })
 })

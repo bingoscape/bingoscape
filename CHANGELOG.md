@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **RuneLite API 2.1 (progression and battleship boards)** - All changes are additive
+  - `apiVersion: "2.1"` on every board payload
+  - `/api/runelite/events` lists boards of every type (standard, progression, battleship); hidden boards stay excluded
+  - `progression.tiers[]` (per-tier unlock state, earned XP and XP required) and stub tiles (`tierLocked`) for locked tiers
+  - `battleship` block with the team's hit/miss/sunk marks, ship rules and opponent ship counts, plus `tiles[].isBlind`
+  - `tierUnlocked` on submission, auto-submission and item-check responses, and `shot` on battleship (auto-)submission responses
+  - Error codes `TIER_LOCKED`, `BOARD_BLIND` and `EVENT_NOT_STARTED`
+  - `ETag` / `If-None-Match` (`304`) on `GET /api/runelite/bingos/{bingoId}`, with a rate limit of 60 requests per minute per user
 - Comprehensive project documentation overhaul
 - Detailed API documentation for RuneLite plugin integration
 - Architecture documentation with technical specifications
@@ -16,9 +24,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `GET /api/runelite/bingos/{bingoId}` now serves battleship boards and requires the caller to be a participant or manager of the event (hidden boards: managers only); every other case answers `404`
+- `apiKeys.lastUsed` is written at most once a minute per key
 - Updated README.md to accurately reflect application capabilities
 - Enhanced project structure documentation
 - Improved contributing guidelines with code standards
+
+### Fixed
+
+- Progression boards: tier 0 is always unlocked, so a fresh team no longer gets an empty board from the RuneLite API
+- Progression boards: completions through the RuneLite plugin, trackers and goal progress now unlock the next tier(s)
+- Progression boards: submitting to a locked tier is refused on every submit path (`TIER_LOCKED`)
+- Battleship boards: the RuneLite board payload redacts blind tiles, and submissions respect the event start
 
 ## [1.1.0] - 2025-08-04
 

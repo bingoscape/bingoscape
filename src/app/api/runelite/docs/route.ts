@@ -3,10 +3,12 @@ import { NextResponse } from "next/server"
 // API documentation for the RuneLite plugin
 export async function GET() {
   const apiDocs = {
-    version: "2.0.0",
+    version: "2.1.0",
     baseUrl: "/api/runelite",
     description: "API for the BingoScape RuneLite plugin",
     changelog: {
+      "2.1.0":
+        "Additive. Board payloads carry apiVersion '2.1', tiles[].tierLocked and tiles[].isBlind, progression.tiers[] and a battleship block. /events lists all board types. GET /bingos/{bingoId} serves battleship boards, requires event access, supports ETag/If-None-Match and is rate limited to 60 requests/minute per user. Submission responses carry tierUnlocked and shot. New error codes TIER_LOCKED, BOARD_BLIND and EVENT_NOT_STARTED.",
       "2.0.0":
         "Added hierarchical goal tree structure with goal groups, item goals, and goal values. Maintained backwards compatibility with flat goals array.",
       "1.0.0":
@@ -41,7 +43,8 @@ export async function GET() {
       {
         path: "/events",
         method: "GET",
-        description: "Get all events for the authenticated user",
+        description:
+          "Get all events for the authenticated user. Every bingo of every bingoType (standard, progression, battleship) is returned as a full board payload (see dataStructures.boardPayload) for the user's team. Hidden bingos are excluded, even for managers. Events without a visible bingo are omitted.",
         response: [
           {
             id: "string",
@@ -49,24 +52,45 @@ export async function GET() {
             description: "string",
             startDate: "date",
             endDate: "date",
+            locked: "boolean",
+            public: "boolean",
             userTeam: {
-              id: "string",
               name: "string",
-              isLeader: "boolean",
+              members: [{ isLeader: "boolean", runescapeName: "string" }],
             },
             role: "string",
-            bingos: [
-              {
-                id: "string",
-                title: "string",
-                description: "string",
-                rows: "number",
-                columns: "number",
-                visible: "boolean",
-              },
-            ],
+            bingos: ["boardPayload (see dataStructures.boardPayload)"],
           },
         ],
+      },
+      {
+        path: "/bingos/{bingoId}",
+        method: "GET",
+        description:
+          "Get one board as seen by the authenticated user's team. Only event participants and managers can read a board, and only managers can read a hidden one. Rate limited to 60 requests/minute per user (in-memory per server process; 304 answers count). Poll with If-None-Match and stay under the limit.",
+        request: {
+          headers: {
+            "If-None-Match":
+              "string (optional) - A previous ETag. Answers 304 with no body when the board is unchanged. Lists, weak tags and * are accepted.",
+          },
+        },
+        response: "boardPayload (see dataStructures.boardPayload)",
+        responseHeaders: {
+          ETag: "string - Hash of the body excluding battleship.serverNow. Differs per view (team and role). Sent on 200 and 304.",
+          "Cache-Control": "private, no-cache - Sent on 200 and 304",
+        },
+        errors: {
+          "401": { error: "Invalid API key" },
+          "404": {
+            error: "Bingo not found",
+            note: "Unknown id, not a participant of the event, or a hidden bingo seen by a non-manager. These cases are deliberately indistinguishable.",
+          },
+          "304": "No body. If-None-Match matched the current ETag",
+          "429": {
+            error: "Too many requests",
+            note: "See the Retry-After header (seconds)",
+          },
+        },
       },
       {
         path: "/events/{eventId}/bingos",
@@ -127,17 +151,78 @@ export async function GET() {
             image: "file",
           },
         },
+        response:
+          "boardPayload (see dataStructures.boardPayload) plus tierUnlocked and shot. Both are always null on this route: a plain submission never completes a tile.",
+        errors: {
+          "401": { error: "Invalid API key" },
+          "403": {
+            codes: ["TIER_LOCKED", "EVENT_NOT_STARTED"],
+            note: "See dataStructures.errorCodes",
+          },
+          "404": { error: "Tile not found", code: "BOARD_BLIND (blind battleship board, non-managers)" },
+        },
+      },
+      {
+        path: "/tiles/{tileId}/auto-submissions",
+        method: "POST",
+        description:
+          "Submit an image with metadata; the server matches the metadata against the tile's goals, updates progress and completes the tile when its goals are met. Same TIER_LOCKED, BOARD_BLIND and EVENT_NOT_STARTED checks as the plain submission route.",
+        request: {
+          formData: {
+            image: "file",
+            metadata:
+              "string (optional) - JSON: npcId, sourceName, itemId, quantity, accountName, sourceType, worldX, worldY, plane, worldNumber, regionId",
+          },
+        },
+        response: {
+          "...": "boardPayload (see dataStructures.boardPayload)",
+          autoApproved: "boolean",
+          matchedGoalId: "string | null",
+          tierUnlocked:
+            "number | null - Highest tier newly unlocked by this request",
+          shot: "{ tileId: string, result: 'hit' | 'miss' | 'sunk' } | null - Battleship only: what the completion did to the team's marks. Null when no tile was newly marked",
+        },
+      },
+      {
+        path: "/items/check",
+        method: "POST",
+        description:
+          "Match a list of items against the item goals of the user's events and update progress. Goals on blind battleship tiles and in locked progression tiers do not progress. Answers 403 TIER_LOCKED only when every matching goal is in a locked tier.",
+        request: {
+          body: {
+            items: [
+              { itemId: "number", itemName: "string", quantity: "number" },
+            ],
+            eventIds: "string[] (optional)",
+          },
+        },
         response: {
           success: "boolean",
-          teamId: "string",
-          teamName: "string",
-          status: "string",
-          submission: {
-            id: "string",
-            createdAt: "date",
-            image: {
-              path: "string",
+          matched: [
+            {
+              goalId: "string",
+              itemName: "string",
+              baseName: "string",
+              previousValue: "number",
+              newValue: "number",
+              targetValue: "number",
+              isComplete: "boolean",
+              tileId: "string",
+              eventId: "string",
             },
+          ],
+          tilesAutoCompleted: "string[]",
+          tierUnlocked:
+            "number | null - Highest tier newly unlocked by this call",
+          scannedItems: "number",
+          matchedGoals: "number",
+        },
+        errors: {
+          "403": {
+            success: false,
+            code: "TIER_LOCKED",
+            tier: "number",
+            xpNeeded: "number",
           },
         },
       },
@@ -231,6 +316,72 @@ export async function GET() {
       },
     ],
     dataStructures: {
+      boardPayload: {
+        description:
+          "The board object returned by /bingos/{bingoId}, inside /events and by the submission routes. All 2.1 additions are additive; treat a missing bingoType as 'standard'.",
+        fields: {
+          apiVersion: "string - '2.1'",
+          bingoType: "'standard' | 'progression' | 'battleship'",
+          "tiles[].tier": "number - 0 on boards without tiers",
+          "tiles[].tierLocked":
+            "boolean - True for a stub tile of a tier the team has not unlocked",
+          "tiles[].isBlind":
+            "boolean - True for a redacted tile of a battleship board that has not started (non-managers). Present on every board type",
+          progression:
+            "object - Only for progression boards, and only when the user is on a team",
+          battleship: "object - Only for battleship boards",
+        },
+      },
+      progression: {
+        description:
+          "Tier 0 is always unlocked. A tier unlocks when the team has earned enough XP (summed tile weight) in the tier below it.",
+        fields: {
+          tierXpRequirements: "{ tier, xpRequired }[] - Older field, unchanged",
+          unlockedTiers:
+            "number[] - Older field, unchanged. Always contains 0",
+          tierProgress:
+            "{ tier, isUnlocked, unlockedAt }[] - Older field, unchanged",
+          tiers:
+            "{ tier, isUnlocked, unlockedAt, earnedXp, xpRequired }[] - One entry per tier of the board, locked tiers included. earnedXp is the summed weight of the team's completed tiles in the tier; xpRequired is the XP needed in that tier to unlock the next one",
+        },
+        notes: [
+          "Tiles of a locked tier are stubs: id, index and tier are real, tierLocked is true, and there is no title, description, image, goals or weight",
+          "Submitting to a locked tier answers 403 TIER_LOCKED with tier and xpNeeded",
+          "Submission and auto-submission responses carry tierUnlocked, the highest tier newly unlocked by the request",
+        ],
+      },
+      battleship: {
+        description:
+          "Always about the caller's own team. No opponent ship position is ever sent.",
+        fields: {
+          started: "boolean - The event's startDate has passed",
+          startDate: "string - ISO timestamp",
+          serverNow:
+            "string - ISO timestamp of the server clock. Not part of the ETag",
+          rules: "{ length, count }[] - The fleet rules, sorted ascending by length",
+          marks:
+            "{ hitTileIds, missTileIds, sunkTileIds } - The team's shots. Empty before the start and for a manager on no team. hitTileIds also contains the sunk tiles, so give sunk priority over hit",
+          opponentShipsSunk: "number",
+          opponentShipsTotal:
+            "number - Total ships in the public fleet rules (sum of rules[].count)",
+        },
+        notes: [
+          "Before the start, non-managers get blind tiles: isBlind true, title 'Tile N', no description, image, goals, weight or progress",
+          "Submissions answer 404 BOARD_BLIND for a blind board and 403 EVENT_NOT_STARTED before the start",
+        ],
+      },
+      errorCodes: {
+        description:
+          "Submission routes put a stable code next to the error message",
+        codes: {
+          TIER_LOCKED:
+            "403 - The tile's tier is locked. Body also has tier and xpNeeded",
+          BOARD_BLIND:
+            "404 - Tile of a battleship board that has not started, requested by a non-manager",
+          EVENT_NOT_STARTED:
+            "403 - Battleship submit before the event's start date",
+        },
+      },
       goalTree: {
         description:
           "Hierarchical goal structure supporting nested goal groups with AND/OR logic",

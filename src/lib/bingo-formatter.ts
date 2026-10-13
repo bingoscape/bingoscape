@@ -1,14 +1,23 @@
 import { db } from "@/server/db"
 import {
+  events,
   tiles,
   teamTileSubmissions,
   goalGroups,
   goals,
   teamGoalProgress,
+  eventParticipants,
   type BingoType,
 } from "@/server/db/schema"
 import { eq, asc, and, inArray } from "drizzle-orm"
+import { applyBlindBoard, isBlindBoard } from "@/server/blind-board"
+import { getBattleshipTeamSummary } from "@/server/battleship"
 import { mapStatus } from "@/lib/statusMapping"
+import {
+  getTierEarnedXp,
+  getTierXpRequired,
+  getUnlockedTiers,
+} from "@/lib/tiers"
 import { getProgressionBingoTiles, getTeamTierProgress, getTierXpRequirements } from "@/app/actions/bingo"
 import type {
   GoalTreeNode,
@@ -17,7 +26,11 @@ import type {
   GroupProgressData,
 } from "@/types/runelite-api"
 
+/** Version of the board payload below; 2.1 added bingoType, tiers and battleship. */
+export const BOARD_API_VERSION = "2.1"
+
 export interface FormattedBingo {
+  apiVersion: typeof BOARD_API_VERSION
   id: string
   title: string
   description: string | null
@@ -36,6 +49,18 @@ export interface FormattedBingo {
     index: number
     tier: number
     isHidden: boolean
+    /**
+     * Progression boards: the Team has not unlocked this Tile's Tier. The Tile
+     * is then a stub: id, index and tier are real, everything else is a
+     * neutral default (no title, description, image, goals or weight).
+     */
+    tierLocked: boolean
+    /**
+     * Battleship boards before the event starts, for a viewer who does not
+     * manage the event: the Tile's content is redacted (placeholder title, no
+     * description, image, goals, weight or progress). Always false otherwise.
+     */
+    isBlind: boolean
     submission: {
       id: string
       status:
@@ -81,6 +106,32 @@ export interface FormattedBingo {
       isUnlocked: boolean
       unlockedAt: Date | null
     }>
+    /** Every Tier of the Board, locked ones included. */
+    tiers: Array<{
+      tier: number
+      isUnlocked: boolean
+      unlockedAt: Date | null
+      /** XP the Team earned from completed Tiles of this Tier. */
+      earnedXp: number
+      /** XP needed in this Tier to unlock the next one. */
+      xpRequired: number
+    }>
+  }
+  /** Only on battleship boards; always about the caller's own team. */
+  battleship?: {
+    started: boolean
+    startDate: Date
+    serverNow: Date
+    rules: Array<{ length: number; count: number }>
+    /** Hits, misses and sunk ships of the caller's team; empty before the start. */
+    marks: {
+      hitTileIds: string[]
+      missTileIds: string[]
+      sunkTileIds: string[]
+    }
+    /** Counts only: no position of an opponent ship ever leaves the server. */
+    opponentShipsSunk: number
+    opponentShipsTotal: number
   }
 }
 
@@ -93,6 +144,9 @@ interface TileWithGoals {
   index: number
   tier: number
   isHidden: boolean
+  tierLocked?: boolean
+  isBlind?: boolean
+  teamTileSubmissions?: Array<{ teamId: string; status: string }>
   goals?: Array<{
     id: string
     description: string
@@ -100,9 +154,62 @@ interface TileWithGoals {
   }>
 }
 
+/**
+ * What a Team may see of a Tile in a Tier it has not unlocked: its place on
+ * the Board and nothing else.
+ */
+function toLockedStub(tile: TileWithGoals): TileWithGoals {
+  return {
+    id: tile.id,
+    title: "",
+    description: null,
+    headerImage: null,
+    weight: 0,
+    index: tile.index,
+    tier: tile.tier,
+    isHidden: false,
+    tierLocked: true,
+    goals: [],
+  }
+}
+
+/**
+ * Who the board is formatted for: the RuneLite API key's user. Decides whether
+ * a blind battleship board is redacted (managers see it unredacted).
+ */
+export interface BingoViewer {
+  userId: string
+}
+
+/** The event's start date and whether the viewer manages it. */
+async function loadEventViewerContext(eventId: string, userId: string) {
+  const [event, participant] = await Promise.all([
+    db.query.events.findFirst({
+      where: eq(events.id, eventId),
+      columns: { startDate: true, creatorId: true },
+    }),
+    db.query.eventParticipants.findFirst({
+      where: and(
+        eq(eventParticipants.eventId, eventId),
+        eq(eventParticipants.userId, userId)
+      ),
+      columns: { role: true },
+    }),
+  ])
+  if (!event) return null
+  return {
+    startDate: event.startDate,
+    isManager:
+      event.creatorId === userId ||
+      participant?.role === "admin" ||
+      participant?.role === "management",
+  }
+}
+
 export async function formatBingoData(
   bingo: {
     id: string
+    eventId: string
     title: string
     description: string | null
     rows: number
@@ -119,34 +226,61 @@ export async function formatBingoData(
         runescapeName: string | null
       }
     }>
-  } | null
+  } | null,
+  viewer: BingoViewer
 ): Promise<FormattedBingo> {
+  const eventContext =
+    bingo.bingoType === "battleship"
+      ? await loadEventViewerContext(bingo.eventId, viewer.userId)
+      : null
+  // Unknown event: redact, never the other way around.
+  const blind = eventContext
+    ? isBlindBoard({
+        bingoType: bingo.bingoType,
+        startDate: eventContext.startDate,
+        isManager: eventContext.isManager,
+      })
+    : bingo.bingoType === "battleship"
+
   // Get tiles based on bingo type - for progressive bingos, filter by unlocked tiers
   let bingoTiles: TileWithGoals[]
   let tierXpRequirements = null
   let tierProgress = null
+  const unlockedTiers = new Set<number>()
+  // Progression Tiles of every Tier, with their completions, for the tier summary.
+  let allProgressionTiles: TileWithGoals[] = []
 
   if (bingo.bingoType === "progression" && userTeam) {
-    // For progression bingo, get only unlocked tiles for the user's team
-    bingoTiles = await getProgressionBingoTiles(bingo.id, userTeam.id)
+    // For progression bingo, locked Tiers come back too, as content-free stubs
+    allProgressionTiles = await getProgressionBingoTiles(bingo.id, userTeam.id, {
+      includeLocked: true,
+    })
+    bingoTiles = allProgressionTiles.map((tile) =>
+      tile.tierLocked ? toLockedStub(tile) : tile
+    )
     tierXpRequirements = await getTierXpRequirements(bingo.id)
     tierProgress = await getTeamTierProgress(userTeam.id, bingo.id)
+    for (const tier of getUnlockedTiers(tierProgress)) unlockedTiers.add(tier)
   } else if (bingo.bingoType === "progression" && !userTeam) {
     // No team found - return empty tiles for progression bingo
     bingoTiles = []
   } else {
     // Standard bingo - get all tiles
-    bingoTiles = await db.query.tiles.findMany({
-      where: eq(tiles.bingoId, bingo.id),
-      orderBy: [asc(tiles.index)],
-      with: {
-        goals: true,
-      },
-    })
+    bingoTiles = applyBlindBoard(
+      await db.query.tiles.findMany({
+        where: eq(tiles.bingoId, bingo.id),
+        orderBy: [asc(tiles.index)],
+        with: {
+          goals: true,
+        },
+      }),
+      blind
+    )
   }
 
-  // Get all team tile submissions for this team
-  const teamSubmissions = userTeam
+  // Get all team tile submissions for this team. A blind board shows none:
+  // their status, images and goal progress would give the Tiles away.
+  const teamSubmissions = userTeam && !blind
     ? await db.query.teamTileSubmissions.findMany({
         where: eq(teamTileSubmissions.teamId, userTeam.id),
         with: {
@@ -173,7 +307,9 @@ export async function formatBingoData(
   > = {}
 
   bingoTiles.forEach((tile) => {
-    const submission = teamSubmissions.find((sub) => sub.tileId === tile.id)
+    const submission = tile.tierLocked
+      ? undefined
+      : teamSubmissions.find((sub) => sub.tileId === tile.id)
     tileSubmissionMap[tile.id] = {
       id: tile.id,
       status: submission ? mapStatus(submission.status) : "not_submitted",
@@ -206,7 +342,11 @@ export async function formatBingoData(
 
   // Build goal trees for all tiles
   const tileGoalTrees = await Promise.all(
-    bingoTiles.map((tile) => buildGoalTreeForAPI(tile.id, userTeam?.id ?? null))
+    bingoTiles.map((tile) =>
+      tile.tierLocked || tile.isBlind
+        ? Promise.resolve([] as GoalTreeNode[])
+        : buildGoalTreeForAPI(tile.id, userTeam?.id ?? null)
+    )
   )
 
   // Create a map of tile IDs to goal trees
@@ -217,6 +357,7 @@ export async function formatBingoData(
 
   // Format the bingo data
   const formattedBingo: FormattedBingo = {
+    apiVersion: BOARD_API_VERSION,
     id: bingo.id,
     title: bingo.title,
     description: bingo.description,
@@ -235,6 +376,8 @@ export async function formatBingoData(
       index: tile.index,
       tier: tile.tier,
       isHidden: tile.isHidden,
+      tierLocked: tile.tierLocked ?? false,
+      isBlind: tile.isBlind ?? false,
       submission: tileSubmissionMap[tile.id]!,
       goals:
         tile.goals?.map((goal) => {
@@ -294,17 +437,63 @@ export async function formatBingoData(
               tier: req.tier,
               xpRequired: req.xpRequired,
             })) ?? [],
-          unlockedTiers:
-            tierProgress?.filter((tp) => tp.isUnlocked).map((tp) => tp.tier) ??
-            [],
+          // Tier 0 is unlocked even before the Team has any tier rows.
+          unlockedTiers: [...unlockedTiers].sort((a, b) => a - b),
           tierProgress:
             tierProgress?.map((tp) => ({
               tier: tp.tier,
               isUnlocked: tp.isUnlocked,
               unlockedAt: tp.unlockedAt,
             })) ?? [],
+          tiers: [...new Set(allProgressionTiles.map((t) => t.tier))]
+            .sort((a, b) => a - b)
+            .map((tier) => ({
+              tier,
+              isUnlocked: unlockedTiers.has(tier),
+              unlockedAt:
+                tierProgress?.find((tp) => tp.tier === tier)?.unlockedAt ??
+                null,
+              earnedXp: getTierEarnedXp(
+                allProgressionTiles.map((t) => ({
+                  id: t.id,
+                  tier: t.tier,
+                  weight: t.weight,
+                  index: t.index,
+                  teamTileSubmissions: t.teamTileSubmissions,
+                })),
+                userTeam.id,
+                tier
+              ),
+              xpRequired: getTierXpRequired(
+                (tierXpRequirements ?? []).map((r) => ({
+                  tier: r.tier,
+                  xpRequired: r.xpRequired,
+                })),
+                tier
+              ),
+            })),
         },
       }),
+  }
+
+  if (bingo.bingoType === "battleship" && eventContext) {
+    const summary = await getBattleshipTeamSummary({
+      bingoId: bingo.id,
+      teamId: userTeam?.id ?? null,
+      startDate: eventContext.startDate,
+    })
+    formattedBingo.battleship = {
+      started: summary.started,
+      startDate: summary.startDate,
+      serverNow: new Date(),
+      rules: summary.rules.map((rule) => ({
+        length: rule.length,
+        count: rule.count,
+      })),
+      marks: summary.marks,
+      opponentShipsSunk: summary.opponentShipsSunk,
+      opponentShipsTotal: summary.opponentShipsTotal,
+    }
   }
 
   return formattedBingo
