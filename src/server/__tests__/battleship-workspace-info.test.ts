@@ -9,7 +9,10 @@ import {
   battleshipShipTiles,
   teamTileSubmissions,
 } from "@/server/db/schema"
-import { getBattleshipWorkspaceInfo } from "@/server/battleship"
+import {
+  getBattleshipWorkspaceInfo,
+  getOwnShipLayout,
+} from "@/server/battleship"
 import {
   createBattleshipFixture,
   DAY_MS,
@@ -113,10 +116,15 @@ describe("getBattleshipWorkspaceInfo", () => {
     signInAs(fx.memberBId)
     const b = await info(fx.memberBId)
     // Team A's ships sit on 0, 3, 6 and 4, 5. Team B only completed 0 and 7,
-    // so none of the others may show up, nor team A's own results (1).
+    // so none of the others may show up in its marks, nor team A's own
+    // results (1).
     for (const untouched of [t[3]!, t[6]!, t[4]!, t[5]!, t[1]!]) {
       expect(flat(b.marks)).not.toContain(untouched)
     }
+    // ownShips holds team B's own positions (2, 5, 8, 3, 4), so only tiles
+    // team B does not occupy can be asserted absent from the whole result:
+    // team A's never-hit ship on 6 and team A's result on 1.
+    expect(JSON.stringify(b)).not.toContain(t[6]!)
     expect(JSON.stringify(b)).not.toContain(t[1]!)
   })
 
@@ -139,6 +147,7 @@ describe("getBattleshipWorkspaceInfo", () => {
       missTileIds: [],
       sunkTileIds: [],
     })
+    expect(result.ownShips).toEqual([])
   })
 
   it("hands out no results before the event starts, whatever was completed", async () => {
@@ -151,11 +160,109 @@ describe("getBattleshipWorkspaceInfo", () => {
       missTileIds: [],
       sunkTileIds: [],
     })
+    expect(early.ownShips).toEqual([])
   })
 
   it("starts handing out results at the exact start instant", async () => {
     setClock(fx.startDate)
     signInAs(fx.memberAId)
-    expect((await info(fx.memberAId)).marks.hitTileIds).toHaveLength(2)
+    const result = await info(fx.memberAId)
+    expect(result.marks.hitTileIds).toHaveLength(2)
+    expect(result.ownShips).toHaveLength(2)
+  })
+
+  it("is empty one millisecond before the start", async () => {
+    setClock(new Date(fx.startDate.getTime() - 1))
+    signInAs(fx.memberAId)
+    const result = await info(fx.memberAId)
+    expect(result.started).toBe(false)
+    expect(result.ownShips).toEqual([])
+  })
+})
+
+describe("getBattleshipWorkspaceInfo ownShips", () => {
+  const normalise = (ships: Array<{ length: number; tileIds: string[] }>) =>
+    ships
+      .map((ship) => ({
+        length: ship.length,
+        tileIds: [...ship.tileIds].sort(),
+      }))
+      .sort((a, b) => b.length - a.length)
+
+  it("hands every member of a team exactly that team's fleet", async () => {
+    for (const [userId, offset] of [
+      [fx.leaderAId, 0],
+      [fx.memberAId, 0],
+      [fx.leaderBId, 1],
+      [fx.memberBId, 1],
+    ] as const) {
+      signInAs(userId)
+      expect(normalise((await info(userId)).ownShips)).toEqual(
+        normalise(validFleet(t, offset))
+      )
+    }
+  })
+
+  it("does not leak a tile only the other team occupies", async () => {
+    // Team A's ships sit on 0, 3, 6, 4, 5; team B's on 2, 5, 8, 3, 4. So 0
+    // and 6 are only team A's, 2 and 8 only team B's.
+    signInAs(fx.memberAId)
+    const a = await info(fx.memberAId)
+    expect(JSON.stringify(a.ownShips)).not.toContain(t[2]!)
+    expect(JSON.stringify(a.ownShips)).not.toContain(t[8]!)
+
+    signInAs(fx.memberBId)
+    const b = await info(fx.memberBId)
+    expect(JSON.stringify(b.ownShips)).not.toContain(t[0]!)
+    expect(JSON.stringify(b.ownShips)).not.toContain(t[6]!)
+  })
+
+  it("carries no damage or sunk state, only length and tile ids", async () => {
+    signInAs(fx.memberAId)
+    const a = await info(fx.memberAId)
+    for (const ship of a.ownShips) {
+      expect(Object.keys(ship).sort()).toEqual(["length", "tileIds"])
+    }
+    // Team B hit tile 0 of team A's 3-ship; the layout stays intact.
+    expect(a.ownShips.flatMap((s) => s.tileIds)).toContain(t[0]!)
+  })
+})
+
+describe("getOwnShipLayout", () => {
+  it("returns the ships of a team of the board's event", async () => {
+    const layout = await getOwnShipLayout(fx.bingoId, fx.teamAId)
+    expect(layout.flatMap((s) => s.tileIds).sort()).toEqual(
+      [t[0]!, t[3]!, t[6]!, t[4]!, t[5]!].sort()
+    )
+  })
+
+  it("is empty for a team of another event", async () => {
+    const other = await createBattleshipFixture()
+    try {
+      await placeFleet(other.teamAId, other.bingoId, validFleet(other.tileIds))
+      // The other event's team on this board, and this event's team on the
+      // other board.
+      expect(await getOwnShipLayout(fx.bingoId, other.teamAId)).toEqual([])
+      expect(await getOwnShipLayout(other.bingoId, fx.teamAId)).toEqual([])
+    } finally {
+      await other.cleanup()
+    }
+  })
+
+  it("is empty before the event starts", async () => {
+    setClock(new Date(fx.startDate.getTime() - 1))
+    expect(await getOwnShipLayout(fx.bingoId, fx.teamAId)).toEqual([])
+  })
+
+  it("is empty for a non-battleship board", async () => {
+    const standard = await createBattleshipFixture({ bingoType: "standard" })
+    try {
+      setClock(new Date(standard.startDate.getTime() + 60 * 1000))
+      expect(
+        await getOwnShipLayout(standard.bingoId, standard.teamAId)
+      ).toEqual([])
+    } finally {
+      await standard.cleanup()
+    }
   })
 })

@@ -277,6 +277,56 @@ export async function getViewerTeamId(eventId: string): Promise<string | null> {
   return row?.teamId ?? null
 }
 
+/**
+ * The ships a team placed, for that team's own members to look at. Session-
+ * free: callers pass the VIEWER's team (from `getViewerTeamId`), never one
+ * taken from request input. Unlike `getTeamShipPlacements` it does not check
+ * who is asking, so it must never be handed another team's id.
+ *
+ * Intact placement only (no hits, no sunk state). Empty before the event
+ * starts, for non-battleship boards and for a team of another event.
+ */
+export async function getOwnShipLayout(
+  bingoId: string,
+  teamId: string
+): Promise<ShipPlacement[]> {
+  const [row] = await db
+    .select({ startDate: events.startDate, bingoType: bingos.bingoType })
+    .from(teams)
+    .innerJoin(bingos, eq(bingos.eventId, teams.eventId))
+    .innerJoin(events, eq(events.id, teams.eventId))
+    .where(and(eq(teams.id, teamId), eq(bingos.id, bingoId)))
+  if (row?.bingoType !== "battleship" || !hasEventStarted(row.startDate)) {
+    return []
+  }
+
+  const rows = await db
+    .select({
+      shipId: battleshipShips.id,
+      length: battleshipShips.shipLength,
+      tileId: battleshipShipTiles.tileId,
+    })
+    .from(battleshipShipTiles)
+    .innerJoin(
+      battleshipShips,
+      eq(battleshipShips.id, battleshipShipTiles.shipId)
+    )
+    .where(
+      and(
+        eq(battleshipShips.bingoId, bingoId),
+        eq(battleshipShips.teamId, teamId)
+      )
+    )
+
+  const byShip = new Map<string, ShipPlacement>()
+  for (const { shipId, length, tileId } of rows) {
+    const ship = byShip.get(shipId) ?? { length, tileIds: [] }
+    ship.tileIds.push(tileId)
+    byShip.set(shipId, ship)
+  }
+  return [...byShip.values()]
+}
+
 export type BattleshipBoardState = {
   /** Tiles the viewer's team completed that carry an opponent ship. */
   hitTileIds: string[]
@@ -467,12 +517,14 @@ function emptyState(): BattleshipBoardState {
 
 /**
  * Everything the event workspace needs about a battleship Board, fetched in
- * parallel on the server: the fleet rules, the Team the viewer leads and the
- * viewer's own hits/misses/sunk ships.
+ * parallel on the server: the fleet rules, the Team the viewer leads, the
+ * viewer's own hits/misses/sunk ships and the viewer's own placed fleet.
  *
- * Marks are only handed out from the start on. Before it, ships can still
- * move, so a hit or miss caused by an early completion (e.g. a manager's
- * override) would tell a leader where the opponent's ships are.
+ * Marks and ships are only handed out from the start on. Before it, ships can
+ * still move, so a hit or miss caused by an early completion (e.g. a manager's
+ * override) would tell a leader where the opponent's ships are. The team is
+ * the SIGNED-IN viewer's (from the session), so `ownShips` is always the
+ * viewer's own fleet, for every member of the team and nobody else.
  */
 export async function getBattleshipWorkspaceInfo({
   bingoId,
@@ -486,12 +538,18 @@ export async function getBattleshipWorkspaceInfo({
   userId: string
 }): Promise<BattleshipWorkspaceInfo> {
   const started = hasEventStarted(startDate)
-  const [rules, ledTeamId, marks] = await Promise.all([
+  const [rules, ledTeamId, viewerTeamId] = await Promise.all([
     getBingoShipRules(bingoId),
     getLedTeamId(eventId, userId),
-    started ? getBattleshipBoardState(bingoId) : Promise.resolve(emptyState()),
+    started ? getViewerTeamId(eventId) : Promise.resolve(null),
   ])
-  return { bingoId, rules, started, ledTeamId, marks }
+  const [marks, ownShips] = viewerTeamId
+    ? await Promise.all([
+        getBattleshipBoardStateForTeam(bingoId, viewerTeamId),
+        getOwnShipLayout(bingoId, viewerTeamId),
+      ])
+    : [emptyState(), []]
+  return { bingoId, rules, started, ledTeamId, marks, ownShips }
 }
 
 // ---------------------------------------------------------------------------

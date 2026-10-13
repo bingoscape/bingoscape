@@ -168,6 +168,7 @@ describe("BoardHeader: battleship", () => {
     started: false,
     ledTeamId: null,
     marks: { hitTileIds: [], missTileIds: [], sunkTileIds: [] },
+    ownShips: [],
     ...overrides,
   })
   const placeShips = () => screen.queryByRole("link", { name: "Place ships" })
