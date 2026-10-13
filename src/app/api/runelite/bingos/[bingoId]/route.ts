@@ -1,10 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { logger } from "@/lib/logger"
 import { validateApiKey } from "@/lib/api-auth"
+import { bingoBoardRateLimiter } from "@/lib/rate-limit"
+import { computeEtag, ifNoneMatchHits } from "@/lib/etag"
 import { db } from "@/server/db"
-import { bingos, teamMembers } from "@/server/db/schema"
-import { eq } from "drizzle-orm"
+import { bingos, eventParticipants, events, teamMembers } from "@/server/db/schema"
+import { and, eq } from "drizzle-orm"
 import { formatBingoData } from "@/lib/bingo-formatter"
+
+// The body depends on the caller (team, manager status) and on the clock, so
+// it may be cached per user but must be revalidated on every use.
+const CACHE_CONTROL = "private, no-cache"
 
 export async function GET(
   request: NextRequest,
@@ -18,6 +24,17 @@ export async function GET(
       return NextResponse.json({ error: "Invalid API key" }, { status: 401 })
     }
 
+    const rate = bingoBoardRateLimiter(userId)
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        {
+          status: 429,
+          headers: { "Retry-After": String(rate.retryAfterSeconds) },
+        }
+      )
+    }
+
     const bingoId = params.bingoId
 
     logger.debug({ bingoId }, "Fetching bingo data")
@@ -26,9 +43,11 @@ export async function GET(
       where: eq(bingos.id, bingoId),
     })
 
-    // Battleship boards hide their tiles until the event starts and are not
-    // supported by the plugin, so they are not exposed here.
-    if (!bingo || bingo.bingoType === "battleship") {
+    // Only the event's participants and managers may read a board, and only
+    // managers see hidden ones. Everybody else gets the same 404 an unknown
+    // id gets, so the answer does not reveal that a board exists.
+    const access = bingo ? await loadBoardAccess(bingo.eventId, userId) : null
+    if (!bingo || !access || (!bingo.visible && !access.isManager)) {
       return NextResponse.json({ error: "Bingo not found" }, { status: 404 })
     }
 
@@ -66,7 +85,21 @@ export async function GET(
       userId,
     })
 
-    return NextResponse.json(formattedBingo)
+    // serverNow changes on every call; leaving it out keeps the ETag stable
+    // while nothing else changed.
+    const { battleship, ...rest } = formattedBingo
+    const etag = computeEtag(
+      battleship
+        ? { ...rest, battleship: { ...battleship, serverNow: undefined } }
+        : rest
+    )
+    const headers = { ETag: etag, "Cache-Control": CACHE_CONTROL }
+
+    if (ifNoneMatchHits(request.headers.get("If-None-Match"), etag)) {
+      return new NextResponse(null, { status: 304, headers })
+    }
+
+    return NextResponse.json(formattedBingo, { headers })
   } catch (error) {
     logger.error({ error }, "Error fetching bingo data")
     return NextResponse.json(
@@ -74,4 +107,32 @@ export async function GET(
       { status: 500 }
     )
   }
+}
+
+/**
+ * Whether the user may read boards of the event at all (participant, manager
+ * or creator) and whether they manage it. Null when they may not.
+ */
+async function loadBoardAccess(eventId: string, userId: string) {
+  const [event, participant] = await Promise.all([
+    db.query.events.findFirst({
+      where: eq(events.id, eventId),
+      columns: { creatorId: true },
+    }),
+    db.query.eventParticipants.findFirst({
+      where: and(
+        eq(eventParticipants.eventId, eventId),
+        eq(eventParticipants.userId, userId)
+      ),
+      columns: { role: true },
+    }),
+  ])
+  if (!event) return null
+
+  const isManager =
+    event.creatorId === userId ||
+    participant?.role === "admin" ||
+    participant?.role === "management"
+  if (!participant && !isManager) return null
+  return { isManager }
 }

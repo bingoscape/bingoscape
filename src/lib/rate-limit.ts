@@ -42,3 +42,6 @@ export const teamDropsRateLimiter = createRateLimiter(30, 60_000)
 
 /** 30 requests / minute per user for the team tile-completions feed (separate budget) */
 export const teamTileCompletionsRateLimiter = createRateLimiter(30, 60_000)
+
+/** 60 requests / minute per user for the board payload (the plugin polls it) */
+export const bingoBoardRateLimiter = createRateLimiter(60, 60_000)
