@@ -1,0 +1,318 @@
+/**
+ * @jest-environment node
+ */
+import { computeCapabilities } from "@/lib/authz/capabilities"
+import {
+  OWNER_ONLY_PERMISSIONS,
+  PERMISSIONS,
+  ROLE_PERMISSIONS,
+  type Permission,
+} from "@/lib/authz/permissions"
+import {
+  buildEventActor,
+  can,
+  evaluatePolicy,
+  type EventActor,
+  type PolicyResource,
+} from "@/lib/authz/policy"
+import { isManagerRole, type EventRole } from "@/lib/authz/roles"
+
+const EVENT_ID = "event-1"
+const TEAM_A = "team-a"
+const TEAM_B = "team-b"
+
+function actor(
+  role: EventRole | null,
+  overrides: Partial<EventActor> = {}
+): EventActor {
+  return {
+    userId: "user-1",
+    eventId: EVENT_ID,
+    role,
+    isOwner: false,
+    teams: [],
+    ...overrides,
+  }
+}
+
+// Written out by hand, independent of ROLE_PERMISSIONS: this is the behaviour
+// the inline role checks enforced before the policy layer existed.
+const MANAGER_CAN: Permission[] = [
+  "event:view",
+  "participant:list",
+  "participant:add",
+  "participant:remove",
+  "participant:assign-team",
+  "registration:review",
+  "finance:read",
+  "finance:write",
+  "webhook:manage",
+  "team:manage",
+  "team:access",
+  "team:lead",
+  "board:manage",
+  "board:view-secret",
+  "submission:create",
+  "submission:review",
+  "submission:comment",
+  "submission:read-comments",
+]
+const ADMIN_ONLY: Permission[] = [
+  "event:update",
+  "event:delete",
+  "event:invite",
+  "event:assign-clan",
+  "event:manage-rules",
+  "participant:set-role",
+]
+const EXPECTED: Record<EventRole, Permission[]> = {
+  admin: [...MANAGER_CAN, ...ADMIN_ONLY],
+  management: MANAGER_CAN,
+  participant: ["event:view"],
+}
+
+describe("role -> permission matrix (no resource)", () => {
+  const cases = (["admin", "management", "participant"] as const).flatMap(
+    (role) => PERMISSIONS.map((permission) => [role, permission] as const)
+  )
+
+  it.each(cases)("%s / %s", (role, permission) => {
+    expect(can(actor(role), permission)).toBe(
+      EXPECTED[role].includes(permission)
+    )
+  })
+
+  it("covers every permission exactly once per role", () => {
+    for (const role of ["admin", "management", "participant"] as const) {
+      expect(new Set(ROLE_PERMISSIONS[role])).toEqual(new Set(EXPECTED[role]))
+      expect(ROLE_PERMISSIONS[role]).toHaveLength(EXPECTED[role].length)
+    }
+  })
+
+  it("keeps today's management rights: buy-ins and donations yes, roles no", () => {
+    expect(can(actor("management"), "finance:write")).toBe(true)
+    expect(can(actor("management"), "finance:read")).toBe(true)
+    expect(can(actor("management"), "participant:set-role")).toBe(false)
+  })
+
+  it.each(PERMISSIONS)("a signed-out caller cannot %s", (permission) => {
+    expect(can(null, permission)).toBe(false)
+  })
+
+  it.each(PERMISSIONS)("a non-member cannot %s", (permission) => {
+    expect(can(actor(null), permission)).toBe(false)
+  })
+})
+
+describe("relational rules", () => {
+  it.each<[EventRole, EventRole, boolean]>([
+    ["admin", "admin", true],
+    ["admin", "management", true],
+    ["admin", "participant", true],
+    ["management", "admin", false],
+    ["management", "management", true],
+    ["management", "participant", true],
+  ])("%s removing a %s: %s", (role, targetRole, allowed) => {
+    expect(can(actor(role), "participant:remove", { targetRole })).toBe(allowed)
+  })
+
+  it.each<[EventRole, EventRole, EventRole, boolean]>([
+    // actor, target's current role, new role
+    ["admin", "participant", "admin", true],
+    ["admin", "admin", "participant", true],
+    ["admin", "management", "management", true],
+    // Only admins hold participant:set-role at all today.
+    ["management", "participant", "management", false],
+    ["participant", "participant", "participant", false],
+  ])("%s changing a %s to %s: %s", (role, targetRole, newRole, allowed) => {
+    expect(
+      can(actor(role), "participant:set-role", { targetRole, newRole })
+    ).toBe(allowed)
+  })
+
+  it("never grants a role above the actor's own", () => {
+    // A hypothetical map that lets management set roles: the relational rule
+    // must still stop them granting admin or touching an admin.
+    const map = {
+      ...ROLE_PERMISSIONS,
+      management: ["participant:set-role"],
+    } as const
+    const manager = actor("management")
+    const evaluate = (resource: PolicyResource) =>
+      evaluatePolicy(manager, "participant:set-role", resource, new Set(), map)
+
+    expect(evaluate({ newRole: "admin" })).toBe(false)
+    expect(evaluate({ newRole: "participant" })).toBe(true)
+    expect(evaluate({ targetRole: "admin", newRole: "participant" })).toBe(
+      false
+    )
+  })
+})
+
+describe("Team scoped permissions", () => {
+  const leader = actor("participant", {
+    teams: [{ teamId: TEAM_A, isLeader: true }],
+  })
+  const member = actor("participant", {
+    teams: [{ teamId: TEAM_A, isLeader: false }],
+  })
+
+  it("a Team member may submit and read comments for their own Team only", () => {
+    for (const permission of [
+      "submission:create",
+      "submission:read-comments",
+      "team:access",
+    ] as const) {
+      expect(can(member, permission, { teamId: TEAM_A })).toBe(true)
+      expect(can(member, permission, { teamId: TEAM_B })).toBe(false)
+      // Without a resource only the role grant counts.
+      expect(can(member, permission)).toBe(false)
+    }
+  })
+
+  it("only the Team leader may lead their Team", () => {
+    expect(can(leader, "team:lead", { teamId: TEAM_A })).toBe(true)
+    expect(can(member, "team:lead", { teamId: TEAM_A })).toBe(false)
+    expect(can(leader, "team:lead", { teamId: TEAM_B })).toBe(false)
+  })
+
+  it("a Team member gets nothing beyond their own Team's permissions", () => {
+    for (const permission of [
+      "team:manage",
+      "submission:review",
+      "submission:comment",
+      "finance:read",
+      "board:view-secret",
+    ] as const) {
+      expect(can(leader, permission, { teamId: TEAM_A })).toBe(false)
+    }
+  })
+
+  it("a manager needs no Team membership", () => {
+    expect(
+      can(actor("management"), "submission:create", { teamId: TEAM_B })
+    ).toBe(true)
+    expect(can(actor("management"), "team:lead", { teamId: TEAM_B })).toBe(true)
+  })
+
+  it("a non-member Team member (no Event role) still gets Team permissions", () => {
+    const teamOnly = actor(null, {
+      teams: [{ teamId: TEAM_A, isLeader: true }],
+    })
+    expect(can(teamOnly, "team:access", { teamId: TEAM_A })).toBe(true)
+    expect(can(teamOnly, "event:view")).toBe(false)
+  })
+})
+
+describe("owner-only permissions", () => {
+  const ownerOnly = new Set<Permission>(["event:delete"])
+
+  it("is empty today: an admin may do everything the owner may", () => {
+    expect(OWNER_ONLY_PERMISSIONS.size).toBe(0)
+    expect(can(actor("admin"), "event:delete")).toBe(true)
+  })
+
+  it("needs isOwner when a permission is marked owner-only", () => {
+    const admin = actor("admin")
+    const owner = actor("admin", { isOwner: true })
+    expect(evaluatePolicy(admin, "event:delete", {}, ownerOnly)).toBe(false)
+    expect(evaluatePolicy(owner, "event:delete", {}, ownerOnly)).toBe(true)
+    expect(evaluatePolicy(admin, "event:update", {}, ownerOnly)).toBe(true)
+  })
+})
+
+describe("buildEventActor", () => {
+  const base = { userId: "u", eventId: EVENT_ID }
+
+  it.each<[EventRole | null]>([
+    [null],
+    ["participant"],
+    ["management"],
+    ["admin"],
+  ])(
+    "the creator counts as admin whatever their participant row says (%s)",
+    (participantRole) => {
+      const result = buildEventActor({
+        ...base,
+        creatorId: "u",
+        participantRole,
+      })
+      expect(result.role).toBe("admin")
+      expect(result.isOwner).toBe(true)
+    }
+  )
+
+  it("keeps the participant role for everybody else", () => {
+    expect(
+      buildEventActor({
+        ...base,
+        creatorId: "x",
+        participantRole: "management",
+      })
+    ).toMatchObject({ role: "management", isOwner: false })
+    expect(
+      buildEventActor({ ...base, creatorId: "x", participantRole: null })
+    ).toMatchObject({ role: null, isOwner: false })
+  })
+
+  it("an Event without a creator has no owner", () => {
+    expect(
+      buildEventActor({ ...base, creatorId: null, participantRole: "admin" })
+    ).toMatchObject({ role: "admin", isOwner: false })
+  })
+
+  it("defaults to no Teams", () => {
+    expect(
+      buildEventActor({ ...base, creatorId: null, participantRole: null }).teams
+    ).toEqual([])
+  })
+})
+
+describe("isManagerRole", () => {
+  it.each<[EventRole | null | undefined, boolean]>([
+    ["admin", true],
+    ["management", true],
+    ["participant", false],
+    [null, false],
+    [undefined, false],
+  ])("%s -> %s", (role, expected) => {
+    expect(isManagerRole(role)).toBe(expected)
+  })
+})
+
+describe("computeCapabilities", () => {
+  it("is serialisable and mirrors can()", () => {
+    const caps = computeCapabilities(actor("management"))
+    expect(JSON.parse(JSON.stringify(caps))).toEqual(caps)
+    expect(caps).toMatchObject({
+      role: "management",
+      isOwner: false,
+      isManager: true,
+      isAdmin: false,
+    })
+    for (const permission of PERMISSIONS) {
+      expect(caps.can[permission]).toBe(can(actor("management"), permission))
+    }
+  })
+
+  it("flags the owner", () => {
+    const caps = computeCapabilities(actor("admin", { isOwner: true }))
+    expect(caps).toMatchObject({
+      isOwner: true,
+      isAdmin: true,
+      isManager: true,
+    })
+    expect(caps.can["participant:set-role"]).toBe(true)
+  })
+
+  it("grants nothing to a signed-out caller", () => {
+    const caps = computeCapabilities(null)
+    expect(caps).toMatchObject({
+      role: null,
+      isOwner: false,
+      isManager: false,
+      isAdmin: false,
+    })
+    expect(Object.values(caps.can).every((v) => v === false)).toBe(true)
+  })
+})
