@@ -9,8 +9,8 @@ import {
   tiles,
 } from "@/server/db/schema"
 import {
+  getEffectiveTierXpRequired,
   getTileTierLock,
-  getTierXpRequired,
   type BoardTierData,
 } from "@/lib/tiers"
 
@@ -129,8 +129,9 @@ export async function unlockNextTierForTeam(
     const nextTier = boardTiers.find((t) => t > highestUnlocked)
     if (nextTier === undefined) break
 
-    const required = getTierXpRequired(
+    const required = getEffectiveTierXpRequired(
       requirements.map((r) => ({ tier: r.tier, xpRequired: r.xpRequired })),
+      tileRows,
       highestUnlocked
     )
     if ((earnedByTier.get(highestUnlocked) ?? 0) < required) break

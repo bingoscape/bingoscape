@@ -4,7 +4,7 @@
 import { eq } from "drizzle-orm"
 
 import { db } from "@/server/db"
-import { teamTierProgress, tiles } from "@/server/db/schema"
+import { teamTierProgress, tierXpRequirements, tiles } from "@/server/db/schema"
 import { createBattleshipFixture } from "@/server/__tests__/helpers/battleship-fixture"
 import {
   createProgressionFixture,
@@ -39,6 +39,22 @@ describe("unlockNextTierForTeam", () => {
 
       expect(await unlockNextTierForTeam(db, fx.teamAId, fx.bingoId)).toBe(2)
       expect(await unlockNextTierForTeam(db, fx.teamAId, fx.bingoId)).toBeNull()
+    })
+
+    it("caps a requirement above what the tier can yield", async () => {
+      // Tier 0 is worth 3 XP in total, but asks for 5.
+      await db
+        .update(tierXpRequirements)
+        .set({ xpRequired: 5 })
+        .where(eq(tierXpRequirements.bingoId, fx.bingoId))
+      await fx.completeTile(0, fx.teamAId)
+      await fx.completeTile(1, fx.teamAId)
+
+      expect(await unlockNextTierForTeam(db, fx.teamAId, fx.bingoId)).toBeNull()
+
+      await fx.completeTile(2, fx.teamAId)
+
+      expect(await unlockNextTierForTeam(db, fx.teamAId, fx.bingoId)).toBe(1)
     })
 
     it("follows the tiers that exist when the board skips a tier number", async () => {

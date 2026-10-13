@@ -3,6 +3,8 @@
  */
 import {
   DEFAULT_TIER_XP_REQUIREMENT,
+  getEffectiveTierXpRequired,
+  getTierCapacity,
   getTierEarnedXp,
   getTierStatus,
   getTileTierLock,
@@ -57,6 +59,44 @@ describe("getTierEarnedXp", () => {
     expect(getTierEarnedXp(tiles, "t2", 0)).toBe(0)
     expect(getTierEarnedXp(tiles, undefined, 0)).toBe(0)
     expect(getTierEarnedXp(tiles, "t1", 1)).toBe(0)
+  })
+})
+
+describe("getTierCapacity / getEffectiveTierXpRequired", () => {
+  it("sums the weight of every tile in the tier", () => {
+    expect(getTierCapacity(tiles, 0)).toBe(8)
+    expect(getTierCapacity(tiles, 1)).toBe(6)
+    expect(getTierCapacity(tiles, 9)).toBe(0)
+  })
+
+  it("keeps a requirement the tier can reach", () => {
+    expect(
+      getEffectiveTierXpRequired([{ tier: 1, xpRequired: 4 }], tiles, 1)
+    ).toBe(4)
+  })
+
+  it("caps a requirement above what the tier can yield", () => {
+    expect(
+      getEffectiveTierXpRequired([{ tier: 1, xpRequired: 20 }], tiles, 1)
+    ).toBe(6)
+    // The default of 5 on a tier worth 3
+    expect(getEffectiveTierXpRequired([], [tile("x", 0, 3, 0)], 0)).toBe(3)
+  })
+
+  it("needs nothing from a tier without tiles", () => {
+    expect(getEffectiveTierXpRequired([], tiles, 9)).toBe(0)
+  })
+
+  it("lets getTierStatus unlock-report against the capped requirement", () => {
+    const small = [tile("x", 0, 1, 0, ["t1"]), tile("y", 0, 1, 1, ["t1"])]
+    const data: BoardTierData = {
+      requirements: [{ tier: 0, xpRequired: 5 }],
+      progress: [],
+    }
+    expect(getTierStatus(1, small, "t1", data)).toMatchObject({
+      requiredInPrevious: 2,
+      xpNeeded: 0,
+    })
   })
 })
 
