@@ -5,7 +5,11 @@ import Image from "next/image"
 import { CheckCircle2, Clock, Lock } from "lucide-react"
 import type { Tile } from "@/types/model"
 import { BattleshipMarkBadge } from "@/components/battleship-mark-badge"
-import { MARK_LABEL, type BattleshipMark } from "@/lib/battleship-marks"
+import {
+  MARK_LABEL,
+  type BattleshipMark,
+  type ShipSegment,
+} from "@/lib/battleship-marks"
 import getRandomFrog from "@/lib/getRandomFrog"
 import { getTileTeamStatus } from "@/lib/tile-status"
 import { cn } from "@/lib/utils"
@@ -41,6 +45,14 @@ interface BingoTileProps {
    * Tiles, which can never carry a marker.
    */
   mark?: BattleshipMark | null
+  /**
+   * Battleship: this Tile carries a segment of the viewer's own (intact) ship.
+   * It always extends the accessible name; the hull is only drawn while
+   * `showOwnShip` is on. Ignored for hidden and blind Tiles.
+   */
+  ownShip?: ShipSegment
+  /** Draw the hull of `ownShip` on the face (the "My ships" toggle). */
+  showOwnShip?: boolean
 }
 
 const STATUS_LABEL = {
@@ -49,6 +61,41 @@ const STATUS_LABEL = {
   pending: "pending review",
   approved: "submitted",
 } as const
+
+/**
+ * The hull of one own-ship segment: a frame in the `info` colour with a thin
+ * black edge (contrast on image faces). Sides that face the same ship's next
+ * segment lose their border, edge and gap, so a ship reads as one hull; the
+ * open corners of the end caps are rounded. Purely decorative (the accessible
+ * name carries "your ship"), below the hit ring and the badges, and static.
+ */
+function OwnShipHull({ segment }: { segment: ShipSegment }) {
+  const { hasLeft, hasRight, hasUp, hasDown } = segment
+  const edges = [
+    !hasLeft && "inset 1px 0 0 #000",
+    !hasRight && "inset -1px 0 0 #000",
+    !hasUp && "inset 0 1px 0 #000",
+    !hasDown && "inset 0 -1px 0 #000",
+  ].filter(Boolean)
+  return (
+    <span
+      aria-hidden="true"
+      data-own-ship={segment.length}
+      style={edges.length > 0 ? { boxShadow: edges.join(", ") } : undefined}
+      className={cn(
+        "border-info bg-info/15 pointer-events-none absolute inset-[3px] z-[4] border-2 @max-[43px]/tile:hidden",
+        hasLeft && "left-0 border-l-0",
+        hasRight && "right-0 border-r-0",
+        hasUp && "top-0 border-t-0",
+        hasDown && "bottom-0 border-b-0",
+        !hasLeft && !hasUp && "rounded-tl-sm",
+        !hasRight && !hasUp && "rounded-tr-sm",
+        !hasLeft && !hasDown && "rounded-bl-sm",
+        !hasRight && !hasDown && "rounded-br-sm"
+      )}
+    />
+  )
+}
 
 /**
  * One slot of the Board. Sized entirely by the grid track it sits in (see
@@ -72,6 +119,8 @@ export const BingoTile = React.memo(function BingoTile({
   readOnly = false,
   gridIndex,
   mark = null,
+  ownShip,
+  showOwnShip = false,
 }: BingoTileProps) {
   const isManagement = userRole === "management" || userRole === "admin"
 
@@ -142,7 +191,7 @@ export const BingoTile = React.memo(function BingoTile({
       : ""
   const label = tile.isHidden
     ? `${position}Hidden tile${canToggleReveal ? ", activate to reveal" : ""}`
-    : `${position}${tile.title}, ${tile.weight} XP, ${statusText}${tierLocked ? ", locked" : ""}${mark ? `, ${MARK_LABEL[mark].toLowerCase()}` : ""}`
+    : `${position}${tile.title}, ${tile.weight} XP, ${statusText}${tierLocked ? ", locked" : ""}${mark ? `, ${MARK_LABEL[mark].toLowerCase()}` : ""}${ownShip ? `, your ship (length ${ownShip.length})` : ""}`
 
   return (
     <div
@@ -255,6 +304,7 @@ export const BingoTile = React.memo(function BingoTile({
               className="ring-danger pointer-events-none absolute inset-0 z-[5] ring-2 ring-inset"
             />
           )}
+          {ownShip && showOwnShip && <OwnShipHull segment={ownShip} />}
           {mark && (
             <BattleshipMarkBadge
               mark={mark}

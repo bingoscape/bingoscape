@@ -161,7 +161,11 @@ describe("BoardHeader: battleship", () => {
     { id: "t2", name: "Team 2" },
   ] as unknown as React.ComponentProps<typeof BoardHeader>["teams"]
   const info = (
-    overrides: Partial<{ started: boolean; ledTeamId: string | null }> = {}
+    overrides: Partial<{
+      started: boolean
+      ledTeamId: string | null
+      ownShips: { length: number; tileIds: string[] }[]
+    }> = {}
   ) => ({
     bingoId: "b1",
     rules: [{ length: 2, count: 1 }],
@@ -302,6 +306,103 @@ describe("BoardHeader: battleship", () => {
         battleship: info({ started: true }),
       })
       expect(legend()).not.toBeInTheDocument()
+    })
+  })
+  describe("My ships toggle", () => {
+    const fleet = [
+      { length: 3, tileIds: ["a", "b", "c"] },
+      { length: 2, tileIds: ["d", "e"] },
+      { length: 2, tileIds: ["f", "g"] },
+    ]
+    const own = { id: "t1", name: "Team 1" }
+    const toggle = () => screen.queryByRole("button", { name: "My ships" })
+    const legendEntry = () => screen.queryByText("Your ship")
+
+    function renderOwn(
+      props: Partial<React.ComponentProps<typeof BoardHeader>> = {},
+      ownShips = fleet
+    ) {
+      const onShowOwnShipsChange = jest.fn()
+      renderBattleship({
+        isManagement: false,
+        ownTeam: own,
+        effectiveTeamId: "t1",
+        battleship: info({ started: true, ownShips }),
+        showOwnShips: false,
+        onShowOwnShipsChange,
+        ...props,
+      })
+      return { onShowOwnShipsChange }
+    }
+
+    it("is an off, labelled toggle button for a team member viewing their team", () => {
+      renderOwn()
+      expect(toggle()).toHaveAttribute("aria-pressed", "false")
+      expect(toggle()).toBeEnabled()
+      expect(toggle()).toHaveClass("pointer-coarse:min-h-11")
+      expect(toggle()!.querySelector("svg.lucide-ship")).toBeInTheDocument()
+      expect(legendEntry()).not.toBeInTheDocument()
+    })
+
+    it("reports the new state when pressed", () => {
+      const { onShowOwnShipsChange } = renderOwn()
+      fireEvent.click(toggle()!)
+      expect(onShowOwnShipsChange).toHaveBeenCalledWith(true)
+    })
+
+    it("adds a legend entry with the fleet summary while on", () => {
+      renderOwn({ showOwnShips: true })
+      expect(toggle()).toHaveAttribute("aria-pressed", "true")
+      const legend = screen.getByRole("list", { name: "Battleship legend" })
+      const entry = within(legend).getByText("Your ship").closest("li")!
+      expect(entry).toHaveTextContent("Your fleet: 3 ships, 7 tiles")
+      expect(entry.querySelector("[data-own-ship-glyph]")).toBeInTheDocument()
+      expect(within(legend).getAllByRole("listitem")).toHaveLength(4)
+    })
+
+    it("uses singular wording for a one-ship fleet", () => {
+      renderOwn({ showOwnShips: true }, [{ length: 1, tileIds: ["a"] }])
+      expect(screen.getByText("Your fleet: 1 ship, 1 tile")).toBeInTheDocument()
+    })
+
+    it("is disabled and explained when the team has no ships placed", () => {
+      renderOwn({ showOwnShips: true }, [])
+      expect(toggle()).toBeDisabled()
+      expect(toggle()).toHaveAttribute("aria-pressed", "false")
+      expect(toggle()).toHaveAccessibleDescription(
+        "Your team has no ships placed"
+      )
+      expect(legendEntry()).not.toBeInTheDocument()
+    })
+
+    it("is hidden before the event starts", () => {
+      renderOwn({ battleship: info({ started: false, ownShips: fleet }) })
+      expect(toggle()).not.toBeInTheDocument()
+    })
+
+    it("is hidden while a manager looks at another team", () => {
+      renderOwn({ isManagement: true, effectiveTeamId: "t2" })
+      expect(toggle()).not.toBeInTheDocument()
+      expect(legendEntry()).not.toBeInTheDocument()
+    })
+
+    it("is hidden for people on no team", () => {
+      renderOwn({ isManagement: true, ownTeam: null, effectiveTeamId: "t2" })
+      expect(toggle()).not.toBeInTheDocument()
+    })
+
+    it("is hidden on other boards and in the read-only view", () => {
+      renderHeader({
+        teams,
+        ownTeam: own,
+        effectiveTeamId: "t1",
+        battleship: info({ started: true, ownShips: fleet }),
+        onShowOwnShipsChange: jest.fn(),
+      })
+      expect(toggle()).not.toBeInTheDocument()
+
+      renderOwn({ readOnly: true })
+      expect(toggle()).not.toBeInTheDocument()
     })
   })
 })
