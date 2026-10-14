@@ -1,0 +1,21 @@
+AGENTS.md
+  s_2aebdb4d5645da::t_59ee657ee25ec3 189
+README.md
+  s_2aebdb4d5645da::t_69b30641de306a 69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5bd3b43b80e6343376774dc1d7b90cc25dbc1411",
+  "prompts": {},
+  "sessions": {
+    "s_2aebdb4d5645da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9e280b93-4bc1-4d59-a11c-e6d1207080db",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
