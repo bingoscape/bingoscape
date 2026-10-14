@@ -1,0 +1,197 @@
+src/components/__tests__/draft-room.test.tsx
+  s_ef9e7db49e4fa3::t_565b77e38f5a37 118-120,127-129,157-159,223-228
+  s_ef9e7db49e4fa3::t_8ec652910fbd45 1-117,121-126,130-156,160-222,229-235
+src/app/api/__tests__/draft-state.test.ts
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 66-68,140-142
+  s_ef9e7db49e4fa3::t_d650b2c61cce09 1-65,69-139,143-176
+src/lib/authz/capabilities.ts
+  s_ef9e7db49e4fa3::t_3f4afb97ba7f1e 46-54,92-97
+src/lib/draft/order.ts
+  s_ef9e7db49e4fa3::t_a9c6756819ed0c 1-57,60-119
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 58-59
+drizzle/0041_team_draft.sql
+  s_ef9e7db49e4fa3::t_f4987fbfc603c2 1-11,163-236
+  s_ef9e7db49e4fa3::t_439b9bfff8032e 12-162
+src/lib/draft/setup.ts
+  s_ef9e7db49e4fa3::t_324eb3ea320e56 1-6,8-70,73-77
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 71-72
+  s_ef9e7db49e4fa3::t_4eb327bdf0c3a6 7
+src/server/draft/core.ts
+  s_ef9e7db49e4fa3::t_ad68dc3710a006 1-4,16-17,26-147,154-156,158-223,230-239,244-327,330-475,484-489,498-519,523-524,528-558,561-602,606-851,857-858,864-873,879-882
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 18-25,149-151,224-229,240-243,328-329,476-483,490-497,520-522,525-527,559-560,603-605,852-856,859-863,874-878
+  s_ef9e7db49e4fa3::t_561b9a436203f0 5-15,148,152-153,157
+src/server/authz/index.ts
+  s_ef9e7db49e4fa3::t_2d07e9020b9718 40
+src/server/draft/action-result.ts
+  s_ef9e7db49e4fa3::t_e6aebde36a978b 1-35
+src/server/__tests__/draft-migration.test.ts
+  s_ef9e7db49e4fa3::t_9e46fd3f02bfbc 1-64,68-76,80-89,92-93,100-134,138-163
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 65-67,77-79,90-91,94-99,135-137
+src/app/events/[id]/(member)/draft/page.tsx
+  s_ef9e7db49e4fa3::t_6b7713d78d5ae6 1-51,53-64
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 52
+src/components/draft/player-pool.tsx
+  s_ef9e7db49e4fa3::t_b17870192679a8 1-49,51-93,95-98,100-115,117-136
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 50,94,99,116
+src/server/draft/queries.ts
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 37-39,43-45,57-59,77-79,135-137,227-230
+  s_ef9e7db49e4fa3::t_1a3d92a073b1cf 7
+  s_ef9e7db49e4fa3::t_c912fb543756e2 1-6,8-36,40-42,46-56,60-76,80-134,138-226,231-300
+src/app/actions/draft.ts
+  s_ef9e7db49e4fa3::t_e21c95da076fb6 1-208,212-239,243-252,256-276
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 209-211,240-242,253-255
+src/lib/authz/__tests__/capabilities.test.ts
+  s_ef9e7db49e4fa3::t_507642176c8ba0 49-51,67-68,91-92,137-154
+src/app/actions/__tests__/draft.test.ts
+  s_ef9e7db49e4fa3::t_955981c72b2aff 412,415-418,659-660
+  s_ef9e7db49e4fa3::t_94d2197510ff73 1-94,99-116,120-173,177-200,204-212,216-296,298-304,312-330,334-348,352-411,413-414,419-469,473-639,644-650,658,661-681,686-690,693-694,699-750,755-852,856-858,865-901,905-927,931-961
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 95-98,117-119,174-176,201-203,213-215,297,305-311,331-333,349-351,470-472,640-643,682-685,691-692,695-698,751-754,853-855,859-864,902-904,928-930
+  s_ef9e7db49e4fa3::t_383f11e850aaa3 651-657
+src/lib/draft/__tests__/view.test.ts
+  s_ef9e7db49e4fa3::t_d02ddeace65788 1-57,64-153,156-162,164-165,167-194
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 58-63,154-155
+  s_ef9e7db49e4fa3::t_1cfe657090a719 163,166
+src/app/api/events/[id]/draft/state/route.ts
+  s_ef9e7db49e4fa3::t_bf99ed1475a710 1-96
+src/components/draft/draft-entry-link.tsx
+  s_ef9e7db49e4fa3::t_83476bb04a84bd 1-50
+CONTEXT.md
+  s_ef9e7db49e4fa3::t_d934ecd468360f 62-65
+docs/DATABASE-MIGRATION.md
+  s_ef9e7db49e4fa3::t_d934ecd468360f 378-395
+src/server/__tests__/cross-event.test.ts
+  s_ef9e7db49e4fa3::t_db23f368694829 21,297-353,969-972
+src/app/actions/team-balancing.ts
+  s_ef9e7db49e4fa3::t_85fe258e4fa1cd 13-19,757
+src/server/authz/team-membership.ts
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 6-9,93-95,213-217
+  s_ef9e7db49e4fa3::t_ba7d82d71fdf5a 1-5,10-92,96-97,100-109,111-132,134-162,164-212,218-250,252-325
+  s_ef9e7db49e4fa3::t_041a3884bee1fd 98
+  s_ef9e7db49e4fa3::t_b49e942971a19a 99,110,133,163,251
+src/app/actions/__tests__/team-balancing-characterisation.test.ts
+  s_ef9e7db49e4fa3::t_c1fb720543e4b7 38-56,170-173,184-185
+  s_ef9e7db49e4fa3::t_ad9bdece099073 108-110,114-118
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 1-37,57-107,111-113,119-169,174-183,186-250
+src/components/draft/draft-setup-form.tsx
+  s_ef9e7db49e4fa3::t_b881569efd0717 1-191,193-236,238-250,252-282,284-344,346-367
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 192,237,251,283,345
+src/server/__tests__/helpers/draft-fixture.ts
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 96-101
+  s_ef9e7db49e4fa3::t_b8c69b7b8a5690 1-95,102-158
+src/lib/authz/permissions.ts
+  s_ef9e7db49e4fa3::t_3f4afb97ba7f1e 51-54,62,88,133-136,143
+src/app/events/[id]/(manage)/teams/page.tsx
+  s_ef9e7db49e4fa3::t_8a15024025e2ce 33-35,46,50
+  s_ef9e7db49e4fa3::t_d723c3753d878a 6-7,9,44-45,47-49,51-59
+src/server/__tests__/draft-concurrency.test.ts
+  s_ef9e7db49e4fa3::t_92ad649bc3dcf8 26-27
+  s_ef9e7db49e4fa3::t_5063779ec757ad 1-12,14-25,28-92,96-150,155-161,166-169,171-172,178-183,188-217
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 13,93-95,151-154,162-165,170,173-177,184-187
+src/components/draft/use-draft-params.ts
+  s_ef9e7db49e4fa3::t_833ffe975f7199 1-42
+src/components/draft/on-the-clock-banner.tsx
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 27-28,70
+  s_ef9e7db49e4fa3::t_5840c9f970812c 1-26,29-69,71-103
+src/components/draft/draft-room.tsx
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 58-60,78-81,89-92,110-114,128-129,148-150,163,183-185
+  s_ef9e7db49e4fa3::t_fa34f19d23ea29 11
+  s_ef9e7db49e4fa3::t_fca707e13a07a2 1-10,12-57,61-77,82-88,93-109,115-127,130-147,151-162,164-182,186-201
+src/lib/draft/rating.ts
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 47-49
+  s_ef9e7db49e4fa3::t_4a3c50a4ee3098 1-46,50-73
+src/lib/team-balancing/scoring.ts
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 79
+  s_ef9e7db49e4fa3::t_ccb5e8d92d5551 1-78,80-219
+src/lib/team-balancing/__tests__/scoring.test.ts
+  s_ef9e7db49e4fa3::t_6db9123ff180f9 1-115
+src/server/db/schema.ts
+  s_ef9e7db49e4fa3::t_4eb327bdf0c3a6 23-31
+  s_ef9e7db49e4fa3::t_bc1454f2557660 1664-1930
+src/components/draft/player-name.tsx
+  s_ef9e7db49e4fa3::t_0cda050debc2ca 1-40
+src/lib/draft/types.ts
+  s_ef9e7db49e4fa3::t_ef53962c890459 70-71
+  s_ef9e7db49e4fa3::t_d46e4faebd4e47 1-6,8-69,72-162
+  s_ef9e7db49e4fa3::t_4eb327bdf0c3a6 7
+src/app/events/[id]/(workspace)/page.tsx
+  s_ef9e7db49e4fa3::t_7bedac91196e1d 106,124,169
+  s_ef9e7db49e4fa3::t_d723c3753d878a 24
+src/components/event-layout-header.tsx
+  s_ef9e7db49e4fa3::t_7bedac91196e1d 9,13,38,43,88-93
+src/components/event-workspace/event-summary-bar.tsx
+  s_ef9e7db49e4fa3::t_7bedac91196e1d 6,13,36-37,136-141
+src/components/draft/use-draft-polling.ts
+  s_ef9e7db49e4fa3::t_8de70f8bd4d183 1-80
+src/server/authz/registry.ts
+  s_ef9e7db49e4fa3::t_5e12e0f55c808b 198-231,429-432
+src/server/__tests__/draft-integrity.test.ts
+  s_ef9e7db49e4fa3::t_a64b3af75fa110 8,220,425
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 74-77,235-237,239-242,303-305,344-347,355,363-366,508-510
+  s_ef9e7db49e4fa3::t_1bf776949e4113 434-438
+  s_ef9e7db49e4fa3::t_27220d1c884bb2 1-7,9-73,78-219,221-234,238,243-302,306-343,348-354,356-362,367-424,426-433,439-507,511-548
+src/components/draft/team-roster-column.tsx
+  s_ef9e7db49e4fa3::t_129eaebb671f56 1-33,36-51,53-54,56-73,75-82
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 34-35,52,55,74
+src/lib/authz/__tests__/policy.test.ts
+  s_ef9e7db49e4fa3::t_507642176c8ba0 214-240
+  s_ef9e7db49e4fa3::t_3f4afb97ba7f1e 64-65,84
+src/components/draft/pick-log.tsx
+  s_ef9e7db49e4fa3::t_1edc87b9439c5f 1-16,18-26,28-33,35-43
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 17,27,34
+CHANGELOG.md
+  s_ef9e7db49e4fa3::t_d934ecd468360f 12
+tests/capabilities.spec.ts
+  s_ef9e7db49e4fa3::t_133eb7e17ec908 66-72,88-101,134-139
+src/components/draft/pick-confirm-dialog.tsx
+  s_ef9e7db49e4fa3::t_b30d817e58a211 1-59,61-63,65-80
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 60,64
+src/server/__tests__/helpers/cross-event-fixture.ts
+  s_ef9e7db49e4fa3::t_db23f368694829 7,40-41,106-109,127
+src/lib/draft/__tests__/order.test.ts
+  s_ef9e7db49e4fa3::t_5a7852785a18d6 1-126
+src/lib/draft/reducer.ts
+  s_ef9e7db49e4fa3::t_9eb5d0b7a49670 1-147
+src/lib/draft/__tests__/reducer.test.ts
+  s_ef9e7db49e4fa3::t_ef53962c890459 168,175-183
+  s_ef9e7db49e4fa3::t_13b7c4a8d2481d 1-167,169-174,184-193
+src/server/authz/resolve.ts
+  s_ef9e7db49e4fa3::t_2d07e9020b9718 11,21,43-53
+src/components/draft/organizer-controls.tsx
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 66-67,72-76,133
+  s_ef9e7db49e4fa3::t_02c56c01362410 1-65,68-71,77-132,134-162
+src/lib/draft/__tests__/rating.test.ts
+  s_ef9e7db49e4fa3::t_14e54fc4f03a2e 1-80
+src/lib/draft/__tests__/setup.test.ts
+  s_ef9e7db49e4fa3::t_3a9626c9d73832 1-16,22-78
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 17-21
+src/app/events/[id]/(manage)/draft/setup/page.tsx
+  s_ef9e7db49e4fa3::t_16e2238ee81c40 1-49
+src/lib/draft/constants.ts
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 28-32
+  s_ef9e7db49e4fa3::t_4eb327bdf0c3a6 1-27,33
+src/lib/rate-limit-policies.ts
+  s_ef9e7db49e4fa3::t_db532c04877553 41-45
+src/lib/draft/view.ts
+  s_ef9e7db49e4fa3::t_2b75784c151753 1-74,79-142
+  s_ef9e7db49e4fa3::t_41e3da2cf92101 75-78
+drizzle/meta/0041_snapshot.json
+  s_ef9e7db49e4fa3::t_fad1535b5e11b3 1-5683
+drizzle/meta/_journal.json
+  s_ef9e7db49e4fa3::t_06ea3fb365c73c 291-297
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fb1f81d66924930e382cb17b7f564ae7050003c0",
+  "prompts": {},
+  "sessions": {
+    "s_ef9e7db49e4fa3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f2ee1b5-009f-4522-8f4a-8ff1c514dfe0",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
