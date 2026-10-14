@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Slider } from "@/components/ui/slider"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -27,10 +27,12 @@ export function ProgressSlider({
   const [isEditing, setIsEditing] = useState(false)
   const [inputValue, setInputValue] = useState(currentValue.toString())
 
-  useEffect(() => {
+  const [syncedValue, setSyncedValue] = useState(currentValue)
+  if (syncedValue !== currentValue) {
+    setSyncedValue(currentValue)
     setLocalValue(currentValue)
     setInputValue(currentValue.toString())
-  }, [currentValue])
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value)

@@ -101,14 +101,23 @@ export function TrackerSettingsModal({
     metric: string
     participations: { progress: { gained: number } }[]
   } | null>(null)
-  const [isLoadingStats, setIsLoadingStats] = useState(false)
+  // The competition whose stats are fetched, only while the modal is open
+  const statsCompetitionId = isOpen && womCompetitionId ? womCompetitionId : null
+  const [isLoadingStats, setIsLoadingStats] = useState(
+    statsCompetitionId !== null
+  )
+  const [prevStatsCompetitionId, setPrevStatsCompetitionId] =
+    useState(statsCompetitionId)
+  if (statsCompetitionId !== prevStatsCompetitionId) {
+    setPrevStatsCompetitionId(statsCompetitionId)
+    if (statsCompetitionId !== null) setIsLoadingStats(true)
+  }
   const [showCode, setShowCode] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
 
   useEffect(() => {
-    if (isOpen && womCompetitionId) {
-      setIsLoadingStats(true)
-      fetchCompetitionFromWOM(womCompetitionId)
+    if (statsCompetitionId !== null) {
+      fetchCompetitionFromWOM(statsCompetitionId)
         .then((result) => {
           if (result.success && result.data) {
             setStats(
@@ -122,7 +131,7 @@ export function TrackerSettingsModal({
         })
         .finally(() => setIsLoadingStats(false))
     }
-  }, [isOpen, womCompetitionId])
+  }, [statsCompetitionId])
 
   const handleUnlink = async () => {
     setIsSubmitting(true)

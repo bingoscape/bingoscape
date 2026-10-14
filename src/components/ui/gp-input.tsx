@@ -35,12 +35,8 @@ export function GPInput({
     return cleaned === "" ? 0 : parseInt(cleaned, 10)
   }
 
-  // Update display value when prop value changes (only when not focused)
-  React.useEffect(() => {
-    if (!isFocused) {
-      setDisplayValue(formatNumber(value))
-    }
-  }, [value, isFocused])
+  // While focused the user's raw text is shown; otherwise the formatted prop
+  const shownValue = isFocused ? displayValue : formatNumber(value)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value
@@ -61,7 +57,6 @@ export function GPInput({
     // Format with commas when blurred
     const numericValue = parseNumber(displayValue)
     onChange(numericValue)
-    setDisplayValue(formatNumber(numericValue))
   }
 
   return (
@@ -69,7 +64,7 @@ export function GPInput({
       <Input
         type="text"
         inputMode="numeric"
-        value={displayValue}
+        value={shownValue}
         onChange={handleChange}
         onFocus={handleFocus}
         onBlur={handleBlur}

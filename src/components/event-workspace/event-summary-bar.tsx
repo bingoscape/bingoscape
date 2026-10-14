@@ -7,6 +7,7 @@ import { EventHeaderActions } from "@/components/event-header-actions"
 import { EventRulesSheet } from "@/components/event-rules-sheet"
 import { PrizePoolDisplay } from "@/components/prize-pool-display"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
+import { getNow } from "@/lib/now"
 import type { EventRule } from "@/app/actions/events"
 import type { EventCapabilities } from "@/lib/authz/capabilities"
 import type { Event } from "@/types/model"
@@ -55,7 +56,7 @@ export function EventSummaryBar({
 }: EventSummaryBarProps) {
   const tz = timezone || "UTC"
 
-  const now = new Date()
+  const now = getNow()
   const startDate = new Date(start)
   const endDate = new Date(end)
   const status: "upcoming" | "active" | "completed" =

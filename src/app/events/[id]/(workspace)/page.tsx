@@ -22,6 +22,7 @@ import { PrizePanel } from "@/components/event-workspace/prize-panel"
 import { TeamsPanel } from "@/components/event-workspace/teams-panel"
 import { Skeleton } from "@/components/ui/skeleton"
 import { resolveWorkspaceSelection } from "@/lib/workspace-selection"
+import { getNow } from "@/lib/now"
 import {
   WORKSPACE_PREFS_COOKIE,
   parseWorkspacePrefs,
@@ -89,7 +90,7 @@ export default async function EventWorkspacePage(props: {
     teamId: firstParam(search.teamId),
   })
 
-  const now = new Date()
+  const now = getNow()
   const registrationOpen =
     !event.locked &&
     (!event.registrationDeadline || now <= new Date(event.registrationDeadline))

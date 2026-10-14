@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { computeCapabilities } from "@/lib/authz/capabilities"
 import { getBoardTierData } from "@/server/queries/tiers"
 import { resolveWorkspaceSelection } from "@/lib/workspace-selection"
+import { getNow } from "@/lib/now"
 
 // Generate metadata for SEO
 export async function generateMetadata(
@@ -119,7 +120,7 @@ export default async function PublicEventPage(props: {
 
   const tierData = await getBoardTierData(bingo, effectiveTeamId)
 
-  const now = new Date()
+  const now = getNow()
   const registrationOpen =
     !event.locked &&
     (!event.registrationDeadline || now <= new Date(event.registrationDeadline))

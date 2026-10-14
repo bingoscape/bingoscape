@@ -10,6 +10,7 @@ import { EventHeaderActions } from "@/components/event-header-actions"
 import { EventRulesSheet } from "@/components/event-rules-sheet"
 import { getEventCapabilities } from "@/server/authz"
 import { getEventById } from "@/server/queries/events"
+import { getNow } from "@/lib/now"
 
 export async function EventLayoutHeader({ eventId }: { eventId: string }) {
   const session = await getServerAuthSession()
@@ -39,7 +40,7 @@ export async function EventLayoutHeader({ eventId }: { eventId: string }) {
     getEventRules(eventId),
   ])
 
-  const now = new Date()
+  const now = getNow()
   const startDate = new Date(event.startDate)
   const endDate = new Date(event.endDate)
   let eventStatus: "upcoming" | "active" | "completed" = "upcoming"

@@ -49,12 +49,12 @@ export function EditEventModal({
     event.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
   )
 
-  const [startDate, setStartDate] = useState<Date>(
+  const [startDate, setStartDate] = useState<Date>(() =>
     event.startDate
       ? toZonedTime(new Date(event.startDate), event.timezone || "UTC")
       : new Date()
   )
-  const [endDate, setEndDate] = useState<Date>(
+  const [endDate, setEndDate] = useState<Date>(() =>
     event.endDate
       ? toZonedTime(new Date(event.endDate), event.timezone || "UTC")
       : new Date()

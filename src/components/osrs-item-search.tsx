@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 
-import { useState } from "react"
+import { useId, useState } from "react"
 import { Loader2, Search } from "lucide-react"
 import {
   Command,
@@ -47,6 +47,7 @@ export function OsrsItemSearch({
 }: OsrsItemSearchProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
+  const listId = useId()
   const { ready, loading, items, failed } = useOsrsItemSearch(query)
 
   const handleSelect = (item: OsrsItem) => {
@@ -62,6 +63,7 @@ export function OsrsItemSearch({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-controls={listId}
           className={cn("w-full justify-between", className)}
           disabled={disabled}
           autoFocus={autoFocus}
@@ -85,6 +87,7 @@ export function OsrsItemSearch({
         </Button>
       </PopoverTrigger>
       <PopoverContent
+        id={listId}
         className="w-[400px] max-w-[calc(100vw-1rem)] p-0"
         align="start"
         collisionPadding={8}

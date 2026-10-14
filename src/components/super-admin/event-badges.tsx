@@ -2,10 +2,11 @@ import { Globe, Lock } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { EVENT_STATE_LABEL, getEventState } from "@/lib/super-admin-format"
+import { getNow } from "@/lib/now"
 
 /** Live / Upcoming / Ended: the word carries the meaning, colour only reinforces it. */
 export function EventStateBadge({ start, end }: { start: Date; end: Date }) {
-  const state = getEventState(start, end, new Date())
+  const state = getEventState(start, end, getNow())
   return (
     <Badge
       variant={

@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -90,8 +90,14 @@ export function InlineGoalAssignment({
   const [predefinedValue, setPredefinedValue] = useState<string>("")
   const [isSaving, setIsSaving] = useState(false)
 
-  // Sync with current goal when it changes
-  useEffect(() => {
+  // Sync with current goal when it changes (or the popover opens/closes)
+  const [synced, setSynced] = useState({ currentGoalId, currentValue, open })
+  if (
+    synced.currentGoalId !== currentGoalId ||
+    synced.currentValue !== currentValue ||
+    synced.open !== open
+  ) {
+    setSynced({ currentGoalId, currentValue, open })
     setSelectedGoalId(currentGoalId ?? null)
     setSubmissionValue(currentValue?.toString() ?? "1")
 
@@ -100,7 +106,7 @@ export function InlineGoalAssignment({
       setStep("goal")
       setPredefinedValue("")
     }
-  }, [currentGoalId, currentValue, open])
+  }
 
   const handleSave = async (overrideGoalId?: string | null, overrideValue?: number) => {
     const goalToSave = overrideGoalId !== undefined ? overrideGoalId : selectedGoalId

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useId, useState } from "react"
 import { Check, ChevronsUpDown } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -50,6 +50,7 @@ export function AdminCombobox({
   ...aria
 }: AdminComboboxProps) {
   const [open, setOpen] = useState(false)
+  const listId = useId()
   const selected = options.find((option) => option.value === value)
 
   const choose = (next: string | null) => {
@@ -66,6 +67,7 @@ export function AdminCombobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-controls={listId}
           aria-haspopup="listbox"
           disabled={disabled}
           className="w-full justify-between font-normal"
@@ -84,6 +86,7 @@ export function AdminCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent
+        id={listId}
         align="start"
         className="w-(--radix-popover-trigger-width) p-0"
       >
