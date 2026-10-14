@@ -37,7 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `GET /api/runelite/bingos/{bingoId}` now serves battleship boards and requires the caller to be a participant or manager of the event (hidden boards: managers only); every other case answers `404`
 - `apiKeys.lastUsed` is written at most once a minute per key
 - Updated README.md to accurately reflect application capabilities
+- Rewrote README.md against the current code: Next.js 16 / React 19 / Node 24 / PostgreSQL 18, all three board types, the full environment variable reference, the Docker, CI and backup flow, testing, the RuneLite API 2.1 endpoints and the BSD 2-Clause license. Local database name is now `bingoscape` in `.env.example`, `start-database.sh` and the docs; `.env.example` no longer lists `?pgbouncer=true` or the unused `GE_PRICE_CACHE_TTL_MINUTES` and documents `WISEOLDMAN_API_KEY`
 - Enhanced project structure documentation
+- Reworked `docs/CONTRIBUTING.md`: current commands (`npm run lint -- --fix`, `npx tsc --noEmit`), the real Prettier style, the server action and authorization rules from AGENTS.md, migration compatibility rules, what CI runs and test setup (Docker required)
 - Improved contributing guidelines with code standards
 
 ### Fixed
@@ -195,6 +197,6 @@ The v1.1 update introduces progression bingo support while maintaining full back
 
 For questions, issues, or feature requests:
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/bingoscape/bingoscape-next/issues)
-- **GitHub Discussions**: [Community discussions and support](https://github.com/bingoscape/bingoscape-next/discussions)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/bingoscape/bingoscape/issues)
+- **GitHub Discussions**: [Community discussions and support](https://github.com/bingoscape/bingoscape/discussions)
 - **Discord**: [Join our community server](https://discord.gg/bingoscape)
