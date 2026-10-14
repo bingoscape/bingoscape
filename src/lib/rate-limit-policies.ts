@@ -48,6 +48,11 @@ export const RATE_LIMITS = {
    * about 5 minutes, so this only stops a reconnect loop.
    */
   draftStream: { limit: 30, windowMs: MINUTE },
+  /**
+   * Rendering the "Share as image" recap (GET .../draft/recap-image), per
+   * user. The picture is drawn on the server, which costs some CPU.
+   */
+  draftRecapImage: { limit: 20, windowMs: MINUTE },
 } as const satisfies Record<string, RateLimitPolicy>
 
 export type RateLimitPolicyName = keyof typeof RATE_LIMITS

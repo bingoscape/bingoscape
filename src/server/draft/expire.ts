@@ -22,6 +22,11 @@ import {
   updateDraft,
   type Tx,
 } from "./internal"
+import { flushDraftDiscord } from "./discord"
+import {
+  DRAFT_RETENTION_INTERVAL_MS,
+  purgeExpiredDraftLogsSafely,
+} from "./retention"
 import { commitPick, commitSkip, loadTurn, slotAt } from "./turn"
 
 /**
@@ -38,6 +43,8 @@ import { commitPick, commitSkip, loadTurn, slotAt } from "./turn"
  * (`settleExpiredDraft`), on startup and once per second from the sweeper
  * (`sweepExpiredDrafts`, guarded by an advisory lock so several instances do
  * not step on each other). `api/cron/draft-sweep` is an optional backstop.
+ * Whatever an expiry changed is handed to the Discord poster once the
+ * transaction that made the change has committed (`flushDraftDiscord`).
  *
  * What an expired turn does is the draft's `on_timeout`:
  * - `auto_pick`: the first still-available entry of the captain's queue, else
@@ -205,6 +212,8 @@ export async function settleExpiredDraft(eventId: string): Promise<boolean> {
       .limit(1)
     if (!due) return false
     const result = await db.transaction((tx) => resolveExpired(tx, due.id))
+    // Committed: let the poster know (an auto-pick is a pick like any other).
+    if (result.acted) void flushDraftDiscord(due.id)
     return result.acted
   } catch (error) {
     logger.error({ error, eventId }, "Could not resolve an expired draft turn")
@@ -233,11 +242,13 @@ export interface SweepResult {
  * does not hold up the others.
  */
 export async function sweepExpiredDrafts(): Promise<SweepResult> {
-  return db.transaction(async (tx) => {
+  const { actedIds, ...result } = await db.transaction(async (tx) => {
     const rows = await tx.execute<{ locked: boolean }>(
       sql`select pg_try_advisory_xact_lock(${SWEEPER_LOCK_KEY}::bigint) as locked`
     )
-    if (!rows[0]?.locked) return { locked: false, resolved: 0 }
+    if (!rows[0]?.locked) {
+      return { locked: false, resolved: 0, actedIds: [] as string[] }
+    }
 
     const due = await tx
       .select({ id: drafts.id })
@@ -252,24 +263,29 @@ export async function sweepExpiredDrafts(): Promise<SweepResult> {
           )
         )
       )
-    let resolved = 0
+    const actedIds: string[] = []
     for (const { id } of due) {
       try {
-        const result = await tx.transaction((inner) =>
+        const outcome = await tx.transaction((inner) =>
           resolveExpired(inner as Tx, id)
         )
-        if (result.acted) resolved += 1
+        if (outcome.acted) actedIds.push(id)
       } catch (error) {
         logger.error({ error, draftId: id }, "Could not resolve a draft turn")
       }
     }
-    return { locked: true, resolved }
+    return { locked: true, resolved: actedIds.length, actedIds }
   })
+  // Only now is everything committed: tell the Discord poster.
+  for (const id of actedIds) void flushDraftDiscord(id)
+  return result
 }
 
 interface SweeperState {
   timer: ReturnType<typeof setInterval>
   running: boolean
+  /** When the draft log retention purge last ran (epoch ms). */
+  lastPurgeAt: number
 }
 
 // On globalThis so a dev server's module reloads do not start a second timer.
@@ -286,6 +302,7 @@ export function startDraftSweeper(intervalMs = 1000): void {
   if (globalForSweeper.draftSweeper) return
   const state: SweeperState = {
     running: false,
+    lastPurgeAt: 0,
     timer: setInterval(() => void tick(), intervalMs),
   }
   state.timer.unref?.()
@@ -296,6 +313,11 @@ export function startDraftSweeper(intervalMs = 1000): void {
     state.running = true
     try {
       await sweepExpiredDrafts()
+      // Retention of the draft log (#218): a few times a day is plenty.
+      if (Date.now() - state.lastPurgeAt >= DRAFT_RETENTION_INTERVAL_MS) {
+        state.lastPurgeAt = Date.now()
+        await purgeExpiredDraftLogsSafely()
+      }
     } catch (error) {
       logger.error({ error }, "Draft sweeper failed")
     } finally {

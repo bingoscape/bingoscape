@@ -439,6 +439,10 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
     kind: "secret",
     reason: "Bearer CRON_SECRET, fail closed when unset",
   },
+  [`${R}events/[id]/draft/recap-image/route.ts#GET`]: perm(
+    "draft:view",
+    "enforced by authorizeDraftView (src/server/draft/http.ts): Event members only; 401 / 404 / 403 answered by the route itself (src/proxy.ts does not protect /api); 404 until the draft is complete"
+  ),
   [`${R}events/[id]/draft/state/route.ts#GET`]: perm(
     "draft:view",
     "enforced by authorizeDraftView (src/server/draft/http.ts): Event members only; 401 / 404 / 403 answered by the route itself (src/proxy.ts does not protect /api)"

@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm"
 
 import { emptyDraftState } from "@/lib/draft/reducer"
+import { utcOffsetOfTimezone } from "@/lib/draft/timezone"
 import type {
   DraftStatus,
   DraftEventType,
@@ -303,6 +304,7 @@ export async function loadPlayers(
       nameOverride: playerMetadata.runescapeNameOverride,
       image: users.image,
       skillLevel: playerMetadata.skillLevel,
+      timezone: playerMetadata.timezone,
     })
     .from(users)
     .leftJoin(
@@ -319,6 +321,7 @@ export async function loadPlayers(
     runescapeName: row.nameOverride ?? row.runescapeName,
     image: row.image,
     skillLevel: row.skillLevel,
+    utcOffset: utcOffsetOfTimezone(row.timezone),
   }))
 }
 

@@ -1707,6 +1707,12 @@ export const drafts = createTable(
     version: integer("version").notNull().default(0),
     // Seed of the random order, set when the draft starts.
     seed: bigint("seed", { mode: "number" }),
+    // Highest `draft_event.seq` already handed to the Discord poster (team
+    // draft 4/4, #218). Advanced after the transaction that wrote the events
+    // committed, so an event is posted at most once.
+    discordPostedSeq: bigint("discord_posted_seq", { mode: "number" })
+      .notNull()
+      .default(0),
     createdBy: uuid("created_by"),
     createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()

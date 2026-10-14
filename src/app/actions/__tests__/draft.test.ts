@@ -42,6 +42,9 @@ import {
 
 jest.mock("@/server/auth", () => ({ getServerAuthSession: jest.fn() }))
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
+// The Discord poster has its own tests (draft-discord.test.ts); here it must not
+// run on in the background against a database a test is about to clean up.
+jest.mock("@/server/draft/discord", () => ({ flushDraftDiscord: jest.fn() }))
 jest.mock("@/lib/logger", () => ({
   logger: {
     error: jest.fn(),

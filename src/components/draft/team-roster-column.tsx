@@ -15,6 +15,8 @@ interface TeamRosterColumnProps {
   state: DraftState
   slot: DraftSlotState
   players: ReadonlyMap<string, DraftPlayerInfo>
+  /** The signed-in viewer: their own row is marked "You". */
+  viewerUserId?: string
   onTheClock: boolean
   /** A pick this viewer just made that the server has not confirmed yet. */
   ghost?: { userId: string | null; rating: number | null }
@@ -27,6 +29,7 @@ export function TeamRosterColumn({
   state,
   slot,
   players,
+  viewerUserId,
   onTheClock,
   ghost,
   freshPicks,
@@ -87,6 +90,7 @@ export function TeamRosterColumn({
               )}
               <PlayerName
                 info={entry.userId ? players.get(entry.userId) : undefined}
+                isYou={entry.userId !== null && entry.userId === viewerUserId}
               />
             </div>
             <div className="flex shrink-0 items-center gap-1">

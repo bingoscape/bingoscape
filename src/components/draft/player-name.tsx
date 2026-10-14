@@ -7,10 +7,12 @@ import { cn } from "@/lib/utils"
 interface PlayerNameProps {
   info: DraftPlayerInfo | undefined
   className?: string
+  /** The signed-in viewer: marked with a "You" badge. */
+  isYou?: boolean
 }
 
 /** Avatar and display name of a player in the draft room. */
-export function PlayerName({ info, className }: PlayerNameProps) {
+export function PlayerName({ info, className, isYou }: PlayerNameProps) {
   const label = playerLabel(info)
   return (
     <span className={cn("flex min-w-0 items-center gap-2", className)}>
@@ -21,6 +23,11 @@ export function PlayerName({ info, className }: PlayerNameProps) {
         </AvatarFallback>
       </Avatar>
       <span className="truncate">{label}</span>
+      {isYou && (
+        <Badge variant="info" className="shrink-0">
+          You
+        </Badge>
+      )}
     </span>
   )
 }

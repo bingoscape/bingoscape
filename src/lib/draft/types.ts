@@ -210,6 +210,11 @@ export interface DraftPlayerInfo {
   runescapeName: string | null
   image: string | null
   skillLevel: string | null
+  /**
+   * Whole hours east of UTC (today's offset of the timezone in the Event's
+   * player metadata); absent or null: unknown. The zone itself is not sent.
+   */
+  utcOffset?: number | null
 }
 
 /**

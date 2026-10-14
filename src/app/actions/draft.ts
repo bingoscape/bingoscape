@@ -22,6 +22,7 @@ import {
   startDraft as startDraftCore,
   undoPick as undoPickCore,
 } from "@/server/draft/core"
+import { flushDraftDiscord } from "@/server/draft/discord"
 import { limitAction } from "@/server/rate-limit"
 
 /**
@@ -31,6 +32,11 @@ import { limitAction } from "@/server/rate-limit"
  * never trusted from the client), and the body runs in one transaction. The
  * logic lives in `src/server/draft/core.ts`; the exports here are thin and all
  * return `{ success, error? }`.
+ *
+ * Phase 4 (#218): once an action's transaction has committed, `finish` hands
+ * the draft to the Discord poster (`src/server/draft/discord.ts`). It runs on
+ * after the response and never throws, so a webhook cannot slow down, fail or
+ * roll back a pick.
  *
  * Phase 3 (#217) adds `skipTurn` (manager) and `setPickQueue` (a captain, for
  * their own team; `draft:view` here and the captain check in the body, like
@@ -226,8 +232,14 @@ function revalidateDraft(eventId: string, wide: boolean) {
 
 async function finish<T extends object>(
   outcome: Parameters<typeof toActionResult<WithEvent<T>>>[0],
-  wide: boolean
+  wide: boolean,
+  draftId?: string
 ): Promise<ActionResult<WithEvent<T>>> {
+  // Whatever the action did is committed by now, even when it refused (an
+  // expired turn it settled first, say), so the Discord poster looks either
+  // way. Only after the action body ran: that means the caller was authorized,
+  // so an arbitrary draft id from the client never reaches the poster.
+  if (draftId && outcome?.data) void flushDraftDiscord(draftId)
   const result = toActionResult<WithEvent<T>>(outcome)
   if (result.success) revalidateDraft(result.eventId, wide)
   return result
@@ -250,19 +262,19 @@ export async function startDraft(input: {
 }): Promise<
   ActionResult<{ poolSize: number; teams: number; eventId: string }>
 > {
-  return finish(await startDraftAction(input), true)
+  return finish(await startDraftAction(input), true, input.draftId)
 }
 
 export async function pauseDraft(input: {
   draftId: string
 }): Promise<ActionResult<{ eventId: string }>> {
-  return finish(await pauseDraftAction(input), true)
+  return finish(await pauseDraftAction(input), true, input.draftId)
 }
 
 export async function resumeDraft(input: {
   draftId: string
 }): Promise<ActionResult<{ eventId: string }>> {
-  return finish(await resumeDraftAction(input), true)
+  return finish(await resumeDraftAction(input), true, input.draftId)
 }
 
 /** Cancels the draft and deletes the Teams it created if still empty (`draft:manage`). */
@@ -271,7 +283,7 @@ export async function cancelDraft(input: {
 }): Promise<
   ActionResult<{ deletedTeams: number; keptTeams: number; eventId: string }>
 > {
-  return finish(await cancelDraftAction(input), true)
+  return finish(await cancelDraftAction(input), true, input.draftId)
 }
 
 /** A captain picks a player when it is their turn. */
@@ -284,7 +296,7 @@ export async function makePick(input: {
   const session = await getServerAuthSession()
   const limited = await limitAction("draftPick", session?.user?.id)
   if (limited) return limited
-  return finish(await makePickAction(input), false)
+  return finish(await makePickAction(input), false, input.draftId)
 }
 
 /** A manager picks for the captain whose turn it is (`draft:manage`). */
@@ -297,7 +309,7 @@ export async function forcePick(input: {
   const session = await getServerAuthSession()
   const limited = await limitAction("draftPick", session?.user?.id)
   if (limited) return limited
-  return finish(await forcePickAction(input), false)
+  return finish(await forcePickAction(input), false, input.draftId)
 }
 
 /**
@@ -309,7 +321,7 @@ export async function skipTurn(input: {
 }): Promise<
   ActionResult<{ pickNo: number; completed: boolean; eventId: string }>
 > {
-  return finish(await skipTurnAction(input), false)
+  return finish(await skipTurnAction(input), false, input.draftId)
 }
 
 /**
@@ -327,7 +339,7 @@ export async function setPickQueue(input: {
 export async function undoPick(input: {
   draftId: string
 }): Promise<ActionResult<{ pickNo: number; eventId: string }>> {
-  return finish(await undoPickAction(input), false)
+  return finish(await undoPickAction(input), false, input.draftId)
 }
 
 /** The manager's confirmation: drafted players join their Teams (`draft:manage`). */
@@ -336,5 +348,5 @@ export async function applyDraft(input: {
 }): Promise<
   ActionResult<{ applied: number; skippedUserIds: string[]; eventId: string }>
 > {
-  return finish(await applyDraftAction(input), true)
+  return finish(await applyDraftAction(input), true, input.draftId)
 }

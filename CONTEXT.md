@@ -60,7 +60,7 @@ What the signed-in user may do in an Event, as plain booleans for the UI (`Event
 _Avoid_: Role prop, Role check
 
 **Draft**:
-How an Event's Teams can be formed by its players: Captains take turns picking Players from the Event's participants who are not on a Team into Teams, in linear, snake or random snake order. A Captain is a participant who leads a Team (`team_members.is_leader`); the Teams are created when the Draft starts and the picked Players only join them when a manager applies the result. At most one live Draft per Event; a manager may undo picks, the Players' ratings are visible to every member.
+How an Event's Teams can be formed by its players: Captains take turns picking Players from the Event's participants who are not on a Team into Teams, in linear, snake or random snake order. A Captain is a participant who leads a Team (`team_members.is_leader`); the Teams are created when the Draft starts and the picked Players only join them when a manager applies the result. At most one live Draft per Event; a manager may undo picks, the Players' ratings are visible to every member, and every member may watch it (nothing is public). A finished Draft has a recap (final rosters, pick history, a shareable image) and, for managers, analytics.
 _Avoid_: Auction, Lottery
 
 **Clan**:

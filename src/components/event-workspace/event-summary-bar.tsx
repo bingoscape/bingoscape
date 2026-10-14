@@ -153,6 +153,7 @@ export function EventSummaryBar({
               pendingRegistrationsCount={members.pendingRegistrationsCount}
               event={members.event}
               userClans={members.userClans}
+              draftStatus={members.draftStatus}
             />
           )}
         </div>

@@ -7,6 +7,7 @@ interface UnassignedListProps {
   state: DraftState
   lateJoiners: readonly string[]
   players: ReadonlyMap<string, DraftPlayerInfo>
+  viewerUserId?: string
 }
 
 /**
@@ -18,6 +19,7 @@ export function UnassignedList({
   state,
   lateJoiners,
   players,
+  viewerUserId,
 }: UnassignedListProps) {
   if (state.status === "setup" || state.status === "open") return null
   const list = unassignedPlayers(state, lateJoiners)
@@ -32,7 +34,10 @@ export function UnassignedList({
             key={`${entry.kind}:${entry.userId}`}
             className="flex items-center justify-between gap-2 p-2"
           >
-            <PlayerName info={players.get(entry.userId)} />
+            <PlayerName
+              info={players.get(entry.userId)}
+              isYou={entry.userId === viewerUserId}
+            />
             <Badge variant="outline">
               {entry.kind === "late_joiner" ? "Joined late" : "Not picked"}
             </Badge>

@@ -195,3 +195,11 @@ export function unassignedPlayers(
     })),
   ]
 }
+
+/** "12s", "1m 05s": how long a pick took. */
+export function formatSeconds(seconds: number): string {
+  const whole = Math.round(seconds)
+  if (whole < 60) return `${whole}s`
+  const minutes = Math.floor(whole / 60)
+  return `${minutes}m ${String(whole % 60).padStart(2, "0")}s`
+}

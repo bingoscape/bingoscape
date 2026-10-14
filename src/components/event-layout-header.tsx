@@ -105,6 +105,7 @@ export async function EventLayoutHeader({ eventId }: { eventId: string }) {
             pendingRegistrationsCount={pendingRegistrationsCount}
             event={event}
             userClans={userClans}
+            draftStatus={draftSummary?.status ?? null}
           />
         )}
       </div>

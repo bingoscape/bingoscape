@@ -415,6 +415,20 @@ Team draft 3/4 (epic #214, issue #217): pick timer, auto-pick, pause and undo. E
 curl --fail -H "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3000/api/cron/draft-sweep
 ```
 
+## Team draft Discord rollout (migration `0043_team_draft_discord`)
+
+Team draft 4/4 (epic #214, issue #218): Discord posts, spectator view, analytics. Expand-only and compatible with the previous app version (rolling the app image back is safe; the database is not reverted). A test (`src/server/__tests__/draft-discord-migration.test.ts`) applies it to a database at 0042.
+
+| Change | Purpose |
+| ------ | ------- |
+| `draft.discord_posted_seq` (`bigint NOT NULL DEFAULT 0`, CHECK `>= 0`) | The highest `draft_event.seq` already handed to the Discord poster. The poster claims unposted events under the draft row lock and moves the cursor in the same short transaction, after the transaction that wrote the events committed, so an event is posted at most once. |
+
+**Backfill.** The column and a backfill that sets every existing draft to its last event sit in one guarded block (`IF NOT EXISTS` on the column), so the deploy does not post a draft's history to Discord and a re-run changes nothing (it can never move a cursor back).
+
+**Compatibility.** The previous app version never reads or writes the column (it has a default). Nothing else changes: no table, index or constraint of 0041 / 0042 is touched. The sweeper's log retention (`src/server/draft/retention.ts`) only deletes rows, never schema.
+
+**Rollback.** The app image can be rolled back freely and the column can stay. The previous version posts nothing to Discord. After the new version runs again, events written in the meantime are posted at the next flush of that draft (possibly a burst of old picks); to skip them, set `discord_posted_seq` to the draft's last `draft_event.seq`.
+
 ## RBAC 7/8 rollout (migration `0040_credential_session_hygiene`)
 
 Phase 7 of the RBAC consolidation (epic #183, issue #190): credential and session hygiene. Add-first and compatible with the previous app version (rolling the app image back is safe; the database is not reverted). Every statement is idempotent.

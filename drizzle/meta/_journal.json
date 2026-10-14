@@ -302,6 +302,13 @@
       "when": 1792006222309,
       "tag": "0042_team_draft_timer",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1792008188748,
+      "tag": "0043_team_draft_discord",
+      "breakpoints": true
     }
   ]
 }

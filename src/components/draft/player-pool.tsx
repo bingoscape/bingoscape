@@ -24,6 +24,8 @@ interface PlayerPoolProps {
   pool: readonly DraftPoolState[]
   players: ReadonlyMap<string, DraftPlayerInfo>
   filter: PoolFilter
+  /** The signed-in viewer: their own row is marked "You". */
+  viewerUserId?: string
   onFilterChange: (key: "q" | "sort" | "skill", value: string) => void
   /** Present when the viewer may pick now; the button label says for whom. */
   pick?: {
@@ -53,6 +55,7 @@ export function PlayerPool({
   pool,
   players,
   filter,
+  viewerUserId,
   onFilterChange,
   pick,
   queue,
@@ -198,6 +201,7 @@ export function PlayerPool({
         >
           {entries.map((entry, index) => {
             const info = entry.userId ? players.get(entry.userId) : undefined
+            const isYou = entry.userId !== null && entry.userId === viewerUserId
             return (
               <li
                 key={entry.poolEntryId}
@@ -208,10 +212,11 @@ export function PlayerPool({
                 onFocus={() => setActive(index)}
                 onKeyDown={(event) => onRowKeyDown(event, index, entry)}
                 aria-describedby={disabledReason ? reasonId : undefined}
-                className="focus-visible:ring-ring flex items-center justify-between gap-2 p-2 focus-visible:ring-2 focus-visible:outline-hidden focus-visible:ring-inset"
+                data-you={isYou ? "true" : undefined}
+                className="focus-visible:ring-ring data-[you=true]:bg-primary/10 flex items-center justify-between gap-2 p-2 focus-visible:ring-2 focus-visible:outline-hidden focus-visible:ring-inset"
               >
                 <div className="flex min-w-0 items-center gap-2">
-                  <PlayerName info={info} />
+                  <PlayerName info={info} isYou={isYou} />
                   {info?.skillLevel && (
                     <span className="text-muted-foreground hidden text-xs sm:inline">
                       {info.skillLevel}

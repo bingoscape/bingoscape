@@ -977,6 +977,8 @@ const EXEMPT: Record<string, string> = {
     "draft:view: the attacker is a legitimate participant of Event 2; whether they may pick (only the on-turn captain) is covered in draft.test.ts and draft-concurrency.test.ts",
   [`${R}events/[id]/draft/state/route.ts#GET`]:
     "draft:view: the attacker is a legitimate participant of Event 2, so the read is allowed; non-members get 403 (draft-state.test.ts)",
+  [`${R}events/[id]/draft/recap-image/route.ts#GET`]:
+    "draft:view: the attacker is a legitimate participant of Event 2, so the read is allowed; non-members get 403 (draft-recap-image.test.ts)",
   [`${R}events/[id]/draft/stream/route.ts#GET`]:
     "draft:view: the attacker is a legitimate participant of Event 2, so the stream opens; non-members get 403 (draft-stream.test.ts)",
   [key("bingo.ts", "submitImage")]:

@@ -1,14 +1,18 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
+import { Trophy } from "lucide-react"
 
 import { forcePick, makePick, setPickQueue } from "@/app/actions/draft"
+import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useDraftStream } from "@/hooks/use-draft-stream"
 import { toast } from "@/hooks/use-toast"
 import type { DraftPoolState, DraftSnapshot } from "@/lib/draft/types"
 import { isDraftTab, onTurnSlot } from "@/lib/draft/view"
 import { cn } from "@/lib/utils"
+import { BalancePanel } from "./balance-panel"
 import { ConnectionIndicator } from "./connection-indicator"
 import { DraftAlerts } from "./draft-alerts"
 import { OnTheClockBanner } from "./on-the-clock-banner"
@@ -226,6 +230,14 @@ export function DraftRoom({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-end gap-2">
+        {state.status === "complete" && (
+          <Button asChild variant="outline" size="sm" className="gap-2">
+            <Link href={`/events/${eventId}/draft/recap`}>
+              <Trophy className="h-4 w-4" aria-hidden="true" />
+              View recap
+            </Link>
+          </Button>
+        )}
         {canPick && active && <TurnCueControls />}
         {active && <ConnectionIndicator connection={connection} />}
       </div>
@@ -290,6 +302,7 @@ export function DraftRoom({
             }
             players={players}
             filter={{ q: params.q, skill: params.skill, sort: params.sort }}
+            viewerUserId={viewerUserId}
             onFilterChange={(key, value) => params.setParam(key, value || null)}
             pick={
               pickAction
@@ -339,6 +352,7 @@ export function DraftRoom({
                 state={state}
                 slot={slot}
                 players={players}
+                viewerUserId={viewerUserId}
                 onTheClock={running && onTurn?.slotId === slot.slotId}
                 ghost={
                   ghostEntry?.slotId === slot.slotId ? ghostEntry : undefined
@@ -348,10 +362,14 @@ export function DraftRoom({
             ))}
           </div>
           <div className="mt-4">
+            <BalancePanel state={state} players={players} />
+          </div>
+          <div className="mt-4">
             <UnassignedList
               state={state}
               lateJoiners={live.lateJoiners}
               players={players}
+              viewerUserId={viewerUserId}
             />
           </div>
         </div>

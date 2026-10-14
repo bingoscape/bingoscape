@@ -41,6 +41,7 @@ import {
   teamTierProgress,
   teamTileSubmissions,
   teams,
+  type DraftRow,
 } from "@/server/db/schema"
 import { expireLocked } from "./expire"
 import {
@@ -88,6 +89,44 @@ import {
 
 export type { Tx }
 export { appendDraftEvent }
+
+/**
+ * One `event_audit_log` row per manager action (team draft 4/4, #218), in the
+ * transaction of the change it records. The draft's own log (`draft_event`)
+ * says what happened in the draft; this says who as a manager did it, in the
+ * place the rest of the Event's sensitive changes are found. Cancel logs its
+ * own row (it records the Teams it deleted).
+ */
+async function auditManagerAction(
+  tx: Tx,
+  draft: Pick<DraftRow, "id" | "eventId">,
+  actor: Pick<EventActor, "userId">,
+  action:
+    | "draft.start"
+    | "draft.pause"
+    | "draft.resume"
+    | "draft.skip_turn"
+    | "draft.force_pick"
+    | "draft.undo"
+    | "draft.apply",
+  change: {
+    before?: Record<string, unknown> | null
+    after?: Record<string, unknown> | null
+  }
+): Promise<void> {
+  await recordEventAudit(tx, {
+    eventId: draft.eventId,
+    actorUserId: actor.userId,
+    action,
+    permission: "draft:manage",
+    targetType: "draft",
+    targetId: draft.id,
+    outcome: "success",
+    before: change.before ?? null,
+    after: change.after ?? null,
+    reason: null,
+  })
+}
 
 // ---------------------------------------------------------------------------
 // Create
@@ -347,6 +386,16 @@ export async function startDraft(
       })),
       ...timerPayload(timing),
     })
+    await auditManagerAction(inner, draft, input.actor, "draft.start", {
+      before: { status: draft.status },
+      after: {
+        status: "in_progress",
+        poolSize: entries.length,
+        teams: slotTeams.length,
+        orderType: draft.orderType,
+        rounds: draft.rounds,
+      },
+    })
     return { success: true, poolSize: entries.length, teams: slotTeams.length }
   })
 }
@@ -380,6 +429,10 @@ export async function pauseDraft(
     reason: "manual",
     ...timerPayload(timing),
   })
+  await auditManagerAction(tx, draft, input.actor, "draft.pause", {
+    before: { status: "in_progress" },
+    after: { status: "paused" },
+  })
   return { success: true }
 }
 
@@ -409,6 +462,10 @@ export async function resumeDraft(
     input.actor.userId,
     timerPayload(timing)
   )
+  await auditManagerAction(tx, draft, input.actor, "draft.resume", {
+    before: { status: "paused" },
+    after: { status: "in_progress" },
+  })
   return { success: true }
 }
 
@@ -497,7 +554,7 @@ export async function performPick(
     return failure("That team is already full", "CONFLICT")
   }
 
-  return commitPick(tx, ctx, {
+  const picked = await commitPick(tx, ctx, {
     pickNo,
     slot,
     entry,
@@ -508,6 +565,18 @@ export async function performPick(
     // an absent captain does not end it.
     consecutiveTimeouts: input.force ? slot.consecutiveTimeouts : 0,
   })
+  if (input.force && picked.success) {
+    await auditManagerAction(tx, draft, input.actor, "draft.force_pick", {
+      after: {
+        pickNo,
+        slotId: slot.id,
+        teamName: slot.teamName,
+        poolEntryId: entry.id,
+        userId: entry.userId,
+      },
+    })
+  }
+  return picked
 }
 
 /**
@@ -528,13 +597,19 @@ export async function skipTurn(
   const ctx = await loadTurn(tx, draft)
   const pickNo = draft.currentPickNo
   const slot = slotAt(ctx, pickNo)
-  return commitSkip(tx, ctx, {
+  const skipped = await commitSkip(tx, ctx, {
     pickNo,
     slot,
     actorUserId: input.actor.userId,
     reason: "manual_skip",
     consecutiveTimeouts: slot.consecutiveTimeouts,
   })
+  if (skipped.success) {
+    await auditManagerAction(tx, draft, input.actor, "draft.skip_turn", {
+      after: { pickNo, slotId: slot.id, teamName: slot.teamName },
+    })
+  }
+  return skipped
 }
 
 /**
@@ -664,6 +739,15 @@ export async function undoPick(
     consecutiveTimeouts: timeouts,
     ...timerPayload(timing),
   })
+  await auditManagerAction(tx, draft, input.actor, "draft.undo", {
+    before: {
+      status: draft.status,
+      pickNo: last.pickNo,
+      slotId: last.slotId,
+      poolEntryId: last.poolEntryId,
+    },
+    after: { status: reopen ? "in_progress" : draft.status },
+  })
   return { success: true, pickNo: last.pickNo }
 }
 
@@ -744,6 +828,10 @@ export async function applyDraft(
     await appendDraftEvent(inner, draft.id, "applied", input.actor.userId, {
       applied,
       skipped,
+    })
+    await auditManagerAction(inner, draft, input.actor, "draft.apply", {
+      before: { status: draft.status, applied: false },
+      after: { applied: true, addedUserIds: applied, skippedUserIds: skipped },
     })
     return { success: true, applied: applied.length, skippedUserIds: skipped }
   })

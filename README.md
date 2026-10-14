@@ -310,6 +310,7 @@ Code rules (details in [AGENTS.md](AGENTS.md) and [docs/CONTRIBUTING.md](docs/CO
 | [docs/GITHUB-SECRETS.md](docs/GITHUB-SECRETS.md)         | GitHub secrets used by the workflows    |
 | [docs/DEBIAN-USER-SETUP.md](docs/DEBIAN-USER-SETUP.md)   | Deployment user on the server           |
 | [docs/DATABASE-MIGRATION.md](docs/DATABASE-MIGRATION.md) | Moving from the old non-Docker database |
+| [docs/TEAM-DRAFT.md](docs/TEAM-DRAFT.md)                 | Team draft: organizers and developers   |
 | [docs/design/osrs-theme.md](docs/design/osrs-theme.md)   | Interface theme                         |
 | [CHANGELOG.md](CHANGELOG.md)                             | Release notes                           |
 | [CONTEXT.md](CONTEXT.md)                                 | Domain vocabulary                       |
