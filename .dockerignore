@@ -77,8 +77,8 @@ playwright-report/
 test-results/
 
 # Misc development files
-.eslintrc.cjs
+.oxlintrc.json
 .prettierrc
 prettier.config.js
-jest.config.ts
+jest.config.mjs
 playwright.config.ts
