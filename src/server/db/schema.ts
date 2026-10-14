@@ -20,6 +20,15 @@ import {
 } from "drizzle-orm/pg-core"
 import type { AdapterAccount } from "next-auth/adapters"
 
+// Relative (not `@/`) so drizzle-kit can load this file; a plain module.
+import type {
+  DraftAutoPickRule,
+  DraftOnTimeout,
+  DraftOrderType,
+  DraftPoolStatus,
+  DraftStatus,
+} from "../../lib/draft/constants"
+
 export const createTable = pgTableCreator((name) => `bingoscape-next_${name}`)
 
 export const users = createTable(
@@ -1652,3 +1661,270 @@ export const eventAuditLog = createTable(
 
 export type EventAuditLogInsert = typeof eventAuditLog.$inferInsert
 export type EventAuditLogRow = typeof eventAuditLog.$inferSelect
+
+// ---------------------------------------------------------------------------
+// Team draft (epic #214, phase 1/4 #215). Captains take turns picking players
+// from a pool into Teams. Additive only: nothing here touches `teams` or
+// `team_members` (drafted players reach `team_members` through
+// src/server/authz/team-membership.ts when a manager applies the draft).
+// Enumerated columns are text with CHECK constraints in the migration
+// (drizzle-kit does not emit CHECKs), like the role ledger above.
+// ---------------------------------------------------------------------------
+
+/** One draft per Event at a time (a cancelled draft does not count). */
+export const drafts = createTable(
+  "draft",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id").notNull(),
+    status: text("status").$type<DraftStatus>().notNull().default("setup"),
+    orderType: text("order_type")
+      .$type<DraftOrderType>()
+      .notNull()
+      .default("snake"),
+    rounds: integer("rounds").notNull(),
+    // NULL: no timer.
+    pickTimerSeconds: integer("pick_timer_seconds"),
+    onTimeout: text("on_timeout")
+      .$type<DraftOnTimeout>()
+      .notNull()
+      .default("auto_pick"),
+    autoPickRule: text("auto_pick_rule")
+      .$type<DraftAutoPickRule>()
+      .notNull()
+      .default("best_rated"),
+    // 1-based number of the pick that is due next.
+    currentPickNo: integer("current_pick_no").notNull().default(1),
+    // Database clock (`now()`), never the client's.
+    turnDeadline: timestamp("turn_deadline", {
+      mode: "date",
+      withTimezone: true,
+    }),
+    // Bumped by every change; clients and the state endpoint compare it.
+    version: integer("version").notNull().default(0),
+    // Seed of the random order, set when the draft starts.
+    seed: bigint("seed", { mode: "number" }),
+    createdBy: uuid("created_by"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    startedAt: timestamp("started_at", { mode: "date", withTimezone: true }),
+    completedAt: timestamp("completed_at", { mode: "date", withTimezone: true }),
+    appliedAt: timestamp("applied_at", { mode: "date", withTimezone: true }),
+  },
+  (table) => ({
+    eventFk: foreignKey({
+      name: "draft_event_fk",
+      columns: [table.eventId],
+      foreignColumns: [events.id],
+    }).onDelete("cascade"),
+    createdByFk: foreignKey({
+      name: "draft_created_by_fk",
+      columns: [table.createdBy],
+      foreignColumns: [users.id],
+    }).onDelete("set null"),
+    // Target of the composite foreign keys of the child tables.
+    idEventUnique: unique("draft_id_event_id_unique").on(
+      table.id,
+      table.eventId
+    ),
+    eventActiveUnique: uniqueIndex("draft_event_active_unique")
+      .on(table.eventId)
+      .where(sql`${table.status} <> 'cancelled'`),
+  })
+)
+
+export type DraftRow = typeof drafts.$inferSelect
+
+/** One captain's place in the order (and, from the start, the Team). */
+export const draftTeamSlots = createTable(
+  "draft_team_slot",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    draftId: uuid("draft_id").notNull(),
+    eventId: uuid("event_id").notNull(),
+    // NULL once the captain's account is deleted.
+    captainUserId: uuid("captain_user_id"),
+    teamName: varchar("team_name", { length: 255 }).notNull(),
+    // 0-based place in the setup order.
+    position: integer("position").notNull(),
+    maxTeamSize: integer("max_team_size").notNull(),
+    // Set when the draft starts; NULL again if the Team is deleted.
+    teamId: uuid("team_id"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    draftEventFk: foreignKey({
+      name: "draft_team_slot_draft_event_fk",
+      columns: [table.draftId, table.eventId],
+      foreignColumns: [drafts.id, drafts.eventId],
+    }).onDelete("cascade"),
+    captainFk: foreignKey({
+      name: "draft_team_slot_captain_fk",
+      columns: [table.captainUserId],
+      foreignColumns: [users.id],
+    }).onDelete("set null"),
+    teamFk: foreignKey({
+      name: "draft_team_slot_team_fk",
+      columns: [table.teamId],
+      foreignColumns: [teams.id],
+    }).onDelete("set null"),
+    draftPositionUnique: uniqueIndex("draft_team_slot_draft_position_unique").on(
+      table.draftId,
+      table.position
+    ),
+    draftCaptainUnique: uniqueIndex("draft_team_slot_draft_captain_unique").on(
+      table.draftId,
+      table.captainUserId
+    ),
+    idDraftUnique: unique("draft_team_slot_id_draft_id_unique").on(
+      table.id,
+      table.draftId
+    ),
+    teamIdx: index("draft_team_slot_team_idx").on(table.teamId),
+  })
+)
+
+export type DraftTeamSlotRow = typeof draftTeamSlots.$inferSelect
+
+/** A player in the frozen pool, with the rating at the time of the start. */
+export const draftPoolEntries = createTable(
+  "draft_pool_entry",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    draftId: uuid("draft_id").notNull(),
+    eventId: uuid("event_id").notNull(),
+    // NULL once the player's account is deleted.
+    userId: uuid("user_id"),
+    status: text("status")
+      .$type<DraftPoolStatus>()
+      .notNull()
+      .default("available"),
+    // 0..1; NULL: unrated (no Wise Old Man data).
+    ratingSnapshot: real("rating_snapshot"),
+    ratingSource: text("rating_source").notNull(),
+    snapshotAt: timestamp("snapshot_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    draftEventFk: foreignKey({
+      name: "draft_pool_entry_draft_event_fk",
+      columns: [table.draftId, table.eventId],
+      foreignColumns: [drafts.id, drafts.eventId],
+    }).onDelete("cascade"),
+    userFk: foreignKey({
+      name: "draft_pool_entry_user_fk",
+      columns: [table.userId],
+      foreignColumns: [users.id],
+    }).onDelete("set null"),
+    draftUserUnique: uniqueIndex("draft_pool_entry_draft_user_unique").on(
+      table.draftId,
+      table.userId
+    ),
+    idDraftUnique: unique("draft_pool_entry_id_draft_id_unique").on(
+      table.id,
+      table.draftId
+    ),
+    draftStatusIdx: index("draft_pool_entry_draft_status_idx").on(
+      table.draftId,
+      table.status
+    ),
+  })
+)
+
+export type DraftPoolEntryRow = typeof draftPoolEntries.$inferSelect
+
+/**
+ * A pick. The composite foreign keys keep a pick inside its draft: the slot
+ * and the pool entry must belong to `draft_id`.
+ */
+export const draftPicks = createTable(
+  "draft_pick",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    draftId: uuid("draft_id").notNull(),
+    pickNo: integer("pick_no").notNull(),
+    round: integer("round").notNull(),
+    slotId: uuid("slot_id").notNull(),
+    poolEntryId: uuid("pool_entry_id").notNull(),
+    pickedBy: uuid("picked_by"),
+    pickedAt: timestamp("picked_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    auto: boolean("auto").default(false).notNull(),
+    reason: text("reason"),
+  },
+  (table) => ({
+    draftFk: foreignKey({
+      name: "draft_pick_draft_fk",
+      columns: [table.draftId],
+      foreignColumns: [drafts.id],
+    }).onDelete("cascade"),
+    slotFk: foreignKey({
+      name: "draft_pick_slot_draft_fk",
+      columns: [table.slotId, table.draftId],
+      foreignColumns: [draftTeamSlots.id, draftTeamSlots.draftId],
+    }).onDelete("cascade"),
+    poolEntryFk: foreignKey({
+      name: "draft_pick_pool_entry_draft_fk",
+      columns: [table.poolEntryId, table.draftId],
+      foreignColumns: [draftPoolEntries.id, draftPoolEntries.draftId],
+    }).onDelete("cascade"),
+    pickedByFk: foreignKey({
+      name: "draft_pick_picked_by_fk",
+      columns: [table.pickedBy],
+      foreignColumns: [users.id],
+    }).onDelete("set null"),
+    draftPickNoUnique: uniqueIndex("draft_pick_draft_pick_no_unique").on(
+      table.draftId,
+      table.pickNo
+    ),
+    draftPoolEntryUnique: uniqueIndex("draft_pick_draft_pool_entry_unique").on(
+      table.draftId,
+      table.poolEntryId
+    ),
+  })
+)
+
+export type DraftPickRow = typeof draftPicks.$inferSelect
+
+/**
+ * Append-only log of what happened in a draft, written in the same
+ * transaction as the change it records. `seq` gives a total order (it drives
+ * `?since=` catch-up). `actor_user_id` has no foreign key so a row can be
+ * anonymised (set to NULL) when a user is erased.
+ */
+export const draftEvents = createTable(
+  "draft_event",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    seq: bigint("seq", { mode: "number" }).generatedAlwaysAsIdentity().notNull(),
+    draftId: uuid("draft_id").notNull(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    type: text("type").notNull(),
+    actorUserId: uuid("actor_user_id"),
+    payload: jsonb("payload")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+  },
+  (table) => ({
+    draftFk: foreignKey({
+      name: "draft_event_draft_fk",
+      columns: [table.draftId],
+      foreignColumns: [drafts.id],
+    }).onDelete("cascade"),
+    seqUnique: uniqueIndex("draft_event_seq_unique").on(table.seq),
+    draftSeqIdx: index("draft_event_draft_seq_idx").on(table.draftId, table.seq),
+  })
+)
+
+export type DraftEventRow = typeof draftEvents.$inferSelect

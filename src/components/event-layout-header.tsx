@@ -6,9 +6,11 @@ import { getUserClans } from "@/app/actions/clan"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { DraftEntryLink } from "@/components/draft/draft-entry-link"
 import { EventHeaderActions } from "@/components/event-header-actions"
 import { EventRulesSheet } from "@/components/event-rules-sheet"
 import { getEventCapabilities } from "@/server/authz"
+import { getDraftSummary } from "@/server/draft/queries"
 import { getEventById } from "@/server/queries/events"
 import { getNow } from "@/lib/now"
 
@@ -34,10 +36,12 @@ export async function EventLayoutHeader({ eventId }: { eventId: string }) {
     userClans,
     pendingRegistrationsCount,
     rules,
+    draftSummary,
   ] = await Promise.all([
     getUserClans(),
     getPendingRegistrationCount(eventId),
     getEventRules(eventId),
+    capabilities.canViewDraft ? getDraftSummary(eventId) : Promise.resolve(null),
   ])
 
   const now = getNow()
@@ -82,6 +86,12 @@ export async function EventLayoutHeader({ eventId }: { eventId: string }) {
       </div>
 
       <div className="flex items-center gap-2">
+        <DraftEntryLink
+          eventId={event.id}
+          status={draftSummary?.status ?? null}
+          canView={capabilities.canViewDraft}
+          canManage={capabilities.canManageDraft}
+        />
         <EventRulesSheet
           eventId={event.id}
           initialRules={rules}

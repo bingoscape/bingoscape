@@ -43,6 +43,15 @@ export interface EventCapabilities {
   canAssignClan: boolean
   canManageRules: boolean
   canDeleteEvent: boolean
+  /** Opens the team draft room (every member). */
+  canViewDraft: boolean
+  /** Sets up, starts, pauses, undoes and applies the team draft. */
+  canManageDraft: boolean
+  /**
+   * Leads a Team, so may pick when it is that Team's turn. Whose turn it is
+   * is a draft state; the server decides, this only shows the controls.
+   */
+  canPick: boolean
 
   /** Roles this actor may grant, for a role select. */
   assignableRoles: EventRole[]
@@ -80,6 +89,12 @@ export function computeCapabilities(
     canAssignClan: granted["event:assign-clan"],
     canManageRules: granted["event:manage-rules"],
     canDeleteEvent: granted["event:delete"],
+    canViewDraft: granted["draft:view"],
+    canManageDraft: granted["draft:manage"],
+    canPick:
+      actor?.teams.some((team) =>
+        can(actor, "draft:pick", { teamId: team.teamId })
+      ) ?? false,
 
     assignableRoles: EVENT_ROLES.filter((newRole) =>
       can(actor, "participant:set-role", { newRole })

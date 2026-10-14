@@ -38,6 +38,11 @@ export const RATE_LIMITS = {
   wiseOldMan: { limit: 20, windowMs: MINUTE },
   /** `POST /api/runelite/auth` (unauthenticated key check), per client IP. */
   runeliteAuth: { limit: 30, windowMs: MINUTE },
+  /**
+   * Draft picks (`makePick`, `forcePick`), per user. A captain picks once per
+   * turn; this only stops a script from hammering the row lock.
+   */
+  draftPick: { limit: 60, windowMs: MINUTE },
 } as const satisfies Record<string, RateLimitPolicy>
 
 export type RateLimitPolicyName = keyof typeof RATE_LIMITS

@@ -195,6 +195,40 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
   [`${A}team.ts#assignParticipantToTeam`]: perm("participant:assign-team"),
   [`${A}team.ts#getCurrentTeamForUser`]: auth("the caller's own Team"),
   [`${A}team.ts#getTeamsByEventId`]: read("Event content scope"),
+  // --- team draft (epic #214) -------------------------------------------
+  [`${A}draft.ts#createDraft`]: perm("draft:manage"),
+  [`${A}draft.ts#startDraft`]: perm(
+    "draft:manage",
+    "Event derived from the draft"
+  ),
+  [`${A}draft.ts#pauseDraft`]: perm(
+    "draft:manage",
+    "Event derived from the draft"
+  ),
+  [`${A}draft.ts#resumeDraft`]: perm(
+    "draft:manage",
+    "Event derived from the draft"
+  ),
+  [`${A}draft.ts#cancelDraft`]: perm(
+    "draft:manage",
+    "Event derived from the draft"
+  ),
+  [`${A}draft.ts#makePick`]: perm(
+    ["draft:view", "draft:pick"],
+    "enforced by performPick (src/server/draft/core.ts): draft:pick is checked against the Team of the on-turn slot under the draft row lock; Event derived from the draft"
+  ),
+  [`${A}draft.ts#forcePick`]: perm(
+    "draft:manage",
+    "a manager picks for the on-turn captain; Event derived from the draft"
+  ),
+  [`${A}draft.ts#undoPick`]: perm(
+    "draft:manage",
+    "managers only; Event derived from the draft"
+  ),
+  [`${A}draft.ts#applyDraft`]: perm(
+    "draft:manage",
+    "Event derived from the draft; writes team_members through addTeamMembers"
+  ),
   [`${A}team-balancing.ts#generateBalancedTeams`]: perm("team:manage"),
   [`${A}team-balancing.ts#calculateTeamBalanceMetrics`]: perm("stats:read"),
   [`${A}team-balancing.ts#canUseBalancedGeneration`]: perm(
@@ -392,6 +426,10 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
     kind: "secret",
     reason: "Bearer CRON_SECRET, fail closed when unset",
   },
+  [`${R}events/[id]/draft/state/route.ts#GET`]: perm(
+    "draft:view",
+    "Event members only; 401 / 404 / 403 answered by the route itself (src/proxy.ts does not protect /api)"
+  ),
   [`${R}events/invite/[inviteCode]/route.ts#GET`]: pub(
     "the invite code is the capability; returns the join card of the Event"
   ),

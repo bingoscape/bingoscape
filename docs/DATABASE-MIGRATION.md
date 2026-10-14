@@ -375,6 +375,24 @@ Without `CRON_SECRET` the route answers `401` and the script reports that it can
 
 **Ownership rules the app now enforces** (all in `src/server/authz/membership.ts`): an Event and a Clan always keep an admin; the Event creator and the Clan owner can be neither demoted nor removed (transfer ownership first); nobody grants or adds a role above their own; deleting an Event, granting the admin role and transferring ownership are owner-only. For an Event whose creator account is gone (`creator_id` is null), its oldest admin acts as the owner for the owner-only actions. Existing data that already violates an invariant is not changed; the reconciliation reports it (for example `events_without_admin`, `creator_role_conflicts`).
 
+## Team draft rollout (migration `0041_team_draft`)
+
+Team draft 1/4 (epic #214, issue #215). Expand-only and compatible with the previous app version (rolling the app image back is safe; the database is not reverted). Every statement is idempotent, so re-running the file is a no-op. `teams`, `team_members` and every other existing table are untouched; a test (`src/server/__tests__/draft-migration.test.ts`) checks that only the five new tables appear.
+
+| Table | Purpose |
+| ----- | ------- |
+| `draft` | One draft per Event: `status`, order, rounds, pick timer settings, `current_pick_no`, `version`, `seed`. A partial unique index allows one non-cancelled draft per Event; `(id, event_id)` is unique so the child tables can reference both. |
+| `draft_team_slot` | One captain's place in the order, and the Team (`team_id`, set when the draft starts). |
+| `draft_pool_entry` | A player of the frozen pool with the rating snapshot (`rating_source` = `team_balancing_v1`). |
+| `draft_pick` | A pick. Unique `(draft_id, pick_no)` and `(draft_id, pool_entry_id)`; composite foreign keys keep the slot and the pool entry inside the pick's draft. |
+| `draft_event` | Append-only log with an identity `seq`, written in the same transaction as the change it records. |
+
+Enumerated columns are `text` with CHECK constraints (status, order type, timeout behaviour, auto-pick rule, pool status, ranges); drizzle-kit 0.24 does not emit CHECKs, so they are added by hand at the end of the file. References to users are `ON DELETE SET NULL` (a draft survives the erasure of an account); `draft_event.actor_user_id` has no foreign key at all so a row can be anonymised.
+
+**Compatibility.** Nothing reads or writes these tables before the new app runs, and the new app only writes `team_members` through `src/server/authz/team-membership.ts`, with `event_id` set (the same as every other writer since 0038). The previous app version keeps inserting `team_members` without `event_id`; the draft's "already on a Team" check joins through `teams` for that reason.
+
+**Rollback.** The app image can be rolled back freely. A draft that is `in_progress` then simply sits there (nobody can pick); its Teams and captain memberships stay. Cancel it from the new version, or delete the Teams by hand. The tables can stay empty and unused indefinitely.
+
 ## RBAC 7/8 rollout (migration `0040_credential_session_hygiene`)
 
 Phase 7 of the RBAC consolidation (epic #183, issue #190): credential and session hygiene. Add-first and compatible with the previous app version (rolling the app image back is safe; the database is not reverted). Every statement is idempotent.
