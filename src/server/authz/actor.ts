@@ -15,6 +15,14 @@ import {
   teams,
 } from "@/server/db/schema"
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Ids reach the database as uuid; anything else cannot match a row. */
+export function isUuid(value: unknown): value is string {
+  return typeof value === "string" && UUID_PATTERN.test(value)
+}
+
 /** The admin participant with the oldest row, or null when there is none. */
 export async function oldestAdminId(eventId: string): Promise<string | null> {
   const [row] = await db
@@ -38,9 +46,94 @@ export type EventActorLookup =
   | { status: "not-found" }
 
 /**
- * Loads the signed-in user's standing in an Event with one joined query: the
- * Event creator, the participant row and the Team memberships. The creator
- * counts as admin (normalised in `buildEventActor`, nowhere else).
+ * Loads one user's standing in an Event with one joined query: the Event
+ * creator, the participant row and the Team memberships. The creator counts as
+ * admin (normalised in `buildEventActor`, nowhere else). Not cached and not tied
+ * to the session: `getEventActor` wraps it for the signed-in user, `getApiActor`
+ * for the owner of an API key.
+ */
+export async function loadEventActor(
+  userId: string,
+  eventId: string
+): Promise<Exclude<EventActorLookup, { status: "unauthenticated" }>> {
+  // A malformed id (a client may send anything) cannot match an Event; fail
+  // closed instead of letting the database reject the cast.
+  if (!isUuid(eventId)) return { status: "not-found" }
+
+  const myTeams = db
+    .select({
+      teamId: teamMembers.teamId,
+      isLeader: teamMembers.isLeader,
+      eventId: teams.eventId,
+    })
+    .from(teamMembers)
+    .innerJoin(teams, eq(teams.id, teamMembers.teamId))
+    .where(and(eq(teamMembers.userId, userId), eq(teams.eventId, eventId)))
+    .as("my_teams")
+
+  const rows = await db
+    .select({
+      creatorId: events.creatorId,
+      participantRole: eventParticipants.role,
+      teamId: myTeams.teamId,
+      isLeader: myTeams.isLeader,
+    })
+    .from(events)
+    .leftJoin(
+      eventParticipants,
+      and(
+        eq(eventParticipants.eventId, events.id),
+        eq(eventParticipants.userId, userId)
+      )
+    )
+    .leftJoin(myTeams, eq(myTeams.eventId, events.id))
+    .where(eq(events.id, eventId))
+
+  const first = rows[0]
+  if (!first) return { status: "not-found" }
+
+  // The joins can repeat a Team or the participant row; collapse them.
+  const teamsById = new Map<string, boolean>()
+  let participantRole: EventRole | null = null
+  for (const row of rows) {
+    if (row.teamId !== null) {
+      teamsById.set(
+        row.teamId,
+        (teamsById.get(row.teamId) ?? false) || (row.isLeader ?? false)
+      )
+    }
+    if (
+      row.participantRole !== null &&
+      (participantRole === null ||
+        EVENT_ROLE_RANK[row.participantRole] >
+          EVENT_ROLE_RANK[participantRole])
+    ) {
+      participantRole = row.participantRole
+    }
+  }
+
+  // An Event whose creator account is gone is owned by its oldest admin.
+  const ownerFallbackId =
+    first.creatorId === null ? await oldestAdminId(eventId) : null
+
+  return {
+    status: "ok",
+    actor: buildEventActor({
+      userId,
+      eventId,
+      creatorId: first.creatorId,
+      ownerFallbackId,
+      participantRole,
+      teams: [...teamsById].map(([teamId, isLeader]) => ({
+        teamId,
+        isLeader,
+      })),
+    }),
+  }
+}
+
+/**
+ * The signed-in user's standing in an Event.
  *
  * Wrapped in React `cache()`, so within one request every guard, resolver and
  * component that asks about the same Event shares one lookup. A database error
@@ -51,77 +144,7 @@ export const getEventActor = cache(
     const session = await getServerAuthSession()
     const userId = session?.user?.id
     if (!userId) return { status: "unauthenticated" }
-
-    const myTeams = db
-      .select({
-        teamId: teamMembers.teamId,
-        isLeader: teamMembers.isLeader,
-        eventId: teams.eventId,
-      })
-      .from(teamMembers)
-      .innerJoin(teams, eq(teams.id, teamMembers.teamId))
-      .where(and(eq(teamMembers.userId, userId), eq(teams.eventId, eventId)))
-      .as("my_teams")
-
-    const rows = await db
-      .select({
-        creatorId: events.creatorId,
-        participantRole: eventParticipants.role,
-        teamId: myTeams.teamId,
-        isLeader: myTeams.isLeader,
-      })
-      .from(events)
-      .leftJoin(
-        eventParticipants,
-        and(
-          eq(eventParticipants.eventId, events.id),
-          eq(eventParticipants.userId, userId)
-        )
-      )
-      .leftJoin(myTeams, eq(myTeams.eventId, events.id))
-      .where(eq(events.id, eventId))
-
-    const first = rows[0]
-    if (!first) return { status: "not-found" }
-
-    // The joins can repeat a Team or the participant row; collapse them.
-    const teamsById = new Map<string, boolean>()
-    let participantRole: EventRole | null = null
-    for (const row of rows) {
-      if (row.teamId !== null) {
-        teamsById.set(
-          row.teamId,
-          (teamsById.get(row.teamId) ?? false) || (row.isLeader ?? false)
-        )
-      }
-      if (
-        row.participantRole !== null &&
-        (participantRole === null ||
-          EVENT_ROLE_RANK[row.participantRole] >
-            EVENT_ROLE_RANK[participantRole])
-      ) {
-        participantRole = row.participantRole
-      }
-    }
-
-    // An Event whose creator account is gone is owned by its oldest admin.
-    const ownerFallbackId =
-      first.creatorId === null ? await oldestAdminId(eventId) : null
-
-    return {
-      status: "ok",
-      actor: buildEventActor({
-        userId,
-        eventId,
-        creatorId: first.creatorId,
-        ownerFallbackId,
-        participantRole,
-        teams: [...teamsById].map(([teamId, isLeader]) => ({
-          teamId,
-          isLeader,
-        })),
-      }),
-    }
+    return loadEventActor(userId, eventId)
   }
 )
 

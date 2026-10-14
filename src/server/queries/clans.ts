@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm"
+import { isManagerRole } from "@/lib/authz/roles"
 
 import { db } from "@/server/db"
 import {
@@ -339,7 +340,7 @@ export async function getClanEventRows(
     const participant = event.eventParticipants[0]
     const role: EventRole =
       event.creatorId === userId ? "admin" : (participant?.role ?? "participant")
-    const isManager = role === "admin" || role === "management"
+    const isManager = isManagerRole(role)
     const team = teamByEvent.get(event.id)
 
     const eventData: EventData = {

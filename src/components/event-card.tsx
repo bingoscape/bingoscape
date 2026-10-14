@@ -72,7 +72,11 @@ export function EventCard({
   const handleRequestSubmit = async () => {
     setIsSubmitting(true)
     try {
-      await requestToJoinEvent(eventData.event.id, requestMessage)
+      const result = await requestToJoinEvent(
+        eventData.event.id,
+        requestMessage
+      )
+      if (!result.success) throw new Error(result.error)
       toast({
         title: "Request submitted",
         description: "Your registration request has been submitted for review.",

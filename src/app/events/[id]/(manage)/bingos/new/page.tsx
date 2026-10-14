@@ -16,6 +16,7 @@ import { getServerAuthSession } from "@/server/auth"
 import { type UUID } from "crypto"
 import getRandomFrog from "@/lib/getRandomFrog"
 import { getEventById } from "@/server/queries/events"
+import { hasPermission } from "@/server/authz"
 
 async function createBingo(formData: FormData) {
   "use server"
@@ -70,7 +71,7 @@ export default async function Page(props: { params: Promise<{ id: UUID }> }) {
 
   const data = await getEventById(params.id)
 
-  if (!data || !(data.userRole === "admin" || data.userRole === "management")) {
+  if (!data || !(await hasPermission(data.event.id, "board:manage"))) {
     notFound()
   }
 

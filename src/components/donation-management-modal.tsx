@@ -103,12 +103,13 @@ export function DonationManagementModal({
     }
 
     try {
-      await addParticipantDonation(
+      const added = await addParticipantDonation(
         eventId,
         participantId,
         Number(newDonation.amount),
         newDonation.description
       )
+      if (!added.success) throw new Error(added.error)
 
       setNewDonation({ amount: "", description: "" })
       setIsAddingDonation(false)
@@ -136,12 +137,13 @@ export function DonationManagementModal({
     description: string | null
   ) => {
     try {
-      await updateParticipantDonation(
+      const updated = await updateParticipantDonation(
         eventId,
         donation.id,
         amount,
         description ?? ""
       )
+      if (!updated.success) throw new Error(updated.error)
 
       setEditingDonation(null)
       await fetchDonations()
@@ -168,7 +170,8 @@ export function DonationManagementModal({
     }
 
     try {
-      await removeParticipantDonation(eventId, donationId)
+      const removed = await removeParticipantDonation(eventId, donationId)
+      if (!removed.success) throw new Error(removed.error)
 
       await fetchDonations()
       onDonationsUpdated()

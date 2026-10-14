@@ -25,16 +25,17 @@ import {
   resolveInviteState,
   type ClanRole,
 } from "@/lib/clan"
-import { getUserRole } from "./events"
+import { authorize, denial, type ActionResult } from "@/server/authz"
 
 /**
  * Clan server actions. This file is the single source of truth for clan
  * mutations; read models for the clan pages live in `@/server/queries/clans`
  * (not server actions, so they are not callable from the browser).
  *
- * Mutations return `{ success, error? }` instead of throwing, except
- * `getUserClans` / `getClanMembersForEvent`, whose existing callers rely on
- * the throwing behaviour.
+ * Mutations return `{ success, error? }` instead of throwing; `getUserClans`
+ * returns an empty list for a signed-out caller. Clan roles are a separate
+ * ladder from Event roles (`@/lib/clan`); the Event permission checks live in
+ * `@/server/authz`.
  */
 
 export type ClanActionResult<T extends object = object> =
@@ -75,7 +76,9 @@ export async function createClan(
       const existingMainClan = await tx
         .select()
         .from(clanMembers)
-        .where(and(eq(clanMembers.userId, userId), eq(clanMembers.isMain, true)))
+        .where(
+          and(eq(clanMembers.userId, userId), eq(clanMembers.isMain, true))
+        )
         .limit(1)
 
       const [created] = await tx
@@ -126,9 +129,7 @@ const INVITE_ERRORS = {
  * only way into a clan. Everything happens in one transaction and the use is
  * claimed with a conditional UPDATE, so a limited invite can't be overspent.
  */
-export async function joinClanWithInvite(
-  rawCode: string
-): Promise<
+export async function joinClanWithInvite(rawCode: string): Promise<
   | { success: true; clanId: string; clanName: string; isMain: boolean }
   | {
       success: false
@@ -474,10 +475,9 @@ export async function updateClanInviteLabel(
 }
 
 export async function getUserClans() {
+  // Deliberate: signed out reads as no Clans (see guards.ts).
   const session = await getServerAuthSession()
-  if (!session || !session.user) {
-    throw new Error("You must be logged in to view your clans")
-  }
+  if (!session || !session.user) return []
 
   const userClans = await db
     .select({
@@ -503,17 +503,22 @@ export async function getUserClans() {
  * Get clan members that can be added to an event
  * Excludes members who are already event participants
  */
-export async function getClanMembersForEvent(eventId: string) {
-  const session = await getServerAuthSession()
-  if (!session?.user) {
-    throw new Error("Not authenticated")
-  }
-
-  // Check user has admin/management role for the event
-  const userRole = await getUserRole(eventId)
-  if (!userRole || !["admin", "management"].includes(userRole)) {
-    throw new Error("Not authorized to manage event participants")
-  }
+export async function getClanMembersForEvent(eventId: string): Promise<
+  ActionResult<{
+    members: {
+      id: string
+      name: string | null
+      runescapeName: string | null
+      image: string | null
+      role: ClanRole
+    }[]
+  }>
+> {
+  // Adding participants is a manager action (`participant:add`).
+  const allowed = await authorize(eventId, "participant:add", {
+    newRole: "participant",
+  })
+  if (!allowed.success) return denial(allowed)
 
   // Get the event and its clan
   const event = await db.query.events.findFirst({
@@ -524,12 +529,15 @@ export async function getClanMembersForEvent(eventId: string) {
     },
   })
 
-  if (!event) {
-    throw new Error("Event not found")
-  }
+  if (!event)
+    return { success: false, error: "Event not found", code: "NOT_FOUND" }
 
   if (!event.clanId) {
-    throw new Error("Event is not associated with a clan")
+    return {
+      success: false,
+      error: "Event is not associated with a clan",
+      code: "INVALID",
+    }
   }
 
   // Get clan members who are not already event participants
@@ -563,5 +571,5 @@ export async function getClanMembersForEvent(eventId: string) {
       END`
     )
 
-  return availableMembers
+  return { success: true, members: availableMembers }
 }

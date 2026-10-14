@@ -378,7 +378,11 @@ export function ParticipantsTab({
     if (!participantToRemove) return
 
     try {
-      await removeParticipantFromEvent(eventId, participantToRemove.id)
+      const removed = await removeParticipantFromEvent(
+        eventId,
+        participantToRemove.id
+      )
+      if (!removed.success) throw new Error(removed.error)
       const updatedParticipants = participants.filter(
         (p) => p.id !== participantToRemove.id
       )
@@ -475,11 +479,12 @@ export function ParticipantsTab({
 
   const handleRoleChange = async (participantId: string, newRole: string) => {
     try {
-      await updateParticipantRole(
+      const changed = await updateParticipantRole(
         eventId,
         participantId,
         newRole as "admin" | "management" | "participant"
       )
+      if (!changed.success) throw new Error(changed.error)
       const updatedParticipants = participants.map((p) =>
         p.id === participantId
           ? { ...p, role: newRole as "admin" | "management" | "participant" }
@@ -495,7 +500,10 @@ export function ParticipantsTab({
       console.error("Error updating role:", error)
       toast({
         title: "Error",
-        description: "Failed to update participant role",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to update participant role",
         variant: "destructive",
       })
     }
@@ -508,6 +516,7 @@ export function ParticipantsTab({
         participantId,
         hasPaid
       )
+      if (!result.success) throw new Error(result.error)
       const updatedParticipants = participants.map((p) =>
         p.id === participantId ? { ...p, buyIn: result.buyInAmount || 0 } : p
       )
@@ -537,7 +546,12 @@ export function ParticipantsTab({
     teamId: string | null
   ) => {
     try {
-      await assignParticipantToTeam(eventId, participantId, teamId!)
+      const assigned = await assignParticipantToTeam(
+        eventId,
+        participantId,
+        teamId!
+      )
+      if (!assigned.success) throw new Error(assigned.error)
       const updatedParticipants = await getEventParticipants(eventId)
       setParticipants(updatedParticipants)
       onParticipantsChange(updatedParticipants)
@@ -551,7 +565,10 @@ export function ParticipantsTab({
       console.error("Error assigning team:", error)
       toast({
         title: "Error",
-        description: "Failed to update participant's team",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to update participant's team",
         variant: "destructive",
       })
     }
@@ -601,11 +618,14 @@ export function ParticipantsTab({
     if (selectedParticipants.size === 0) return
 
     try {
-      await Promise.all(
+      const results = await Promise.all(
         Array.from(selectedParticipants).map((id) =>
           removeParticipantFromEvent(eventId, id)
         )
       )
+      if (results.some((result) => !result.success)) {
+        throw new Error("Failed to remove some participants")
+      }
       const updatedParticipants = participants.filter(
         (p) => !selectedParticipants.has(p.id)
       )
@@ -625,7 +645,7 @@ export function ParticipantsTab({
     }
   }
 
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- Complex filtering with multiple dependencies
+   
   const filteredAndSortedParticipants = useMemo(() => {
     const filtered = participants.filter((p) => {
       const matchesSearch = p.runescapeName

@@ -5,7 +5,7 @@ import { authOptions } from "@/server/auth"
 import { db } from "@/server/db"
 import {
   AuthzError,
-  requireBingoAdminForSubmission,
+  requirePermissionForSubmission,
   requireSubmissionCommentReader,
 } from "@/server/authz"
 import { submissionComments, submissions, users } from "@/server/db/schema"
@@ -26,7 +26,7 @@ const createCommentSchema = z.object({
  */
 async function authorizeWrite(submissionId: string): Promise<NextResponse | null> {
   try {
-    await requireBingoAdminForSubmission(submissionId)
+    await requirePermissionForSubmission(submissionId, "submission:comment")
     return null
   } catch (error) {
     return authzFailure(error)
@@ -36,7 +36,7 @@ async function authorizeWrite(submissionId: string): Promise<NextResponse | null
 /** Unknown and forbidden Submissions look the same: no enumeration. */
 function authzFailure(error: unknown): NextResponse {
   if (!(error instanceof AuthzError)) throw error
-  const status = error.message === "Unauthorized" ? 401 : 404
+  const status = error.code === "UNAUTHENTICATED" ? 401 : 404
   return NextResponse.json({ error: "Not found" }, { status })
 }
 

@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/card"
 import Link from "next/link"
 import Image from "next/image"
 import getRandomFrog from "@/lib/getRandomFrog"
+import { toast } from "@/hooks/use-toast"
 
 interface Notification {
   id: string
@@ -56,7 +57,14 @@ export function NotificationBell({ userId }: { userId: string }) {
   }, [])
 
   async function handleNotificationClick(notificationId: string) {
-    await markNotificationAsRead(notificationId)
+    const result = await markNotificationAsRead(notificationId)
+    if (!result.success) {
+      toast({
+        title: "Error",
+        description: result.error,
+        variant: "destructive",
+      })
+    }
     fetchNotifications().catch((e) => console.error(e))
   }
 

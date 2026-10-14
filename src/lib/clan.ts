@@ -18,9 +18,14 @@ export function isClanRole(value: unknown): value is ClanRole {
   return CLAN_ROLES.includes(value as ClanRole)
 }
 
+/** Admins and managers of a Clan (a Clan role, not an Event role). */
+export function isClanManager(role: ClanRole | null | undefined): boolean {
+  return role === "admin" || role === "management"
+}
+
 /** Admins and managers can create, edit and revoke invite links. */
 export function canManageInvites(role: ClanRole | null | undefined): boolean {
-  return role === "admin" || role === "management"
+  return isClanManager(role)
 }
 
 /** Only admins can change another member's role. */

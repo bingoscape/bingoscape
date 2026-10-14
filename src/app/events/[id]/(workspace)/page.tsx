@@ -1,3 +1,4 @@
+import { hasPermission } from "@/server/authz"
 import { Suspense } from "react"
 import { cookies } from "next/headers"
 import { notFound } from "next/navigation"
@@ -76,8 +77,10 @@ export default async function EventWorkspacePage(props: {
     return null
   }
 
-  const isManagement = userRole === "admin" || userRole === "management"
-  const isAdmin = userRole === "admin"
+  const [isManagement, isAdmin] = await Promise.all([
+    hasPermission(event.id, "board:manage"),
+    hasPermission(event.id, "event:update"),
+  ])
 
   const { bingo, effectiveTeamId } = resolveWorkspaceSelection({
     bingos: event.bingos,

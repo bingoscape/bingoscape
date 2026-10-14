@@ -1,5 +1,6 @@
-import { and, eq, or } from "drizzle-orm"
+import { and, eq, inArray } from "drizzle-orm"
 
+import { MANAGER_ROLES } from "@/lib/authz/roles"
 import { db } from "@/server/db"
 import { eventParticipants, notifications } from "@/server/db/schema"
 
@@ -23,10 +24,7 @@ export async function createNotification(
     .where(
       and(
         eq(eventParticipants.eventId, eventId),
-        or(
-          eq(eventParticipants.role, "admin"),
-          eq(eventParticipants.role, "management")
-        )
+        inArray(eventParticipants.role, [...MANAGER_ROLES])
       )
     )
 

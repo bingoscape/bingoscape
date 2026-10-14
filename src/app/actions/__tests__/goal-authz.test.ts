@@ -3,7 +3,8 @@
  */
 import { db } from "@/server/db"
 import { getServerAuthSession } from "@/server/auth"
-import { getEventRole } from "@/server/authz/actor"
+import { getEventActor } from "@/server/authz/actor"
+import { actorLookup } from "@/server/__tests__/helpers/mock-actor"
 import { canReadGoal, getTileReadAccess } from "@/server/authz/read"
 import { addGoalValue, deleteGoalValue, getGoalValues } from "@/app/actions/goals"
 import {
@@ -17,8 +18,12 @@ import {
 } from "@/app/actions/goal-groups"
 
 jest.mock("@/server/auth", () => ({ getServerAuthSession: jest.fn() }))
-// The role lookup is the seam: `getUserRole` delegates to the actor loader.
-jest.mock("@/server/authz/actor", () => ({ getEventRole: jest.fn() }))
+// The actor lookup is the seam: every guard resolves the caller through it.
+jest.mock("@/server/authz/actor", () => ({
+  getEventActor: jest.fn(),
+  getEventRole: jest.fn(),
+  isUuid: () => true,
+}))
 // The read policy has its own database-backed tests (read-policy.test.ts); here
 // it is the seam that decides whether a Tile is readable.
 jest.mock("@/server/authz/read", () => ({
@@ -60,7 +65,12 @@ jest.mock("@/server/db", () => {
 })
 
 const session = getServerAuthSession as jest.Mock
-const role = getEventRole as jest.Mock
+const actor = getEventActor as jest.Mock
+/** The caller's standing in the Event, as the actor loader reports it. */
+const role = {
+  mockResolvedValue: (r: string | null) =>
+    actor.mockResolvedValue(actorLookup(r)),
+}
 const mockDb = db as unknown as {
   query: Record<string, { findFirst: jest.Mock; findMany: jest.Mock }>
   insert: jest.Mock
@@ -187,7 +197,7 @@ describe("goal mutations when the caller is not signed in", () => {
     session.mockResolvedValue(null)
     role.mockResolvedValue(null)
     const result = await addGoalValue("goal-1", 1, "x")
-    expect(result).toEqual({ success: false, error: "Unauthorized" })
+    expect(result).toMatchObject({ success: false, error: "Unauthorized" })
     expectNoWrites()
   })
 })
@@ -202,7 +212,7 @@ describe.each([["admin"], ["management"]])(
     it("addGoalValue succeeds and checks the Event derived from the Goal", async () => {
       const result = await addGoalValue("goal-1", 5, "five")
       expect(result.success).toBe(true)
-      expect(role).toHaveBeenCalledWith("event-1")
+      expect(actor).toHaveBeenCalledWith("event-1")
       expect(mockDb.transaction).toHaveBeenCalled()
     })
 

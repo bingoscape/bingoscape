@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm"
 
 import { db } from "@/server/db"
-import { isEventManager } from "@/server/authz/guards"
+import { hasPermission } from "@/server/authz/guards"
 import { isBlindBoard } from "@/server/blind-board"
 import { bingos, tiles } from "@/server/db/schema"
 
@@ -32,7 +32,7 @@ export async function isBingoBlindForViewer(
   })
   if (!blindForNonManagers) return false
 
-  return !(await isEventManager(bingo.eventId))
+  return !(await hasPermission(bingo.eventId, "board:view-secret"))
 }
 
 /** Like `isBingoBlindForViewer`, starting from a Tile. Unknown Tiles are not blind. */

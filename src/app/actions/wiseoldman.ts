@@ -2,6 +2,7 @@
 
 import { WOMClient } from "@wise-old-man/utils"
 import { logger } from "@/lib/logger"
+import { getServerAuthSession } from "@/server/auth"
 
 // Initialize WiseOldMan client with optional API key for higher rate limits
 const womClient = new WOMClient({
@@ -34,6 +35,10 @@ export interface FetchWOMDataResult {
 export async function fetchPlayerDataFromWOM(
   runescapeName: string
 ): Promise<FetchWOMDataResult> {
+  // A signed-in user only: the endpoint spends the server's WiseOldMan quota.
+  if (!(await getServerAuthSession())?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
   if (!runescapeName || runescapeName.trim() === "") {
     return {
       success: false,
@@ -157,6 +162,9 @@ export async function fetchPlayerDataFromWOM(
 export async function updatePlayerOnWOM(
   runescapeName: string
 ): Promise<FetchWOMDataResult> {
+  if (!(await getServerAuthSession())?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
   if (!runescapeName || runescapeName.trim() === "") {
     return {
       success: false,
@@ -205,6 +213,9 @@ export interface FetchWOMCompetitionResult {
 export async function fetchCompetitionFromWOM(
   competitionId: number
 ): Promise<FetchWOMCompetitionResult> {
+  if (!(await getServerAuthSession())?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
   try {
     const competition =
       await womClient.competitions.getCompetitionDetails(competitionId)

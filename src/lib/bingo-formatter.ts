@@ -6,10 +6,11 @@ import {
   goalGroups,
   goals,
   teamGoalProgress,
-  eventParticipants,
   type BingoType,
 } from "@/server/db/schema"
 import { eq, asc, and, inArray } from "drizzle-orm"
+import { can } from "@/lib/authz/policy"
+import { loadEventActor } from "@/server/authz/actor"
 import { applyBlindBoard, isBlindBoard } from "@/server/blind-board"
 import { getBattleshipTeamSummary } from "@/server/battleship"
 import { mapStatus } from "@/lib/statusMapping"
@@ -183,26 +184,19 @@ export interface BingoViewer {
 
 /** The event's start date and whether the viewer manages it. */
 async function loadEventViewerContext(eventId: string, userId: string) {
-  const [event, participant] = await Promise.all([
+  const [event, lookup] = await Promise.all([
     db.query.events.findFirst({
       where: eq(events.id, eventId),
-      columns: { startDate: true, creatorId: true },
+      columns: { startDate: true },
     }),
-    db.query.eventParticipants.findFirst({
-      where: and(
-        eq(eventParticipants.eventId, eventId),
-        eq(eventParticipants.userId, userId)
-      ),
-      columns: { role: true },
-    }),
+    loadEventActor(userId, eventId),
   ])
   if (!event) return null
   return {
     startDate: event.startDate,
+    // Hidden and Blind Tiles are for the Event's managers.
     isManager:
-      event.creatorId === userId ||
-      participant?.role === "admin" ||
-      participant?.role === "management",
+      lookup.status === "ok" && can(lookup.actor, "board:view-secret"),
   }
 }
 

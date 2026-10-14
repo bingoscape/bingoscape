@@ -191,8 +191,10 @@ describe("createBingo with the battleship type", () => {
   it("rejects events that already have more than two teams", async () => {
     await db.insert(teams).values({ eventId: fx.eventId, name: "Team C" })
     const result = await createBingo(boardForm(fx, { bingoType: "battleship" }))
-    expect(result.success).toBe(false)
-    expect(result.error).toMatch(/exactly 2 teams/)
+    expect(result).toMatchObject({
+      success: false,
+      error: expect.stringMatching(/exactly 2 teams/),
+    })
     expect(await findNewBoard(fx)).toBeUndefined()
   })
 
@@ -223,7 +225,7 @@ describe("updateBingo and the battleship type", () => {
   it("rejects changing a battleship board to another type", async () => {
     for (const type of ["standard", "progression"] as const) {
       const result = await updateBingo(fx.bingoId, data(type))
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         success: false,
         error: "A board cannot be changed to or from the battleship type",
       })
@@ -344,7 +346,7 @@ describe("updateBingo and the battleship type", () => {
           ...data(undefined),
           shipRules: newRules,
         })
-        expect(result).toEqual({
+        expect(result).toMatchObject({
           success: false,
           error: "Not a battleship board",
         })
@@ -376,8 +378,10 @@ describe("updateBingo and the battleship type", () => {
 describe("two-team rule", () => {
   it("blocks creating a third team in an event with a battleship board", async () => {
     const result = await createTeam(fx.eventId, "Team C")
-    expect(result.success).toBe(false)
-    expect(result.error).toMatch(/exactly 2 teams/)
+    expect(result).toMatchObject({
+      success: false,
+      error: expect.stringMatching(/exactly 2 teams/),
+    })
     const all = await db
       .select()
       .from(teams)

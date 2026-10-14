@@ -17,6 +17,7 @@ export const PERMISSIONS = [
   "event:manage-rules",
   "event:grant-admin",
   "event:transfer-ownership",
+  "event:override-registration",
   // Participants
   "participant:list",
   "participant:add",
@@ -24,6 +25,11 @@ export const PERMISSIONS = [
   "participant:assign-team",
   "participant:set-role",
   "registration:review",
+  // Statistics and player metadata
+  "stats:read",
+  "player-metadata:read",
+  "player-metadata:write",
+  "player-metadata:write-own",
   // Money
   "finance:read",
   "finance:write",
@@ -41,12 +47,14 @@ export const PERMISSIONS = [
   "submission:review",
   "submission:comment",
   "submission:read-comments",
+  "submission:create-on-behalf",
 ] as const
 
 export type Permission = (typeof PERMISSIONS)[number]
 
 const MEMBER_PERMISSIONS = [
   "event:view",
+  "player-metadata:write-own",
 ] as const satisfies readonly Permission[]
 
 const MANAGER_PERMISSIONS = [
@@ -56,6 +64,9 @@ const MANAGER_PERMISSIONS = [
   "participant:remove",
   "participant:assign-team",
   "registration:review",
+  "stats:read",
+  "player-metadata:read",
+  "player-metadata:write",
   "finance:read",
   "finance:write",
   "webhook:manage",
@@ -68,6 +79,7 @@ const MANAGER_PERMISSIONS = [
   "submission:review",
   "submission:comment",
   "submission:read-comments",
+  "submission:create-on-behalf",
 ] as const satisfies readonly Permission[]
 
 const ADMIN_PERMISSIONS = [
@@ -79,6 +91,7 @@ const ADMIN_PERMISSIONS = [
   "event:manage-rules",
   "event:grant-admin",
   "event:transfer-ownership",
+  "event:override-registration",
   "participant:set-role",
 ] as const satisfies readonly Permission[]
 

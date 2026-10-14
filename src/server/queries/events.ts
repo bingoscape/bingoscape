@@ -1,4 +1,5 @@
 import "server-only"
+import { isManagerRole } from "@/lib/authz/roles"
 
 import { cache } from "react"
 import { eq, and, asc, inArray, sql } from "drizzle-orm"
@@ -227,9 +228,7 @@ export async function getEvents(userId: string): Promise<EventData[]> {
     const managedEventIds = userEvents
       .filter(
         (e) =>
-          e.creatorId === userId ||
-          e.eventParticipants[0]?.role === "admin" ||
-          e.eventParticipants[0]?.role === "management"
+          e.creatorId === userId || isManagerRole(e.eventParticipants[0]?.role)
       )
       .map((e) => e.id)
 
@@ -375,8 +374,7 @@ export async function getEvents(userId: string): Promise<EventData[]> {
       const teamEvent = userEvents.find((e) => e.id === t.eventId)
       const isManager =
         teamEvent?.creatorId === userId ||
-        teamEvent?.eventParticipants[0]?.role === "admin" ||
-        teamEvent?.eventParticipants[0]?.role === "management"
+        isManagerRole(teamEvent?.eventParticipants[0]?.role)
       // Progress counts completions across every Board, so the total must too
       // (hidden Boards only count for managers).
       const totalTiles = (teamEvent?.bingos ?? [])
@@ -407,7 +405,7 @@ export async function getEvents(userId: string): Promise<EventData[]> {
       const totalDonations = donationsMap.get(event.id) ?? 0
       const totalPrizePool = basePrizePool + totalBuyIns + totalDonations
 
-      const isManager = role === "admin" || role === "management"
+      const isManager = isManagerRole(role)
 
       return {
         event: {

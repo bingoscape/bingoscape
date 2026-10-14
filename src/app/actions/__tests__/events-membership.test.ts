@@ -5,6 +5,7 @@
  * rolls back): owner-only operations, ownership transfer, and that joining,
  * creating, approving and removing leave a ledger row through the helper.
  */
+import { expectFailure } from "@/server/__tests__/helpers/expect-failure"
 import { and, eq } from "drizzle-orm"
 
 import {
@@ -167,9 +168,7 @@ describe("updateParticipantRole", () => {
     await withDb(async () => {
       const f = await seed()
       signInAs(f.id.admin)
-      await expect(
-        updateParticipantRole(f.eventId, f.id.player, "admin")
-      ).rejects.toThrow(/owner/i)
+      await expectFailure(updateParticipantRole(f.eventId, f.id.player, "admin"), /owner/i)
       expect(await roleOf(f.eventId, f.id.player)).toBe("participant")
 
       signInAs(f.id.owner)
@@ -187,9 +186,7 @@ describe("updateParticipantRole", () => {
     await withDb(async () => {
       const f = await seed()
       signInAs(f.id.admin)
-      await expect(
-        updateParticipantRole(f.eventId, f.id.owner, "participant")
-      ).rejects.toThrow("creator")
+      await expectFailure(updateParticipantRole(f.eventId, f.id.owner, "participant"), "creator")
     })
   })
 })

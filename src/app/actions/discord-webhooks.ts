@@ -1,9 +1,18 @@
 "use server"
 
-import { getServerAuthSession } from "@/server/auth"
 import { logger } from "@/lib/logger"
+import { getServerAuthSession } from "@/server/auth"
+import {
+  actionFailure,
+  authorize,
+  denial,
+  failure,
+  hasPermission,
+  type ActionFailure,
+  type ActionResult,
+} from "@/server/authz"
 import { db } from "@/server/db"
-import { discordWebhooks, eventParticipants, events } from "@/server/db/schema"
+import { discordWebhooks } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { testDiscordWebhook } from "@/lib/discord-webhook"
@@ -23,81 +32,29 @@ export interface DiscordWebhook {
 export async function getDiscordWebhooks(
   eventId: string
 ): Promise<DiscordWebhook[]> {
-  const session = await getServerAuthSession()
-  if (!session?.user) {
-    throw new Error("Not authenticated")
-  }
+  // Webhook URLs are secrets: managers only. Deliberate: a denial reads as an
+  // empty list (see guards.ts).
+  if (!(await hasPermission(eventId, "webhook:manage"))) return []
 
-  // Check if user has permission to view webhooks for this event
-  const event = await db.query.events.findFirst({
-    where: eq(events.id, eventId),
-    with: {
-      eventParticipants: {
-        where: eq(eventParticipants.userId, session.user.id),
-      },
-    },
-  })
-
-  if (!event) {
-    throw new Error("Event not found")
-  }
-
-  const userParticipant = event.eventParticipants[0]
-  const hasPermission =
-    event.creatorId === session.user.id ||
-    userParticipant?.role === "admin" ||
-    userParticipant?.role === "management"
-
-  if (!hasPermission) {
-    throw new Error("Insufficient permissions")
-  }
-
-  const webhooks = await db.query.discordWebhooks.findMany({
+  return db.query.discordWebhooks.findMany({
     where: eq(discordWebhooks.eventId, eventId),
     orderBy: [discordWebhooks.createdAt],
   })
-
-  return webhooks
 }
 
 export async function createDiscordWebhook(
   eventId: string,
   name: string,
   webhookUrl: string
-): Promise<{ success: boolean; error?: string; webhook?: DiscordWebhook }> {
-  const session = await getServerAuthSession()
-  if (!session?.user) {
-    return { success: false, error: "Not authenticated" }
-  }
+): Promise<ActionResult<{ webhook: DiscordWebhook }>> {
+  // Check permissions before anything leaves the server
+  const allowed = await authorize(eventId, "webhook:manage")
+  if (!allowed.success) return denial(allowed)
 
   try {
     // Validate webhook URL format
     if (!isDiscordWebhookUrl(webhookUrl)) {
-      return { success: false, error: "Invalid Discord webhook URL" }
-    }
-
-    // Check permissions before anything leaves the server
-    const event = await db.query.events.findFirst({
-      where: eq(events.id, eventId),
-      with: {
-        eventParticipants: {
-          where: eq(eventParticipants.userId, session.user.id),
-        },
-      },
-    })
-
-    if (!event) {
-      return { success: false, error: "Event not found" }
-    }
-
-    const userParticipant = event.eventParticipants[0]
-    const hasPermission =
-      event.creatorId === session.user.id ||
-      userParticipant?.role === "admin" ||
-      userParticipant?.role === "management"
-
-    if (!hasPermission) {
-      return { success: false, error: "Insufficient permissions" }
+      return failure("Invalid Discord webhook URL", "INVALID")
     }
 
     // Test the webhook
@@ -107,7 +64,7 @@ export async function createDiscordWebhook(
         { eventId, action: "createDiscordWebhook" },
         "Webhook test failed during creation"
       )
-      return { success: false, error: `Webhook test failed` }
+      return failure("Webhook test failed")
     }
 
     // Create the webhook
@@ -117,7 +74,7 @@ export async function createDiscordWebhook(
         eventId,
         name,
         webhookUrl,
-        createdBy: session.user.id,
+        createdBy: allowed.actor.userId,
         isActive: true,
       })
       .returning()
@@ -135,52 +92,47 @@ export async function createDiscordWebhook(
       { error, eventId, action: "createDiscordWebhook" },
       "Error creating Discord webhook"
     )
-    return { success: false, error: "Failed to create webhook" }
+    return actionFailure(error, "Failed to create webhook")
   }
+}
+
+/**
+ * Authorises `webhook:manage` for the Event that owns the webhook and loads the
+ * webhook. A missing webhook is NOT_FOUND; the Event is never taken from the
+ * client.
+ */
+async function authorizeWebhook(
+  webhookId: string
+): Promise<
+  | { success: true; webhook: typeof discordWebhooks.$inferSelect }
+  | ActionFailure
+> {
+  const session = await getServerAuthSession()
+  if (!session?.user) return failure("Not authenticated", "UNAUTHENTICATED")
+
+  const webhook = await db.query.discordWebhooks.findFirst({
+    where: eq(discordWebhooks.id, webhookId),
+  })
+  if (!webhook) return failure("Webhook not found", "NOT_FOUND")
+
+  const allowed = await authorize(webhook.eventId, "webhook:manage")
+  if (!allowed.success) return denial(allowed)
+  return { success: true, webhook }
 }
 
 export async function updateDiscordWebhook(
   webhookId: string,
   updates: { name?: string; webhookUrl?: string; isActive?: boolean }
-): Promise<{ success: boolean; error?: string }> {
-  const session = await getServerAuthSession()
-  if (!session?.user) {
-    return { success: false, error: "Not authenticated" }
-  }
-
+): Promise<ActionResult> {
   try {
-    // Get the webhook and check permissions
-    const webhook = await db.query.discordWebhooks.findFirst({
-      where: eq(discordWebhooks.id, webhookId),
-      with: {
-        event: {
-          with: {
-            eventParticipants: {
-              where: eq(eventParticipants.userId, session.user.id),
-            },
-          },
-        },
-      },
-    })
-
-    if (!webhook) {
-      return { success: false, error: "Webhook not found" }
-    }
-
-    const userParticipant = webhook.event.eventParticipants[0]
-    const hasPermission =
-      webhook.event.creatorId === session.user.id ||
-      userParticipant?.role === "admin" ||
-      userParticipant?.role === "management"
-
-    if (!hasPermission) {
-      return { success: false, error: "Insufficient permissions" }
-    }
+    const checked = await authorizeWebhook(webhookId)
+    if (!checked.success) return checked
+    const { webhook } = checked
 
     // If updating webhook URL, test it first
     if (updates.webhookUrl && updates.webhookUrl !== webhook.webhookUrl) {
       if (!isDiscordWebhookUrl(updates.webhookUrl)) {
-        return { success: false, error: "Invalid Discord webhook URL" }
+        return failure("Invalid Discord webhook URL", "INVALID")
       }
 
       const testResult = await testDiscordWebhook(updates.webhookUrl)
@@ -189,7 +141,7 @@ export async function updateDiscordWebhook(
           { webhookId, action: "updateDiscordWebhook" },
           "Webhook test failed during update"
         )
-        return { success: false, error: `Webhook test failed` }
+        return failure("Webhook test failed")
       }
     }
 
@@ -223,46 +175,17 @@ export async function updateDiscordWebhook(
       { error, webhookId, action: "updateDiscordWebhook" },
       "Error updating Discord webhook"
     )
-    return { success: false, error: "Failed to update webhook" }
+    return actionFailure(error, "Failed to update webhook")
   }
 }
 
 export async function deleteDiscordWebhook(
   webhookId: string
-): Promise<{ success: boolean; error?: string }> {
-  const session = await getServerAuthSession()
-  if (!session?.user) {
-    return { success: false, error: "Not authenticated" }
-  }
-
+): Promise<ActionResult> {
   try {
-    // Get the webhook and check permissions
-    const webhook = await db.query.discordWebhooks.findFirst({
-      where: eq(discordWebhooks.id, webhookId),
-      with: {
-        event: {
-          with: {
-            eventParticipants: {
-              where: eq(eventParticipants.userId, session.user.id),
-            },
-          },
-        },
-      },
-    })
-
-    if (!webhook) {
-      return { success: false, error: "Webhook not found" }
-    }
-
-    const userParticipant = webhook.event.eventParticipants[0]
-    const hasPermission =
-      webhook.event.creatorId === session.user.id ||
-      userParticipant?.role === "admin" ||
-      userParticipant?.role === "management"
-
-    if (!hasPermission) {
-      return { success: false, error: "Insufficient permissions" }
-    }
+    const checked = await authorizeWebhook(webhookId)
+    if (!checked.success) return checked
+    const { webhook } = checked
 
     // Delete the webhook
     await db.delete(discordWebhooks).where(eq(discordWebhooks.id, webhookId))
@@ -280,62 +203,27 @@ export async function deleteDiscordWebhook(
       { error, webhookId, action: "deleteDiscordWebhook" },
       "Error deleting Discord webhook"
     )
-    return { success: false, error: "Failed to delete webhook" }
+    return actionFailure(error, "Failed to delete webhook")
   }
 }
 
-export async function testWebhook(
-  webhookId: string
-): Promise<{ success: boolean; error?: string }> {
-  const session = await getServerAuthSession()
-  if (!session?.user) {
-    return { success: false, error: "Not authenticated" }
-  }
-
+export async function testWebhook(webhookId: string): Promise<ActionResult> {
   try {
-    const webhook = await db.query.discordWebhooks.findFirst({
-      where: eq(discordWebhooks.id, webhookId),
-      with: {
-        event: {
-          with: {
-            eventParticipants: {
-              where: eq(eventParticipants.userId, session.user.id),
-            },
-          },
-        },
-      },
-    })
+    const checked = await authorizeWebhook(webhookId)
+    if (!checked.success) return checked
 
-    if (!webhook) {
-      return { success: false, error: "Webhook not found" }
-    }
-
-    const userParticipant = webhook.event.eventParticipants[0]
-    const hasPermission =
-      webhook.event.creatorId === session.user.id ||
-      userParticipant?.role === "admin" ||
-      userParticipant?.role === "management"
-
-    if (!hasPermission) {
-      return { success: false, error: "Insufficient permissions" }
-    }
-
-    const success = await testDiscordWebhook(webhook.webhookUrl)
+    const success = await testDiscordWebhook(checked.webhook.webhookUrl)
     if (!success) {
       logger.warn({ webhookId, action: "testWebhook" }, "Webhook test failed")
-    } else {
-      logger.info(
-        { webhookId, action: "testWebhook" },
-        "Webhook test succeeded"
-      )
+      return failure("Failed to test webhook")
     }
-
-    return { success, error: "Failed to test webhook" }
+    logger.info({ webhookId, action: "testWebhook" }, "Webhook test succeeded")
+    return { success: true }
   } catch (error) {
     logger.error(
       { error, webhookId, action: "testWebhook" },
       "Error testing webhook"
     )
-    return { success: false, error: "Failed to test webhook" }
+    return actionFailure(error, "Failed to test webhook")
   }
 }

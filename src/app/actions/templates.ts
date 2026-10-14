@@ -66,7 +66,11 @@ export async function saveBingoAsTemplate(
   try {
     const exportedData = await exportBingoBoard(bingoId)
     if ("error" in exportedData) {
-      return { success: false, error: exportedData.error }
+      return {
+        success: false,
+        error: exportedData.error,
+        ...(exportedData.code ? { code: exportedData.code } : {}),
+      }
     }
 
     const summary = summarizeTemplate(exportedData)
@@ -91,7 +95,7 @@ export async function saveBingoAsTemplate(
     })
 
     revalidateTemplates()
-    return { success: true, templateId: template?.id }
+    return { success: true as const, templateId: template?.id }
   } catch (error) {
     logger.error({ error }, "Error saving template:", error)
     return { success: false, error: "Failed to save template" }
@@ -166,7 +170,7 @@ export async function updateTemplate(
           )
         )
 
-      return { success: true }
+      return { success: true as const }
     })
 
     if (result.success) revalidateTemplates(templateId)
@@ -206,7 +210,7 @@ export async function deleteTemplate(
       }
 
       await tx.delete(bingoTemplates).where(eq(bingoTemplates.id, templateId))
-      return { success: true }
+      return { success: true as const }
     })
 
     if (result.success) revalidateTemplates(templateId)

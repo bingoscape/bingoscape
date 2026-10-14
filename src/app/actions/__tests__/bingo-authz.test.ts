@@ -3,7 +3,8 @@
  */
 import { db } from "@/server/db"
 import { getServerAuthSession } from "@/server/auth"
-import { getUserRole } from "@/app/actions/events"
+import { getEventActor } from "@/server/authz/actor"
+import { actorLookup } from "@/server/__tests__/helpers/mock-actor"
 import {
   createItemGoal,
   createMetricGoal,
@@ -15,7 +16,11 @@ import {
 } from "@/app/actions/bingo"
 
 jest.mock("@/server/auth", () => ({ getServerAuthSession: jest.fn() }))
-jest.mock("@/app/actions/events", () => ({ getUserRole: jest.fn() }))
+jest.mock("@/server/authz/actor", () => ({
+  getEventActor: jest.fn(),
+  getEventRole: jest.fn(),
+  isUuid: () => true,
+}))
 jest.mock("@/server/notifications", () => ({
   createNotification: jest.fn(),
 }))
@@ -53,7 +58,12 @@ jest.mock("@/server/db", () => {
 })
 
 const session = getServerAuthSession as jest.Mock
-const role = getUserRole as jest.Mock
+const actor = getEventActor as jest.Mock
+/** The caller's standing in the Event, as the actor loader reports it. */
+const role = {
+  mockResolvedValue: (r: string | null) =>
+    actor.mockResolvedValue(actorLookup(r)),
+}
 const mockDb = db as unknown as {
   query: Record<string, { findFirst: jest.Mock; findMany: jest.Mock }>
   select: jest.Mock
@@ -185,8 +195,10 @@ describe("submitImage participant checks", () => {
       [{ id: "team-1", name: "Team", eventId: "event-1" }]
     )
     const result = await submitImage(form())
-    expect(result.success).toBe(false)
-    expect(result.error).toMatch(/not a member/)
+    expect(result).toMatchObject({
+      success: false,
+      error: expect.stringMatching(/not a member/),
+    })
     expectNoWrites()
   })
 
@@ -204,8 +216,10 @@ describe("submitImage participant checks", () => {
       [{ id: "team-9", name: "Other", eventId: "event-2" }]
     )
     const result = await submitImage(form("team-9"))
-    expect(result.success).toBe(false)
-    expect(result.error).toMatch(/does not belong/)
+    expect(result).toMatchObject({
+      success: false,
+      error: expect.stringMatching(/does not belong/),
+    })
     expectNoWrites()
   })
 
@@ -224,8 +238,10 @@ describe("submitImage participant checks", () => {
       [{ id: "team-1", name: "Team", eventId: "event-1" }]
     )
     const result = await submitImage(form())
-    expect(result.success).toBe(false)
-    expect(result.error).toMatch(/Tile not found/)
+    expect(result).toMatchObject({
+      success: false,
+      error: expect.stringMatching(/Tile not found/),
+    })
     expectNoWrites()
   })
 })

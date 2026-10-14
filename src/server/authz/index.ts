@@ -2,11 +2,14 @@
  * Server-side authorization for Events.
  *
  * - `actor.ts`   one cached lookup of the caller's standing in an Event
- * - `guards.ts`  `authorize` / `requirePermission` and the existing
- *                `require*` helpers
- * - `resolve.ts` Event from Board / Tile / Goal / Submission / Team
+ * - `guards.ts`  `authorize` / `requirePermission` / `hasPermission`, the
+ *                action result helpers and the return conventions
+ * - `api.ts`     `getApiActor` for the RuneLite routes
+ * - `registry.ts` every action and route handler with its policy
+ * - `resolve.ts` Event from Board / Tile / Goal / Submission / Team, and
+ *                `requirePermissionFor<Resource>`
  * - `read.ts`    read policy: canReadEvent / Board / Tile / Team
- * - `compat.ts`  existing Team / comment helpers
+ * - `compat.ts`  Team and Submission comment guards
  *
  * The pure policy lives in `@/lib/authz`. `eventAction` (next-safe-action) is
  * imported from `@/server/authz/action` so this entry point stays light.
@@ -15,32 +18,43 @@
 export { AuthzError, authzErrorMessage, type AuthzErrorCode } from "./errors"
 export { getEventActor, getEventRole, type EventActorLookup } from "./actor"
 export {
+  actionFailure,
   authorize,
-  isEventManager,
-  requireEventAdmin,
-  requireEventManager,
-  requireEventMember,
+  denial,
+  failure,
+  hasPermission,
+  membershipFailure,
   requirePermission,
   requireSession,
+  type ActionErrorCode,
+  type ActionFailure,
+  type ActionResult,
   type AuthorizeResult,
 } from "./guards"
+export { getApiActor, type ApiActorLookup } from "./api"
 export {
   assertGoalInEvent,
   eventIdOfBingo,
   eventIdOfGoal,
   eventIdOfGoalGroup,
   eventIdOfGoalValue,
+  eventIdOfRegistrationRequest,
   eventIdOfSubmission,
   eventIdOfTeam,
   eventIdOfTeamTileSubmission,
   eventIdOfTile,
-  requireBingoAdmin,
-  requireBingoAdminForGoal,
-  requireBingoAdminForGoalGroup,
-  requireBingoAdminForGoalValue,
-  requireBingoAdminForSubmission,
-  requireBingoAdminForTeamTileSubmission,
-  requireBingoAdminForTile,
+  eventIdOfWebhook,
+  requirePermissionForBingo,
+  requirePermissionForEvent,
+  requirePermissionForGoal,
+  requirePermissionForGoalGroup,
+  requirePermissionForGoalValue,
+  requirePermissionForRegistrationRequest,
+  requirePermissionForSubmission,
+  requirePermissionForTeam,
+  requirePermissionForTeamTileSubmission,
+  requirePermissionForTile,
+  requirePermissionForWebhook,
 } from "./resolve"
 export {
   assertTeamLeaderOrManager,

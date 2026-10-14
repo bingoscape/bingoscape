@@ -6,9 +6,9 @@ import { revalidatePath } from "next/cache"
 import { db } from "@/server/db"
 import {
   assertTeamLeaderOrManager,
-  authzErrorMessage,
   AuthzError,
-  requireBingoAdmin,
+  requirePermissionForBingo,
+  actionFailure,
 } from "@/server/authz"
 import {
   battleshipShips,
@@ -199,7 +199,7 @@ export async function saveTeamShipPlacements(
     return { success: true }
   } catch (error) {
     if (error instanceof AuthzError) {
-      return { success: false, error: error.message }
+      return actionFailure(error, error.message)
     }
     if (isUniqueViolation(error)) {
       return {
@@ -226,7 +226,7 @@ export async function updateBingoShipRules(
   rules: ShipRule[]
 ): Promise<ActionResult & { clearedTeams?: number }> {
   try {
-    const eventId = await requireBingoAdmin(bingoId)
+    const eventId = await requirePermissionForBingo(bingoId, "board:manage")
 
     if (!isShipRuleList(rules)) {
       return { success: false, error: "Invalid ship rules" }
@@ -240,7 +240,7 @@ export async function updateBingoShipRules(
     return { success: true, clearedTeams }
   } catch (error) {
     if (error instanceof AuthzError) {
-      return { success: false, error: authzErrorMessage(error, "Forbidden") }
+      return actionFailure(error, "Forbidden")
     }
     if (error instanceof BattleshipRuleError) {
       return { success: false, error: error.message }

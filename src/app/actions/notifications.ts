@@ -5,9 +5,11 @@ import { notifications } from "@/server/db/schema"
 import { eq, and, desc } from "drizzle-orm"
 import { events, teams, tiles } from "@/server/db/schema"
 import { getServerAuthSession } from "@/server/auth"
+import { failure, type ActionResult } from "@/server/authz"
 
 export async function getNotifications(userId: string, limit = 10) {
   // Notifications carry Tile titles: only the signed-in user may read their own.
+  // Deliberate: a denial reads as an empty list (see guards.ts).
   const session = await getServerAuthSession()
   if (!session?.user || session.user.id !== userId) return []
 
@@ -32,10 +34,12 @@ export async function getNotifications(userId: string, limit = 10) {
     .limit(limit)
 }
 
-export async function markNotificationAsRead(notificationId: string) {
+export async function markNotificationAsRead(
+  notificationId: string
+): Promise<ActionResult> {
   // Only the owner of a notification may mark it as read.
   const session = await getServerAuthSession()
-  if (!session?.user) return
+  if (!session?.user) return failure("Unauthorized", "UNAUTHENTICATED")
 
   await db
     .update(notifications)
@@ -46,4 +50,5 @@ export async function markNotificationAsRead(notificationId: string) {
         eq(notifications.userId, session.user.id)
       )
     )
+  return { success: true }
 }

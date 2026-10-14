@@ -5,7 +5,11 @@ import { ArrowLeft, EyeOff, Lock } from "lucide-react"
 import { ShipPlacementClient } from "@/components/ship-placement/ship-placement-client"
 import type { PlacementTile } from "@/components/ship-placement/ship-placement-board"
 import { getServerAuthSession } from "@/server/auth"
-import { assertTeamLeaderOrManager, AuthzError } from "@/server/authz"
+import {
+  assertTeamLeaderOrManager,
+  AuthzError,
+  hasPermission,
+} from "@/server/authz"
 import {
   getBingoShipRules,
   getLedTeamId,
@@ -64,12 +68,12 @@ export default async function ShipPlacementPage(props: {
 
   const data = await getEventById(eventId)
   if (!data?.userRole) notFound()
-  const { event, userRole } = data
+  const { event } = data
 
   const bingo = event.bingos?.find((b) => b.id === bingoId)
   if (!bingo) notFound()
 
-  const isManager = userRole === "admin" || userRole === "management"
+  const isManager = await hasPermission(event.id, "board:manage")
   const teams = event.teams ?? []
 
   const access = resolvePlacementAccess({

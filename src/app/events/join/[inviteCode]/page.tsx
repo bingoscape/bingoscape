@@ -102,9 +102,11 @@ export default function JoinEventPage(props: {
   const handleJoinEvent = async () => {
     setIsJoining(true)
     try {
-      const event = await joinEventViaInvite(inviteCode)
+      const joined = await joinEventViaInvite(inviteCode)
+      if (!joined.success) throw new Error(joined.error)
+      const { event } = joined
 
-      if (event.pendingApproval) {
+      if (joined.pendingApproval) {
         toast({
           title: "Registration submitted",
           description:

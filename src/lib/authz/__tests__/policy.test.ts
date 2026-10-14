@@ -44,6 +44,10 @@ const MANAGER_CAN: Permission[] = [
   "participant:remove",
   "participant:assign-team",
   "registration:review",
+  "stats:read",
+  "player-metadata:read",
+  "player-metadata:write",
+  "player-metadata:write-own",
   "finance:read",
   "finance:write",
   "webhook:manage",
@@ -56,12 +60,14 @@ const MANAGER_CAN: Permission[] = [
   "submission:review",
   "submission:comment",
   "submission:read-comments",
+  "submission:create-on-behalf",
 ]
 const ADMIN_ONLY: Permission[] = [
   "event:update",
   "event:invite",
   "event:assign-clan",
   "event:manage-rules",
+  "event:override-registration",
   "participant:set-role",
 ]
 // Admin permissions that only the Event owner can use (RBAC 3/8).
@@ -73,7 +79,7 @@ const OWNER_ONLY: Permission[] = [
 const EXPECTED: Record<EventRole, Permission[]> = {
   admin: [...MANAGER_CAN, ...ADMIN_ONLY],
   management: MANAGER_CAN,
-  participant: ["event:view"],
+  participant: ["event:view", "player-metadata:write-own"],
 }
 
 describe("role -> permission matrix (no resource)", () => {
