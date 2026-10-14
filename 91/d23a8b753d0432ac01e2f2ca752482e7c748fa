@@ -1,0 +1,30 @@
+README.md
+  s_2aebdb4d5645da::t_b424ef9f72c3cd 206
+  s_2aebdb4d5645da::t_9bc1b854e83010 297
+  s_2aebdb4d5645da::t_03b78217973409 78
+docs/CONTRIBUTING.md
+  s_2aebdb4d5645da::t_b607b6d443e991 97-98
+  s_2aebdb4d5645da::t_4f616344eaf472 84-85
+  s_2aebdb4d5645da::t_0b7a063f29dbdf 87
+AGENTS.md
+  s_2aebdb4d5645da::t_cb000d7365542e 123
+  s_2aebdb4d5645da::t_587246fc373322 116
+  s_2aebdb4d5645da::t_0e75e1845541fb 8
+  s_2aebdb4d5645da::t_6da565bae81dd5 17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "91d23a8b753d0432ac01e2f2ca752482e7c748fa",
+  "prompts": {},
+  "sessions": {
+    "s_2aebdb4d5645da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9e280b93-4bc1-4d59-a11c-e6d1207080db",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
