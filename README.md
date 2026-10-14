@@ -66,8 +66,8 @@ Administration
 
 | Area            | Technology                                                                |
 | --------------- | ------------------------------------------------------------------------- |
-| Framework       | Next.js 16.1.1 (App Router, standalone output), React 19.2.3              |
-| Language        | TypeScript 5 (strict, `noUncheckedIndexedAccess`)                         |
+| Framework       | Next.js 16.4.0 (App Router, standalone output), React 19.3.0              |
+| Language        | TypeScript 7 (strict, `noUncheckedIndexedAccess`)                         |
 | Database        | PostgreSQL 18, Drizzle ORM 0.33, drizzle-kit 0.24, postgres.js            |
 | Authentication  | NextAuth.js 4: credentials, Discord, GitHub (optional), Google (optional) |
 | Validation      | Zod 3, `@t3-oss/env-nextjs` for environment variables                     |
@@ -75,7 +75,7 @@ Administration
 | Images          | sharp                                                                     |
 | Unit tests      | Jest 29, React Testing Library, Testcontainers (PostgreSQL)               |
 | End-to-end      | Playwright                                                                |
-| Lint and format | ESLint 9, Prettier 3 with the Tailwind plugin                             |
+| Lint and format | oxlint, Prettier 3 with the Tailwind plugin                               |
 | Runtime         | Node.js 24 (Docker image `node:24-alpine`)                                |
 
 ## Architecture
@@ -203,7 +203,7 @@ Variables are validated in `src/env.js`. Some are read directly from `process.en
 | `npm run build:ci`              | Production build without `env-cmd` (used in the Dockerfile).              |
 | `npm start`                     | Production server on port 3344.                                           |
 | `npm run start:prod`            | Production server on port 3333.                                           |
-| `npm run lint`                  | ESLint. Add `-- --fix` to fix automatically.                              |
+| `npm run lint`                  | oxlint. Add `-- --fix` to fix automatically.                              |
 | `npx tsc --noEmit`              | Type check. Also runs in CI.                                              |
 | `npm test`                      | Jest unit tests. Docker must be running.                                  |
 | `npm run test:watch`            | Jest in watch mode.                                                       |
@@ -294,7 +294,7 @@ Setup guides: [docs/PRODUCTION-SETUP.md](docs/PRODUCTION-SETUP.md), [docs/GITHUB
 
 Code rules (details in [AGENTS.md](AGENTS.md) and [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)):
 
-- Do not bypass ESLint or the type checker (`eslint-disable`, `@ts-ignore`) without a justification comment.
+- Do not bypass oxlint or the type checker (`oxlint-disable`, `eslint-disable`, `@ts-ignore`) without a justification comment.
 - Wrap mutations in `db.transaction()` and revalidate affected paths.
 - Check permissions in server actions before mutating.
 - Import internal modules through the `@/` alias.
