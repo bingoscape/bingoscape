@@ -3,14 +3,9 @@
  * so permission and invite-state decisions are made (and tested) in one place.
  */
 
-export type ClanRole = "admin" | "management" | "member" | "guest"
+import { CLAN_ROLES, type ClanRole } from "@/lib/authz/roles"
 
-export const CLAN_ROLES: readonly ClanRole[] = [
-  "admin",
-  "management",
-  "member",
-  "guest",
-]
+export { CLAN_ROLES, type ClanRole }
 
 export const CLAN_ROLE_LABELS: Record<ClanRole, string> = {
   admin: "Admin",

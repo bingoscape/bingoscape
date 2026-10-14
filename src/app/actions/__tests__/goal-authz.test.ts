@@ -3,7 +3,7 @@
  */
 import { db } from "@/server/db"
 import { getServerAuthSession } from "@/server/auth"
-import { getUserRole } from "@/app/actions/events"
+import { getEventRole } from "@/server/authz/actor"
 import { addGoalValue, deleteGoalValue, getGoalValues } from "@/app/actions/goals"
 import {
   createGoalGroup,
@@ -16,7 +16,8 @@ import {
 } from "@/app/actions/goal-groups"
 
 jest.mock("@/server/auth", () => ({ getServerAuthSession: jest.fn() }))
-jest.mock("@/app/actions/events", () => ({ getUserRole: jest.fn() }))
+// The role lookup is the seam: `getUserRole` delegates to the actor loader.
+jest.mock("@/server/authz/actor", () => ({ getEventRole: jest.fn() }))
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
 jest.mock("@/lib/logger", () => ({
   logger: { error: jest.fn(), info: jest.fn(), warn: jest.fn() },
@@ -49,7 +50,7 @@ jest.mock("@/server/db", () => {
 })
 
 const session = getServerAuthSession as jest.Mock
-const role = getUserRole as jest.Mock
+const role = getEventRole as jest.Mock
 const mockDb = db as unknown as {
   query: Record<string, { findFirst: jest.Mock; findMany: jest.Mock }>
   insert: jest.Mock

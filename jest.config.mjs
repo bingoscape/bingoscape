@@ -14,6 +14,10 @@ const customJestConfig = {
   moduleNameMapper: {
     "^@t3-oss/env-nextjs$": "<rootDir>/src/__mocks__/env-nextjs.ts",
     "^@/env$": "<rootDir>/src/__mocks__/env.ts",
+    // Next aliases `server-only` at build time; Jest has no such alias, so map
+    // it to the no-op module that is used outside the client bundle.
+    "^server-only$":
+      "<rootDir>/node_modules/next/dist/compiled/server-only/empty.js",
     "^@/(.*)$": "<rootDir>/src/$1",
   },
   globalSetup: "<rootDir>/jest.global-setup.ts",
@@ -21,5 +25,22 @@ const customJestConfig = {
   testMatch: ["**/__tests__/**/*.test.[jt]s?(x)"],
 }
 
-// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-export default createJestConfig(customJestConfig)
+const createConfig = createJestConfig(customJestConfig)
+
+// next-safe-action ships ESM only, and next/jest ignores every node_modules
+// path for transformation (a custom pattern cannot opt a package back in), so
+// override the resolved patterns to transform it. Needed by the `eventAction`
+// tests, which run the real client.
+/** @returns {Promise<import('jest').Config>} */
+const config = async () => {
+  const resolved = await createConfig()
+  return {
+    ...resolved,
+    transformIgnorePatterns: [
+      "/node_modules/(?!(next-safe-action)/)",
+      "^.+\\.module\\.(css|sass|scss)$",
+    ],
+  }
+}
+
+export default config

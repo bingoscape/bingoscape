@@ -5,6 +5,8 @@ import { nanoid } from "nanoid"
 import { revalidatePath } from "next/cache"
 
 import { getServerAuthSession } from "@/server/auth"
+import type { EventRole as AuthzEventRole } from "@/lib/authz/roles"
+import { getEventRole } from "@/server/authz/actor"
 import { db } from "@/server/db"
 import {
   events,
@@ -74,7 +76,9 @@ export interface GetEventByIdResult {
   userRole: EventRole | null
 }
 
-export type EventRole = "admin" | "management" | "participant"
+// A type alias, not a re-export: a "use server" file may only export async
+// functions at runtime, and a re-export is not erased by the bundler.
+export type EventRole = AuthzEventRole
 
 export interface RegistrationRequest {
   id: string
@@ -212,42 +216,12 @@ export async function createEvent(formData: FormData) {
   }
 }
 
-// Modify the getUserRole function to handle non-participants gracefully
+/**
+ * The signed-in user's effective role in the Event (the creator counts as
+ * admin), or null for non-members. Delegates to the actor loader.
+ */
 export async function getUserRole(eventId: string): Promise<EventRole | null> {
-  const session = await getServerAuthSession()
-
-  if (!session || !session.user) {
-    return null
-  }
-
-  try {
-    // First, check if the user is the event creator (admin)
-    const event = await db.query.events.findFirst({
-      where: and(eq(events.id, eventId), eq(events.creatorId, session.user.id)),
-    })
-
-    if (event) {
-      return "admin"
-    }
-
-    // If not the creator, check the event_participants table
-    const participant = await db.query.eventParticipants.findFirst({
-      where: and(
-        eq(eventParticipants.eventId, eventId),
-        eq(eventParticipants.userId, session.user.id)
-      ),
-    })
-
-    if (participant) {
-      return participant.role as EventRole
-    }
-
-    // If the user is not found in event_participants, return null instead of throwing an error
-    return null
-  } catch (error) {
-    logger.error({ error }, "Error fetching user role")
-    return null
-  }
+  return getEventRole(eventId)
 }
 
 /**
@@ -1126,7 +1100,7 @@ class ParticipantChangeError extends Error {}
 export async function updateParticipantRole(
   eventId: string,
   userId: string,
-  newRole: "admin" | "management" | "participant"
+  newRole: EventRole
 ) {
   // The caller is derived from the session, never from the target arguments.
   const access = await checkEventRole(eventId, EVENT_ADMINS)
