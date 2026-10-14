@@ -55,6 +55,10 @@ How a viewer stands towards an Event when they read it: `manager` (admin, manage
 What an Event role may do, named `<subject>:<action>` and defined once in `src/lib/authz/permissions.ts` (the role -> permission map). Every server action, route handler and server page asks `authorize`, `requirePermission` or `hasPermission` (`src/server/authz`); nobody compares a role string. Every public entry point is listed with its permission, or with why it is public, in `src/server/authz/registry.ts`, and a test fails when one is missing. Two of the epic's open decisions keep today's behaviour: `management` can edit buy-ins and donations (`finance:write`) but not roles (`participant:set-role` is admin only), and submission comments can be read by managers and the owning Team but written by managers only.
 _Avoid_: Role check, Guard
 
+**Capabilities**:
+What the signed-in user may do in an Event, as plain booleans for the UI (`EventCapabilities`, `src/lib/authz/capabilities.ts`; `getEventCapabilities` in `src/server/authz` computes it once per request). Server pages pass it to client components as a prop; components never compare a role string. Capabilities only decide what is shown: the server guard on every action stays the authority.
+_Avoid_: Role prop, Role check
+
 **Clan**:
 A persistent, long-term group of Players outside of any specific Event.
 _Avoid_: Group, Guild

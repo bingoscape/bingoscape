@@ -63,7 +63,7 @@ export async function signIn(page: Page, username: string): Promise<void> {
 export async function seedEvent(options: {
   userId: string
   username: string
-  role: "admin" | "participant"
+  role: "admin" | "management" | "participant"
   boards: SeedBoard[]
   isPublic?: boolean
 }): Promise<SeededEvent> {

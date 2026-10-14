@@ -61,10 +61,17 @@ import { isClanManager } from "@/lib/clan"
 import { logger } from "@/lib/logger"
 import { applyBlindBoard } from "@/server/blind-board"
 
+import {
+  capabilitiesForMembership,
+  type EventCapabilities,
+} from "@/lib/authz/capabilities"
 import type { Event } from "@/types/model"
 
 export interface EventData {
+  /** `role` is for display; decisions use `capabilities`. */
   event: Event & { role?: EventRole }
+  /** What the viewer may do in this Event, computed on the server. */
+  capabilities: EventCapabilities
   totalPrizePool: number
 
   participantData?: {
@@ -570,6 +577,12 @@ export async function getEvents(userId: string): Promise<EventData[]> {
           ...event,
           role,
         },
+        capabilities: capabilitiesForMembership({
+          userId,
+          eventId: event.id,
+          creatorId: event.creatorId,
+          participantRole: event.eventParticipants[0]?.role ?? null,
+        }),
         totalPrizePool,
         ...(isManager && managerDataMap.has(event.id)
           ? { managerData: managerDataMap.get(event.id) }

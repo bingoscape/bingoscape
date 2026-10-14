@@ -8,6 +8,7 @@ import { ArrowLeft } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { EventHeaderActions } from "@/components/event-header-actions"
 import { EventRulesSheet } from "@/components/event-rules-sheet"
+import { getEventCapabilities } from "@/server/authz"
 import { getEventById } from "@/server/queries/events"
 
 export async function EventLayoutHeader({ eventId }: { eventId: string }) {
@@ -16,14 +17,17 @@ export async function EventLayoutHeader({ eventId }: { eventId: string }) {
     notFound()
   }
 
-  const data = await getEventById(eventId)
+  const [data, capabilities] = await Promise.all([
+    getEventById(eventId),
+    getEventCapabilities(eventId),
+  ])
   if (!data) {
     notFound()
   }
 
-  const { event, userRole } = data
+  const { event } = data
 
-  // userRole access is handled by EventAccessGuard in the layout
+  // Access (membership) is handled by EventAccessGuard in the layout
 
   const [
     userClans,
@@ -34,9 +38,6 @@ export async function EventLayoutHeader({ eventId }: { eventId: string }) {
     getPendingRegistrationCount(eventId),
     getEventRules(eventId),
   ])
-
-  const isAdminOrManagement = userRole === "admin" || userRole === "management"
-  const isAdmin = userRole === "admin"
 
   const now = new Date()
   const startDate = new Date(event.startDate)
@@ -83,12 +84,12 @@ export async function EventLayoutHeader({ eventId }: { eventId: string }) {
         <EventRulesSheet
           eventId={event.id}
           initialRules={rules}
-          isAdmin={isAdmin}
+          canManageRules={capabilities.canManageRules}
         />
-        {isAdminOrManagement && (
+        {capabilities.canViewManagerPages && (
           <EventHeaderActions
             eventId={event.id}
-            userRole={userRole!}
+            capabilities={capabilities}
             requiresApproval={event.requiresApproval}
             pendingRegistrationsCount={pendingRegistrationsCount}
             event={event}

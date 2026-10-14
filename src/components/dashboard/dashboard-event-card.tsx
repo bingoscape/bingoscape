@@ -39,8 +39,8 @@ export function DashboardEventCard({
   const start = new Date(event.startDate)
   const end = new Date(event.endDate)
   const tz = event.timezone || "UTC"
-  const isAdmin = event.role === "admin"
-  const isManager = isAdmin || event.role === "management"
+  const { capabilities } = eventData
+  const isManager = capabilities.canViewManagerPages
   const team = participantData?.team ?? null
   const progress = participantData?.progress ?? null
   const attention = managerData?.actionItems
@@ -76,7 +76,7 @@ export function DashboardEventCard({
             </span>
           )}
         </div>
-        {isAdmin && (
+        {capabilities.canEditEvent && (
           <Button
             asChild
             variant="ghost"
@@ -140,7 +140,7 @@ export function DashboardEventCard({
             <li>
               <Link
                 href={
-                  isAdmin
+                  capabilities.canEditEvent
                     ? `/events/${event.id}/admin/submissions`
                     : `/events/${event.id}`
                 }

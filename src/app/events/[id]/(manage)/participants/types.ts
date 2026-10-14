@@ -1,10 +1,12 @@
 
+import type { EventRole } from "@/lib/authz/roles"
+
 export interface Participant {
   id: string
   runescapeName: string
   hasOverride?: boolean
   originalRunescapeName?: string
-  role: "admin" | "management" | "participant"
+  role: EventRole
   teamId: string | null
   teamName: string | null
   buyIn: number
@@ -24,13 +26,3 @@ export type SortField =
   | "donations"
   | "status"
 export type SortDirection = "asc" | "desc"
-
-export interface EventPermissions {
-  isEventCreator: boolean
-  currentUserRole: "admin" | "management" | "participant"
-  canManageParticipant: (participant: Participant) => boolean
-  canChangeRoles: () => boolean
-  canChangeTeams: () => boolean
-  canRemoveParticipants: () => boolean
-  canEditBuyIns: () => boolean
-}

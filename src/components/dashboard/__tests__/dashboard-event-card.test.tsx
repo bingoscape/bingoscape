@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react"
 import { DashboardEventCard } from "@/components/dashboard/dashboard-event-card"
 import type { EventData } from "@/app/actions/events"
+import { capabilitiesForMembership } from "@/lib/authz/capabilities"
+import type { EventRole } from "@/lib/authz/roles"
 
 const NOW = new Date("2026-06-15T12:00:00Z")
 
@@ -12,7 +14,14 @@ function make(
     totalPrizePool?: number
   } = {}
 ): EventData {
+  const role = (overrides.event?.role as EventRole | undefined) ?? "participant"
   return {
+    capabilities: capabilitiesForMembership({
+      userId: "u1",
+      eventId: "evt1",
+      creatorId: null,
+      participantRole: role,
+    }),
     totalPrizePool: overrides.totalPrizePool ?? 0,
     event: {
       id: "evt1",

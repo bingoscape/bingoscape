@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Target, BarChart3, Users, Copy, Check } from "lucide-react"
 import type { EventStatsData } from "@/server/queries/stats"
-import { EventRole } from "@/app/actions/events"
 import type { ItemStatistics } from "@/server/queries/item-statistics"
 import { EventTeamChart } from "@/components/event-team-chart"
 import { BingoBreakdownChart } from "@/components/bingo-breakdown-chart"
@@ -22,7 +21,6 @@ import { cn } from "@/lib/utils"
 interface EventStatsDisplayProps {
   eventStats: EventStatsData
   eventTitle: string
-  userRole: EventRole
   itemStatistics?: ItemStatistics
   patternCompletionData?: EventPatternCompletionData
 }

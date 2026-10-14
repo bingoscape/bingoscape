@@ -52,7 +52,8 @@ type EditableTileFields = {
 interface TileDetailsTabProps {
   selectedTile: Tile | null
   editedTile: Partial<Tile>
-  userRole: "admin" | "management" | "participant"
+  /** May edit the Tile and sync tracker data (`board:manage`). */
+  canEdit: boolean
   teams: Team[]
   gameType: "osrs" | "rs3"
   eventId?: string
@@ -89,7 +90,7 @@ function isValidImageUrl(url: string): boolean {
 export function TileDetailsTab({
   selectedTile,
   editedTile,
-  userRole,
+  canEdit,
   teams,
   gameType,
   eventId,
@@ -103,7 +104,6 @@ export function TileDetailsTab({
   const [isEditing, setIsEditing] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isValidImage, setIsValidImage] = useState(true)
-  const canEdit = userRole === "admin" || userRole === "management"
 
   // Helper to get wiki API URL based on game type
   const getWikiApiUrl = useCallback(() => {
@@ -546,7 +546,7 @@ export function TileDetailsTab({
             selectedTile={selectedTile}
             teams={teams}
             onUpdateProgress={onUpdateProgress}
-            userRole={userRole}
+            canEdit={canEdit}
             eventId={eventId}
           />
         </div>
@@ -558,12 +558,12 @@ export function TileDetailsTab({
 function TileProgress({
   selectedTile,
   teams,
-  userRole,
+  canEdit,
 }: {
   selectedTile: Tile | null
   teams: Team[]
   onUpdateProgress: (goalId: string, teamId: string, newValue: number) => void
-  userRole: "admin" | "management" | "participant"
+  canEdit: boolean
   eventId?: string
 }) {
   const router = useRouter()
@@ -599,7 +599,7 @@ function TileProgress({
   const canSync =
     hasMetricGoals &&
     selectedTile?.bingoId &&
-    (userRole === "admin" || userRole === "management")
+    canEdit
 
   const handleSync = async () => {
     if (!selectedTile?.bingoId) return

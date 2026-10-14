@@ -1,4 +1,5 @@
 import "server-only"
+import { capabilitiesForMembership } from "@/lib/authz/capabilities"
 import { isManagerRole } from "@/lib/authz/roles"
 
 import { cache } from "react"
@@ -412,6 +413,12 @@ export async function getEvents(userId: string): Promise<EventData[]> {
           ...event,
           role,
         },
+        capabilities: capabilitiesForMembership({
+          userId,
+          eventId: event.id,
+          creatorId: event.creatorId,
+          participantRole: event.eventParticipants[0]?.role ?? null,
+        }),
         totalPrizePool,
         ...(isManager && managerDataMap.has(event.id)
           ? { managerData: managerDataMap.get(event.id) }

@@ -47,3 +47,14 @@ export const MANAGER_ROLES = [
 export function isManagerRole(role: EventRole | null | undefined): boolean {
   return role === "admin" || role === "management"
 }
+
+const EVENT_ROLE_LABELS = {
+  admin: "Admin",
+  management: "Management",
+  participant: "Participant",
+} as const satisfies Record<EventRole, string>
+
+/** Display name of an Event role (for badges and selects). */
+export function eventRoleLabel(role: EventRole): string {
+  return EVENT_ROLE_LABELS[role]
+}

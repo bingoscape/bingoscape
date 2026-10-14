@@ -5,7 +5,6 @@ import { toast } from "@/hooks/use-toast"
 import { updateTile } from "@/app/actions/bingo"
 import "@/styles/modal-animations.css"
 import type { Bingo, Tile } from "@/types/model"
-import { type EventRole } from "@/app/actions/events"
 import Sortable, { type SortableEvent } from "sortablejs"
 import { BingoGridLayout } from "./bingo-grid-layout"
 import { ProgressionBingoGrid } from "./progression-bingo-grid"
@@ -14,7 +13,8 @@ import type { BattleshipMarkSets, ShipSegment } from "@/lib/battleship-marks"
 
 interface BingoGridProps {
   bingo: Bingo
-  userRole: EventRole
+  /** May edit the Board (`board:manage`): hidden Tiles, layout. Computed on the server. */
+  isManagement: boolean
   currentTeamId: string | undefined
   /** Controls whether the board layout can be modified. */
   isLayoutLocked: boolean
@@ -44,7 +44,7 @@ interface BingoGridProps {
  */
 export default function BingoGrid({
   bingo,
-  userRole,
+  isManagement,
   currentTeamId,
   isLayoutLocked,
   onReorderTiles,
@@ -70,10 +70,8 @@ export default function BingoGrid({
   const gridRef = useRef<HTMLDivElement>(null)
   const sortableRef = useRef<Sortable | null>(null)
 
-  const hasSufficientRights = userRole === "admin" || userRole === "management"
-
   useEffect(() => {
-    if (gridRef.current && hasSufficientRights && !isLayoutLocked) {
+    if (gridRef.current && isManagement && !isLayoutLocked) {
       sortableRef.current = new Sortable(gridRef.current, {
         animation: 150,
         swap: true,
@@ -113,7 +111,7 @@ export default function BingoGrid({
         }
       }
     }
-  }, [tiles, isLayoutLocked, onReorderTiles, hasSufficientRights])
+  }, [tiles, isLayoutLocked, onReorderTiles, isManagement])
 
   const handleTogglePlaceholder = useCallback(
     async (tile: Tile) => {
@@ -154,13 +152,13 @@ export default function BingoGrid({
     async (tile: Tile) => {
       // Blind Tiles have nothing to open.
       if (tile.isBlind) return
-      if (tile.isHidden && !isLayoutLocked && hasSufficientRights) {
+      if (tile.isHidden && !isLayoutLocked && isManagement) {
         await handleTogglePlaceholder(tile)
         return
       }
       onSelectTile(tile.id)
     },
-    [isLayoutLocked, hasSufficientRights, handleTogglePlaceholder, onSelectTile]
+    [isLayoutLocked, isManagement, handleTogglePlaceholder, onSelectTile]
   )
 
   if (bingo.bingoType === "progression") {
@@ -176,7 +174,7 @@ export default function BingoGrid({
             unlockedAt: p.unlockedAt ?? null,
           }))}
           tierXpRequirements={tierData?.requirements ?? []}
-          userRole={userRole}
+          isManagement={isManagement}
           bingoId={bingo.id}
           onTilesUpdated={onTileUpdated}
           isEditMode={!isLayoutLocked}
@@ -191,7 +189,7 @@ export default function BingoGrid({
       tiles={tiles}
       columns={bingo.columns}
       rows={bingo.rows}
-      userRole={userRole}
+      isManagement={isManagement}
       currentTeamId={currentTeamId}
       onTileClick={handleTileClick}
       onTogglePlaceholder={handleTogglePlaceholder}

@@ -285,7 +285,6 @@ export function BoardHeader({
             <TeamSelector
               teams={teams}
               currentTeamId={ownTeam?.id}
-              userRole="admin"
               selectedTeamId={effectiveTeamId}
               onTeamChange={(id) =>
                 onTeamChange(id && id !== ownTeam?.id ? id : null)

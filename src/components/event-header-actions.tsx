@@ -15,11 +15,13 @@ import { ShareEventButton } from "./share-event-button"
 import AssignEventToClanModal from "./assign-event-to-clan-modal"
 import { DiscordWebhookManagement } from "./discord-webhook-management"
 import { EventDeleteModal } from "./event-delete-modal"
+import type { EventCapabilities } from "@/lib/authz/capabilities"
 import type { Event } from "@/types/model"
 
 interface EventHeaderActionsProps {
   eventId: string
-  userRole: "admin" | "management" | "verified" | "pending"
+  /** What the signed-in user may do; computed on the server. */
+  capabilities: EventCapabilities
   requiresApproval: boolean
   pendingRegistrationsCount: number
   event: Event
@@ -28,13 +30,12 @@ interface EventHeaderActionsProps {
 
 export function EventHeaderActions({
   eventId,
-  userRole,
+  capabilities,
   requiresApproval,
   pendingRegistrationsCount,
   event,
   userClans,
 }: EventHeaderActionsProps) {
-  const isAdmin = userRole === "admin"
   const [editModalOpen, setEditModalOpen] = useState(false)
   // Bumped on every open so the modal remounts with fresh form state
   const [editModalSession, setEditModalSession] = useState(0)
@@ -49,7 +50,7 @@ export function EventHeaderActions({
   return (
     <div className="flex flex-wrap items-center justify-end gap-3">
       {/* Edit Event Modal */}
-      {isAdmin && (
+      {capabilities.canEditEvent && (
         <EditEventModal
           key={editModalSession}
           event={event}
@@ -80,7 +81,7 @@ export function EventHeaderActions({
       />
 
       {/* Delete Event Modal */}
-      {isAdmin && (
+      {capabilities.canDeleteEvent && (
         <EventDeleteModal
           event={{
             id: event.id,
@@ -96,7 +97,7 @@ export function EventHeaderActions({
       {/* Primary Action Button Group */}
       <ButtonGroup>
         {/* Registration Requests Button */}
-        {requiresApproval && isAdmin && (
+        {requiresApproval && capabilities.canEditEvent && (
           <>
             <Button
               variant="outline"
@@ -119,7 +120,7 @@ export function EventHeaderActions({
         )}
 
         {/* Generate Invite Link Button */}
-        {isAdmin && (
+        {capabilities.canInvite && (
           <>
             <GenerateEventInviteLink eventId={event.id as UUID}>
               <Button variant="outline" size="sm" className="gap-2">
@@ -132,7 +133,7 @@ export function EventHeaderActions({
         )}
 
         {/* Event Settings Button - Admin Only */}
-        {isAdmin && (
+        {capabilities.canEditEvent && (
           <Button
             variant="outline"
             size="sm"
@@ -149,7 +150,7 @@ export function EventHeaderActions({
       <EventCommandPalette
         eventId={event.id as UUID}
         pendingRegistrationsCount={pendingRegistrationsCount}
-        isAdmin={isAdmin}
+        canEditEvent={capabilities.canEditEvent}
         isPublic={event.public ?? false}
         hasClan={!!event.clan}
         createBingoModal={
@@ -187,7 +188,7 @@ export function EventHeaderActions({
           />
         }
         editEventModal={
-          isAdmin ? (
+          capabilities.canEditEvent ? (
             <Button
               variant="ghost"
               className="w-full justify-start"
@@ -199,7 +200,7 @@ export function EventHeaderActions({
           ) : undefined
         }
         assignClanModal={
-          isAdmin && !event.clan ? (
+          capabilities.canAssignClan && !event.clan ? (
             <AssignEventToClanModal
               eventId={event.id}
               clans={userClans.map((uc) => ({
@@ -211,7 +212,7 @@ export function EventHeaderActions({
         }
         discordWebhooks={<DiscordWebhookManagement eventId={event.id} />}
         deleteEventModal={
-          isAdmin ? (
+          capabilities.canDeleteEvent ? (
             <Button
               variant="ghost"
               className="text-danger hover:text-danger w-full justify-start"

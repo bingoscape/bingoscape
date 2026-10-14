@@ -2,6 +2,7 @@
  * Server-side authorization for Events.
  *
  * - `actor.ts`   one cached lookup of the caller's standing in an Event
+ * - `capabilities.ts` cached `getEventCapabilities` for the UI
  * - `guards.ts`  `authorize` / `requirePermission` / `hasPermission`, the
  *                action result helpers and the return conventions
  * - `api.ts`     `getApiActor` for the RuneLite routes
@@ -17,6 +18,7 @@
  */
 export { AuthzError, authzErrorMessage, type AuthzErrorCode } from "./errors"
 export { getEventActor, getEventRole, type EventActorLookup } from "./actor"
+export { getEventCapabilities } from "./capabilities"
 export {
   actionFailure,
   authorize,

@@ -9,14 +9,14 @@ import {
   type BattleshipMarkSets,
   type ShipSegment,
 } from "@/lib/battleship-marks"
-import type { EventRole } from "@/app/actions/events"
 import type { Tile } from "@/types/model"
 
 interface BingoGridLayoutProps {
   tiles: Tile[]
   columns: number
   rows: number
-  userRole: EventRole
+  /** May edit the Board (`board:manage`): hidden Tiles, layout. Computed on the server. */
+  isManagement: boolean
   currentTeamId: string | undefined
   onTileClick: (tile: Tile) => void
   onTogglePlaceholder: (tile: Tile) => void
@@ -60,7 +60,7 @@ export const BingoGridLayout = memo(
         tiles,
         columns,
         rows,
-        userRole,
+        isManagement,
         currentTeamId,
         onTileClick,
         onTogglePlaceholder,
@@ -77,7 +77,6 @@ export const BingoGridLayout = memo(
       },
       ref
     ) => {
-      const isManagement = userRole === "admin" || userRole === "management"
       const editing = !isLocked
 
       const isSkippable = useCallback(
@@ -164,7 +163,7 @@ export const BingoGridLayout = memo(
           tile={tile}
           onClick={onTileClick}
           onTogglePlaceholder={onTogglePlaceholder}
-          userRole={userRole}
+          isManagement={isManagement}
           currentTeamId={currentTeamId}
           isLocked={isLocked}
           isLoading={loadingTileId === tile.id}

@@ -50,7 +50,6 @@ export default async function EventStatsPage(props: {
       <EventStatsDisplay
         eventStats={eventStats}
         eventTitle={event.title}
-        userRole={userRole}
         itemStatistics={itemStatistics}
         patternCompletionData={patternCompletionData}
       />
