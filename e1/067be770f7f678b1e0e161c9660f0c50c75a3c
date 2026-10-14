@@ -1,0 +1,45 @@
+src/app/actions/events.ts
+  s_e32e07509d7036::t_db23c32e8e625e 789-791,799-809,1386-1387,1390-1395,1638-1643,1645-1647,1650-1653,1662-1674
+  s_e32e07509d7036::t_69ab75bf8d2856 1309-1371,1376,1381-1384,1389,1396-1398,1400-1407,1409-1411,1413-1414,1419,1421,1423
+  s_e32e07509d7036::t_e3f7976fa595ec 1649,1701-1702,1732-1734,1743-1755
+src/app/actions/player-metadata.ts
+  s_e32e07509d7036::t_473f0a7530406d 16,86-110,145-146,148-149,151,153-154,156-158,204-206,263-275,277
+  s_e32e07509d7036::t_bb642f3a3cdcd5 62-63
+  s_e32e07509d7036::t_38a0b2cd8a528b 15,64-66,68-71,73-83,85
+src/components/team-management.tsx
+  s_e32e07509d7036::t_d1c6a48ace9504 15,19,1027
+src/app/actions/__tests__/read-write-authz.test.ts
+  s_e32e07509d7036::t_d1c6a48ace9504 31
+src/lib/rate-limit-policies.ts
+  s_e32e07509d7036::t_db23c32e8e625e 33-34
+src/app/actions/team.ts
+  s_e32e07509d7036::t_88b77db1be9256 13
+  s_e32e07509d7036::t_d1c6a48ace9504 222-225,244-248
+src/server/authz/registry.ts
+  s_e32e07509d7036::t_d1c6a48ace9504 195
+  s_e32e07509d7036::t_69ab75bf8d2856 157
+src/server/__tests__/cross-event.test.ts
+  s_e32e07509d7036::t_bccad4e6a592f1 251-254
+  s_e32e07509d7036::t_d1c6a48ace9504 250,339-340
+src/app/actions/__tests__/participants-hardening.test.ts
+  s_e32e07509d7036::t_fe6c1ae8629526 1-282,284-360
+  s_e32e07509d7036::t_dfa4bb1eb81170 283
+src/app/actions/__tests__/team-membership.test.ts
+  s_e32e07509d7036::t_d1c6a48ace9504 9-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e1067be770f7f678b1e0e161c9660f0c50c75a3c",
+  "prompts": {},
+  "sessions": {
+    "s_e32e07509d7036": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0f5dfb9a-3776-4ec4-a635-481b24c3d7ae",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
