@@ -1,0 +1,25 @@
+package.json
+  s_2aebdb4d5645da::t_1e012acc7a9248 136
+src/types/css.d.ts
+  s_2aebdb4d5645da::t_1e0a55414deb8c 1-2
+tsconfig.json
+  s_2aebdb4d5645da::t_8092d7466d7922 19
+package-lock.json
+  s_2aebdb4d5645da::t_a8e0e7cc68dcc6 121,8027-8029,8034-8037,8040,8050-8052,8056-8058,8062-8065,8076-8077,8081-8083,8087-8088,8099,8103-8105,8109-8110,8121-8123,8134,8138-8140,8144-8146,8148,8158-8159,8163-8165,8177-8179,8183-8186,8188,8191,8201-8240,8244-8246,8257-8259,8264-8266,8276-8277,8281-8283,8287-8288,8299-8301,8305,14151-14153,22657-22659,22937-22939,22951-22953,22957-22960,22970-22971
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "654d1092568bb34615fed82d46f6c865c0299d3f",
+  "prompts": {},
+  "sessions": {
+    "s_2aebdb4d5645da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9e280b93-4bc1-4d59-a11c-e6d1207080db",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
