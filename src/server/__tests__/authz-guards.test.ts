@@ -7,7 +7,6 @@
 import { eq } from "drizzle-orm"
 import { z } from "zod"
 
-import { getUserRole } from "@/app/actions/events"
 import type { Permission } from "@/lib/authz/permissions"
 import { getServerAuthSession } from "@/server/auth"
 import {
@@ -84,7 +83,7 @@ describe("getEventActor", () => {
   })
 
   it.each<[UserKey, "admin" | "management" | "participant" | null, boolean]>([
-    // The creator's participant row says "participant"; they are admin anyway.
+    // The creator is the owner and holds an admin row.
     ["creator", "admin", true],
     ["admin", "admin", false],
     ["management", "management", false],
@@ -107,13 +106,15 @@ describe("getEventActor", () => {
     })
   })
 
-  it("counts a creator without any participant row as admin and owner", async () => {
+  it("gives a creator without any participant row ownership but no role (no implicit admin)", async () => {
     signInAs(f.users.otherCreator)
     const lookup = await getEventActor(f.event2.id)
     expect(lookup).toMatchObject({
       status: "ok",
-      actor: { role: "admin", isOwner: true, teams: [] },
+      actor: { role: null, isOwner: true, teams: [] },
     })
+    await expect(getEventRole(f.event2.id)).resolves.toBeNull()
+    await expect(hasPermission(f.event2.id, "event:update")).resolves.toBe(false)
   })
 
   it("loads the Teams the user belongs to in that Event only", async () => {
@@ -139,31 +140,6 @@ describe("getEventActor", () => {
     signInAs(f.users.admin)
     await expect(getEventRole(f.event1.id)).resolves.toBe("admin")
     await expect(getEventRole(f.event2.id)).resolves.toBe("participant")
-  })
-})
-
-describe("getUserRole (compatibility shim) delegates to the actor loader", () => {
-  it.each<[UserKey, string | null]>([
-    ["creator", "admin"],
-    ["admin", "admin"],
-    ["management", "management"],
-    ["participant", "participant"],
-    ["outsider", null],
-  ])("%s -> %s", async (user, expected) => {
-    signInAs(f.users[user])
-    await expect(getUserRole(f.event1.id)).resolves.toBe(expected)
-    await expect(getUserRole(f.event1.id)).resolves.toBe(
-      await getEventRole(f.event1.id)
-    )
-  })
-
-  it("is null when signed out or for an unknown Event", async () => {
-    signInAs(null)
-    await expect(getUserRole(f.event1.id)).resolves.toBeNull()
-    signInAs(f.users.admin)
-    await expect(
-      getUserRole("00000000-0000-4000-8000-000000000000")
-    ).resolves.toBeNull()
   })
 })
 

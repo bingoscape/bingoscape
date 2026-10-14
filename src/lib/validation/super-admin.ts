@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { CLAN_ROLES, EVENT_ROLES } from "@/lib/authz/roles"
+
 /**
  * Input schemas for the super-admin mutations. Everything is `.strict()`:
  * unknown keys (`password`, `id`, `creatorId`, ...) are rejected, not ignored,
@@ -8,8 +10,7 @@ import { z } from "zod"
  * Pure module (zod only) so the schemas can be unit tested without a DB.
  */
 
-export const CLAN_ROLES = ["admin", "management", "member", "guest"] as const
-export const EVENT_ROLES = ["admin", "management", "participant"] as const
+export { CLAN_ROLES, EVENT_ROLES }
 
 const uuid = z.string().uuid("Invalid id")
 

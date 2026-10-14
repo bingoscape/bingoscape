@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, exists, inArray, or } from "drizzle-orm"
+import { and, asc, desc, eq, exists, inArray } from "drizzle-orm"
 
 import { MANAGER_ROLES } from "@/lib/authz/roles"
 import { db } from "@/server/db"
@@ -11,8 +11,8 @@ import {
 import { logger } from "@/lib/logger"
 
 /**
- * Events the user can manage: the creator, or a participant with the `admin`
- * or `management` role. This mirrors the `board:manage` permission
+ * Events the user can manage: a participant with the `admin` or `management`
+ * role (the creator holds an admin row). This mirrors the `board:manage` permission
  * (src/lib/authz/permissions.ts), which is what the import and export actions enforce,
  * so the pickers never offer an Event the action would then reject.
  *
@@ -44,20 +44,17 @@ export async function getManageableEvents(
       .select({ id: events.id, title: events.title })
       .from(events)
       .where(
-        or(
-          eq(events.creatorId, userId),
-          exists(
-            db
-              .select({ id: eventParticipants.id })
-              .from(eventParticipants)
-              .where(
-                and(
-                  eq(eventParticipants.eventId, events.id),
-                  eq(eventParticipants.userId, userId),
-                  inArray(eventParticipants.role, [...MANAGER_ROLES])
-                )
+        exists(
+          db
+            .select({ id: eventParticipants.id })
+            .from(eventParticipants)
+            .where(
+              and(
+                eq(eventParticipants.eventId, events.id),
+                eq(eventParticipants.userId, userId),
+                inArray(eventParticipants.role, [...MANAGER_ROLES])
               )
-          )
+            )
         )
       )
       .orderBy(desc(events.createdAt))

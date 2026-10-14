@@ -2,7 +2,6 @@ import { and, eq, isNull, lt, or } from "drizzle-orm"
 
 import { logger } from "@/lib/logger"
 import {
-  apiKeyDisplayPrefix,
   apiKeyStatus,
   hasApiKeyScope,
   hashApiKey,
@@ -34,44 +33,26 @@ const KEY_COLUMNS = {
   name: apiKeys.name,
   scopes: apiKeys.scopes,
   lastUsed: apiKeys.lastUsed,
-  keyHash: apiKeys.keyHash,
   revokedAt: apiKeys.revokedAt,
   expiresAt: apiKeys.expiresAt,
 } as const
 
 /**
- * Checks a plaintext API key.
- *
- * Lookup order (dual-read, for one release): by the SHA-256 hash first, then by
- * the legacy plaintext column for keys the previous app version created after
- * migration 0040. A legacy hit backfills the hash and prefix so the next call
- * takes the fast path. Revocation, expiry and the required scope are checked
- * on both paths. `lastUsed` is stamped at most once per throttle window.
+ * Checks a plaintext API key: looked up by its SHA-256 hash (the plaintext is
+ * never stored), then revocation, expiry and the required scope are checked.
+ * `lastUsed` is stamped at most once per throttle window.
  */
 export async function checkApiKey(
   plaintext: string,
   options: { scope?: ApiKeyScope; now?: Date } = {}
 ): Promise<ApiKeyCheck> {
   const now = options.now ?? new Date()
-  const hash = hashApiKey(plaintext)
 
-  let [row] = await db
+  const [row] = await db
     .select(KEY_COLUMNS)
     .from(apiKeys)
-    .where(eq(apiKeys.keyHash, hash))
+    .where(eq(apiKeys.keyHash, hashApiKey(plaintext)))
     .limit(1)
-  let viaLegacyColumn = false
-
-  if (!row) {
-    // Legacy: a key created by the previous app version has no hash yet.
-    const [legacy] = await db
-      .select(KEY_COLUMNS)
-      .from(apiKeys)
-      .where(eq(apiKeys.key, plaintext))
-      .limit(1)
-    row = legacy
-    viaLegacyColumn = !!legacy
-  }
 
   if (!row) return { ok: false, reason: "unknown" }
 
@@ -82,23 +63,17 @@ export async function checkApiKey(
   }
 
   const cutoff = new Date(now.getTime() - LAST_USED_THROTTLE_MS)
-  const stale = !row.lastUsed || row.lastUsed < cutoff
-  if (viaLegacyColumn || stale) {
+  if (!row.lastUsed || row.lastUsed < cutoff) {
     // The guard in the WHERE keeps concurrent instances from all writing in
-    // the same window; a legacy row is backfilled regardless.
-    const staleGuard = or(isNull(apiKeys.lastUsed), lt(apiKeys.lastUsed, cutoff))
+    // the same window.
     await db
       .update(apiKeys)
-      .set({
-        ...(stale ? { lastUsed: now } : {}),
-        ...(viaLegacyColumn
-          ? { keyHash: hash, keyPrefix: apiKeyDisplayPrefix(plaintext) }
-          : {}),
-      })
+      .set({ lastUsed: now })
       .where(
-        viaLegacyColumn
-          ? eq(apiKeys.id, row.id)
-          : and(eq(apiKeys.id, row.id), staleGuard)
+        and(
+          eq(apiKeys.id, row.id),
+          or(isNull(apiKeys.lastUsed), lt(apiKeys.lastUsed, cutoff))
+        )
       )
   }
 

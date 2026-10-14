@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **RBAC 8/8 (#191): contract phase and guard rails.** **Do not deploy before RBAC 2/8 to 7/8 (migrations 0038 to 0040) have been live for at least one release**; see `docs/DATABASE-MIGRATION.md`, "RBAC 8/8 rollout". Migration 0041 (idempotent, defensive):
+  - `team_members.event_id` is `NOT NULL` (the backfill runs again first; a Player the old app put on two Teams of one Event is moved to `team_members_quarantine`)
+  - The legacy plaintext `api_keys.key` column is dropped (keys without a hash are hashed first) together with the dual-read in `checkApiKey`; the unused `user_role` enum is dropped
+  - Creators get an `admin` participant row if missing and are promoted if they hold a lower role, because the policy no longer treats the creator as admin by itself
+  - `clan_invites.created_by` is nullable (it was `NOT NULL` with `ON DELETE SET NULL`, so deleting the user who created an invite failed); the invite now outlives its creator. `discord_webhooks.created_by` is `NOT NULL ... ON DELETE CASCADE`, consistent, and unchanged
+  - ESLint `no-restricted-syntax` guard rails (`eslint.config.mjs`): no `=== "admin"`, `!== "management"`, `case "admin":`, `.includes("admin")` or `["admin", "management"]` outside `src/lib/authz` and `src/server/authz` (tests and `schema.ts` excepted), and every `user` / `creator` / `reviewer` / `author` relation in a Drizzle `with:` needs explicit `columns`. `src/server/__tests__/lint-guard-rails.test.ts` pins the behaviour. The grep test `role-comparisons.test.ts` and its allowlist are gone
+  - `docs/adr/0002-rbac-roles-and-ownership.md` records the final role and ownership model; `CONTEXT.md` is updated
 - **RBAC 7/8 (#190): credential and session hygiene.** Migration 0040 (add-first, see `docs/DATABASE-MIGRATION.md`, "RBAC 7/8 rollout"):
   - API keys are stored as a SHA-256 hash plus an 8 character prefix and shown once at creation; they gain `expires_at`, `revoked_at` and scopes (`read`, `submit`). Lookup is by hash, then by the legacy plaintext column (a legacy hit backfills the hash), for one release. The key format and the RuneLite `Bearer` header are unchanged, existing keys keep working. The API keys page lists the prefix, status, expiry and scope, can set an expiry and a read-only key at creation, and revokes instead of deleting active keys (`revokeApiKey`)
   - Sessions: explicit JWT lifetime (30 days), the user row is checked on every request so a deleted account or a revoked session stops working, `runescapeName` is read from the database instead of the token, "Sign out everywhere" on the settings page (`revokeAllSessions`, `users.session_revoked_at`)
@@ -39,6 +46,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **RBAC 8/8 (#191) behaviour changes:**
+  - `buildEventActor` no longer turns the creator into an implicit admin: the role is the participant row, `isOwner` is the owner pointer. The creator always has an admin row (Event creation inserts it, migrations 0038 and 0041 backfill it, `creator_without_participant_row` and `creator_role_conflicts` report any fault), so nothing changes for healthy data
+  - Dashboard, Clan Event and manageable-Event queries no longer treat `creator_id` as a role shortcut; they read the participant row
+  - `src/server/authz/compat.ts` is now `team-guards.ts` (same exports). `getUserRole` (a shim over `getEventRole`), the duplicate `getEvents` server action and the unused `getEventSummary` action are removed; `getEvents` lives in `@/server/queries/events`
+  - Clan role helpers (`isClanManager`, `canChangeRoles`, `validateRoleChange`) and the UI role badges use `isManagerRole`, `isAdminRole`, `isLastAdmin` (`@/lib/authz/roles`) and `roleBadgeVariant` (`@/lib/authz/role-display`) instead of comparing role strings
 - **RBAC 7/8 (#190) behaviour changes:**
   - Super admins have to sign in through Discord, GitHub or Google once after the deploy; until then `/super-admin` denies them. Credentials accounts can no longer be super admins
   - `getUserClans` no longer returns the Clan owner's whole user row (it carried the password hash) but id, name, image and RuneScape name

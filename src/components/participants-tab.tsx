@@ -40,11 +40,13 @@ import {
   ArrowDown,
   Heart,
   UserPlus,
+  type LucideIcon,
 } from "lucide-react"
 import { updateParticipantRole, assignParticipantToTeam, updateParticipantBuyIn, removeParticipantFromEvent, getEventParticipants } from "@/app/actions/events"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import type { EventCapabilities } from "@/lib/authz/capabilities"
 import { eventRoleLabel, type EventRole } from "@/lib/authz/roles"
+import { roleBadgeVariant } from "@/lib/authz/role-display"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -79,6 +81,11 @@ import type {
   SortDirection,
 } from "@/app/events/[id]/(manage)/participants/types"
 import { AddClanMembersDialog } from "@/components/events/add-clan-members-dialog"
+
+const ROLE_ICONS: Record<string, LucideIcon> = {
+  admin: Crown,
+  management: Shield,
+}
 
 interface RemoveParticipantDialogProps {
   isOpen: boolean
@@ -687,26 +694,11 @@ export function ParticipantsTab({
   )
 
   const getRoleIcon = (role: string) => {
-    switch (role) {
-      case "admin":
-        return <Crown className="h-4 w-4" />
-      case "management":
-        return <Shield className="h-4 w-4" />
-      default:
-        return <User className="h-4 w-4" />
-    }
+    const Icon = ROLE_ICONS[role] ?? User
+    return <Icon aria-hidden="true" className="h-4 w-4" />
   }
 
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "default"
-      case "management":
-        return "secondary"
-      default:
-        return "outline"
-    }
-  }
+  const getRoleBadgeVariant = roleBadgeVariant
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) return <ArrowUpDown className="h-4 w-4" />

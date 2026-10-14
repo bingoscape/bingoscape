@@ -134,7 +134,7 @@ describe("GET /api/runelite/bingos/[bingoId]", () => {
       expectSecret(body, fx.titleOf(0))
     })
 
-    it("serves the creator even without a participant row", async () => {
+    it("does not serve a creator without a participant row (no implicit admin)", async () => {
       await db
         .delete(eventParticipants)
         .where(
@@ -144,7 +144,7 @@ describe("GET /api/runelite/bingos/[bingoId]", () => {
           )
         )
       const response = await fetchBoard(fx.managerId, fx.bingoId)
-      expect(response.status).toBe(200)
+      expect(response.status).toBe(404)
     })
 
     it("answers 404 to a user who is not in the event", async () => {

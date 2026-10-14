@@ -339,8 +339,7 @@ export async function getClanEventRows(
 
   return clanEvents.map((event) => {
     const participant = event.eventParticipants[0]
-    const role: EventRole =
-      event.creatorId === userId ? "admin" : (participant?.role ?? "participant")
+    const role: EventRole = participant?.role ?? "participant"
     const isManager = isManagerRole(role)
     const team = teamByEvent.get(event.id)
 
@@ -374,7 +373,7 @@ export async function getClanEventRows(
     }
 
     const registration: ClanEventRegistration =
-      participant || event.creatorId === userId
+      participant
         ? "joined"
         : pending.has(event.id)
           ? "pending"

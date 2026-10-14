@@ -65,7 +65,7 @@ export interface EventReadAccess {
   level: EventReadLevel
   /** The level `enforce` would give. Secrets are decided on this one. */
   strictLevel: EventReadLevel
-  /** Effective Event role (the creator counts as admin); null for non-members. */
+  /** Effective Event role (the participant row); null for non-members. */
   role: EventRole | null
   /** Admin or management (hidden / Blind Tiles, drafts and secrets). */
   isManager: boolean

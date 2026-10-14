@@ -30,6 +30,7 @@ import {
   canChangeRoles,
   type ClanRole,
 } from "@/lib/clan"
+import { isAdminRole } from "@/lib/authz/roles"
 import type { LucideIcon } from "lucide-react"
 
 export interface ClanMemberListMember {
@@ -237,7 +238,7 @@ export function ClanMemberList({
               {displayName(change.member)} will go from{" "}
               <strong>{CLAN_ROLE_LABELS[change.member.role]}</strong> to{" "}
               <strong>{CLAN_ROLE_LABELS[change.role]}</strong>.
-              {change.role === "admin"
+              {isAdminRole(change.role)
                 ? " Admins can change everyone's roles."
                 : ""}
             </>

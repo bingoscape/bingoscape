@@ -153,7 +153,6 @@ export const verificationTokens = createTable(
 )
 
 // Enums
-export const userRoleEnum = pgEnum("user_role", ["user", "admin", "management"])
 // Change the submissionStatusEnum to remove "declined" and use clearer names
 export const submissionStatusEnum = pgEnum("submission_status", [
   "pending",
@@ -441,10 +440,9 @@ export const teamMembers = createTable(
       .notNull()
       .references(() => teams.id, { onDelete: "cascade" }),
     // Denormalised from teams.event_id so the database can enforce "a Player
-    // is on at most one Team per Event". Nullable while the previous app
-    // version (which does not set it) can still insert rows; becomes NOT NULL
-    // in the contract phase (RBAC 8/8).
-    eventId: uuid("event_id"),
+    // is on at most one Team per Event". The composite foreign key below keeps
+    // it equal to the Team's Event.
+    eventId: uuid("event_id").notNull(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -908,9 +906,11 @@ export const clanInvites = createTable("clan_invites", {
   inviteCode: varchar("invite_code", { length: 10 }).notNull().unique(),
   expiresAt: timestamp("expires_at"), // NULL = permanent invite
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  createdBy: uuid("created_by")
-    .notNull()
-    .references(() => users.id, { onDelete: "set null" }),
+  // An invite outlives the member who made it: nullable, set to NULL when that
+  // user is deleted (the UI shows "Unknown").
+  createdBy: uuid("created_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
   label: varchar("label", { length: 100 }), // Optional friendly name
   maxUses: integer("max_uses"), // NULL = unlimited uses
   currentUses: integer("current_uses").default(0).notNull(),
@@ -1271,11 +1271,8 @@ export const apiKeys = createTable(
       .references(() => users.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 100 }).notNull(),
     description: text("description"),
-    // LEGACY plaintext key. New keys leave it NULL; rows created before
-    // migration 0040 (and by the previous app version) still carry it and are
-    // found by the dual-read in `@/lib/api-auth`. Dropped in RBAC 8/8.
-    key: varchar("key", { length: 100 }).unique(),
-    // SHA-256 (hex) of the key, and its first characters for display.
+    // SHA-256 (hex) of the key (the plaintext is never stored), and its first
+    // characters for display.
     keyHash: varchar("key_hash", { length: 64 }),
     keyPrefix: varchar("key_prefix", { length: 16 }),
     // What the key may do (`API_KEY_SCOPES` in `@/lib/api-key`).

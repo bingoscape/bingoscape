@@ -3,6 +3,16 @@ import { isManagerRole } from "@/lib/authz/roles"
 
 export type RoleFilter = "all" | "admin" | "participant"
 
+/**
+ * The `?role=` URL tokens of the dashboard. They name a filter ("events I run"
+ * / "events I play in"), not an Event role; "admin" is kept so bookmarked links
+ * keep working. Who runs an Event is decided by `isManagerRole`.
+ */
+const ROLE_FILTERS: readonly string[] = ["all", "admin", "participant"]
+
+/** The filter that lists the Events the user runs. */
+export const RUNS_FILTER: RoleFilter = "admin"
+
 export interface CategorizedEvents {
   active: EventData[]
   upcoming: EventData[]
@@ -12,7 +22,7 @@ export interface CategorizedEvents {
 /** Reads the `?role=` search param; anything unknown falls back to "all". */
 export function parseRoleFilter(value: string | string[] | undefined): RoleFilter {
   const raw = Array.isArray(value) ? value[0] : value
-  return raw === "admin" || raw === "participant" ? raw : "all"
+  return raw && ROLE_FILTERS.includes(raw) ? (raw as RoleFilter) : "all"
 }
 
 /** "admin" = events the user runs (admin or management), "participant" = events they play in. */
@@ -23,7 +33,7 @@ export function filterEventsByRole(
   if (filter === "all") return events
   return events.filter((e) => {
     const runs = isManagerRole(e.event.role)
-    return filter === "admin" ? runs : !runs
+    return filter === RUNS_FILTER ? runs : !runs
   })
 }
 

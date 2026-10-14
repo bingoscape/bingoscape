@@ -24,8 +24,7 @@ export async function POST(req: Request) {
 
     const { apiKey } = schema.parse(body)
 
-    // Hash lookup (then the legacy plaintext column); revoked and expired
-    // keys are refused like unknown ones.
+    // Hash lookup; revoked and expired keys are refused like unknown ones.
     const check = await checkApiKey(apiKey, { scope: "read" })
     if (!check.ok) {
       return NextResponse.json({ valid: false }, { status: 401 })

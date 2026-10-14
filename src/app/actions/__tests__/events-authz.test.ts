@@ -9,7 +9,6 @@ import {
   assignParticipantToTeam,
   generateEventInviteLink,
   getEventParticipants,
-  getEvents,
   getParticipantDonations,
   getPendingRegistrationCount,
   getRegistrationRequests,
@@ -20,6 +19,7 @@ import {
   updateParticipantRole,
 } from "@/app/actions/events"
 import { getServerAuthSession } from "@/server/auth"
+import { getEvents } from "@/server/queries/events"
 import { db } from "@/server/db"
 import {
   clanMembers,
@@ -102,6 +102,7 @@ async function seed() {
   const participantsA = await db
     .insert(eventParticipants)
     .values([
+      { eventId: eventA!.id, userId: idOf("creator"), role: "admin" },
       { eventId: eventA!.id, userId: idOf("admin"), role: "admin" },
       { eventId: eventA!.id, userId: idOf("manager"), role: "management" },
       { eventId: eventA!.id, userId: idOf("player"), role: "participant" },
@@ -119,7 +120,9 @@ async function seed() {
     .returning({ id: teams.id })
   await db
     .insert(teamMembers)
-    .values([{ teamId: teamA1!.id, userId: idOf("player") }])
+    .values([
+      { teamId: teamA1!.id, eventId: eventA!.id, userId: idOf("player") },
+    ])
 
   // The player also takes part in Event B, on a team there.
   const [playerInB] = await db
@@ -128,7 +131,7 @@ async function seed() {
     .returning({ id: eventParticipants.id })
   await db
     .insert(teamMembers)
-    .values({ teamId: teamB!.id, userId: idOf("player") })
+    .values({ teamId: teamB!.id, eventId: eventB!.id, userId: idOf("player") })
   const [donationB] = await db
     .insert(eventDonations)
     .values({ eventParticipantId: playerInB!.id, amount: 50 })
@@ -391,11 +394,6 @@ describe("updateParticipantRole", () => {
   it("never demotes the event creator", async () => {
     await withDb(async () => {
       const f = await seed()
-      await db.insert(eventParticipants).values({
-        eventId: f.eventA,
-        userId: f.idOf("creator"),
-        role: "admin",
-      })
       signInAs(f.idOf("admin"))
 
       await expectFailure(updateParticipantRole(f.eventA, f.idOf("creator"), "participant"), "creator")
@@ -410,6 +408,14 @@ describe("updateParticipantRole", () => {
         .update(events)
         .set({ creatorId: null })
         .where(eq(events.id, f.eventA))
+      await db
+        .delete(eventParticipants)
+        .where(
+          and(
+            eq(eventParticipants.eventId, f.eventA),
+            eq(eventParticipants.userId, f.idOf("creator"))
+          )
+        )
       signInAs(f.idOf("admin"))
 
       await expectFailure(updateParticipantRole(f.eventA, f.idOf("admin"), "participant"), "at least one admin")

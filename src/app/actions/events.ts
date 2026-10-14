@@ -6,16 +6,12 @@ import { revalidatePath } from "next/cache"
 
 import { getServerAuthSession } from "@/server/auth"
 import { limitAction } from "@/server/rate-limit"
-import {
-  isManagerRole,
-  type EventRole as AuthzEventRole,
-} from "@/lib/authz/roles"
+import type { EventRole as AuthzEventRole } from "@/lib/authz/roles"
 import {
   actionFailure,
   authorize,
   denial,
   failure,
-  getEventRole,
   hasPermission,
   membershipFailure,
   type ActionResult,
@@ -62,10 +58,7 @@ import { isClanManager } from "@/lib/clan"
 import { logger } from "@/lib/logger"
 import { applyBlindBoard } from "@/server/blind-board"
 
-import {
-  capabilitiesForMembership,
-  type EventCapabilities,
-} from "@/lib/authz/capabilities"
+import type { EventCapabilities } from "@/lib/authz/capabilities"
 import type { Event } from "@/types/model"
 
 export interface EventData {
@@ -251,14 +244,6 @@ export async function createEvent(formData: FormData) {
   }
 }
 
-/**
- * The signed-in user's effective role in the Event (the creator counts as
- * admin), or null for non-members. Delegates to the actor loader.
- */
-export async function getUserRole(eventId: string): Promise<EventRole | null> {
-  return getEventRole(eventId)
-}
-
 /** Never load a full users row for a response: it carries the password hash. */
 const USER_PUBLIC_COLUMNS = {
   columns: {
@@ -321,283 +306,6 @@ export async function assignEventToClan(
   } catch (error) {
     logger.error({ error, eventId, clanId }, "Error assigning event to clan")
     return actionFailure(error, "Failed to assign the event to the clan")
-  }
-}
-
-export async function getEvents(userId: string): Promise<EventData[]> {
-  // Only the signed-in user may list their own events.
-  const session = await getServerAuthSession()
-  if (!session?.user || session.user.id !== userId) return []
-
-  try {
-    const userEvents = await db.query.events.findMany({
-      where: (events, { or, eq, exists }) =>
-        or(
-          eq(events.creatorId, userId),
-          exists(
-            db
-              .select()
-              .from(eventParticipants)
-              .where(
-                and(
-                  eq(eventParticipants.eventId, events.id),
-                  eq(eventParticipants.userId, userId)
-                )
-              )
-          )
-        ),
-      with: {
-        eventParticipants: {
-          where: eq(eventParticipants.userId, userId),
-        },
-        clan: true,
-        bingos: true,
-      },
-      orderBy: events.createdAt,
-    })
-
-    if (userEvents.length === 0) return []
-
-    const eventIds = userEvents.map((e) => e.id)
-
-    // 1. Bulk Prize Pool Queries
-    const buyInsResult = await db
-      .select({
-        eventId: eventParticipants.eventId,
-        total: sql<number>`COALESCE(SUM(${eventBuyIns.amount}), 0)`.mapWith(
-          Number
-        ),
-      })
-      .from(eventBuyIns)
-      .innerJoin(
-        eventParticipants,
-        eq(eventBuyIns.eventParticipantId, eventParticipants.id)
-      )
-      .where(inArray(eventParticipants.eventId, eventIds))
-      .groupBy(eventParticipants.eventId)
-
-    const donationsResult = await db
-      .select({
-        eventId: eventParticipants.eventId,
-        total: sql<number>`COALESCE(SUM(${eventDonations.amount}), 0)`.mapWith(
-          Number
-        ),
-      })
-      .from(eventDonations)
-      .innerJoin(
-        eventParticipants,
-        eq(eventDonations.eventParticipantId, eventParticipants.id)
-      )
-      .where(inArray(eventParticipants.eventId, eventIds))
-      .groupBy(eventParticipants.eventId)
-
-    const buyInsMap = new Map(buyInsResult.map((r) => [r.eventId, r.total]))
-    const donationsMap = new Map(
-      donationsResult.map((r) => [r.eventId, r.total])
-    )
-
-    // Identify which events the user manages
-    const managedEventIds = userEvents
-      .filter(
-        (e) =>
-          e.creatorId === userId || isManagerRole(e.eventParticipants[0]?.role)
-      )
-      .map((e) => e.id)
-
-    // 2. Manager Data (if any managed events)
-    const managerDataMap = new Map()
-    if (managedEventIds.length > 0) {
-      const pendingRegResult = await db
-        .select({
-          eventId: eventRegistrationRequests.eventId,
-          count: sql<number>`count(*)`.mapWith(Number),
-        })
-        .from(eventRegistrationRequests)
-        .where(
-          and(
-            inArray(eventRegistrationRequests.eventId, managedEventIds),
-            eq(eventRegistrationRequests.status, "pending")
-          )
-        )
-        .groupBy(eventRegistrationRequests.eventId)
-
-      const pendingSubResult = await db
-        .select({
-          eventId: teams.eventId,
-          count: sql<number>`count(*)`.mapWith(Number),
-        })
-        .from(submissions)
-        .innerJoin(
-          teamTileSubmissions,
-          eq(submissions.teamTileSubmissionId, teamTileSubmissions.id)
-        )
-        .innerJoin(teams, eq(teamTileSubmissions.teamId, teams.id))
-        .where(
-          and(
-            inArray(teams.eventId, managedEventIds),
-            eq(submissions.status, "pending")
-          )
-        )
-        .groupBy(teams.eventId)
-
-      const totalPartResult = await db
-        .select({
-          eventId: eventParticipants.eventId,
-          count: sql<number>`count(*)`.mapWith(Number),
-        })
-        .from(eventParticipants)
-        .where(inArray(eventParticipants.eventId, managedEventIds))
-        .groupBy(eventParticipants.eventId)
-
-      const activeTeamsResult = await db
-        .select({
-          eventId: teams.eventId,
-          count: sql<number>`count(*)`.mapWith(Number),
-        })
-        .from(teams)
-        .where(inArray(teams.eventId, managedEventIds))
-        .groupBy(teams.eventId)
-
-      for (const id of managedEventIds) {
-        managerDataMap.set(id, {
-          actionItems: {
-            pendingRegistrations:
-              pendingRegResult.find((r) => r.eventId === id)?.count ?? 0,
-            pendingSubmissions:
-              pendingSubResult.find((r) => r.eventId === id)?.count ?? 0,
-          },
-          eventStats: {
-            totalParticipants:
-              totalPartResult.find((r) => r.eventId === id)?.count ?? 0,
-            activeTeams:
-              activeTeamsResult.find((r) => r.eventId === id)?.count ?? 0,
-          },
-        })
-      }
-    }
-
-    // 3. Participant Data
-    const participantDataMap = new Map()
-    const userTeams = await db
-      .select({
-        eventId: teams.eventId,
-        teamId: teams.id,
-        teamName: teams.name,
-      })
-      .from(teamMembers)
-      .innerJoin(teams, eq(teamMembers.teamId, teams.id))
-      .where(
-        and(inArray(teams.eventId, eventIds), eq(teamMembers.userId, userId))
-      )
-
-    const userTeamIds = userTeams.map((t) => t.teamId)
-    let teamMemberCounts: { teamId: string; count: number }[] = []
-    let completedTilesCount: { teamId: string; count: number }[] = []
-
-    if (userTeamIds.length > 0) {
-      teamMemberCounts = await db
-        .select({
-          teamId: teamMembers.teamId,
-          count: sql<number>`count(*)`.mapWith(Number),
-        })
-        .from(teamMembers)
-        .where(inArray(teamMembers.teamId, userTeamIds))
-        .groupBy(teamMembers.teamId)
-
-      completedTilesCount = await db
-        .select({
-          teamId: teamTileSubmissions.teamId,
-          count: sql<number>`count(*)`.mapWith(Number),
-        })
-        .from(teamTileSubmissions)
-        .where(
-          and(
-            inArray(teamTileSubmissions.teamId, userTeamIds),
-            eq(teamTileSubmissions.status, "completed")
-          )
-        )
-        .groupBy(teamTileSubmissions.teamId)
-    }
-
-    const bingoTotalTilesResult = await db
-      .select({
-        bingoId: tiles.bingoId,
-        count: sql<number>`count(*)`.mapWith(Number),
-      })
-      .from(tiles)
-      .where(
-        inArray(
-          tiles.bingoId,
-          userEvents.flatMap((e) => e.bingos?.map((b) => b.id) ?? [])
-        )
-      )
-      .groupBy(tiles.bingoId)
-
-    const tilesCountMap = new Map(
-      bingoTotalTilesResult.map((r) => [r.bingoId, r.count])
-    )
-
-    for (const t of userTeams) {
-      const memberCount =
-        teamMemberCounts.find((r) => r.teamId === t.teamId)?.count ?? 0
-      const completedTiles =
-        completedTilesCount.find((r) => r.teamId === t.teamId)?.count ?? 0
-
-      const eventBingos = userEvents.find((e) => e.id === t.eventId)?.bingos
-      const firstBingoId = eventBingos?.[0]?.id
-      const totalTiles = firstBingoId
-        ? (tilesCountMap.get(firstBingoId) ?? 0)
-        : 0
-
-      participantDataMap.set(t.eventId, {
-        team: {
-          id: t.teamId,
-          name: t.teamName,
-          memberCount,
-        },
-        progress: {
-          completedTiles,
-          totalTiles,
-        },
-      })
-    }
-
-    const eventData = userEvents.map((event) => {
-      const role =
-        event.creatorId === userId
-          ? "admin"
-          : (event.eventParticipants[0]?.role ?? "participant")
-
-      const basePrizePool = event.basePrizePool
-      const totalBuyIns = buyInsMap.get(event.id) ?? 0
-      const totalDonations = donationsMap.get(event.id) ?? 0
-      const totalPrizePool = basePrizePool + totalBuyIns + totalDonations
-
-      const isManager = isManagerRole(role)
-
-      return {
-        event: {
-          ...event,
-          role,
-        },
-        capabilities: capabilitiesForMembership({
-          userId,
-          eventId: event.id,
-          creatorId: event.creatorId,
-          participantRole: event.eventParticipants[0]?.role ?? null,
-        }),
-        totalPrizePool,
-        ...(isManager && managerDataMap.has(event.id)
-          ? { managerData: managerDataMap.get(event.id) }
-          : {}),
-        participantData: participantDataMap.get(event.id) ?? undefined,
-      }
-    })
-
-    return eventData
-  } catch (error) {
-    logger.error({ error }, "Error fetching events")
-    throw new Error("Failed to fetch events")
   }
 }
 

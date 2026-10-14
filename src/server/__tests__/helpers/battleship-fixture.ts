@@ -83,17 +83,29 @@ export async function createBattleshipFixture(
     ])
     .returning({ id: teams.id })
 
-  await db.insert(eventParticipants).values(
-    ["leaderA", "memberA", "leaderB", "memberB", "outsider"].map((name) => ({
+  await db.insert(eventParticipants).values([
+    // The creator has the admin row every creator has.
+    { eventId: event!.id, userId: idOf("manager"), role: "admin" as const },
+    ...["leaderA", "memberA", "leaderB", "memberB", "outsider"].map((name) => ({
       eventId: event!.id,
       userId: idOf(name),
-    }))
-  )
+    })),
+  ])
   await db.insert(teamMembers).values([
-    { teamId: teamA!.id, userId: idOf("leaderA"), isLeader: true },
-    { teamId: teamA!.id, userId: idOf("memberA") },
-    { teamId: teamB!.id, userId: idOf("leaderB"), isLeader: true },
-    { teamId: teamB!.id, userId: idOf("memberB") },
+    {
+      teamId: teamA!.id,
+      eventId: event!.id,
+      userId: idOf("leaderA"),
+      isLeader: true,
+    },
+    { teamId: teamA!.id, eventId: event!.id, userId: idOf("memberA") },
+    {
+      teamId: teamB!.id,
+      eventId: event!.id,
+      userId: idOf("leaderB"),
+      isLeader: true,
+    },
+    { teamId: teamB!.id, eventId: event!.id, userId: idOf("memberB") },
   ])
 
   const [bingo] = await db

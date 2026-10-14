@@ -8,7 +8,7 @@ import { can, type EventActor } from "./policy"
  * Vocabulary
  *
  * - A **read level** says how the viewer stands towards the Event:
- *   `manager` (admin / management / creator), `member` (any other participant,
+ *   `manager` (admin / management; the creator is an admin), `member` (any other participant,
  *   or a member of one of its Teams), `public` (not a member, but the Event is
  *   public), `summary` (a signed-in non-member of a non-public Event: they hold
  *   the link and get the join card), `none`.

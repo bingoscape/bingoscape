@@ -11,6 +11,7 @@ import {
   categorizeEvents,
   countNeedsAttention,
   filterEventsByRole,
+  RUNS_FILTER,
   type RoleFilter,
 } from "@/lib/dashboard-events"
 import { cn } from "@/lib/utils"
@@ -186,12 +187,12 @@ export default function EventList({
       ) : visibleEvents.length === 0 ? (
         <div className="osrs-panel space-y-4 rounded-sm p-8 text-center">
           <p className="text-muted-foreground">
-            {roleFilter === "admin"
+            {roleFilter === RUNS_FILTER
               ? "You don't run any Events yet."
               : "You aren't playing in any Events yet."}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">
-            {roleFilter === "admin" ? (
+            {roleFilter === RUNS_FILTER ? (
               <CreateEventButton />
             ) : (
               <JoinEventPopover />
