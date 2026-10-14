@@ -5,12 +5,11 @@
  * handler method) must be registered with a policy. The entry points are found
  * by reading the source, not from a list kept by hand.
  */
-import ts from "typescript"
-
 import { PERMISSIONS } from "@/lib/authz/permissions"
 import { POLICY_REGISTRY } from "@/server/authz/registry"
 import {
   findEntryPoints,
+  parseSource,
   readRepoFile,
   runtimeExports,
 } from "@/server/__tests__/helpers/export-scan"
@@ -18,8 +17,7 @@ import {
 const entryPoints = findEntryPoints()
 
 describe("export scanner", () => {
-  const exportsOf = (code: string) =>
-    runtimeExports(ts.createSourceFile("x.ts", code, ts.ScriptTarget.Latest))
+  const exportsOf = (code: string) => runtimeExports(parseSource(code))
 
   it("sees runtime exports and ignores types", () => {
     expect(
