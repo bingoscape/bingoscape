@@ -1,0 +1,47 @@
+src/server/__tests__/revalidate-event-participants.test.ts
+  s_e32e07509d7036::t_87758fc38918a2 1-30
+src/components/registrations-tab.tsx
+  s_e32e07509d7036::t_a34d51186c7b17 41,72
+src/components/__tests__/participants-dialogs.test.tsx
+  s_e32e07509d7036::t_5a0b9402880974 1-119
+src/lib/__tests__/registration-search.test.ts
+  s_e32e07509d7036::t_8134149a059159 1-50
+src/components/participants-tab.tsx
+  s_e32e07509d7036::t_e6f0b7f77dabe0 152,159-161,163,165-168,172,179,188,197,211,234,241-243,245,247-250,254,260,267,276,285,300,513,715-721,752,795,935,1011,1167,1171,1181,1191,1201,1211,1221
+src/app/actions/team-balancing.ts
+  s_e32e07509d7036::t_5616fc12a8ae3c 6
+  s_e32e07509d7036::t_309be0d52ff1d3 897
+src/app/actions/player-metadata.ts
+  s_e32e07509d7036::t_5616fc12a8ae3c 14
+  s_e32e07509d7036::t_309be0d52ff1d3 133,199,228
+src/server/revalidate-event-participants.ts
+  s_e32e07509d7036::t_4fc0297b5a34c8 1-25
+src/app/actions/events.ts
+  s_e32e07509d7036::t_a34d51186c7b17 64,1542-1545
+  s_e32e07509d7036::t_b7ecd7aae6edc0 833,921,1009,1034,1182,1216,1275,1346,1378,1488,1619,1663,1780,1820,1853
+  s_e32e07509d7036::t_2ae9587cdd3855 1223
+  s_e32e07509d7036::t_c53f669d64804c 65
+src/app/actions/team.ts
+  s_e32e07509d7036::t_309be0d52ff1d3 5,38,155,192,227,318,355,451
+src/lib/registration-search.ts
+  s_e32e07509d7036::t_8134149a059159 1-27
+src/app/actions/__tests__/participants-workflow.test.ts
+  s_e32e07509d7036::t_e6ac6d1186ccba 89-91
+  s_e32e07509d7036::t_87758fc38918a2 1-88,92-216
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "54f7e4cca9ab2434d1c649a8c2991ba481d958d4",
+  "prompts": {},
+  "sessions": {
+    "s_e32e07509d7036": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0f5dfb9a-3776-4ec4-a635-481b24c3d7ae",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
