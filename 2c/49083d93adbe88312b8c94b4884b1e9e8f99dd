@@ -1,0 +1,36 @@
+src/components/event-workspace/tier-ladder-view.tsx
+  s_2aebdb4d5645da::t_a202a41f5a2ce1 140-144
+  s_2aebdb4d5645da::t_9aa366af7c2a3c 157
+  s_2aebdb4d5645da::t_01c0f7b51083fc 166
+src/components/event-card.tsx
+  s_2aebdb4d5645da::t_95276e887e6fce 347
+  s_2aebdb4d5645da::t_24b098000e9d49 119
+src/components/events/add-clan-members-dialog.tsx
+  s_2aebdb4d5645da::t_f9e29adcef39b6 71-82
+src/components/player-metadata-modal.tsx
+  s_2aebdb4d5645da::t_b8798ec28ced99 153-159
+package.json
+  s_2aebdb4d5645da::t_b4ad37e73e8d6b 81,125
+eslint.config.mjs
+  s_2aebdb4d5645da::t_e84f2e081f3257 25,27-30,34-37
+  s_2aebdb4d5645da::t_8e7f21ff725cca 26
+  s_2aebdb4d5645da::t_993836bc60ff13 31-33
+package-lock.json
+  s_2aebdb4d5645da::t_d49695655b1cc5 66,110,1520-1522,2739-2741,2791-2825,3181-3215,4918-4920,4924-4926,4930,4935-4937,4951-4953,4967-4969,4973-4975,4986-4988,4992-4994,5005-5007,5011-5013,5024-5026,5030-5032,5043-5045,5059-5061,7072-7074,9597-9599,9602-9605,12160-12162,12166,12172,12174,12470-12472,12486,18598-18600,18603-18605,18607,18617-18625,18725-18730,18732-19228,19230-19232,19235-19270,20162-20164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2c49083d93adbe88312b8c94b4884b1e9e8f99dd",
+  "prompts": {},
+  "sessions": {
+    "s_2aebdb4d5645da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9e280b93-4bc1-4d59-a11c-e6d1207080db",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
