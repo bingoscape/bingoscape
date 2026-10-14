@@ -104,6 +104,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@babel/parser": "^7.29.9",
     "@playwright/test": "^1.54.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/typography": "^0.5.15",
