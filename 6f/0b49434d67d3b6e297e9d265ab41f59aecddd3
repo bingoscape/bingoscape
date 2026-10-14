@@ -1,0 +1,165 @@
+src/lib/draft/view.ts
+  s_ef9e7db49e4fa3::t_e4ec77292953f3 198-205
+drizzle/0043_team_draft_discord.sql
+  s_ef9e7db49e4fa3::t_423e159931f35a 1-36
+src/server/authz/registry.ts
+  s_ef9e7db49e4fa3::t_39427e44c6fb8b 442-445
+src/lib/draft/__tests__/optimum.test.ts
+  s_ef9e7db49e4fa3::t_9988f50a33c2e5 1-43,45-67,69-87
+  s_ef9e7db49e4fa3::t_7ac9e0bbb9dc0c 44,68
+src/server/draft/core.ts
+  s_ef9e7db49e4fa3::t_2561778a7459f8 44,93-130,389-398,432-435,465-468,557,568-579,600,607-612,742-750,832-835
+src/lib/team-balancing/annealing.ts
+  s_ef9e7db49e4fa3::t_e81d879a37aa79 19,47,55,66,99,119,134,173,283,343
+  s_ef9e7db49e4fa3::t_ca2c8714ea93e5 75-79
+  s_ef9e7db49e4fa3::t_bf27b51da643ba 1-18,20-46,48-54,56-65,67-74,80-98,100-118,120-133,135-172,174-282,284-342,344-456
+src/components/draft/recap/recap-image-element.tsx
+  s_ef9e7db49e4fa3::t_75108300a94a58 1-52,57-155
+  s_ef9e7db49e4fa3::t_ca2c8714ea93e5 53-56
+src/app/events/[id]/(member)/draft/recap/page.tsx
+  s_ef9e7db49e4fa3::t_fd3897c31b3f07 1-100
+src/app/actions/__tests__/draft.test.ts
+  s_ef9e7db49e4fa3::t_3b88ff6eb55149 45-47
+src/components/event-command-palette.tsx
+  s_ef9e7db49e4fa3::t_f82cddfafe7c55 15,17,27,81-82,99,174-214
+src/app/api/__tests__/draft-state.test.ts
+  s_ef9e7db49e4fa3::t_3b88ff6eb55149 24-26
+src/server/__tests__/draft-timer.test.ts
+  s_ef9e7db49e4fa3::t_3b88ff6eb55149 52-54
+docs/TEAM-DRAFT.md
+  s_ef9e7db49e4fa3::t_bdd928365a598f 1-196
+README.md
+  s_ef9e7db49e4fa3::t_2114f44515be67 313
+src/server/draft/queries.ts
+  s_ef9e7db49e4fa3::t_3e0b8db8d5347b 16,324
+  s_ef9e7db49e4fa3::t_46ef1030f09c0a 307
+src/lib/draft/types.ts
+  s_ef9e7db49e4fa3::t_3e0b8db8d5347b 213-217
+src/lib/__tests__/discord-draft-embeds.test.ts
+  s_ef9e7db49e4fa3::t_e1b13c41590f2f 1-187
+tests/draft-complete.spec.ts
+  s_ef9e7db49e4fa3::t_7ac9e0bbb9dc0c 99-101,108-110,141-143
+  s_ef9e7db49e4fa3::t_f3e691ef2cd932 1-98,102-107,111-140,144-202
+src/components/__tests__/draft-spectator.test.tsx
+  s_ef9e7db49e4fa3::t_7ac9e0bbb9dc0c 187,214-216,236-242,253-255
+  s_ef9e7db49e4fa3::t_bb66d100b6b064 1-186,188-213,217-235,243-252,256-270
+src/components/event-workspace/event-summary-bar.tsx
+  s_ef9e7db49e4fa3::t_f82cddfafe7c55 155
+src/components/draft/recap/final-rosters.tsx
+  s_ef9e7db49e4fa3::t_a468954133b7c3 1-78
+src/components/draft/balance-panel.tsx
+  s_ef9e7db49e4fa3::t_fa74c0418daae3 1-126
+src/components/draft/draft-room.tsx
+  s_ef9e7db49e4fa3::t_fc0c257b658e8c 4-5,8,15,233-240,305,355,364-366,372
+src/server/db/schema.ts
+  s_ef9e7db49e4fa3::t_3ab7db8ac4bf10 1710-1715
+src/components/draft/unassigned-list.tsx
+  s_ef9e7db49e4fa3::t_3de56bfc04e687 10,22,37-40
+src/app/api/__tests__/draft-recap-image.test.ts
+  s_ef9e7db49e4fa3::t_c0f4e6c4c60a0b 1-154
+src/server/__tests__/cross-event.test.ts
+  s_ef9e7db49e4fa3::t_39427e44c6fb8b 980-981
+src/components/draft/team-roster-column.tsx
+  s_ef9e7db49e4fa3::t_3de56bfc04e687 18-19,32,93
+src/app/api/events/[id]/draft/recap-image/route.ts
+  s_ef9e7db49e4fa3::t_ca2c8714ea93e5 1-82
+src/lib/draft/optimum.ts
+  s_ef9e7db49e4fa3::t_af1b13e2543921 1-56,58-108
+  s_ef9e7db49e4fa3::t_ca2c8714ea93e5 57
+src/lib/draft/analytics.ts
+  s_ef9e7db49e4fa3::t_ca2c8714ea93e5 103,114
+  s_ef9e7db49e4fa3::t_b9058471f4a303 1-102,104-113,115-218
+src/components/draft/player-name.tsx
+  s_ef9e7db49e4fa3::t_3de56bfc04e687 10-11,15,26-30
+src/lib/rate-limit-policies.ts
+  s_ef9e7db49e4fa3::t_b0fd3318b39c69 51-55
+src/server/draft/analytics.ts
+  s_ef9e7db49e4fa3::t_b6f263a4cff49c 1-67
+src/lib/discord-webhook.ts
+  s_ef9e7db49e4fa3::t_dd4e4725ccbebe 4
+  s_ef9e7db49e4fa3::t_520ef641980ec9 341
+  s_ef9e7db49e4fa3::t_0347d6f85bcfba 331-340,342-506
+  s_ef9e7db49e4fa3::t_721bd79e5b9e79 330
+src/lib/draft/__tests__/draft-seed.ts
+  s_ef9e7db49e4fa3::t_1d42c428b53caa 1-143
+src/server/__tests__/draft-analytics.test.ts
+  s_ef9e7db49e4fa3::t_b9f87347a04b84 1-182,184-189,199-216
+  s_ef9e7db49e4fa3::t_0a3703550f4447 183,190-198
+src/components/__tests__/recap-image-element.test.tsx
+  s_ef9e7db49e4fa3::t_779b0da2afe498 1-27,30-88,93-97,101-102
+  s_ef9e7db49e4fa3::t_7ac9e0bbb9dc0c 28-29,89-92,98-100
+src/components/draft/player-pool.tsx
+  s_ef9e7db49e4fa3::t_3de56bfc04e687 27-28,58,204,215-216,219
+src/server/draft/expire.ts
+  s_ef9e7db49e4fa3::t_ad0e24a1136cd2 26-29,287-288,305,316-320
+  s_ef9e7db49e4fa3::t_ca4a0126858759 25,46-47,215-216,245,249-251,266,269,272,277,279-281
+src/components/event-header-actions.tsx
+  s_ef9e7db49e4fa3::t_f82cddfafe7c55 19,30-31,41,160-164
+src/components/draft/recap/draft-analytics-panel.tsx
+  s_ef9e7db49e4fa3::t_2242563a55493c 1-177
+src/components/__tests__/event-command-palette.test.tsx
+  s_ef9e7db49e4fa3::t_7ac9e0bbb9dc0c 1-79
+src/server/draft/discord.ts
+  s_ef9e7db49e4fa3::t_6373151a78d7bc 1-280
+CHANGELOG.md
+  s_ef9e7db49e4fa3::t_2114f44515be67 12
+src/lib/draft/timezone.ts
+  s_ef9e7db49e4fa3::t_3e0b8db8d5347b 1-16
+src/lib/draft/balance.ts
+  s_ef9e7db49e4fa3::t_3e0b8db8d5347b 1-138
+src/lib/draft/__tests__/analytics.test.ts
+  s_ef9e7db49e4fa3::t_e302e07f75c11a 1-173
+jest.global-setup.ts
+  s_ef9e7db49e4fa3::t_774db365d1ad93 11-13,16
+src/server/__tests__/draft-discord.test.ts
+  s_ef9e7db49e4fa3::t_7ac9e0bbb9dc0c 1-377
+src/lib/draft/__tests__/timezone.test.ts
+  s_ef9e7db49e4fa3::t_0a3703550f4447 1-31
+src/server/__tests__/draft-discord-migration.test.ts
+  s_ef9e7db49e4fa3::t_ca2c8714ea93e5 93-94,96-98
+  s_ef9e7db49e4fa3::t_cc6bdc6f7798e0 1-92,95,99-112
+src/app/actions/draft.ts
+  s_ef9e7db49e4fa3::t_dd4e4725ccbebe 25,36-40,235-236,238,265,271,277,286,299,312,324,342,351
+  s_ef9e7db49e4fa3::t_19d419de55ccd5 239-242
+src/lib/draft/__tests__/balance.test.ts
+  s_ef9e7db49e4fa3::t_0a3703550f4447 1-225
+src/app/api/__tests__/draft-stream.test.ts
+  s_ef9e7db49e4fa3::t_3b88ff6eb55149 28-30
+CONTEXT.md
+  s_ef9e7db49e4fa3::t_2114f44515be67 63
+src/app/actions/team-balancing.ts
+  s_ef9e7db49e4fa3::t_a5de5f960229cb 13-16,26
+src/components/draft/recap/share-recap-image.tsx
+  s_ef9e7db49e4fa3::t_ec160edd0f019a 1-66
+src/server/draft/retention.ts
+  s_ef9e7db49e4fa3::t_1c6f7015a9107a 1-81
+src/server/__tests__/draft-audit-retention.test.ts
+  s_ef9e7db49e4fa3::t_7ac9e0bbb9dc0c 1-314
+src/components/event-layout-header.tsx
+  s_ef9e7db49e4fa3::t_f82cddfafe7c55 107
+src/components/draft/recap/pick-history-table.tsx
+  s_ef9e7db49e4fa3::t_7ca448919027e0 1-150
+docs/DATABASE-MIGRATION.md
+  s_ef9e7db49e4fa3::t_2114f44515be67 418-429,431
+  s_ef9e7db49e4fa3::t_5058eeffdee674 430
+drizzle/meta/0043_snapshot.json
+  s_ef9e7db49e4fa3::t_8c9a48077aba67 1-5833
+drizzle/meta/_journal.json
+  s_ef9e7db49e4fa3::t_2d613560540ae0 305-311
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6f0b49434d67d3b6e297e9d265ab41f59aecddd3",
+  "prompts": {},
+  "sessions": {
+    "s_ef9e7db49e4fa3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f2ee1b5-009f-4522-8f4a-8ff1c514dfe0",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
