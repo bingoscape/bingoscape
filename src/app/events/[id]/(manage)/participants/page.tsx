@@ -7,7 +7,7 @@ import {
 import { getTeamsByEventId } from "@/app/actions/team"
 import { getServerAuthSession } from "@/server/auth"
 import { getEventCapabilities } from "@/server/authz"
-import { getEventById } from "@/server/queries/events"
+import { getParticipantsEventInfo } from "@/server/queries/participants"
 import { ParticipantsPageClient } from "./participants-client"
 
 /**
@@ -24,16 +24,15 @@ export default async function EventParticipantsPage(props: {
   const session = await getServerAuthSession()
   if (!session?.user) notFound()
 
-  const [data, capabilities] = await Promise.all([
-    getEventById(eventId),
+  const [event, capabilities] = await Promise.all([
+    getParticipantsEventInfo(eventId),
     getEventCapabilities(eventId),
   ])
-  if (!data) notFound()
+  if (!event) notFound()
 
   // Buy-ins and donations are on this page: managers only.
   if (!capabilities.canManageParticipants) redirect(`/events/${eventId}`)
 
-  const { event } = data
   const [participants, teams, registrationRequests, pendingCount] =
     await Promise.all([
       getEventParticipants(eventId),

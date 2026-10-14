@@ -61,8 +61,11 @@ import {
 import { isClanManager } from "@/lib/clan"
 import { logger } from "@/lib/logger"
 import { applyBlindBoard } from "@/server/blind-board"
-import { matchesRegistrationSearch } from "@/lib/registration-search"
 import { revalidateEventParticipants } from "@/server/revalidate-event-participants"
+import {
+  listAllParticipants,
+  listRegistrationRequests,
+} from "@/server/queries/participants"
 
 import {
   capabilitiesForMembership,
@@ -260,17 +263,6 @@ export async function createEvent(formData: FormData) {
 export async function getUserRole(eventId: string): Promise<EventRole | null> {
   return getEventRole(eventId)
 }
-
-/** Never load a full users row for a response: it carries the password hash. */
-const USER_PUBLIC_COLUMNS = {
-  columns: {
-    id: true,
-    name: true,
-    email: true,
-    image: true,
-    runescapeName: true,
-  },
-} as const
 
 /** Subquery: the participant rows of one event. */
 function eventParticipantIds(eventId: string) {
@@ -1072,102 +1064,8 @@ export async function getEventParticipants(eventId: string) {
   if (!(await hasPermission(eventId, "participant:list"))) return []
 
   try {
-    // First, get all unique participants for this event
-    const eventParticipantsList = await db
-      .select({
-        id: eventParticipants.id,
-        userId: eventParticipants.userId,
-        role: eventParticipants.role,
-      })
-      .from(eventParticipants)
-      .where(eq(eventParticipants.eventId, eventId))
-
-    // Process each participant individually to avoid duplicates
-    const participants = await Promise.all(
-      eventParticipantsList.map(async (participant) => {
-        // Get user info
-        const user = await db.query.users.findFirst({
-          where: eq(users.id, participant.userId),
-          columns: { id: true, runescapeName: true },
-        })
-
-        // Get buy-in amount (if any)
-        const buyInResult = await db
-          .select({
-            amount: sql<number>`COALESCE(${eventBuyIns.amount}, 0)`.as("buyIn"),
-          })
-          .from(eventBuyIns)
-          .where(eq(eventBuyIns.eventParticipantId, participant.id))
-
-        const buyIn = buyInResult[0]?.amount ?? 0
-
-        // Get total donations for this participant
-        const donationsResult = await db
-          .select({
-            total: sql<number>`COALESCE(SUM(${eventDonations.amount}), 0)`.as(
-              "totalDonations"
-            ),
-          })
-          .from(eventDonations)
-          .where(eq(eventDonations.eventParticipantId, participant.id))
-
-        const totalDonations = donationsResult[0]?.total ?? 0
-
-        // Get team info (if any) - Make sure we're getting the latest team assignment
-        // const teamMember = await db.query.teamMembers.findFirst({
-        //   where: eq(teamMembers.userId, participant.userId),
-        //   with: {
-        //     team: true,
-        //   },
-        //   orderBy: [desc(teamMembers.createdAt)], // Get the most recent team assignment
-
-        // Use select syntax with a join between teams and teamMembers
-        const team = await db
-          .select({
-            id: teams.id,
-            name: teams.name,
-            isLeader: teamMembers.isLeader,
-          })
-          .from(teams)
-          .innerJoin(
-            teamMembers,
-            and(
-              eq(teamMembers.teamId, teams.id),
-              eq(teamMembers.userId, participant.userId)
-            )
-          )
-          .where(eq(teams.eventId, eventId))
-          .limit(1)
-
-        const t = team[0] ?? null
-        // Only include team if it belongs to this event
-        // const team = teamMember?.team.eventId === eventId ? teamMember.team : null
-
-        // Get metadata (skillLevel)
-        const metadata = await db.query.playerMetadata.findFirst({
-          where: and(
-            eq(playerMetadata.userId, participant.userId),
-            eq(playerMetadata.eventId, eventId)
-          ),
-        })
-
-        return {
-          id: participant.userId,
-          runescapeName:
-            metadata?.runescapeNameOverride ?? user?.runescapeName ?? "",
-          hasOverride: !!metadata?.runescapeNameOverride,
-          originalRunescapeName: user?.runescapeName ?? "",
-          role: participant.role,
-          teamId: t != null ? t.id : null,
-          teamName: t != null ? t.name : null,
-          buyIn: buyIn,
-          totalDonations: totalDonations,
-          skillLevel: metadata?.skillLevel ?? null,
-        }
-      })
-    )
-
-    return participants
+    // One statement for the whole Event instead of five queries per participant.
+    return await listAllParticipants(eventId)
   } catch (error) {
     logger.error({ error }, "Error fetching event participants")
     throw new Error("Failed to fetch event participants")
@@ -1586,35 +1484,10 @@ export async function getRegistrationRequests(
   if (!(await hasPermission(eventId, "registration:review"))) return []
 
   try {
-    const query = db.query.eventRegistrationRequests.findMany({
-      where: (reqs, { and, eq }) => {
-        const conditions = [eq(reqs.eventId, eventId)]
-
-        if (filters.status) {
-          conditions.push(eq(reqs.status, filters.status))
-        }
-
-        return and(...conditions)
-      },
-      with: {
-        user: USER_PUBLIC_COLUMNS,
-        event: true,
-        reviewer: USER_PUBLIC_COLUMNS,
-      },
-      orderBy: [desc(eventRegistrationRequests.createdAt)],
+    return await listRegistrationRequests(eventId, {
+      status: filters.status,
+      q: filters.search,
     })
-
-    let requests = await query
-
-    // Apply search filter in memory if provided
-    const search = filters.search
-    if (search) {
-      requests = requests.filter((req) =>
-        matchesRegistrationSearch(req, search)
-      )
-    }
-
-    return requests
   } catch (error) {
     logger.error({ error }, "Error fetching registration requests:", error)
     throw new Error("Failed to fetch registration requests")
