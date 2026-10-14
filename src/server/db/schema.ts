@@ -1529,6 +1529,9 @@ export const ROLE_CHANGE_SOURCES = [
   "api",
   "super_admin",
   "system",
+  // Written by the database trigger for a membership write that did not go
+  // through changeRole() (e.g. the previous app version).
+  "trigger",
 ] as const
 export type RoleChangeSource = (typeof ROLE_CHANGE_SOURCES)[number]
 

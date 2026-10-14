@@ -59,11 +59,16 @@ const MANAGER_CAN: Permission[] = [
 ]
 const ADMIN_ONLY: Permission[] = [
   "event:update",
-  "event:delete",
   "event:invite",
   "event:assign-clan",
   "event:manage-rules",
   "participant:set-role",
+]
+// Admin permissions that only the Event owner can use (RBAC 3/8).
+const OWNER_ONLY: Permission[] = [
+  "event:delete",
+  "event:grant-admin",
+  "event:transfer-ownership",
 ]
 const EXPECTED: Record<EventRole, Permission[]> = {
   admin: [...MANAGER_CAN, ...ADMIN_ONLY],
@@ -83,10 +88,19 @@ describe("role -> permission matrix (no resource)", () => {
   })
 
   it("covers every permission exactly once per role", () => {
-    for (const role of ["admin", "management", "participant"] as const) {
+    const owner = [...ADMIN_ONLY, ...MANAGER_CAN, ...OWNER_ONLY]
+    expect(new Set(ROLE_PERMISSIONS.admin)).toEqual(new Set(owner))
+    expect(ROLE_PERMISSIONS.admin).toHaveLength(owner.length)
+    for (const role of ["management", "participant"] as const) {
       expect(new Set(ROLE_PERMISSIONS[role])).toEqual(new Set(EXPECTED[role]))
       expect(ROLE_PERMISSIONS[role]).toHaveLength(EXPECTED[role].length)
     }
+  })
+
+  it.each(PERMISSIONS)("the owner (admin) / %s", (permission) => {
+    expect(can(actor("admin", { isOwner: true }), permission)).toBe(
+      [...EXPECTED.admin, ...OWNER_ONLY].includes(permission)
+    )
   })
 
   it("keeps today's management rights: buy-ins and donations yes, roles no", () => {
@@ -118,7 +132,8 @@ describe("relational rules", () => {
 
   it.each<[EventRole, EventRole, EventRole, boolean]>([
     // actor, target's current role, new role
-    ["admin", "participant", "admin", true],
+    // Granting admin is owner-only, see "owner-only permissions".
+    ["admin", "participant", "admin", false],
     ["admin", "admin", "participant", true],
     ["admin", "management", "management", true],
     // Only admins hold participant:set-role at all today.
@@ -207,9 +222,40 @@ describe("Team scoped permissions", () => {
 describe("owner-only permissions", () => {
   const ownerOnly = new Set<Permission>(["event:delete"])
 
-  it("is empty today: an admin may do everything the owner may", () => {
-    expect(OWNER_ONLY_PERMISSIONS.size).toBe(0)
-    expect(can(actor("admin"), "event:delete")).toBe(true)
+  it("covers delete Event, grant admin and transfer ownership", () => {
+    expect([...OWNER_ONLY_PERMISSIONS].sort()).toEqual([...OWNER_ONLY].sort())
+    for (const permission of OWNER_ONLY) {
+      expect(can(actor("admin"), permission)).toBe(false)
+      expect(can(actor("admin", { isOwner: true }), permission)).toBe(true)
+    }
+    // Everything else an admin may do stays with every admin.
+    expect(can(actor("admin"), "event:update")).toBe(true)
+    expect(can(actor("admin"), "participant:remove")).toBe(true)
+  })
+
+  it("only the owner grants the admin role, by set-role or add", () => {
+    const admin = actor("admin")
+    const owner = actor("admin", { isOwner: true })
+    for (const permission of [
+      "participant:set-role",
+      "participant:add",
+    ] as const) {
+      expect(can(admin, permission, { newRole: "admin" })).toBe(false)
+      expect(can(owner, permission, { newRole: "admin" })).toBe(true)
+      expect(can(admin, permission, { newRole: "management" })).toBe(true)
+    }
+  })
+
+  it("nobody adds a participant above their own role", () => {
+    expect(
+      can(actor("management"), "participant:add", { newRole: "participant" })
+    ).toBe(true)
+    expect(
+      can(actor("management"), "participant:add", { newRole: "management" })
+    ).toBe(true)
+    expect(
+      can(actor("management"), "participant:add", { newRole: "admin" })
+    ).toBe(false)
   })
 
   it("needs isOwner when a permission is marked owner-only", () => {
@@ -255,9 +301,28 @@ describe("buildEventActor", () => {
     ).toMatchObject({ role: null, isOwner: false })
   })
 
-  it("an Event without a creator has no owner", () => {
+  it("an Event without a creator has no owner, unless a fallback is given", () => {
     expect(
       buildEventActor({ ...base, creatorId: null, participantRole: "admin" })
+    ).toMatchObject({ role: "admin", isOwner: false })
+    expect(
+      buildEventActor({
+        ...base,
+        creatorId: null,
+        ownerFallbackId: "u",
+        participantRole: "admin",
+      })
+    ).toMatchObject({ role: "admin", isOwner: true })
+  })
+
+  it("ignores the fallback while a creator exists", () => {
+    expect(
+      buildEventActor({
+        ...base,
+        creatorId: "x",
+        ownerFallbackId: "u",
+        participantRole: "admin",
+      })
     ).toMatchObject({ role: "admin", isOwner: false })
   })
 

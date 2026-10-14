@@ -324,7 +324,7 @@ UPDATE "bingoscape-next_team_members" tm SET event_id = t.event_id
 FROM "bingoscape-next_teams" t WHERE tm.team_id = t.id AND tm.event_id IS NULL;
 ```
 
-Memberships created by the previous app after this migration have no ledger row until RBAC 3/8 baselines them; `ledger_drift` reports them until then.
+Memberships created by the previous app after this migration have no ledger row until migration 0039 (RBAC 3/8) baselines them; `ledger_drift` reports them until then.
 
 **Before deploying: verify on a restored production backup** (see `scripts/restore-db.sh`, or restore into a scratch database):
 
@@ -349,6 +349,31 @@ Emails that differ only in letter case do not block the index; `duplicate_emails
 **Quarantine and rollback.** Nothing is lost silently: removed rows are in `event_participants_quarantine` and `team_members_quarantine` (with the id of the row that was kept and, for Teams, the kept Team). If a kept Team is wrong, move the Player back by hand and delete the quarantine row. To undo the data changes, restore the pre-deploy backup (`scripts/restore-db.sh`); rolling back only the app image leaves the new tables and constraints in place, which the previous version tolerates.
 
 **Retention and erasure.** `event_audit_log` and `role_change_log` are meant to be kept `EVENT_AUDIT_RETENTION_DAYS` (365, `src/server/authz/audit-log.ts`; pending the maintainer's answer on decision 10 of #183). No purge job exists yet. They hold user ids without foreign keys, so a user-erasure request is served by setting `actor_user_id` / `subject_user_id` to `NULL` on that user's rows.
+
+## RBAC 3/8 rollout (migration `0039_rbac_role_change_trigger`)
+
+Phase 3 of the RBAC consolidation (epic #183, issue #186). Add-first and compatible with the previous app version (rolling the app image back is safe; the database is not reverted).
+
+| Part | Effect |
+| ---- | ------ |
+| `role_change_log.source` | The CHECK constraint accepts the new source `trigger` (drop and re-add of `role_change_log_source_check`). |
+| Ledger catch-up | Memberships created, changed or removed by the previous app between 0038 and 0039 have no or a stale ledger entry. The migration writes one `baseline` / `backfill` / `remove` row (source `migration`) for each, so `ledger_drift` is empty right after the deploy. A second run finds nothing to do. |
+| Safety-net trigger | `AFTER INSERT OR UPDATE OF role OR DELETE` on `event_participants` and `clan_members` (function `bingoscape_next_log_membership_change`). It writes a ledger row with source `trigger` for any write that did not come through `changeRole()` and its siblings, for example the previous app version. |
+
+**No double logging.** The membership helper sets the transaction-local setting `app.audit_source` (`set_config(..., true)`) before it writes and inserts its own ledger row; the trigger returns early when the setting is non-empty. The helper resets the setting when its operation is done, so later writes in the same transaction are still caught. Deleting an Event, a Clan or a user cascades to the membership rows; the trigger skips those deletes (the parent or the user no longer exists), as does the reconciliation query.
+
+Every statement is idempotent. To switch the trigger off in an emergency: `ALTER TABLE "bingoscape-next_event_participants" DISABLE TRIGGER event_participants_role_ledger;` (and `clan_members_role_ledger` on `bingoscape-next_clan_members`); the next reconciliation run then reports ledger drift for writes made in the meantime.
+
+**Daily reconciliation.** The verification queries of `src/server/authz/verification.ts` run once a day through `GET /api/cron/rbac-reconcile` (bearer `CRON_SECRET`, like `/api/cron/unlock`). It answers `200` when every `error` check is empty and `500` with the first rows of each finding otherwise. `scripts/rbac-reconcile.sh` calls it from host cron, appends the result to `backups/rbac-reconcile.log` and posts failures to Discord when `BACKUP_ALERT_WEBHOOK_URL` is set in the server `.env` (the variable the backups already use). Install once on the server:
+
+```bash
+./scripts/setup-rbac-reconcile-cron.sh   # daily at 4:00 AM, after the 3:00 AM backup
+./scripts/rbac-reconcile.sh              # run it by hand
+```
+
+Without `CRON_SECRET` the route answers `401` and the script reports that it cannot run. Findings are fixed by hand (see "RBAC 2/8 rollout" for the duplicate and quarantine checks); the job never repairs data.
+
+**Ownership rules the app now enforces** (all in `src/server/authz/membership.ts`): an Event and a Clan always keep an admin; the Event creator and the Clan owner can be neither demoted nor removed (transfer ownership first); nobody grants or adds a role above their own; deleting an Event, granting the admin role and transferring ownership are owner-only. For an Event whose creator account is gone (`creator_id` is null), its oldest admin acts as the owner for the owner-only actions. Existing data that already violates an invariant is not changed; the reconciliation reports it (for example `events_without_admin`, `creator_role_conflicts`).
 
 ---
 

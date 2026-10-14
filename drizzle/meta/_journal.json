@@ -274,6 +274,13 @@
       "when": 1791929510412,
       "tag": "0038_rbac_membership_integrity",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1791930138805,
+      "tag": "0039_rbac_role_change_trigger",
+      "breakpoints": true
     }
   ]
 }

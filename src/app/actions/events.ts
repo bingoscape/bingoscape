@@ -1,12 +1,19 @@
 "use server"
 
-import { eq, and, asc, sum, sql, desc, inArray, ne } from "drizzle-orm"
+import { eq, and, asc, sum, sql, desc, inArray } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { revalidatePath } from "next/cache"
 
 import { getServerAuthSession } from "@/server/auth"
 import type { EventRole as AuthzEventRole } from "@/lib/authz/roles"
 import { getEventRole } from "@/server/authz/actor"
+import { authorize } from "@/server/authz/guards"
+import {
+  addMember,
+  changeRole,
+  removeMember,
+  transferOwnership,
+} from "@/server/authz/membership"
 import { db } from "@/server/db"
 import {
   events,
@@ -180,15 +187,17 @@ export async function createEvent(formData: FormData) {
         })
         .returning()
 
-      // Add the user as an admin participant
-      await tx
-        .insert(eventParticipants)
-        .values({
-          eventId: createdEvent!.id,
-          userId: session.user.id,
-          role: "admin",
-        })
-        .onConflictDoNothing()
+      // The creator is the owner and an admin participant.
+      const added = await addMember({
+        scope: "event",
+        parentId: createdEvent!.id,
+        userId: session.user.id,
+        role: "admin",
+        actor: { kind: "system", userId: session.user.id },
+        reason: "event created",
+        tx,
+      })
+      if (!added.success) throw new Error(added.error)
 
       return createdEvent
     })
@@ -903,15 +912,24 @@ export async function joinEvent(eventId: string, override = false) {
     }
 
     // A concurrent join may have won the race: the unique (event, user) index
-    // makes the second insert a no-op instead of a duplicate row.
-    await db
-      .insert(eventParticipants)
-      .values({
-        eventId,
-        userId: session.user.id,
-        role: "participant",
-      })
-      .onConflictDoNothing()
+    // turns the second insert into ALREADY_MEMBER instead of a duplicate row.
+    const joined = await addMember({
+      scope: "event",
+      parentId: eventId,
+      userId: session.user.id,
+      role: "participant",
+      actor: { kind: "self", userId: session.user.id },
+      reason: "joined the event",
+    })
+    if (!joined.success) {
+      return {
+        success: false,
+        error:
+          joined.code === "ALREADY_MEMBER"
+            ? "You are already a participant in this event"
+            : joined.error,
+      }
+    }
 
     return { success: true }
   } catch (error) {
@@ -988,14 +1006,21 @@ export async function joinEventViaInvite(inviteCode: string) {
     return { ...invite.event, pendingApproval: true }
   }
 
-  await db
-    .insert(eventParticipants)
-    .values({
-      eventId: invite.eventId,
-      userId: session!.user.id,
-      role: "participant",
-    })
-    .onConflictDoNothing()
+  const joined = await addMember({
+    scope: "event",
+    parentId: invite.eventId,
+    userId: session!.user.id,
+    role: "participant",
+    actor: { kind: "self", userId: session!.user.id },
+    reason: "joined through an event invite",
+  })
+  if (!joined.success) {
+    throw new Error(
+      joined.code === "ALREADY_MEMBER"
+        ? "You are already a participant in this event"
+        : joined.error
+    )
+  }
 
   return { ...invite.event, pendingApproval: false }
 }
@@ -1119,61 +1144,53 @@ export async function updateParticipantRole(
     throw new Error("You don't have permission to update participant roles")
   }
 
-  try {
-    await db.transaction(async (tx) => {
-      const event = await tx.query.events.findFirst({
-        where: eq(events.id, eventId),
-        columns: { creatorId: true },
-      })
-      if (!event) throw new ParticipantChangeError("Event not found")
-
-      const target = await tx.query.eventParticipants.findFirst({
-        where: and(
-          eq(eventParticipants.eventId, eventId),
-          eq(eventParticipants.userId, userId)
-        ),
-        columns: { id: true, role: true },
-      })
-      if (!target) throw new ParticipantChangeError("Participant not found")
-
-      // The creator is an admin whatever their participant row says.
-      if (event.creatorId === userId && newRole !== "admin") {
-        throw new ParticipantChangeError(
-          "The event creator can't be demoted from admin"
-        )
-      }
-
-      // An event always keeps at least one admin.
-      if (target.role === "admin" && newRole !== "admin") {
-        const [otherAdmins] = await tx
-          .select({ count: sql<number>`count(*)::int` })
-          .from(eventParticipants)
-          .where(
-            and(
-              eq(eventParticipants.eventId, eventId),
-              eq(eventParticipants.role, "admin"),
-              ne(eventParticipants.userId, userId)
-            )
-          )
-        const creatorIsOtherAdmin =
-          event.creatorId !== null && event.creatorId !== userId
-        if ((otherAdmins?.count ?? 0) === 0 && !creatorIsOtherAdmin) {
-          throw new ParticipantChangeError(
-            "An event needs at least one admin"
-          )
-        }
-      }
-
-      await tx
-        .update(eventParticipants)
-        .set({ role: newRole })
-        .where(eq(eventParticipants.id, target.id))
-    })
-  } catch (error) {
-    logger.error({ error }, "Error updating participant role")
-    if (error instanceof ParticipantChangeError) throw error
-    throw new Error("Failed to update participant role")
+  // The helper locks the Event and re-checks the policy, the owner rules and
+  // the last-admin rule under that lock.
+  const result = await changeRole({
+    scope: "event",
+    parentId: eventId,
+    userId,
+    newRole,
+    actor: { kind: "user", userId: access.userId },
+  })
+  if (!result.success) {
+    logger.warn(
+      { code: result.code, eventId, userId, newRole },
+      "Participant role change refused"
+    )
+    throw new ParticipantChangeError(result.error)
   }
+}
+
+/**
+ * Hands the Event over to another participant (owner-only). The new owner
+ * becomes `events.creator_id` and an admin; the previous owner stays an admin.
+ */
+export async function transferEventOwnership(
+  eventId: string,
+  newOwnerId: string
+): Promise<{ success: boolean; error?: string; code?: string }> {
+  const session = await getServerAuthSession()
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized", code: "UNAUTHENTICATED" }
+  }
+  if (!eventId || !newOwnerId) {
+    return { success: false, error: "Missing event or user", code: "INVALID" }
+  }
+
+  const result = await transferOwnership({
+    scope: "event",
+    parentId: eventId,
+    newOwnerId,
+    actor: { kind: "user", userId: session.user.id },
+  })
+  if (!result.success) {
+    return { success: false, error: result.error, code: result.code }
+  }
+
+  revalidatePath(`/events/${eventId}`)
+  revalidatePath(`/events/${eventId}/participants`)
+  return { success: true }
 }
 
 export async function assignParticipantToTeam(
@@ -1415,58 +1432,14 @@ export async function removeParticipantFromEvent(
   }
 
   try {
-    await db.transaction(async (tx) => {
-      // Find the participant record
-      const participant = await tx.query.eventParticipants.findFirst({
-        where: and(
-          eq(eventParticipants.eventId, eventId),
-          eq(eventParticipants.userId, userId)
-        ),
-      })
-
-      if (!participant) {
-        throw new Error("Participant not found")
-      }
-
-      // Check if trying to remove an admin (only admins can remove other admins)
-      if (participant.role === "admin" && userRole !== "admin") {
-        throw new Error("Only admins can remove other admins")
-      }
-
-      // Remove the participant from any teams they might be in
-      const teamMemberships = await tx.query.teamMembers.findMany({
-        where: eq(teamMembers.userId, userId),
-        with: {
-          team: true,
-        },
-      })
-
-      const membershipsToDelete = teamMemberships
-        .filter((m) => m.team.eventId === eventId)
-        .map((m) => m.id)
-
-      // Only remove from teams in this event, using inArray to avoid N+1 query
-      if (membershipsToDelete.length > 0) {
-        await tx
-          .delete(teamMembers)
-          .where(inArray(teamMembers.id, membershipsToDelete))
-      }
-
-      // Remove any buy-ins
-      await tx
-        .delete(eventBuyIns)
-        .where(eq(eventBuyIns.eventParticipantId, participant.id))
-
-      // Remove any donations
-      await tx
-        .delete(eventDonations)
-        .where(eq(eventDonations.eventParticipantId, participant.id))
-
-      // Remove the participant from the event
-      await tx
-        .delete(eventParticipants)
-        .where(eq(eventParticipants.id, participant.id))
+    // Also removes the participant's Team places, buy-ins and donations.
+    const removed = await removeMember({
+      scope: "event",
+      parentId: eventId,
+      userId,
+      actor: { kind: "user", userId: session.user.id },
     })
+    if (!removed.success) throw new Error(removed.error)
 
     revalidatePath(`/events/${eventId}/participants`)
     return { success: true }
@@ -1568,18 +1541,25 @@ export async function addClanMembersToEvent(
     const existingUserIds = existingParticipants.map((p) => p.userId)
     const newUserIds = userIds.filter((id) => !existingUserIds.includes(id))
 
-    // Add new participants
+    // Add new participants, all or none
     if (newUserIds.length > 0) {
-      await db
-        .insert(eventParticipants)
-        .values(
-          newUserIds.map((userId) => ({
-            eventId,
+      await db.transaction(async (tx) => {
+        for (const userId of newUserIds) {
+          const added = await addMember({
+            scope: "event",
+            parentId: eventId,
             userId,
-            role: "participant" as const,
-          }))
-        )
-        .onConflictDoNothing()
+            role: "participant",
+            actor: { kind: "user", userId: session.user.id },
+            reason: "added from the event's clan",
+            tx,
+          })
+          // A concurrent join is not an error.
+          if (!added.success && added.code !== "ALREADY_MEMBER") {
+            throw new Error(added.error)
+          }
+        }
+      })
     }
 
     revalidatePath(`/events/${eventId}/participants`)
@@ -1713,14 +1693,18 @@ export async function approveRegistrationRequest(
     })
 
     if (!existingParticipant) {
-      await tx
-        .insert(eventParticipants)
-        .values({
-          eventId: request.eventId,
-          userId: request.userId,
-          role: "participant",
-        })
-        .onConflictDoNothing()
+      const added = await addMember({
+        scope: "event",
+        parentId: request.eventId,
+        userId: request.userId,
+        role: "participant",
+        actor: { kind: "user", userId: session.user.id },
+        reason: "registration request approved",
+        tx,
+      })
+      if (!added.success && added.code !== "ALREADY_MEMBER") {
+        throw new Error(added.error)
+      }
     }
 
     revalidatePath(`/events/${request.eventId}`)
@@ -2102,12 +2086,16 @@ export async function deleteEventByAdmin(
   }
 
   try {
-    // Check if user is event admin
-    const userRole = await getUserRole(eventId)
-    if (userRole !== "admin") {
+    // Deleting an Event is owner-only (the creator, or the oldest admin of an
+    // Event whose creator account is gone).
+    const allowed = await authorize(eventId, "event:delete")
+    if (!allowed.success) {
       return {
         success: false,
-        error: "Only event administrators can delete events",
+        error:
+          allowed.code === "FORBIDDEN"
+            ? "Only the event owner can delete this event"
+            : allowed.error,
       }
     }
 
@@ -2302,10 +2290,8 @@ export async function deleteEventByAdmin(
       // Delete teams
       await tx.delete(teams).where(eq(teams.eventId, eventId))
 
-      // Delete event participants
-      await tx
-        .delete(eventParticipants)
-        .where(eq(eventParticipants.eventId, eventId))
+      // The participants go with the Event itself (ON DELETE CASCADE); the
+      // membership trigger skips cascades of a vanished Event.
 
       // Delete registration requests
       await tx
