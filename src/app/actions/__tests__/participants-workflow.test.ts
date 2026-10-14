@@ -12,6 +12,7 @@ import {
   assignParticipantToTeam,
   getRegistrationRequests,
   rejectRegistrationRequest,
+  requestToJoinEvent,
   updateParticipantBuyIn,
   updateParticipantRole,
 } from "@/app/actions/events"
@@ -19,6 +20,7 @@ import { withDb } from "@/lib/test-utils"
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
 import {
+  eventBuyIns,
   eventParticipants,
   eventRegistrationRequests,
   events,
@@ -211,6 +213,63 @@ describe("getRegistrationRequests search", () => {
       expect(byEmail).toHaveLength(1)
       expect(byMessage).toHaveLength(1)
       expect(none).toHaveLength(0)
+    })
+  })
+})
+
+describe("repeated writes with the new unique indexes", () => {
+  it("keeps one buy-in row per participant when the toggle is hit repeatedly (also in parallel)", async () => {
+    await withDb(async () => {
+      const f = await seed()
+      signInAs(f.id.owner)
+      const participant = await db.query.eventParticipants.findFirst({
+        where: and(
+          eq(eventParticipants.eventId, f.eventId),
+          eq(eventParticipants.userId, f.id.player)
+        ),
+      })
+
+      await Promise.all([
+        updateParticipantBuyIn(f.eventId, f.id.player, true),
+        updateParticipantBuyIn(f.eventId, f.id.player, true),
+      ])
+      await updateParticipantBuyIn(f.eventId, f.id.player, false)
+      await updateParticipantBuyIn(f.eventId, f.id.player, true)
+
+      const rows = await db
+        .select()
+        .from(eventBuyIns)
+        .where(eq(eventBuyIns.eventParticipantId, participant!.id))
+      expect(rows).toHaveLength(1)
+      expect(rows[0]?.amount).toBe(100)
+    })
+  })
+
+  it("creates a single pending request when a user asks to join twice (also in parallel)", async () => {
+    await withDb(async () => {
+      const f = await seed()
+      await db
+        .update(events)
+        .set({ requiresApproval: true })
+        .where(eq(events.id, f.eventId))
+      signInAs(f.id.applicant)
+
+      await Promise.all([
+        requestToJoinEvent(f.eventId, "first"),
+        requestToJoinEvent(f.eventId, "second"),
+      ])
+
+      const rows = await db
+        .select()
+        .from(eventRegistrationRequests)
+        .where(
+          and(
+            eq(eventRegistrationRequests.eventId, f.eventId),
+            eq(eventRegistrationRequests.userId, f.id.applicant)
+          )
+        )
+      expect(rows).toHaveLength(1)
+      expect(rows[0]?.status).toBe("pending")
     })
   })
 })

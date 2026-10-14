@@ -823,12 +823,17 @@ export async function requestToJoinEvent(
     }
 
     // Create a new registration request
-    await db.insert(eventRegistrationRequests).values({
-      eventId,
-      userId: session.user.id,
-      status: "pending",
-      message: message || null,
-    })
+    // The partial unique index on pending requests settles a concurrent
+    // duplicate: the second insert is a no-op.
+    await db
+      .insert(eventRegistrationRequests)
+      .values({
+        eventId,
+        userId: session.user.id,
+        status: "pending",
+        message: message || null,
+      })
+      .onConflictDoNothing()
 
     revalidateEventParticipants(eventId)
     return { success: true as const }
@@ -1000,12 +1005,16 @@ export async function joinEventViaInvite(
 
     // If the event requires approval, create a registration request instead
     if (invite.event.requiresApproval) {
-      await db.insert(eventRegistrationRequests).values({
-        eventId: invite.eventId,
-        userId,
-        status: "pending",
-        message: `Joined via invite code: ${inviteCode}`,
-      })
+      // An existing pending request stays; the unique index makes this a no-op.
+      await db
+        .insert(eventRegistrationRequests)
+        .values({
+          eventId: invite.eventId,
+          userId,
+          status: "pending",
+          message: `Joined via invite code: ${inviteCode}`,
+        })
+        .onConflictDoNothing()
       revalidateEventParticipants(invite.eventId)
       return {
         success: true as const,
@@ -1334,10 +1343,18 @@ export async function updateParticipantBuyIn(
       } else {
         // Insert new record only if they're paying
         if (hasPaid) {
-          await tx.insert(eventBuyIns).values({
-            eventParticipantId: eventParticipant.id,
-            amount: amount,
-          })
+          // A concurrent toggle may have inserted the row meanwhile; the unique
+          // index on the participant turns that into an update.
+          await tx
+            .insert(eventBuyIns)
+            .values({
+              eventParticipantId: eventParticipant.id,
+              amount: amount,
+            })
+            .onConflictDoUpdate({
+              target: eventBuyIns.eventParticipantId,
+              set: { amount, updatedAt: sql`CURRENT_TIMESTAMP` },
+            })
         }
       }
       return amount

@@ -181,6 +181,10 @@ export const registrationStatusEnum = pgEnum("registration_status", [
   "approved",
   "rejected",
 ])
+export const teamGenerationRunStatusEnum = pgEnum(
+  "team_generation_run_status",
+  ["previewed", "applied", "undone"]
+)
 export const bingoTypeEnum = pgEnum("bingo_type", [
   "standard",
   "progression",
@@ -232,6 +236,8 @@ export const playerMetadata = createTable(
       table.userId,
       table.eventId
     ),
+    // The unique index above leads with user_id; lookups per event need this.
+    eventIdx: index("player_metadata_event_idx").on(table.eventId),
   })
 )
 
@@ -334,7 +340,19 @@ export const eventRegistrationRequests = createTable(
     reviewedAt: timestamp("reviewed_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  }
+  },
+  (table) => ({
+    // At most one open request per user and event (the check-then-insert in the
+    // join actions is racy without it).
+    pendingUnique: uniqueIndex("event_registration_requests_pending_unique")
+      .on(table.eventId, table.userId)
+      .where(sql`${table.status} = 'pending'`),
+    eventStatusIdx: index("event_registration_requests_event_status_idx").on(
+      table.eventId,
+      table.status,
+      table.createdAt
+    ),
+  })
 )
 
 export const eventRegistrationRequestsRelatixons = relations(
@@ -432,6 +450,65 @@ export const teamsRelations = relations(teams, ({ many, one }) => ({
   tierProgress: many(teamTierProgress),
   battleshipShips: many(battleshipShips),
 }))
+
+/** One proposed or applied automatic team balancing, kept for preview and undo. */
+export interface TeamGenerationPlanTeam {
+  name: string
+  /** Set when the plan fills an existing team instead of creating one. */
+  teamId?: string
+  userIds: string[]
+}
+export interface TeamGenerationPreviousAssignment {
+  userId: string
+  teamId: string | null
+  isLeader: boolean
+}
+
+export const teamGenerationRuns = createTable(
+  "team_generation_runs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    status: teamGenerationRunStatusEnum("status").default("previewed").notNull(),
+    seed: bigint("seed", { mode: "number" }),
+    config: jsonb("config").$type<Record<string, unknown>>().notNull(),
+    objective: real("objective"),
+    plan: jsonb("plan").$type<TeamGenerationPlanTeam[]>().notNull(),
+    // Filled when the run is applied, so it can be undone exactly.
+    previousAssignments: jsonb(
+      "previous_assignments"
+    ).$type<TeamGenerationPreviousAssignment[]>(),
+    createdTeamIds: jsonb("created_team_ids").$type<string[]>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    appliedAt: timestamp("applied_at"),
+    undoneAt: timestamp("undone_at"),
+  },
+  (table) => ({
+    eventCreatedIdx: index("team_generation_runs_event_created_idx").on(
+      table.eventId,
+      table.createdAt
+    ),
+  })
+)
+
+export const teamGenerationRunsRelations = relations(
+  teamGenerationRuns,
+  ({ one }) => ({
+    event: one(events, {
+      fields: [teamGenerationRuns.eventId],
+      references: [events.id],
+    }),
+    creator: one(users, {
+      fields: [teamGenerationRuns.createdBy],
+      references: [users.id],
+    }),
+  })
+)
 
 export const teamMembers = createTable(
   "team_members",
@@ -1123,15 +1200,27 @@ export const columnBonusesRelations = relations(columnBonuses, ({ one }) => ({
   }),
 }))
 
-export const eventBuyIns = createTable("event_buy_ins", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  eventParticipantId: uuid("event_participant_id")
-    .notNull()
-    .references(() => eventParticipants.id, { onDelete: "cascade" }),
-  amount: bigint("amount", { mode: "number" }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-})
+export const eventBuyIns = createTable(
+  "event_buy_ins",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventParticipantId: uuid("event_participant_id")
+      .notNull()
+      .references(() => eventParticipants.id, { onDelete: "cascade" }),
+    // Paid so far. A participant has at most one row; partial payments raise it.
+    amount: bigint("amount", { mode: "number" }).notNull(),
+    // Snapshot of the Event's minimum buy-in when the row was created. Null
+    // (rows written by the previous app version) means "the current minimum".
+    expectedAmount: bigint("expected_amount", { mode: "number" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    participantUnique: uniqueIndex("event_buy_ins_participant_unique").on(
+      table.eventParticipantId
+    ),
+  })
+)
 
 export const eventBuyInsRelations = relations(eventBuyIns, ({ one }) => ({
   eventParticipant: one(eventParticipants, {
@@ -1140,16 +1229,24 @@ export const eventBuyInsRelations = relations(eventBuyIns, ({ one }) => ({
   }),
 }))
 
-export const eventDonations = createTable("event_donations", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  eventParticipantId: uuid("event_participant_id")
-    .notNull()
-    .references(() => eventParticipants.id, { onDelete: "cascade" }),
-  amount: bigint("amount", { mode: "number" }).notNull(),
-  description: text("description"), // Optional description for the donation
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-})
+export const eventDonations = createTable(
+  "event_donations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventParticipantId: uuid("event_participant_id")
+      .notNull()
+      .references(() => eventParticipants.id, { onDelete: "cascade" }),
+    amount: bigint("amount", { mode: "number" }).notNull(),
+    description: text("description"), // Optional description for the donation
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    participantIdx: index("event_donations_participant_idx").on(
+      table.eventParticipantId
+    ),
+  })
+)
 
 export const eventDonationsRelations = relations(eventDonations, ({ one }) => ({
   eventParticipant: one(eventParticipants, {
