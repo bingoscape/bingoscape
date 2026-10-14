@@ -81,9 +81,10 @@ The authoritative rules are in [AGENTS.md](../AGENTS.md). Domain vocabulary (Eve
 ### Formatting and linting
 
 - Prettier (`prettier.config.js`) with `prettier-plugin-tailwindcss`: 2-space indentation, no semicolons, double quotes, trailing commas where valid in ES5 (`trailingComma: "es5"`), print width 80, LF line endings. Tailwind classes are sorted by the plugin.
-- ESLint uses the Next.js `core-web-vitals` and TypeScript presets. Unused variables warn unless the name starts with `_`.
+- Linting uses [oxlint](https://oxc.rs/docs/guide/usage/linter) (`.oxlintrc.json`) with the rules of the former Next.js `core-web-vitals` and TypeScript ESLint presets: React, React Hooks (including the React Compiler rules), Next.js, jsx-a11y, import and typescript-eslint rules. Unused variables warn unless the name starts with `_`. Warnings are allowed, errors fail the lint run. oxlint is not type-aware.
+- In the editor, install the oxlint extension (VS Code: `oxc.oxc-vscode`) to see lint results while typing.
 - Run `npm run lint -- --fix` after making changes and `npx tsc --noEmit` before opening a pull request.
-- Do not bypass ESLint or the type checker with `eslint-disable` or `@ts-ignore` unless it is a known false positive. A suppression needs a justification comment next to it.
+- Do not bypass oxlint or the type checker with `oxlint-disable` / `eslint-disable` comments or `@ts-ignore` unless it is a known false positive. A suppression needs a justification comment next to it. oxlint honors both comment styles; the existing suppressions still use `eslint-disable` with the ESLint rule names (`react-hooks/*`, `@typescript-eslint/*`).
 
 ### TypeScript
 
@@ -93,7 +94,8 @@ The authoritative rules are in [AGENTS.md](../AGENTS.md). Domain vocabulary (Eve
 - Use `import type` for type-only imports and the `@/` alias for internal imports.
 - Generate ids with `nanoid()`.
 - Store monetary values (buy-ins, donations) as `bigint`.
-- `tsc` is TypeScript 7 (the `@typescript/native` dev dependency, an alias of `typescript@7`). The `typescript` dev dependency is an alias of `@typescript/typescript6`, because ESLint, ts-node and Jest need the JavaScript compiler API, which TypeScript 7 does not ship. `require("typescript")` therefore resolves to TypeScript 6, and `next build` type checks with its `tsc6` CLI. Do not replace either alias with a plain version range. Collapse the two into a single `typescript` dependency once typescript-eslint supports the TypeScript 7.1 API.
+- TypeScript 7 (the native compiler) is the single `typescript` dev dependency. `tsc`, `next build` and `npx tsc --noEmit` all use it. It does not ship the JavaScript compiler API, so tools that need that API (typescript-eslint, ts-node) must not be added; this is why linting uses oxlint and the Jest config is a plain `jest.config.mjs`.
+- The `next` TypeScript language-service plugin in `tsconfig.json` is not loaded by TypeScript 7 (no plugin API). Next.js re-adds the entry on every build, so leave it in place.
 
 ### Naming and structure
 
