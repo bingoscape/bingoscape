@@ -3,7 +3,10 @@ import type { UUID } from "crypto"
 import { getServerAuthSession } from "@/server/auth"
 import { getEventById } from "@/server/queries/events"
 import { hasPermission } from "@/server/authz"
+import { getDraftSummary } from "@/server/draft/queries"
+import Link from "next/link"
 import { Breadcrumbs } from "@/components/breadcrumbs"
+import { Button } from "@/components/ui/button"
 import { TeamManagement } from "@/components/team-management"
 
 /** Team management for admins / management (moved out of the workspace). */
@@ -27,6 +30,9 @@ export default async function EventTeamsPage(props: {
     notFound()
   }
 
+  const canManageDraft = await hasPermission(event.id, "draft:manage")
+  const draft = canManageDraft ? await getDraftSummary(event.id) : null
+
   return (
     <main className="w-full">
       <Breadcrumbs
@@ -35,7 +41,22 @@ export default async function EventTeamsPage(props: {
           { label: "Teams", href: `/events/${event.id}/teams` },
         ]}
       />
-      <h2 className="osrs-heading mb-4 text-2xl">Manage teams</h2>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="osrs-heading text-2xl">Manage teams</h2>
+        {canManageDraft && (
+          <Button variant="outline" asChild>
+            <Link
+              href={
+                draft
+                  ? `/events/${event.id}/draft`
+                  : `/events/${event.id}/draft/setup`
+              }
+            >
+              Team draft
+            </Link>
+          </Button>
+        )}
+      </div>
       <TeamManagement eventId={event.id} />
     </main>
   )

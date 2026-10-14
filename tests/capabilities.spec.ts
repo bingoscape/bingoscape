@@ -63,7 +63,13 @@ test.describe("a participant", () => {
     ).toHaveCount(0)
   })
 
-  for (const path of ["participants", "teams", "admin", "registrations"]) {
+  for (const path of [
+    "participants",
+    "teams",
+    "admin",
+    "registrations",
+    "draft/setup",
+  ]) {
     test(`is sent back to the Event from /${path}`, async ({ page }) => {
       await page.goto(`/events/${participant.eventId}/${path}`)
       await expect(page).toHaveURL(
@@ -78,6 +84,20 @@ test.describe("a participant", () => {
     expect(response?.status()).toBe(200)
     await expect(page).toHaveURL(/\/stats$/)
     await expect(page.getByText("Statistics").first()).toBeVisible()
+  })
+
+  test("opens the team draft room but has no way to set one up", async ({
+    page,
+  }) => {
+    const response = await page.goto(`/events/${participant.eventId}/draft`)
+    expect(response?.status()).toBe(200)
+    await expect(
+      page.getByRole("heading", { name: "Team draft" })
+    ).toBeVisible()
+    await expect(page.getByText("This event has no team draft.")).toBeVisible()
+    await expect(
+      page.getByRole("link", { name: "Set up a draft" })
+    ).toHaveCount(0)
   })
 })
 
@@ -110,6 +130,12 @@ test.describe("management", () => {
     await expect(
       page.getByRole("button", { name: "Invite", exact: true })
     ).toHaveCount(0)
+
+    // Management may set up the team draft.
+    await page.goto(`/events/${management.eventId}/draft/setup`)
+    await expect(
+      page.getByRole("heading", { name: "Set up a team draft" })
+    ).toBeVisible()
 
     // The admin dashboard checks its own permission (a 404 page).
     await page.goto(`/events/${management.eventId}/admin`)

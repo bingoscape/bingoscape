@@ -195,6 +195,48 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
   [`${A}team.ts#assignParticipantToTeam`]: perm("participant:assign-team"),
   [`${A}team.ts#getCurrentTeamForUser`]: auth("the caller's own Team"),
   [`${A}team.ts#getTeamsByEventId`]: read("Event content scope"),
+  // --- team draft (epic #214) -------------------------------------------
+  [`${A}draft.ts#createDraft`]: perm("draft:manage"),
+  [`${A}draft.ts#startDraft`]: perm(
+    "draft:manage",
+    "Event derived from the draft"
+  ),
+  [`${A}draft.ts#pauseDraft`]: perm(
+    "draft:manage",
+    "Event derived from the draft"
+  ),
+  [`${A}draft.ts#resumeDraft`]: perm(
+    "draft:manage",
+    "Event derived from the draft"
+  ),
+  [`${A}draft.ts#cancelDraft`]: perm(
+    "draft:manage",
+    "Event derived from the draft"
+  ),
+  [`${A}draft.ts#makePick`]: perm(
+    ["draft:view", "draft:pick"],
+    "enforced by performPick (src/server/draft/core.ts): draft:pick is checked against the Team of the on-turn slot under the draft row lock; Event derived from the draft"
+  ),
+  [`${A}draft.ts#forcePick`]: perm(
+    "draft:manage",
+    "a manager picks for the on-turn captain; Event derived from the draft"
+  ),
+  [`${A}draft.ts#skipTurn`]: perm(
+    "draft:manage",
+    "a manager passes the on-turn captain's pick; Event derived from the draft"
+  ),
+  [`${A}draft.ts#setPickQueue`]: perm(
+    ["draft:view", "draft:pick"],
+    "enforced by setPickQueue (src/server/draft/core.ts): only a captain, only for the Team they lead (draft:pick against that Team); the queue is private; Event derived from the draft"
+  ),
+  [`${A}draft.ts#undoPick`]: perm(
+    "draft:manage",
+    "managers only; Event derived from the draft"
+  ),
+  [`${A}draft.ts#applyDraft`]: perm(
+    "draft:manage",
+    "Event derived from the draft; writes team_members through addTeamMembers"
+  ),
   [`${A}team-balancing.ts#generateBalancedTeams`]: perm("team:manage"),
   [`${A}team-balancing.ts#calculateTeamBalanceMetrics`]: perm("stats:read"),
   [`${A}team-balancing.ts#canUseBalancedGeneration`]: perm(
@@ -384,6 +426,11 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
     kind: "framework",
     reason: "NextAuth handles its own sign-in and session endpoints",
   },
+  [`${R}cron/draft-sweep/route.ts#GET`]: {
+    kind: "secret",
+    reason:
+      "Bearer CRON_SECRET, fail closed when unset; resolves expired draft turns (backstop for the in-process sweeper)",
+  },
   [`${R}cron/rbac-reconcile/route.ts#GET`]: {
     kind: "secret",
     reason: "Bearer CRON_SECRET, fail closed when unset",
@@ -392,6 +439,18 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
     kind: "secret",
     reason: "Bearer CRON_SECRET, fail closed when unset",
   },
+  [`${R}events/[id]/draft/recap-image/route.ts#GET`]: perm(
+    "draft:view",
+    "enforced by authorizeDraftView (src/server/draft/http.ts): Event members only; 401 / 404 / 403 answered by the route itself (src/proxy.ts does not protect /api); 404 until the draft is complete"
+  ),
+  [`${R}events/[id]/draft/state/route.ts#GET`]: perm(
+    "draft:view",
+    "enforced by authorizeDraftView (src/server/draft/http.ts): Event members only; 401 / 404 / 403 answered by the route itself (src/proxy.ts does not protect /api)"
+  ),
+  [`${R}events/[id]/draft/stream/route.ts#GET`]: perm(
+    "draft:view",
+    "enforced by authorizeDraftView (src/server/draft/http.ts): Event members only; 401 / 404 / 403 answered by the route itself (src/proxy.ts does not protect /api); streams end after about 5 minutes so the client is authorized again"
+  ),
   [`${R}events/invite/[inviteCode]/route.ts#GET`]: pub(
     "the invite code is the capability; returns the join card of the Event"
   ),

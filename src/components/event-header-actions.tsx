@@ -16,6 +16,7 @@ import AssignEventToClanModal from "./assign-event-to-clan-modal"
 import { DiscordWebhookManagement } from "./discord-webhook-management"
 import { EventDeleteModal } from "./event-delete-modal"
 import type { EventCapabilities } from "@/lib/authz/capabilities"
+import type { DraftStatus } from "@/lib/draft/types"
 import type { Event } from "@/types/model"
 
 interface EventHeaderActionsProps {
@@ -26,6 +27,8 @@ interface EventHeaderActionsProps {
   pendingRegistrationsCount: number
   event: Event
   userClans: Array<{ clan: { id: string; name: string } }>
+  /** Status of the Event's live team draft, null when it has none. */
+  draftStatus?: DraftStatus | null
 }
 
 export function EventHeaderActions({
@@ -35,6 +38,7 @@ export function EventHeaderActions({
   pendingRegistrationsCount,
   event,
   userClans,
+  draftStatus = null,
 }: EventHeaderActionsProps) {
   const [editModalOpen, setEditModalOpen] = useState(false)
   // Bumped on every open so the modal remounts with fresh form state
@@ -153,6 +157,11 @@ export function EventHeaderActions({
         canEditEvent={capabilities.canEditEvent}
         isPublic={event.public ?? false}
         hasClan={!!event.clan}
+        draft={{
+          status: draftStatus,
+          canView: capabilities.canViewDraft,
+          canManage: capabilities.canManageDraft,
+        }}
         createBingoModal={
           <Button
             variant="ghost"

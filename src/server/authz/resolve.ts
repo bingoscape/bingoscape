@@ -8,6 +8,7 @@ import { db } from "@/server/db"
 import {
   bingos,
   discordWebhooks,
+  drafts,
   eventRegistrationRequests,
   goalGroups,
   goals,
@@ -17,6 +18,7 @@ import {
   teamTileSubmissions,
   tiles,
 } from "@/server/db/schema"
+import { isUuid } from "./actor"
 import { AuthzError } from "./errors"
 import { requirePermission, requireSession } from "./guards"
 
@@ -36,6 +38,17 @@ export async function eventIdOfBingo(bingoId: string): Promise<string> {
   })
   if (!bingo) throw notFound("Bingo")
   return bingo.eventId
+}
+
+export async function eventIdOfDraft(draftId: string): Promise<string> {
+  // A malformed id cannot match a draft; the database would reject the cast.
+  if (!isUuid(draftId)) throw notFound("Draft")
+  const draft = await db.query.drafts.findFirst({
+    where: eq(drafts.id, draftId),
+    columns: { eventId: true },
+  })
+  if (!draft) throw notFound("Draft")
+  return draft.eventId
 }
 
 export async function eventIdOfTile(tileId: string): Promise<string> {

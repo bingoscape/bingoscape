@@ -12,7 +12,9 @@ import {
   Settings,
   Search,
   Command,
+  Swords,
   Trash2,
+  Trophy,
 } from "lucide-react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -22,6 +24,7 @@ import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { X } from "lucide-react"
 import Link from "next/link"
 import type { UUID } from "crypto"
+import type { DraftStatus } from "@/lib/draft/types"
 
 interface EventAction {
   id: string
@@ -75,6 +78,8 @@ interface EventCommandPaletteProps {
   canEditEvent: boolean
   isPublic: boolean
   hasClan: boolean
+  /** The Event's team draft: what to offer for it (`canView`: every member). */
+  draft?: { status: DraftStatus | null; canView: boolean; canManage: boolean }
   createBingoModal: React.ReactNode
   importExportModal: React.ReactNode
   generateInviteLink: React.ReactNode
@@ -91,6 +96,7 @@ export function EventCommandPalette({
   canEditEvent,
   isPublic,
   hasClan,
+  draft,
   createBingoModal,
   importExportModal,
   generateInviteLink,
@@ -164,6 +170,47 @@ export function EventCommandPalette({
       component: generateInviteLink,
     },
   ]
+
+  // Team draft: the room (and its recap) for members, setup for managers.
+  if (draft?.canView) {
+    if (draft.status === null) {
+      if (draft.canManage) {
+        actions.push({
+          id: "draft-setup",
+          icon: Swords,
+          label: "Set Up Team Draft",
+          description: "Let captains pick players into teams",
+          href: `/events/${eventId}/draft/setup`,
+          category: "participants",
+          keywords: ["draft", "team", "captain", "pick", "setup"],
+        })
+      }
+    } else {
+      actions.push({
+        id: "draft",
+        icon: Swords,
+        label: "Team Draft",
+        description:
+          draft.status === "in_progress"
+            ? "The draft is live: watch the picks"
+            : "Open the draft room",
+        href: `/events/${eventId}/draft`,
+        category: "participants",
+        keywords: ["draft", "team", "captain", "pick", "live", "spectate"],
+      })
+      if (draft.status === "complete") {
+        actions.push({
+          id: "draft-recap",
+          icon: Trophy,
+          label: "Team Draft Recap",
+          description: "Final rosters, pick history and share image",
+          href: `/events/${eventId}/draft/recap`,
+          category: "participants",
+          keywords: ["draft", "recap", "rosters", "history", "share", "image"],
+        })
+      }
+    }
+  }
 
   // Add share button if event is public
   if (isPublic) {

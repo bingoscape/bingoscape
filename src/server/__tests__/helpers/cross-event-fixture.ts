@@ -4,6 +4,7 @@ import { db } from "@/server/db"
 import {
   apiKeys,
   discordWebhooks,
+  drafts,
   eventDonations,
   eventParticipants,
   eventRegistrationRequests,
@@ -36,6 +37,8 @@ export interface CrossEventFixture extends AuthzFixture {
     registrationRequestId: string
     donationId: string
     ruleId: string
+    /** A draft (in setup) of Event 2. */
+    draftId: string
   }
   adminApiKey: string
 }
@@ -100,6 +103,10 @@ export async function createCrossEventFixture(): Promise<CrossEventFixture> {
     .insert(eventRules)
     .values({ eventId: event2.id, content: "Be nice" })
     .returning({ id: eventRules.id })
+  const [draft] = await db
+    .insert(drafts)
+    .values({ eventId: event2.id, rounds: 1 })
+    .returning({ id: drafts.id })
   const adminApiKey = `bsn_cross_${Math.random().toString(36).slice(2)}`
   await db
     .insert(apiKeys)
@@ -117,6 +124,7 @@ export async function createCrossEventFixture(): Promise<CrossEventFixture> {
       registrationRequestId: request!.id,
       donationId: donation!.id,
       ruleId: rule!.id,
+      draftId: draft!.id,
     },
     adminApiKey,
     cleanup: async () => {

@@ -375,6 +375,60 @@ Without `CRON_SECRET` the route answers `401` and the script reports that it can
 
 **Ownership rules the app now enforces** (all in `src/server/authz/membership.ts`): an Event and a Clan always keep an admin; the Event creator and the Clan owner can be neither demoted nor removed (transfer ownership first); nobody grants or adds a role above their own; deleting an Event, granting the admin role and transferring ownership are owner-only. For an Event whose creator account is gone (`creator_id` is null), its oldest admin acts as the owner for the owner-only actions. Existing data that already violates an invariant is not changed; the reconciliation reports it (for example `events_without_admin`, `creator_role_conflicts`).
 
+## Team draft rollout (migration `0041_team_draft`)
+
+Team draft 1/4 (epic #214, issue #215). Expand-only and compatible with the previous app version (rolling the app image back is safe; the database is not reverted). Every statement is idempotent, so re-running the file is a no-op. `teams`, `team_members` and every other existing table are untouched; a test (`src/server/__tests__/draft-migration.test.ts`) checks that only the five new tables appear.
+
+| Table | Purpose |
+| ----- | ------- |
+| `draft` | One draft per Event: `status`, order, rounds, pick timer settings, `current_pick_no`, `version`, `seed`. A partial unique index allows one non-cancelled draft per Event; `(id, event_id)` is unique so the child tables can reference both. |
+| `draft_team_slot` | One captain's place in the order, and the Team (`team_id`, set when the draft starts). |
+| `draft_pool_entry` | A player of the frozen pool with the rating snapshot (`rating_source` = `team_balancing_v1`). |
+| `draft_pick` | A pick. Unique `(draft_id, pick_no)` and `(draft_id, pool_entry_id)`; composite foreign keys keep the slot and the pool entry inside the pick's draft. |
+| `draft_event` | Append-only log with an identity `seq`, written in the same transaction as the change it records. |
+
+Enumerated columns are `text` with CHECK constraints (status, order type, timeout behaviour, auto-pick rule, pool status, ranges); drizzle-kit 0.24 does not emit CHECKs, so they are added by hand at the end of the file. References to users are `ON DELETE SET NULL` (a draft survives the erasure of an account); `draft_event.actor_user_id` has no foreign key at all so a row can be anonymised.
+
+**Compatibility.** Nothing reads or writes these tables before the new app runs, and the new app only writes `team_members` through `src/server/authz/team-membership.ts`, with `event_id` set (the same as every other writer since 0038). The previous app version keeps inserting `team_members` without `event_id`; the draft's "already on a Team" check joins through `teams` for that reason.
+
+**Rollback.** The app image can be rolled back freely. A draft that is `in_progress` then simply sits there (nobody can pick); its Teams and captain memberships stay. Cancel it from the new version, or delete the Teams by hand. The tables can stay empty and unused indefinitely.
+
+## Team draft timer rollout (migration `0042_team_draft_timer`)
+
+Team draft 3/4 (epic #214, issue #217): pick timer, auto-pick, pause and undo. Expand-only and compatible with the previous app version (rolling the app image back is safe; the database is not reverted). Every statement is idempotent. A test (`src/server/__tests__/draft-timer-migration.test.ts`) applies it to a database at 0041 and checks all of the below.
+
+| Change | Purpose |
+| ------ | ------- |
+| `draft.paused_remaining_ms` (nullable) | The time left on the turn when the draft was paused; resume restores it. `turn_deadline` is NULL while paused. |
+| `draft_team_slot.consecutive_timeouts` (`NOT NULL DEFAULT 0`) | Turns in a row a captain let the timer run out; at 2 the room flags the captain for the manager. |
+| `draft_pick.undone_at` (nullable) | Undo is a soft delete: the row stays for the audit trail. |
+| `draft_pick_draft_pick_no_unique`, `draft_pick_draft_pool_entry_unique` | Recreated as **partial** unique indexes (`WHERE undone_at IS NULL`), so an undone pick frees its number and its player. They are dropped and created in the same transaction. |
+| `draft_queue_entry` (new table) | A captain's private pick queue; composite foreign keys keep it inside its draft. |
+
+**Compatibility.** The previous app version never sets `undone_at` and hard-deletes on undo, so for it the partial indexes behave exactly like the full ones. It does not know the new columns (they are nullable or defaulted) or the new table. A draft that is `in_progress` with a pick timer configured but no `turn_deadline` (started by the previous version) is armed by the new version the first time it is read or swept: the turn is timed from then on.
+
+**Rollback.** The app image can be rolled back freely. Rows with `undone_at` set are invisible to the previous version only through its own queries: it reads every `draft_pick` row, so an undone pick would show again there. Finish or cancel a draft with undone picks before rolling back, or delete the rows with `undone_at IS NOT NULL` by hand.
+
+**The timer needs a long-lived process.** The sweeper (once per second, `pg_try_advisory_xact_lock`) starts from `src/instrumentation.ts` in the Node server, like the SSE hub. It also resolves turns that expired during a deploy as soon as the new container is up. Expired turns are additionally resolved lazily on every pick, state read and stream connect, so a missing sweeper only delays an AFK captain's auto-pick until somebody looks at the draft. `GET /api/cron/draft-sweep` (bearer `CRON_SECRET`, same as the other cron routes) runs the same sweep and can be called from host cron as a backstop:
+
+```bash
+curl --fail -H "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3000/api/cron/draft-sweep
+```
+
+## Team draft Discord rollout (migration `0043_team_draft_discord`)
+
+Team draft 4/4 (epic #214, issue #218): Discord posts, spectator view, analytics. Expand-only and compatible with the previous app version (rolling the app image back is safe; the database is not reverted). A test (`src/server/__tests__/draft-discord-migration.test.ts`) applies it to a database at 0042.
+
+| Change | Purpose |
+| ------ | ------- |
+| `draft.discord_posted_seq` (`bigint NOT NULL DEFAULT 0`, CHECK `>= 0`) | The highest `draft_event.seq` already handed to the Discord poster. The poster claims unposted events under the draft row lock and moves the cursor in the same short transaction, after the transaction that wrote the events committed, so an event is posted at most once. |
+
+**Backfill.** The column and a backfill that sets every existing draft to its last event sit in one guarded block (`IF NOT EXISTS` on the column), so the deploy does not post a draft's history to Discord and a re-run changes nothing (it can never move a cursor back).
+
+**Compatibility.** The previous app version never reads or writes the column (it has a default). Nothing else changes: no table, index or constraint of 0041 / 0042 is touched. The sweeper's log retention (`src/server/draft/retention.ts`) only deletes rows, never schema.
+
+**Rollback.** The app image can be rolled back freely and the column can stay. The previous version posts nothing to Discord. After the new version runs again, events written in the meantime are posted at the next flush of that draft (possibly a burst of old picks); to skip them, set `discord_posted_seq` to the draft's last `draft_event.seq`.
+
 ## RBAC 7/8 rollout (migration `0040_credential_session_hygiene`)
 
 Phase 7 of the RBAC consolidation (epic #183, issue #190): credential and session hygiene. Add-first and compatible with the previous app version (rolling the app image back is safe; the database is not reverted). Every statement is idempotent.

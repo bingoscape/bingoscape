@@ -48,6 +48,10 @@ export const PERMISSIONS = [
   "submission:comment",
   "submission:read-comments",
   "submission:create-on-behalf",
+  // Team draft
+  "draft:view",
+  "draft:pick",
+  "draft:manage",
 ] as const
 
 export type Permission = (typeof PERMISSIONS)[number]
@@ -55,6 +59,7 @@ export type Permission = (typeof PERMISSIONS)[number]
 const MEMBER_PERMISSIONS = [
   "event:view",
   "player-metadata:write-own",
+  "draft:view",
 ] as const satisfies readonly Permission[]
 
 const MANAGER_PERMISSIONS = [
@@ -80,6 +85,7 @@ const MANAGER_PERMISSIONS = [
   "submission:comment",
   "submission:read-comments",
   "submission:create-on-behalf",
+  "draft:manage",
 ] as const satisfies readonly Permission[]
 
 const ADMIN_PERMISSIONS = [
@@ -124,10 +130,15 @@ export const OWNER_ONLY_PERMISSIONS: ReadonlySet<Permission> =
 /**
  * Team scoped permissions a plain Team member (or leader) holds for their own
  * Team, without any Event role.
+ *
+ * `draft:pick` is held by no role: only the leader (the captain) of the Team
+ * whose turn it is, so the caller passes `{ teamId }` of the on-turn slot's
+ * Team. A manager who wants to pick for a captain uses `draft:manage`.
  */
 export const TEAM_RELATION_PERMISSIONS = {
   "team:access": "member",
   "team:lead": "leader",
   "submission:create": "member",
   "submission:read-comments": "member",
+  "draft:pick": "leader",
 } as const satisfies Partial<Record<Permission, "member" | "leader">>
