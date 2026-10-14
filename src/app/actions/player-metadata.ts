@@ -11,9 +11,9 @@ import {
 import { logger } from "@/lib/logger"
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
+import { revalidateEventParticipants } from "@/server/revalidate-event-participants"
 import { playerMetadata, eventParticipants } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
-import { revalidatePath } from "next/cache"
 import { fetchPlayerDataFromWOM, type FetchWOMDataResult } from "./wiseoldman"
 
 /**
@@ -130,7 +130,7 @@ export async function updatePlayerMetadata(
     })
     if (!metadata) return failure("Failed to save player metadata")
 
-    revalidatePath(`/events/${eventId}`)
+    revalidateEventParticipants(eventId)
     return { success: true, metadata }
   } catch (error) {
     logger.error({ error, eventId }, "Error saving player metadata")
@@ -196,7 +196,7 @@ export async function updateOwnPlayerMetadata(
     })
     if (!metadata) return failure("Failed to save player metadata")
 
-    revalidatePath(`/events/${eventId}`)
+    revalidateEventParticipants(eventId)
     return { success: true, metadata }
   } catch (error) {
     logger.error({ error, eventId }, "Error saving own player metadata")
@@ -225,7 +225,7 @@ export async function deletePlayerMetadata(
         )
       )
 
-    revalidatePath(`/events/${eventId}`)
+    revalidateEventParticipants(eventId)
     return { success: true }
   } catch (error) {
     logger.error({ error, eventId }, "Error deleting player metadata")

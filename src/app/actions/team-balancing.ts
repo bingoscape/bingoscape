@@ -3,13 +3,13 @@
 import { authorize, denial, hasPermission } from "@/server/authz"
 import { logger } from "@/lib/logger"
 import { db } from "@/server/db"
+import { revalidateEventParticipants } from "@/server/revalidate-event-participants"
 import {
   assertTeamLimitForBattleship,
   battleshipErrorMessage,
 } from "@/server/battleship"
 import { teams, eventParticipants, teamMembers } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
-import { revalidatePath } from "next/cache"
 import {
   getEventParticipantMetadata,
   calculateMetadataCoverage,
@@ -894,7 +894,7 @@ export async function generateBalancedTeams(
       }
     })
 
-    revalidatePath(`/events/${eventId}`)
+    revalidateEventParticipants(eventId)
 
     logger.info(
       {

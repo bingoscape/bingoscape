@@ -61,6 +61,8 @@ import {
 import { isClanManager } from "@/lib/clan"
 import { logger } from "@/lib/logger"
 import { applyBlindBoard } from "@/server/blind-board"
+import { matchesRegistrationSearch } from "@/lib/registration-search"
+import { revalidateEventParticipants } from "@/server/revalidate-event-participants"
 
 import {
   capabilitiesForMembership,
@@ -828,6 +830,7 @@ export async function requestToJoinEvent(
       message: message || null,
     })
 
+    revalidateEventParticipants(eventId)
     return { success: true as const }
   } catch (error) {
     logger.error({ error, eventId }, "Error requesting to join event")
@@ -915,6 +918,7 @@ export async function joinEvent(eventId: string, override = false) {
       }
     }
 
+    revalidateEventParticipants(eventId)
     return { success: true as const }
   } catch (error) {
     logger.error({ error }, "Error joining event")
@@ -1002,6 +1006,7 @@ export async function joinEventViaInvite(
         status: "pending",
         message: `Joined via invite code: ${inviteCode}`,
       })
+      revalidateEventParticipants(invite.eventId)
       return {
         success: true as const,
         event: invite.event,
@@ -1026,6 +1031,7 @@ export async function joinEventViaInvite(
       )
     }
 
+    revalidateEventParticipants(invite.eventId)
     return {
       success: true as const,
       event: invite.event,
@@ -1173,7 +1179,7 @@ export async function updateParticipantRole(
       )
       return membershipFailure(result)
     }
-    revalidatePath(`/events/${eventId}/participants`)
+    revalidateEventParticipants(eventId)
     return { success: true as const }
   } catch (error) {
     logger.error({ error, eventId, userId }, "Error updating participant role")
@@ -1207,15 +1213,14 @@ export async function transferEventOwnership(
     return { success: false, error: result.error, code: result.code }
   }
 
-  revalidatePath(`/events/${eventId}`)
-  revalidatePath(`/events/${eventId}/participants`)
+  revalidateEventParticipants(eventId)
   return { success: true as const }
 }
 
 export async function assignParticipantToTeam(
   eventId: string,
   userId: string,
-  teamId: string
+  teamId: string | null
 ): Promise<ActionResult> {
   const allowed = await authorize(eventId, "participant:assign-team")
   if (!allowed.success) return denial(allowed)
@@ -1267,8 +1272,7 @@ export async function assignParticipantToTeam(
         })
       }
     })
-    revalidatePath(`/events/${eventId}/participants`)
-    revalidatePath(`/events/${eventId}`)
+    revalidateEventParticipants(eventId)
     return { success: true as const }
   } catch (error) {
     logger.error({ error }, "Error assigning participant to team")
@@ -1339,7 +1343,7 @@ export async function updateParticipantBuyIn(
       return amount
     })
 
-    revalidatePath(`/events/${eventId}`)
+    revalidateEventParticipants(eventId)
     revalidatePath(`/`)
 
     return { success: true as const, buyInAmount }
@@ -1371,7 +1375,7 @@ export async function removeParticipantFromEvent(
     })
     if (!removed.success) return membershipFailure(removed)
 
-    revalidatePath(`/events/${eventId}/participants`)
+    revalidateEventParticipants(eventId)
     return { success: true as const }
   } catch (error) {
     logger.error({ error }, "Error removing participant:", error)
@@ -1481,7 +1485,7 @@ export async function addClanMembersToEvent(
       })
     }
 
-    revalidatePath(`/events/${eventId}/participants`)
+    revalidateEventParticipants(eventId)
 
     // Build response message
     const added = newUserIds.length
@@ -1535,14 +1539,10 @@ export async function getRegistrationRequests(
     let requests = await query
 
     // Apply search filter in memory if provided
-    if (filters.search && filters.search.trim() !== "") {
-      const searchTerm = filters.search.toLowerCase()
-      requests = requests.filter(
-        (req) =>
-          req.user.name?.toLowerCase().includes(searchTerm) ??
-          req.user.email?.toLowerCase().includes(searchTerm) ??
-          req.user.runescapeName?.toLowerCase().includes(searchTerm) ??
-          req.message?.toLowerCase().includes(searchTerm)
+    const search = filters.search
+    if (search) {
+      requests = requests.filter((req) =>
+        matchesRegistrationSearch(req, search)
       )
     }
 
@@ -1616,8 +1616,7 @@ export async function approveRegistrationRequest(
         }
       }
 
-      revalidatePath(`/events/${request.eventId}`)
-      revalidatePath(`/events/${request.eventId}/registrations`)
+      revalidateEventParticipants(request.eventId)
 
       return { success: true as const }
     })
@@ -1661,7 +1660,7 @@ export async function rejectRegistrationRequest(
       })
       .where(eq(eventRegistrationRequests.id, requestId))
 
-    revalidatePath(`/events/${request.eventId}/registrations`)
+    revalidateEventParticipants(request.eventId)
 
     return { success: true as const }
   } catch (error) {
@@ -1778,8 +1777,7 @@ export async function addParticipantDonation(
       })
       .returning()
 
-    revalidatePath(`/events/${eventId}/participants`)
-    revalidatePath(`/events/${eventId}`)
+    revalidateEventParticipants(eventId)
 
     return { success: true as const, data: donation! }
   } catch (error) {
@@ -1819,8 +1817,7 @@ export async function updateParticipantDonation(
 
     if (!donation) return failure("Donation not found", "NOT_FOUND")
 
-    revalidatePath(`/events/${eventId}/participants`)
-    revalidatePath(`/events/${eventId}`)
+    revalidateEventParticipants(eventId)
 
     return { success: true as const, data: donation }
   } catch (error) {
@@ -1853,8 +1850,7 @@ export async function removeParticipantDonation(
       .returning({ id: eventDonations.id })
     if (removed.length === 0) return failure("Donation not found", "NOT_FOUND")
 
-    revalidatePath(`/events/${eventId}/participants`)
-    revalidatePath(`/events/${eventId}`)
+    revalidateEventParticipants(eventId)
 
     return { success: true as const }
   } catch (error) {

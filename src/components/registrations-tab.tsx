@@ -38,6 +38,7 @@ import {
   User,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { matchesRegistrationSearch } from "@/lib/registration-search"
 import { approveRegistrationRequest, rejectRegistrationRequest, type RegistrationRequest } from "@/app/actions/events"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -68,16 +69,7 @@ export function RegistrationsTab({
   const filteredRequests = requests.filter((request) => {
     const matchesFilter = filter === "all" || request.status === filter
 
-    if (!search) return matchesFilter
-
-    const searchLower = search.toLowerCase()
-    return (
-      matchesFilter &&
-      (request.user.name?.toLowerCase().includes(searchLower) ??
-        request.user.email?.toLowerCase().includes(searchLower) ??
-        request.user.runescapeName?.toLowerCase().includes(searchLower) ??
-        request.message?.toLowerCase().includes(searchLower))
-    )
+    return matchesFilter && matchesRegistrationSearch(request, search)
   })
 
   const handleApprove = async () => {

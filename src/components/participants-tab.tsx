@@ -149,32 +149,34 @@ interface EditRoleDialogProps {
   assignableRoles: readonly EventRole[]
 }
 
-function EditRoleDialog({
+export function EditRoleDialog({
   isOpen,
   onClose,
   participant,
   onRoleChange,
   assignableRoles,
 }: EditRoleDialogProps) {
-  const [selectedRole, setSelectedRole] = useState<string>("")
+  // null = untouched. The dialog stays mounted, so the selection falls back to
+  // the participant's current role and is cleared whenever the dialog closes.
+  const [chosenRole, setChosenRole] = useState<string | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
+  const selectedRole = chosenRole ?? participant?.role ?? ""
 
-  useState(() => {
-    if (participant) {
-      setSelectedRole(participant.role)
-    }
-  })
+  const close = () => {
+    setChosenRole(null)
+    onClose()
+  }
 
   const handleSave = async () => {
     if (!participant || selectedRole === participant.role) {
-      onClose()
+      close()
       return
     }
 
     setIsUpdating(true)
     try {
       await onRoleChange(participant.id, selectedRole)
-      onClose()
+      close()
     } catch (error) {
       console.error("Error updating role:", error)
     } finally {
@@ -183,7 +185,7 @@ function EditRoleDialog({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={close}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Role</DialogTitle>
@@ -192,7 +194,7 @@ function EditRoleDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
-          <Select value={selectedRole} onValueChange={setSelectedRole}>
+          <Select value={selectedRole} onValueChange={setChosenRole}>
             <SelectTrigger>
               <SelectValue placeholder="Select a role" />
             </SelectTrigger>
@@ -206,7 +208,7 @@ function EditRoleDialog({
           </Select>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isUpdating}>
+          <Button variant="outline" onClick={close} disabled={isUpdating}>
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={isUpdating}>
@@ -229,38 +231,40 @@ interface ChangeTeamDialogProps {
   onTeamChange: (participantId: string, teamId: string | null) => Promise<void>
 }
 
-function ChangeTeamDialog({
+export function ChangeTeamDialog({
   isOpen,
   onClose,
   participant,
   teams,
   onTeamChange,
 }: ChangeTeamDialogProps) {
-  const [selectedTeam, setSelectedTeam] = useState<string>("")
+  // null = untouched. The dialog stays mounted, so the selection falls back to
+  // the participant's current team and is cleared whenever the dialog closes.
+  const [chosenTeam, setChosenTeam] = useState<string | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
+  const selectedTeam = chosenTeam ?? participant?.teamId ?? "no-team"
 
-  useState(() => {
-    if (participant) {
-      setSelectedTeam(participant.teamId ?? "no-team")
-    }
-  })
+  const close = () => {
+    setChosenTeam(null)
+    onClose()
+  }
 
   const handleSave = async () => {
     if (!participant) {
-      onClose()
+      close()
       return
     }
 
     const newTeamId = selectedTeam === "no-team" ? null : selectedTeam
     if (newTeamId === participant.teamId) {
-      onClose()
+      close()
       return
     }
 
     setIsUpdating(true)
     try {
       await onTeamChange(participant.id, newTeamId)
-      onClose()
+      close()
     } catch (error) {
       console.error("Error updating team:", error)
     } finally {
@@ -269,7 +273,7 @@ function ChangeTeamDialog({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={close}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Change Team</DialogTitle>
@@ -278,7 +282,7 @@ function ChangeTeamDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
-          <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+          <Select value={selectedTeam} onValueChange={setChosenTeam}>
             <SelectTrigger>
               <SelectValue placeholder="Select a team" />
             </SelectTrigger>
@@ -293,7 +297,7 @@ function ChangeTeamDialog({
           </Select>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isUpdating}>
+          <Button variant="outline" onClick={close} disabled={isUpdating}>
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={isUpdating}>
@@ -506,7 +510,7 @@ export function ParticipantsTab({
       const assigned = await assignParticipantToTeam(
         eventId,
         participantId,
-        teamId!
+        teamId
       )
       if (!assigned.success) throw new Error(assigned.error)
       const updatedParticipants = await getEventParticipants(eventId)
@@ -708,6 +712,13 @@ export function ParticipantsTab({
     }
   }
 
+  const getAriaSort = (
+    field: SortField
+  ): "none" | "ascending" | "descending" => {
+    if (sortField !== field) return "none"
+    return sortDirection === "asc" ? "ascending" : "descending"
+  }
+
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) return <ArrowUpDown className="h-4 w-4" />
     return sortDirection === "asc" ? (
@@ -738,6 +749,7 @@ export function ParticipantsTab({
               onCheckedChange={(checked) =>
                 handleSelectParticipant(participant.id, checked as boolean)
               }
+              aria-label={`Select ${participant.runescapeName}`}
             />
           )}
         </TableCell>
@@ -780,6 +792,7 @@ export function ParticipantsTab({
                     handleBuyInChange(participant.id, checked as boolean)
                   }
                   className="h-5 w-5 data-[state=checked]:border-success data-[state=checked]:bg-success"
+                  aria-label={`Buy-in paid for ${participant.runescapeName}`}
                 />
                 <span className="text-sm font-medium">
                   {participant.buyIn >= minimumBuyIn ? "Paid" : "Unpaid"}
@@ -919,6 +932,7 @@ export function ParticipantsTab({
                           checked as boolean
                         )
                       }
+                      aria-label={`Select ${participant.runescapeName}`}
                     />
                   )}
                   <DropdownMenu>
@@ -994,6 +1008,7 @@ export function ParticipantsTab({
                       handleBuyInChange(participant.id, checked as boolean)
                     }
                     className="h-4 w-4 data-[state=checked]:border-success data-[state=checked]:bg-success"
+                    aria-label={`Buy-in paid for ${participant.runescapeName}`}
                   />
                   <span className="text-sm font-medium">
                     {participant.buyIn >= minimumBuyIn ? "Paid" : "Unpaid"}
@@ -1149,10 +1164,11 @@ export function ParticipantsTab({
                         <Checkbox
                           checked={allSelectableSelected}
                           onCheckedChange={handleSelectAll}
+                          aria-label="Select all participants"
                         />
                       )}
                   </TableHead>
-                  <TableHead>
+                  <TableHead aria-sort={getAriaSort("name")}>
                     <Button
                       variant="ghost"
                       onClick={() => handleSort("name")}
@@ -1162,7 +1178,7 @@ export function ParticipantsTab({
                       {getSortIcon("name")}
                     </Button>
                   </TableHead>
-                  <TableHead>
+                  <TableHead aria-sort={getAriaSort("role")}>
                     <Button
                       variant="ghost"
                       onClick={() => handleSort("role")}
@@ -1172,7 +1188,7 @@ export function ParticipantsTab({
                       {getSortIcon("role")}
                     </Button>
                   </TableHead>
-                  <TableHead>
+                  <TableHead aria-sort={getAriaSort("team")}>
                     <Button
                       variant="ghost"
                       onClick={() => handleSort("team")}
@@ -1182,7 +1198,7 @@ export function ParticipantsTab({
                       {getSortIcon("team")}
                     </Button>
                   </TableHead>
-                  <TableHead>
+                  <TableHead aria-sort={getAriaSort("buyIn")}>
                     <Button
                       variant="ghost"
                       onClick={() => handleSort("buyIn")}
@@ -1192,7 +1208,7 @@ export function ParticipantsTab({
                       {getSortIcon("buyIn")}
                     </Button>
                   </TableHead>
-                  <TableHead>
+                  <TableHead aria-sort={getAriaSort("donations")}>
                     <Button
                       variant="ghost"
                       onClick={() => handleSort("donations")}
@@ -1202,7 +1218,7 @@ export function ParticipantsTab({
                       {getSortIcon("donations")}
                     </Button>
                   </TableHead>
-                  <TableHead>
+                  <TableHead aria-sort={getAriaSort("status")}>
                     <Button
                       variant="ghost"
                       onClick={() => handleSort("status")}

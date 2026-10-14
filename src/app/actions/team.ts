@@ -2,6 +2,7 @@
 import { getServerAuthSession } from "@/server/auth"
 import { logger } from "@/lib/logger"
 import { db } from "@/server/db"
+import { revalidateEventParticipants } from "@/server/revalidate-event-participants"
 import {
   teams,
   teamMembers,
@@ -10,7 +11,6 @@ import {
   playerMetadata,
 } from "@/server/db/schema"
 import { eq, and, inArray, not, exists } from "drizzle-orm"
-import { revalidatePath } from "next/cache"
 import { levelAllows } from "@/lib/authz/read-policy"
 import { getEventReadAccessFor } from "@/server/authz/read"
 import { authorize, denial, failure, hasPermission } from "@/server/authz"
@@ -35,7 +35,7 @@ export async function createTeam(eventId: string, name: string) {
         .returning()
       return created
     })
-    revalidatePath(`/events/${eventId}`)
+    revalidateEventParticipants(eventId)
 
     if (team) {
       logger.info(
@@ -152,7 +152,7 @@ export async function addUserToTeam(teamId: string, userId: string) {
         error: "User is already on a team in this event",
       }
     }
-    revalidatePath(`/events/${teamInfo.event.id}`)
+    revalidateEventParticipants(teamInfo.event.id)
     logger.info(
       {
         eventId: teamInfo.event.id,
@@ -189,7 +189,7 @@ export async function removeUserFromTeam(teamId: string, userId: string) {
       .where(
         and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId))
       )
-    revalidatePath(`/events/${teamInfo.event.id}`)
+    revalidateEventParticipants(teamInfo.event.id)
     logger.info(
       {
         eventId: teamInfo.event.id,
@@ -224,7 +224,7 @@ export async function deleteTeam(teamId: string) {
     await db.delete(teamMembers).where(eq(teamMembers.teamId, teamId))
     await db.delete(teams).where(eq(teams.id, teamId))
 
-    revalidatePath(`/events/${teamInfo.event.id}`)
+    revalidateEventParticipants(teamInfo.event.id)
     logger.info(
       {
         eventId: teamInfo.event.id,
@@ -315,7 +315,7 @@ export async function updateTeamName(teamId: string, newName: string) {
       .returning()
 
     if (updatedTeam) {
-      revalidatePath(`/events/${updatedTeam.eventId}`)
+      revalidateEventParticipants(updatedTeam.eventId)
       return { success: true as const, data: updatedTeam }
     } else {
       return { success: false, error: "Team not found" }
@@ -352,7 +352,7 @@ export async function updateTeamMember(
       )
       .returning()
 
-    revalidatePath(`/events/${teamInfo.event.id}`)
+    revalidateEventParticipants(teamInfo.event.id)
     return { success: true as const, data: updatedMember }
   } catch (error) {
     logger.error({ error }, "Error updating team member:", error)
@@ -448,10 +448,7 @@ export async function assignParticipantToTeam(
       }
     })
 
-    // Revalidate the participants page to reflect the changes
-    revalidatePath(`/events/${eventId}/participants`)
-    // Also revalidate the event page
-    revalidatePath(`/events/${eventId}`)
+    revalidateEventParticipants(eventId)
 
     return { success: true as const }
   } catch (error) {
