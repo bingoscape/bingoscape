@@ -252,7 +252,7 @@ export async function GET(
                           }}
                         >
                           {tile?.headerImage ? (
-                             
+                            // oxlint-disable-next-line next/no-img-element -- rendered by Satori (ImageResponse), where next/image is unsupported
                             <img
                               src={tile.headerImage}
                               alt={tile.title}

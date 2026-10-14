@@ -5,6 +5,7 @@ import { EventDisplay } from "@/components/events-display"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { categorizeEvents } from "@/lib/dashboard-events"
+import { getNow } from "@/lib/now"
 import type { ClanEventRow } from "@/server/queries/clans"
 
 interface ClanEventsPanelProps {
@@ -44,7 +45,7 @@ export default function ClanEventsPanel({ rows, clanName }: ClanEventsPanelProps
   return (
     <EventDisplay
       categorized={categorized}
-      now={new Date()}
+      now={getNow()}
       footer={(eventData, state) => {
         if (state === "past") return null
         const registration = registrationById.get(eventData.event.id)

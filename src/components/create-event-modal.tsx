@@ -67,6 +67,13 @@ const slideVariants = {
   }),
 }
 
+/** Midnight today, local time: the earliest selectable date. */
+function startOfToday(): Date {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return today
+}
+
 export function CreateEventModal({
   isOpen,
   onClose,
@@ -95,6 +102,15 @@ export function CreateEventModal({
 
   const totalSteps = 4
 
+  // "Today" is read when the modal mounts and refreshed whenever it opens, so
+  // a long-lived tab doesn't allow dates that have since passed.
+  const [today, setToday] = useState(startOfToday)
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen)
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen)
+    if (isOpen) setToday(startOfToday())
+  }
+
   // Reset step on close
   useEffect(() => {
     if (!isOpen) {
@@ -106,11 +122,9 @@ export function CreateEventModal({
   }, [isOpen])
 
   // Auto-set end date to start date + 7 days when start date is selected
-  useEffect(() => {
-    if (startDate && !endDate) {
-      setEndDate(addDays(startDate, 7))
-    }
-  }, [startDate, endDate])
+  if (startDate && !endDate) {
+    setEndDate(addDays(startDate, 7))
+  }
 
   const eventDuration = useMemo(() => {
     if (!startDate || !endDate) return null
@@ -249,9 +263,6 @@ export function CreateEventModal({
       setIsSubmitting(false)
     }
   }
-
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

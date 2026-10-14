@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import {
@@ -24,11 +24,17 @@ export function RunescapeLinkPrompt() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
 
-  useEffect(() => {
+  // Open whenever the session changes to one without a linked account
+  // (undefined at first, so the session present on mount counts as a change)
+  const [seenSession, setSeenSession] = useState<typeof session | undefined>(
+    undefined
+  )
+  if (session !== seenSession) {
+    setSeenSession(session)
     if (session?.user && !session.user.runescapeName) {
       setIsOpen(true)
     }
-  }, [session])
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

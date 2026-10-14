@@ -62,8 +62,8 @@ export function EventCard({
 
   const eventTz = eventData.event.timezone || "UTC"
   
-  const isRegistrationClosed =
-    !!registrationDeadline && new Date() > registrationDeadline
+  const [now] = useState(() => new Date())
+  const isRegistrationClosed = !!registrationDeadline && now > registrationDeadline
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [requestMessage, setRequestMessage] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
