@@ -1,0 +1,28 @@
+src/server/queries/participants.ts
+  s_e32e07509d7036::t_3a977f73cf6324 107-110,191,193,213,326-328,548
+  s_e32e07509d7036::t_c1f33b8eae7396 192
+  s_e32e07509d7036::t_4d2f4ddb2024c3 1-106,111-190,194-212,214-325,329-547,549-635
+src/app/actions/events.ts
+  s_e32e07509d7036::t_b74c23bf0a5649 65-68,1067-1068,1487-1489
+src/app/events/[id]/(manage)/participants/page.tsx
+  s_e32e07509d7036::t_7efe0de902ee1a 10,27-28,31
+src/server/queries/__tests__/participants.test.ts
+  s_e32e07509d7036::t_793a8ef85751db 1-56,59-93,95-146,150-189,191-195,207-214,224-289,312,321-335,340-379,383-423,427-428,432-531
+  s_e32e07509d7036::t_18716951f2a958 57-58,94,147-149,190,196-206,215-223,290-311,313-320,336-339,380-382,424-426,429-431
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c95ad3a6aab93d7a5de882285533bfbe2e181743",
+  "prompts": {},
+  "sessions": {
+    "s_e32e07509d7036": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0f5dfb9a-3776-4ec4-a635-481b24c3d7ae",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
