@@ -2,6 +2,8 @@
 
 Web application for running Old School RuneScape clan bingo events: boards, teams, submissions with screenshot evidence, clan management, and an API for the RuneLite plugin. Latest released version in the changelog: 1.1.0.
 
+Production instance: [https://bingoscape.org](https://bingoscape.org)
+
 ## Table of Contents
 
 - [Features](#features)
@@ -184,7 +186,7 @@ Variables are validated in `src/env.js`. Some are read directly from `process.en
 | `CRON_SECRET`                                | for scheduled unlock | Bearer token for `GET /api/cron/unlock`. The route answers 401 when it is unset. `scripts/setup-unlock-cron.sh` sets up a cron job that calls it every minute.         |
 | `OSRS_WIKI_CONTACT_EMAIL`                    | recommended          | Contact address in the User-Agent of OSRS Wiki price requests. Defaults to `unknown@example.com`.                                                                      |
 | `WISEOLDMAN_API_KEY`                         | no                   | Wise Old Man API key for higher rate limits.                                                                                                                           |
-| `NEXT_PUBLIC_BASE_URL`                       | no                   | Base URL used for public event page metadata. Defaults to `https://next.bingoscape.org`.                                                                               |
+| `NEXT_PUBLIC_BASE_URL`                       | no                   | Base URL used for public event page metadata. Defaults to `https://bingoscape.org`.                                                                                    |
 | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`         | production (Docker)  | Passed through by `docker-compose.yml`.                                                                                                                                |
 | `SKIP_ENV_VALIDATION`                        | no                   | Set to `1` to skip validation (Docker build, CI).                                                                                                                      |
 | `NODE_ENV`                                   | no                   | `development`, `test` or `production`.                                                                                                                                 |
