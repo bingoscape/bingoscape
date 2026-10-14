@@ -23,15 +23,13 @@ import {
   eventIdOfTile,
   getEventActor,
   getEventRole,
-  isEventManager,
-  requireBingoAdmin,
-  requireBingoAdminForGoal,
-  requireBingoAdminForSubmission,
-  requireBingoAdminForTile,
-  requireEventAdmin,
-  requireEventManager,
-  requireEventMember,
+  hasPermission,
   requirePermission,
+  requirePermissionForBingo,
+  requirePermissionForEvent,
+  requirePermissionForGoal,
+  requirePermissionForSubmission,
+  requirePermissionForTile,
   requireTeamMemberOrManager,
 } from "@/server/authz"
 import { eventAction } from "@/server/authz/action"
@@ -269,69 +267,76 @@ describe("authorize / requirePermission", () => {
   })
 })
 
-describe("existing helpers keep their behaviour", () => {
-  it("requireEventManager: admin, management and the creator pass", async () => {
+describe("hasPermission and the resolver guards", () => {
+  it("hasPermission: admin, management and the creator manage; others do not", async () => {
     for (const user of ["creator", "admin", "management"] as const) {
       signInAs(f.users[user])
-      await expect(requireEventManager(f.event1.id)).resolves.toBe(f.event1.id)
-      await expect(isEventManager(f.event1.id)).resolves.toBe(true)
+      await expect(hasPermission(f.event1.id, "board:manage")).resolves.toBe(
+        true
+      )
     }
     for (const user of ["participant", "outsider"] as const) {
       signInAs(f.users[user])
-      await expect(requireEventManager(f.event1.id)).rejects.toThrow(
-        "Forbidden: admin or management role required"
+      await expect(hasPermission(f.event1.id, "board:manage")).resolves.toBe(
+        false
       )
-      await expect(isEventManager(f.event1.id)).resolves.toBe(false)
     }
     signInAs(null)
-    await expect(requireEventManager(f.event1.id)).rejects.toThrow(
-      "Unauthorized"
+    await expect(hasPermission(f.event1.id, "board:manage")).resolves.toBe(
+      false
     )
   })
 
-  it("requireEventAdmin / requireEventMember", async () => {
+  it("hasPermission fails closed on a malformed or unknown id", async () => {
+    signInAs(f.users.admin)
+    await expect(hasPermission("not-a-uuid", "event:view")).resolves.toBe(false)
+    await expect(
+      hasPermission("00000000-0000-4000-8000-000000000000", "event:view")
+    ).resolves.toBe(false)
+  })
+
+  it("admin-only permissions: the creator passes, management does not", async () => {
     signInAs(f.users.creator)
-    await expect(requireEventAdmin(f.event1.id)).resolves.toBe(f.event1.id)
+    await expect(
+      requirePermissionForEvent(f.event1.id, "event:update")
+    ).resolves.toBe(f.event1.id)
     signInAs(f.users.management)
-    await expect(requireEventAdmin(f.event1.id)).rejects.toThrow(
-      "Forbidden: admin role required"
-    )
-    await expect(requireEventMember(f.event1.id)).resolves.toBe("management")
-    signInAs(f.users.outsider)
-    await expect(requireEventMember(f.event1.id)).rejects.toThrow(
-      "Forbidden: not a member of this event"
-    )
+    await expect(
+      requirePermissionForEvent(f.event1.id, "event:update")
+    ).rejects.toThrow("Forbidden")
   })
 
   it("manager of Event 1 cannot reach the rows of Event 2", async () => {
     signInAs(f.users.management)
-    await expect(requireBingoAdmin(f.event1.bingoId)).resolves.toBe(f.event1.id)
-    await expect(requireBingoAdminForTile(f.event1.tileId)).resolves.toBe(
-      f.event1.id
-    )
-    await expect(requireBingoAdminForGoal(f.event1.goalId)).resolves.toBe(
-      f.event1.id
-    )
     await expect(
-      requireBingoAdminForSubmission(f.event1.submissionId)
+      requirePermissionForBingo(f.event1.bingoId, "board:manage")
+    ).resolves.toBe(f.event1.id)
+    await expect(
+      requirePermissionForTile(f.event1.tileId, "board:manage")
+    ).resolves.toBe(f.event1.id)
+    await expect(
+      requirePermissionForGoal(f.event1.goalId, "board:manage")
+    ).resolves.toBe(f.event1.id)
+    await expect(
+      requirePermissionForSubmission(f.event1.submissionId, "submission:review")
     ).resolves.toBe(f.event1.id)
 
-    await expect(requireBingoAdmin(f.event2.bingoId)).rejects.toBeInstanceOf(
-      AuthzError
-    )
-    await expect(requireBingoAdminForTile(f.event2.tileId)).rejects.toThrow(
-      "Forbidden"
-    )
-    await expect(requireBingoAdminForGoal(f.event2.goalId)).rejects.toThrow(
-      "Forbidden"
-    )
+    await expect(
+      requirePermissionForBingo(f.event2.bingoId, "board:manage")
+    ).rejects.toBeInstanceOf(AuthzError)
+    await expect(
+      requirePermissionForTile(f.event2.tileId, "board:manage")
+    ).rejects.toThrow("Forbidden")
+    await expect(
+      requirePermissionForGoal(f.event2.goalId, "board:manage")
+    ).rejects.toThrow("Forbidden")
   })
 
   it("admin of Event 1 is only a participant of Event 2", async () => {
     signInAs(f.users.admin)
-    await expect(requireBingoAdminForTile(f.event2.tileId)).rejects.toThrow(
-      "Forbidden: admin or management role required"
-    )
+    await expect(
+      requirePermissionForTile(f.event2.tileId, "board:manage")
+    ).rejects.toThrow("Forbidden")
   })
 
   it("Team helpers: member, leader and manager rules", async () => {
@@ -340,10 +345,10 @@ describe("existing helpers keep their behaviour", () => {
       f.event1.id
     )
     await expect(requireTeamMemberOrManager(f.event1.teamBId)).rejects.toThrow(
-      "Forbidden: not a member of this team"
+      "Forbidden"
     )
     await expect(assertTeamLeaderOrManager(f.event1.teamAId)).rejects.toThrow(
-      "only the team leader or an event manager"
+      "Forbidden"
     )
 
     signInAs(f.users.leaderA)
@@ -351,7 +356,7 @@ describe("existing helpers keep their behaviour", () => {
       f.event1.id
     )
     await expect(assertTeamLeaderOrManager(f.event1.teamBId)).rejects.toThrow(
-      "Forbidden: not a member of this team"
+      "Forbidden"
     )
 
     signInAs(f.users.management)
@@ -359,7 +364,7 @@ describe("existing helpers keep their behaviour", () => {
       f.event1.id
     )
     await expect(requireTeamMemberOrManager(f.event2.teamId)).rejects.toThrow(
-      "Forbidden: not a member of this team"
+      "Forbidden"
     )
   })
 

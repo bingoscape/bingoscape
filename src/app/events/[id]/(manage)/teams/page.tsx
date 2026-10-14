@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 import type { UUID } from "crypto"
 import { getServerAuthSession } from "@/server/auth"
 import { getEventById } from "@/server/queries/events"
+import { hasPermission } from "@/server/authz"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { TeamManagement } from "@/components/team-management"
 
@@ -21,8 +22,8 @@ export default async function EventTeamsPage(props: {
     notFound()
   }
 
-  const { event, userRole } = data
-  if (userRole !== "admin" && userRole !== "management") {
+  const { event } = data
+  if (!(await hasPermission(event.id, "team:manage"))) {
     notFound()
   }
 

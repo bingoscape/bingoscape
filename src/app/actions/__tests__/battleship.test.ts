@@ -89,7 +89,11 @@ describe("saveTeamShipPlacements authorization", () => {
       fx.teamAId,
       validFleet(fx.tileIds)
     )
-    expect(result).toEqual({ success: false, error: "Unauthorized" })
+    expect(result).toMatchObject({
+      success: false,
+      error: "Unauthorized",
+      code: "UNAUTHENTICATED",
+    })
     expect(await shipsOf(fx.teamAId)).toHaveLength(0)
   })
 

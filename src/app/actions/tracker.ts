@@ -15,7 +15,7 @@ import { fetchCompetitionFromWOM } from "./wiseoldman"
 import { WOMClient } from "@wise-old-man/utils"
 import { logger } from "@/lib/logger"
 import { checkAndAutoCompleteTile } from "@/server/tile-completion"
-import { authzErrorMessage, requireBingoAdmin } from "@/server/authz"
+import { requirePermissionForBingo, actionFailure } from "@/server/authz"
 import { unstable_noStore as noStore } from "next/cache"
 import {
   sendDiscordWebhook,
@@ -30,7 +30,7 @@ export async function syncTrackerProgress(bingoId: string) {
   noStore()
   try {
     // Syncing writes Team progress and may complete Tiles: managers only.
-    await requireBingoAdmin(bingoId)
+    await requirePermissionForBingo(bingoId, "board:manage")
 
     // 1. Get bingo
     const bingo = await db.query.bingos.findFirst({
@@ -67,15 +67,25 @@ export async function syncTrackerProgress(bingoId: string) {
 
     // 3. Get all metric goals for this bingo
     const eventTilesList = await db
-      .select({ id: tiles.id, title: tiles.title, description: tiles.description })
+      .select({
+        id: tiles.id,
+        title: tiles.title,
+        description: tiles.description,
+      })
       .from(tiles)
       .where(eq(tiles.bingoId, bingoId))
     if (!eventTilesList.length)
       return { success: false, error: "No tiles found" }
 
     // Build a lookup map so we can enrich Discord embeds with tile info
-    const tileMap = new Map<string, { title: string; description: string | null }>(
-      eventTilesList.map((t) => [t.id, { title: t.title, description: t.description }])
+    const tileMap = new Map<
+      string,
+      { title: string; description: string | null }
+    >(
+      eventTilesList.map((t) => [
+        t.id,
+        { title: t.title, description: t.description },
+      ])
     )
 
     const allGoals = await db.query.goals.findMany({
@@ -90,7 +100,7 @@ export async function syncTrackerProgress(bingoId: string) {
     )
 
     if (mGoals.length === 0) {
-      return { success: true, message: "No metric goals to sync" }
+      return { success: true as const, message: "No metric goals to sync" }
     }
 
     // 4. Gather participants and fetch individual gains
@@ -164,17 +174,21 @@ export async function syncTrackerProgress(bingoId: string) {
     const updatedTiles = new Set<string>()
 
     // Accumulators for Discord notifications — populated during loops, dispatched at the end
-    const pendingGoalNotifications: Array<GoalCompleteEmbedData & { progressId: string | undefined }> = []
-    const pendingTileNotifications: Array<TileCompleteEmbedData & { submissionId: string | undefined }> = []
+    const pendingGoalNotifications: Array<
+      GoalCompleteEmbedData & { progressId: string | undefined }
+    > = []
+    const pendingTileNotifications: Array<
+      TileCompleteEmbedData & { submissionId: string | undefined }
+    > = []
 
     const eventTeams = await db.query.teams.findMany({
       where: eq(teams.eventId, eventId),
       with: {
         teamMembers: {
-          with: { 
+          with: {
             user: {
-              with: { playerMetadata: true }
-            } 
+              with: { playerMetadata: true },
+            },
           },
         },
       },
@@ -187,8 +201,12 @@ export async function syncTrackerProgress(bingoId: string) {
         if (!metricName) continue
 
         const teamRsns = team.teamMembers.map((tm) => {
-          const metadata = tm.user.playerMetadata?.find(pm => pm.eventId === eventId)
-          return (metadata?.runescapeNameOverride || tm.user.runescapeName)?.toLowerCase()
+          const metadata = tm.user.playerMetadata?.find(
+            (pm) => pm.eventId === eventId
+          )
+          return (
+            metadata?.runescapeNameOverride || tm.user.runescapeName
+          )?.toLowerCase()
         })
 
         for (const participation of womComp.participations) {
@@ -297,7 +315,10 @@ export async function syncTrackerProgress(bingoId: string) {
     }
 
     // Dispatch all accumulated Discord notifications in one batch at the end
-    if (pendingGoalNotifications.length > 0 || pendingTileNotifications.length > 0) {
+    if (
+      pendingGoalNotifications.length > 0 ||
+      pendingTileNotifications.length > 0
+    ) {
       try {
         const activeWebhooks = await db.query.discordWebhooks.findMany({
           where: and(
@@ -353,13 +374,10 @@ export async function syncTrackerProgress(bingoId: string) {
       }
     }
 
-    return { success: true, message: "Sync complete" }
+    return { success: true as const, message: "Sync complete" }
   } catch (error) {
     logger.error({ error }, "Error syncing tracker progress:", error)
-    return {
-      success: false,
-      error: authzErrorMessage(error, "Failed to sync tracker progress"),
-    }
+    return actionFailure(error, "Failed to sync tracker progress")
   }
 }
 
@@ -370,7 +388,7 @@ export async function createWiseOldManCompetition(
   customEndsAt?: Date
 ) {
   try {
-    await requireBingoAdmin(bingoId)
+    await requirePermissionForBingo(bingoId, "board:manage")
 
     const bingo = await db.query.bingos.findFirst({
       where: eq(bingos.id, bingoId),
@@ -383,10 +401,10 @@ export async function createWiseOldManCompetition(
       where: eq(teams.eventId, bingo.eventId),
       with: {
         teamMembers: {
-          with: { 
+          with: {
             user: {
-              with: { playerMetadata: true }
-            } 
+              with: { playerMetadata: true },
+            },
           },
         },
       },
@@ -396,7 +414,9 @@ export async function createWiseOldManCompetition(
     for (const team of eventTeams) {
       const participants = team.teamMembers
         .map((member) => {
-          const metadata = member.user.playerMetadata?.find(pm => pm.eventId === bingo.eventId)
+          const metadata = member.user.playerMetadata?.find(
+            (pm) => pm.eventId === bingo.eventId
+          )
           return metadata?.runescapeNameOverride || member.user.runescapeName
         })
         .filter((name): name is string => name !== null && name !== undefined)
@@ -430,13 +450,10 @@ export async function createWiseOldManCompetition(
       })
       .where(eq(bingos.id, bingoId))
 
-    return { success: true, womCompetitionId: comp.competition.id }
+    return { success: true as const, womCompetitionId: comp.competition.id }
   } catch (error) {
     logger.error({ error }, "Error creating WOM competition:", error)
-    return {
-      success: false,
-      error: authzErrorMessage(error, "Failed to create WOM competition"),
-    }
+    return actionFailure(error, "Failed to create WOM competition")
   }
 }
 
@@ -446,7 +463,7 @@ export async function linkWiseOldManCompetition(
   verificationCode?: string
 ) {
   try {
-    await requireBingoAdmin(bingoId)
+    await requirePermissionForBingo(bingoId, "board:manage")
 
     // Optionally verify that the competition exists
     const womResult = await fetchCompetitionFromWOM(competitionId)
@@ -462,19 +479,16 @@ export async function linkWiseOldManCompetition(
       })
       .where(eq(bingos.id, bingoId))
 
-    return { success: true }
+    return { success: true as const }
   } catch (error) {
     logger.error({ error }, "Error linking WOM competition:", error)
-    return {
-      success: false,
-      error: authzErrorMessage(error, "Failed to link WOM competition"),
-    }
+    return actionFailure(error, "Failed to link WOM competition")
   }
 }
 
 export async function unlinkWiseOldManCompetition(bingoId: string) {
   try {
-    await requireBingoAdmin(bingoId)
+    await requirePermissionForBingo(bingoId, "board:manage")
 
     await db
       .update(bingos)
@@ -483,12 +497,9 @@ export async function unlinkWiseOldManCompetition(bingoId: string) {
         womVerificationCode: null,
       })
       .where(eq(bingos.id, bingoId))
-    return { success: true }
+    return { success: true as const }
   } catch (error) {
     logger.error({ error }, "Error unlinking WOM competition:", error)
-    return {
-      success: false,
-      error: authzErrorMessage(error, "Failed to unlink WOM competition"),
-    }
+    return actionFailure(error, "Failed to unlink WOM competition")
   }
 }

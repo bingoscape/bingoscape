@@ -51,8 +51,17 @@ export function AddClanMembersDialog({
   const loadMembers = async () => {
     setIsLoading(true)
     try {
-      const availableMembers = await getClanMembersForEvent(eventId)
-      setMembers(availableMembers)
+      const result = await getClanMembersForEvent(eventId)
+      if (!result.success) {
+        toast({
+          title: "Error",
+          description: result.error,
+          variant: "destructive",
+        })
+        onOpenChange(false)
+        return
+      }
+      setMembers(result.members)
     } catch (error) {
       toast({
         title: "Error",

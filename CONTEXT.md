@@ -51,6 +51,10 @@ Every change of an Event or Clan membership (join, add, role change, removal, ow
 **Read level**:
 How a viewer stands towards an Event when they read it: `manager` (admin, management, creator), `member` (any other participant or Team member), `public` (not a member, the Event is public), `summary` (signed in, not a member, the Event is not public: they hold the link and get the join card) or `none`. One policy (`src/lib/authz/read-policy.ts`, `src/server/authz/read.ts`) turns the level into what each read returns; draft Boards, hidden Tiles, Blind Tiles and the tracker verification code are managers only. The defaults for decisions 3-5 of the RBAC epic (link holders of non-public Events, public upload URLs, codephrase visible to players) are recorded in `docs/adr/0001-read-visibility-defaults.md` as pending maintainer confirmation; `RBAC_READ_POLICY=relaxed` is the temporary escape hatch.
 
+**Permission**:
+What an Event role may do, named `<subject>:<action>` and defined once in `src/lib/authz/permissions.ts` (the role -> permission map). Every server action, route handler and server page asks `authorize`, `requirePermission` or `hasPermission` (`src/server/authz`); nobody compares a role string. Every public entry point is listed with its permission, or with why it is public, in `src/server/authz/registry.ts`, and a test fails when one is missing. Two of the epic's open decisions keep today's behaviour: `management` can edit buy-ins and donations (`finance:write`) but not roles (`participant:set-role` is admin only), and submission comments can be read by managers and the owning Team but written by managers only.
+_Avoid_: Role check, Guard
+
 **Clan**:
 A persistent, long-term group of Players outside of any specific Event.
 _Avoid_: Group, Guild

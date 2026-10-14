@@ -1,4 +1,5 @@
 import type { EventData } from "@/app/actions/events"
+import { isManagerRole } from "@/lib/authz/roles"
 
 export type RoleFilter = "all" | "admin" | "participant"
 
@@ -21,7 +22,7 @@ export function filterEventsByRole(
 ): EventData[] {
   if (filter === "all") return events
   return events.filter((e) => {
-    const runs = e.event.role === "admin" || e.event.role === "management"
+    const runs = isManagerRole(e.event.role)
     return filter === "admin" ? runs : !runs
   })
 }

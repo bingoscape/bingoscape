@@ -82,8 +82,8 @@ export function EventRulesSheet({
 
     startTransition(async () => {
       const result = await createEventRule(eventId, text)
-      if (result.success && result.rule) {
-        setRules((prev) => [...prev, result.rule!])
+      if (result.success) {
+        setRules((prev) => [...prev, result.rule])
         setNewRuleText("")
         router.refresh()
         newRuleInputRef.current?.focus()

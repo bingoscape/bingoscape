@@ -2,9 +2,13 @@ import "server-only"
 
 import { eq } from "drizzle-orm"
 
+import type { Permission } from "@/lib/authz/permissions"
+import type { PolicyResource } from "@/lib/authz/policy"
 import { db } from "@/server/db"
 import {
   bingos,
+  discordWebhooks,
+  eventRegistrationRequests,
   goalGroups,
   goals,
   goalValues,
@@ -14,7 +18,7 @@ import {
   tiles,
 } from "@/server/db/schema"
 import { AuthzError } from "./errors"
-import { requireEventManager, requireSession } from "./guards"
+import { requirePermission, requireSession } from "./guards"
 
 /**
  * Resolvers: derive the Event that owns a Board, Tile, Goal, Submission or Team
@@ -114,6 +118,26 @@ export async function eventIdOfTeam(teamId: string): Promise<string> {
   return team.eventId
 }
 
+export async function eventIdOfWebhook(webhookId: string): Promise<string> {
+  const webhook = await db.query.discordWebhooks.findFirst({
+    where: eq(discordWebhooks.id, webhookId),
+    columns: { eventId: true },
+  })
+  if (!webhook) throw notFound("Webhook")
+  return webhook.eventId
+}
+
+export async function eventIdOfRegistrationRequest(
+  requestId: string
+): Promise<string> {
+  const request = await db.query.eventRegistrationRequests.findFirst({
+    where: eq(eventRegistrationRequests.id, requestId),
+    columns: { eventId: true },
+  })
+  if (!request) throw notFound("Registration request")
+  return request.eventId
+}
+
 /** Throws unless the Goal belongs to a Tile of the given Event. */
 export async function assertGoalInEvent(
   goalId: string,
@@ -135,36 +159,91 @@ export async function assertGoalInEvent(
 }
 
 // ---------------------------------------------------------------------------
-// Existing "manager of the Event that owns X" helpers (compatibility shim):
-// resolve the Event, then require admin/management. Each returns the eventId.
-// The session is checked first so anonymous callers never reach the database.
+// "May the caller do <permission> in the Event that owns X?": resolve the Event
+// from X, then require the permission. Each returns the eventId. The session is
+// checked first so anonymous callers never reach the database. A missing X is
+// NOT_FOUND, a caller without the permission FORBIDDEN.
 // ---------------------------------------------------------------------------
 
-async function requireManagerOf(
-  resolveEventId: () => Promise<string>
+async function requireOn(
+  resolveEventId: () => Promise<string>,
+  permission: Permission,
+  resource?: PolicyResource
 ): Promise<string> {
   await requireSession()
-  return requireEventManager(await resolveEventId())
+  const eventId = await resolveEventId()
+  await requirePermission(eventId, permission, resource)
+  return eventId
 }
 
-export const requireBingoAdmin = (bingoId: string) =>
-  requireManagerOf(() => eventIdOfBingo(bingoId))
+export const requirePermissionForEvent = (
+  eventId: string,
+  permission: Permission,
+  resource?: PolicyResource
+) => requireOn(async () => eventId, permission, resource)
 
-export const requireBingoAdminForTile = (tileId: string) =>
-  requireManagerOf(() => eventIdOfTile(tileId))
+export const requirePermissionForBingo = (
+  bingoId: string,
+  permission: Permission,
+  resource?: PolicyResource
+) => requireOn(() => eventIdOfBingo(bingoId), permission, resource)
 
-export const requireBingoAdminForGoal = (goalId: string) =>
-  requireManagerOf(() => eventIdOfGoal(goalId))
+export const requirePermissionForTile = (
+  tileId: string,
+  permission: Permission,
+  resource?: PolicyResource
+) => requireOn(() => eventIdOfTile(tileId), permission, resource)
 
-export const requireBingoAdminForGoalGroup = (groupId: string) =>
-  requireManagerOf(() => eventIdOfGoalGroup(groupId))
+export const requirePermissionForGoal = (
+  goalId: string,
+  permission: Permission,
+  resource?: PolicyResource
+) => requireOn(() => eventIdOfGoal(goalId), permission, resource)
 
-export const requireBingoAdminForGoalValue = (goalValueId: string) =>
-  requireManagerOf(() => eventIdOfGoalValue(goalValueId))
+export const requirePermissionForGoalGroup = (
+  groupId: string,
+  permission: Permission,
+  resource?: PolicyResource
+) => requireOn(() => eventIdOfGoalGroup(groupId), permission, resource)
 
-export const requireBingoAdminForTeamTileSubmission = (
-  teamTileSubmissionId: string
-) => requireManagerOf(() => eventIdOfTeamTileSubmission(teamTileSubmissionId))
+export const requirePermissionForGoalValue = (
+  goalValueId: string,
+  permission: Permission,
+  resource?: PolicyResource
+) => requireOn(() => eventIdOfGoalValue(goalValueId), permission, resource)
 
-export const requireBingoAdminForSubmission = (submissionId: string) =>
-  requireManagerOf(() => eventIdOfSubmission(submissionId))
+export const requirePermissionForTeamTileSubmission = (
+  teamTileSubmissionId: string,
+  permission: Permission,
+  resource?: PolicyResource
+) =>
+  requireOn(
+    () => eventIdOfTeamTileSubmission(teamTileSubmissionId),
+    permission,
+    resource
+  )
+
+export const requirePermissionForSubmission = (
+  submissionId: string,
+  permission: Permission,
+  resource?: PolicyResource
+) => requireOn(() => eventIdOfSubmission(submissionId), permission, resource)
+
+export const requirePermissionForTeam = (
+  teamId: string,
+  permission: Permission,
+  resource?: PolicyResource
+) => requireOn(() => eventIdOfTeam(teamId), permission, resource)
+
+export const requirePermissionForWebhook = (
+  webhookId: string,
+  permission: Permission,
+  resource?: PolicyResource
+) => requireOn(() => eventIdOfWebhook(webhookId), permission, resource)
+
+export const requirePermissionForRegistrationRequest = (
+  requestId: string,
+  permission: Permission,
+  resource?: PolicyResource
+) =>
+  requireOn(() => eventIdOfRegistrationRequest(requestId), permission, resource)

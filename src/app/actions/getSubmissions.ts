@@ -4,13 +4,14 @@ import { logger } from "@/lib/logger"
 import { teamTileSubmissions, teams } from "@/server/db/schema"
 import { eq, inArray } from "drizzle-orm"
 import type { TeamTileSubmission } from "@/types/model"
-import { isEventManager } from "@/server/authz"
+import { hasPermission } from "@/server/authz"
 
 export async function getEventSubmissions(
   eventId: string
 ): Promise<TeamTileSubmission[]> {
   // All Teams' Submissions (with images and users) are for managers only.
-  if (!(await isEventManager(eventId))) return []
+  // Deliberate: a denial reads as an empty list (see guards.ts).
+  if (!(await hasPermission(eventId, "submission:review"))) return []
 
   try {
     // 1. Get all teams for the event
@@ -41,7 +42,7 @@ export async function getEventSubmissions(
             goals: {
               with: {
                 itemGoal: true,
-              }
+              },
             },
           },
         },

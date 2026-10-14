@@ -59,7 +59,8 @@ export default function AssignEventToClanModal({
 
     setIsLoading(true)
     try {
-      await assignEventToClan(eventId, selectedClanId)
+      const result = await assignEventToClan(eventId, selectedClanId)
+      if (!result.success) throw new Error(result.error)
       setOpen(false)
       toast({
         title: "Event assigned",

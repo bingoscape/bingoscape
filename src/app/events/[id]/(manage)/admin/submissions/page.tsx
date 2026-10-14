@@ -7,6 +7,7 @@ import { ShieldCheck, ArrowLeft } from "lucide-react"
 import type { UUID } from "crypto"
 import { ReviewSubmissionsClient } from "./client"
 import { getEventById } from "@/server/queries/events"
+import { hasPermission } from "@/server/authz"
 
 export default async function ReviewSubmissionsPage(props: {
   params: Promise<{ id: UUID }>
@@ -24,9 +25,9 @@ export default async function ReviewSubmissionsPage(props: {
     notFound()
   }
 
-  const { event, userRole } = eventData
+  const { event } = eventData
 
-  if (userRole !== "admin" && userRole !== "management") {
+  if (!(await hasPermission(event.id, "submission:review"))) {
     notFound()
   }
 

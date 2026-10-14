@@ -85,7 +85,11 @@ export function RegistrationsTab({
 
     setIsSubmitting(true)
     try {
-      await approveRegistrationRequest(selectedRequest.id, responseMessage)
+      const result = await approveRegistrationRequest(
+        selectedRequest.id,
+        responseMessage
+      )
+      if (!result.success) throw new Error(result.error)
 
       // Update local state
       const updatedRequests = requests.map((req) =>
@@ -128,7 +132,11 @@ export function RegistrationsTab({
 
     setIsSubmitting(true)
     try {
-      await rejectRegistrationRequest(selectedRequest.id, responseMessage)
+      const result = await rejectRegistrationRequest(
+        selectedRequest.id,
+        responseMessage
+      )
+      if (!result.success) throw new Error(result.error)
 
       // Update local state
       const updatedRequests = requests.map((req) =>

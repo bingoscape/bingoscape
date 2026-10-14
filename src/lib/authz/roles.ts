@@ -37,6 +37,12 @@ export function isEventRole(value: unknown): value is EventRole {
   return EVENT_ROLES.includes(value as EventRole)
 }
 
+/** The roles that manage an Event, for database filters. */
+export const MANAGER_ROLES = [
+  "admin",
+  "management",
+] as const satisfies readonly EventRole[]
+
 /** "Manager" means the `admin` or `management` role of an Event. */
 export function isManagerRole(role: EventRole | null | undefined): boolean {
   return role === "admin" || role === "management"

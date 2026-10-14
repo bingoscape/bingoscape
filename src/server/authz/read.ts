@@ -25,7 +25,7 @@ import { db } from "@/server/db"
 import { isBlindBoard } from "@/server/blind-board"
 import { bingos, events, goals, teams, tiles } from "@/server/db/schema"
 import type { BingoType } from "@/server/db/schema"
-import { getEventActor } from "./actor"
+import { getEventActor, isUuid } from "./actor"
 
 /**
  * Server-side read policy: `canReadEvent`, `canReadBoard`, `canReadTile`,
@@ -39,13 +39,7 @@ import { getEventActor } from "./actor"
  * the client.
  */
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-/** Ids reach the database as uuid; anything else cannot match a row. */
-export function isUuid(value: unknown): value is string {
-  return typeof value === "string" && UUID_PATTERN.test(value)
-}
+export { isUuid }
 
 const warnedModes = new Set<string>()
 

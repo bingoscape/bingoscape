@@ -1,13 +1,20 @@
 "use server"
 
-import { isEventManager } from "@/server/authz"
-import { getUserRole } from "./events"
+import {
+  actionFailure,
+  authorize,
+  denial,
+  failure,
+  hasPermission,
+  type ActionResult,
+} from "@/server/authz"
+import { logger } from "@/lib/logger"
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
 import { playerMetadata, eventParticipants } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
-import { fetchPlayerDataFromWOM } from "./wiseoldman"
+import { fetchPlayerDataFromWOM, type FetchWOMDataResult } from "./wiseoldman"
 
 /**
  * Get player metadata for a specific user in a specific event
@@ -15,12 +22,13 @@ import { fetchPlayerDataFromWOM } from "./wiseoldman"
 export async function getPlayerMetadata(userId: string, eventId: string) {
   // Managers read anyone's metadata. A participant reads their own, without the
   // management-only notes. Everybody else gets nothing.
-  const callerIsManager = await isEventManager(eventId)
+  // Deliberate: a denial reads as null (see guards.ts).
+  const callerIsManager = await hasPermission(eventId, "player-metadata:read")
   let isOwnRecord = false
   if (!callerIsManager) {
     const session = await getServerAuthSession()
     if (!session?.user || session.user.id !== userId) return null
-    if (!(await getUserRole(eventId))) return null
+    if (!(await hasPermission(eventId, "event:view"))) return null
     isOwnRecord = true
   }
 
@@ -48,7 +56,8 @@ export async function getPlayerMetadata(userId: string, eventId: string) {
  * Get all player metadata for an event (used for team balancing)
  */
 export async function getEventParticipantMetadata(eventId: string) {
-  if (!(await isEventManager(eventId))) return []
+  // Deliberate: a denial reads as an empty list (see guards.ts).
+  if (!(await hasPermission(eventId, "player-metadata:read"))) return []
 
   const metadata = await db.query.playerMetadata.findMany({
     where: eq(playerMetadata.eventId, eventId),
@@ -93,62 +102,40 @@ export async function updatePlayerMetadata(
     womPlayerData?: string | null
     lastFetchedFromWOM?: Date | null
   }
-) {
-  const session = await getServerAuthSession()
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized: You must be logged in")
-  }
+): Promise<ActionResult<{ metadata: typeof playerMetadata.$inferSelect }>> {
+  const allowed = await authorize(eventId, "player-metadata:write")
+  if (!allowed.success) return denial(allowed)
 
-  // Check if user has management rights for this event
-  const participant = await db.query.eventParticipants.findFirst({
-    where: and(
-      eq(eventParticipants.eventId, eventId),
-      eq(eventParticipants.userId, session.user.id)
-    ),
-  })
-
-  if (
-    !participant ||
-    (participant.role !== "management" && participant.role !== "admin")
-  ) {
-    throw new Error(
-      "Unauthorized: You must be a management user for this event"
-    )
-  }
-
-  // Check if metadata already exists
-  const existing = await db.query.playerMetadata.findFirst({
-    where: and(
-      eq(playerMetadata.userId, userId),
-      eq(playerMetadata.eventId, eventId)
-    ),
-  })
-
-  let result
-  if (existing) {
-    // Update existing metadata
-    ;[result] = await db
-      .update(playerMetadata)
-      .set({
-        ...data,
-        updatedAt: new Date(),
+  try {
+    const metadata = await db.transaction(async (tx) => {
+      const existing = await tx.query.playerMetadata.findFirst({
+        where: and(
+          eq(playerMetadata.userId, userId),
+          eq(playerMetadata.eventId, eventId)
+        ),
       })
-      .where(eq(playerMetadata.id, existing.id))
-      .returning()
-  } else {
-    // Create new metadata
-    ;[result] = await db
-      .insert(playerMetadata)
-      .values({
-        userId,
-        eventId,
-        ...data,
-      })
-      .returning()
-  }
+      if (existing) {
+        const [updated] = await tx
+          .update(playerMetadata)
+          .set({ ...data, updatedAt: new Date() })
+          .where(eq(playerMetadata.id, existing.id))
+          .returning()
+        return updated
+      }
+      const [created] = await tx
+        .insert(playerMetadata)
+        .values({ userId, eventId, ...data })
+        .returning()
+      return created
+    })
+    if (!metadata) return failure("Failed to save player metadata")
 
-  revalidatePath(`/events/${eventId}`)
-  return result
+    revalidatePath(`/events/${eventId}`)
+    return { success: true, metadata }
+  } catch (error) {
+    logger.error({ error, eventId }, "Error saving player metadata")
+    return actionFailure(error, "Failed to save player metadata")
+  }
 }
 
 /**
@@ -170,23 +157,11 @@ export async function updateOwnPlayerMetadata(
     dailyHoursAvailable?: number | null
     runescapeNameOverride?: string | null
   }
-) {
-  const session = await getServerAuthSession()
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized: You must be logged in")
-  }
-
-  // Check if user is a participant in this event (any role)
-  const participant = await db.query.eventParticipants.findFirst({
-    where: and(
-      eq(eventParticipants.eventId, eventId),
-      eq(eventParticipants.userId, session.user.id)
-    ),
-  })
-
-  if (!participant) {
-    throw new Error("Unauthorized: You must be a participant in this event")
-  }
+): Promise<ActionResult<{ metadata: typeof playerMetadata.$inferSelect }>> {
+  // Any participant (`player-metadata:write-own`); the row is the caller's own.
+  const allowed = await authorize(eventId, "player-metadata:write-own")
+  if (!allowed.success) return denial(allowed)
+  const userId = allowed.actor.userId
 
   // Only allow updating timezone and dailyHoursAvailable
   // Explicitly block any other fields to prevent tampering
@@ -197,78 +172,65 @@ export async function updateOwnPlayerMetadata(
     runescapeNameOverride: data.runescapeNameOverride,
   }
 
-  // Check if metadata already exists
-  const existing = await db.query.playerMetadata.findFirst({
-    where: and(
-      eq(playerMetadata.userId, session.user.id),
-      eq(playerMetadata.eventId, eventId)
-    ),
-  })
+  try {
+    const metadata = await db.transaction(async (tx) => {
+      const existing = await tx.query.playerMetadata.findFirst({
+        where: and(
+          eq(playerMetadata.userId, userId),
+          eq(playerMetadata.eventId, eventId)
+        ),
+      })
+      if (existing) {
+        const [updated] = await tx
+          .update(playerMetadata)
+          .set({ ...allowedData, updatedAt: new Date() })
+          .where(eq(playerMetadata.id, existing.id))
+          .returning()
+        return updated
+      }
+      const [created] = await tx
+        .insert(playerMetadata)
+        .values({ userId, eventId, ...allowedData })
+        .returning()
+      return created
+    })
+    if (!metadata) return failure("Failed to save player metadata")
 
-  let result
-  if (existing) {
-    // Update existing metadata
-    ;[result] = await db
-      .update(playerMetadata)
-      .set({
-        ...allowedData,
-        updatedAt: new Date(),
-      })
-      .where(eq(playerMetadata.id, existing.id))
-      .returning()
-  } else {
-    // Create new metadata
-    ;[result] = await db
-      .insert(playerMetadata)
-      .values({
-        userId: session.user.id,
-        eventId,
-        ...allowedData,
-      })
-      .returning()
+    revalidatePath(`/events/${eventId}`)
+    return { success: true, metadata }
+  } catch (error) {
+    logger.error({ error, eventId }, "Error saving own player metadata")
+    return actionFailure(error, "Failed to save player metadata")
   }
-
-  revalidatePath(`/events/${eventId}`)
-  return result
 }
 
 /**
  * Delete player metadata for a specific event
  * Only accessible by management users
  */
-export async function deletePlayerMetadata(userId: string, eventId: string) {
-  const session = await getServerAuthSession()
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized: You must be logged in")
-  }
+export async function deletePlayerMetadata(
+  userId: string,
+  eventId: string
+): Promise<ActionResult> {
+  const allowed = await authorize(eventId, "player-metadata:write")
+  if (!allowed.success) return denial(allowed)
 
-  // Check if user has management rights for this event
-  const participant = await db.query.eventParticipants.findFirst({
-    where: and(
-      eq(eventParticipants.eventId, eventId),
-      eq(eventParticipants.userId, session.user.id)
-    ),
-  })
-
-  if (
-    !participant ||
-    (participant.role !== "management" && participant.role !== "admin")
-  ) {
-    throw new Error(
-      "Unauthorized: You must be a management user for this event"
-    )
-  }
-
-  await db
-    .delete(playerMetadata)
-    .where(
-      and(
-        eq(playerMetadata.userId, userId),
-        eq(playerMetadata.eventId, eventId)
+  try {
+    await db
+      .delete(playerMetadata)
+      .where(
+        and(
+          eq(playerMetadata.userId, userId),
+          eq(playerMetadata.eventId, eventId)
+        )
       )
-    )
 
-  revalidatePath(`/events/${eventId}`)
+    revalidatePath(`/events/${eventId}`)
+    return { success: true }
+  } catch (error) {
+    logger.error({ error, eventId }, "Error deleting player metadata")
+    return actionFailure(error, "Failed to delete player metadata")
+  }
 }
 
 /**
@@ -276,7 +238,8 @@ export async function deletePlayerMetadata(userId: string, eventId: string) {
  * Returns the percentage of participants that have metadata
  */
 export async function calculateMetadataCoverage(eventId: string) {
-  if (!(await isEventManager(eventId))) return 0
+  // Deliberate: a denial reads as zero (see guards.ts).
+  if (!(await hasPermission(eventId, "player-metadata:read"))) return 0
 
   // Get total participants
   const participants = await db.query.eventParticipants.findMany({
@@ -304,28 +267,9 @@ export async function fetchWOMDataForPlayer(
   userId: string,
   eventId: string,
   runescapeName: string
-) {
-  const session = await getServerAuthSession()
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized: You must be logged in")
-  }
-
-  // Check if user has management rights for this event
-  const participant = await db.query.eventParticipants.findFirst({
-    where: and(
-      eq(eventParticipants.eventId, eventId),
-      eq(eventParticipants.userId, session.user.id)
-    ),
-  })
-
-  if (
-    !participant ||
-    (participant.role !== "management" && participant.role !== "admin")
-  ) {
-    throw new Error(
-      "Unauthorized: You must be a management user for this event"
-    )
-  }
+): Promise<FetchWOMDataResult> {
+  const allowed = await authorize(eventId, "player-metadata:write")
+  if (!allowed.success) return denial(allowed)
 
   // Check if user has an override
   const metadata = await db.query.playerMetadata.findFirst({
@@ -334,11 +278,9 @@ export async function fetchWOMDataForPlayer(
       eq(playerMetadata.eventId, eventId)
     ),
   })
-  
+
   const effectiveName = metadata?.runescapeNameOverride || runescapeName
 
   // Fetch from WiseOldMan
-  const result = await fetchPlayerDataFromWOM(effectiveName)
-
-  return result
+  return fetchPlayerDataFromWOM(effectiveName)
 }

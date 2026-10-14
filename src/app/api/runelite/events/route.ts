@@ -1,3 +1,4 @@
+import { buildEventActor } from "@/lib/authz/policy"
 import { NextResponse } from "next/server"
 import { logger } from "@/lib/logger"
 import { db } from "@/server/db"
@@ -102,9 +103,12 @@ export async function GET(req: Request) {
           minimumBuyIn: eventData.minimumBuyIn,
           clan: eventData.clan,
           role:
-            eventData.creatorId === userId
-              ? "admin"
-              : (eventData.eventParticipants[0]?.role ?? "participant"),
+            buildEventActor({
+              userId,
+              eventId: eventData.id,
+              creatorId: eventData.creatorId,
+              participantRole: eventData.eventParticipants[0]?.role ?? null,
+            }).role ?? "participant",
           userTeam: !!userTeam
             ? {
                 name: userTeam.name,

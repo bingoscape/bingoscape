@@ -160,9 +160,10 @@ export function PlayerMetadataModal({
   const handleSave = async () => {
     setSaving(true)
     try {
+      let saved
       if (isSelfEditing) {
         // Use self-editing action (only timezone and dailyHoursAvailable)
-        await updateOwnPlayerMetadata(eventId, {
+        saved = await updateOwnPlayerMetadata(eventId, {
           timezone: formData.timezone || null,
           dailyHoursAvailable: formData.dailyHoursAvailable
             ? parseFloat(formData.dailyHoursAvailable)
@@ -179,7 +180,7 @@ export function PlayerMetadataModal({
         })
       } else {
         // Use admin action (all fields)
-        await updatePlayerMetadata(userId, eventId, {
+        saved = await updatePlayerMetadata(userId, eventId, {
           ehp: formData.ehp ? parseFloat(formData.ehp) : null,
           ehb: formData.ehb ? parseFloat(formData.ehb) : null,
           combatLevel: formData.combatLevel
@@ -205,6 +206,15 @@ export function PlayerMetadataModal({
           runescapeNameOverride: formData.runescapeNameOverride || null,
           lastFetchedFromWOM: lastFetched,
         })
+      }
+
+      if (!saved.success) {
+        toast({
+          title: "Error",
+          description: saved.error,
+          variant: "destructive",
+        })
+        return
       }
 
       toast({
