@@ -1,0 +1,21 @@
+package.json
+  s_2aebdb4d5645da::t_f7bed751eb8ae6 87,90,117-118,143-144
+package-lock.json
+  s_2aebdb4d5645da::t_91f9dde267dae7 72,75,102-103,7991-7993,8000-8002,8006,20687-20689,20737-20739,20742,20745,21716-21718
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7020b0763785b2bf97420aa00a65fcb6a80605e9",
+  "prompts": {},
+  "sessions": {
+    "s_2aebdb4d5645da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9e280b93-4bc1-4d59-a11c-e6d1207080db",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
