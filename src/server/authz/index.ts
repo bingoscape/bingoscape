@@ -5,7 +5,8 @@
  * - `guards.ts`  `authorize` / `requirePermission` and the existing
  *                `require*` helpers
  * - `resolve.ts` Event from Board / Tile / Goal / Submission / Team
- * - `compat.ts`  existing Team / comment / Tile-readability helpers
+ * - `read.ts`    read policy: canReadEvent / Board / Tile / Team
+ * - `compat.ts`  existing Team / comment helpers
  *
  * The pure policy lives in `@/lib/authz`. `eventAction` (next-safe-action) is
  * imported from `@/server/authz/action` so this entry point stays light.
@@ -43,8 +44,22 @@ export {
 } from "./resolve"
 export {
   assertTeamLeaderOrManager,
-  canReadGoal,
-  canReadTile,
   requireSubmissionCommentReader,
   requireTeamMemberOrManager,
 } from "./compat"
+export {
+  canReadBoard,
+  canReadEvent,
+  canReadGoal,
+  canReadTeam,
+  canReadTile,
+  getBoardReadAccess,
+  getEventReadAccess,
+  getEventReadAccessFor,
+  getReadPolicyMode,
+  getTileReadAccess,
+  keepViewerTeamProgress,
+  redactBoardForViewer,
+  type BoardReadAccess,
+  type EventReadAccess,
+} from "./read"

@@ -6,11 +6,14 @@ import { eq, and, count, asc } from "drizzle-orm"
 import type { UUID } from "crypto"
 import { logger } from "@/lib/logger"
 import { redactHiddenTiles } from "@/lib/hidden-tiles"
+import { redactBoardSecrets } from "@/lib/authz/read-policy"
 import { applyBlindBoard, isBlindBoard } from "@/server/blind-board"
 import type { Bingo, Team, Tile } from "@/types/model"
 
 /**
- * Public (unauthenticated) read access. Every function first checks that the
+ * Public (unauthenticated) read access: the `public` level of the read policy
+ * (`@/lib/authz/read-policy`), independent of any session and of the
+ * `RBAC_READ_POLICY` mode. Every function first checks that the
  * Event is marked public; Boards must additionally be visible. Hidden Tiles
  * keep their cell but are redacted, battleship Boards are blind (redacted, with
  * `isBlind`) until the Event starts, and secrets (codephrase, tracker
@@ -42,14 +45,12 @@ async function isPublicEvent(eventId: string): Promise<boolean> {
   return !!event
 }
 
-/** Board row without anything a public viewer must not see. */
+/**
+ * Board row without anything a public viewer must not see: the same redaction
+ * the read policy applies to a viewer at the `public` level.
+ */
 function sanitizeBingo<T extends Bingo>(bingo: T): T {
-  return {
-    ...bingo,
-    codephrase: "",
-    womCompetitionId: null,
-    womVerificationCode: null,
-  }
+  return redactBoardSecrets(bingo, "public")
 }
 
 /**

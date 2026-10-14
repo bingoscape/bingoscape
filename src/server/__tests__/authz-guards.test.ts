@@ -36,7 +36,7 @@ import {
 } from "@/server/authz"
 import { eventAction } from "@/server/authz/action"
 import { db } from "@/server/db"
-import { events } from "@/server/db/schema"
+import { bingos, events } from "@/server/db/schema"
 import {
   createAuthzFixture,
   type AuthzFixture,
@@ -363,12 +363,32 @@ describe("existing helpers keep their behaviour", () => {
     )
   })
 
-  it("canReadTile: unhidden Tiles are readable, unknown Tiles are not", async () => {
-    signInAs(f.users.outsider)
+  it("canReadTile: members read unhidden Tiles of a visible Board, outsiders and unknown Tiles are refused", async () => {
+    // The fixture's Board is a draft until it is made visible.
+    signInAs(f.users.participant)
+    await expect(canReadTile(f.event1.tileId)).resolves.toBe(false)
+    signInAs(f.users.management)
     await expect(canReadTile(f.event1.tileId)).resolves.toBe(true)
-    await expect(
-      canReadTile("00000000-0000-4000-8000-000000000000")
-    ).resolves.toBe(false)
+
+    await db
+      .update(bingos)
+      .set({ visible: true })
+      .where(eq(bingos.id, f.event1.bingoId))
+    try {
+      signInAs(f.users.participant)
+      await expect(canReadTile(f.event1.tileId)).resolves.toBe(true)
+      await expect(
+        canReadTile("00000000-0000-4000-8000-000000000000")
+      ).resolves.toBe(false)
+      // Event 1 is not public: a signed-in non-member only gets the join card.
+      signInAs(f.users.outsider)
+      await expect(canReadTile(f.event1.tileId)).resolves.toBe(false)
+    } finally {
+      await db
+        .update(bingos)
+        .set({ visible: false })
+        .where(eq(bingos.id, f.event1.bingoId))
+    }
   })
 })
 

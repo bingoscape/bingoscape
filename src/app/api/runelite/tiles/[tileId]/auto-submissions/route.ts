@@ -26,7 +26,7 @@ import { hasEventStarted } from "@/lib/event-status"
 import { battleshipShot } from "@/lib/battleship-marks"
 import { getBattleshipBoardStateForTeam } from "@/server/battleship"
 import { getTierLockForSubmit, tierLockedBody } from "@/server/tier-progression"
-import { checkAndAutoCompleteTile } from "@/app/actions/tile-completion"
+import { checkAndAutoCompleteTile } from "@/server/tile-completion"
 
 // Type definition for auto-submission metadata
 interface AutoSubmissionMetadata {

@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import type { PatternCompletionResult } from "@/app/actions/pattern-completion"
+import type { PatternCompletionResult } from "@/server/pattern-completion"
 
 interface BonusXPBreakdownProps {
   patterns: PatternCompletionResult

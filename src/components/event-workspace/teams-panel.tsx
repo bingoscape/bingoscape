@@ -6,7 +6,7 @@ import {
   TeamRoster,
   type RosterTeam,
 } from "@/components/event-workspace/team-roster"
-import { getEventStats } from "@/app/actions/stats"
+import { getEventStats } from "@/server/queries/stats"
 import { getTeamsByEventId } from "@/app/actions/team"
 import { buildLeaderboard } from "@/lib/leaderboard"
 

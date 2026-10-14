@@ -17,7 +17,7 @@ import { validateApiKey } from "@/lib/api-auth"
 import { boardContentUnlockedSql } from "@/server/blind-board"
 import { z } from "zod"
 import { doesItemMatchBaseName } from "@/app/actions/osrs-items"
-import { checkAndAutoCompleteTile } from "@/app/actions/tile-completion"
+import { checkAndAutoCompleteTile } from "@/server/tile-completion"
 import { getTierLockForSubmit, tierLockedBody } from "@/server/tier-progression"
 
 // Zod schema for item data from RuneLite

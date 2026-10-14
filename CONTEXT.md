@@ -48,6 +48,9 @@ An Event and a Clan always keep at least one admin. A demotion or removal that w
 **Role change**:
 Every change of an Event or Clan membership (join, add, role change, removal, ownership transfer) goes through `changeRole()` and its siblings in `src/server/authz/membership.ts`, in one transaction. Each writes one row to the `role_change_log` ledger (who, whom, old and new role, source, reason); replaying the ledger must give the live roles, which a daily reconciliation checks. Nobody grants or adds a role above their own.
 
+**Read level**:
+How a viewer stands towards an Event when they read it: `manager` (admin, management, creator), `member` (any other participant or Team member), `public` (not a member, the Event is public), `summary` (signed in, not a member, the Event is not public: they hold the link and get the join card) or `none`. One policy (`src/lib/authz/read-policy.ts`, `src/server/authz/read.ts`) turns the level into what each read returns; draft Boards, hidden Tiles, Blind Tiles and the tracker verification code are managers only. The defaults for decisions 3-5 of the RBAC epic (link holders of non-public Events, public upload URLs, codephrase visible to players) are recorded in `docs/adr/0001-read-visibility-defaults.md` as pending maintainer confirmation; `RBAC_READ_POLICY=relaxed` is the temporary escape hatch.
+
 **Clan**:
 A persistent, long-term group of Players outside of any specific Event.
 _Avoid_: Group, Guild

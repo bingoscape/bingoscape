@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Check } from "lucide-react"
-import type { PatternCompletionResult } from "@/app/actions/pattern-completion"
+import type { PatternCompletionResult } from "@/server/pattern-completion"
 
 interface PatternCompletionGridProps {
   patterns: PatternCompletionResult

@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation"
 import { getServerAuthSession } from "@/server/auth"
 
-import { getBingoItemStatistics } from "@/app/actions/item-statistics"
-import { getAllTeamPointsAndTotal } from "@/app/actions/stats"
+import { getBingoItemStatistics } from "@/server/queries/item-statistics"
+import { getAllTeamPointsAndTotal } from "@/server/queries/stats"
 import { ItemStatisticsDisplay } from "@/components/item-statistics-display"
 import {
   Card,

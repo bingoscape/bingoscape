@@ -8,6 +8,7 @@ import { getServerAuthSession } from "@/server/auth"
 import type { EventRole as AuthzEventRole } from "@/lib/authz/roles"
 import { getEventRole } from "@/server/authz/actor"
 import { authorize } from "@/server/authz/guards"
+import { getBoardReadAccess, getEventReadAccessFor } from "@/server/authz/read"
 import {
   addMember,
   changeRole,
@@ -46,7 +47,7 @@ import {
   eventRules,
 } from "@/server/db/schema"
 import { logger } from "@/lib/logger"
-import { applyBlindBoard, isBlindBoard } from "@/server/blind-board"
+import { applyBlindBoard } from "@/server/blind-board"
 
 import type { Event } from "@/types/model"
 
@@ -2000,6 +2001,17 @@ export async function getParticipantDonations(
 }
 
 export async function calculateEventPrizePool(eventId: string) {
+  // The prize pool is on the public Event page too: anybody who may read the
+  // Event content may read it; everybody else gets the empty result.
+  if (!(await getEventReadAccessFor(eventId, "content"))) {
+    return {
+      basePrizePool: 0,
+      totalBuyIns: 0,
+      totalDonations: 0,
+      totalPrizePool: 0,
+    }
+  }
+
   try {
     // Get base prize pool from event
     const event = await db.query.events.findFirst({
@@ -2473,34 +2485,36 @@ export async function deleteEventRule(
   }
 }
 
+/**
+ * The Tiles of a Board for the mini board: id, position, title and image, plus
+ * whether the viewer's own Team completed them. The viewer must be able to read
+ * the Board (a visible Board of an Event they may read, any Board for
+ * managers); hidden Tiles keep their cell but lose their content, and a
+ * battleship Board is blind until its Event starts.
+ */
 export async function getMiniBoardTiles(bingoId: string) {
+  const boardAccess = await getBoardReadAccess(bingoId)
+  if (!boardAccess) return []
+
   const session = await getServerAuthSession()
-  if (!session) return []
+  const { eventId } = boardAccess.board
+  const callerIsManager = boardAccess.isManager
 
-  const bingo = await db.query.bingos.findFirst({
-    where: eq(bingos.id, bingoId),
-    columns: { eventId: true, visible: true, bingoType: true },
-    with: { event: { columns: { startDate: true } } },
-  })
-
-  if (!bingo || !bingo.visible) return []
-
-  const userTeam = await db
-    .select({ teamId: teams.id })
-    .from(teamMembers)
-    .innerJoin(teams, eq(teamMembers.teamId, teams.id))
-    .where(
-      and(
-        eq(teamMembers.userId, session.user.id),
-        eq(teams.eventId, bingo.eventId)
-      )
-    )
-    .limit(1)
+  const userTeam = session?.user
+    ? await db
+        .select({ teamId: teams.id })
+        .from(teamMembers)
+        .innerJoin(teams, eq(teamMembers.teamId, teams.id))
+        .where(
+          and(
+            eq(teamMembers.userId, session.user.id),
+            eq(teams.eventId, eventId)
+          )
+        )
+        .limit(1)
+    : []
 
   const teamId = userTeam[0]?.teamId
-
-  const callerRole = await getUserRole(bingo.eventId)
-  const callerIsManager = callerRole === "admin" || callerRole === "management"
 
   const rawTiles = await db.query.tiles.findMany({
     where: eq(tiles.bingoId, bingoId),
@@ -2522,11 +2536,7 @@ export async function getMiniBoardTiles(bingoId: string) {
         ? { ...tile, title: "", headerImage: null }
         : tile
     ),
-    isBlindBoard({
-      bingoType: bingo.bingoType,
-      startDate: bingo.event.startDate,
-      isManager: callerIsManager,
-    })
+    boardAccess.blind
   )
 
   if (!teamId) {

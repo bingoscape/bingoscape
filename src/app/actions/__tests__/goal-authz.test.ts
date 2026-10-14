@@ -4,6 +4,7 @@
 import { db } from "@/server/db"
 import { getServerAuthSession } from "@/server/auth"
 import { getEventRole } from "@/server/authz/actor"
+import { canReadGoal, getTileReadAccess } from "@/server/authz/read"
 import { addGoalValue, deleteGoalValue, getGoalValues } from "@/app/actions/goals"
 import {
   createGoalGroup,
@@ -18,6 +19,15 @@ import {
 jest.mock("@/server/auth", () => ({ getServerAuthSession: jest.fn() }))
 // The role lookup is the seam: `getUserRole` delegates to the actor loader.
 jest.mock("@/server/authz/actor", () => ({ getEventRole: jest.fn() }))
+// The read policy has its own database-backed tests (read-policy.test.ts); here
+// it is the seam that decides whether a Tile is readable.
+jest.mock("@/server/authz/read", () => ({
+  canReadGoal: jest.fn(),
+  canReadTile: jest.fn(),
+  canReadTeam: jest.fn(),
+  getTileReadAccess: jest.fn(),
+  keepViewerTeamProgress: <T>(rows: T[]) => rows,
+}))
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
 jest.mock("@/lib/logger", () => ({
   logger: { error: jest.fn(), info: jest.fn(), warn: jest.fn() },
@@ -216,30 +226,28 @@ describe.each([["admin"], ["management"]])(
   }
 )
 
-describe("hidden Tile Goals are not readable by non-managers", () => {
-  beforeEach(() => {
-    q.tiles!.findFirst.mockResolvedValue({
-      isHidden: true,
-      bingoId: "bingo-1",
-      bingo: standardBingo("event-1"),
-    })
-    q.goals!.findFirst.mockResolvedValue({ tileId: "tile-1" })
-  })
+describe("Goals are only read when the read policy allows the Tile", () => {
+  const tileAccess = jest.mocked(getTileReadAccess)
+  const goalReadable = jest.mocked(canReadGoal)
 
-  it("getGoalTree returns nothing for a participant", async () => {
-    role.mockResolvedValue("participant")
+  it("getGoalTree returns nothing for an unreadable Tile", async () => {
+    tileAccess.mockResolvedValue(null)
     await expect(getGoalTree("tile-1")).resolves.toEqual([])
     expect(q.goals!.findMany).not.toHaveBeenCalled()
   })
 
-  it("getGoalValues returns nothing for a participant", async () => {
-    role.mockResolvedValue("participant")
+  it("getGoalValues returns nothing for an unreadable Goal", async () => {
+    goalReadable.mockResolvedValue(false)
     await expect(getGoalValues("goal-1")).resolves.toEqual([])
     expect(q.goalValues!.findMany).not.toHaveBeenCalled()
   })
 
-  it("getGoalTree is available to managers", async () => {
-    role.mockResolvedValue("admin")
+  it("getGoalTree reads the Goals of a readable Tile", async () => {
+    tileAccess.mockResolvedValue({
+      access: { actor: null },
+      board: { bingoType: "standard" },
+      isManager: true,
+    } as never)
     await expect(getGoalTree("tile-1")).resolves.toEqual([])
     expect(q.goals!.findMany).toHaveBeenCalled()
   })

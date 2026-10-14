@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation"
 import { EventAccessGuard } from "@/components/event-access-guard"
 import { getEventById } from "@/server/queries/events"
 
@@ -16,7 +17,11 @@ export default async function EventLayout({
   const { id } = await params
   const data = await getEventById(id)
 
-  if (!data?.userRole) {
+  // No Event, or one the read policy hides from this viewer (decision 3,
+  // `members-only`): indistinguishable from an Event that does not exist.
+  if (!data) notFound()
+
+  if (!data.userRole) {
     return (
       <div className="container mx-auto py-6">
         <EventAccessGuard eventId={id} />

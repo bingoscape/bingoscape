@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation"
 import { getServerAuthSession } from "@/server/auth"
 
-import { getEventStats } from "@/app/actions/stats"
-import { getEventItemStatistics } from "@/app/actions/item-statistics"
-import { getEventPatternCompletion } from "@/app/actions/event-pattern-completion"
+import { getEventStats } from "@/server/queries/stats"
+import { getEventItemStatistics } from "@/server/queries/item-statistics"
+import { getEventPatternCompletion } from "@/server/queries/event-pattern-completion"
 import { EventStatsDisplay } from "@/components/event-stats-display"
 import type { UUID } from "crypto"
 import { getEventById } from "@/server/queries/events"

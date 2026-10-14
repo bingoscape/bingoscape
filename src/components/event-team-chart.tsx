@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { EventTeamPoints } from "@/app/actions/stats"
+import type { EventTeamPoints } from "@/server/queries/stats"
 import {
   Chart as ChartJS,
   CategoryScale,

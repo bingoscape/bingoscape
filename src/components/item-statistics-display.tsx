@@ -10,7 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Trophy, Coins, TrendingUp, Package, Clock, Award } from "lucide-react"
-import type { ItemStatistics } from "@/app/actions/item-statistics"
+import type { ItemStatistics } from "@/server/queries/item-statistics"
 import { formatGPValue } from "@/lib/format-gp"
 import { ItemValueCharts } from "@/components/item-value-charts"
 import { ItemTimelineCharts } from "@/components/item-timeline-charts"

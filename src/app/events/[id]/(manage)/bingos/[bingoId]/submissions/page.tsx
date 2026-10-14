@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/hooks/use-toast"
 import { ArrowLeft, RefreshCw } from "lucide-react"
-import { getEventById } from "@/server/queries/events"
+import { getEventSummary } from "@/app/actions/event-summary"
 import type { BingoData, TeamTileSubmission } from "@/types/model"
 import { SubmissionsTab } from "@/components/submissions-tab"
 import { FullSizeImageDialog } from "@/components/full-size-image-dialog"
@@ -37,7 +37,7 @@ export default function BingoSubmissionsPage(props: {
       try {
         setLoading(true)
         const [eventData, teamsData, userRoleData, bingoData] = await Promise.all([
-          getEventById(eventId),
+          getEventSummary(eventId),
           getTeamsByEventId(eventId),
           getUserRole(eventId),
           getBingoById(bingoId),

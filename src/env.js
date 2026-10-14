@@ -28,6 +28,12 @@ export const env = createEnv({
     GITHUB_CLIENT_SECRET: z.string().optional(),
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
+    // Read policy for Event data (RBAC epic #183). Optional: unset means
+    // "enforce". The app reads it from process.env on every request (see
+    // src/lib/authz/read-policy.ts), so a change needs a restart of the
+    // container, not a rebuild. Where validation is skipped (the Docker image)
+    // an unknown value falls back to "enforce".
+    RBAC_READ_POLICY: z.enum(["enforce", "relaxed"]).optional(),
   },
 
   /**
@@ -54,6 +60,7 @@ export const env = createEnv({
     GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+    RBAC_READ_POLICY: process.env.RBAC_READ_POLICY,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

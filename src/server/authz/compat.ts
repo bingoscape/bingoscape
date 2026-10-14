@@ -3,21 +3,15 @@ import "server-only"
 import { and, eq } from "drizzle-orm"
 
 import { db } from "@/server/db"
-import { isBlindBoard } from "@/server/blind-board"
-import {
-  goals,
-  submissions,
-  teamMembers,
-  teams,
-  tiles,
-} from "@/server/db/schema"
+import { submissions, teamMembers, teams } from "@/server/db/schema"
 import { AuthzError } from "./errors"
 import { isEventManager, requireSession } from "./guards"
+import { canReadTile } from "./read"
 
 /**
- * Existing Team, Submission-comment and Tile-readability helpers, kept with
- * their original queries and messages until their call sites move to the
- * policy layer.
+ * Existing Team and Submission-comment helpers, kept with their original
+ * queries and messages until their call sites move to the policy layer. The
+ * Tile / Goal readability helpers live in `read.ts`.
  */
 
 /**
@@ -118,42 +112,4 @@ export async function requireSubmissionCommentReader(
     throw new AuthzError("Submission not found")
   }
   return { isManager: false }
-}
-
-/**
- * Whether the caller may read the content of the Tile. Hidden Tiles, and the
- * Tiles of a battleship Board before its Event starts (blind Tiles), are only
- * readable by admin/management of the owning Event. Unknown Tiles are not
- * readable.
- */
-export async function canReadTile(tileId: string): Promise<boolean> {
-  const tile = await db.query.tiles.findFirst({
-    where: eq(tiles.id, tileId),
-    columns: { isHidden: true },
-    with: {
-      bingo: {
-        columns: { eventId: true, bingoType: true },
-        with: { event: { columns: { startDate: true } } },
-      },
-    },
-  })
-  if (!tile) return false
-
-  const blind = isBlindBoard({
-    bingoType: tile.bingo.bingoType,
-    startDate: tile.bingo.event.startDate,
-    isManager: false,
-  })
-  if (!tile.isHidden && !blind) return true
-  return isEventManager(tile.bingo.eventId)
-}
-
-/** Like canReadTile but starting from a Goal. */
-export async function canReadGoal(goalId: string): Promise<boolean> {
-  const goal = await db.query.goals.findFirst({
-    where: eq(goals.id, goalId),
-    columns: { tileId: true },
-  })
-  if (!goal) return false
-  return canReadTile(goal.tileId)
 }

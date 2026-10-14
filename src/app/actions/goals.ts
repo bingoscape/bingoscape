@@ -1,10 +1,11 @@
 "use server"
 
 import { db } from "@/server/db"
-import { goalValues, submissions, teamGoalProgress, teamTileSubmissions, goals } from "@/server/db/schema"
-import { eq, and } from "drizzle-orm"
+import { goalValues, submissions, teamTileSubmissions } from "@/server/db/schema"
+import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { logger } from "@/lib/logger"
+import { recalculateGoalProgress } from "@/server/goal-progress"
 import {
   assertGoalInEvent,
   authzErrorMessage,
@@ -96,64 +97,6 @@ export async function getGoalValues(goalId: string): Promise<GoalValue[]> {
   } catch (error) {
     logger.error({ error, goalId }, "Error fetching goal values")
     return []
-  }
-}
-
-type DbOrTransaction = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]
-
-export async function recalculateGoalProgress(tx: DbOrTransaction, targetGoalId: string, teamId: string) {
-  const approvedSubmissions = await tx
-    .select({
-      submissionValue: submissions.submissionValue,
-    })
-    .from(submissions)
-    .innerJoin(
-      teamTileSubmissions,
-      eq(submissions.teamTileSubmissionId, teamTileSubmissions.id)
-    )
-    .where(
-      and(
-        eq(submissions.goalId, targetGoalId),
-        eq(submissions.status, "approved"),
-        eq(teamTileSubmissions.teamId, teamId)
-      )
-    )
-
-  const totalValue = approvedSubmissions.reduce(
-    (sum: number, s: { submissionValue: number | null }) => sum + (s.submissionValue || 0),
-    0
-  )
-
-  const progress = await tx.query.teamGoalProgress.findFirst({
-    where: and(
-      eq(teamGoalProgress.goalId, targetGoalId),
-      eq(teamGoalProgress.teamId, teamId)
-    ),
-  })
-
-  if (progress) {
-    await tx
-      .update(teamGoalProgress)
-      .set({
-        currentValue: totalValue,
-        updatedAt: new Date(),
-      })
-      .where(eq(teamGoalProgress.id, progress.id))
-  } else if (totalValue > 0) {
-    await tx.insert(teamGoalProgress).values({
-      goalId: targetGoalId,
-      teamId: teamId,
-      currentValue: totalValue,
-    })
-  }
-
-  // Evaluate if the tile should be auto-completed based on updated progress
-  const goal = await tx.query.goals.findFirst({
-    where: eq(goals.id, targetGoalId),
-  })
-  if (goal) {
-    const { checkAndAutoCompleteTile } = await import("./tile-completion")
-    await checkAndAutoCompleteTile(tx, goal.tileId, teamId)
   }
 }
 
