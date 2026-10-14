@@ -40,6 +40,16 @@ export const users = createTable(
     // Password field for Credentials provider authentication
     // Nullable to support OAuth-only users (Discord, GitHub, Google)
     password: varchar("password", { length: 255 }),
+    // Sessions (JWTs) issued before this instant are rejected (RBAC 7/8, #190).
+    // Bumped by "sign out everywhere"; NULL means never revoked. Nullable so
+    // the previous app version, which does not know the column, keeps working.
+    sessionRevokedAt: timestamp("session_revoked_at", { withTimezone: true }),
+    // The email address an OAuth provider vouched for at the last sign-in
+    // (normalised, lower case), NULL when the provider did not verify it or
+    // the user never signed in through a provider. The super-admin allowlist
+    // only honours an email that equals this column; `email_verified` cannot
+    // be used because it defaults to CURRENT_TIMESTAMP.
+    providerVerifiedEmail: varchar("provider_verified_email", { length: 255 }),
   },
   (table) => ({
     // The app looks users up with `eq(users.username, name.toLowerCase())` and
@@ -1252,17 +1262,36 @@ export const bingoTemplatesRelations = relations(bingoTemplates, ({ one }) => ({
 // Add this to your existing schema.ts file
 // This creates a new table for API keys
 
-export const apiKeys = createTable("api_keys", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 100 }).notNull(),
-  description: text("description"),
-  key: varchar("key", { length: 100 }).notNull().unique(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  lastUsed: timestamp("last_used"),
-})
+export const apiKeys = createTable(
+  "api_keys",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 100 }).notNull(),
+    description: text("description"),
+    // LEGACY plaintext key. New keys leave it NULL; rows created before
+    // migration 0040 (and by the previous app version) still carry it and are
+    // found by the dual-read in `@/lib/api-auth`. Dropped in RBAC 8/8.
+    key: varchar("key", { length: 100 }).unique(),
+    // SHA-256 (hex) of the key, and its first characters for display.
+    keyHash: varchar("key_hash", { length: 64 }),
+    keyPrefix: varchar("key_prefix", { length: 16 }),
+    // What the key may do (`API_KEY_SCOPES` in `@/lib/api-key`).
+    scopes: text("scopes")
+      .array()
+      .notNull()
+      .default(sql`ARRAY['read','submit']::text[]`),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    lastUsed: timestamp("last_used"),
+  },
+  (table) => ({
+    keyHashUnique: uniqueIndex("api_keys_key_hash_unique").on(table.keyHash),
+  })
+)
 
 export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
   user: one(users, {

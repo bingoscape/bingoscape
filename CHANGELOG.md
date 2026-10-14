@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **RBAC 7/8 (#190): credential and session hygiene.** Migration 0040 (add-first, see `docs/DATABASE-MIGRATION.md`, "RBAC 7/8 rollout"):
+  - API keys are stored as a SHA-256 hash plus an 8 character prefix and shown once at creation; they gain `expires_at`, `revoked_at` and scopes (`read`, `submit`). Lookup is by hash, then by the legacy plaintext column (a legacy hit backfills the hash), for one release. The key format and the RuneLite `Bearer` header are unchanged, existing keys keep working. The API keys page lists the prefix, status, expiry and scope, can set an expiry and a read-only key at creation, and revokes instead of deleting active keys (`revokeApiKey`)
+  - Sessions: explicit JWT lifetime (30 days), the user row is checked on every request so a deleted account or a revoked session stops working, `runescapeName` is read from the database instead of the token, "Sign out everywhere" on the settings page (`revokeAllSessions`, `users.session_revoked_at`)
+  - Rate limits behind a swappable `RateLimitStore` (single instance, in memory): sign-in, sign-up, invite creation and redemption, Event creation, uploads (manual and RuneLite), Wise Old Man actions and `POST /api/runelite/auth`. Actions answer `{ success: false, code: "RATE_LIMITED" }`, routes `429` with `Retry-After`
+  - `X-Content-Type-Options: nosniff`, `Referrer-Policy` and a Content-Security-Policy (`CSP_MODE=report-only|enforce|off`, default report-only)
+  - Super-admin allowlist entries only count when the OAuth provider verified the email (`users.provider_verified_email`)
+  - One `assertCanSubmit()` (locked Board, image type, size) for the manual submit action and both RuneLite submission routes
+  - `PublicUser` / `publicUserSelect` (`src/server/db/public-user.ts`) for user fields that reach clients
 - One read policy for Event data (`src/lib/authz/read-policy.ts`, `src/server/authz/read.ts`): `canReadEvent`, `canReadBoard`, `canReadTile`, `canReadGoal` and `canReadTeam` decide what a viewer (manager, participant, member of another Team, outsider, anonymous) may read, for public and private Events alike. Optional `RBAC_READ_POLICY=enforce|relaxed` (default `enforce`, read per request) relaxes the membership gates without a rebuild; see `.env.example` and `docs/GITHUB-SECRETS.md`
 - `docs/adr/0001-read-visibility-defaults.md` records decisions 3-5 of the RBAC epic (#183) with today's behaviour as the default, pending maintainer confirmation: link holders of a non-public Event get the join card only, uploads are served by public URL, the codephrase is visible to participants. Each is a one-line constant (`READ_DECISIONS`)
 - Transfer Event ownership (`transferEventOwnership` server action, owner-only): the new owner must be a participant, becomes the creator and an admin; the previous owner stays an admin
@@ -31,6 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **RBAC 7/8 (#190) behaviour changes:**
+  - Super admins have to sign in through Discord, GitHub or Google once after the deploy; until then `/super-admin` denies them. Credentials accounts can no longer be super admins
+  - `getUserClans` no longer returns the Clan owner's whole user row (it carried the password hash) but id, name, image and RuneScape name
+  - The manual submit action now enforces the image types (JPEG, PNG, GIF, WebP) and the size limit the RuneLite routes already had, and refuses submissions on a locked Board (managers may still submit); the upload form only offers those types
+  - A key revoked in the new app works again if the previous app image is deployed (it does not know `revoked_at`); keys created by the new app do not work in the previous image (they have no plaintext value)
+  - `POST /api/runelite/keys` returns `keyPrefix`, `scopes` and `expiresAt` in addition to the one-time `key`; `GET` lists `keyPrefix`, `scopes`, `expiresAt` and `revokedAt` instead of nothing about the key itself
 - **Behaviour change (reads):** the read paths now apply the same rules. Before, several server-side reads answered any caller who had an id, even a non-member or an anonymous one. Now:
   - `getEventById` gives non-members only the Event row (the join card the Event page showed anyway), not Boards, Teams, Submissions or secrets. An Event that does not exist, or (with `members-only`) one hidden from the viewer, answers 404.
   - `getMiniBoardTiles`, `getBingoById`, the Goal / Tile readers (`getTileGoalsAndProgress`, `getGoalTree`, `getGoalValues`, `getGoalWithItemData`, `getItemGoalsForTile`), event and Board statistics, item statistics, pattern completion, `getTeamsByEventId` and `calculateEventPrizePool` need membership of the Event, or a public Event for the content a public page shows (Boards, Tiles, leaderboard, Teams, prize pool). Per player statistics, item statistics and pattern completion are for participants and managers only.

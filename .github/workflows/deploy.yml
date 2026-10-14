@@ -55,6 +55,7 @@ jobs:
           SUPER_ADMIN_EMAILS: ${{ secrets.SUPER_ADMIN_EMAILS }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           RBAC_READ_POLICY: ${{ secrets.RBAC_READ_POLICY }}
+          CSP_MODE: ${{ secrets.CSP_MODE }}
           NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
         run: |
           set -euo pipefail
@@ -109,6 +110,7 @@ jobs:
           emit SUPER_ADMIN_EMAILS "$SUPER_ADMIN_EMAILS"
           emit CRON_SECRET "$CRON_SECRET"
           emit RBAC_READ_POLICY "$RBAC_READ_POLICY"
+          emit CSP_MODE "$CSP_MODE"
           emit NEXT_SERVER_ACTIONS_ENCRYPTION_KEY "$NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"
           # IMAGE_TAG is added by scripts/deploy.sh on the server
           chmod 600 "$out"

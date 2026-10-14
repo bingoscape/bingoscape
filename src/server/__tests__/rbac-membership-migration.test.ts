@@ -487,6 +487,9 @@ describe("migration 0038: dirty data", () => {
 
   it("leaves the same indexes and columns as `drizzle-kit push` of the schema", async () => {
     await mig.apply(MIGRATION)
+    // The user table also carries the columns of 0040 (RBAC 7/8), which the
+    // pushed schema has.
+    await mig.apply("0040_credential_session_hygiene")
     const tables = [
       "bingoscape-next_event_participants",
       "bingoscape-next_team_members",

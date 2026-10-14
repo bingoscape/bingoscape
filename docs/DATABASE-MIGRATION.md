@@ -375,6 +375,43 @@ Without `CRON_SECRET` the route answers `401` and the script reports that it can
 
 **Ownership rules the app now enforces** (all in `src/server/authz/membership.ts`): an Event and a Clan always keep an admin; the Event creator and the Clan owner can be neither demoted nor removed (transfer ownership first); nobody grants or adds a role above their own; deleting an Event, granting the admin role and transferring ownership are owner-only. For an Event whose creator account is gone (`creator_id` is null), its oldest admin acts as the owner for the owner-only actions. Existing data that already violates an invariant is not changed; the reconciliation reports it (for example `events_without_admin`, `creator_role_conflicts`).
 
+## RBAC 7/8 rollout (migration `0040_credential_session_hygiene`)
+
+Phase 7 of the RBAC consolidation (epic #183, issue #190): credential and session hygiene. Add-first and compatible with the previous app version (rolling the app image back is safe; the database is not reverted). Every statement is idempotent.
+
+| Part | Effect |
+| ---- | ------ |
+| `api_keys.key` | `NOT NULL` is dropped (the `UNIQUE` constraint stays). New keys leave it `NULL`; the previous app always supplies it and reads it with `WHERE key = ...`, both unaffected. **The legacy plaintext column is not dropped or emptied**; that is RBAC 8/8. |
+| `api_keys.key_hash`, `key_prefix` | SHA-256 (lower-case hex) of the key and its first 8 characters. Unique index `api_keys_key_hash_unique`. |
+| Backfill | `UPDATE ... SET key_hash = encode(sha256(convert_to(key, 'UTF8')), 'hex'), key_prefix = left(key, 8)` for every existing key. PostgreSQL 11+ has the built-in `sha256(bytea)`, so **no `pgcrypto` extension is needed**. Keys the previous app creates after the migration have no hash; the new app backfills them on first use (see below). |
+| `api_keys.scopes`, `expires_at`, `revoked_at` | `scopes text[] NOT NULL DEFAULT '{read,submit}'`, so every existing key keeps full access; `expires_at` / `revoked_at` are nullable. |
+| `user.session_revoked_at` | Nullable. Sessions issued before this instant are rejected ("sign out everywhere"). NULL for everybody after the migration, so **no session is invalidated by the deploy**. |
+| `user.provider_verified_email` | Nullable. The email an OAuth provider vouched for at the last sign-in (see "Super admins" below). |
+
+**Dual-read of API keys (one release).** A key is looked up by its hash first; if there is no row, by the legacy `key` column. A legacy hit writes the hash and prefix back (`checkApiKey` in `src/lib/api-auth.ts`). Revocation, expiry and scope are checked on both paths, and a revoked row found by hash is never revived through its plaintext. Existing keys and RuneLite plugin clients keep working unchanged: the key format (`bsn_` + 32 characters) and the `Authorization: Bearer` header did not change.
+
+**Rolling back the app image.** Keys created by the new app have `key = NULL`, so the **previous app version cannot validate them** (it only knows the plaintext column). The owner has to create a new key after a rollback. Keys that existed before the deploy keep working on both versions. `revoked_at`, `expires_at` and `scopes` are unknown to the previous app: a key revoked or expired in the new app **works again** in the previous version until it is deleted. Delete the key instead of revoking it if a rollback is likely.
+
+**Rollout checklist.**
+
+```sql
+-- after the migration: every key that had a plaintext value has a hash
+SELECT count(*) FROM "bingoscape-next_api_keys" WHERE key IS NOT NULL AND key_hash IS NULL;  -- expect 0
+SELECT count(*) FROM "bingoscape-next_api_keys" WHERE key_hash IS NOT NULL AND key IS NULL;   -- keys created by the new app
+```
+
+RBAC 8/8 drops `api_keys.key` after one release; before that, run the first query again (keys created by the previous app after 0040 and never used are the only ones without a hash; they are backfilled on first use or can be backfilled with the `UPDATE` in the migration file).
+
+**Super admins must sign in through their provider once.** `SUPER_ADMIN_EMAILS` stays env-only (decision 2 of #183 is open), but an address on the list now only counts when it equals `users.provider_verified_email`, which the app sets at each OAuth sign-in from the provider's own verification flag (Discord `verified`, Google `email_verified`, GitHub public or verified primary email). It is deliberately **not backfilled**: `users.email_verified` defaults to `CURRENT_TIMESTAMP` and says nothing. Until a super admin has signed in with Discord, GitHub or Google after this deploy, `/super-admin` denies them (their normal account keeps working). Credentials accounts and unverified provider emails can never be super admins, which closes the case of a self-registered account carrying an allowlisted address. To grant by hand in an emergency: `UPDATE "bingoscape-next_user" SET provider_verified_email = lower(email) WHERE id = '<uuid>';`.
+
+**Sessions.** The JWT is now only a pointer to the user (id and issue time). On every request the user row is read by primary key (one lookup, memoised per request): a deleted account, or a token older than `session_revoked_at`, is rejected and its cookie cleared; the `runescapeName` in the session comes from the database, not from the token or from `useSession().update()`. The lifetime is explicit (30 days, extended at most once a day). Existing sessions stay valid. Setting a user's `session_revoked_at = now()` signs them out everywhere; the profile settings page has a button for it.
+
+**Rate limits and the proxy.** Limits are in `src/lib/rate-limit-policies.ts`. They assume **one app instance** (decision 9 of #183): counters live in process memory and reset on restart. For a client IP the app trusts only the **last** entry of `X-Forwarded-For`, i.e. the address the host nginx appended (`proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`, as in `docs/PRODUCTION-SETUP.md`). If nginx is ever configured differently, or another proxy sits in front of it, anonymous limits (sign-in, sign-up, `/api/runelite/auth`, invite lookups) apply per proxy address instead of per client.
+
+**Content-Security-Policy.** `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin` are sent on every response. The CSP ships as `Content-Security-Policy-Report-Only` by default because it was not verified against every page of the running app. Browse the main pages with the browser console open; when it shows no violations set `CSP_MODE=enforce` in the server `.env` (GitHub secret `CSP_MODE`) and restart the container, no rebuild needed. `CSP_MODE=off` removes the header.
+
+**Rollback of the schema** is not needed and not offered: the new columns are ignored by the previous app. To undo the data effects only, restore the pre-deploy backup (`scripts/restore-db.sh`).
+
 ---
 
 ## Need Help?

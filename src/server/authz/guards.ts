@@ -131,7 +131,12 @@ export async function requireSession(): Promise<{ userId: string }> {
 // Action results
 // ---------------------------------------------------------------------------
 
-export type ActionErrorCode = AuthzErrorCode | "INVALID" | "CONFLICT" | "FAILED"
+export type ActionErrorCode =
+  | AuthzErrorCode
+  | "INVALID"
+  | "CONFLICT"
+  | "FAILED"
+  | "RATE_LIMITED"
 
 export interface ActionFailure {
   success: false

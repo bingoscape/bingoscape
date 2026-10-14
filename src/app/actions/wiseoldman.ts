@@ -3,6 +3,7 @@
 import { WOMClient } from "@wise-old-man/utils"
 import { logger } from "@/lib/logger"
 import { getServerAuthSession } from "@/server/auth"
+import { limitAction } from "@/server/rate-limit"
 
 // Initialize WiseOldMan client with optional API key for higher rate limits
 const womClient = new WOMClient({
@@ -36,9 +37,19 @@ export async function fetchPlayerDataFromWOM(
   runescapeName: string
 ): Promise<FetchWOMDataResult> {
   // A signed-in user only: the endpoint spends the server's WiseOldMan quota.
-  if (!(await getServerAuthSession())?.user) {
+  const session = await getServerAuthSession()
+  if (!session?.user) {
     return { success: false, error: "Unauthorized" }
   }
+  const limited = await limitAction("wiseOldMan", session.user.id)
+  if (limited) return limited
+  return loadPlayerData(runescapeName)
+}
+
+/** The WiseOldMan lookup behind the actions; callers check session and rate limit. */
+async function loadPlayerData(
+  runescapeName: string
+): Promise<FetchWOMDataResult> {
   if (!runescapeName || runescapeName.trim() === "") {
     return {
       success: false,
@@ -162,9 +173,12 @@ export async function fetchPlayerDataFromWOM(
 export async function updatePlayerOnWOM(
   runescapeName: string
 ): Promise<FetchWOMDataResult> {
-  if (!(await getServerAuthSession())?.user) {
+  const session = await getServerAuthSession()
+  if (!session?.user) {
     return { success: false, error: "Unauthorized" }
   }
+  const limited = await limitAction("wiseOldMan", session.user.id)
+  if (limited) return limited
   if (!runescapeName || runescapeName.trim() === "") {
     return {
       success: false,
@@ -180,7 +194,7 @@ export async function updatePlayerOnWOM(
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
     // Fetch the updated data
-    const updatedData = await fetchPlayerDataFromWOM(runescapeName)
+    const updatedData = await loadPlayerData(runescapeName)
     if (updatedData.success) {
       logger.info(
         { runescapeName, action: "updatePlayerOnWOM" },
@@ -213,9 +227,12 @@ export interface FetchWOMCompetitionResult {
 export async function fetchCompetitionFromWOM(
   competitionId: number
 ): Promise<FetchWOMCompetitionResult> {
-  if (!(await getServerAuthSession())?.user) {
+  const session = await getServerAuthSession()
+  if (!session?.user) {
     return { success: false, error: "Unauthorized" }
   }
+  const limited = await limitAction("wiseOldMan", session.user.id)
+  if (limited) return limited
   try {
     const competition =
       await womClient.competitions.getCompetitionDetails(competitionId)

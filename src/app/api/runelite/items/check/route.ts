@@ -88,7 +88,7 @@ interface MatchedGoal {
  */
 export async function POST(req: Request) {
   // Validate API key
-  const userId = await validateApiKey(req)
+  const userId = await validateApiKey(req, "submit")
   if (!userId) {
     return NextResponse.json({ error: "Invalid API key" }, { status: 401 })
   }

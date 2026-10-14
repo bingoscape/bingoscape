@@ -219,7 +219,7 @@ export function SubmissionUploadForm({
                   <Input
                     id="image"
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
                     onChange={onImageChange}
                     disabled={isUploading || disabled}
                     className={`absolute inset-0 h-full w-full cursor-pointer opacity-0 ${(selectedImage ?? pastedImage ?? (isUploading || disabled)) ? "pointer-events-none" : ""}`}

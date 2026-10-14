@@ -22,8 +22,11 @@ export type AdminCheck =
  *
  * The JWT is not trusted for the email: it is minted at sign-in and never
  * refreshed. The user is loaded by id and the email stored in the database is
- * compared (normalized) against `SUPER_ADMIN_EMAILS`. A deleted user or a
- * changed email therefore loses access on the next request.
+ * compared (normalized) against `SUPER_ADMIN_EMAILS`, and it must equal
+ * `users.provider_verified_email`, the address the OAuth provider (Discord,
+ * GitHub, Google) verified at the user's last sign-in. A deleted user or a
+ * changed email therefore loses access on the next request, and a super admin
+ * signs in through the provider once after RBAC 7/8 is deployed.
  */
 export async function checkSuperAdmin(): Promise<AdminCheck> {
   const session = await getServerAuthSession()
@@ -34,13 +37,25 @@ export async function checkSuperAdmin(): Promise<AdminCheck> {
 
   try {
     const [row] = await db
-      .select({ id: users.id, email: users.email })
+      .select({
+        id: users.id,
+        email: users.email,
+        providerVerifiedEmail: users.providerVerifiedEmail,
+      })
       .from(users)
       .where(eq(users.id, sessionUserId))
       .limit(1)
 
     const email = normalizeEmail(row?.email)
-    if (!row || !email || !isSuperAdminEmail(email)) {
+    // The allowlist only counts an email an OAuth provider verified at the
+    // last sign-in: a credentials account (or an unverified provider email)
+    // that merely carries the address must not become a super admin.
+    if (
+      !row ||
+      !email ||
+      !isSuperAdminEmail(email) ||
+      normalizeEmail(row.providerVerifiedEmail) !== email
+    ) {
       return { ok: false, userId: sessionUserId }
     }
     return { ok: true, admin: { adminId: row.id, email } }

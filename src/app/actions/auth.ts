@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger"
 import { signUpSchema, type SignUpInput } from "@/lib/validation/auth"
 import { db } from "@/server/db"
 import { users } from "@/server/db/schema"
+import { limitAction } from "@/server/rate-limit"
 import { eq } from "drizzle-orm"
 import { ZodError } from "zod"
 
@@ -15,13 +16,17 @@ import { ZodError } from "zod"
  * @returns Success response with userId or error response with message
  */
 export async function registerUser(input: SignUpInput) {
+  // Anonymous by definition, so limited per client IP.
+  const limited = await limitAction("signUp")
+  if (limited) return limited
+
   try {
     // Validate input with Zod schema
     const validated = await signUpSchema.parseAsync(input)
 
     // Check if username already exists
     const existingUser = await db
-      .select()
+      .select({ id: users.id })
       .from(users)
       .where(eq(users.username, validated.username.toLowerCase()))
       .limit(1)
@@ -47,7 +52,7 @@ export async function registerUser(input: SignUpInput) {
         email: null, // Not required for credentials auth
         emailVerified: null,
       })
-      .returning()
+      .returning({ id: users.id })
 
     if (!newUser) {
       return {

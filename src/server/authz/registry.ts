@@ -84,10 +84,12 @@ const SUPER_ADMIN = "super-admin only (adminAction); not an Event permission"
 export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
   // --- account ------------------------------------------------------------
   [`${A}api-keys.ts#createApiKey`]: auth(SELF),
+  [`${A}api-keys.ts#revokeApiKey`]: auth("revokes only keys owned by the caller"),
   [`${A}api-keys.ts#deleteApiKey`]: auth("deletes only keys owned by the caller"),
   [`${A}auth.ts#registerUser`]: pub("sign-up; anonymous by definition"),
   [`${A}profile.ts#updateProfile`]: auth(SELF),
   [`${A}user.ts#linkRunescapeAccount`]: auth(SELF),
+  [`${A}user.ts#revokeAllSessions`]: auth(SELF),
   [`${A}notifications.ts#getNotifications`]: auth(
     "only the signed-in user's own notifications"
   ),

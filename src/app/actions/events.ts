@@ -5,6 +5,7 @@ import { nanoid } from "nanoid"
 import { revalidatePath } from "next/cache"
 
 import { getServerAuthSession } from "@/server/auth"
+import { limitAction } from "@/server/rate-limit"
 import {
   isManagerRole,
   type EventRole as AuthzEventRole,
@@ -144,6 +145,8 @@ export async function createEvent(formData: FormData) {
       error: "You must be logged in to create an event",
     }
   }
+  const limited = await limitAction("eventCreate", session.user.id)
+  if (limited) return limited
 
   const title = formData.get("title") as string
   const description = formData.get("description") as string
@@ -924,6 +927,8 @@ export async function generateEventInviteLink(
 ): Promise<ActionResult<{ invite: typeof eventInvites.$inferSelect }>> {
   const allowed = await authorize(eventId, "event:invite")
   if (!allowed.success) return denial(allowed)
+  const limited = await limitAction("inviteCreate", allowed.actor.userId)
+  if (limited) return limited
 
   try {
     const event = await db.query.events.findFirst({
@@ -962,6 +967,9 @@ export async function joinEventViaInvite(
     return failure("You must be logged in to join an event", "UNAUTHENTICATED")
   }
   const userId = session.user.id
+  // Stops guessing of invite codes.
+  const limited = await limitAction("inviteRedeem", userId)
+  if (limited) return limited
 
   try {
     const invite = await db.query.eventInvites.findFirst({
@@ -1051,6 +1059,7 @@ export async function getEventParticipants(eventId: string) {
         // Get user info
         const user = await db.query.users.findFirst({
           where: eq(users.id, participant.userId),
+          columns: { id: true, runescapeName: true },
         })
 
         // Get buy-in amount (if any)
