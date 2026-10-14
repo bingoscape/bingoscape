@@ -186,7 +186,7 @@ Workflows are in `.github/workflows/`; details in `docs/GITHUB-ACTIONS.md`, secr
 
 ### Additional Notes
 
-- React 19.2.3 with Next.js 16.1.1 App Router
+- React 19.3.0 with Next.js 16.4.0 App Router
 - PostgreSQL database with Drizzle ORM
 - NextAuth for authentication (Discord OAuth + Credentials)
 - Use `nanoid()` for ID generation
