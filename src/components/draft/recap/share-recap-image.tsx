@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useSyncExternalStore } from "react"
 import { Clipboard, Download } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,11 @@ interface ShareRecapImageProps {
   eventId: string
 }
 
+const noSubscription = () => () => undefined
+// Clipboard images are not available everywhere (Firefox, insecure origins).
+const supportsImageCopy = () =>
+  typeof ClipboardItem !== "undefined" && !!navigator.clipboard?.write
+
 /**
  * "Share as image": the final rosters as a PNG to download or copy, for
  * pasting into Discord. The picture is drawn by `api/events/[id]/draft/recap-image`.
@@ -17,9 +22,13 @@ interface ShareRecapImageProps {
 export function ShareRecapImage({ eventId }: ShareRecapImageProps) {
   const [busy, setBusy] = useState(false)
   const url = `/api/events/${eventId}/draft/recap-image`
-  // Clipboard images are not available everywhere (Firefox, insecure origins).
-  const canCopy =
-    typeof ClipboardItem !== "undefined" && !!navigator.clipboard?.write
+  // False on the server and while hydrating, so the markup matches; the
+  // client then shows the button where the browser can copy an image.
+  const canCopy = useSyncExternalStore(
+    noSubscription,
+    supportsImageCopy,
+    () => false
+  )
 
   const copy = async () => {
     setBusy(true)
