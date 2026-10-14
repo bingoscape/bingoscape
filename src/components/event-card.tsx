@@ -120,7 +120,7 @@ export function EventCard({
     }
   }
 
-  const RegistrationStatus = () => {
+  const renderRegistrationStatus = () => {
     if (!registrationStatus || registrationStatus.status === "not_requested")
       return null
 
@@ -348,7 +348,7 @@ export function EventCard({
                 </div>
               )}
 
-              <RegistrationStatus />
+              {renderRegistrationStatus()}
 
               {showRequestForm && (
                 <div className="relative z-10 mt-3 space-y-2">

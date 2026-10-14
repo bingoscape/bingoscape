@@ -48,18 +48,6 @@ export function AddClanMembersDialog({
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  useEffect(() => {
-    if (open && clanId) {
-      loadMembers()
-    } else {
-      // Reset state when dialog closes
-      setMembers([])
-      setSelectedMembers(new Set())
-      setSearchTerm("")
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, eventId])
-
   const loadMembers = async () => {
     setIsLoading(true)
     try {
@@ -88,6 +76,18 @@ export function AddClanMembersDialog({
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (open && clanId) {
+      loadMembers()
+    } else {
+      // Reset state when dialog closes
+      setMembers([])
+      setSelectedMembers(new Set())
+      setSearchTerm("")
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, eventId])
 
   const filteredMembers = useMemo(() => {
     if (!searchTerm) return members
