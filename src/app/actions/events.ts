@@ -786,12 +786,26 @@ export async function requestToJoinEvent(
     )
   }
 
+  const limited = await limitAction("joinRequest", session.user.id)
+  if (limited) return limited
+
   try {
     const event = await db.query.events.findFirst({
       where: eq(events.id, eventId),
     })
 
     if (!event) return failure("Event not found", "NOT_FOUND")
+
+    const existingParticipant = await db.query.eventParticipants.findFirst({
+      where: and(
+        eq(eventParticipants.eventId, eventId),
+        eq(eventParticipants.userId, session.user.id)
+      ),
+      columns: { id: true },
+    })
+    if (existingParticipant) {
+      return failure("You are already a participant in this event", "CONFLICT")
+    }
 
     if (!event.requiresApproval) {
       return failure("This event does not require approval to join", "INVALID")
@@ -1292,84 +1306,121 @@ export async function assignParticipantToTeam(
   }
 }
 
+/** What a participant owes and has paid. `expectedAmount` is the snapshot taken when the buy-in row was created. */
+interface BuyInSummary {
+  buyInAmount: number
+  expectedAmount: number
+}
+
+/**
+ * Writes the participant's single buy-in row in one transaction. `amountFor`
+ * receives what the participant owes (the row's snapshot, else the Event's
+ * current minimum) and returns the amount paid so far. A participant who has
+ * not paid and has no row gets none.
+ */
+async function saveBuyIn(
+  eventId: string,
+  userId: string,
+  amountFor: (expected: number) => number
+): Promise<BuyInSummary> {
+  return db.transaction(async (tx) => {
+    const event = await tx.query.events.findFirst({
+      where: eq(events.id, eventId),
+      columns: { minimumBuyIn: true },
+    })
+    if (!event) throw new Error("Event not found")
+
+    const eventParticipant = await tx.query.eventParticipants.findFirst({
+      where: and(
+        eq(eventParticipants.eventId, eventId),
+        eq(eventParticipants.userId, userId)
+      ),
+      columns: { id: true },
+    })
+    if (!eventParticipant) {
+      throw new Error("Participant not found for this event")
+    }
+
+    const existing = await tx.query.eventBuyIns.findFirst({
+      where: eq(eventBuyIns.eventParticipantId, eventParticipant.id),
+    })
+    const expectedAmount = existing?.expectedAmount ?? event.minimumBuyIn
+    const amount = amountFor(expectedAmount)
+
+    if (!existing && amount === 0) {
+      return { buyInAmount: 0, expectedAmount }
+    }
+
+    // The unique index on the participant settles two writers racing on a
+    // participant that has no row yet.
+    await tx
+      .insert(eventBuyIns)
+      .values({
+        eventParticipantId: eventParticipant.id,
+        amount,
+        expectedAmount,
+      })
+      .onConflictDoUpdate({
+        target: eventBuyIns.eventParticipantId,
+        set: { amount, updatedAt: sql`CURRENT_TIMESTAMP` },
+      })
+    return { buyInAmount: amount, expectedAmount }
+  })
+}
+
+// `participantId` is the participant's user id.
 export async function updateParticipantBuyIn(
   eventId: string,
   participantId: string,
   hasPaid: boolean
-): Promise<ActionResult<{ buyInAmount: number }>> {
+): Promise<ActionResult<BuyInSummary>> {
   const allowed = await authorize(eventId, "finance:write")
   if (!allowed.success) return denial(allowed)
 
   try {
-    const buyInAmount = await db.transaction(async (tx) => {
-      // First, get the minimum buy-in for the event
-      const event = await tx.query.events.findFirst({
-        where: eq(events.id, eventId),
-      })
-
-      if (!event) {
-        throw new Error("Event not found")
-      }
-
-      // Find the eventParticipant
-      const eventParticipant = await tx.query.eventParticipants.findFirst({
-        where: and(
-          eq(eventParticipants.eventId, eventId),
-          eq(eventParticipants.userId, participantId)
-        ),
-      })
-
-      if (!eventParticipant) {
-        throw new Error("Participant not found for this event")
-      }
-
-      // Calculate buy-in amount: use minimum buy-in if paid, 0 if not paid
-      const amount = hasPaid ? event.minimumBuyIn : 0
-
-      // Check if a buy-in record already exists
-      const existingBuyIn = await tx.query.eventBuyIns.findFirst({
-        where: eq(eventBuyIns.eventParticipantId, eventParticipant.id),
-      })
-
-      if (existingBuyIn) {
-        // Update existing record
-        await tx
-          .update(eventBuyIns)
-          .set({
-            amount: amount,
-            updatedAt: sql`CURRENT_TIMESTAMP`,
-          })
-          .where(eq(eventBuyIns.id, existingBuyIn.id))
-      } else {
-        // Insert new record only if they're paying
-        if (hasPaid) {
-          // A concurrent toggle may have inserted the row meanwhile; the unique
-          // index on the participant turns that into an update.
-          await tx
-            .insert(eventBuyIns)
-            .values({
-              eventParticipantId: eventParticipant.id,
-              amount: amount,
-            })
-            .onConflictDoUpdate({
-              target: eventBuyIns.eventParticipantId,
-              set: { amount, updatedAt: sql`CURRENT_TIMESTAMP` },
-            })
-        }
-      }
-      return amount
-    })
+    // Paid means the full amount owed, unpaid means nothing paid.
+    const summary = await saveBuyIn(eventId, participantId, (expected) =>
+      hasPaid ? expected : 0
+    )
 
     revalidateEventParticipants(eventId)
     revalidatePath(`/`)
 
-    return { success: true as const, buyInAmount }
+    return { success: true as const, ...summary }
   } catch (error) {
     logger.error({ error }, "Error updating participant buy-in:", error)
     return failure(
       error instanceof Error
         ? error.message
         : "Failed to update participant buy-in"
+    )
+  }
+}
+
+/** Records how much a participant has paid so far (partial payments allowed). */
+export async function setParticipantPayment(
+  eventId: string,
+  userId: string,
+  amount: number
+): Promise<ActionResult<BuyInSummary>> {
+  const allowed = await authorize(eventId, "finance:write")
+  if (!allowed.success) return denial(allowed)
+
+  if (!Number.isSafeInteger(amount) || amount < 0) {
+    return failure("The amount must be a whole number of 0 or more", "INVALID")
+  }
+
+  try {
+    const summary = await saveBuyIn(eventId, userId, () => amount)
+
+    revalidateEventParticipants(eventId)
+    revalidatePath(`/`)
+
+    return { success: true as const, ...summary }
+  } catch (error) {
+    logger.error({ error }, "Error recording participant payment:", error)
+    return failure(
+      error instanceof Error ? error.message : "Failed to record the payment"
     )
   }
 }
@@ -1584,22 +1635,22 @@ export async function approveRegistrationRequest(
   const reviewerId = session.user.id
 
   try {
-    return await db.transaction(async (tx) => {
-      // Get the request
-      const request = await tx.query.eventRegistrationRequests.findFirst({
-        where: eq(eventRegistrationRequests.id, requestId),
-      })
+    const request = await db.query.eventRegistrationRequests.findFirst({
+      where: eq(eventRegistrationRequests.id, requestId),
+    })
+    if (!request) {
+      return failure("Registration request not found", "NOT_FOUND")
+    }
 
-      if (!request) {
-        return failure("Registration request not found", "NOT_FOUND")
-      }
+    // The Event comes from the request, never from the client.
+    const allowed = await authorize(request.eventId, "registration:review")
+    if (!allowed.success) return denial(allowed)
 
-      // The Event comes from the request, never from the client.
-      const allowed = await authorize(request.eventId, "registration:review")
-      if (!allowed.success) return denial(allowed)
-
-      // Update the request status
-      await tx
+    const result = await db.transaction(async (tx) => {
+      // Only a still pending request can be approved. The conditional update
+      // is the guard: two reviewers (or a double click) cannot both win, and a
+      // rejected request is never resurrected.
+      const [updated] = await tx
         .update(eventRegistrationRequests)
         .set({
           status: "approved",
@@ -1608,7 +1659,19 @@ export async function approveRegistrationRequest(
           responseMessage: responseMessage ?? null,
           updatedAt: new Date(),
         })
-        .where(eq(eventRegistrationRequests.id, requestId))
+        .where(
+          and(
+            eq(eventRegistrationRequests.id, requestId),
+            eq(eventRegistrationRequests.status, "pending")
+          )
+        )
+        .returning({ id: eventRegistrationRequests.id })
+      if (!updated) {
+        return failure(
+          "This registration request has already been reviewed",
+          "CONFLICT"
+        )
+      }
 
       // Add the user as a participant
       const existingParticipant = await tx.query.eventParticipants.findFirst({
@@ -1633,10 +1696,10 @@ export async function approveRegistrationRequest(
         }
       }
 
-      revalidateEventParticipants(request.eventId)
-
       return { success: true as const }
     })
+    if (result.success) revalidateEventParticipants(request.eventId)
+    return result
   } catch (error) {
     logger.error({ error, requestId }, "Error approving registration request")
     return actionFailure(error, "Failed to approve the registration request")
@@ -1666,7 +1729,9 @@ export async function rejectRegistrationRequest(
     const allowed = await authorize(request.eventId, "registration:review")
     if (!allowed.success) return denial(allowed)
 
-    await db
+    // Only a still pending request can be rejected (an approved one would leave
+    // the user a participant with a "rejected" request).
+    const [updated] = await db
       .update(eventRegistrationRequests)
       .set({
         status: "rejected",
@@ -1675,7 +1740,19 @@ export async function rejectRegistrationRequest(
         responseMessage: responseMessage ?? null,
         updatedAt: new Date(),
       })
-      .where(eq(eventRegistrationRequests.id, requestId))
+      .where(
+        and(
+          eq(eventRegistrationRequests.id, requestId),
+          eq(eventRegistrationRequests.status, "pending")
+        )
+      )
+      .returning({ id: eventRegistrationRequests.id })
+    if (!updated) {
+      return failure(
+        "This registration request has already been reviewed",
+        "CONFLICT"
+      )
+    }
 
     revalidateEventParticipants(request.eventId)
 

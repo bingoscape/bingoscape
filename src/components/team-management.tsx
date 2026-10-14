@@ -12,11 +12,11 @@ import {
   addUserToTeam,
   removeUserFromTeam,
   deleteTeam,
-  getEventParticipants,
+  getUnassignedParticipants,
   updateTeamMember,
   updateTeamName,
-  assignParticipantToTeam,
 } from "@/app/actions/team"
+import { assignParticipantToTeam } from "@/app/actions/events"
 import { toast } from "@/hooks/use-toast"
 import {
   Edit2,
@@ -1024,7 +1024,7 @@ export function TeamManagement({ eventId }: { eventId: string }) {
     try {
       const [fetchedTeams, fetchedParticipants] = await Promise.all([
         getTeamsByEventId(eventId),
-        getEventParticipants(eventId),
+        getUnassignedParticipants(eventId),
       ])
       setTeams(fetchedTeams)
       setParticipants(fetchedParticipants)

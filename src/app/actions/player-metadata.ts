@@ -12,8 +12,8 @@ import { logger } from "@/lib/logger"
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
 import { revalidateEventParticipants } from "@/server/revalidate-event-participants"
-import { playerMetadata, eventParticipants } from "@/server/db/schema"
-import { eq, and } from "drizzle-orm"
+import { playerMetadata, eventParticipants, users } from "@/server/db/schema"
+import { eq, and, sql } from "drizzle-orm"
 import { fetchPlayerDataFromWOM, type FetchWOMDataResult } from "./wiseoldman"
 
 /**
@@ -59,21 +59,55 @@ export async function getEventParticipantMetadata(eventId: string) {
   // Deliberate: a denial reads as an empty list (see guards.ts).
   if (!(await hasPermission(eventId, "player-metadata:read"))) return []
 
-  const metadata = await db.query.playerMetadata.findMany({
-    where: eq(playerMetadata.eventId, eventId),
-    with: {
+  // Rows of players who left the event stay in the table (a re-join keeps the
+  // manager's notes) but are not part of the event's data.
+  const rows = await db
+    .select({
+      metadata: playerMetadata,
       user: {
-        columns: {
-          id: true,
-          name: true,
-          runescapeName: true,
-          image: true,
-        },
+        id: users.id,
+        name: users.name,
+        runescapeName: users.runescapeName,
+        image: users.image,
       },
-    },
-  })
+    })
+    .from(playerMetadata)
+    .innerJoin(
+      eventParticipants,
+      and(
+        eq(eventParticipants.eventId, playerMetadata.eventId),
+        eq(eventParticipants.userId, playerMetadata.userId)
+      )
+    )
+    .innerJoin(users, eq(users.id, playerMetadata.userId))
+    .where(eq(playerMetadata.eventId, eventId))
 
-  return metadata
+  return rows.map(({ metadata, user }) => ({ ...metadata, user }))
+}
+
+type PlayerMetadataInput = Partial<
+  Omit<typeof playerMetadata.$inferInsert, "id" | "userId" | "eventId">
+>
+
+/**
+ * Inserts or updates the (user, event) row in one statement; the unique index
+ * settles two writers racing on the same player.
+ */
+async function upsertPlayerMetadata(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  userId: string,
+  eventId: string,
+  data: PlayerMetadataInput
+) {
+  const [row] = await tx
+    .insert(playerMetadata)
+    .values({ userId, eventId, ...data })
+    .onConflictDoUpdate({
+      target: [playerMetadata.userId, playerMetadata.eventId],
+      set: { ...data, updatedAt: new Date() },
+    })
+    .returning()
+  return row
 }
 
 /**
@@ -108,26 +142,20 @@ export async function updatePlayerMetadata(
 
   try {
     const metadata = await db.transaction(async (tx) => {
-      const existing = await tx.query.playerMetadata.findFirst({
+      // Metadata belongs to a participant; never create orphan rows.
+      const participant = await tx.query.eventParticipants.findFirst({
         where: and(
-          eq(playerMetadata.userId, userId),
-          eq(playerMetadata.eventId, eventId)
+          eq(eventParticipants.eventId, eventId),
+          eq(eventParticipants.userId, userId)
         ),
+        columns: { id: true },
       })
-      if (existing) {
-        const [updated] = await tx
-          .update(playerMetadata)
-          .set({ ...data, updatedAt: new Date() })
-          .where(eq(playerMetadata.id, existing.id))
-          .returning()
-        return updated
-      }
-      const [created] = await tx
-        .insert(playerMetadata)
-        .values({ userId, eventId, ...data })
-        .returning()
-      return created
+      if (!participant) return null
+      return upsertPlayerMetadata(tx, userId, eventId, data)
     })
+    if (metadata === null) {
+      return failure("User is not a participant of this event", "NOT_FOUND")
+    }
     if (!metadata) return failure("Failed to save player metadata")
 
     revalidateEventParticipants(eventId)
@@ -173,27 +201,9 @@ export async function updateOwnPlayerMetadata(
   }
 
   try {
-    const metadata = await db.transaction(async (tx) => {
-      const existing = await tx.query.playerMetadata.findFirst({
-        where: and(
-          eq(playerMetadata.userId, userId),
-          eq(playerMetadata.eventId, eventId)
-        ),
-      })
-      if (existing) {
-        const [updated] = await tx
-          .update(playerMetadata)
-          .set({ ...allowedData, updatedAt: new Date() })
-          .where(eq(playerMetadata.id, existing.id))
-          .returning()
-        return updated
-      }
-      const [created] = await tx
-        .insert(playerMetadata)
-        .values({ userId, eventId, ...allowedData })
-        .returning()
-      return created
-    })
+    const metadata = await db.transaction((tx) =>
+      upsertPlayerMetadata(tx, userId, eventId, allowedData)
+    )
     if (!metadata) return failure("Failed to save player metadata")
 
     revalidateEventParticipants(eventId)
@@ -250,12 +260,21 @@ export async function calculateMetadataCoverage(eventId: string) {
     return 0
   }
 
-  // Get participants with metadata
-  const metadataRecords = await db.query.playerMetadata.findMany({
-    where: eq(playerMetadata.eventId, eventId),
-  })
+  // Only rows of current participants count: leftovers of removed players
+  // must not push the figure above the real coverage.
+  const [withMetadata] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(playerMetadata)
+    .innerJoin(
+      eventParticipants,
+      and(
+        eq(eventParticipants.eventId, playerMetadata.eventId),
+        eq(eventParticipants.userId, playerMetadata.userId)
+      )
+    )
+    .where(eq(playerMetadata.eventId, eventId))
 
-  const coverage = (metadataRecords.length / participants.length) * 100
+  const coverage = ((withMetadata?.count ?? 0) / participants.length) * 100
   return Math.round(coverage)
 }
 

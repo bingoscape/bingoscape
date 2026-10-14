@@ -248,6 +248,11 @@ const CASES: Case[] = [
     expect: "denied",
   },
   {
+    key: key("events.ts", "setParticipantPayment"),
+    call: (x) => events.setParticipantPayment(x.event2.id, x.users.admin, 50),
+    expect: "denied",
+  },
+  {
     key: key("events.ts", "addParticipantDonation"),
     call: (x) =>
       events.addParticipantDonation(x.event2.id, x.users.admin, 5, "x"),
@@ -331,16 +336,9 @@ const CASES: Case[] = [
     expect: "denied",
   },
   {
-    key: key("team.ts", "getEventParticipants"),
-    call: (x) => team.getEventParticipants(x.event2.id),
+    key: key("team.ts", "getUnassignedParticipants"),
+    call: (x) => team.getUnassignedParticipants(x.event2.id),
     expect: "empty",
-  },
-  {
-    key: key("team.ts", "assignParticipantToTeam"),
-    call: (x) =>
-      team.assignParticipantToTeam(x.event1.id, x.users.participant, x.event2.teamId),
-    expect: "denied",
-    note: "a Team of Event 2 for a participant of Event 1",
   },
   {
     key: key("team-balancing.ts", "generateBalancedTeams"),

@@ -6,7 +6,8 @@
  */
 import { eq } from "drizzle-orm"
 
-import { addUserToTeam, assignParticipantToTeam } from "@/app/actions/team"
+import { assignParticipantToTeam } from "@/app/actions/events"
+import { addUserToTeam } from "@/app/actions/team"
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
 import { teamMembers } from "@/server/db/schema"

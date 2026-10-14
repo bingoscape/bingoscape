@@ -28,7 +28,7 @@ import {
 import { calculateTeamBalanceMetrics } from "@/app/actions/team-balancing"
 import { getEventTeamStatistics } from "@/app/actions/team-statistics"
 import {
-  getEventParticipants as getUnassignedParticipants,
+  getUnassignedParticipants,
   getTeamsByEventId,
 } from "@/app/actions/team"
 import { GET, POST } from "@/app/api/submissions/[id]/comments/route"

@@ -10,7 +10,7 @@ import {
   users,
   playerMetadata,
 } from "@/server/db/schema"
-import { eq, and, inArray, not, exists } from "drizzle-orm"
+import { eq, and, not, exists } from "drizzle-orm"
 import { levelAllows } from "@/lib/authz/read-policy"
 import { getEventReadAccessFor } from "@/server/authz/read"
 import { authorize, denial, failure, hasPermission } from "@/server/authz"
@@ -18,8 +18,6 @@ import {
   assertTeamLimitForBattleship,
   battleshipErrorMessage,
 } from "@/server/battleship"
-
-class InvalidTeamError extends Error {}
 
 export async function createTeam(eventId: string, name: string) {
   const allowed = await authorize(eventId, "team:manage")
@@ -221,8 +219,10 @@ export async function deleteTeam(teamId: string) {
     const allowed = await authorize(teamInfo.eventId, "team:manage")
     if (!allowed.success) return denial(allowed)
 
-    await db.delete(teamMembers).where(eq(teamMembers.teamId, teamId))
-    await db.delete(teams).where(eq(teams.id, teamId))
+    await db.transaction(async (tx) => {
+      await tx.delete(teamMembers).where(eq(teamMembers.teamId, teamId))
+      await tx.delete(teams).where(eq(teams.id, teamId))
+    })
 
     revalidateEventParticipants(teamInfo.event.id)
     logger.info(
@@ -241,7 +241,11 @@ export async function deleteTeam(teamId: string) {
   }
 }
 
-export async function getEventParticipants(eventId: string) {
+/**
+ * Participants of the event that are not on a team yet, with a flag for
+ * whether they have player metadata (for the team builder).
+ */
+export async function getUnassignedParticipants(eventId: string) {
   // Deliberate: a denial reads as an empty list (see guards.ts).
   if (!(await hasPermission(eventId, "participant:list"))) return []
 
@@ -400,62 +404,5 @@ export async function getCurrentTeamForUser(eventId: string) {
   } catch (error) {
     logger.error({ error }, "Error fetching current team for user:", error)
     throw new Error("Failed to fetch current team for user") // Keep throw for queries if expected
-  }
-}
-
-export async function assignParticipantToTeam(
-  eventId: string,
-  userId: string,
-  teamId: string
-) {
-  try {
-    const allowed = await authorize(eventId, "participant:assign-team")
-    if (!allowed.success) return denial(allowed)
-
-    await db.transaction(async (tx) => {
-      // First, remove the user from every team of this event (and only this
-      // event)
-      const eventTeamIds = tx
-        .select({ id: teams.id })
-        .from(teams)
-        .where(eq(teams.eventId, eventId))
-      await tx
-        .delete(teamMembers)
-        .where(
-          and(
-            eq(teamMembers.userId, userId),
-            inArray(teamMembers.teamId, eventTeamIds)
-          )
-        )
-
-      // Then, add the user to the new team
-      if (teamId) {
-        // Verify that the new team belongs to the correct event
-        const newTeam = await tx.query.teams.findFirst({
-          where: and(eq(teams.id, teamId), eq(teams.eventId, eventId)),
-        })
-
-        if (!newTeam) {
-          throw new InvalidTeamError()
-        }
-
-        await tx.insert(teamMembers).values({
-          teamId,
-          eventId,
-          userId,
-          isLeader: false,
-        })
-      }
-    })
-
-    revalidateEventParticipants(eventId)
-
-    return { success: true as const }
-  } catch (error) {
-    logger.error({ error }, "Error assigning participant to team:", error)
-    if (error instanceof InvalidTeamError) {
-      return failure("Invalid team for this event", "INVALID")
-    }
-    return { success: false, error: "Failed to assign participant to team" }
   }
 }

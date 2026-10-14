@@ -30,6 +30,8 @@ export const RATE_LIMITS = {
   inviteCreate: { limit: 30, windowMs: HOUR },
   /** Redeeming / looking up invite codes, per user or IP (stops code guessing). */
   inviteRedeem: { limit: 30, windowMs: 15 * MINUTE },
+  /** Asking to join an Event that needs approval, per user. */
+  joinRequest: { limit: 20, windowMs: HOUR },
   /** Creating Events, per user. */
   eventCreate: { limit: 10, windowMs: HOUR },
   /** Image uploads (manual and RuneLite submissions), per user. */
