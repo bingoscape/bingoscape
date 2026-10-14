@@ -47,8 +47,9 @@ export type EventActorLookup =
 
 /**
  * Loads one user's standing in an Event with one joined query: the Event
- * creator, the participant row and the Team memberships. The creator counts as
- * admin (normalised in `buildEventActor`, nowhere else). Not cached and not tied
+ * creator, the participant row and the Team memberships. The role is the
+ * participant row; the creator holds an admin row (see `buildEventActor`), there
+ * is no implicit admin for them. Not cached and not tied
  * to the session: `getEventActor` wraps it for the signed-in user, `getApiActor`
  * for the owner of an API key.
  */
@@ -149,8 +150,7 @@ export const getEventActor = cache(
 )
 
 /**
- * The signed-in user's effective role in the Event (the creator counts as
- * admin), or null when signed out, not a member, the Event does not exist or
+ * The signed-in user's role in the Event (their participant row), or null when signed out, not a member, the Event does not exist or
  * the lookup failed. Never throws.
  */
 export async function getEventRole(eventId: string): Promise<EventRole | null> {

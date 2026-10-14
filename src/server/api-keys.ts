@@ -26,8 +26,8 @@ export interface CreatedApiKey {
 }
 
 /**
- * Creates an API key for a user and returns the plaintext once. The legacy
- * plaintext column stays NULL for new keys.
+ * Creates an API key for a user and returns the plaintext once; only its
+ * SHA-256 hash is stored.
  */
 export async function createApiKeyForUser(
   userId: string,

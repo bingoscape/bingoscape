@@ -16,6 +16,7 @@ import { apiKeys, users } from "@/server/db/schema"
 describe("validateApiKey lastUsed", () => {
   const suffix = Math.random().toString(36).slice(2)
   const key = `test-key-${suffix}`
+  const keyHash = hashApiKey(key)
   let userId: string
 
   const request = () =>
@@ -23,7 +24,7 @@ describe("validateApiKey lastUsed", () => {
       headers: { Authorization: `Bearer ${key}` },
     })
   const lastUsed = async () =>
-    (await db.query.apiKeys.findFirst({ where: eq(apiKeys.key, key) }))!
+    (await db.query.apiKeys.findFirst({ where: eq(apiKeys.keyHash, keyHash) }))!
       .lastUsed
 
   beforeEach(async () => {
@@ -32,7 +33,7 @@ describe("validateApiKey lastUsed", () => {
       .values({ name: "key owner", email: `owner-${suffix}@example.test` })
       .returning({ id: users.id })
     userId = user!.id
-    await db.insert(apiKeys).values({ userId, name: "test", key })
+    await db.insert(apiKeys).values({ userId, name: "test", keyHash })
   })
 
   afterEach(async () => {
@@ -49,7 +50,7 @@ describe("validateApiKey lastUsed", () => {
 
   it("does not rewrite lastUsed within the throttle window", async () => {
     const recent = new Date(Date.now() - 10_000)
-    await db.update(apiKeys).set({ lastUsed: recent }).where(eq(apiKeys.key, key))
+    await db.update(apiKeys).set({ lastUsed: recent }).where(eq(apiKeys.keyHash, keyHash))
 
     expect(await validateApiKey(request())).toBe(userId)
 
@@ -58,7 +59,7 @@ describe("validateApiKey lastUsed", () => {
 
   it("rewrites lastUsed once the window has passed", async () => {
     const stale = new Date(Date.now() - LAST_USED_THROTTLE_MS - 5_000)
-    await db.update(apiKeys).set({ lastUsed: stale }).where(eq(apiKeys.key, key))
+    await db.update(apiKeys).set({ lastUsed: stale }).where(eq(apiKeys.keyHash, keyHash))
 
     expect(await validateApiKey(request())).toBe(userId)
 
@@ -85,7 +86,7 @@ describe("validateApiKey lastUsed", () => {
   })
 })
 
-describe("checkApiKey (hashed keys, legacy dual-read, expiry, revocation, scopes)", () => {
+describe("checkApiKey (hashed keys, expiry, revocation, scopes)", () => {
   const suffix = Math.random().toString(36).slice(2)
   let userId: string
 
@@ -114,7 +115,6 @@ describe("checkApiKey (hashed keys, legacy dual-read, expiry, revocation, scopes
 
     expect(created.key).toMatch(/^bsn_/)
     const row = await rowFor(created.id)
-    expect(row.key).toBeNull()
     expect(row.keyHash).toBe(hashApiKey(created.key))
     expect(row.keyHash).toMatch(/^[0-9a-f]{64}$/)
     expect(row.keyPrefix).toBe(created.key.slice(0, 8))
@@ -138,57 +138,10 @@ describe("checkApiKey (hashed keys, legacy dual-read, expiry, revocation, scopes
     })
   })
 
-  it("falls back to the legacy plaintext column and backfills hash and prefix", async () => {
-    const legacyKey = `bsn_legacy-${suffix}`
-    const [row] = await db
-      .insert(apiKeys)
-      .values({ userId, name: "legacy", key: legacyKey })
-      .returning({ id: apiKeys.id })
-    expect((await rowFor(row!.id)).keyHash).toBeNull()
-
-    expect(await validateApiKey(bearer(legacyKey))).toBe(userId)
-
-    const after = await rowFor(row!.id)
-    expect(after.keyHash).toBe(hashApiKey(legacyKey))
-    expect(after.keyPrefix).toBe(legacyKey.slice(0, 8))
-    // The plaintext stays for one release so a rollback keeps working.
-    expect(after.key).toBe(legacyKey)
-    // The second call takes the hash path.
-    expect(await validateApiKey(bearer(legacyKey))).toBe(userId)
-  })
-
-  it("refuses a revoked key on the hash path and the legacy path", async () => {
+  it("refuses a revoked key", async () => {
     const hashed = await createApiKeyForUser(userId, { name: "revoked" })
     await revokeApiKeyForUser(userId, hashed.id)
     expect(await checkApiKey(hashed.key)).toEqual({
-      ok: false,
-      reason: "revoked",
-    })
-
-    const legacyKey = `bsn_legacy-revoked-${suffix}`
-    await db.insert(apiKeys).values({
-      userId,
-      name: "legacy revoked",
-      key: legacyKey,
-      revokedAt: new Date(),
-    })
-    expect(await checkApiKey(legacyKey)).toEqual({
-      ok: false,
-      reason: "revoked",
-    })
-  })
-
-  it("does not resurrect a revoked, hashed key through its legacy plaintext", async () => {
-    // A key migrated by 0040 has both the hash and the plaintext.
-    const legacyKey = `bsn_migrated-${suffix}`
-    await db.insert(apiKeys).values({
-      userId,
-      name: "migrated",
-      key: legacyKey,
-      keyHash: hashApiKey(legacyKey),
-      revokedAt: new Date(),
-    })
-    expect(await checkApiKey(legacyKey)).toMatchObject({
       ok: false,
       reason: "revoked",
     })

@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["eslint", "typescript", "react", "nextjs", "jsx-a11y", "import"],
+  "jsPlugins": ["./tools/oxlint/rbac-plugin.mjs"],
   "categories": {
     "correctness": "off"
   },
@@ -127,6 +128,31 @@
     "jsx-a11y/aria-proptypes": "warn",
     "jsx-a11y/aria-unsupported-elements": "warn",
     "jsx-a11y/role-has-required-aria-props": "warn",
-    "jsx-a11y/role-supports-aria-props": "warn"
-  }
+    "jsx-a11y/role-supports-aria-props": "warn",
+
+    // RBAC guard rails (tools/oxlint/rbac-plugin.mjs).
+    "rbac/no-role-comparison": "error",
+    "rbac/user-relation-columns": "error"
+  },
+  "overrides": [
+    {
+      // The policy is where role strings belong, the schema spells the enum
+      // out (the source of the role types in src/lib/authz/roles.ts), and tests
+      // name roles on purpose: fixtures and expected values. The plugin and the
+      // e2e seed helpers are not application code.
+      "files": [
+        "src/lib/authz/**",
+        "src/server/authz/**",
+        "src/server/db/schema.ts",
+        "**/__tests__/**",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "tests/**",
+        "tools/**"
+      ],
+      "rules": {
+        "rbac/no-role-comparison": "off"
+      }
+    }
+  ]
 }

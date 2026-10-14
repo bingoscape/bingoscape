@@ -23,7 +23,6 @@ jest.mock("@/server/authz/membership", () => ({
   changeRole: jest.fn(),
   removeMember: jest.fn(),
 }))
-jest.mock("@/app/actions/events", () => ({ getUserRole: jest.fn() }))
 jest.mock("nanoid", () => ({ nanoid: () => "newcode123" }))
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
 jest.mock("@/lib/logger", () => ({

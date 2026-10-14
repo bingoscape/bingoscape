@@ -20,13 +20,13 @@ import {
 /**
  * A committed multi-Event fixture for authorization tests on real Postgres.
  *
- * Event 1 (owned by `creator`, whose participant row says plain `participant`
- * on purpose, so the "creator counts as admin" rule is exercised):
+ * Event 1 (owned by `creator`, who holds the admin row every creator has):
  *   admin, management, participant, creator, leaderA, memberA, memberB
  *   Team A (leaderA leads, memberA), Team B (memberB)
  *   one Board, Tile, Goal group, Goal, Goal value, Team A submission
  *
- * Event 2 (owned by `otherCreator`, who has no participant row at all):
+ * Event 2 (owned by `otherCreator`, who has no participant row at all: a data
+ * fault, kept to prove the owner gets no implicit admin role):
  *   `admin` is only a plain participant there; `outsider` is in neither Event.
  *   one Board, Tile and Goal
  */
@@ -114,7 +114,7 @@ export async function createAuthzFixture(): Promise<AuthzFixture> {
   const event2Id = e2!.id
 
   await db.insert(eventParticipants).values([
-    { eventId: event1Id, userId: u.creator, role: "participant" },
+    { eventId: event1Id, userId: u.creator, role: "admin" },
     { eventId: event1Id, userId: u.admin, role: "admin" },
     { eventId: event1Id, userId: u.management, role: "management" },
     { eventId: event1Id, userId: u.participant, role: "participant" },
@@ -133,9 +133,9 @@ export async function createAuthzFixture(): Promise<AuthzFixture> {
     ])
     .returning({ id: teams.id })
   await db.insert(teamMembers).values([
-    { teamId: teamA!.id, userId: u.leaderA, isLeader: true },
-    { teamId: teamA!.id, userId: u.memberA },
-    { teamId: teamB!.id, userId: u.memberB },
+    { teamId: teamA!.id, eventId: event1Id, userId: u.leaderA, isLeader: true },
+    { teamId: teamA!.id, eventId: event1Id, userId: u.memberA },
+    { teamId: teamB!.id, eventId: event1Id, userId: u.memberB },
   ])
 
   const [b1, b2] = await db

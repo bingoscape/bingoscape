@@ -4,6 +4,8 @@ import { useState } from "react"
 import type React from "react"
 import { Shield, UserMinus } from "lucide-react"
 
+import { isAdminRole } from "@/lib/authz/roles"
+
 import {
   removeClanMember,
   removeEventParticipant,
@@ -237,7 +239,7 @@ function RoleForm({
           </SelectContent>
         </Select>
       </div>
-      {isLastAdmin && role !== "admin" ? (
+      {isLastAdmin && !isAdminRole(role) ? (
         <p className="border-warning/50 bg-warning/10 rounded-sm border p-3 text-sm">
           This is the last admin. Saving is refused until another admin exists
           in this {parentNoun}.

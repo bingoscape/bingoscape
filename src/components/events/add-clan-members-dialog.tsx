@@ -15,7 +15,16 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "@/hooks/use-toast"
-import { Loader2, Search, Crown, Shield, User, Users } from "lucide-react"
+import {
+  Loader2,
+  Search,
+  Crown,
+  Shield,
+  User,
+  Users,
+  type LucideIcon,
+} from "lucide-react"
+import { roleBadgeVariant } from "@/lib/authz/role-display"
 import { getClanMembersForEvent } from "@/app/actions/clan"
 import { addClanMembersToEvent } from "@/app/actions/events"
 
@@ -25,6 +34,11 @@ interface ClanMember {
   runescapeName: string | null
   image: string | null
   role: "admin" | "management" | "member" | "guest"
+}
+
+const ROLE_ICONS: Record<string, LucideIcon> = {
+  admin: Crown,
+  management: Shield,
 }
 
 interface AddClanMembersDialogProps {
@@ -172,26 +186,11 @@ export function AddClanMembersDialog({
   }
 
   const getRoleIcon = (role: string) => {
-    switch (role) {
-      case "admin":
-        return <Crown aria-hidden="true" className="h-3 w-3" />
-      case "management":
-        return <Shield aria-hidden="true" className="h-3 w-3" />
-      default:
-        return <User aria-hidden="true" className="h-3 w-3" />
-    }
+    const Icon = ROLE_ICONS[role] ?? User
+    return <Icon aria-hidden="true" className="h-3 w-3" />
   }
 
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "default"
-      case "management":
-        return "secondary"
-      default:
-        return "outline"
-    }
-  }
+  const getRoleBadgeVariant = roleBadgeVariant
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

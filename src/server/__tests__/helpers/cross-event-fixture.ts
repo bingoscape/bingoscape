@@ -1,5 +1,6 @@
 import { eq, inArray } from "drizzle-orm"
 
+import { hashApiKey } from "@/lib/api-key"
 import { db } from "@/server/db"
 import {
   apiKeys,
@@ -103,7 +104,11 @@ export async function createCrossEventFixture(): Promise<CrossEventFixture> {
   const adminApiKey = `bsn_cross_${Math.random().toString(36).slice(2)}`
   await db
     .insert(apiKeys)
-    .values({ userId: u.admin, name: "cross-event", key: adminApiKey })
+    .values({
+      userId: u.admin,
+      name: "cross-event",
+      keyHash: hashApiKey(adminApiKey),
+    })
 
   void event1
   return {
@@ -120,7 +125,7 @@ export async function createCrossEventFixture(): Promise<CrossEventFixture> {
     },
     adminApiKey,
     cleanup: async () => {
-      await db.delete(apiKeys).where(eq(apiKeys.key, adminApiKey))
+      await db.delete(apiKeys).where(eq(apiKeys.keyHash, hashApiKey(adminApiKey)))
       await db.delete(submissions).where(eq(submissions.id, submission!.id))
       await db
         .delete(teamTileSubmissions)

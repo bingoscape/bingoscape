@@ -99,12 +99,6 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
 
   // --- events -------------------------------------------------------------
   [`${A}events.ts#createEvent`]: auth("any signed-in user may create an Event"),
-  [`${A}events.ts#getEvents`]: auth(
-    "lists the Events of the signed-in user (userId must be the caller)"
-  ),
-  [`${A}events.ts#getUserRole`]: auth(
-    "the caller's own role in an Event; null for non-members"
-  ),
   [`${A}events.ts#updateEvent`]: perm("event:update"),
   [`${A}events.ts#deleteEventByAdmin`]: perm("event:delete", "owner only"),
   [`${A}events.ts#assignEventToClan`]: perm(
@@ -166,7 +160,6 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
   [`${A}events.ts#updateEventRule`]: perm("event:manage-rules"),
   [`${A}events.ts#deleteEventRule`]: perm("event:manage-rules"),
   [`${A}events.ts#getMiniBoardTiles`]: read("Board read access"),
-  [`${A}event-summary.ts#getEventSummary`]: read("Event read policy"),
 
   // --- clans --------------------------------------------------------------
   [`${A}clan.ts#createClan`]: auth("any signed-in user may create a Clan"),

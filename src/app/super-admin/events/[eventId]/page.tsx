@@ -37,6 +37,7 @@ import {
 } from "@/components/super-admin/membership-actions"
 import { PageHeader } from "@/components/super-admin/page-header"
 import { Stat } from "@/components/super-admin/stat"
+import { isLastAdmin } from "@/lib/authz/roles"
 import { UserAvatar } from "@/components/super-admin/user-avatar"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -286,7 +287,7 @@ async function ParticipantsTab({
               confirmText: userConfirmText(participant.user),
               role: participant.role,
             }}
-            isLastAdmin={participant.role === "admin" && data.adminCount === 1}
+            isLastAdmin={isLastAdmin(participant.role, data.adminCount)}
           />
         )}
         basePath={basePath}

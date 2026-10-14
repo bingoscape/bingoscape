@@ -38,13 +38,4 @@ describe("read helpers are not endpoints", () => {
       expect(source).toMatch(/import "server-only"/)
     }
   )
-
-  it("the client-callable read entry points authorize and stay thin", () => {
-    const entry = fs.readFileSync(
-      path.join(SRC, "app/actions/event-summary.ts"),
-      "utf8"
-    )
-    expect(entry).toMatch(USE_SERVER)
-    expect(entry).toMatch(/getEventById/)
-  })
 })
