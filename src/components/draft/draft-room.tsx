@@ -1,23 +1,24 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 import { forcePick, makePick } from "@/app/actions/draft"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useDraftStream } from "@/hooks/use-draft-stream"
 import { toast } from "@/hooks/use-toast"
-import type { DraftSnapshot } from "@/server/draft/queries"
-import type { DraftPoolState } from "@/lib/draft/types"
+import type { DraftPoolState, DraftSnapshot } from "@/lib/draft/types"
 import { isDraftTab, onTurnSlot } from "@/lib/draft/view"
 import { cn } from "@/lib/utils"
+import { ConnectionIndicator } from "./connection-indicator"
 import { OnTheClockBanner } from "./on-the-clock-banner"
 import { OrganizerControls } from "./organizer-controls"
 import { PickConfirmDialog } from "./pick-confirm-dialog"
 import { PickLog } from "./pick-log"
 import { PlayerPool } from "./player-pool"
 import { TeamRosterColumn } from "./team-roster-column"
+import { TurnCueControls, useTurnCues } from "./turn-cues"
 import { useDraftParams } from "./use-draft-params"
-import { useDraftPolling } from "./use-draft-polling"
+import { useFreshPicks } from "./use-fresh-picks"
 
 interface DraftRoomProps {
   eventId: string
@@ -29,11 +30,23 @@ interface DraftRoomProps {
   canPick: boolean
 }
 
+/** A pick the viewer just made that the server has not confirmed yet. */
+interface PendingPick {
+  poolEntryId: string
+  userId: string | null
+  rating: number | null
+  slotId: string
+  /** `lastSeq` when it was made: any newer event settles it one way or the other. */
+  baseSeq: number
+}
+
 /**
- * The draft room. Everything it shows comes from the server rendered
- * `snapshot`; `useDraftPolling` re-renders the page (`router.refresh()`) when
- * the draft changes. Desktop shows pool, teams and log side by side; below
- * `lg` they are tabs (`?tab=pool|teams|log`).
+ * The draft room. It starts from the server rendered `snapshot` and
+ * `useDraftStream` keeps it live (stream, polling as the fallback). A pick is
+ * optimistic: the player moves to the roster as a pending row at once and
+ * returns to the pool with a toast if the server refuses. Desktop shows pool,
+ * teams and log side by side; below `lg` they are tabs
+ * (`?tab=pool|teams|log`).
  */
 export function DraftRoom({
   eventId,
@@ -42,23 +55,24 @@ export function DraftRoom({
   canManage,
   canPick,
 }: DraftRoomProps) {
-  const router = useRouter()
-  const { state } = snapshot
+  const { live, connection, sync, active } = useDraftStream({
+    eventId,
+    snapshot,
+  })
+  const { state } = live
   const params = useDraftParams()
   const players = useMemo(
-    () => new Map(snapshot.players.map((p) => [p.userId, p])),
-    [snapshot.players]
+    () => new Map(live.players.map((p) => [p.userId, p])),
+    [live.players]
   )
   const [pending, setPending] = useState<DraftPoolState | null>(null)
+  const [ghost, setGhost] = useState<PendingPick | null>(null)
   const [busy, setBusy] = useState(false)
-
-  useDraftPolling({
-    eventId,
-    lastSeq: state.lastSeq,
-    enabled:
-      state.status !== "cancelled" &&
-      !(state.status === "complete" && state.applied),
-  })
+  const stateRef = useRef(state)
+  useEffect(() => {
+    stateRef.current = state
+  }, [state])
+  const freshPicks = useFreshPicks(state.picks)
 
   const onTurn = onTurnSlot(state)
   const running = state.status === "in_progress"
@@ -71,35 +85,81 @@ export function DraftRoom({
       ? { label: "Pick for team", forced: true }
       : null
 
+  useTurnCues({ myTurn, teamName: onTurn?.teamName ?? "Your team" })
+
+  // The pending pick shows only while nothing else happened since: once the
+  // server event (or anyone else's) arrives the real state takes over.
+  const ghostEntry =
+    ghost &&
+    ghost.baseSeq === state.lastSeq &&
+    state.pool.find((e) => e.poolEntryId === ghost.poolEntryId)?.status ===
+      "available"
+      ? ghost
+      : null
+
   const confirmPick = async () => {
-    if (!pending || !pickAction) return
+    if (!pending || !pickAction || !onTurn || busy) return
+    const entry = pending
+    setPending(null)
     setBusy(true)
+    setGhost({
+      poolEntryId: entry.poolEntryId,
+      userId: entry.userId,
+      rating: entry.rating,
+      slotId: onTurn.slotId,
+      baseSeq: state.lastSeq,
+    })
     try {
       const input = {
-        draftId: snapshot.draftId,
-        poolEntryId: pending.poolEntryId,
+        draftId: live.draftId,
+        poolEntryId: entry.poolEntryId,
       }
       const result = pickAction.forced
         ? await forcePick(input)
         : await makePick(input)
-      if (result.success) {
-        setPending(null)
-        router.refresh()
-      } else {
+      // Fetch what happened right away; the stream may be a moment behind.
+      const events = await sync()
+      if (!result.success) {
+        setGhost(null)
+        const taker = events.find(
+          (e) =>
+            e.type === "pick" && e.payload.poolEntryId === entry.poolEntryId
+        )
+        const takenSlot =
+          taker?.type === "pick"
+            ? taker.payload.slotId
+            : stateRef.current.picks.find(
+                (p) => p.poolEntryId === entry.poolEntryId
+              )?.slotId
+        const takenBy = takenSlot
+          ? stateRef.current.slots.find((s) => s.slotId === takenSlot)?.teamName
+          : undefined
         toast({
-          title: result.error ?? "The pick failed",
+          title: takenBy
+            ? `Taken by ${takenBy}`
+            : (result.error ?? "The pick failed"),
           variant: "destructive",
         })
-        // Someone else's pick or a status change got there first: show it.
-        router.refresh()
-        setPending(null)
       }
     } catch {
+      setGhost(null)
       toast({ title: "The pick failed", variant: "destructive" })
     } finally {
       setBusy(false)
     }
   }
+
+  // Why a viewer who has a role in the draft cannot pick right now.
+  const disabledReason =
+    !pickAction && (canPick || canManage)
+      ? running
+        ? "Not your turn"
+        : state.status === "paused"
+          ? "The draft is paused"
+          : state.status === "setup" || state.status === "open"
+            ? "The draft has not started"
+            : null
+      : null
 
   const draftedCount = state.picks.length
   const panel = (name: "pool" | "teams" | "log") =>
@@ -107,6 +167,16 @@ export function DraftRoom({
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {canPick && active && <TurnCueControls />}
+        {active && <ConnectionIndicator connection={connection} />}
+      </div>
+
+      {/* Assertive on purpose: being on the clock must interrupt. */}
+      <div role="alert" className="sr-only">
+        {myTurn ? "It is your turn to pick." : ""}
+      </div>
+
       <OnTheClockBanner
         state={state}
         players={players}
@@ -115,7 +185,7 @@ export function DraftRoom({
 
       {canManage && (
         <OrganizerControls
-          draftId={snapshot.draftId}
+          draftId={live.draftId}
           state={state}
           teamCount={state.slots.length}
           draftedCount={draftedCount}
@@ -149,15 +219,27 @@ export function DraftRoom({
             Player pool
           </h2>
           <PlayerPool
-            pool={state.pool}
+            pool={
+              ghostEntry
+                ? state.pool.filter(
+                    (e) => e.poolEntryId !== ghostEntry.poolEntryId
+                  )
+                : state.pool
+            }
             players={players}
             filter={{ q: params.q, skill: params.skill, sort: params.sort }}
             onFilterChange={(key, value) => params.setParam(key, value || null)}
             pick={
               pickAction
-                ? { label: pickAction.label, onPick: setPending }
+                ? {
+                    label: pickAction.label,
+                    onPick: (entry) => {
+                      if (!busy) setPending(entry)
+                    },
+                  }
                 : undefined
             }
+            disabledReason={disabledReason ?? undefined}
           />
           {state.status === "setup" && (
             <p className="text-muted-foreground text-sm">
@@ -175,6 +257,10 @@ export function DraftRoom({
                 slot={slot}
                 players={players}
                 onTheClock={running && onTurn?.slotId === slot.slotId}
+                ghost={
+                  ghostEntry?.slotId === slot.slotId ? ghostEntry : undefined
+                }
+                freshPicks={freshPicks}
               />
             ))}
           </div>
@@ -192,7 +278,7 @@ export function DraftRoom({
         players={players}
         teamName={onTurn?.teamName ?? "the team"}
         forced={pickAction?.forced ?? false}
-        pending={busy}
+        pending={false}
         onConfirm={confirmPick}
         onCancel={() => setPending(null)}
       />

@@ -428,7 +428,11 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
   },
   [`${R}events/[id]/draft/state/route.ts#GET`]: perm(
     "draft:view",
-    "Event members only; 401 / 404 / 403 answered by the route itself (src/proxy.ts does not protect /api)"
+    "enforced by authorizeDraftView (src/server/draft/http.ts): Event members only; 401 / 404 / 403 answered by the route itself (src/proxy.ts does not protect /api)"
+  ),
+  [`${R}events/[id]/draft/stream/route.ts#GET`]: perm(
+    "draft:view",
+    "enforced by authorizeDraftView (src/server/draft/http.ts): Event members only; 401 / 404 / 403 answered by the route itself (src/proxy.ts does not protect /api); streams end after about 5 minutes so the client is authorized again"
   ),
   [`${R}events/invite/[inviteCode]/route.ts#GET`]: pub(
     "the invite code is the capability; returns the join card of the Event"

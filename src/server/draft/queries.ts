@@ -8,6 +8,7 @@ import type {
   DraftEventType,
   DraftLogEvent,
   DraftPlayerInfo,
+  DraftSnapshot,
   DraftState,
 } from "@/lib/draft/types"
 import { db } from "@/server/db"
@@ -91,14 +92,7 @@ export async function getDraftStamp(
   }
 }
 
-export interface DraftSnapshot {
-  draftId: string
-  eventId: string
-  version: number
-  state: DraftState
-  /** Names and avatars of everyone in the state (captains, pool, pickers). */
-  players: DraftPlayerInfo[]
-}
+export type { DraftSnapshot }
 
 /**
  * The whole draft as the room renders it, built from the tables. Ratings are
@@ -110,34 +104,45 @@ export async function loadDraftSnapshot(
   const draft = await getActiveDraft(eventId)
   if (!draft) return null
 
-  const [slotRows, poolRows, pickRows, seqRow, startedRow] = await Promise.all([
-    db
-      .select()
-      .from(draftTeamSlots)
-      .where(eq(draftTeamSlots.draftId, draft.id))
-      .orderBy(asc(draftTeamSlots.position)),
-    db
-      .select()
-      .from(draftPoolEntries)
-      .where(eq(draftPoolEntries.draftId, draft.id)),
-    db
-      .select()
-      .from(draftPicks)
-      .where(eq(draftPicks.draftId, draft.id))
-      .orderBy(asc(draftPicks.pickNo)),
-    db
-      .select({ seq: max(draftEvents.seq) })
-      .from(draftEvents)
-      .where(eq(draftEvents.draftId, draft.id)),
-    db
-      .select({ payload: draftEvents.payload })
-      .from(draftEvents)
-      .where(
-        and(eq(draftEvents.draftId, draft.id), eq(draftEvents.type, "started"))
-      )
-      .orderBy(asc(draftEvents.seq))
-      .limit(1),
-  ])
+  // One repeatable-read transaction: the rows and `lastSeq` describe the same
+  // moment, so a client that subscribes with `?since=lastSeq` neither misses
+  // nor repeats an event.
+  const [slotRows, poolRows, pickRows, seqRow, startedRow] =
+    await db.transaction(
+      async (tx) => {
+        const slots = await tx
+          .select()
+          .from(draftTeamSlots)
+          .where(eq(draftTeamSlots.draftId, draft.id))
+          .orderBy(asc(draftTeamSlots.position))
+        const pool = await tx
+          .select()
+          .from(draftPoolEntries)
+          .where(eq(draftPoolEntries.draftId, draft.id))
+        const picks = await tx
+          .select()
+          .from(draftPicks)
+          .where(eq(draftPicks.draftId, draft.id))
+          .orderBy(asc(draftPicks.pickNo))
+        const seq = await tx
+          .select({ seq: max(draftEvents.seq) })
+          .from(draftEvents)
+          .where(eq(draftEvents.draftId, draft.id))
+        const started = await tx
+          .select({ payload: draftEvents.payload })
+          .from(draftEvents)
+          .where(
+            and(
+              eq(draftEvents.draftId, draft.id),
+              eq(draftEvents.type, "started")
+            )
+          )
+          .orderBy(asc(draftEvents.seq))
+          .limit(1)
+        return [slots, pool, picks, seq, started] as const
+      },
+      { isolationLevel: "repeatable read", accessMode: "read only" }
+    )
 
   const userIdOfEntry = new Map(poolRows.map((e) => [e.id, e.userId]))
   const permutation = (
@@ -239,16 +244,22 @@ export async function loadPlayers(
   }))
 }
 
-/** Log events after `since`, oldest first, in the shape the reducer takes. */
+/**
+ * Log events after `since`, oldest first, in the shape the reducer takes.
+ * `limit` caps the page (the stream asks for one more than it will replay to
+ * learn that a client is too far behind).
+ */
 export async function loadDraftEventsSince(
   draftId: string,
-  since: number
+  since: number,
+  limit?: number
 ): Promise<DraftLogEvent[]> {
-  const rows = await db
+  const query = db
     .select()
     .from(draftEvents)
     .where(and(eq(draftEvents.draftId, draftId), gt(draftEvents.seq, since)))
     .orderBy(asc(draftEvents.seq))
+  const rows = await (limit === undefined ? query : query.limit(limit))
   return rows.map(
     (row) =>
       ({

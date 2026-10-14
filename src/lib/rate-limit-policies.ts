@@ -43,6 +43,11 @@ export const RATE_LIMITS = {
    * turn; this only stops a script from hammering the row lock.
    */
   draftPick: { limit: 60, windowMs: MINUTE },
+  /**
+   * Opening a draft stream (GET .../draft/stream), per user. A stream lives
+   * about 5 minutes, so this only stops a reconnect loop.
+   */
+  draftStream: { limit: 30, windowMs: MINUTE },
 } as const satisfies Record<string, RateLimitPolicy>
 
 export type RateLimitPolicyName = keyof typeof RATE_LIMITS

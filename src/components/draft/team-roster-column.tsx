@@ -15,6 +15,10 @@ interface TeamRosterColumnProps {
   slot: DraftSlotState
   players: ReadonlyMap<string, DraftPlayerInfo>
   onTheClock: boolean
+  /** A pick this viewer just made that the server has not confirmed yet. */
+  ghost?: { userId: string | null; rating: number | null }
+  /** Pick numbers that just arrived: highlighted for a moment. */
+  freshPicks?: ReadonlySet<number>
 }
 
 /** One team: its captain, the players picked so far and the places left. */
@@ -23,9 +27,11 @@ export function TeamRosterColumn({
   slot,
   players,
   onTheClock,
+  ghost,
+  freshPicks,
 }: TeamRosterColumnProps) {
   const roster = rosterOf(state, slot)
-  const open = Math.max(0, slot.maxTeamSize - roster.length)
+  const open = Math.max(0, slot.maxTeamSize - roster.length - (ghost ? 1 : 0))
 
   return (
     <section
@@ -43,7 +49,19 @@ export function TeamRosterColumn({
         {roster.map((entry) => (
           <li
             key={entry.pickNo ?? "captain"}
-            className="flex items-center justify-between gap-2 p-2"
+            data-fresh={
+              entry.pickNo !== null && freshPicks?.has(entry.pickNo)
+                ? "true"
+                : undefined
+            }
+            className={cn(
+              "flex items-center justify-between gap-2 p-2",
+              // The pick slides in; with reduced motion it just appears and
+              // keeps the same highlight.
+              entry.pickNo !== null &&
+                freshPicks?.has(entry.pickNo) &&
+                "bg-primary/20 animate-in fade-in slide-in-from-left-4 motion-reduce:animate-none"
+            )}
           >
             <div className="flex min-w-0 items-center gap-2">
               {entry.captain ? (
@@ -67,6 +85,20 @@ export function TeamRosterColumn({
             </div>
           </li>
         ))}
+        {ghost && (
+          <li
+            aria-busy="true"
+            className="bg-primary/10 flex items-center justify-between gap-2 border-l-2 border-dashed p-2"
+          >
+            <PlayerName
+              info={ghost.userId ? players.get(ghost.userId) : undefined}
+            />
+            <div className="flex shrink-0 items-center gap-1">
+              <Badge variant="outline">Picking…</Badge>
+              <RatingBadge rating={ghost.rating} />
+            </div>
+          </li>
+        )}
         {Array.from({ length: open }, (_, i) => (
           <li
             key={`open-${i}`}

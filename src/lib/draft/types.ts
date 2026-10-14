@@ -160,3 +160,18 @@ export interface DraftPlayerInfo {
   image: string | null
   skillLevel: string | null
 }
+
+/**
+ * The whole draft as the room renders it: the state plus the user data of
+ * everyone in it. The Server Component builds it from the tables
+ * (`loadDraftSnapshot`), the state endpoint and the stream's `reset` event
+ * carry it, and the client keeps it current with `liveReducer`.
+ */
+export interface DraftSnapshot {
+  draftId: string
+  eventId: string
+  version: number
+  state: DraftState
+  /** Names and avatars of everyone in the state (captains, pool, pickers). */
+  players: DraftPlayerInfo[]
+}

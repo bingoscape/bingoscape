@@ -534,6 +534,36 @@ location / {
 
 Then visit `https://your-domain.com` and confirm the certificate is valid.
 
+### Live team draft (Server-Sent Events)
+
+The draft room (`/events/[id]/draft`) receives picks over a Server-Sent Events stream, `GET /api/events/<event-id>/draft/stream`. A proxy that buffers responses or closes idle connections breaks it (the page then falls back to polling every 3 s and shows "Polling"). Add a dedicated location **above** `location /`:
+
+```nginx
+location ~ ^/api/events/[^/]+/draft/stream$ {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_buffering off;
+    proxy_cache off;
+    proxy_read_timeout 1h;
+}
+```
+
+The stream route also sends `X-Accel-Buffering: no` and `Cache-Control: no-cache, no-transform`, and the server sends a `:` heartbeat every 15 s. Each stream is closed by the server after about 5 minutes (the browser reconnects and is authorized again) and on `SIGTERM`, so a deploy only costs a reconnect: the client resumes from the last event it saw (`Last-Event-ID`).
+
+**Verify through the proxy** (use a session cookie of an Event member, copied from the browser; `since=0` replays the log first):
+
+```bash
+curl -N -H "Cookie: <session cookie>"   "https://your-domain.com/api/events/<event-id>/draft/stream?since=0"
+```
+
+You should see `retry: 2000`, the replayed `event: draft` frames immediately and a `: heartbeat` line every 15 s, each as it happens. If everything only appears in a burst after a long wait, something still buffers: check the location above matched (`sudo nginx -T | grep -n draft/stream`). If compression is the culprit, set `compress: false` in `next.config.mjs` (the route sends `no-transform`, which Next's compression honours, so this should not be needed); nginx can compress instead.
+
+**Database connections.** The stream uses one extra, permanent connection per app process for `LISTEN draft_events` (postgres-js `sql.listen()`; it reconnects by itself). Check that `max_connections` and the app's pool leave room for it. `LISTEN` needs a session: it does **not** work through PgBouncer in transaction pooling mode, so point `DATABASE_URL` at Postgres directly (or at a session-mode pooler). The stream and the draft's `pg_notify` need a long-lived Node process, which the Docker deployment is (not serverless).
+
 ---
 
 ## Database Management

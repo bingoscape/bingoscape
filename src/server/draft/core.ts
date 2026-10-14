@@ -25,6 +25,7 @@ import {
 } from "@/lib/draft/order"
 import { DRAFT_RATING_SOURCE, rateDraftPool } from "@/lib/draft/rating"
 import type { DraftSettingsInput } from "@/lib/draft/setup"
+import { DRAFT_NOTIFY_CHANNEL, type DraftNotifyPayload } from "@/lib/draft/sse"
 import type {
   DraftEventPayloads,
   DraftEventType,
@@ -138,6 +139,13 @@ export async function appendDraftEvent<T extends DraftEventType>(
     })
     .returning({ seq: draftEvents.seq })
   if (!row) throw new Error("draft_event insert returned no row")
+  // Wake the live streams. Postgres delivers this only if the transaction
+  // commits, and only `{ draftId, seq }` travels (the payload limit is 8 KB):
+  // the streams read the log row themselves.
+  const notice: DraftNotifyPayload = { draftId, seq: row.seq }
+  await tx.execute(
+    sql`select pg_notify(${DRAFT_NOTIFY_CHANNEL}, ${JSON.stringify(notice)})`
+  )
   return row.seq
 }
 

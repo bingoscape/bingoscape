@@ -970,6 +970,8 @@ const EXEMPT: Record<string, string> = {
     "draft:view: the attacker is a legitimate participant of Event 2; whether they may pick (only the on-turn captain) is covered in draft.test.ts and draft-concurrency.test.ts",
   [`${R}events/[id]/draft/state/route.ts#GET`]:
     "draft:view: the attacker is a legitimate participant of Event 2, so the read is allowed; non-members get 403 (draft-state.test.ts)",
+  [`${R}events/[id]/draft/stream/route.ts#GET`]:
+    "draft:view: the attacker is a legitimate participant of Event 2, so the stream opens; non-members get 403 (draft-stream.test.ts)",
   [key("bingo.ts", "submitImage")]:
     "the case above stops at the missing image; the member / manager rules of the full path are covered in blind-board-submit.test.ts and bingo-authz.test.ts",
 }

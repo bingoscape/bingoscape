@@ -9,6 +9,16 @@ interface PickLogProps {
 
 /** Every pick so far, newest first. */
 export function PickLog({ state, players }: PickLogProps) {
+  // The live region stays mounted, so the first pick is announced as well as
+  // the later ones.
+  return (
+    <div aria-live="polite" aria-relevant="additions text">
+      <PickLogList state={state} players={players} />
+    </div>
+  )
+}
+
+function PickLogList({ state, players }: PickLogProps) {
   const slots = new Map(state.slots.map((s) => [s.slotId, s]))
   const picks = [...state.picks].reverse()
 

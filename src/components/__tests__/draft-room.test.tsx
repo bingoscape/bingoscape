@@ -1,9 +1,16 @@
-import { fireEvent, render, screen, within } from "@testing-library/react"
+import { act, fireEvent, render, screen, within } from "@testing-library/react"
 
+import { makePick } from "@/app/actions/draft"
 import { DraftRoom } from "@/components/draft/draft-room"
-import { replayDraft } from "@/lib/draft/reducer"
-import type { DraftLogEvent, DraftPlayerInfo } from "@/lib/draft/types"
-import type { DraftSnapshot } from "@/server/draft/queries"
+import { FakeEventSource } from "@/hooks/__tests__/fake-event-source"
+import { toast } from "@/hooks/use-toast"
+import {
+  created,
+  pickEvent,
+  snapshotOf,
+  started,
+} from "@/lib/draft/__tests__/draft-fixtures"
+import type { DraftLogEvent } from "@/lib/draft/types"
 
 jest.mock("@/app/actions/draft", () => ({
   applyDraft: jest.fn(),
@@ -15,75 +22,29 @@ jest.mock("@/app/actions/draft", () => ({
   startDraft: jest.fn(),
   undoPick: jest.fn(),
 }))
-jest.mock("@/components/draft/use-draft-polling", () => ({
-  useDraftPolling: jest.fn(),
-}))
+jest.mock("@/hooks/use-toast", () => ({ toast: jest.fn() }))
 
-const AT = "2026-01-01T00:00:00.000Z"
+const makePickMock = makePick as jest.Mock
+const fetchMock = jest.fn()
 
-const created: DraftLogEvent = {
-  seq: 1,
-  type: "created",
-  actorUserId: "manager",
-  at: AT,
-  payload: {
-    orderType: "snake",
-    rounds: 2,
-    pickTimerSeconds: null,
-    onTimeout: "auto_pick",
-    autoPickRule: "best_rated",
-    slots: [0, 1].map((i) => ({
-      slotId: `s${i}`,
-      position: i,
-      captainUserId: `c${i}`,
-      teamName: `Team ${i + 1}`,
-      maxTeamSize: 3,
-    })),
-  },
-}
-const started: DraftLogEvent = {
-  seq: 2,
-  type: "started",
-  actorUserId: "manager",
-  at: AT,
-  payload: {
-    seed: 1,
-    permutation: [0, 1],
-    slots: [0, 1].map((i) => ({ slotId: `s${i}`, teamId: `t${i}` })),
-    pool: [0, 1, 2, 3].map((i) => ({
-      poolEntryId: `e${i}`,
-      userId: `p${i}`,
-      rating: i === 3 ? null : 0.9 - i * 0.2,
-      ratingSource: "team_balancing_v1",
-    })),
-  },
-}
-
-const info = (userId: string, name: string): DraftPlayerInfo => ({
-  userId,
-  name,
-  runescapeName: null,
-  image: null,
-  skillLevel: null,
+beforeEach(() => {
+  FakeEventSource.install()
+  global.fetch = fetchMock as unknown as typeof fetch
+  fetchMock.mockReset()
+  fetchMock.mockResolvedValue({
+    ok: true,
+    status: 304,
+    headers: { get: () => null },
+  })
+  makePickMock.mockReset()
+  ;(toast as jest.Mock).mockClear()
 })
 
-function snapshot(events: DraftLogEvent[]): DraftSnapshot {
-  return {
-    draftId: "draft-1",
-    eventId: "event-1",
-    version: 1,
-    state: replayDraft(events),
-    players: [
-      info("c0", "Captain One"),
-      info("c1", "Captain Two"),
-      info("p0", "Alice"),
-      info("p1", "Bob"),
-      info("p2", "Carol"),
-      info("p3", "Dave"),
-      info("manager", "Manager"),
-    ],
-  }
-}
+afterEach(() => {
+  FakeEventSource.uninstall()
+})
+
+const AT = "2026-01-01T00:00:00.000Z"
 
 function renderRoom(
   events: DraftLogEvent[],
@@ -92,13 +53,16 @@ function renderRoom(
   return render(
     <DraftRoom
       eventId="event-1"
-      snapshot={snapshot(events)}
+      snapshot={snapshotOf(events)}
       viewerUserId={viewer.id}
       canManage={viewer.canManage ?? false}
       canPick={viewer.canPick ?? false}
     />
   )
 }
+
+const push = (event: DraftLogEvent) =>
+  act(() => FakeEventSource.last.emit("draft", event))
 
 describe("DraftRoom", () => {
   it("tells the on-turn captain it is their turn and lets them pick", () => {
@@ -112,12 +76,13 @@ describe("DraftRoom", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("shows a captain who is not on turn who is, without pick buttons", () => {
+  it("shows a captain who is not on turn who is, with the pick buttons disabled", () => {
     renderRoom([created, started], { id: "c1", canPick: true })
     expect(screen.getByText("On the clock: Team 1")).toBeInTheDocument()
-    expect(
-      screen.queryByRole("button", { name: "Pick" })
-    ).not.toBeInTheDocument()
+    // The pick buttons are there, but disabled.
+    for (const button of screen.getAllByRole("button", { name: "Pick" })) {
+      expect(button).toHaveAttribute("aria-disabled", "true")
+    }
   })
 
   it("gives a plain member the view only", () => {
@@ -197,29 +162,7 @@ describe("DraftRoom", () => {
   })
 
   it("lists the teams with their captains and the pick log", () => {
-    renderRoom(
-      [
-        created,
-        started,
-        {
-          seq: 3,
-          type: "pick",
-          actorUserId: "c0",
-          at: AT,
-          payload: {
-            pickNo: 1,
-            round: 1,
-            slotId: "s0",
-            poolEntryId: "e0",
-            userId: "p0",
-            auto: false,
-            forced: false,
-            reason: null,
-          },
-        },
-      ],
-      { id: "p1" }
-    )
+    renderRoom([created, started, pickEvent(1)], { id: "p1" })
     expect(
       screen.getByRole("region", { name: "Team Team 1" })
     ).toBeInTheDocument()
@@ -231,5 +174,252 @@ describe("DraftRoom", () => {
     // Alice left the pool.
     const pool = screen.getByRole("region", { name: "Player pool" })
     expect(within(pool).queryByText("Alice")).not.toBeInTheDocument()
+  })
+})
+
+describe("DraftRoom live updates", () => {
+  it("shows the connection state", () => {
+    renderRoom([created, started], { id: "p0" })
+    expect(
+      screen.getByRole("button", { name: /Connection: Connecting/ })
+    ).toBeInTheDocument()
+    act(() => FakeEventSource.last.open())
+    const indicator = screen.getByRole("button", { name: /Connection: Live/ })
+    expect(within(indicator).getByText("Live")).toBeInTheDocument()
+    act(() => FakeEventSource.last.fail())
+    expect(
+      screen.getByRole("button", { name: /Connection: Reconnecting/ })
+    ).toBeInTheDocument()
+  })
+
+  it("shows a pick a watcher did not make, without a reload", () => {
+    renderRoom([created, started], { id: "p1" })
+    act(() => FakeEventSource.last.open())
+    const pool = screen.getByRole("region", { name: "Player pool" })
+    expect(within(pool).getByText("Alice")).toBeInTheDocument()
+
+    push(pickEvent(1))
+
+    expect(within(pool).queryByText("Alice")).not.toBeInTheDocument()
+    const log = screen.getByRole("list", { name: "Pick log" })
+    expect(within(log).getByText(/picked Alice/)).toBeInTheDocument()
+    expect(screen.getByText("On the clock: Team 2")).toBeInTheDocument()
+    // The new roster row is highlighted for a moment.
+    const roster = screen.getByRole("region", { name: "Team Team 1" })
+    expect(roster.querySelector("[data-fresh='true']")).not.toBeNull()
+  })
+
+  it("announces the pick log politely and the own turn assertively", () => {
+    renderRoom([created, started, pickEvent(1)], { id: "c1", canPick: true })
+    expect(
+      screen.getByRole("list", { name: "Pick log" }).closest("[aria-live]")
+    ).toHaveAttribute("aria-live", "polite")
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "It is your turn to pick."
+    )
+    expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite")
+  })
+
+  it("cues the captain when the turn comes round", () => {
+    renderRoom([created, started], { id: "c1", canPick: true })
+    act(() => FakeEventSource.last.open())
+    expect(screen.getByRole("alert")).toBeEmptyDOMElement()
+    const original = document.title
+
+    push(pickEvent(1))
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "It is your turn to pick."
+    )
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Your pick!" })
+    )
+    expect(document.title).toBe(`Your pick! ${original}`.trim())
+
+    // Team 2 also has pick 3 (snake); then it is Team 1 again.
+    push(pickEvent(2))
+    push(pickEvent(3))
+    expect(document.title).toBe(original)
+  })
+
+  it("does not cue a captain who opens the page on their turn", () => {
+    renderRoom([created, started], { id: "c0", canPick: true })
+    expect(toast).not.toHaveBeenCalled()
+  })
+
+  it("shows Pick as disabled with the reason when it is not your turn", () => {
+    renderRoom([created, started], { id: "c1", canPick: true })
+    const pool = screen.getByRole("region", { name: "Player pool" })
+    const buttons = within(pool).getAllByRole("button", { name: "Pick" })
+    expect(buttons).toHaveLength(4)
+    for (const button of buttons) {
+      expect(button).toHaveAttribute("aria-disabled", "true")
+      expect(button).toHaveAttribute("title", "Not your turn")
+    }
+    expect(within(pool).getByText(/Not your turn:/)).toBeInTheDocument()
+    // Clicking one does nothing.
+    fireEvent.click(buttons[0]!)
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
+  it("leaves a plain member's rows alone", () => {
+    renderRoom([created, started], { id: "p0" })
+    const pool = screen.getByRole("region", { name: "Player pool" })
+    expect(within(pool).queryByRole("button")).not.toBeInTheDocument()
+    expect(within(pool).queryByText(/Not your turn/)).not.toBeInTheDocument()
+  })
+
+  it("picks from the keyboard: / searches, arrows move, Enter confirms", () => {
+    renderRoom([created, started], { id: "c0", canPick: true })
+    fireEvent.keyDown(document.body, { key: "/" })
+    expect(
+      screen.getByRole("textbox", { name: "Search players" })
+    ).toHaveFocus()
+
+    const rows = within(
+      screen.getByRole("list", { name: "Available players" })
+    ).getAllByRole("listitem")
+    // Roving tabindex: one row is in the tab order.
+    expect(rows.map((r) => r.tabIndex)).toEqual([0, -1, -1, -1])
+    rows[0]!.focus()
+    fireEvent.keyDown(rows[0]!, { key: "ArrowDown" })
+    expect(rows[1]).toHaveFocus()
+    expect(rows.map((r) => r.tabIndex)).toEqual([-1, 0, -1, -1])
+    fireEvent.keyDown(rows[1]!, { key: "End" })
+    expect(rows[3]).toHaveFocus()
+    fireEvent.keyDown(rows[3]!, { key: "ArrowUp" })
+    expect(rows[2]).toHaveFocus()
+
+    fireEvent.keyDown(rows[2]!, { key: "Enter" })
+    expect(
+      within(screen.getByRole("dialog")).getByText("Carol")
+    ).toBeInTheDocument()
+    // Escape cancels.
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" })
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
+  it("does not steal / while typing in a field", () => {
+    renderRoom([created, started], { id: "c0", canPick: true })
+    const search = screen.getByRole("textbox", { name: "Search players" })
+    const rows = within(
+      screen.getByRole("list", { name: "Available players" })
+    ).getAllByRole("listitem")
+    rows[0]!.focus()
+    fireEvent.keyDown(search, { key: "/" })
+    expect(rows[0]).toHaveFocus()
+  })
+})
+
+describe("DraftRoom optimistic pick", () => {
+  const confirm = async () => {
+    fireEvent.click(screen.getAllByRole("button", { name: "Pick" })[0]!)
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Confirm pick" }))
+    })
+  }
+
+  it("moves the player into the roster as a pending row until the server confirms", async () => {
+    let resolvePick!: (value: { success: boolean }) => void
+    makePickMock.mockReturnValue(
+      new Promise((resolve) => (resolvePick = resolve))
+    )
+    // The sync after the action finds the pick.
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({
+        draft: { id: "draft-1", status: "in_progress", version: 2 },
+        seq: 3,
+        events: [pickEvent(1)],
+      }),
+    })
+    renderRoom([created, started], { id: "c0", canPick: true })
+    await confirm()
+
+    const roster = screen.getByRole("region", { name: "Team Team 1" })
+    expect(within(roster).getByText("Picking…")).toBeInTheDocument()
+    expect(within(roster).getByText("Alice")).toBeInTheDocument()
+    const pool = screen.getByRole("region", { name: "Player pool" })
+    expect(within(pool).queryByText("Alice")).not.toBeInTheDocument()
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+
+    await act(async () => resolvePick({ success: true }))
+
+    expect(within(roster).queryByText("Picking…")).not.toBeInTheDocument()
+    expect(within(roster).getByText("Alice")).toBeInTheDocument()
+    expect(makePickMock).toHaveBeenCalledWith({
+      draftId: "draft-1",
+      poolEntryId: "e0",
+    })
+    expect(toast).not.toHaveBeenCalled()
+  })
+
+  it("rolls back with Taken by when somebody else got the player", async () => {
+    makePickMock.mockResolvedValue({
+      success: false,
+      error: "That player is not available",
+    })
+    // Team 2 picked Alice first (the log shows it as the missed pick 1).
+    const stolen = pickEvent(1)
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({
+        draft: { id: "draft-1", status: "in_progress", version: 2 },
+        seq: 3,
+        events: [
+          stolen.type === "pick"
+            ? {
+                ...stolen,
+                payload: { ...stolen.payload, slotId: "s1" },
+              }
+            : stolen,
+        ],
+      }),
+    })
+    renderRoom([created, started], { id: "c0", canPick: true })
+    await confirm()
+
+    expect(toast).toHaveBeenCalledWith({
+      title: "Taken by Team 2",
+      variant: "destructive",
+    })
+    const roster = screen.getByRole("region", { name: "Team Team 1" })
+    expect(within(roster).queryByText("Picking…")).not.toBeInTheDocument()
+  })
+
+  it("puts the player back in the pool and shows the error when the server refuses", async () => {
+    makePickMock.mockResolvedValue({
+      success: false,
+      error: "It is not your turn",
+    })
+    renderRoom([created, started], { id: "c0", canPick: true })
+    await confirm()
+
+    expect(toast).toHaveBeenCalledWith({
+      title: "It is not your turn",
+      variant: "destructive",
+    })
+    const pool = screen.getByRole("region", { name: "Player pool" })
+    expect(within(pool).getByText("Alice")).toBeInTheDocument()
+    const roster = screen.getByRole("region", { name: "Team Team 1" })
+    expect(within(roster).queryByText("Picking…")).not.toBeInTheDocument()
+  })
+
+  it("shows the real state as soon as another event arrives, even before the action returns", async () => {
+    makePickMock.mockReturnValue(new Promise(() => undefined))
+    renderRoom([created, started], { id: "c0", canPick: true })
+    act(() => FakeEventSource.last.open())
+    await confirm()
+    const roster = screen.getByRole("region", { name: "Team Team 1" })
+    expect(within(roster).getByText("Picking…")).toBeInTheDocument()
+
+    push(pickEvent(1)) // the server's own event arrives first
+
+    expect(within(roster).queryByText("Picking…")).not.toBeInTheDocument()
+    expect(within(roster).getByText("Alice")).toBeInTheDocument()
   })
 })

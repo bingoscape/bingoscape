@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 
 import { computeEtag, ifNoneMatchHits } from "@/lib/etag"
 import { logger } from "@/lib/logger"
-import { authorize } from "@/server/authz"
+import { authorizeDraftView } from "@/server/draft/http"
 import {
   getDraftStamp,
   loadDraftEventsSince,
@@ -15,7 +15,8 @@ const CACHE_CONTROL = "private, no-cache"
 
 /**
  * The state of the Event's draft, for clients that poll (team draft 1/4,
- * #215; the live stream follows in phase 2).
+ * #215). The live stream (`../stream`, #216) is the primary transport; this
+ * is its fallback and its resync.
  *
  * - `GET .../draft/state` answers `{ draft: <snapshot> }`, or `{ draft: null }`
  *   when the Event has no draft.
@@ -36,16 +37,8 @@ export async function GET(
   const { id } = await props.params
 
   try {
-    const allowed = await authorize(id, "draft:view")
-    if (!allowed.success) {
-      const status =
-        allowed.code === "UNAUTHENTICATED"
-          ? 401
-          : allowed.code === "NOT_FOUND"
-            ? 404
-            : 403
-      return NextResponse.json({ error: allowed.error }, { status })
-    }
+    const allowed = await authorizeDraftView(id)
+    if (!allowed.ok) return allowed.response
 
     const sinceParam = new URL(request.url).searchParams.get("since")
     let since: number | null = null
