@@ -1,0 +1,29 @@
+AGENTS.md
+  s_2aebdb4d5645da::t_4f1149cd14469f 17
+.github/dependabot.yml
+  s_2aebdb4d5645da::t_4f1149cd14469f 27-31
+docs/CONTRIBUTING.md
+  s_2aebdb4d5645da::t_cdac1706b3ae37 96
+README.md
+  s_2aebdb4d5645da::t_cdac1706b3ae37 70
+package.json
+  s_2aebdb4d5645da::t_48905b7ba24076 121,137
+package-lock.json
+  s_2aebdb4d5645da::t_8e4dcb1ebdad63 106,122,8395-8785,23934-23937,23940-23941,23943-23944
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7e94b8ceb6fc2e86b28fd3d977957d7331376237",
+  "prompts": {},
+  "sessions": {
+    "s_2aebdb4d5645da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9e280b93-4bc1-4d59-a11c-e6d1207080db",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
