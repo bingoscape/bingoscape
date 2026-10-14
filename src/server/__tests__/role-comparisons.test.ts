@@ -1,10 +1,11 @@
 /**
  * @jest-environment node
  *
- * Temporary grep gate for RBAC 5/8 (#188): no inline Event role comparisons
- * outside `src/lib/authz` and `src/server/authz`. Call sites ask the policy
- * (`authorize`, `requirePermission`, `hasPermission`, `can`) instead. The lint
- * rule that replaces this test lands in phase 8 (#191).
+ * Temporary grep gate for RBAC 5/8 (#188) and 6/8 (#189): no inline Event role
+ * comparisons outside `src/lib/authz` and `src/server/authz`. Server code asks
+ * the policy (`authorize`, `requirePermission`, `hasPermission`, `can`); UI
+ * components get server computed capabilities (`EventCapabilities`) as props.
+ * The lint rule that replaces this test lands in phase 8 (#191).
  */
 import fs from "fs"
 import path from "path"
@@ -24,8 +25,6 @@ const POLICY_DIRS = ["src/lib/authz/", "src/server/authz/"]
 
 /**
  * Files that legitimately still compare a role string, each with the reason.
- * "phase 6" entries are UI code that receives a role as a prop; they move to
- * server computed capabilities in #189.
  */
 const ALLOWED: Record<string, string> = {
   // Clan roles are a separate ladder from Event roles.
@@ -44,25 +43,6 @@ const ALLOWED: Record<string, string> = {
     "super-admin display of the last Event admin",
   "src/components/super-admin/membership-actions.tsx":
     "super-admin display of the last admin",
-  // Phase 6: UI that receives a role as a prop or fetches it on the client.
-  "src/app/events/[id]/(manage)/participants/page.tsx": "phase 6",
-  "src/app/events/[id]/(manage)/bingos/[bingoId]/submissions/page.tsx":
-    "phase 6",
-  "src/components/participants-tab.tsx": "phase 6",
-  "src/components/progression-bingo-grid.tsx": "phase 6",
-  "src/components/team-selector.tsx": "phase 6",
-  "src/components/event-card.tsx": "phase 6",
-  "src/components/tile-details-tab.tsx": "phase 6",
-  "src/components/event-header-actions.tsx": "phase 6",
-  "src/components/bingo-grid-layout.tsx": "phase 6",
-  "src/components/bingo-tile.tsx": "phase 6",
-  "src/components/bingogrid.tsx": "phase 6",
-  "src/components/event-layout-header.tsx": "phase 6",
-  "src/components/event-workspace/tile-panel.tsx": "phase 6",
-  "src/components/event-workspace/event-workspace.tsx": "phase 6",
-  "src/components/event-workspace/tier-ladder-view.tsx": "phase 6",
-  "src/components/event-workspace/event-summary-bar.tsx": "phase 6",
-  "src/components/dashboard/dashboard-event-card.tsx": "phase 6",
 }
 
 function matchesIn(file: string): string[] {

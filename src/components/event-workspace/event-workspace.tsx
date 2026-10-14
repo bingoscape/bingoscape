@@ -37,7 +37,7 @@ import {
   type PanelTab,
 } from "@/components/event-workspace/use-workspace-params"
 import { reorderTiles } from "@/app/actions/bingo"
-import type { EventRole } from "@/app/actions/events"
+import type { EventCapabilities } from "@/lib/authz/capabilities"
 import { toast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { getBoardStats } from "@/lib/tile-status"
@@ -77,7 +77,8 @@ export interface WorkspaceEvent {
 
 interface EventWorkspaceProps {
   event: WorkspaceEvent
-  userRole: EventRole
+  /** What the viewer may do, computed on the server (nobody in the public view). */
+  capabilities: EventCapabilities
   /** The caller's own Team in this Event. */
   currentTeam: { id: string; name: string } | null
   selectableUsers: SelectableUser[]
@@ -113,7 +114,7 @@ const DRAWER_TOP_BAR = "1.5rem"
  */
 export function EventWorkspace({
   event,
-  userRole,
+  capabilities,
   currentTeam,
   selectableUsers,
   tierData,
@@ -138,8 +139,7 @@ export function EventWorkspace({
     isSwitching,
   } = useWorkspaceParams()
 
-  const isManagement =
-    !readOnly && (userRole === "admin" || userRole === "management")
+  const isManagement = !readOnly && capabilities.canEditBoard
 
   const resizable = !!layoutPrefs
   const [prefs, setPrefs] = useState(layoutPrefs ?? DEFAULT_WORKSPACE_PREFS)
@@ -429,7 +429,7 @@ export function EventWorkspace({
         tile={selectedTile}
         bingo={bingo}
         workspace={workspace}
-        userRole={userRole}
+        isManagement={isManagement}
         teams={teams}
         currentTeamId={effectiveTeamId}
         eventId={event.id}
@@ -575,7 +575,7 @@ export function EventWorkspace({
                   tiles={tiles}
                   columns={bingo.columns}
                   tierData={tierData}
-                  userRole={readOnly ? "participant" : userRole}
+                  isManagement={isManagement}
                   currentTeamId={effectiveTeamId}
                   selectedTileId={selectedTile?.id ?? null}
                   dimmedTileIds={dimmedTileIds}
@@ -585,7 +585,7 @@ export function EventWorkspace({
                 <BingoGrid
                   key={bingo.id}
                   bingo={bingo}
-                  userRole={readOnly ? "participant" : userRole}
+                  isManagement={isManagement}
                   currentTeamId={effectiveTeamId}
                   tierData={tierData}
                   isLayoutLocked={!(editLayout && isManagement)}

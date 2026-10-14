@@ -13,14 +13,14 @@ import {
   type BoardTierData,
 } from "@/lib/tiers"
 import { cn } from "@/lib/utils"
-import type { EventRole } from "@/app/actions/events"
 import type { Tile } from "@/types/model"
 
 interface TierLadderViewProps {
   tiles: Tile[]
   columns: number
   tierData: BoardTierData
-  userRole: EventRole
+  /** May edit the Board (`board:manage`): hidden Tiles, layout. Computed on the server. */
+  isManagement: boolean
   currentTeamId: string | undefined
   selectedTileId: string | null
   /** Tiles that do not match the active Board filter (shown faded). */
@@ -40,14 +40,12 @@ export function TierLadderView({
   tiles,
   columns,
   tierData,
-  userRole,
+  isManagement,
   currentTeamId,
   selectedTileId,
   dimmedTileIds,
   onSelectTile,
 }: TierLadderViewProps) {
-  const isManagement = userRole === "admin" || userRole === "management"
-
   const bands = useMemo(() => groupTilesByTier(tiles), [tiles])
   const metrics = useMemo(
     () =>
@@ -215,7 +213,7 @@ export function TierLadderView({
                     tile={tile}
                     onClick={(t) => onSelectTile(t.id)}
                     onTogglePlaceholder={() => undefined}
-                    userRole={userRole}
+                    isManagement={isManagement}
                     currentTeamId={currentTeamId}
                     isLocked
                     readOnly

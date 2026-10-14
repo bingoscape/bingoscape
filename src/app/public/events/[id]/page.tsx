@@ -11,6 +11,7 @@ import { InfoPanel } from "@/components/event-workspace/info-panel"
 import { PrizePanel } from "@/components/event-workspace/prize-panel"
 import { TeamsPanel } from "@/components/event-workspace/teams-panel"
 import { Skeleton } from "@/components/ui/skeleton"
+import { computeCapabilities } from "@/lib/authz/capabilities"
 import { getBoardTierData } from "@/server/queries/tiers"
 import { resolveWorkspaceSelection } from "@/lib/workspace-selection"
 
@@ -143,7 +144,7 @@ export default async function PublicEventPage(props: {
         bingos: data.bingos,
         teams: data.teams,
       }}
-      userRole="participant"
+      capabilities={computeCapabilities(null)}
       currentTeam={null}
       selectableUsers={[]}
       tierData={tierData}
@@ -210,7 +211,7 @@ export default async function PublicEventPage(props: {
                 }
               : null
           }
-          isAdmin={false}
+          canInvite={false}
         />
       }
     />

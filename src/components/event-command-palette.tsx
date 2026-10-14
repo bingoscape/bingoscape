@@ -71,7 +71,8 @@ const categoryMetadata = {
 interface EventCommandPaletteProps {
   eventId: UUID
   pendingRegistrationsCount: number
-  isAdmin: boolean
+  /** May edit the Event settings; gates the settings entries. */
+  canEditEvent: boolean
   isPublic: boolean
   hasClan: boolean
   createBingoModal: React.ReactNode
@@ -87,7 +88,7 @@ interface EventCommandPaletteProps {
 export function EventCommandPalette({
   eventId,
   pendingRegistrationsCount,
-  isAdmin,
+  canEditEvent,
   isPublic,
   hasClan,
   createBingoModal,
@@ -199,8 +200,8 @@ export function EventCommandPalette({
     keywords: ["stats", "analytics", "reports", "progress"],
   })
 
-  // Add admin actions to configuration
-  if (isAdmin) {
+  // Add the Event settings actions to configuration
+  if (canEditEvent) {
     if (editEventModal) {
       actions.push({
         id: "edit-event",

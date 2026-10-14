@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm"
+import { capabilitiesForMembership } from "@/lib/authz/capabilities"
 import { isManagerRole } from "@/lib/authz/roles"
 
 import { db } from "@/server/db"
@@ -345,6 +346,12 @@ export async function getClanEventRows(
 
     const eventData: EventData = {
       event: { ...event, role },
+      capabilities: capabilitiesForMembership({
+        userId,
+        eventId: event.id,
+        creatorId: event.creatorId,
+        participantRole: participant?.role ?? null,
+      }),
       totalPrizePool:
         event.basePrizePool +
         (buyInByEvent.get(event.id) ?? 0) +

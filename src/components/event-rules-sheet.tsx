@@ -21,13 +21,14 @@ import { EventRule } from "@/app/actions/events"
 interface EventRulesSheetProps {
   eventId: string
   initialRules: EventRule[]
-  isAdmin: boolean
+  /** May add, edit and delete rules (`event:manage-rules`). */
+  canManageRules: boolean
 }
 
 export function EventRulesSheet({
   eventId,
   initialRules,
-  isAdmin,
+  canManageRules,
 }: EventRulesSheetProps) {
   const [open, setOpen] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -54,7 +55,7 @@ export function EventRulesSheet({
   const hasRules = rules.length > 0
 
   // Don't render the button at all for non-admins when there are no rules
-  if (!isAdmin && !hasRules) return null
+  if (!canManageRules && !hasRules) return null
 
   function handleOpenChange(value: boolean) {
     setOpen(value)
@@ -164,7 +165,7 @@ export function EventRulesSheet({
               <SheetTitle className="text-base">
                 {isEditing ? "Edit Rules" : "Event Rules"}
               </SheetTitle>
-              {isAdmin && !isEditing && hasRules && (
+              {canManageRules && !isEditing && hasRules && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -194,7 +195,7 @@ export function EventRulesSheet({
                 <p className="text-sm">
                   No rules have been set for this event.
                 </p>
-                {isAdmin && (
+                {canManageRules && (
                   <Button
                     variant="outline"
                     size="sm"

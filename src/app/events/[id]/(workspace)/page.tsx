@@ -1,4 +1,4 @@
-import { hasPermission } from "@/server/authz"
+import { getEventCapabilities } from "@/server/authz"
 import { Suspense } from "react"
 import { cookies } from "next/headers"
 import { notFound } from "next/navigation"
@@ -77,10 +77,8 @@ export default async function EventWorkspacePage(props: {
     return null
   }
 
-  const [isManagement, isAdmin] = await Promise.all([
-    hasPermission(event.id, "board:manage"),
-    hasPermission(event.id, "event:update"),
-  ])
+  const capabilities = await getEventCapabilities(event.id)
+  const isManagement = capabilities.canEditBoard
 
   const { bingo, effectiveTeamId } = resolveWorkspaceSelection({
     bingos: event.bingos,
@@ -108,7 +106,7 @@ export default async function EventWorkspacePage(props: {
     calculateEventPrizePool(event.id),
     getEventRules(event.id),
     isManagement ? getPendingRegistrationCount(event.id) : Promise.resolve(0),
-    isAdmin ? getUserClans() : Promise.resolve([]),
+    capabilities.canAssignClan ? getUserClans() : Promise.resolve([]),
     isManagement || currentTeam
       ? getSelectableUsersForSubmission(event.id, currentTeam?.id ?? "")
       : Promise.resolve([]),
@@ -140,7 +138,7 @@ export default async function EventWorkspacePage(props: {
   return (
     <EventWorkspace
       event={slimEvent}
-      userRole={userRole}
+      capabilities={capabilities}
       currentTeam={currentTeam}
       selectableUsers={selectableUsers}
       tierData={tierData}
@@ -161,7 +159,7 @@ export default async function EventWorkspacePage(props: {
           backLabel="Back to my events"
           members={{
             event,
-            userRole,
+            capabilities,
             rules,
             pendingRegistrationsCount,
             userClans,
@@ -211,7 +209,7 @@ export default async function EventWorkspacePage(props: {
                 }
               : null
           }
-          isAdmin={isAdmin}
+          canInvite={capabilities.canInvite}
         />
       }
     />

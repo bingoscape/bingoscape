@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import { EventCard } from "@/components/event-card"
 import type { EventData } from "@/app/actions/events"
+import { capabilitiesForMembership } from "@/lib/authz/capabilities"
 
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push: jest.fn() }) }))
 jest.mock("@/app/actions/events", () => ({ requestToJoinEvent: jest.fn() }))
@@ -13,6 +14,12 @@ jest.mock("@/components/prize-pool-display", () => ({
 
 function makeEventData(overrides: Partial<EventData["event"]> = {}): EventData {
   return {
+    capabilities: capabilitiesForMembership({
+      userId: "u1",
+      eventId: "evt1",
+      creatorId: null,
+      participantRole: "admin",
+    }),
     totalPrizePool: 0,
     event: {
       id: "evt1",

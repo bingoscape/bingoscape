@@ -64,7 +64,7 @@ function renderGrid(
       tiles={tiles}
       columns={2}
       rows={Math.ceil(tiles.length / 2)}
-      userRole="participant"
+      isManagement={false}
       currentTeamId={TEAM}
       onTileClick={onTileClick}
       onTogglePlaceholder={jest.fn()}
@@ -463,7 +463,7 @@ describe("own ships on the Board", () => {
     )
     const { container } = renderFleet({
       tiles: withHidden,
-      userRole: "management",
+      isManagement: true,
     })
     expect(container.querySelectorAll("[data-own-ship]")).toHaveLength(5)
     expect(

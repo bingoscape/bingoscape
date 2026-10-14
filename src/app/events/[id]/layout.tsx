@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 import { EventAccessGuard } from "@/components/event-access-guard"
+import { getEventCapabilities } from "@/server/authz"
 import { getEventById } from "@/server/queries/events"
 
 /**
@@ -15,13 +16,17 @@ export default async function EventLayout({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const data = await getEventById(id)
+  const [data, capabilities] = await Promise.all([
+    getEventById(id),
+    // Cached per request: the (manage) gate, the header and the pages reuse it.
+    getEventCapabilities(id),
+  ])
 
   // No Event, or one the read policy hides from this viewer (decision 3,
   // `members-only`): indistinguishable from an Event that does not exist.
   if (!data) notFound()
 
-  if (!data.userRole) {
+  if (!capabilities.role) {
     return (
       <div className="container mx-auto py-6">
         <EventAccessGuard eventId={id} />

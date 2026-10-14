@@ -18,7 +18,8 @@ interface BingoTileProps {
   tile: Tile
   onClick: (tile: Tile) => void
   onTogglePlaceholder: (tile: Tile) => void
-  userRole: "participant" | "management" | "admin"
+  /** May edit the Board (`board:manage`): hidden Tiles, layout. Computed on the server. */
+  isManagement: boolean
   currentTeamId?: string
   /** True when the board layout is locked (not in "Edit layout" mode). */
   isLocked: boolean
@@ -105,7 +106,7 @@ export const BingoTile = React.memo(function BingoTile({
   tile,
   onClick,
   onTogglePlaceholder,
-  userRole,
+  isManagement,
   currentTeamId,
   isLocked,
   isLoading = false,
@@ -122,8 +123,6 @@ export const BingoTile = React.memo(function BingoTile({
   ownShip,
   showOwnShip = false,
 }: BingoTileProps) {
-  const isManagement = userRole === "management" || userRole === "admin"
-
   const { completion, submissionState } = React.useMemo(
     () => getTileTeamStatus(tile, currentTeamId),
     [tile, currentTeamId]

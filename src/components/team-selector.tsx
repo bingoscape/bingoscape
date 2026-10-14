@@ -16,25 +16,17 @@ interface Team {
 interface TeamSelectorProps {
   teams: Team[]
   currentTeamId?: string
-  userRole: string
   selectedTeamId?: string
   onTeamChange: (teamId: string | undefined) => void
 }
 
+/** Switch the viewed Team. Callers render it only for those who may view other Teams. */
 export function TeamSelector({
   teams,
   currentTeamId,
-  userRole,
   selectedTeamId,
   onTeamChange,
 }: TeamSelectorProps) {
-  const isAdminOrManagement = userRole === "admin" || userRole === "management"
-
-  // Only show team selector for admins/management
-  if (!isAdminOrManagement) {
-    return null
-  }
-
   const handleTeamChange = (value: string) => {
     if (value === "current") {
       onTeamChange(currentTeamId)
