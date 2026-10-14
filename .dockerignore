@@ -80,5 +80,5 @@ test-results/
 .oxlintrc.json
 .prettierrc
 prettier.config.js
-jest.config.ts
+jest.config.mjs
 playwright.config.ts

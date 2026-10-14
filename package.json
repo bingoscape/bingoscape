@@ -127,7 +127,6 @@
     "prettier-plugin-tailwindcss": "^0.8.1",
     "shadcn": "^3.5.0",
     "tailwindcss": "^4.3.3",
-    "ts-node": "^10.9.2",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
   "ct3aMetadata": {
