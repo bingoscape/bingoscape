@@ -39,7 +39,9 @@ External clients like the RuneLite plugin use API key authentication with Bearer
 Authorization: Bearer bsn_your_api_key_here
 ```
 
-**API Key Format:** `bsn_` prefix followed by a unique identifier
+**API Key Format:** `bsn_` prefix followed by a unique identifier (unchanged).
+
+**Key lifecycle.** The server stores only a SHA-256 hash and the first 8 characters of a key. The full key is shown **once**, when it is created (web UI or `POST /api/runelite/keys`); lose it and create a new one. A key can carry an expiry (`expiresAt`), can be revoked (`revokedAt`) and has scopes: `read` (every read route, `POST /api/runelite/auth`) and `submit` (`POST .../submissions`, `POST .../auto-submissions`, `POST /api/runelite/items/check`). Keys created before this change and keys created in the web UI without a choice have both scopes. An expired, revoked, unknown or insufficiently scoped key is answered like an invalid one: `401 { "error": "Invalid API key" }`.
 
 ## RuneLite Plugin API
 
@@ -676,10 +678,19 @@ The RuneLite polling endpoints are limited per user with an in-memory sliding wi
 
 `apiKeys.lastUsed` (shown in the key list on the web) is written at most once a minute per key, however many requests the key makes.
 
-Other endpoints have no explicit limit. For production deployments the following are recommended:
+More limits (same mechanism, fixed in `src/lib/rate-limit-policies.ts`):
 
-- **File Uploads**: 10 uploads per minute per user
-- **Authentication**: 5 login attempts per minute per IP
+| Endpoint | Limit |
+| --- | --- |
+| `POST /api/runelite/auth` | 30 requests per minute per client IP |
+| `POST /api/runelite/tiles/{tileId}/submissions` and `.../auto-submissions` | 30 uploads per minute per user (shared budget with the web upload form) |
+| `GET /api/events/invite/{code}` | 30 requests per 15 minutes per client IP |
+
+The web app also limits credentials sign-in (20 attempts per 15 minutes per IP, 10 per username and IP), sign-up (5 per hour per IP), invite links and redemptions, Event creation (10 per hour per user) and the Wise Old Man actions (20 per minute per user). A limited server action returns `{ "success": false, "error": "...", "code": "RATE_LIMITED", "retryAfterSeconds": n }`.
+
+The limits assume a single app instance. The client IP is the last entry of `X-Forwarded-For`, the one the host nginx appends.
+
+A submission is also refused with `403` (`code: "BOARD_LOCKED"`) when its Board is locked and with `400` (`code: "INVALID_FILE_TYPE"` / `"FILE_TOO_LARGE"`) for anything but a JPEG, PNG, GIF or WebP image of at most 25 MB. This is the same check the web upload form uses.
 
 ## Examples
 

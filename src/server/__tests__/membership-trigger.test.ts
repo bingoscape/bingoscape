@@ -49,7 +49,9 @@ let sql: postgres.Sql
 beforeAll(async () => {
   mig = await createMigrationDb()
   sql = mig.sql
-  await mig.applyThrough(MIGRATION)
+  // Through 0040: the fixture inserts users through the Drizzle schema, which
+  // knows the columns that migration adds.
+  await mig.applyThrough("0040_credential_session_hygiene")
   // events.timezone is in the Drizzle schema but in no migration file (a gap
   // that predates RBAC); the fixture inserts through the schema, so add it.
   await sql`ALTER TABLE "bingoscape-next_events" ADD COLUMN IF NOT EXISTS "timezone" varchar(100) NOT NULL DEFAULT 'UTC'`

@@ -1,5 +1,6 @@
 "use server"
 
+import { publicUserSelect } from "@/server/db/public-user"
 import { eq, and, count, sql } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { revalidatePath } from "next/cache"
@@ -483,7 +484,9 @@ export async function getUserClans() {
     .select({
       clan: clans,
       isMain: clanMembers.isMain,
-      owner: users,
+      // Explicit columns: the result reaches client components, and a full
+      // users row carries the password hash.
+      owner: publicUserSelect,
       memberCount: sql<number>`(
         SELECT COUNT(*)
         FROM ${clanMembers} AS cm

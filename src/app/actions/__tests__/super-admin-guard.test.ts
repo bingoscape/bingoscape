@@ -86,11 +86,16 @@ function fakeTx(rows: unknown[]) {
 }
 
 /** Signs in `ADMIN_ID` whose DB row has `dbEmail`. The JWT email is deliberately different. */
-function signInAsAdmin(dbEmail: string | null = "admin@example.com") {
+function signInAsAdmin(
+  dbEmail: string | null = "admin@example.com",
+  providerVerifiedEmail: string | null = dbEmail
+) {
   mockSession.mockResolvedValue({
     user: { id: ADMIN_ID, email: "jwt-email@example.com" },
   })
-  mockDb.select.mockReturnValue(queryResult([{ id: ADMIN_ID, email: dbEmail }]))
+  mockDb.select.mockReturnValue(
+    queryResult([{ id: ADMIN_ID, email: dbEmail, providerVerifiedEmail }])
+  )
 }
 
 function useTransaction(tx: ReturnType<typeof fakeTx>) {
@@ -163,6 +168,22 @@ describe("super-admin guard", () => {
       ok: true,
       admin: { adminId: ADMIN_ID, email: "admin@example.com" },
     })
+  })
+
+  it("denies an allowlisted email the provider never verified", async () => {
+    // A credentials account, or a provider that reported the email unverified.
+    signInAsAdmin("admin@example.com", null)
+    await expect(isSuperAdmin()).resolves.toBe(false)
+  })
+
+  it("denies when the verified email is not the stored email", async () => {
+    signInAsAdmin("admin@example.com", "old-address@example.com")
+    await expect(isSuperAdmin()).resolves.toBe(false)
+  })
+
+  it("accepts the verified email regardless of case", async () => {
+    signInAsAdmin("Admin@Example.com", "admin@example.com")
+    await expect(isSuperAdmin()).resolves.toBe(true)
   })
 
   it("denies a deleted user (no DB row) immediately", async () => {

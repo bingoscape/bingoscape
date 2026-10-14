@@ -49,7 +49,11 @@ export function LoginCard() {
       })
 
       if (result?.error) {
-        setError("Invalid username or password")
+        setError(
+          result.error === "RATE_LIMITED"
+            ? "Too many sign-in attempts. Please wait a few minutes and try again."
+            : "Invalid username or password"
+        )
       } else if (result?.ok) {
         router.push(callbackUrl)
         router.refresh()

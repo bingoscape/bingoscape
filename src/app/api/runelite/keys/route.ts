@@ -3,8 +3,8 @@ import { logger } from "@/lib/logger"
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
 import { apiKeys } from "@/server/db/schema"
+import { createApiKeyForUser } from "@/server/api-keys"
 import { eq } from "drizzle-orm"
-import { nanoid } from "nanoid"
 import { z } from "zod"
 
 // Generate a new API key for the authenticated user
@@ -16,8 +16,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Parse request body|
-
+    // Parse request body
     const body = await req.json()
 
     // Validate request body
@@ -28,27 +27,21 @@ export async function POST(req: Request) {
 
     const { name, description } = schema.parse(body)
 
-    // Generate a unique API key
-    const key = `bsn_${nanoid(32)}`
-
-    // Insert the new API key into the database
-    const [apiKey] = await db
-      .insert(apiKeys)
-      .values({
-        userId: session.user.id,
-        name,
-        description: description ?? null,
-        key,
-        lastUsed: null,
-      })
-      .returning({
-        id: apiKeys.id,
-        name: apiKeys.name,
-        description: apiKeys.description,
-        createdAt: apiKeys.createdAt,
-        // Only return the key in the response when it's first created
-        key: apiKeys.key,
-      })
+    // Only the hash is stored; the plaintext is returned this once.
+    const created = await createApiKeyForUser(session.user.id, {
+      name,
+      description: description ?? null,
+    })
+    const apiKey = {
+      id: created.id,
+      name: created.name,
+      description: created.description,
+      createdAt: created.createdAt,
+      keyPrefix: created.keyPrefix,
+      scopes: created.scopes,
+      expiresAt: created.expiresAt,
+      key: created.key,
+    }
 
     return NextResponse.json(apiKey)
   } catch (error) {
@@ -84,6 +77,10 @@ export async function GET() {
         description: apiKeys.description,
         createdAt: apiKeys.createdAt,
         lastUsed: apiKeys.lastUsed,
+        keyPrefix: apiKeys.keyPrefix,
+        scopes: apiKeys.scopes,
+        expiresAt: apiKeys.expiresAt,
+        revokedAt: apiKeys.revokedAt,
       })
       .from(apiKeys)
       .where(eq(apiKeys.userId, session.user.id))

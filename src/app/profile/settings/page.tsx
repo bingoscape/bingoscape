@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 import { eq } from "drizzle-orm"
+import { SignOutEverywhere } from "@/components/sign-out-everywhere"
 import { UpdateRsnForm } from "@/components/update-rsn-form"
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
@@ -35,6 +36,7 @@ export default async function SettingsPage() {
         <p className="text-muted-foreground mt-2">Manage your account settings and preferences.</p>
       </div>
       <UpdateRsnForm user={user} />
+      <SignOutEverywhere />
     </div>
   )
 }

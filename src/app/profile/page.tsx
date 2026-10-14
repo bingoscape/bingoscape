@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation"
-import { eq, desc, sql } from "drizzle-orm"
+import { and, eq, desc, gt, isNull, or, sql } from "drizzle-orm"
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
+import { PUBLIC_USER_COLUMNS } from "@/server/db/public-user"
 import { users, apiKeys, playerMetadata, submissions, eventParticipants } from "@/server/db/schema"
 import { PlayerCard } from "@/components/player-card"
 import { StatsDashboard } from "@/components/stats-dashboard"
@@ -12,8 +13,11 @@ import { AlertTriangle } from "lucide-react"
 
 async function getProfileData(userId: string) {
   // 1. Get user basic info
+  // Explicit columns: the profile goes to client components, and a full
+  // users row carries the password hash.
   const user = await db.query.users.findFirst({
     where: eq(users.id, userId),
+    columns: PUBLIC_USER_COLUMNS,
   })
 
   if (!user) return null
@@ -22,7 +26,13 @@ async function getProfileData(userId: string) {
   const keysCount = await db
     .select({ count: sql<number>`count(*)` })
     .from(apiKeys)
-    .where(eq(apiKeys.userId, userId))
+    .where(
+      and(
+        eq(apiKeys.userId, userId),
+        isNull(apiKeys.revokedAt),
+        or(isNull(apiKeys.expiresAt), gt(apiKeys.expiresAt, new Date()))
+      )
+    )
 
   const hasApiKey = (keysCount[0]?.count ?? 0) > 0
 

@@ -34,6 +34,10 @@ export const env = createEnv({
     // container, not a rebuild. Where validation is skipped (the Docker image)
     // an unknown value falls back to "enforce".
     RBAC_READ_POLICY: z.enum(["enforce", "relaxed"]).optional(),
+    // Content-Security-Policy mode (RBAC 7/8, #190). Optional: unset means
+    // "report-only". Read per request by src/proxy.ts, so a change needs a
+    // restart of the container, not a rebuild.
+    CSP_MODE: z.enum(["report-only", "enforce", "off"]).optional(),
   },
 
   /**
@@ -61,6 +65,7 @@ export const env = createEnv({
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     RBAC_READ_POLICY: process.env.RBAC_READ_POLICY,
+    CSP_MODE: process.env.CSP_MODE,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

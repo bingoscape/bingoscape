@@ -58,6 +58,11 @@ import {
   requireTeamMemberOrManager,
 } from "@/server/authz"
 import { isBlindBoard } from "@/server/blind-board"
+import {
+  assertCanSubmit,
+  SubmissionRejectedError,
+} from "@/lib/submission-guard"
+import { limitAction } from "@/server/rate-limit"
 import { isBingoBlindForViewer } from "@/server/blind-board-viewer"
 import { recalculateGoalProgress } from "@/server/goal-progress"
 import { checkAndAutoCompleteTile } from "@/server/tile-completion"
@@ -1149,6 +1154,8 @@ export async function submitImage(formData: FormData) {
     if (!session?.user) {
       throw new AuthzError("Unauthorized", "UNAUTHENTICATED")
     }
+    const limited = await limitAction("upload", session.user.id)
+    if (limited) return limited
 
     // Check if the tile exists and get its bingoId
     const tileResult = await db
@@ -1293,6 +1300,24 @@ export async function submitImage(formData: FormData) {
       if (!callerMayShoot) {
         throw new AuthzError("You are not a member of this team", "FORBIDDEN")
       }
+    }
+
+    // Locked Board, file type and size: the gate shared with the RuneLite
+    // routes. A manager may still submit on a locked Board.
+    try {
+      assertCanSubmit({
+        board: bingoResult,
+        file: image,
+        managerOverridesLock: callerIsManager,
+      })
+    } catch (error) {
+      if (error instanceof SubmissionRejectedError) {
+        return failure(
+          error.message,
+          error.status === 403 ? "FORBIDDEN" : "INVALID"
+        )
+      }
+      throw error
     }
 
     // Ensure the upload directory exists

@@ -15,7 +15,12 @@ import { fetchCompetitionFromWOM } from "./wiseoldman"
 import { WOMClient } from "@wise-old-man/utils"
 import { logger } from "@/lib/logger"
 import { checkAndAutoCompleteTile } from "@/server/tile-completion"
-import { requirePermissionForBingo, actionFailure } from "@/server/authz"
+import {
+  requirePermissionForBingo,
+  requireSession,
+  actionFailure,
+} from "@/server/authz"
+import { limitAction } from "@/server/rate-limit"
 import { unstable_noStore as noStore } from "next/cache"
 import {
   sendDiscordWebhook,
@@ -187,6 +192,7 @@ export async function syncTrackerProgress(bingoId: string) {
         teamMembers: {
           with: {
             user: {
+              columns: { id: true, runescapeName: true },
               with: { playerMetadata: true },
             },
           },
@@ -389,6 +395,9 @@ export async function createWiseOldManCompetition(
 ) {
   try {
     await requirePermissionForBingo(bingoId, "board:manage")
+    // Spends the server's WiseOldMan quota.
+    const limited = await limitAction("wiseOldMan", (await requireSession()).userId)
+    if (limited) return limited
 
     const bingo = await db.query.bingos.findFirst({
       where: eq(bingos.id, bingoId),
@@ -403,6 +412,7 @@ export async function createWiseOldManCompetition(
         teamMembers: {
           with: {
             user: {
+              columns: { id: true, runescapeName: true },
               with: { playerMetadata: true },
             },
           },

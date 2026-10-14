@@ -86,6 +86,7 @@ export async function getEventTeamStatistics(
       teamMembers: {
         with: {
           user: {
+            columns: { id: true, runescapeName: true },
             with: {
               playerMetadata: {
                 where: eq(playerMetadata.eventId, eventId),
