@@ -267,6 +267,13 @@
       "when": 1791809181729,
       "tag": "0037_battleship",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1791929510412,
+      "tag": "0038_rbac_membership_integrity",
+      "breakpoints": true
     }
   ]
 }

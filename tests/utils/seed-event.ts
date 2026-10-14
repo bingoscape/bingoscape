@@ -92,7 +92,9 @@ export async function seedEvent(options: {
     { id: teamIds[1]!, eventId, name: "Team Bravo" },
   ])
   if (role === "participant") {
-    await db.insert(teamMembers).values({ teamId: teamIds[0]!, userId })
+    await db
+      .insert(teamMembers)
+      .values({ teamId: teamIds[0]!, eventId, userId })
   }
 
   const seededBoards: SeededEvent["boards"] = []

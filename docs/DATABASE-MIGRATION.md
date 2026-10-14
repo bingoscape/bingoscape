@@ -300,6 +300,58 @@ gunzip -c backup.sql.gz | docker compose exec -T postgres psql -U postgres -d bi
 
 ---
 
+## RBAC 2/8 rollout (migration `0038_rbac_membership_integrity`)
+
+Phase 2 of the RBAC consolidation (epic #183, issue #185). Expand-only: no column or table is dropped, and the previous app version keeps working against the new schema (rollback of the app image is safe; the database is not reverted).
+
+**What it does**
+
+| Step | Effect |
+| ---- | ------ |
+| Participants | Removes duplicate `event_participants` rows (keeps the highest role, then the oldest), re-points their buy-ins and donations to the keeper, copies the removed rows to `event_participants_quarantine`, then adds unique `(event_id, user_id)`. |
+| Team members | Adds nullable `team_members.event_id`, backfills it from `teams`, removes duplicate rows (leader row first, then oldest) into `team_members_quarantine`, then adds unique `(team_id, user_id)` and unique `(event_id, user_id)` (a Player is on one Team per Event, as `CONTEXT.md` and the app already assume), and a composite foreign key `(team_id, event_id)` to `teams` that keeps `event_id` equal to the Team's Event. |
+| Indexes | `event_participants(user_id)`, partial `event_participants(user_id, event_id)` for `admin`/`management`, `team_members(user_id)`. Plain `CREATE INDEX`: drizzle runs a migration in one transaction, where `CONCURRENTLY` is not allowed. The tables are small, so the short write lock is acceptable. |
+| Creators | Inserts an `admin` participant row for every Event whose creator has none (ledger action `backfill`). Existing non-admin creator rows are left alone and reported by `creator_role_conflicts`. |
+| Ledger | New `role_change_log` (one `baseline` row per existing Event and Clan membership) and `event_audit_log`, both without foreign keys and with CHECK constraints on the enumerated columns. Not written by the app yet (RBAC 3/8). |
+| Users | Unique `users_username_unique` and `users_email_unique`, created **only if the column has no duplicates**; otherwise the migration logs a `NOTICE` and skips that index, so a deploy never fails on dirty user data. |
+
+Every statement is idempotent, so re-running the migration (`migrate.yml`) is a no-op.
+
+**Compatibility with the previous app version.** It inserts `team_members` without `event_id` (NULL is tolerated by every constraint) and inserts participants without `ON CONFLICT`; a racing duplicate join then fails with a unique violation instead of creating a duplicate row. The new app fills `event_id` and uses `ON CONFLICT DO NOTHING`. `NOT NULL` on `team_members.event_id` follows in RBAC 8/8, after re-running the backfill:
+
+```sql
+UPDATE "bingoscape-next_team_members" tm SET event_id = t.event_id
+FROM "bingoscape-next_teams" t WHERE tm.team_id = t.id AND tm.event_id IS NULL;
+```
+
+Memberships created by the previous app after this migration have no ledger row until RBAC 3/8 baselines them; `ledger_drift` reports them until then.
+
+**Before deploying: verify on a restored production backup** (see `scripts/restore-db.sh`, or restore into a scratch database):
+
+```bash
+DATABASE_URL=postgres://.../scratch npm run db:verify-rbac   # before: the duplicate checks list the rows 0038 will clean up; the ledger and event_id checks print ERR (their tables do not exist yet)
+# run the migration against the scratch database, then:
+DATABASE_URL=postgres://.../scratch npm run db:verify-rbac   # after: no FAIL lines except documented exceptions
+```
+
+The checks live in `src/server/authz/verification.ts` (the same module becomes the ledger reconciliation job in RBAC 3/8). Documented exceptions after the migration, which are reported but never auto-fixed: `events_without_admin` (Events without a creator and without an admin), `creator_role_conflicts` (creator with an explicit non-admin role; the policy treats the creator as admin), `team_members_not_participants`, and the `warn` checks below.
+
+**Resolving duplicate usernames and emails.** The app lowercases usernames and looks them up with an exact match; NextAuth looks emails up exactly. The indexes therefore cover the raw columns. If `duplicate_usernames` / `duplicate_emails` return rows, the migration skipped the index. Fix the accounts (rename, merge by hand, or null the stale email), then create the index; `IF NOT EXISTS` makes this safe to repeat:
+
+```sql
+SELECT username, count(*) FROM "bingoscape-next_user" WHERE username IS NOT NULL GROUP BY 1 HAVING count(*) > 1;
+CREATE UNIQUE INDEX IF NOT EXISTS "users_username_unique" ON "bingoscape-next_user" ("username");
+CREATE UNIQUE INDEX IF NOT EXISTS "users_email_unique" ON "bingoscape-next_user" ("email");
+```
+
+Emails that differ only in letter case do not block the index; `duplicate_emails_ignoring_case` lists them for review.
+
+**Quarantine and rollback.** Nothing is lost silently: removed rows are in `event_participants_quarantine` and `team_members_quarantine` (with the id of the row that was kept and, for Teams, the kept Team). If a kept Team is wrong, move the Player back by hand and delete the quarantine row. To undo the data changes, restore the pre-deploy backup (`scripts/restore-db.sh`); rolling back only the app image leaves the new tables and constraints in place, which the previous version tolerates.
+
+**Retention and erasure.** `event_audit_log` and `role_change_log` are meant to be kept `EVENT_AUDIT_RETENTION_DAYS` (365, `src/server/authz/audit-log.ts`; pending the maintainer's answer on decision 10 of #183). No purge job exists yet. They hold user ids without foreign keys, so a user-erasure request is served by setting `actor_user_id` / `subject_user_id` to `NULL` on that user's rows.
+
+---
+
 ## Need Help?
 
 1. Check logs: `docker compose logs`
