@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 
-import { forcePick, makePick } from "@/app/actions/draft"
+import { forcePick, makePick, setPickQueue } from "@/app/actions/draft"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useDraftStream } from "@/hooks/use-draft-stream"
 import { toast } from "@/hooks/use-toast"
@@ -10,13 +10,16 @@ import type { DraftPoolState, DraftSnapshot } from "@/lib/draft/types"
 import { isDraftTab, onTurnSlot } from "@/lib/draft/view"
 import { cn } from "@/lib/utils"
 import { ConnectionIndicator } from "./connection-indicator"
+import { DraftAlerts } from "./draft-alerts"
 import { OnTheClockBanner } from "./on-the-clock-banner"
 import { OrganizerControls } from "./organizer-controls"
 import { PickConfirmDialog } from "./pick-confirm-dialog"
 import { PickLog } from "./pick-log"
+import { PickQueue } from "./pick-queue"
 import { PlayerPool } from "./player-pool"
 import { TeamRosterColumn } from "./team-roster-column"
 import { TurnCueControls, useTurnCues } from "./turn-cues"
+import { UnassignedList } from "./unassigned-list"
 import { useDraftParams } from "./use-draft-params"
 import { useFreshPicks } from "./use-fresh-picks"
 
@@ -28,6 +31,8 @@ interface DraftRoomProps {
   canManage: boolean
   /** Leads a Team: may pick when it is that Team's turn. */
   canPick: boolean
+  /** The viewer's own saved pick queue (pool entry ids, best first). */
+  initialQueue?: string[]
 }
 
 /** A pick the viewer just made that the server has not confirmed yet. */
@@ -54,8 +59,9 @@ export function DraftRoom({
   viewerUserId,
   canManage,
   canPick,
+  initialQueue = [],
 }: DraftRoomProps) {
-  const { live, connection, sync, active } = useDraftStream({
+  const { live, connection, sync, active, clockOffsetMs } = useDraftStream({
     eventId,
     snapshot,
   })
@@ -73,6 +79,58 @@ export function DraftRoom({
     stateRef.current = state
   }, [state])
   const freshPicks = useFreshPicks(state.picks)
+
+  // The captain's private pick queue (used when the timer runs out).
+  const [queue, setQueue] = useState<string[]>(initialQueue)
+  const [queueBusy, setQueueBusy] = useState(false)
+  const queueEnabled =
+    canPick &&
+    (state.status === "in_progress" || state.status === "paused") &&
+    state.slots.some((slot) => slot.captainUserId === viewerUserId)
+  const queuedEntries = queue.flatMap((id) => {
+    const entry = state.pool.find((e) => e.poolEntryId === id)
+    return entry && entry.status === "available" && !entry.leftEvent
+      ? [entry]
+      : []
+  })
+  const saveQueue = async (next: string[]) => {
+    const previous = queue
+    setQueue(next)
+    setQueueBusy(true)
+    try {
+      const result = await setPickQueue({
+        draftId: live.draftId,
+        poolEntryIds: next,
+      })
+      if (!result.success) {
+        setQueue(previous)
+        toast({
+          title: result.error ?? "The queue was not saved",
+          variant: "destructive",
+        })
+      }
+    } catch {
+      setQueue(previous)
+      toast({ title: "The queue was not saved", variant: "destructive" })
+    } finally {
+      setQueueBusy(false)
+    }
+  }
+  const queuedIds = queuedEntries.map((e) => e.poolEntryId)
+  const toggleQueued = (entry: DraftPoolState) =>
+    void saveQueue(
+      queuedIds.includes(entry.poolEntryId)
+        ? queuedIds.filter((id) => id !== entry.poolEntryId)
+        : [...queuedIds, entry.poolEntryId]
+    )
+  const moveQueued = (poolEntryId: string, by: -1 | 1) => {
+    const index = queuedIds.indexOf(poolEntryId)
+    const target = index + by
+    if (index < 0 || target < 0 || target >= queuedIds.length) return
+    const next = [...queuedIds]
+    ;[next[index], next[target]] = [next[target]!, next[index]!]
+    void saveQueue(next)
+  }
 
   const onTurn = onTurnSlot(state)
   const running = state.status === "in_progress"
@@ -181,7 +239,11 @@ export function DraftRoom({
         state={state}
         players={players}
         viewerUserId={viewerUserId}
+        clockOffsetMs={clockOffsetMs}
+        onTimerExpired={() => void sync()}
       />
+
+      {canManage && <DraftAlerts state={state} players={players} />}
 
       {canManage && (
         <OrganizerControls
@@ -239,8 +301,29 @@ export function DraftRoom({
                   }
                 : undefined
             }
+            queue={
+              queueEnabled
+                ? {
+                    ids: new Set(queuedIds),
+                    onToggle: toggleQueued,
+                  }
+                : undefined
+            }
             disabledReason={disabledReason ?? undefined}
           />
+          {queueEnabled && (
+            <div className="mt-4">
+              <PickQueue
+                entries={queuedEntries}
+                players={players}
+                busy={queueBusy}
+                onMove={moveQueued}
+                onRemove={(id) =>
+                  void saveQueue(queuedIds.filter((x) => x !== id))
+                }
+              />
+            </div>
+          )}
           {state.status === "setup" && (
             <p className="text-muted-foreground text-sm">
               The pool is frozen when the draft starts.
@@ -263,6 +346,13 @@ export function DraftRoom({
                 freshPicks={freshPicks}
               />
             ))}
+          </div>
+          <div className="mt-4">
+            <UnassignedList
+              state={state}
+              lateJoiners={live.lateJoiners}
+              players={players}
+            />
           </div>
         </div>
         <div className={panel("log")}>

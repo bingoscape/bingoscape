@@ -5,7 +5,7 @@
  * #215): authorization, the lifecycle, picking, undo, apply and cancel. The
  * data is committed; every test builds its own world.
  */
-import { and, asc, eq, inArray } from "drizzle-orm"
+import { and, asc, eq, inArray, isNull } from "drizzle-orm"
 
 import {
   applyDraft,
@@ -100,7 +100,7 @@ const picksOf = (draftId: string) =>
   db
     .select()
     .from(draftPicks)
-    .where(eq(draftPicks.draftId, draftId))
+    .where(and(eq(draftPicks.draftId, draftId), isNull(draftPicks.undoneAt)))
     .orderBy(asc(draftPicks.pickNo))
 const teamsOfEvent = () =>
   db.select().from(teams).where(eq(teams.eventId, w.eventId))
@@ -834,7 +834,11 @@ describe("applyDraft", () => {
     await completeDraft(draftId)
     const picks = await picksOf(draftId)
     const pool = await poolOf(draftId)
-    const leaver = pool.find((e) => e.id === picks[0]!.poolEntryId)!.userId!
+    // The pool also holds the owner and the manager (participants without a
+    // Team); the one who leaves must not be the manager who applies.
+    const leaver = picks
+      .map((p) => pool.find((e) => e.id === p.poolEntryId)!.userId!)
+      .find((userId) => w.players.includes(userId))!
     await db
       .delete(eventParticipants)
       .where(

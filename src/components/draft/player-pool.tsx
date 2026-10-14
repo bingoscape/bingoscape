@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react"
-import { Search } from "lucide-react"
+import { ListPlus, ListX, Search } from "lucide-react"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -29,6 +30,11 @@ interface PlayerPoolProps {
     label: string
     onPick: (entry: DraftPoolState) => void
   }
+  /** A captain's private pick queue: who is in it, and how to add or drop one. */
+  queue?: {
+    ids: ReadonlySet<string>
+    onToggle: (entry: DraftPoolState) => void
+  }
   /**
    * Why the viewer cannot pick right now ("Not your turn"). Every row then
    * shows a Pick button that is `aria-disabled` and carries the reason as a
@@ -49,6 +55,7 @@ export function PlayerPool({
   filter,
   onFilterChange,
   pick,
+  queue,
   disabledReason,
 }: PlayerPoolProps) {
   const entries = filterPool(pool, players, filter)
@@ -212,8 +219,37 @@ export function PlayerPool({
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  {entry.isNew && <Badge variant="info">New</Badge>}
+                  {entry.leftEvent && (
+                    <Badge variant="warning">Left event</Badge>
+                  )}
                   <RatingBadge rating={entry.rating} />
-                  {pick && (
+                  {queue && !entry.leftEvent && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      tabIndex={-1}
+                      aria-pressed={queue.ids.has(entry.poolEntryId)}
+                      aria-label={
+                        queue.ids.has(entry.poolEntryId)
+                          ? "Remove from my queue"
+                          : "Add to my queue"
+                      }
+                      title={
+                        queue.ids.has(entry.poolEntryId)
+                          ? "Remove from my queue"
+                          : "Add to my queue"
+                      }
+                      onClick={() => queue.onToggle(entry)}
+                    >
+                      {queue.ids.has(entry.poolEntryId) ? (
+                        <ListX className="h-4 w-4" />
+                      ) : (
+                        <ListPlus className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
+                  {pick && !entry.leftEvent && (
                     <Button
                       size="sm"
                       tabIndex={-1}
@@ -223,7 +259,7 @@ export function PlayerPool({
                       {pick.label}
                     </Button>
                   )}
-                  {!pick && disabledReason && (
+                  {(!pick || entry.leftEvent) && disabledReason && (
                     // Not `disabled`: it stays focusable and keeps its
                     // tooltip, and the text stays at full contrast.
                     <Button

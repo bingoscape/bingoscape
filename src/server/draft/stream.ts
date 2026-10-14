@@ -7,6 +7,7 @@ import {
   formatSseFrame,
   type DraftByeReason,
 } from "@/lib/draft/sse"
+import { databaseNowIso } from "@/server/draft/clock"
 import { subscribeToDraft } from "@/server/draft/hub"
 import { loadDraftEventsSince, loadDraftSnapshot } from "@/server/draft/queries"
 
@@ -86,6 +87,21 @@ export async function openDraftStream(
   }
 
   const onAbort = () => close()
+
+  // Database time for the client's countdown offset; never fatal.
+  const sendClock = async () => {
+    try {
+      const serverNow = await databaseNowIso()
+      write(
+        formatSseFrame({
+          event: DRAFT_STREAM_EVENTS.clock,
+          data: { serverNow },
+        })
+      )
+    } catch {
+      // The next heartbeat tries again.
+    }
+  }
 
   function close(reason?: DraftByeReason) {
     if (closed) return
@@ -210,7 +226,11 @@ export async function openDraftStream(
       }
       input.signal.addEventListener("abort", onAbort, { once: true })
       write(formatSseFrame({ retry: config.retryMs }))
-      heartbeat = setInterval(() => write(SSE_HEARTBEAT), config.heartbeatMs)
+      heartbeat = setInterval(() => {
+        write(SSE_HEARTBEAT)
+        void sendClock()
+      }, config.heartbeatMs)
+      void sendClock()
       lifetime = setTimeout(
         () => close("cap"),
         config.maxLifetimeMs + Math.random() * config.lifetimeJitterMs

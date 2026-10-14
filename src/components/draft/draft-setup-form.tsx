@@ -66,6 +66,8 @@ export function DraftSetupForm({ eventId, candidates }: DraftSetupFormProps) {
   const [rounds, setRounds] = useState(5)
   const [timer, setTimer] = useState(0)
   const [onTimeout, setOnTimeout] = useState<DraftOnTimeout>("auto_pick")
+  // Empty: the captain plus one player per round.
+  const [maxTeamSize, setMaxTeamSize] = useState("")
   const [autoPickRule, setAutoPickRule] =
     useState<DraftAutoPickRule>("best_rated")
   const [captains, setCaptains] = useState<Captain[]>([])
@@ -96,7 +98,11 @@ export function DraftSetupForm({ eventId, candidates }: DraftSetupFormProps) {
     rounds >= 1 &&
     rounds <= MAX_DRAFT_ROUNDS &&
     Number.isInteger(timer) &&
-    timer >= 0
+    timer >= 0 &&
+    (maxTeamSize === "" ||
+      (Number.isInteger(Number(maxTeamSize)) &&
+        Number(maxTeamSize) >= 2 &&
+        Number(maxTeamSize) <= MAX_DRAFT_ROUNDS + 1))
 
   const addCaptain = (userId: string) => {
     if (captains.length >= MAX_DRAFT_CAPTAINS) return
@@ -125,6 +131,7 @@ export function DraftSetupForm({ eventId, candidates }: DraftSetupFormProps) {
         pickTimerSeconds: timer > 0 ? timer : null,
         onTimeout,
         autoPickRule,
+        ...(maxTeamSize === "" ? {} : { maxTeamSize: Number(maxTeamSize) }),
         captains: captains.map((c) => ({
           userId: c.userId,
           teamName: c.teamName.trim(),
@@ -190,8 +197,8 @@ export function DraftSetupForm({ eventId, candidates }: DraftSetupFormProps) {
             onChange={(e) => setTimer(Number(e.target.value))}
           />
           <p className="text-muted-foreground text-xs">
-            The timer is saved with the draft but not enforced yet: picks have
-            no time limit in this version.
+            The clock is the server&apos;s. When it runs out, the setting on the
+            right applies.
           </p>
         </div>
         <div className="space-y-2">
@@ -211,6 +218,12 @@ export function DraftSetupForm({ eventId, candidates }: DraftSetupFormProps) {
               ))}
             </SelectContent>
           </Select>
+          {onTimeout === "skip" && (
+            <p role="alert" className="text-xs font-medium text-amber-600">
+              A captain who runs out of time loses that pick, so teams may end
+              up uneven.
+            </p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="draft-rule">Auto-pick rule</Label>
@@ -229,6 +242,21 @@ export function DraftSetupForm({ eventId, candidates }: DraftSetupFormProps) {
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="draft-max-team">Max team size (optional)</Label>
+          <Input
+            id="draft-max-team"
+            type="number"
+            min={2}
+            max={MAX_DRAFT_ROUNDS + 1}
+            placeholder={String(rounds + 1)}
+            value={maxTeamSize}
+            onChange={(e) => setMaxTeamSize(e.target.value)}
+          />
+          <p className="text-muted-foreground text-xs">
+            Captain included. A team that reached it is passed over.
+          </p>
         </div>
       </div>
 

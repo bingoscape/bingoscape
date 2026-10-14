@@ -25,6 +25,7 @@ describe("summarizeDraftSetup", () => {
       rounds: 6,
       leftover: 0,
       shortfall: 0,
+      extraTeams: 0,
     })
     expect(describeDraftSetup(summary)).toBe(
       "24 players, 4 teams, 6 rounds, 0 leftover"

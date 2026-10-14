@@ -31,6 +31,16 @@ export const draftSettingsSchema = z.object({
     .max(MAX_PICK_TIMER_SECONDS)
     .nullable(),
   onTimeout: z.enum(DRAFT_ON_TIMEOUT),
+  /**
+   * Cap on a team's size, captain included. Omitted: the captain plus one
+   * player per round. A team that reached it is passed over.
+   */
+  maxTeamSize: z
+    .number()
+    .int()
+    .min(2)
+    .max(MAX_DRAFT_ROUNDS + 1)
+    .optional(),
   autoPickRule: z.enum(DRAFT_AUTO_PICK_RULES),
   /** Captains in setup order. */
   captains: z
@@ -50,6 +60,11 @@ export interface DraftSetupSummary {
   leftover: number
   /** Picks the rounds call for beyond the pool; the draft ends when the pool is empty. */
   shortfall: number
+  /**
+   * When the pool is too small for every round: how many teams end up with
+   * one more player than the others ("2 teams get 1 extra"). 0 otherwise.
+   */
+  extraTeams: number
 }
 
 export function summarizeDraftSetup(input: {
@@ -64,6 +79,10 @@ export function summarizeDraftSetup(input: {
     rounds: input.rounds,
     leftover: Math.max(0, input.poolSize - picks),
     shortfall: Math.max(0, picks - input.poolSize),
+    extraTeams:
+      input.captains > 0 && picks > input.poolSize
+        ? input.poolSize % input.captains
+        : 0,
   }
 }
 
@@ -71,7 +90,10 @@ export function describeDraftSetup(summary: DraftSetupSummary): string {
   const plural = (n: number, word: string) =>
     `${n} ${word}${n === 1 ? "" : "s"}`
   const text = `${plural(summary.players, "player")}, ${plural(summary.teams, "team")}, ${plural(summary.rounds, "round")}, ${summary.leftover} leftover`
-  return summary.shortfall > 0
-    ? `${text} (${plural(summary.shortfall, "pick")} short: the pool runs out first)`
-    : text
+  if (summary.shortfall === 0) return text
+  const extra =
+    summary.extraTeams > 0
+      ? `; ${plural(summary.extraTeams, "team")} get${summary.extraTeams === 1 ? "s" : ""} 1 extra`
+      : ""
+  return `${text} (${plural(summary.shortfall, "pick")} short: the pool runs out first${extra})`
 }

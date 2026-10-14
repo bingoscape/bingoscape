@@ -1,3 +1,4 @@
+import { DRAFT_AFK_THRESHOLD } from "./constants"
 import { slotFor } from "./order"
 import type {
   DraftPlayerInfo,
@@ -69,6 +70,8 @@ export interface RosterEntry {
   rating: number | null
   auto: boolean
   forced: boolean
+  /** The player left the Event after being drafted (snapshot only). */
+  leftEvent: boolean
 }
 
 /** The captain followed by the players the slot picked, in pick order. */
@@ -77,6 +80,9 @@ export function rosterOf(
   slot: DraftSlotState
 ): RosterEntry[] {
   const ratingOf = new Map(state.pool.map((p) => [p.poolEntryId, p.rating]))
+  const leftOf = new Map(
+    state.pool.map((p) => [p.poolEntryId, p.leftEvent === true])
+  )
   return [
     {
       userId: slot.captainUserId,
@@ -86,6 +92,7 @@ export function rosterOf(
       rating: null,
       auto: false,
       forced: false,
+      leftEvent: false,
     },
     ...state.picks
       .filter((pick) => pick.slotId === slot.slotId)
@@ -97,6 +104,7 @@ export function rosterOf(
         rating: ratingOf.get(pick.poolEntryId) ?? null,
         auto: pick.auto,
         forced: pick.forced,
+        leftEvent: leftOf.get(pick.poolEntryId) ?? false,
       })),
   ]
 }
@@ -139,4 +147,51 @@ export function filterPool(
     }
     return byName(a, b)
   })
+}
+
+/** Captains who let the timer run out `DRAFT_AFK_THRESHOLD` turns in a row. */
+export function awaySlots(state: DraftState): DraftSlotState[] {
+  return state.slots.filter(
+    (slot) => slot.consecutiveTimeouts >= DRAFT_AFK_THRESHOLD
+  )
+}
+
+/** Players drafted who have since left the Event: the manager has to step in. */
+export function draftedWhoLeft(state: DraftState): DraftPoolState[] {
+  return state.pool.filter(
+    (entry) => entry.status === "drafted" && entry.leftEvent === true
+  )
+}
+
+export interface UnassignedPlayer {
+  userId: string
+  kind: "not_picked" | "late_joiner"
+}
+
+/**
+ * Participants no team will get: pool players nobody picked (known once the
+ * draft is complete) and those who joined after the start (the pool is frozen
+ * then). The manager places them by hand.
+ */
+export function unassignedPlayers(
+  state: DraftState,
+  lateJoiners: readonly string[]
+): UnassignedPlayer[] {
+  const notPicked =
+    state.status === "complete"
+      ? state.pool.flatMap((entry) =>
+          entry.status === "available" &&
+          entry.userId !== null &&
+          entry.leftEvent !== true
+            ? [{ userId: entry.userId, kind: "not_picked" as const }]
+            : []
+        )
+      : []
+  return [
+    ...notPicked,
+    ...lateJoiners.map((userId) => ({
+      userId,
+      kind: "late_joiner" as const,
+    })),
+  ]
 }

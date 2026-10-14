@@ -221,6 +221,14 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
     "draft:manage",
     "a manager picks for the on-turn captain; Event derived from the draft"
   ),
+  [`${A}draft.ts#skipTurn`]: perm(
+    "draft:manage",
+    "a manager passes the on-turn captain's pick; Event derived from the draft"
+  ),
+  [`${A}draft.ts#setPickQueue`]: perm(
+    ["draft:view", "draft:pick"],
+    "enforced by setPickQueue (src/server/draft/core.ts): only a captain, only for the Team they lead (draft:pick against that Team); the queue is private; Event derived from the draft"
+  ),
   [`${A}draft.ts#undoPick`]: perm(
     "draft:manage",
     "managers only; Event derived from the draft"
@@ -417,6 +425,11 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
   [`${R}auth/[...nextauth]/route.ts#POST`]: {
     kind: "framework",
     reason: "NextAuth handles its own sign-in and session endpoints",
+  },
+  [`${R}cron/draft-sweep/route.ts#GET`]: {
+    kind: "secret",
+    reason:
+      "Bearer CRON_SECRET, fail closed when unset; resolves expired draft turns (backstop for the in-process sweeper)",
   },
   [`${R}cron/rbac-reconcile/route.ts#GET`]: {
     kind: "secret",

@@ -393,6 +393,28 @@ Enumerated columns are `text` with CHECK constraints (status, order type, timeou
 
 **Rollback.** The app image can be rolled back freely. A draft that is `in_progress` then simply sits there (nobody can pick); its Teams and captain memberships stay. Cancel it from the new version, or delete the Teams by hand. The tables can stay empty and unused indefinitely.
 
+## Team draft timer rollout (migration `0042_team_draft_timer`)
+
+Team draft 3/4 (epic #214, issue #217): pick timer, auto-pick, pause and undo. Expand-only and compatible with the previous app version (rolling the app image back is safe; the database is not reverted). Every statement is idempotent. A test (`src/server/__tests__/draft-timer-migration.test.ts`) applies it to a database at 0041 and checks all of the below.
+
+| Change | Purpose |
+| ------ | ------- |
+| `draft.paused_remaining_ms` (nullable) | The time left on the turn when the draft was paused; resume restores it. `turn_deadline` is NULL while paused. |
+| `draft_team_slot.consecutive_timeouts` (`NOT NULL DEFAULT 0`) | Turns in a row a captain let the timer run out; at 2 the room flags the captain for the manager. |
+| `draft_pick.undone_at` (nullable) | Undo is a soft delete: the row stays for the audit trail. |
+| `draft_pick_draft_pick_no_unique`, `draft_pick_draft_pool_entry_unique` | Recreated as **partial** unique indexes (`WHERE undone_at IS NULL`), so an undone pick frees its number and its player. They are dropped and created in the same transaction. |
+| `draft_queue_entry` (new table) | A captain's private pick queue; composite foreign keys keep it inside its draft. |
+
+**Compatibility.** The previous app version never sets `undone_at` and hard-deletes on undo, so for it the partial indexes behave exactly like the full ones. It does not know the new columns (they are nullable or defaulted) or the new table. A draft that is `in_progress` with a pick timer configured but no `turn_deadline` (started by the previous version) is armed by the new version the first time it is read or swept: the turn is timed from then on.
+
+**Rollback.** The app image can be rolled back freely. Rows with `undone_at` set are invisible to the previous version only through its own queries: it reads every `draft_pick` row, so an undone pick would show again there. Finish or cancel a draft with undone picks before rolling back, or delete the rows with `undone_at IS NOT NULL` by hand.
+
+**The timer needs a long-lived process.** The sweeper (once per second, `pg_try_advisory_xact_lock`) starts from `src/instrumentation.ts` in the Node server, like the SSE hub. It also resolves turns that expired during a deploy as soon as the new container is up. Expired turns are additionally resolved lazily on every pick, state read and stream connect, so a missing sweeper only delays an AFK captain's auto-pick until somebody looks at the draft. `GET /api/cron/draft-sweep` (bearer `CRON_SECRET`, same as the other cron routes) runs the same sweep and can be called from host cron as a backstop:
+
+```bash
+curl --fail -H "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3000/api/cron/draft-sweep
+```
+
 ## RBAC 7/8 rollout (migration `0040_credential_session_hygiene`)
 
 Phase 7 of the RBAC consolidation (epic #183, issue #190): credential and session hygiene. Add-first and compatible with the previous app version (rolling the app image back is safe; the database is not reverted). Every statement is idempotent.

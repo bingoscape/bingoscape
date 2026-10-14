@@ -6,7 +6,8 @@ import { DraftRoom } from "@/components/draft/draft-room"
 import { Button } from "@/components/ui/button"
 import { getServerAuthSession } from "@/server/auth"
 import { getEventCapabilities } from "@/server/authz"
-import { loadDraftSnapshot } from "@/server/draft/queries"
+import { settleExpiredDraft } from "@/server/draft/expire"
+import { loadDraftSnapshot, loadPickQueue } from "@/server/draft/queries"
 import { getEventById } from "@/server/queries/events"
 
 /**
@@ -28,7 +29,13 @@ export default async function EventDraftPage(props: {
   ])
   if (!data || !capabilities.canViewDraft) notFound()
 
+  // Lazy enforcement of the pick timer: opening the room settles an expired turn.
+  await settleExpiredDraft(id)
   const snapshot = await loadDraftSnapshot(id)
+  const initialQueue =
+    snapshot && capabilities.canPick
+      ? await loadPickQueue(snapshot.draftId, session.user.id)
+      : []
 
   return (
     <main className="w-full space-y-4">
@@ -46,6 +53,7 @@ export default async function EventDraftPage(props: {
           viewerUserId={session.user.id}
           canManage={capabilities.canManageDraft}
           canPick={capabilities.canPick}
+          initialQueue={initialQueue}
         />
       ) : (
         <div className="rounded-sm border border-dashed p-8 text-center">

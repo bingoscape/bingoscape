@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
+import { MAX_QUEUE_LENGTH } from "@/lib/draft/autopick"
 import { draftSettingsSchema } from "@/lib/draft/setup"
 import { getServerAuthSession } from "@/server/auth"
 import type { ActionResult } from "@/server/authz"
@@ -16,6 +17,8 @@ import {
   pauseDraft as pauseDraftCore,
   performPick,
   resumeDraft as resumeDraftCore,
+  setPickQueue as setPickQueueCore,
+  skipTurn as skipTurnCore,
   startDraft as startDraftCore,
   undoPick as undoPickCore,
 } from "@/server/draft/core"
@@ -28,6 +31,10 @@ import { limitAction } from "@/server/rate-limit"
  * never trusted from the client), and the body runs in one transaction. The
  * logic lives in `src/server/draft/core.ts`; the exports here are thin and all
  * return `{ success, error? }`.
+ *
+ * Phase 3 (#217) adds `skipTurn` (manager) and `setPickQueue` (a captain, for
+ * their own team; `draft:view` here and the captain check in the body, like
+ * `makePick`).
  *
  * `makePick` asks for `draft:view` here and for `draft:pick` in the body: who
  * may pick depends on whose turn it is, which is only known under the draft
@@ -145,6 +152,40 @@ const forcePickAction = eventAction({
   )
 )
 
+const skipTurnAction = eventAction({
+  schema: draftIdSchema,
+  permission: "draft:manage",
+  eventIdOf: (input) => eventIdOfDraft(input.draftId),
+}).action(async ({ parsedInput, ctx }) =>
+  withEvent(
+    await skipTurnCore(ctx.tx, {
+      draftId: parsedInput.draftId,
+      actor: ctx.actor,
+    }),
+    ctx.actor.eventId
+  )
+)
+
+const pickQueueSchema = draftIdSchema.extend({
+  poolEntryIds: z.array(z.string().uuid()).max(MAX_QUEUE_LENGTH),
+})
+
+const setPickQueueAction = eventAction({
+  schema: pickQueueSchema,
+  permission: "draft:view",
+  eventIdOf: (input) => eventIdOfDraft(input.draftId),
+}).action(async ({ parsedInput, ctx }) =>
+  withEvent(
+    // Only a captain, and only for their own team: checked in setPickQueue.
+    await setPickQueueCore(ctx.tx, {
+      draftId: parsedInput.draftId,
+      actor: ctx.actor,
+      poolEntryIds: parsedInput.poolEntryIds,
+    }),
+    ctx.actor.eventId
+  )
+)
+
 const undoPickAction = eventAction({
   schema: draftIdSchema,
   permission: "draft:manage",
@@ -257,6 +298,29 @@ export async function forcePick(input: {
   const limited = await limitAction("draftPick", session?.user?.id)
   if (limited) return limited
   return finish(await forcePickAction(input), false)
+}
+
+/**
+ * A manager passes the on-turn captain's pick: the pick is lost and the next
+ * turn starts (`draft:manage`).
+ */
+export async function skipTurn(input: {
+  draftId: string
+}): Promise<
+  ActionResult<{ pickNo: number; completed: boolean; eventId: string }>
+> {
+  return finish(await skipTurnAction(input), false)
+}
+
+/**
+ * A captain sets their private pick queue: the players their team takes first
+ * when the timer runs out. Replaces the previous list.
+ */
+export async function setPickQueue(input: {
+  draftId: string
+  poolEntryIds: string[]
+}): Promise<ActionResult<{ count: number; eventId: string }>> {
+  return finish(await setPickQueueAction(input), false)
 }
 
 /** Removes the last pick (`draft:manage`, managers only). */

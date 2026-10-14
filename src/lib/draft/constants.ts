@@ -31,3 +31,9 @@ export const DRAFT_POOL_STATUSES = [
   "withdrawn",
 ] as const
 export type DraftPoolStatus = (typeof DRAFT_POOL_STATUSES)[number]
+
+/**
+ * A captain who let the timer run out this many turns in a row is flagged so
+ * the manager can step in (pause, pick for them, or skip their turn).
+ */
+export const DRAFT_AFK_THRESHOLD = 2

@@ -342,6 +342,11 @@ const CASES: Case[] = [
     expect: "denied",
   },
   {
+    key: key("draft.ts", "skipTurn"),
+    call: (x) => draft.skipTurn({ draftId: x.event2Extra.draftId }),
+    expect: "denied",
+  },
+  {
     key: key("draft.ts", "undoPick"),
     call: (x) => draft.undoPick({ draftId: x.event2Extra.draftId }),
     expect: "denied",
@@ -966,6 +971,8 @@ const EXEMPT: Record<string, string> = {
     "always writes the caller's own row, and the attacker is a participant of Event 2",
   [key("templates.ts", "importTemplateIntoEvent")]:
     "needs a stored template; the permission is enforced by importBingoBoard, which has a case",
+  [key("draft.ts", "setPickQueue")]:
+    "draft:view: the attacker is a legitimate participant of Event 2; only a captain of a Team of the draft may queue (draft-timer.test.ts)",
   [key("draft.ts", "makePick")]:
     "draft:view: the attacker is a legitimate participant of Event 2; whether they may pick (only the on-turn captain) is covered in draft.test.ts and draft-concurrency.test.ts",
   [`${R}events/[id]/draft/state/route.ts#GET`]:

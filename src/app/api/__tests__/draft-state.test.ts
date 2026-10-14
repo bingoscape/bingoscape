@@ -5,13 +5,13 @@
  * it authorizes itself, answers a snapshot or the events since a `seq`, and
  * keeps polling cheap with an ETag.
  */
-import { asc, eq } from "drizzle-orm"
+import { asc, eq, sql } from "drizzle-orm"
 
 import { makePick } from "@/app/actions/draft"
 import { GET } from "@/app/api/events/[id]/draft/state/route"
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
-import { draftPoolEntries, draftTeamSlots } from "@/server/db/schema"
+import { draftPoolEntries, draftTeamSlots, drafts } from "@/server/db/schema"
 import { resetRateLimits } from "@/server/rate-limit"
 import {
   createDraftWorld,
@@ -172,5 +172,39 @@ describe("state", () => {
     expect((await call(w.eventId, "?since=-1")).status).toBe(400)
     expect((await call(w.eventId, "?since=abc")).status).toBe(400)
     expect((await call(w.eventId, "?since=1.5")).status).toBe(400)
+  })
+})
+
+describe("the pick timer", () => {
+  it("reports database time with the events since a seq", async () => {
+    await startedDraft(w, { pickTimerSeconds: 60 })
+    signInAs(w.players[0]!)
+    const body = await (await call(w.eventId, "?since=0")).json()
+    expect(Math.abs(Date.parse(body.serverNow) - Date.now())).toBeLessThan(5000)
+    const started = body.events.find(
+      (e: { type: string }) => e.type === "started"
+    )
+    expect(started.payload.deadline).toEqual(expect.any(String))
+    expect(started.payload.serverNow).toEqual(expect.any(String))
+  })
+
+  it("settles an expired turn when the state is read", async () => {
+    const { draftId } = await startedDraft(w, { pickTimerSeconds: 60 })
+    signInAs(w.players[0]!)
+    await db
+      .update(drafts)
+      .set({ turnDeadline: sql`clock_timestamp() - interval '1 second'` })
+      .where(eq(drafts.id, draftId))
+
+    const body = await (await call(w.eventId)).json()
+
+    expect(body.draft.state.currentPickNo).toBe(2)
+    expect(body.draft.state.picks).toHaveLength(1)
+    expect(body.draft.state.picks[0]).toMatchObject({
+      auto: true,
+      reason: "timer_auto",
+    })
+    expect(Date.parse(body.draft.state.deadline)).toBeGreaterThan(Date.now())
+    expect(body.draft.serverNow).toBe(body.draft.state.serverNow)
   })
 })

@@ -5,38 +5,20 @@ import { randomInt } from "node:crypto"
 import {
   and,
   asc,
-  count,
   desc,
   eq,
   inArray,
+  isNull,
   notInArray,
   sql,
-  type SQL,
 } from "drizzle-orm"
 
 import { can, type EventActor } from "@/lib/authz/policy"
-import {
-  identityPermutation,
-  isPermutation,
-  roundOf,
-  seededPermutation,
-  slotFor,
-  totalPicks,
-} from "@/lib/draft/order"
+import { identityPermutation, seededPermutation } from "@/lib/draft/order"
+import { normalizeQueue } from "@/lib/draft/autopick"
 import { DRAFT_RATING_SOURCE, rateDraftPool } from "@/lib/draft/rating"
 import type { DraftSettingsInput } from "@/lib/draft/setup"
-import { DRAFT_NOTIFY_CHANNEL, type DraftNotifyPayload } from "@/lib/draft/sse"
-import type {
-  DraftEventPayloads,
-  DraftEventType,
-  DraftStatus,
-} from "@/lib/draft/types"
-import {
-  failure,
-  membershipFailure,
-  type ActionFailure,
-  type ActionResult,
-} from "@/server/authz/guards"
+import { failure, membershipFailure } from "@/server/authz/guards"
 import { recordEventAudit } from "@/server/authz/audit-log"
 import {
   addTeamMembers,
@@ -44,13 +26,12 @@ import {
   lockEventRow,
   onATeamAmong,
   participantsAmong,
-  type Tx,
 } from "@/server/authz/team-membership"
 import {
   battleshipShips,
-  draftEvents,
   draftPicks,
   draftPoolEntries,
+  draftQueueEntries,
   draftTeamSlots,
   drafts,
   eventParticipants,
@@ -60,8 +41,31 @@ import {
   teamTierProgress,
   teamTileSubmissions,
   teams,
-  type DraftRow,
 } from "@/server/db/schema"
+import { expireLocked } from "./expire"
+import {
+  CONFLICT_CHANGED,
+  NOT_FOUND,
+  appendDraftEvent,
+  atomic,
+  deadlineIn,
+  deadlineInMs,
+  lockDraft,
+  remainingMsSql,
+  statusMessage,
+  timerPayload,
+  updateDraft,
+  type Result,
+  type Tx,
+} from "./internal"
+import {
+  commitPick,
+  commitSkip,
+  isFull,
+  loadTurn,
+  pickCounts,
+  slotAt,
+} from "./turn"
 
 /**
  * The draft lifecycle, as plain functions that run in the caller's transaction
@@ -83,120 +87,7 @@ import {
  */
 
 export type { Tx }
-
-type Result<T extends object = object> = ActionResult<T>
-
-const NOT_FOUND = failure("Draft not found", "NOT_FOUND")
-
-class AbortWith extends Error {
-  constructor(readonly failure: ActionFailure) {
-    super(failure.error)
-  }
-}
-
-/** Runs `fn` in a savepoint; a returned failure rolls the savepoint back. */
-async function atomic<T extends object>(
-  tx: Tx,
-  fn: (inner: Tx) => Promise<Result<T>>
-): Promise<Result<T>> {
-  try {
-    return await tx.transaction(async (inner) => {
-      const result = await fn(inner as Tx)
-      if (!result.success) throw new AbortWith(result)
-      return result
-    })
-  } catch (error) {
-    if (error instanceof AbortWith) return error.failure
-    throw error
-  }
-}
-
-async function lockDraft(tx: Tx, draftId: string): Promise<DraftRow | null> {
-  const [row] = await tx
-    .select()
-    .from(drafts)
-    .where(eq(drafts.id, draftId))
-    .for("update")
-    .limit(1)
-  return row ?? null
-}
-
-/** Appends a row to the draft log and returns its `seq`. */
-export async function appendDraftEvent<T extends DraftEventType>(
-  tx: Tx,
-  draftId: string,
-  type: T,
-  actorUserId: string | null,
-  payload: DraftEventPayloads[T]
-): Promise<number> {
-  const [row] = await tx
-    .insert(draftEvents)
-    .values({
-      draftId,
-      type,
-      actorUserId,
-      payload: payload as Record<string, unknown>,
-    })
-    .returning({ seq: draftEvents.seq })
-  if (!row) throw new Error("draft_event insert returned no row")
-  // Wake the live streams. Postgres delivers this only if the transaction
-  // commits, and only `{ draftId, seq }` travels (the payload limit is 8 KB):
-  // the streams read the log row themselves.
-  const notice: DraftNotifyPayload = { draftId, seq: row.seq }
-  await tx.execute(
-    sql`select pg_notify(${DRAFT_NOTIFY_CHANNEL}, ${JSON.stringify(notice)})`
-  )
-  return row.seq
-}
-
-/**
- * Updates the locked draft, bumps `version` and `updated_at`, and only when it
- * still has the status it was read with. False: nothing was updated.
- */
-type DraftUpdate = {
-  [K in keyof typeof drafts.$inferInsert]?:
-    | (typeof drafts.$inferInsert)[K]
-    | SQL
-}
-
-async function updateDraft(
-  tx: Tx,
-  draft: Pick<DraftRow, "id" | "status">,
-  set: DraftUpdate
-): Promise<boolean> {
-  const rows = await tx
-    .update(drafts)
-    .set({
-      ...set,
-      version: sql`${drafts.version} + 1`,
-      updatedAt: sql`now()`,
-    })
-    .where(and(eq(drafts.id, draft.id), eq(drafts.status, draft.status)))
-    .returning({ id: drafts.id })
-  return rows.length === 1
-}
-
-const CONFLICT_CHANGED = failure(
-  "The draft changed while you were acting. Reload and try again.",
-  "CONFLICT"
-)
-
-function statusMessage(status: DraftStatus): string {
-  switch (status) {
-    case "setup":
-      return "The draft has not started yet"
-    case "open":
-      return "The draft has not started yet"
-    case "paused":
-      return "The draft is paused"
-    case "complete":
-      return "The draft is complete"
-    case "cancelled":
-      return "The draft was cancelled"
-    default:
-      return "The draft is not running"
-  }
-}
+export { appendDraftEvent }
 
 // ---------------------------------------------------------------------------
 // Create
@@ -269,7 +160,8 @@ export async function createDraft(
     .returning({ id: drafts.id })
   if (!draft) throw new Error("draft insert returned no row")
 
-  const maxTeamSize = settings.rounds + 1 // the captain plus one player per round
+  // The captain plus one player per round, unless the manager capped it.
+  const maxTeamSize = settings.maxTeamSize ?? settings.rounds + 1
   const slots = await tx
     .insert(draftTeamSlots)
     .values(
@@ -434,13 +326,14 @@ export async function startDraft(
         ? seededPermutation(seed, slots.length)
         : identityPermutation(slots.length)
 
-    // Phase 1 has no pick timer: `turn_deadline` stays NULL.
-    const updated = await updateDraft(inner, draft, {
+    const seconds = draft.pickTimerSeconds
+    const timing = await updateDraft(inner, draft, {
       status: "in_progress",
       seed,
       startedAt: sql`now()`,
+      turnDeadline: seconds ? deadlineIn(seconds) : null,
     })
-    if (!updated) return CONFLICT_CHANGED
+    if (!timing) return CONFLICT_CHANGED
 
     await appendDraftEvent(inner, draft.id, "started", input.actor.userId, {
       seed,
@@ -452,6 +345,7 @@ export async function startDraft(
         rating: entry.ratingSnapshot,
         ratingSource: entry.ratingSource,
       })),
+      ...timerPayload(timing),
     })
     return { success: true, poolSize: entries.length, teams: slotTeams.length }
   })
@@ -461,48 +355,61 @@ export async function startDraft(
 // Pause / resume
 // ---------------------------------------------------------------------------
 
-async function changeStatus(
+/**
+ * Pauses the running draft and freezes the time left on the turn
+ * (`paused_remaining_ms`); `resumeDraft` restores it. A turn that had already
+ * run out is resolved first (it is the timer's, not the manager's, to settle).
+ */
+export async function pauseDraft(
   tx: Tx,
-  input: { draftId: string; actor: Pick<EventActor, "userId"> },
-  from: DraftStatus,
-  to: DraftStatus,
-  type: "paused" | "resumed",
-  refusal: string
+  input: { draftId: string; actor: Pick<EventActor, "userId"> }
 ): Promise<Result> {
-  const draft = await lockDraft(tx, input.draftId)
-  if (!draft) return NOT_FOUND
-  if (draft.status !== from) return failure(refusal, "CONFLICT")
-  if (!(await updateDraft(tx, draft, { status: to }))) return CONFLICT_CHANGED
-  await appendDraftEvent(tx, draft.id, type, input.actor.userId, {})
+  const locked = await lockDraft(tx, input.draftId)
+  if (!locked) return NOT_FOUND
+  const { draft } = await expireLocked(tx, locked)
+  if (draft.status !== "in_progress") {
+    return failure("Only a running draft can be paused", "CONFLICT")
+  }
+  const timing = await updateDraft(tx, draft, {
+    status: "paused",
+    turnDeadline: null,
+    pausedRemainingMs: draft.turnDeadline ? remainingMsSql : null,
+  })
+  if (!timing) return CONFLICT_CHANGED
+  await appendDraftEvent(tx, draft.id, "paused", input.actor.userId, {
+    reason: "manual",
+    ...timerPayload(timing),
+  })
   return { success: true }
 }
 
-export function pauseDraft(
+export async function resumeDraft(
   tx: Tx,
   input: { draftId: string; actor: Pick<EventActor, "userId"> }
 ): Promise<Result> {
-  return changeStatus(
+  const draft = await lockDraft(tx, input.draftId)
+  if (!draft) return NOT_FOUND
+  if (draft.status !== "paused") {
+    return failure("Only a paused draft can be resumed", "CONFLICT")
+  }
+  const seconds = draft.pickTimerSeconds
+  // A draft paused before the timer existed has no stored time: start over.
+  const remainingMs =
+    draft.pausedRemainingMs ?? (seconds ? seconds * 1000 : null)
+  const timing = await updateDraft(tx, draft, {
+    status: "in_progress",
+    turnDeadline: remainingMs === null ? null : deadlineInMs(remainingMs),
+    pausedRemainingMs: null,
+  })
+  if (!timing) return CONFLICT_CHANGED
+  await appendDraftEvent(
     tx,
-    input,
-    "in_progress",
-    "paused",
-    "paused",
-    "Only a running draft can be paused"
-  )
-}
-
-export function resumeDraft(
-  tx: Tx,
-  input: { draftId: string; actor: Pick<EventActor, "userId"> }
-): Promise<Result> {
-  return changeStatus(
-    tx,
-    input,
-    "paused",
-    "in_progress",
+    draft.id,
     "resumed",
-    "Only a paused draft can be resumed"
+    input.actor.userId,
+    timerPayload(timing)
   )
+  return { success: true }
 }
 
 // ---------------------------------------------------------------------------
@@ -517,56 +424,36 @@ export interface PerformPickInput {
   force?: boolean
 }
 
-async function loadPermutation(
-  tx: Tx,
-  draftId: string,
-  slotCount: number
-): Promise<number[]> {
-  const [started] = await tx
-    .select({ payload: draftEvents.payload })
-    .from(draftEvents)
-    .where(
-      and(eq(draftEvents.draftId, draftId), eq(draftEvents.type, "started"))
-    )
-    .orderBy(asc(draftEvents.seq))
-    .limit(1)
-  const permutation = (
-    started?.payload as { permutation?: unknown } | undefined
-  )?.permutation
-  if (!isPermutation(permutation, slotCount)) {
-    throw new Error("The draft has no valid start event")
-  }
-  return permutation as number[]
-}
+const TURN_EXPIRED = failure(
+  "Time ran out for that turn, so the draft moved on",
+  "CONFLICT"
+)
 
 /**
  * One pick, `makePick` or (with `force`) `forcePick`. In the caller's
- * transaction: lock the draft; work out the slot that is due from
+ * transaction: lock the draft; settle an expired turn (a pick that arrives
+ * after the deadline loses to the timer); work out the slot that is due from
  * `current_pick_no`; refuse unless the actor leads that slot's Team (or a
  * manager forces); refuse unless the player is an available pool entry and
- * still a participant; insert the pick, bump `current_pick_no` and `version`,
- * append the log row, and complete the draft after the last pick.
+ * still a participant; then record the pick and move the turn on
+ * (`commitPick`: next deadline, completion, full teams passed over).
  */
 export async function performPick(
   tx: Tx,
   input: PerformPickInput
 ): Promise<Result<{ pickNo: number; completed: boolean }>> {
-  const draft = await lockDraft(tx, input.draftId)
-  if (!draft) return NOT_FOUND
+  const locked = await lockDraft(tx, input.draftId)
+  if (!locked) return NOT_FOUND
+  const { draft, acted } = await expireLocked(tx, locked)
+  if (acted) return TURN_EXPIRED
   if (draft.status !== "in_progress") {
     return failure(statusMessage(draft.status), "CONFLICT")
   }
 
-  const slots = await tx
-    .select()
-    .from(draftTeamSlots)
-    .where(eq(draftTeamSlots.draftId, draft.id))
-    .orderBy(asc(draftTeamSlots.position))
-  const permutation = await loadPermutation(tx, draft.id, slots.length)
+  const ctx = await loadTurn(tx, draft)
+  const { slots } = ctx
   const pickNo = draft.currentPickNo
-  const slot =
-    slots[slotFor(pickNo, slots.length, draft.orderType, permutation)]
-  if (!slot) throw new Error("No slot for the current pick")
+  const slot = slotAt(ctx, pickNo)
 
   if (input.force) {
     if (!can(input.actor, "draft:manage")) {
@@ -605,34 +492,79 @@ export async function performPick(
     }
   }
 
-  const [{ n: slotPicks = 0 } = {}] = await tx
-    .select({ n: count() })
-    .from(draftPicks)
-    .where(
-      and(eq(draftPicks.draftId, draft.id), eq(draftPicks.slotId, slot.id))
-    )
-  // The captain counts toward the team size.
-  if (slotPicks + 1 >= slot.maxTeamSize) {
+  const counts = await pickCounts(tx, draft.id)
+  if (isFull(slot, counts.get(slot.id) ?? 0)) {
     return failure("That team is already full", "CONFLICT")
   }
 
-  await tx.insert(draftPicks).values({
-    draftId: draft.id,
+  return commitPick(tx, ctx, {
     pickNo,
-    round: roundOf(pickNo, slots.length),
-    slotId: slot.id,
-    poolEntryId: entry.id,
-    pickedBy: input.actor.userId,
+    slot,
+    entry,
+    actorUserId: input.actor.userId,
     auto: false,
     reason: input.force ? "forced" : null,
+    // The captain picked: their streak of timeouts ends. A manager picking for
+    // an absent captain does not end it.
+    consecutiveTimeouts: input.force ? slot.consecutiveTimeouts : 0,
   })
-  await tx
-    .update(draftPoolEntries)
-    .set({ status: "drafted" })
-    .where(eq(draftPoolEntries.id, entry.id))
+}
 
-  const [{ n: available = 0 } = {}] = await tx
-    .select({ n: count() })
+/**
+ * A manager passes the on-turn captain's pick (`skipTurn`): the pick is lost,
+ * as with `on_timeout: skip`, and the next turn starts with a fresh deadline.
+ */
+export async function skipTurn(
+  tx: Tx,
+  input: { draftId: string; actor: Pick<EventActor, "userId"> }
+): Promise<Result<{ pickNo: number; completed: boolean }>> {
+  const locked = await lockDraft(tx, input.draftId)
+  if (!locked) return NOT_FOUND
+  const { draft, acted } = await expireLocked(tx, locked)
+  if (acted) return TURN_EXPIRED
+  if (draft.status !== "in_progress") {
+    return failure(statusMessage(draft.status), "CONFLICT")
+  }
+  const ctx = await loadTurn(tx, draft)
+  const pickNo = draft.currentPickNo
+  const slot = slotAt(ctx, pickNo)
+  return commitSkip(tx, ctx, {
+    pickNo,
+    slot,
+    actorUserId: input.actor.userId,
+    reason: "manual_skip",
+    consecutiveTimeouts: slot.consecutiveTimeouts,
+  })
+}
+
+/**
+ * Sets the viewer's pick queue: the players their team takes first when the
+ * timer runs out. Only a captain, only for their own team, only players still
+ * available; the list replaces the old one. Private: it is not logged and not
+ * part of any snapshot.
+ */
+export async function setPickQueue(
+  tx: Tx,
+  input: { draftId: string; actor: EventActor; poolEntryIds: string[] }
+): Promise<Result<{ count: number }>> {
+  const draft = await lockDraft(tx, input.draftId)
+  if (!draft) return NOT_FOUND
+  if (draft.status !== "in_progress" && draft.status !== "paused") {
+    return failure(statusMessage(draft.status), "CONFLICT")
+  }
+  const slots = await tx
+    .select()
+    .from(draftTeamSlots)
+    .where(eq(draftTeamSlots.draftId, draft.id))
+  const slot = slots.find(
+    (s) => s.teamId && can(input.actor, "draft:pick", { teamId: s.teamId })
+  )
+  if (!slot) {
+    return failure("Only a captain can queue players", "FORBIDDEN")
+  }
+
+  const available = await tx
+    .select({ id: draftPoolEntries.id })
     .from(draftPoolEntries)
     .where(
       and(
@@ -640,37 +572,35 @@ export async function performPick(
         eq(draftPoolEntries.status, "available")
       )
     )
-  const nextPickNo = pickNo + 1
-  const completed =
-    nextPickNo > totalPicks(draft.rounds, slots.length) || available === 0
+  const queue = normalizeQueue(
+    input.poolEntryIds,
+    new Set(available.map((e) => e.id))
+  )
 
-  const updated = await updateDraft(tx, draft, {
-    currentPickNo: nextPickNo,
-    ...(completed ? { status: "complete", completedAt: sql`now()` } : {}),
-  })
-  if (!updated) throw new Error("The locked draft changed under the pick")
-
-  await appendDraftEvent(tx, draft.id, "pick", input.actor.userId, {
-    pickNo,
-    round: roundOf(pickNo, slots.length),
-    slotId: slot.id,
-    poolEntryId: entry.id,
-    userId: entry.userId,
-    auto: false,
-    forced: input.force === true,
-    reason: input.force ? "forced" : null,
-  })
-  if (completed) {
-    await appendDraftEvent(tx, draft.id, "completed", input.actor.userId, {})
+  await tx
+    .delete(draftQueueEntries)
+    .where(eq(draftQueueEntries.slotId, slot.id))
+  if (queue.length > 0) {
+    await tx.insert(draftQueueEntries).values(
+      queue.map((poolEntryId, position) => ({
+        draftId: draft.id,
+        slotId: slot.id,
+        poolEntryId,
+        position,
+      }))
+    )
   }
-  return { success: true, pickNo, completed }
+  return { success: true, count: queue.length }
 }
 
 /**
  * Removes the last pick (manager only, enforced by the action's permission).
- * Pick numbers stay contiguous because only the highest one is removed under
- * the draft lock. A completed draft that was not applied becomes
- * `in_progress` again.
+ * It is a soft delete (`undone_at`): the row stays for the audit trail, and
+ * the unique indexes ignore it, so its pick number and its player are free
+ * again. Pick numbers stay contiguous because only the highest standing one is
+ * undone under the draft lock; the order is never recomputed. A completed
+ * draft that was not applied becomes `in_progress` again; the turn restarts
+ * with a full timer.
  */
 export async function undoPick(
   tx: Tx,
@@ -688,27 +618,51 @@ export async function undoPick(
   const [last] = await tx
     .select()
     .from(draftPicks)
-    .where(eq(draftPicks.draftId, draft.id))
+    .where(and(eq(draftPicks.draftId, draft.id), isNull(draftPicks.undoneAt)))
     .orderBy(desc(draftPicks.pickNo))
     .limit(1)
   if (!last) return failure("There is no pick to undo", "CONFLICT")
 
-  await tx.delete(draftPicks).where(eq(draftPicks.id, last.id))
+  await tx
+    .update(draftPicks)
+    .set({ undoneAt: sql`now()` })
+    .where(eq(draftPicks.id, last.id))
   await tx
     .update(draftPoolEntries)
     .set({ status: "available" })
     .where(eq(draftPoolEntries.id, last.poolEntryId))
+
+  // A pick the timer made was a timeout; taking it back takes the count back.
+  const [slot] = await tx
+    .select()
+    .from(draftTeamSlots)
+    .where(eq(draftTeamSlots.id, last.slotId))
+  let timeouts = slot?.consecutiveTimeouts ?? 0
+  if (slot && last.auto && last.reason?.startsWith("timer_")) {
+    timeouts = Math.max(0, timeouts - 1)
+    await tx
+      .update(draftTeamSlots)
+      .set({ consecutiveTimeouts: timeouts })
+      .where(eq(draftTeamSlots.id, slot.id))
+  }
+
   const reopen = draft.status === "complete"
-  const updated = await updateDraft(tx, draft, {
+  const running = reopen || draft.status === "in_progress"
+  const seconds = draft.pickTimerSeconds
+  const timing = await updateDraft(tx, draft, {
     currentPickNo: last.pickNo,
     ...(reopen ? { status: "in_progress", completedAt: null } : {}),
+    turnDeadline: running && seconds ? deadlineIn(seconds) : null,
+    pausedRemainingMs: !running && seconds ? seconds * 1000 : null,
   })
-  if (!updated) throw new Error("The locked draft changed under the undo")
+  if (!timing) throw new Error("The locked draft changed under the undo")
 
   await appendDraftEvent(tx, draft.id, "undo", input.actor.userId, {
     pickNo: last.pickNo,
     slotId: last.slotId,
     poolEntryId: last.poolEntryId,
+    consecutiveTimeouts: timeouts,
+    ...timerPayload(timing),
   })
   return { success: true, pickNo: last.pickNo }
 }
@@ -753,7 +707,7 @@ export async function applyDraft(
         eq(draftPoolEntries.draftId, draftPicks.draftId)
       )
     )
-    .where(eq(draftPicks.draftId, draft.id))
+    .where(and(eq(draftPicks.draftId, draft.id), isNull(draftPicks.undoneAt)))
     .orderBy(asc(draftPicks.pickNo))
 
   return atomic(tx, async (inner) => {

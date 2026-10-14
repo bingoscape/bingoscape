@@ -1695,11 +1695,14 @@ export const drafts = createTable(
       .default("best_rated"),
     // 1-based number of the pick that is due next.
     currentPickNo: integer("current_pick_no").notNull().default(1),
-    // Database clock (`now()`), never the client's.
+    // Database clock, never the client's. NULL: no timer, or the draft is
+    // paused (see `pausedRemainingMs`).
     turnDeadline: timestamp("turn_deadline", {
       mode: "date",
       withTimezone: true,
     }),
+    // Time left on the turn when the draft was paused; `resume` restores it.
+    pausedRemainingMs: integer("paused_remaining_ms"),
     // Bumped by every change; clients and the state endpoint compare it.
     version: integer("version").notNull().default(0),
     // Seed of the random order, set when the draft starts.
@@ -1754,6 +1757,8 @@ export const draftTeamSlots = createTable(
     maxTeamSize: integer("max_team_size").notNull(),
     // Set when the draft starts; NULL again if the Team is deleted.
     teamId: uuid("team_id"),
+    // Turns in a row this captain let the timer run out; a pick resets it.
+    consecutiveTimeouts: integer("consecutive_timeouts").notNull().default(0),
     createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -1859,6 +1864,9 @@ export const draftPicks = createTable(
       .notNull(),
     auto: boolean("auto").default(false).notNull(),
     reason: text("reason"),
+    // Soft delete: an undone pick stays for the audit trail, and its pick
+    // number and player are free again (the unique indexes ignore it).
+    undoneAt: timestamp("undone_at", { mode: "date", withTimezone: true }),
   },
   (table) => ({
     draftFk: foreignKey({
@@ -1881,18 +1889,58 @@ export const draftPicks = createTable(
       columns: [table.pickedBy],
       foreignColumns: [users.id],
     }).onDelete("set null"),
-    draftPickNoUnique: uniqueIndex("draft_pick_draft_pick_no_unique").on(
-      table.draftId,
-      table.pickNo
-    ),
-    draftPoolEntryUnique: uniqueIndex("draft_pick_draft_pool_entry_unique").on(
-      table.draftId,
-      table.poolEntryId
-    ),
+    draftPickNoUnique: uniqueIndex("draft_pick_draft_pick_no_unique")
+      .on(table.draftId, table.pickNo)
+      .where(sql`${table.undoneAt} IS NULL`),
+    draftPoolEntryUnique: uniqueIndex("draft_pick_draft_pool_entry_unique")
+      .on(table.draftId, table.poolEntryId)
+      .where(sql`${table.undoneAt} IS NULL`),
   })
 )
 
 export type DraftPickRow = typeof draftPicks.$inferSelect
+
+/**
+ * A captain's private list of preferred players (team draft 3/4, #217). When
+ * the timer runs out, the first still-available entry is picked before the
+ * auto-pick rule applies. Never sent to other viewers.
+ */
+export const draftQueueEntries = createTable(
+  "draft_queue_entry",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    draftId: uuid("draft_id").notNull(),
+    slotId: uuid("slot_id").notNull(),
+    poolEntryId: uuid("pool_entry_id").notNull(),
+    // 0-based, in the captain's order.
+    position: integer("position").notNull(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    slotFk: foreignKey({
+      name: "draft_queue_entry_slot_draft_fk",
+      columns: [table.slotId, table.draftId],
+      foreignColumns: [draftTeamSlots.id, draftTeamSlots.draftId],
+    }).onDelete("cascade"),
+    poolEntryFk: foreignKey({
+      name: "draft_queue_entry_pool_entry_draft_fk",
+      columns: [table.poolEntryId, table.draftId],
+      foreignColumns: [draftPoolEntries.id, draftPoolEntries.draftId],
+    }).onDelete("cascade"),
+    slotEntryUnique: uniqueIndex("draft_queue_entry_slot_entry_unique").on(
+      table.slotId,
+      table.poolEntryId
+    ),
+    slotPositionIdx: index("draft_queue_entry_slot_position_idx").on(
+      table.slotId,
+      table.position
+    ),
+  })
+)
+
+export type DraftQueueEntryRow = typeof draftQueueEntries.$inferSelect
 
 /**
  * Append-only log of what happened in a draft, written in the same

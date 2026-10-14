@@ -27,6 +27,8 @@ export interface DraftLiveState {
   version: number
   state: DraftState
   players: DraftPlayerInfo[]
+  /** Joined the Event after the draft started (from the last snapshot). */
+  lateJoiners: string[]
   /** Events were missed or a name is unknown: refetch the snapshot. */
   needsResync: boolean
 }
@@ -41,6 +43,7 @@ export function initialLiveState(snapshot: DraftSnapshot): DraftLiveState {
     version: snapshot.version,
     state: snapshot.state,
     players: snapshot.players,
+    lateJoiners: snapshot.lateJoiners,
     needsResync: false,
   }
 }
@@ -50,8 +53,11 @@ export function isGap(state: DraftState, event: DraftLogEvent): boolean {
   switch (event.type) {
     case "pick":
       return event.payload.pickNo !== state.currentPickNo
+    case "skipped":
+      return event.payload.pickNo !== state.currentPickNo
     case "undo":
-      return event.payload.pickNo !== state.currentPickNo - 1
+      // Skipped turns may sit between the last pick and the current one.
+      return state.picks.at(-1)?.pickNo !== event.payload.pickNo
     default:
       return false
   }

@@ -6,6 +6,7 @@ import type {
   DraftSlotState,
   DraftState,
 } from "@/lib/draft/types"
+import { DRAFT_AFK_THRESHOLD } from "@/lib/draft/constants"
 import { rosterOf } from "@/lib/draft/view"
 import { cn } from "@/lib/utils"
 import { PlayerName, RatingBadge } from "./player-name"
@@ -43,7 +44,17 @@ export function TeamRosterColumn({
     >
       <header className="flex items-center justify-between gap-2 border-b p-2">
         <h3 className="osrs-heading truncate">{slot.teamName}</h3>
-        {onTheClock && <Badge variant="success">On the clock</Badge>}
+        <div className="flex shrink-0 items-center gap-1">
+          {slot.consecutiveTimeouts >= DRAFT_AFK_THRESHOLD && (
+            <Badge
+              variant="warning"
+              title={`The captain let the timer run out ${slot.consecutiveTimeouts} turns in a row`}
+            >
+              Away
+            </Badge>
+          )}
+          {onTheClock && <Badge variant="success">On the clock</Badge>}
+        </div>
       </header>
       <ol className="divide-y">
         {roster.map((entry) => (
@@ -79,6 +90,7 @@ export function TeamRosterColumn({
               />
             </div>
             <div className="flex shrink-0 items-center gap-1">
+              {entry.leftEvent && <Badge variant="warning">Left event</Badge>}
               {entry.auto && <Badge variant="outline">auto</Badge>}
               {entry.forced && <Badge variant="outline">forced</Badge>}
               {!entry.captain && <RatingBadge rating={entry.rating} />}

@@ -100,7 +100,9 @@ export function snapshotOf(
     draftId: "draft-1",
     eventId: "event-1",
     version: 1,
+    serverNow: AT,
     state: replayDraft(events),
+    lateJoiners: [],
     players,
   }
 }

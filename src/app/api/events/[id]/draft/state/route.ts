@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 
 import { computeEtag, ifNoneMatchHits } from "@/lib/etag"
 import { logger } from "@/lib/logger"
+import { databaseNowIso } from "@/server/draft/clock"
+import { settleExpiredDraft } from "@/server/draft/expire"
 import { authorizeDraftView } from "@/server/draft/http"
 import {
   getDraftStamp,
@@ -22,6 +24,11 @@ const CACHE_CONTROL = "private, no-cache"
  *   when the Event has no draft.
  * - `GET .../draft/state?since=<seq>` answers only the log events after `seq`
  *   (`{ draft: { id, status, version }, seq, events }`) for the client reducer.
+ * - The deltas also carry `serverNow` (database time), the client's clock
+ *   reference for the pick countdown (not part of the ETag: a 304 changes
+ *   nothing the client does not already know).
+ * - A turn whose timer has run out is resolved first (lazy enforcement, #217),
+ *   so a state read never shows a stale deadline.
  * - Both carry an ETag derived from the draft's `version` and last `seq`, and
  *   answer 304 to a matching `If-None-Match` without loading the snapshot, so
  *   the 3 s polling of an idle draft stays cheap.
@@ -52,6 +59,7 @@ export async function GET(
       }
     }
 
+    await settleExpiredDraft(id)
     const stamp = await getDraftStamp(id)
     const etag = computeEtag({ stamp, since })
     const headers = { ETag: etag, "Cache-Control": CACHE_CONTROL }
@@ -71,6 +79,7 @@ export async function GET(
             version: stamp.version,
           },
           seq: stamp.seq,
+          serverNow: await databaseNowIso(),
           events,
         },
         { headers }

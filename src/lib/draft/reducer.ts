@@ -3,6 +3,7 @@ import type {
   DraftLogEvent,
   DraftPickState,
   DraftState,
+  DraftTimerFields,
 } from "./types"
 
 /**
@@ -28,7 +29,39 @@ export function emptyDraftState(): DraftState {
     picks: [],
     lastSeq: 0,
     applied: false,
+    deadline: null,
+    serverNow: null,
+    pausedRemainingMs: null,
   }
+}
+
+/**
+ * The timer part of an event. A field the event does not carry (events logged
+ * before the timer existed) leaves the state as it was.
+ */
+function timerOf(
+  state: DraftState,
+  p: DraftTimerFields
+): Pick<DraftState, "deadline" | "serverNow" | "pausedRemainingMs"> {
+  return {
+    deadline: p.deadline !== undefined ? p.deadline : state.deadline,
+    serverNow: p.serverNow ?? state.serverNow,
+    pausedRemainingMs:
+      p.pausedRemainingMs !== undefined
+        ? p.pausedRemainingMs
+        : state.pausedRemainingMs,
+  }
+}
+
+function withTimeouts(
+  state: DraftState,
+  slotId: string,
+  consecutiveTimeouts: number | undefined
+): DraftState["slots"] {
+  if (consecutiveTimeouts === undefined) return state.slots
+  return state.slots.map((slot) =>
+    slot.slotId === slotId ? { ...slot, consecutiveTimeouts } : slot
+  )
 }
 
 export function applyDraftEvent(
@@ -67,7 +100,11 @@ function reduce(state: DraftState, event: DraftLogEvent): DraftState {
         onTimeout: p.onTimeout,
         autoPickRule: p.autoPickRule,
         currentPickNo: 1,
-        slots: p.slots.map((slot) => ({ ...slot, teamId: null })),
+        slots: p.slots.map((slot) => ({
+          ...slot,
+          teamId: null,
+          consecutiveTimeouts: 0,
+        })),
       }
     }
     case "started": {
@@ -76,6 +113,7 @@ function reduce(state: DraftState, event: DraftLogEvent): DraftState {
       return {
         ...state,
         status: "in_progress",
+        ...timerOf(state, p),
         seed: p.seed,
         permutation: p.permutation,
         slots: state.slots.map((slot) => ({
@@ -92,13 +130,38 @@ function reduce(state: DraftState, event: DraftLogEvent): DraftState {
       }
     }
     case "paused":
-      return { ...state, status: "paused" }
+      return {
+        ...state,
+        status: "paused",
+        // Frozen: no deadline until the draft is resumed.
+        deadline: null,
+        serverNow: event.payload.serverNow ?? state.serverNow,
+        pausedRemainingMs: event.payload.pausedRemainingMs ?? null,
+      }
+    case "timer":
+      return { ...state, ...timerOf(state, event.payload) }
     case "resumed":
-      return { ...state, status: "in_progress" }
+      return {
+        ...state,
+        status: "in_progress",
+        deadline: event.payload.deadline ?? null,
+        serverNow: event.payload.serverNow ?? state.serverNow,
+        pausedRemainingMs: null,
+      }
     case "cancelled":
-      return { ...state, status: "cancelled" }
+      return {
+        ...state,
+        status: "cancelled",
+        deadline: null,
+        pausedRemainingMs: null,
+      }
     case "completed":
-      return { ...state, status: "complete" }
+      return {
+        ...state,
+        status: "complete",
+        deadline: null,
+        pausedRemainingMs: null,
+      }
     case "pick": {
       const p = event.payload
       const pick: DraftPickState = {
@@ -115,6 +178,8 @@ function reduce(state: DraftState, event: DraftLogEvent): DraftState {
       }
       return {
         ...state,
+        ...timerOf(state, p),
+        slots: withTimeouts(state, p.slotId, p.consecutiveTimeouts),
         currentPickNo: p.pickNo + 1,
         picks: [...state.picks.filter((x) => x.pickNo !== p.pickNo), pick].sort(
           (a, b) => a.pickNo - b.pickNo
@@ -126,10 +191,21 @@ function reduce(state: DraftState, event: DraftLogEvent): DraftState {
         ),
       }
     }
+    case "skipped": {
+      const p = event.payload
+      return {
+        ...state,
+        ...timerOf(state, p),
+        slots: withTimeouts(state, p.slotId, p.consecutiveTimeouts),
+        currentPickNo: p.pickNo + 1,
+      }
+    }
     case "undo": {
       const p: DraftEventPayloads["undo"] = event.payload
       return {
         ...state,
+        ...timerOf(state, p),
+        slots: withTimeouts(state, p.slotId, p.consecutiveTimeouts),
         // Undoing the pick that completed the draft reopens it.
         status: state.status === "complete" ? "in_progress" : state.status,
         currentPickNo: p.pickNo,

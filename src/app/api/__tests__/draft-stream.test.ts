@@ -116,13 +116,13 @@ class SseReader {
     }
   }
 
-  /** Frames of the named events, skipping heartbeats and the retry hint. */
+  /** Frames of the named events, skipping heartbeats, clock frames and the retry hint. */
   async nextEvent(timeoutMs = 3000): Promise<Frame | null> {
     const deadline = Date.now() + timeoutMs
     for (;;) {
       const frame = await this.next(Math.max(1, deadline - Date.now()))
       if (!frame) return null
-      if (frame.event) return frame
+      if (frame.event && frame.event !== "clock") return frame
     }
   }
 
@@ -217,6 +217,39 @@ describe("authorization", () => {
       signInAs(userId)
       expect((await open(w.eventId, "?since=0")).response.status).toBe(200)
     }
+  })
+})
+
+describe("clock frames", () => {
+  it("sends database time right after connecting", async () => {
+    await startedDraft(w)
+    signInAs(w.players[0]!)
+    const { reader } = await openStream(w.eventId, "?since=0")
+    let clock: Frame | null = null
+    for (let i = 0; i < 8 && !clock; i++) {
+      const frame = await reader.next()
+      if (!frame) break
+      if (frame.event === "clock") clock = frame
+    }
+    expect(clock).not.toBeNull()
+    const { serverNow } = clock!.data as { serverNow: string }
+    expect(Math.abs(Date.parse(serverNow) - Date.now())).toBeLessThan(5000)
+    // A clock frame has no id: it must not move Last-Event-ID.
+    expect(clock!.id).toBeUndefined()
+  })
+
+  it("repeats it with every heartbeat", async () => {
+    draftStreamConfig.heartbeatMs = 50
+    await startedDraft(w)
+    signInAs(w.players[0]!)
+    const { reader } = await openStream(w.eventId, "?since=0")
+    let clocks = 0
+    for (let i = 0; i < 40 && clocks < 3; i++) {
+      const frame = await reader.next(1000)
+      if (!frame) break
+      if (frame.event === "clock") clocks += 1
+    }
+    expect(clocks).toBeGreaterThanOrEqual(3)
   })
 })
 

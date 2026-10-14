@@ -4,6 +4,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 
 import { initialLiveState, liveReducer } from "@/lib/draft/live"
+import { clockOffsetMs as offsetBetween } from "@/lib/draft/timer"
 import { DRAFT_STREAM_EVENTS, type DraftByeReason } from "@/lib/draft/sse"
 import type { DraftLogEvent, DraftSnapshot } from "@/lib/draft/types"
 
@@ -41,6 +42,8 @@ interface UseDraftStreamOptions {
 interface StateBody {
   draft: DraftSnapshot | { id: string } | null
   events?: DraftLogEvent[]
+  /** Database time of a `?since` answer. */
+  serverNow?: string
 }
 
 /**
@@ -57,6 +60,10 @@ interface StateBody {
  * - The browser's own reconnects are not used: on any error the source is
  *   closed and reopened with exponential backoff and a fresh `since`. Polling
  *   runs whenever the stream is not live and the tab is visible.
+ * - The pick countdown runs on `clockOffsetMs`: database time minus this
+ *   browser's time, measured whenever the server tells its time (a snapshot,
+ *   the stream's `clock` frames, a `?since` answer). The deadline itself is
+ *   database time, so the local clock cannot move it.
  * - `sync()` fetches what happened after `lastSeq` right now (after an
  *   action, so the actor does not wait for the stream) and resolves with
  *   those events.
@@ -70,6 +77,15 @@ export function useDraftStream({ eventId, snapshot }: UseDraftStreamOptions) {
   }, [router])
   const [live, dispatch] = useReducer(liveReducer, snapshot, initialLiveState)
   const [connection, setConnection] = useState<DraftConnection>("connecting")
+  // Starts from the rendered snapshot's database time; the stream's `clock`
+  // frames, the snapshots and the `?since` answers keep it current.
+  const [clockOffsetMs, setClockOffsetMs] = useState(
+    () => offsetBetween(snapshot.serverNow, Date.now()) ?? 0
+  )
+  const noteServerTime = useCallback((serverNow: string | undefined) => {
+    const offset = offsetBetween(serverNow, Date.now())
+    if (offset !== null) setClockOffsetMs(offset)
+  }, [])
   // Nothing can change any more once the draft is cancelled or applied: stop
   // all traffic.
   const { status, applied } = live.state
@@ -102,8 +118,11 @@ export function useDraftStream({ eventId, snapshot }: UseDraftStreamOptions) {
         if (!response.ok) throw new Error(`state ${response.status}`)
         const body = (await response.json()) as StateBody
         if (body.draft === null) routerRef.current.refresh()
-        else
-          dispatch({ type: "snapshot", snapshot: body.draft as DraftSnapshot })
+        else {
+          const fresh = body.draft as DraftSnapshot
+          dispatch({ type: "snapshot", snapshot: fresh })
+          noteServerTime(fresh.serverNow)
+        }
       } catch {
         // Offline or a hiccup: try again shortly.
         window.setTimeout(() => {
@@ -114,7 +133,7 @@ export function useDraftStream({ eventId, snapshot }: UseDraftStreamOptions) {
       }
       resyncing.current = false
     },
-    [eventId]
+    [eventId, noteServerTime]
   )
 
   const needsResync = live.needsResync
@@ -140,6 +159,7 @@ export function useDraftStream({ eventId, snapshot }: UseDraftStreamOptions) {
       const value = response.headers.get("ETag")
       if (value) etagRef.current = { since, value }
       const body = (await response.json()) as StateBody
+      noteServerTime(body.serverNow)
       if (body.draft === null) {
         routerRef.current.refresh()
         return []
@@ -152,7 +172,7 @@ export function useDraftStream({ eventId, snapshot }: UseDraftStreamOptions) {
       if (events.length > 0) dispatch({ type: "events", events })
       return events
     },
-    [eventId, resync]
+    [eventId, resync, noteServerTime]
   )
 
   const sync = useCallback(async (): Promise<DraftLogEvent[]> => {
@@ -209,8 +229,16 @@ export function useDraftStream({ eventId, snapshot }: UseDraftStreamOptions) {
         const body = JSON.parse((message as MessageEvent<string>).data) as {
           draft: DraftSnapshot | null
         }
-        if (body.draft) dispatch({ type: "snapshot", snapshot: body.draft })
-        else routerRef.current.refresh()
+        if (body.draft) {
+          dispatch({ type: "snapshot", snapshot: body.draft })
+          noteServerTime(body.draft.serverNow)
+        } else routerRef.current.refresh()
+      })
+      next.addEventListener(DRAFT_STREAM_EVENTS.clock, (message) => {
+        const { serverNow } = JSON.parse(
+          (message as MessageEvent<string>).data
+        ) as { serverNow: string }
+        noteServerTime(serverNow)
       })
       next.addEventListener(DRAFT_STREAM_EVENTS.bye, (message) => {
         const { reason } = JSON.parse(
@@ -243,7 +271,7 @@ export function useDraftStream({ eventId, snapshot }: UseDraftStreamOptions) {
       window.clearTimeout(openTimer)
       source?.close()
     }
-  }, [eventId, enabled])
+  }, [eventId, enabled, noteServerTime])
 
   // Polling: whenever the stream is not live.
   const polling =
@@ -271,5 +299,5 @@ export function useDraftStream({ eventId, snapshot }: UseDraftStreamOptions) {
     }
   }, [polling, fetchDelta])
 
-  return { live, connection, sync, active: enabled }
+  return { live, connection, sync, active: enabled, clockOffsetMs }
 }

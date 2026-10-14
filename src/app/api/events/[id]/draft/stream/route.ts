@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { logger } from "@/lib/logger"
+import { settleExpiredDraft } from "@/server/draft/expire"
 import { authorizeDraftView, parseSeq } from "@/server/draft/http"
 import { getDraftStamp } from "@/server/draft/queries"
 import { openDraftStream } from "@/server/draft/stream"
@@ -51,6 +52,8 @@ export async function GET(
     const since =
       parseSeq(request.headers.get("Last-Event-ID")) ?? parseSeq(sinceParam)
 
+    // Lazy enforcement of the pick timer: connecting resolves an expired turn.
+    await settleExpiredDraft(id)
     const stamp = await getDraftStamp(id)
     if (!stamp) {
       return NextResponse.json(

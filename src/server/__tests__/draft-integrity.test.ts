@@ -497,7 +497,12 @@ describe("draft reads", () => {
     expect(replayed.slots).toEqual(state.slots)
     const byEntry = (list: typeof state.pool) =>
       [...list].sort((a, b) => a.poolEntryId.localeCompare(b.poolEntryId))
-    expect(byEntry(replayed.pool)).toEqual(byEntry(state.pool))
+    // `leftEvent` is read from the participants, not from the log.
+    const withoutLeft = (list: typeof state.pool) =>
+      byEntry(list).map(({ leftEvent: _left, ...entry }) => entry)
+    expect(withoutLeft(replayed.pool)).toEqual(withoutLeft(state.pool))
+    expect(replayed.deadline).toBe(state.deadline)
+    expect(replayed.pausedRemainingMs).toBe(state.pausedRemainingMs)
     expect(
       replayed.picks.map((p) => [p.pickNo, p.slotId, p.poolEntryId, p.pickedBy])
     ).toEqual(

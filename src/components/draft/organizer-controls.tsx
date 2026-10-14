@@ -2,13 +2,22 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Pause, Play, Rocket, Undo2, Users, XCircle } from "lucide-react"
+import {
+  Pause,
+  Play,
+  Rocket,
+  SkipForward,
+  Undo2,
+  Users,
+  XCircle,
+} from "lucide-react"
 
 import {
   applyDraft,
   cancelDraft,
   pauseDraft,
   resumeDraft,
+  skipTurn,
   startDraft,
   undoPick,
 } from "@/app/actions/draft"
@@ -17,7 +26,7 @@ import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
 import type { DraftState } from "@/lib/draft/types"
 
-type Confirming = "start" | "cancel" | "undo" | "apply" | null
+type Confirming = "start" | "cancel" | "undo" | "apply" | "skip" | null
 
 interface OrganizerControlsProps {
   draftId: string
@@ -27,7 +36,10 @@ interface OrganizerControlsProps {
   draftedCount: number
 }
 
-/** Start, pause, undo, cancel and "Apply teams"; shown to managers only. */
+/**
+ * Start, pause / resume, skip, undo, cancel and "Apply teams"; shown to
+ * managers only. (Picking for the captain is the Pick button of the pool.)
+ */
 export function OrganizerControls({
   draftId,
   state,
@@ -90,6 +102,16 @@ export function OrganizerControls({
           Pause
         </Button>
       )}
+      {status === "in_progress" && (
+        <Button
+          variant="outline"
+          disabled={busy}
+          onClick={() => setConfirming("skip")}
+        >
+          <SkipForward className="mr-2 h-4 w-4" />
+          Skip turn
+        </Button>
+      )}
       {status === "paused" && (
         <Button
           disabled={busy}
@@ -136,9 +158,17 @@ export function OrganizerControls({
         open={confirming === "undo"}
         onOpenChange={(open) => !open && setConfirming(null)}
         title="Undo the last pick?"
-        description="The player goes back to the pool and the pick returns to the captain's turn."
+        description="The player goes back to the pool and the pick returns to the captain's turn, with a fresh timer. The pick stays in the audit log."
         confirmLabel="Undo pick"
         onConfirm={() => run(() => undoPick({ draftId }), "Pick undone")}
+      />
+      <ConfirmDialog
+        open={confirming === "skip"}
+        onOpenChange={(open) => !open && setConfirming(null)}
+        title="Skip this turn?"
+        description="The captain on the clock loses this pick and the next team is up. Teams may end up uneven."
+        confirmLabel="Skip turn"
+        onConfirm={() => run(() => skipTurn({ draftId }), "Turn skipped")}
       />
       <ConfirmDialog
         open={confirming === "apply"}

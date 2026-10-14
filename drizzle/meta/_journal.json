@@ -295,6 +295,13 @@
       "when": 1791993059197,
       "tag": "0041_team_draft",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1792006222309,
+      "tag": "0042_team_draft_timer",
+      "breakpoints": true
     }
   ]
 }

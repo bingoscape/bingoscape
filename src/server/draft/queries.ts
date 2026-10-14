@@ -1,6 +1,16 @@
 import "server-only"
 
-import { and, asc, eq, gt, inArray, max, notInArray, sql } from "drizzle-orm"
+import {
+  and,
+  asc,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  max,
+  notInArray,
+  sql,
+} from "drizzle-orm"
 
 import { emptyDraftState } from "@/lib/draft/reducer"
 import type {
@@ -8,6 +18,7 @@ import type {
   DraftEventType,
   DraftLogEvent,
   DraftPlayerInfo,
+  DraftPoolState,
   DraftSnapshot,
   DraftState,
 } from "@/lib/draft/types"
@@ -16,6 +27,7 @@ import {
   draftEvents,
   draftPicks,
   draftPoolEntries,
+  draftQueueEntries,
   draftTeamSlots,
   drafts,
   eventParticipants,
@@ -107,7 +119,7 @@ export async function loadDraftSnapshot(
   // One repeatable-read transaction: the rows and `lastSeq` describe the same
   // moment, so a client that subscribes with `?since=lastSeq` neither misses
   // nor repeats an event.
-  const [slotRows, poolRows, pickRows, seqRow, startedRow] =
+  const [slotRows, poolRows, pickRows, seqRow, startedRow, people, clock] =
     await db.transaction(
       async (tx) => {
         const slots = await tx
@@ -122,7 +134,9 @@ export async function loadDraftSnapshot(
         const picks = await tx
           .select()
           .from(draftPicks)
-          .where(eq(draftPicks.draftId, draft.id))
+          .where(
+            and(eq(draftPicks.draftId, draft.id), isNull(draftPicks.undoneAt))
+          )
           .orderBy(asc(draftPicks.pickNo))
         const seq = await tx
           .select({ seq: max(draftEvents.seq) })
@@ -139,7 +153,32 @@ export async function loadDraftSnapshot(
           )
           .orderBy(asc(draftEvents.seq))
           .limit(1)
-        return [slots, pool, picks, seq, started] as const
+        const participants = await tx
+          .select({
+            userId: eventParticipants.userId,
+            createdAt: eventParticipants.createdAt,
+          })
+          .from(eventParticipants)
+          .where(eq(eventParticipants.eventId, eventId))
+          .orderBy(asc(eventParticipants.createdAt), asc(eventParticipants.id))
+        const onTeam = await tx
+          .select({ userId: teamMembers.userId })
+          .from(teamMembers)
+          .innerJoin(teams, eq(teams.id, teamMembers.teamId))
+          .where(eq(teams.eventId, eventId))
+        // The database clock, for the client's countdown offset.
+        const now = await tx.execute<{ ms: number }>(
+          sql`select (extract(epoch from clock_timestamp()) * 1000)::float8 as ms`
+        )
+        return [
+          slots,
+          pool,
+          picks,
+          seq,
+          started,
+          { participants, onTeam },
+          Number(now[0]?.ms ?? Date.now()),
+        ] as const
       },
       { isolationLevel: "repeatable read", accessMode: "read only" }
     )
@@ -148,6 +187,44 @@ export async function loadDraftSnapshot(
   const permutation = (
     startedRow[0]?.payload as { permutation?: number[] } | undefined
   )?.permutation
+
+  const serverNow = new Date(clock).toISOString()
+  const participantIds = new Set(people.participants.map((p) => p.userId))
+  const onTeamIds = new Set(people.onTeam.map((m) => m.userId))
+  const started = draft.status !== "setup" && draft.status !== "open"
+
+  let poolState: DraftPoolState[]
+  let lateJoiners: string[] = []
+  if (started) {
+    // Frozen at the start. `leftEvent`: the player is no longer a participant.
+    poolState = poolRows.map((entry) => ({
+      poolEntryId: entry.id,
+      userId: entry.userId,
+      status: entry.status,
+      rating: entry.ratingSnapshot,
+      ratingSource: entry.ratingSource,
+      leftEvent: entry.userId === null || !participantIds.has(entry.userId),
+    }))
+    const pooled = new Set(poolRows.map((e) => e.userId))
+    lateJoiners = people.participants
+      .filter((p) => !pooled.has(p.userId) && !onTeamIds.has(p.userId))
+      .map((p) => p.userId)
+  } else {
+    // Before the start the pool is a preview of who would be in it: everyone
+    // without a Team except the captains. Whoever joined the Event after the
+    // draft was set up is tagged "New".
+    const captainIds = new Set(slotRows.map((s) => s.captainUserId))
+    poolState = people.participants
+      .filter((p) => !onTeamIds.has(p.userId) && !captainIds.has(p.userId))
+      .map((p) => ({
+        poolEntryId: `candidate:${p.userId}`,
+        userId: p.userId,
+        status: "available" as const,
+        rating: null,
+        ratingSource: "preview",
+        isNew: p.createdAt.getTime() > draft.createdAt.getTime(),
+      }))
+  }
 
   const state: DraftState = {
     ...emptyDraftState(),
@@ -167,14 +244,9 @@ export async function loadDraftSnapshot(
       teamName: slot.teamName,
       maxTeamSize: slot.maxTeamSize,
       teamId: slot.teamId,
+      consecutiveTimeouts: slot.consecutiveTimeouts,
     })),
-    pool: poolRows.map((entry) => ({
-      poolEntryId: entry.id,
-      userId: entry.userId,
-      status: entry.status,
-      rating: entry.ratingSnapshot,
-      ratingSource: entry.ratingSource,
-    })),
+    pool: poolState,
     picks: pickRows.map((pick) => ({
       pickNo: pick.pickNo,
       round: pick.round,
@@ -189,13 +261,17 @@ export async function loadDraftSnapshot(
     })),
     lastSeq: seqRow[0]?.seq ?? 0,
     applied: draft.appliedAt !== null,
+    deadline: draft.turnDeadline ? draft.turnDeadline.toISOString() : null,
+    serverNow,
+    pausedRemainingMs: draft.pausedRemainingMs,
   }
 
   const userIds = [
     ...new Set(
       [
         ...slotRows.map((s) => s.captainUserId),
-        ...poolRows.map((e) => e.userId),
+        ...poolState.map((e) => e.userId),
+        ...lateJoiners,
         ...pickRows.map((p) => p.pickedBy),
       ].filter((id): id is string => id !== null)
     ),
@@ -206,7 +282,9 @@ export async function loadDraftSnapshot(
     draftId: draft.id,
     eventId,
     version: draft.version,
+    serverNow,
     state,
+    lateJoiners,
     players,
   }
 }
@@ -308,4 +386,33 @@ export async function listDraftCandidates(
         { sensitivity: "base" }
       )
     )
+}
+
+/**
+ * The viewer's own pick queue (pool entry ids, best first), or [] when they
+ * do not captain a slot of the draft. Private to the captain: only ever
+ * called with the signed-in user's id.
+ */
+export async function loadPickQueue(
+  draftId: string,
+  userId: string
+): Promise<string[]> {
+  const rows = await db
+    .select({ poolEntryId: draftQueueEntries.poolEntryId })
+    .from(draftQueueEntries)
+    .innerJoin(
+      draftTeamSlots,
+      and(
+        eq(draftTeamSlots.id, draftQueueEntries.slotId),
+        eq(draftTeamSlots.draftId, draftQueueEntries.draftId)
+      )
+    )
+    .where(
+      and(
+        eq(draftQueueEntries.draftId, draftId),
+        eq(draftTeamSlots.captainUserId, userId)
+      )
+    )
+    .orderBy(asc(draftQueueEntries.position))
+  return rows.map((r) => r.poolEntryId)
 }

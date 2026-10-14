@@ -7,6 +7,9 @@
  * - `reset`: a full snapshot (`{ draft: DraftSnapshot | null }`); `id` is the
  *   snapshot's `lastSeq`. Sent instead of a replay when the client is too far
  *   behind (or ahead of) the log.
+ * - `clock`: database time (`{ serverNow }`, ISO), sent on connect and with
+ *   every heartbeat. The pick countdown is computed against the offset
+ *   between it and the client's clock; it carries no `id`.
  * - `bye`: the server is about to close the stream (`{ reason }`).
  */
 
@@ -22,6 +25,7 @@ export interface DraftNotifyPayload {
 export const DRAFT_STREAM_EVENTS = {
   draft: "draft",
   reset: "reset",
+  clock: "clock",
   bye: "bye",
 } as const
 

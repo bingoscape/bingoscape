@@ -7,7 +7,7 @@
  * of the whole process). The draft row lock decides every race; the unique
  * indexes are only the backstop.
  */
-import { and, asc, eq } from "drizzle-orm"
+import { and, asc, eq, isNull } from "drizzle-orm"
 
 import { db } from "@/server/db"
 import { performPick, undoPick, type Tx } from "@/server/draft/core"
@@ -71,7 +71,7 @@ const picks = (draftId: string) =>
   db
     .select()
     .from(draftPicks)
-    .where(eq(draftPicks.draftId, draftId))
+    .where(and(eq(draftPicks.draftId, draftId), isNull(draftPicks.undoneAt)))
     .orderBy(asc(draftPicks.pickNo))
 
 describe("makePick races", () => {
