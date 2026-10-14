@@ -829,7 +829,7 @@ export async function getBingoWithTiles(bingoId: string) {
 
 For API support and questions:
 
-- **GitHub Issues**: [Report API bugs](https://github.com/bingoscape/bingoscape-next/issues)
+- **GitHub Issues**: [Report API bugs](https://github.com/bingoscape/bingoscape/issues)
 - **Discord**: [Developer community](https://discord.gg/bingoscape)
 - **Email**: support@bingoscape.com
 
