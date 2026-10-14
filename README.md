@@ -1,443 +1,326 @@
 # BingoScape Next
 
-A comprehensive full-stack OSRS (Old School RuneScape) clan bingo management platform featuring sophisticated team management, real-time RuneLite plugin integration, and advanced progression systems.
+Web application for running Old School RuneScape clan bingo events: boards, teams, submissions with screenshot evidence, clan management, and an API for the RuneLite plugin. Latest released version in the changelog: 1.1.0.
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+Production instance: [https://bingoscape.org](https://bingoscape.org)
 
 ## Table of Contents
 
 - [Features](#features)
+- [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
 - [Getting Started](#getting-started)
-- [RuneLite Plugin Integration](#runelite-plugin-integration)
-- [API Documentation](#api-documentation)
-- [Development](#development)
+- [Configuration](#configuration)
+- [Scripts](#scripts)
+- [Testing](#testing)
+- [RuneLite API](#runelite-api)
+- [Database](#database)
 - [Deployment](#deployment)
 - [Contributing](#contributing)
+- [Documentation](#documentation)
 - [License](#license)
+- [Support](#support)
 
 ## Features
 
-### 🎯 **Advanced Bingo Systems**
+Boards
 
-- **Standard Bingo**: Traditional 5x5 grids with immediate tile access
-- **Progression Bingo**: Tiered system with XP-based tier unlocking
-- **Template System**: Save, share, and import custom bingo boards
-- **Export/Import**: Full board data portability with v1.1 format support
+- Three board types: standard, progression and battleship (`bingo_type` enum in `src/server/db/schema.ts`).
+- Boards have configurable row and column counts.
+- Progression boards group tiles into tiers. A tier unlocks when a team earns enough XP. Tier 0 is always unlocked.
+- Battleship boards: teams place ships on the board, hits, misses and sunk ships are marked, and an event with a battleship board allows at most two teams. Before the event starts, non-managers see tiles as blind (position only, no content). After the start, players can show their own team's ships with a "My ships" toggle, and managers can open a read-only fleet page.
+- Goals per tile: generic, item and metric goals, combined with AND, OR or SUM groups.
+- Row, column and diagonal (main and anti-diagonal) bonus XP.
+- Templates: save, browse and import boards (`/templates`, `/templates/my-templates`).
+- Board export and import as JSON, export format version 2.0 (`CURRENT_EXPORT_VERSION` in `src/lib/bingo-template-schema.ts`).
 
-### 👥 **Comprehensive Team Management**
+Events and teams
 
-- **Dynamic Team Formation**: Flexible team creation and member assignment
-- **Role-Based Permissions**: Event admins, management, and participants
-- **Team Progress Tracking**: Real-time submission status and completion rates
-- **Auto Team Generator**: Intelligent team balancing algorithms
+- Events with rules, registration requests, invite codes, public event pages (`/public/events/[id]`), buy-ins, donations and prize pool.
+- Teams, team members and an automatic balanced team generator that uses player skill levels (beginner, intermediate, advanced, expert, pvmgod).
+- Event roles: admin, management, participant.
+- Scheduled unlock of events and boards through `GET /api/cron/unlock`.
 
-### 🔌 **RuneLite Plugin Integration**
+Submissions
 
-- **Direct Screenshot Submission**: Upload evidence from in-game client
-- **API Key Management**: Secure authentication for plugin access
-- **Real-time Sync**: Live progress updates during gameplay
-- **Multi-event Support**: Manage multiple concurrent bingo events
+- Manual submissions with image upload, review (pending, approved, needs review) and comments.
+- Automatic submissions from the RuneLite plugin.
+- In-app notifications and Discord webhook notifications.
 
-### 🏛️ **Clan Management**
+Clans
 
-- **Clan Hierarchies**: Admin, management, member, and guest roles
-- **Event Assignment**: Associate events with specific clans
-- **Invite System**: Secure clan and event invitation codes
-- **Member Tracking**: Complete member activity and participation history
+- Clan roles: admin, management, member, guest.
+- Clan invites and assigning events to clans.
 
-### 📊 **Advanced Analytics**
+Statistics and integrations
 
-- **Event Statistics**: Comprehensive performance metrics
-- **Progress Visualization**: Interactive charts and progress tracking
-- **Submission Management**: Review, approve, and comment on submissions
-- **Discord Integration**: Automated webhook notifications
+- Event, team and item statistics (Chart.js and Recharts).
+- Wise Old Man lookups for player data and competitions.
+- Item resolution and Grand Exchange prices from the OSRS Wiki.
 
-### 🎨 **Modern UI/UX**
+Administration
 
-- **Dark-First Design**: Gaming-optimized dark theme
-- **Responsive Layout**: Mobile-first responsive design
-- **Accessibility**: Full ARIA support and keyboard navigation
-- **Real-time Updates**: Live UI updates without page refreshes
-
-## Architecture
-
-**Full-Stack Next.js 14 Application**
-
-```
-Frontend: React 18 + TypeScript + Tailwind CSS + shadcn/ui
-Backend: Next.js App Router + Server Actions + API Routes
-Database: PostgreSQL + Drizzle ORM (19+ tables)
-Authentication: NextAuth.js (Discord OAuth)
-External: RuneLite Plugin API + Discord Webhooks
-```
-
-### **Key Technical Features**
-
-- **Type-Safe Database**: Comprehensive Drizzle ORM schema with relations
-- **Server Actions**: Type-safe data mutations without REST overhead
-- **Component Architecture**: 30+ shadcn/ui components + 50+ business components
-- **File Upload System**: Secure image handling with unique filename generation
-- **API Key Authentication**: Bearer token system for external plugin access
+- Super-admin area (`/super-admin`) with users, clans, events and an audit log. Access is controlled by `SUPER_ADMIN_EMAILS`.
 
 ## Tech Stack
 
-### **Core Technologies**
+| Area            | Technology                                                                |
+| --------------- | ------------------------------------------------------------------------- |
+| Framework       | Next.js 16.4.0 (App Router, standalone output), React 19.3.0              |
+| Language        | TypeScript 7 (strict, `noUncheckedIndexedAccess`)                         |
+| Database        | PostgreSQL 18, Drizzle ORM 0.33, drizzle-kit 0.24, postgres.js            |
+| Authentication  | NextAuth.js 4: credentials, Discord, GitHub (optional), Google (optional) |
+| Validation      | Zod 3, `@t3-oss/env-nextjs` for environment variables                     |
+| UI              | Tailwind CSS 4, shadcn/ui on Radix UI, Framer Motion, Chart.js, Recharts  |
+| Images          | sharp                                                                     |
+| Unit tests      | Jest 29, React Testing Library, Testcontainers (PostgreSQL)               |
+| End-to-end      | Playwright                                                                |
+| Lint and format | oxlint, Prettier 3 with the Tailwind plugin                               |
+| Runtime         | Node.js 24 (Docker image `node:24-alpine`)                                |
 
-- **[Next.js 14](https://nextjs.org/)** - React framework with App Router
-- **[React 18](https://reactjs.org/)** - Frontend library with Server Components
-- **[TypeScript](https://www.typescriptlang.org/)** - Type-safe JavaScript
-- **[PostgreSQL](https://www.postgresql.org/)** - Primary database
-- **[Drizzle ORM](https://orm.drizzle.team/)** - Type-safe database toolkit
+## Architecture
 
-### **UI & Styling**
+```
+src/
+  app/              App Router pages and route handlers
+    actions/        Server actions ("use server"), tests in __tests__
+    api/            auth, cron/unlock, events/invite, runelite, submissions,
+                    super-admin, uploads, uptime
+    clans/ events/ profile/ public/ sign-in/ sign-up/ super-admin/ templates/
+  components/       Business components; ui/ holds shadcn/ui primitives
+  hooks/ lib/ types/ styles/ fonts/ __mocks__/
+  server/           auth.ts, authz.ts, db/ (index.ts, schema.ts), battleship.ts,
+                    blind-board*.ts, progression.ts, tier-progression.ts,
+                    notifications.ts, queries/, super-admin/
+  env.js            Environment variable schema
+  proxy.ts          Redirects unauthenticated users to /sign-in for /events,
+                    /clans, /profile, /super-admin and /templates
+drizzle/            SQL migrations
+scripts/            Backup, restore, deploy and cron scripts
+tests/              Playwright specs
+docs/               Guides, API reference, design notes
+```
 
-- **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework
-- **[shadcn/ui](https://ui.shadcn.com/)** - Accessible component library
-- **[Radix UI](https://www.radix-ui.com/)** - Unstyled accessible components
-- **[Framer Motion](https://www.framer.com/motion/)** - Animation library
-
-### **Authentication & Security**
-
-- **[NextAuth.js](https://next-auth.js.org/)** - Authentication framework
-- **[Zod](https://zod.dev/)** - Runtime type validation
-- **[Discord OAuth](https://discord.com/developers/docs/topics/oauth2)** - Primary auth provider
-
-### **Development & Testing**
-
-- **[Jest](https://jestjs.io/)** - Unit testing framework
-- **[Playwright](https://playwright.dev/)** - End-to-end testing
-- **[ESLint](https://eslint.org/)** - Code linting
-- **[Prettier](https://prettier.io/)** - Code formatting
-
-### **External Integrations**
-
-- **[RuneLite Plugin](https://runelite.net/plugin-hub/show/bingoscape-companion)** - OSRS client integration
-- **[Discord Webhooks](https://discord.com/developers/docs/resources/webhook)** - Real-time notifications
+- Data is read in Server Components with Drizzle queries and passed to Client Components as props.
+- Mutations are server actions in `src/app/actions/` and run inside database transactions.
+- Permission checks live in `src/server/authz.ts` and in the server actions.
+- RuneLite requests are authenticated with API keys (see RuneLite API).
+- Uploaded images are stored in `public/uploads/` and served through `/api/uploads/[...path]`. Submitted screenshot files are named with a `nanoid()`.
+- `/api/uptime` is the health check endpoint used by Docker and the deploy script.
+- Domain terms (Event, Team, Board, Tile, Blind Tile, Submission, Goal, Tier) are defined in [CONTEXT.md](CONTEXT.md). The database calls a board `bingos`.
 
 ## Getting Started
 
-### Prerequisites
+Prerequisites
 
-**Required:**
+- Node.js 24 and npm
+- PostgreSQL 18 (local install, Docker, or `./start-database.sh`)
+- Docker (also required to run `npm test`)
+- A Discord application for OAuth. `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` are required by the environment schema.
 
-- [Node.js 18+](https://nodejs.org/) (LTS recommended)
-- [PostgreSQL 14+](https://www.postgresql.org/) (for database)
-- npm (comes with Node.js)
+Setup
 
-**Optional:**
-
-- [Docker](https://www.docker.com/) (for containerized database)
-- [Discord Application](https://discord.com/developers/applications) (for OAuth)
-
-### Installation
-
-1. **Clone the repository:**
+1. Clone the repository.
 
    ```bash
-   git clone https://github.com/bingoscape/bingoscape-next.git
-   cd bingoscape-next
+   git clone https://github.com/bingoscape/bingoscape.git
+   cd bingoscape
    ```
 
-2. **Install dependencies:**
+2. Install dependencies.
 
    ```bash
    npm install
    ```
 
-3. **Set up environment variables:**
+3. Create the environment file. The npm scripts load `.env` through `env-cmd`.
 
    ```bash
-   cp .env.example .env.local
+   cp .env.example .env
    ```
 
-   Configure the following variables:
+   Set at least `DATABASE_URL`, `NEXTAUTH_URL`, `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET`. For the Discord application, set the redirect URL to `{NEXTAUTH_URL}/api/auth/callback/discord`. Add your own address to `SUPER_ADMIN_EMAILS` to get super-admin access. All variables are listed under Configuration.
 
-   ```env
-   # Database
-   DATABASE_URL="postgresql://username:password@localhost:5432/bingoscape"
-
-   # NextAuth
-   NEXTAUTH_SECRET="your-secret-key"
-   NEXTAUTH_URL="http://localhost:3000"
-
-   # Discord OAuth
-   DISCORD_CLIENT_ID="your-discord-client-id"
-   DISCORD_CLIENT_SECRET="your-discord-client-secret"
-   ```
-
-4. **Set up the database:**
+4. Start a database. Use one of the following.
 
    ```bash
-   # Generate schema
-   npm run db:generate
+   # Option A: standalone container named bingoscape-next-postgres, database "bingoscape".
+   # Reads DATABASE_URL from .env and offers to replace the default password.
+   ./start-database.sh
 
-   # Run migrations
+   # Option B: only the postgres service from docker-compose.yml
+   # (user postgres, password postgres, database bingoscape, port 127.0.0.1:5432).
+   # Set DATABASE_URL="postgresql://postgres:postgres@localhost:5432/bingoscape"
+   docker compose up -d postgres
+   ```
+
+   `start-database.sh` runs under bash. On Windows use WSL.
+
+5. Apply the migrations. A fresh database only needs `db:migrate`. Run `db:generate` only after changing `src/server/db/schema.ts`.
+
+   ```bash
    npm run db:migrate
-
-   # (Optional) Open database studio
-   npm run db:studio
    ```
 
-5. **Start the development server:**
+6. Start the development server and open http://localhost:3000.
 
    ```bash
    npm run dev
    ```
 
-6. **Open [http://localhost:3000](http://localhost:3000)** in your browser.
+Do not use `docker compose up -d` without a service name for development. It also starts the `app` service, which pulls the published image and binds port 3000.
 
-### Quick Start with Docker
+## Configuration
 
-```bash
-# Start PostgreSQL with Docker
-docker-compose up -d
+Variables are validated in `src/env.js`. Some are read directly from `process.env`.
 
-# Run the application
-npm run dev
-```
+| Variable                                     | Required             | Description                                                                                                                                                            |
+| -------------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                               | yes                  | PostgreSQL connection URL. Example: `postgresql://postgres:password@localhost:5432/bingoscape`.                                                                        |
+| `NEXTAUTH_URL`                               | yes                  | Public URL of the app. `VERCEL_URL` takes precedence when set.                                                                                                         |
+| `NEXTAUTH_SECRET`                            | in production        | Session secret. Generate with `openssl rand -base64 32`.                                                                                                               |
+| `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | yes                  | Discord OAuth application.                                                                                                                                             |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`   | no                   | Enables GitHub sign-in. Callback `{NEXTAUTH_URL}/api/auth/callback/github`. In GitHub Actions the secrets are named `GH_OAUTH_CLIENT_ID` and `GH_OAUTH_CLIENT_SECRET`. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`   | no                   | Enables Google sign-in. Callback `{NEXTAUTH_URL}/api/auth/callback/google`.                                                                                            |
+| `SUPER_ADMIN_EMAILS`                         | no                   | Comma-separated super-admin emails, compared case-insensitively with the email stored in the database. If empty, nobody is a super admin.                              |
+| `CRON_SECRET`                                | for scheduled unlock | Bearer token for `GET /api/cron/unlock`. The route answers 401 when it is unset. `scripts/setup-unlock-cron.sh` sets up a cron job that calls it every minute.         |
+| `OSRS_WIKI_CONTACT_EMAIL`                    | recommended          | Contact address in the User-Agent of OSRS Wiki price requests. Defaults to `unknown@example.com`.                                                                      |
+| `WISEOLDMAN_API_KEY`                         | no                   | Wise Old Man API key for higher rate limits.                                                                                                                           |
+| `NEXT_PUBLIC_BASE_URL`                       | no                   | Base URL used for public event page metadata. Defaults to `https://bingoscape.org`.                                                                                    |
+| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`         | production (Docker)  | Passed through by `docker-compose.yml`.                                                                                                                                |
+| `SKIP_ENV_VALIDATION`                        | no                   | Set to `1` to skip validation (Docker build, CI).                                                                                                                      |
+| `NODE_ENV`                                   | no                   | `development`, `test` or `production`.                                                                                                                                 |
 
-## RuneLite Plugin Integration
+`docker-compose.yml` also reads `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_NAME`, `DB_PORT` and `IMAGE_TAG` (defaults: `postgres`, `postgres`, `bingoscapedb`, `bingoscape`, `5432`, `main`).
 
-### Installing the Plugin
+## Scripts
 
-1. **Download RuneLite** from [runelite.net](https://runelite.net/)
-2. **Install BingoScape Companion** from the [Plugin Hub](https://runelite.net/plugin-hub/show/bingoscape-companion)
-3. **Generate API Key** in your BingoScape profile settings
-4. **Configure Plugin** with your API key in RuneLite settings
+| Command                         | Description                                                               |
+| ------------------------------- | ------------------------------------------------------------------------- |
+| `npm run dev`                   | Development server on port 3000.                                          |
+| `npm run dbg`                   | Development server with the Node.js inspector.                            |
+| `npm run build`                 | Production build (loads `.env`).                                          |
+| `npm run build:ci`              | Production build without `env-cmd` (used in the Dockerfile).              |
+| `npm start`                     | Production server on port 3344.                                           |
+| `npm run start:prod`            | Production server on port 3333.                                           |
+| `npm run lint`                  | oxlint. Add `-- --fix` to fix automatically.                              |
+| `npx tsc --noEmit`              | Type check. Also runs in CI.                                              |
+| `npm test`                      | Jest unit tests. Docker must be running.                                  |
+| `npm run test:watch`            | Jest in watch mode.                                                       |
+| `npm run test:e2e`              | Playwright tests. `test:e2e:ui` and `test:e2e:headed` are also available. |
+| `npm run db:generate`           | Generate a Drizzle migration from schema changes.                         |
+| `npm run db:migrate`            | Apply migrations. Use this in production.                                 |
+| `npm run db:push`               | Push the schema with `--force`. Can delete data. Not for production.      |
+| `npm run db:studio`             | Open Drizzle Studio.                                                      |
+| `npm run db:backfill-templates` | Fill template metadata with `scripts/backfill-template-metadata.ts`.      |
 
-### Plugin Features
+## Testing
 
-- **Automatic Screenshot Upload**: Submit evidence directly from game
-- **Event Synchronization**: View active bingo events in-game
-- **Progress Tracking**: Real-time tile completion status
-- **Multi-Account Support**: Use different API keys per account
+- `npm test` runs Jest 29 (jsdom, `next/jest`). Test files match `**/__tests__/**/*.test.[jt]s?(x)` and are co-located with the code under `src/`.
+- Jest global setup starts a `postgres:15-alpine` Testcontainers database, so Docker must be running.
+- Run one file with `npm test -- <path>`, or filter with `npm test -- --testNamePattern="<pattern>"`.
+- `npm run test:e2e` runs the Playwright specs in `tests/` against `http://localhost:3001` with an ephemeral database.
+- CI runs lint, `npx tsc --noEmit`, `npm test` and `docker compose config -q`. It does not run the Playwright tests.
 
-### API Key Management
+## RuneLite API
 
-```typescript
-// Generate new API key
-POST /api/runelite/keys
-Authorization: Bearer session-token
+The RuneLite plugin ([BingoScape Companion on the Plugin Hub](https://runelite.net/plugin-hub/show/bingoscape-companion)) talks to the server with API keys.
 
-// Validate API key
-POST /api/runelite/auth
-Body: { "apiKey": "bsn_your_key_here" }
-```
+- Create a key in the web app. `POST /api/runelite/keys` (session cookie required, body `{ "name": string, "description"?: string }`) returns a key of the form `bsn_<32 characters>`. The full key is returned only on creation.
+- `GET /api/runelite/keys` lists a user's keys and `DELETE /api/runelite/keys/{id}` revokes one. A user can hold several keys.
+- Plugin requests send `Authorization: Bearer bsn_...`.
 
-## API Documentation
+| Method | Path                                            | Purpose                                                                                               |
+| ------ | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| POST   | `/api/runelite/auth`                            | Validate a key. Body `{ "apiKey": "bsn_..." }`.                                                       |
+| GET    | `/api/runelite/events`                          | Events and boards of the key owner, all board types.                                                  |
+| GET    | `/api/runelite/bingos/{bingoId}`                | Board payload. Supports `ETag` and `If-None-Match` (304). Rate limit 60 requests per minute per user. |
+| POST   | `/api/runelite/tiles/{tileId}/submissions`      | Submit a screenshot (`multipart/form-data`, field `image`).                                           |
+| POST   | `/api/runelite/tiles/{tileId}/auto-submissions` | Automatic submission.                                                                                 |
+| POST   | `/api/runelite/items/check`                     | Check items against goals.                                                                            |
+| GET    | `/api/runelite/team-drops`                      | Team drops.                                                                                           |
+| GET    | `/api/runelite/team-tile-completions`           | Team tile completions.                                                                                |
+| GET    | `/api/runelite/docs`                            | Machine-readable API description (version 2.1.0).                                                     |
 
-### Authentication
+API version 2.1 is additive. Board payloads carry `apiVersion: "2.1"`, progression tiers and locked-tile stubs, and a `battleship` block with blind-tile redaction. Error codes `TIER_LOCKED`, `BOARD_BLIND` and `EVENT_NOT_STARTED` were added. Full request and response details are in [docs/API.md](docs/API.md).
 
-**Session-based (Web UI):**
+## Database
 
-```typescript
-// Automatic session handling via NextAuth.js
-const session = await getServerAuthSession()
-```
+- 41 tables defined in `src/server/db/schema.ts`. All table names carry the prefix `bingoscape-next_` (`createTable`, and `tablesFilter` in `drizzle.config.ts`).
+- 39 SQL migrations in `drizzle/`.
+- Table groups:
+  - Auth: `user`, `account`, `session`, `verificationToken`
+  - Events: `events`, `event_rules`, `event_registration_requests`, `event_participants`, `event_invites`, `event_buy_ins`, `event_donations`
+  - Boards: `bingos`, `tiles`, `goal_groups`, `goals`, `goal_values`, `item_goals`, `metric_goals`, `row_bonuses`, `column_bonuses`, `bingo_templates`
+  - Teams and progress: `teams`, `team_members`, `team_tile_submissions`, `team_goal_progress`, `team_tier_progress`, `tier_xp_requirements`
+  - Submissions: `submissions`, `submission_comments`, `images`
+  - Clans: `clans`, `clan_members`, `clan_invites`
+  - Battleship: `bingo_ship_rules`, `battleship_ships`, `battleship_ship_tiles`
+  - Other: `player_metadata`, `notifications`, `api_keys`, `discord_webhooks`, `admin_audit_log`
+- Schema change workflow: edit `schema.ts`, run `npm run db:generate`, commit the generated SQL, run `npm run db:migrate`.
+- Migrations run on every deploy before the new app version starts. A rollback does not revert the database, so a migration must stay compatible with the previous app version: add first, remove in a later release.
+- Backups are gzip SQL dumps made by `scripts/backup-db.sh`:
 
-**API Key (RuneLite Plugin):**
+  | Type       | Schedule                | Kept |
+  | ---------- | ----------------------- | ---- |
+  | daily      | 03:00                   | 7    |
+  | weekly     | Sunday 02:00            | 4    |
+  | monthly    | 1st of the month, 01:00 | 6    |
+  | pre-deploy | before each deploy      | 10   |
 
-```typescript
-// Include in request headers
-Authorization: Bearer bsn_your_api_key_here
-```
-
-### Key Endpoints
-
-**Get User Events:**
-
-```http
-GET /api/runelite/events
-Authorization: Bearer bsn_your_key
-```
-
-**Get Bingo Data:**
-
-```http
-GET /api/runelite/bingos/{bingoId}
-Authorization: Bearer bsn_your_key
-```
-
-**Submit Screenshot:**
-
-```http
-POST /api/runelite/tiles/{tileId}/submissions
-Authorization: Bearer bsn_your_key
-Content-Type: multipart/form-data
-
-image: <file>
-```
-
-**Full API Documentation:** Available at `/api/runelite/docs`
-
-## Development
-
-### Available Scripts
-
-```bash
-# Development
-npm run dev          # Start development server
-npm run dbg          # Start with Node.js inspector
-
-# Building
-npm run build        # Build production application
-npm run start        # Start production server
-
-# Database
-npm run db:generate  # Generate Drizzle schema
-npm run db:migrate   # Run database migrations
-npm run db:push      # Push schema changes
-npm run db:studio    # Open Drizzle Studio
-
-# Testing
-npm run test         # Run Jest unit tests
-npm run test:watch   # Run Jest in watch mode
-npm run test:e2e     # Run Playwright E2E tests
-npm run test:e2e:ui  # Run E2E tests with UI
-
-# Code Quality
-npm run lint         # Run ESLint
-```
-
-### Project Structure
-
-```
-src/
-├── app/                    # Next.js App Router
-│   ├── actions/           # Server Actions (mutations)
-│   ├── api/               # API Routes
-│   └── [routes]/          # Page components
-├── components/            # React components
-│   ├── ui/               # shadcn/ui components
-│   └── [business]/       # Domain components
-├── server/               # Backend logic
-│   ├── auth.ts           # NextAuth configuration
-│   └── db/               # Database schema & connection
-└── lib/                  # Utility functions
-```
-
-### Database Schema
-
-**Core Tables:**
-
-- `events` - Bingo events and competitions
-- `bingos` - Individual bingo boards within events
-- `tiles` - Bingo tiles with goals and requirements
-- `teams` - Team management and member assignments
-- `submissions` - Screenshot submissions and reviews
-- `users` - User accounts and authentication
-
-**Key Relations:**
-
-- Events → Bingos (one-to-many)
-- Bingos → Tiles (one-to-many)
-- Teams → Submissions (one-to-many)
-- Users → TeamMembers (many-to-many via junction)
-
-### Adding New Features
-
-1. **Database Changes:** Update schema in `src/server/db/schema.ts`
-2. **Server Actions:** Add mutations in `src/app/actions/`
-3. **API Routes:** Add endpoints in `src/app/api/`
-4. **Components:** Create components in `src/components/`
-5. **Pages:** Add routes in `src/app/`
+  Files are stored under `~/bingoscape/backups/<type>/`. Set up the schedule with `scripts/setup-backup-cron.sh`. Restore with `scripts/restore-db.sh <backup-file>`, which creates a safety backup first and asks for confirmation. `scripts/verify-backup.sh` restores a backup into a temporary container to check it, and runs monthly (first Sunday, 05:00).
 
 ## Deployment
 
-### Environment Setup
+Production runs as Docker containers on a Debian host behind nginx and certbot (not part of this repository). The app listens on `127.0.0.1:3000`.
 
-**Production Environment Variables:**
+- Images: `ghcr.io/bingoscape/bingoscape` (target `runner`, the app) and `ghcr.io/bingoscape/bingoscape-migrator` (target `migrator`, runs `drizzle-kit migrate`). Both receive the same tags, so one `IMAGE_TAG` selects both.
+- CI (`.github/workflows/ci-cd.yml`) runs on pull requests to `main`, pushes to `main` and `v*.*.*` tags: lint, type check, tests, then a Docker build of both targets on Node 24. Pull requests only build. Pushes to `main` publish `:main` and `:sha-<short>`. Release tags publish `:X.Y.Z`, `:X.Y`, `:X` and, for tags without a pre-release suffix, `:latest`.
+- Deploys are manual: run the Deploy workflow (`deploy.yml`, `workflow_dispatch`) with `image_tag` set to `main`, `sha-<short>` or a release tag. There is a single `production` environment and no staging.
+- `scripts/deploy.sh` runs on the server: pull images, pre-deploy backup (skipped if PostgreSQL is not running yet), run migrations, replace only the app container, wait for a healthy `/api/uptime`, record the tag in `~/bingoscape/.deployed-tag`. A failure after the app was replaced restores the previous image.
+- `migrate.yml` runs migrations without a deploy. It is manual and requires typing `MIGRATE`.
+- Uploads are stored on the host in `./uploads`, mounted at `/app/public/uploads`.
+- Dependabot opens weekly PRs for GitHub Actions, Docker base images (Node stays on major 24) and npm.
 
-```env
-# Database (use connection pooling for production)
-DATABASE_URL="postgresql://user:pass@host:port/db?pgbouncer=true"
-
-# Authentication (must be secure in production)
-NEXTAUTH_SECRET="secure-random-string-64-chars"
-NEXTAUTH_URL="https://your-domain.com"
-
-# Discord OAuth (production app credentials)
-DISCORD_CLIENT_ID="prod-client-id"
-DISCORD_CLIENT_SECRET="prod-client-secret"
-```
-
-### Platform Deployment
-
-**Vercel (Recommended):**
-
-```bash
-# Deploy to Vercel
-npx vercel
-
-# Set environment variables in Vercel dashboard
-# Connect PostgreSQL database (Neon, Supabase, etc.)
-```
-
-**Docker:**
-
-```dockerfile
-# Use provided Dockerfile
-docker build -t bingoscape-next .
-docker run -p 3000:3000 bingoscape-next
-```
-
-**Manual Deployment:**
-
-```bash
-# Build the application
-npm run build
-
-# Start production server
-npm run start:prod
-```
-
-### Database Migration
-
-```bash
-# For production deployments
-npm run db:migrate
-```
+Setup guides: [docs/PRODUCTION-SETUP.md](docs/PRODUCTION-SETUP.md), [docs/GITHUB-ACTIONS.md](docs/GITHUB-ACTIONS.md), [docs/GITHUB-SECRETS.md](docs/GITHUB-SECRETS.md), [docs/DEBIAN-USER-SETUP.md](docs/DEBIAN-USER-SETUP.md), [docs/DATABASE-MIGRATION.md](docs/DATABASE-MIGRATION.md).
 
 ## Contributing
 
-We welcome contributions! Please read our contributing guidelines:
+1. Fork the repository and create a branch such as `feat/<topic>` or `fix/<topic>`.
+2. Make the change. Add or update tests.
+3. Run `npm run lint -- --fix`, `npx tsc --noEmit` and `npm test`.
+4. Commit with [Conventional Commits](https://www.conventionalcommits.org/), for example `feat(battleship): add ship placement page` or `fix(tiers): unlock the next tier after board edits`.
+5. Open a pull request against `main`.
 
-### Development Process
+Code rules (details in [AGENTS.md](AGENTS.md) and [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)):
 
-1. **Fork the repository**
-2. **Create a feature branch:** `git checkout -b feature/amazing-feature`
-3. **Make your changes** following our coding standards
-4. **Add tests** for new functionality
-5. **Run the test suite:** `npm run test && npm run test:e2e`
-6. **Commit changes:** Follow conventional commit format
-7. **Push to your fork:** `git push origin feature/amazing-feature`
-8. **Open a Pull Request** with a clear description
+- Do not bypass oxlint or the type checker (`oxlint-disable`, `eslint-disable`, `@ts-ignore`) without a justification comment.
+- Wrap mutations in `db.transaction()` and revalidate affected paths.
+- Check permissions in server actions before mutating.
+- Import internal modules through the `@/` alias.
 
-### Code Standards
+## Documentation
 
-- **TypeScript**: Strict mode enabled, no `any` types
-- **ESLint**: Follow project linting rules
-- **Prettier**: Code formatting enforced
-- **Testing**: Unit tests for business logic, E2E tests for user flows
-
-### Commit Convention
-
-```
-feat: add progression bingo tier system
-fix: resolve submission upload race condition
-docs: update API documentation
-test: add team management integration tests
-```
+| File                                                     | Content                                 |
+| -------------------------------------------------------- | --------------------------------------- |
+| [docs/API.md](docs/API.md)                               | RuneLite and web API reference          |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)             | Contribution guide                      |
+| [docs/PRODUCTION-SETUP.md](docs/PRODUCTION-SETUP.md)     | Production server setup                 |
+| [docs/GITHUB-ACTIONS.md](docs/GITHUB-ACTIONS.md)         | CI, deploy and migration workflows      |
+| [docs/GITHUB-SECRETS.md](docs/GITHUB-SECRETS.md)         | GitHub secrets used by the workflows    |
+| [docs/DEBIAN-USER-SETUP.md](docs/DEBIAN-USER-SETUP.md)   | Deployment user on the server           |
+| [docs/DATABASE-MIGRATION.md](docs/DATABASE-MIGRATION.md) | Moving from the old non-Docker database |
+| [docs/design/osrs-theme.md](docs/design/osrs-theme.md)   | Interface theme                         |
+| [CHANGELOG.md](CHANGELOG.md)                             | Release notes                           |
+| [CONTEXT.md](CONTEXT.md)                                 | Domain vocabulary                       |
+| [AGENTS.md](AGENTS.md)                                   | Commands and code conventions           |
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+BSD 2-Clause License. See [LICENSE](LICENSE).
 
-## Support & Community
+## Support
 
-- **Issues**: [GitHub Issues](https://github.com/bingoscape/bingoscape-next/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/bingoscape/bingoscape-next/discussions)
-- **Discord**: [BingoScape Community](https://discord.gg/bingoscape)
+- Issues: https://github.com/bingoscape/bingoscape/issues
+- Discussions: https://github.com/bingoscape/bingoscape/discussions
+- Discord: https://discord.gg/bingoscape
