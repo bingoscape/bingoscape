@@ -1,0 +1,19 @@
+src/components/draft/recap/share-recap-image.tsx
+  s_ef9e7db49e4fa3::t_adaf4b950dfa45 3,13-17,25-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "419af6fe76597c1ed839dc855364e73dffeb3c8b",
+  "prompts": {},
+  "sessions": {
+    "s_ef9e7db49e4fa3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f2ee1b5-009f-4522-8f4a-8ff1c514dfe0",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
