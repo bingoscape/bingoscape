@@ -26,7 +26,6 @@ import { GoalsTab } from "@/components/goals-tab"
 import { SubmissionsTab } from "@/components/submissions-tab"
 import { TileDetailsTab } from "@/components/tile-details-tab"
 import type { TileWorkspace } from "@/components/event-workspace/use-tile-workspace"
-import type { EventRole } from "@/app/actions/events"
 import {
   getAttentionTiles,
   getBoardStats,
@@ -52,7 +51,8 @@ interface TilePanelProps {
   tile: Tile | null
   bingo: Bingo
   workspace: TileWorkspace
-  userRole: EventRole
+  /** May edit the Board (`board:manage`); false in the public view. */
+  isManagement: boolean
   teams: Team[]
   /** The Team whose progress is shown / submitted for (effective Team). */
   currentTeamId: string | undefined
@@ -128,7 +128,7 @@ export function TilePanel({
   tile,
   bingo,
   workspace,
-  userRole,
+  isManagement,
   teams,
   currentTeamId,
   eventId,
@@ -146,9 +146,6 @@ export function TilePanel({
   scrollClassName,
   scrollStyle,
 }: TilePanelProps) {
-  const canEdit =
-    !readOnly && (userRole === "admin" || userRole === "management")
-
   if (!tile) {
     return (
       <TilePanelScroll className={scrollClassName} style={scrollStyle}>
@@ -170,7 +167,7 @@ export function TilePanel({
         tile={tile}
         bingo={bingo}
         workspace={workspace}
-        userRole={userRole}
+        isManagement={isManagement}
         teams={teams}
         currentTeamId={currentTeamId}
         eventId={eventId}
@@ -180,7 +177,6 @@ export function TilePanel({
         battleshipMark={battleshipMark}
         ownShip={ownShip}
         readOnly={readOnly}
-        canEdit={canEdit}
         subTab={subTab}
         onSubTabChange={onSubTabChange}
         onClose={onClose}
@@ -194,7 +190,7 @@ function TilePanelBody({
   tile,
   bingo,
   workspace,
-  userRole,
+  isManagement,
   teams,
   currentTeamId,
   eventId,
@@ -204,7 +200,6 @@ function TilePanelBody({
   battleshipMark,
   ownShip,
   readOnly,
-  canEdit,
   subTab: requestedSubTab,
   onSubTabChange,
   onClose,
@@ -214,9 +209,7 @@ function TilePanelBody({
   "onSelectTile" | "tile" | "scrollClassName" | "scrollStyle"
 > & {
   tile: Tile
-  canEdit: boolean
 }) {
-  const isManagement = userRole === "admin" || userRole === "management"
   const { completion, submissionState } = getTileTeamStatus(tile, currentTeamId)
 
   const pendingCount = useMemo(() => {
@@ -242,7 +235,7 @@ function TilePanelBody({
   // A remembered sub-tab this view does not offer falls back to Details.
   const subTab: TileSubTab =
     (requestedSubTab === "submissions" && readOnly) ||
-    (requestedSubTab === "goals" && !canEdit)
+    (requestedSubTab === "goals" && !isManagement)
       ? "details"
       : requestedSubTab
 
@@ -391,7 +384,7 @@ function TilePanelBody({
                 }
               />
             )}
-            {canEdit && (
+            {isManagement && (
               <SubTabTrigger
                 value="goals"
                 label="Goals"
@@ -408,7 +401,7 @@ function TilePanelBody({
             embedded
             selectedTile={tile}
             editedTile={workspace.editedTile}
-            userRole={readOnly ? "participant" : userRole}
+            canEdit={isManagement}
             teams={progressTeams}
             eventId={eventId}
             gameType={gameType}
@@ -450,7 +443,7 @@ function TilePanelBody({
           </TabsContent>
         )}
 
-        {canEdit && (
+        {isManagement && (
           <TabsContent value="goals" className="mt-3">
             <GoalsTab
               embedded

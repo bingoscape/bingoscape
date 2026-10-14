@@ -3,27 +3,29 @@ import { getServerAuthSession } from "@/server/auth"
 import { logger } from "@/lib/logger"
 import { db } from "@/server/db"
 import {
-  events,
   teams,
   teamMembers,
   eventParticipants,
   users,
   playerMetadata,
 } from "@/server/db/schema"
-import { eq, and, not, exists } from "drizzle-orm"
+import { eq, and, inArray, not, exists } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
-import { getUserRole } from "./events"
+import { levelAllows } from "@/lib/authz/read-policy"
+import { getEventReadAccessFor } from "@/server/authz/read"
+import { authorize, denial, failure, hasPermission } from "@/server/authz"
 import {
   assertTeamLimitForBattleship,
   battleshipErrorMessage,
 } from "@/server/battleship"
 
+class InvalidTeamError extends Error {}
+
 export async function createTeam(eventId: string, name: string) {
+  const allowed = await authorize(eventId, "team:manage")
+  if (!allowed.success) return denial(allowed)
+
   try {
-    const role = await getUserRole(eventId)
-    if (role !== "admin" && role !== "management") {
-      return { success: false, error: "Unauthorized" }
-    }
     const team = await db.transaction(async (tx) => {
       // Battleship events are played by exactly two teams.
       await assertTeamLimitForBattleship(tx, eventId)
@@ -47,28 +49,21 @@ export async function createTeam(eventId: string, name: string) {
       )
     }
 
-    return { success: true, data: team }
+    return { success: true as const, data: team }
   } catch (error) {
     logger.error({ error }, "Error creating team", error)
-    return {
-      success: false,
-      error: battleshipErrorMessage(error, "Failed to create team"),
-    }
+    return failure(battleshipErrorMessage(error, "Failed to create team"))
   }
 }
 
 export async function getTeamsByEventId(eventId: string) {
-  // Members get the teams with the skill badges the roster shows. Visitors of
-  // a public Event get the teams only, without any player metadata.
-  const role = await getUserRole(eventId)
-  if (!role) {
-    const event = await db.query.events.findFirst({
-      where: eq(events.id, eventId),
-      columns: { public: true },
-    })
-    if (!event?.public) return []
-  }
-  const withMetadata = role !== null
+  // Anybody who may read the Event content gets the Teams (a public Event shows
+  // its rosters). Only members also get the skill badges the roster shows;
+  // visitors of a public Event get no player metadata. Judged on the strict
+  // level, so the relaxed read policy never hands metadata to non-members.
+  const access = await getEventReadAccessFor(eventId, "content")
+  if (!access) return []
+  const withMetadata = levelAllows(access.strictLevel, "member-data")
 
   const eventTeams = await db.query.teams.findMany({
     where: eq(teams.eventId, eventId),
@@ -104,7 +99,8 @@ export async function getTeamsByEventId(eventId: string) {
           ...member.user,
           hasMetadata: !!metadata,
           skillLevel: metadata?.skillLevel ?? null,
-          runescapeName: metadata?.runescapeNameOverride ?? member.user.runescapeName,
+          runescapeName:
+            metadata?.runescapeNameOverride ?? member.user.runescapeName,
           hasOverride: !!metadata?.runescapeNameOverride,
           originalRunescapeName: member.user.runescapeName,
         },
@@ -123,18 +119,39 @@ export async function addUserToTeam(teamId: string, userId: string) {
     })
 
     if (!teamInfo) {
-      return { success: false, error: "Team not found" }
+      return failure("Team not found", "NOT_FOUND")
     }
 
-    const role = await getUserRole(teamInfo.eventId)
-    if (role !== "admin" && role !== "management") {
-      return { success: false, error: "Unauthorized" }
+    const allowed = await authorize(teamInfo.eventId, "team:manage")
+    if (!allowed.success) return denial(allowed)
+
+    // A Player is on at most one Team per Event (unique event_id + user_id).
+    const [existing] = await db
+      .select({ id: teamMembers.id })
+      .from(teamMembers)
+      .innerJoin(teams, eq(teams.id, teamMembers.teamId))
+      .where(
+        and(eq(teams.eventId, teamInfo.eventId), eq(teamMembers.userId, userId))
+      )
+      .limit(1)
+    if (existing) {
+      return {
+        success: false,
+        error: "User is already on a team in this event",
+      }
     }
 
     const [member] = await db
       .insert(teamMembers)
-      .values({ teamId, userId })
+      .values({ teamId, eventId: teamInfo.eventId, userId })
+      .onConflictDoNothing()
       .returning()
+    if (!member) {
+      return {
+        success: false,
+        error: "User is already on a team in this event",
+      }
+    }
     revalidatePath(`/events/${teamInfo.event.id}`)
     logger.info(
       {
@@ -146,7 +163,7 @@ export async function addUserToTeam(teamId: string, userId: string) {
       "User added to team successfully"
     )
 
-    return { success: true, data: member }
+    return { success: true as const, data: member }
   } catch (error) {
     logger.error({ error }, "Error adding user to team", error)
     return { success: false, error: "Failed to add user to team" }
@@ -161,13 +178,11 @@ export async function removeUserFromTeam(teamId: string, userId: string) {
     })
 
     if (!teamInfo) {
-      return { success: false, error: "Team not found" }
+      return failure("Team not found", "NOT_FOUND")
     }
 
-    const role = await getUserRole(teamInfo.eventId)
-    if (role !== "admin" && role !== "management") {
-      return { success: false, error: "Unauthorized" }
-    }
+    const allowed = await authorize(teamInfo.eventId, "team:manage")
+    if (!allowed.success) return denial(allowed)
 
     await db
       .delete(teamMembers)
@@ -185,7 +200,7 @@ export async function removeUserFromTeam(teamId: string, userId: string) {
       "User removed from team successfully"
     )
 
-    return { success: true }
+    return { success: true as const }
   } catch (error) {
     logger.error({ error }, "Error removing user from team", error)
     return { success: false, error: "Failed to remove user from team" }
@@ -200,13 +215,11 @@ export async function deleteTeam(teamId: string) {
     })
 
     if (!teamInfo) {
-      return { success: false, error: "Team not found" }
+      return failure("Team not found", "NOT_FOUND")
     }
 
-    const role = await getUserRole(teamInfo.eventId)
-    if (role !== "admin" && role !== "management") {
-      return { success: false, error: "Unauthorized" }
-    }
+    const allowed = await authorize(teamInfo.eventId, "team:manage")
+    if (!allowed.success) return denial(allowed)
 
     await db.delete(teamMembers).where(eq(teamMembers.teamId, teamId))
     await db.delete(teams).where(eq(teams.id, teamId))
@@ -221,7 +234,7 @@ export async function deleteTeam(teamId: string) {
       "Team deleted successfully"
     )
 
-    return { success: true }
+    return { success: true as const }
   } catch (error) {
     logger.error({ error }, "Error deleting team", error)
     return { success: false, error: "Failed to delete team" }
@@ -229,8 +242,8 @@ export async function deleteTeam(teamId: string) {
 }
 
 export async function getEventParticipants(eventId: string) {
-  const callerRole = await getUserRole(eventId)
-  if (callerRole !== "admin" && callerRole !== "management") return []
+  // Deliberate: a denial reads as an empty list (see guards.ts).
+  if (!(await hasPermission(eventId, "participant:list"))) return []
 
   const participants = await db
     .select({
@@ -289,13 +302,11 @@ export async function updateTeamName(teamId: string, newName: string) {
     })
 
     if (!teamInfo) {
-      return { success: false, error: "Team not found" }
+      return failure("Team not found", "NOT_FOUND")
     }
 
-    const role = await getUserRole(teamInfo.eventId)
-    if (role !== "admin" && role !== "management") {
-      return { success: false, error: "Unauthorized" }
-    }
+    const allowed = await authorize(teamInfo.eventId, "team:manage")
+    if (!allowed.success) return denial(allowed)
 
     const [updatedTeam] = await db
       .update(teams)
@@ -305,7 +316,7 @@ export async function updateTeamName(teamId: string, newName: string) {
 
     if (updatedTeam) {
       revalidatePath(`/events/${updatedTeam.eventId}`)
-      return { success: true, data: updatedTeam }
+      return { success: true as const, data: updatedTeam }
     } else {
       return { success: false, error: "Team not found" }
     }
@@ -327,13 +338,11 @@ export async function updateTeamMember(
     })
 
     if (!teamInfo) {
-      return { success: false, error: "Team not found" }
+      return failure("Team not found", "NOT_FOUND")
     }
 
-    const role = await getUserRole(teamInfo.eventId)
-    if (role !== "admin" && role !== "management") {
-      return { success: false, error: "Unauthorized" }
-    }
+    const allowed = await authorize(teamInfo.eventId, "team:manage")
+    if (!allowed.success) return denial(allowed)
 
     const [updatedMember] = await db
       .update(teamMembers)
@@ -344,7 +353,7 @@ export async function updateTeamMember(
       .returning()
 
     revalidatePath(`/events/${teamInfo.event.id}`)
-    return { success: true, data: updatedMember }
+    return { success: true as const, data: updatedMember }
   } catch (error) {
     logger.error({ error }, "Error updating team member:", error)
     return { success: false, error: "Failed to update team member" }
@@ -400,25 +409,24 @@ export async function assignParticipantToTeam(
   teamId: string
 ) {
   try {
-    const role = await getUserRole(eventId)
-    if (role !== "admin" && role !== "management") {
-      return { success: false, error: "Unauthorized" }
-    }
+    const allowed = await authorize(eventId, "participant:assign-team")
+    if (!allowed.success) return denial(allowed)
 
     await db.transaction(async (tx) => {
-      // First, remove the user from any existing team in this event
-      const existingTeamMember = await tx.query.teamMembers.findFirst({
-        where: eq(teamMembers.userId, userId),
-        with: {
-          team: true,
-        },
-      })
-
-      if (existingTeamMember && existingTeamMember.team.eventId === eventId) {
-        await tx
-          .delete(teamMembers)
-          .where(eq(teamMembers.id, existingTeamMember.id))
-      }
+      // First, remove the user from every team of this event (and only this
+      // event)
+      const eventTeamIds = tx
+        .select({ id: teams.id })
+        .from(teams)
+        .where(eq(teams.eventId, eventId))
+      await tx
+        .delete(teamMembers)
+        .where(
+          and(
+            eq(teamMembers.userId, userId),
+            inArray(teamMembers.teamId, eventTeamIds)
+          )
+        )
 
       // Then, add the user to the new team
       if (teamId) {
@@ -428,11 +436,12 @@ export async function assignParticipantToTeam(
         })
 
         if (!newTeam) {
-          throw new Error("Invalid team for this event")
+          throw new InvalidTeamError()
         }
 
         await tx.insert(teamMembers).values({
           teamId,
+          eventId,
           userId,
           isLeader: false,
         })
@@ -444,9 +453,12 @@ export async function assignParticipantToTeam(
     // Also revalidate the event page
     revalidatePath(`/events/${eventId}`)
 
-    return { success: true }
+    return { success: true as const }
   } catch (error) {
     logger.error({ error }, "Error assigning participant to team:", error)
+    if (error instanceof InvalidTeamError) {
+      return failure("Invalid team for this event", "INVALID")
+    }
     return { success: false, error: "Failed to assign participant to team" }
   }
 }

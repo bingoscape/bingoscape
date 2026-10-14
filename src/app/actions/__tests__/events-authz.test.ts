@@ -1,6 +1,7 @@
 /**
  * @jest-environment node
  */
+import { expectFailure } from "@/server/__tests__/helpers/expect-failure"
 import { and, eq } from "drizzle-orm"
 
 import {
@@ -8,7 +9,6 @@ import {
   assignParticipantToTeam,
   generateEventInviteLink,
   getEventParticipants,
-  getEventParticipantsWithTeams,
   getEvents,
   getParticipantDonations,
   getPendingRegistrationCount,
@@ -181,8 +181,7 @@ describe("updateEvent", () => {
       const f = await seed()
       signInAs(userFor(who, f.idOf))
 
-      await expect(
-        updateEvent(f.eventA, {
+      await expectFailure(updateEvent(f.eventA, {
           title: "Hijacked",
           description: null,
           startDate: new Date().toISOString(),
@@ -191,8 +190,7 @@ describe("updateEvent", () => {
           minimumBuyIn: 0,
           basePrizePool: 999,
           public: true,
-        })
-      ).rejects.toThrow()
+        }))
 
       const event = await db.query.events.findFirst({
         where: eq(events.id, f.eventA),
@@ -229,8 +227,7 @@ describe("updateEvent", () => {
       const f = await seed()
       signInAs(f.idOf("otherCreator"))
 
-      await expect(
-        updateEvent(f.eventA, {
+      await expectFailure(updateEvent(f.eventA, {
           title: "Hijacked",
           description: null,
           startDate: new Date().toISOString(),
@@ -238,8 +235,7 @@ describe("updateEvent", () => {
           registrationDeadline: null,
           minimumBuyIn: 0,
           basePrizePool: 0,
-        })
-      ).rejects.toThrow()
+        }))
     })
   })
 })
@@ -284,9 +280,7 @@ describe("assignParticipantToTeam", () => {
       const f = await seed()
       signInAs(userFor(who, f.idOf))
 
-      await expect(
-        assignParticipantToTeam(f.eventA, f.idOf("other"), f.teamA1)
-      ).rejects.toThrow()
+      await expectFailure(assignParticipantToTeam(f.eventA, f.idOf("other"), f.teamA1))
 
       const members = await db.query.teamMembers.findMany({
         where: eq(teamMembers.teamId, f.teamA1),
@@ -333,9 +327,7 @@ describe("assignParticipantToTeam", () => {
       const f = await seed()
       signInAs(f.idOf("manager"))
 
-      await expect(
-        assignParticipantToTeam(f.eventA, f.idOf("outsider"), f.teamA1)
-      ).rejects.toThrow("not a participant")
+      await expectFailure(assignParticipantToTeam(f.eventA, f.idOf("outsider"), f.teamA1), "not a participant")
     })
   })
 
@@ -344,9 +336,7 @@ describe("assignParticipantToTeam", () => {
       const f = await seed()
       signInAs(f.idOf("manager"))
 
-      await expect(
-        assignParticipantToTeam(f.eventA, f.idOf("other"), f.teamB)
-      ).rejects.toThrow("Invalid team")
+      await expectFailure(assignParticipantToTeam(f.eventA, f.idOf("other"), f.teamB), "Invalid team")
     })
   })
 })
@@ -357,9 +347,7 @@ describe("updateParticipantRole", () => {
       const f = await seed()
       signInAs(null)
 
-      await expect(
-        updateParticipantRole(f.eventA, f.idOf("creator"), "participant")
-      ).rejects.toThrow()
+      await expectFailure(updateParticipantRole(f.eventA, f.idOf("creator"), "participant"))
     })
   })
 
@@ -370,9 +358,7 @@ describe("updateParticipantRole", () => {
         const f = await seed()
         signInAs(f.idOf(who))
 
-        await expect(
-          updateParticipantRole(f.eventA, f.idOf(who), "admin")
-        ).rejects.toThrow()
+        await expectFailure(updateParticipantRole(f.eventA, f.idOf(who), "admin"))
 
         const row = await db.query.eventParticipants.findFirst({
           where: and(
@@ -412,9 +398,7 @@ describe("updateParticipantRole", () => {
       })
       signInAs(f.idOf("admin"))
 
-      await expect(
-        updateParticipantRole(f.eventA, f.idOf("creator"), "participant")
-      ).rejects.toThrow("creator")
+      await expectFailure(updateParticipantRole(f.eventA, f.idOf("creator"), "participant"), "creator")
     })
   })
 
@@ -428,9 +412,7 @@ describe("updateParticipantRole", () => {
         .where(eq(events.id, f.eventA))
       signInAs(f.idOf("admin"))
 
-      await expect(
-        updateParticipantRole(f.eventA, f.idOf("admin"), "participant")
-      ).rejects.toThrow("at least one admin")
+      await expectFailure(updateParticipantRole(f.eventA, f.idOf("admin"), "participant"), "at least one admin")
 
       // With a second admin the first one may step down.
       await updateParticipantRole(f.eventA, f.idOf("manager"), "admin")
@@ -445,13 +427,12 @@ describe("manager-only reads", () => {
       const f = await seed()
       signInAs(userFor(who, f.idOf))
 
-      await expect(getEventParticipants(f.eventA)).rejects.toThrow()
-      await expect(getEventParticipantsWithTeams(f.eventA)).rejects.toThrow()
+      expect(await getEventParticipants(f.eventA)).toEqual([])
       expect(await getParticipantDonations(f.eventA, f.idOf("player"))).toEqual(
         []
       )
       expect(await getPendingRegistrationCount(f.eventA)).toBe(0)
-      await expect(getRegistrationRequests(f.eventA)).rejects.toThrow()
+      expect(await getRegistrationRequests(f.eventA)).toEqual([])
     })
   })
 
@@ -461,9 +442,6 @@ describe("manager-only reads", () => {
       signInAs(f.idOf("manager"))
 
       expect((await getEventParticipants(f.eventA)).length).toBeGreaterThan(0)
-      expect(
-        (await getEventParticipantsWithTeams(f.eventA)).length
-      ).toBeGreaterThan(0)
       expect(
         await getParticipantDonations(f.eventA, f.idOf("player"))
       ).toHaveLength(1)
@@ -491,9 +469,7 @@ describe("donations are scoped to the event", () => {
       const f = await seed()
       signInAs(f.idOf("manager"))
 
-      await expect(
-        updateParticipantDonation(f.eventA, f.donationB, 9999, "pwned")
-      ).rejects.toThrow()
+      await expectFailure(updateParticipantDonation(f.eventA, f.donationB, 9999, "pwned"))
 
       const donation = await db.query.eventDonations.findFirst({
         where: eq(eventDonations.id, f.donationB),
@@ -543,7 +519,7 @@ describe("generateEventInviteLink", () => {
       const f = await seed()
       signInAs(userFor(who, f.idOf))
 
-      await expect(generateEventInviteLink(f.eventA)).rejects.toThrow()
+      await expectFailure(generateEventInviteLink(f.eventA))
     })
   })
 
@@ -552,8 +528,8 @@ describe("generateEventInviteLink", () => {
       const f = await seed()
       signInAs(f.idOf("admin"))
 
-      const invite = await generateEventInviteLink(f.eventA)
-      expect(invite?.eventId).toBe(f.eventA)
+      const result = await generateEventInviteLink(f.eventA)
+      expect(result.success && result.invite.eventId).toBe(f.eventA)
     })
   })
 })
@@ -581,7 +557,7 @@ describe("assignEventToClan", () => {
         const clanId = await seedClan(f)
         signInAs(f.idOf(who))
 
-        await expect(assignEventToClan(f.eventA, clanId)).rejects.toThrow()
+        await expectFailure(assignEventToClan(f.eventA, clanId))
 
         const event = await db.query.events.findFirst({
           where: eq(events.id, f.eventA),

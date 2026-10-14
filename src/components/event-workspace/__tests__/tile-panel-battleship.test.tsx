@@ -50,7 +50,7 @@ function renderPanel(
       tile={tile(completed)}
       bingo={bingo}
       workspace={{ editedTile: {} } as unknown as TileWorkspace}
-      userRole="participant"
+      isManagement={false}
       teams={[] as Team[]}
       currentTeamId={currentTeamId ?? undefined}
       eventId="e1"

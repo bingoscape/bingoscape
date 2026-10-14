@@ -4,8 +4,10 @@ import { validateApiKey } from "@/lib/api-auth"
 import { bingoBoardRateLimiter } from "@/lib/rate-limit"
 import { computeEtag, ifNoneMatchHits } from "@/lib/etag"
 import { db } from "@/server/db"
-import { bingos, eventParticipants, events, teamMembers } from "@/server/db/schema"
-import { and, eq } from "drizzle-orm"
+import { bingos, teamMembers } from "@/server/db/schema"
+import { eq } from "drizzle-orm"
+import { can } from "@/lib/authz/policy"
+import { getApiActor } from "@/server/authz/api"
 import { formatBingoData } from "@/lib/bingo-formatter"
 
 // The body depends on the caller (team, manager status) and on the clock, so
@@ -46,8 +48,17 @@ export async function GET(
     // Only the event's participants and managers may read a board, and only
     // managers see hidden ones. Everybody else gets the same 404 an unknown
     // id gets, so the answer does not reveal that a board exists.
-    const access = bingo ? await loadBoardAccess(bingo.eventId, userId) : null
-    if (!bingo || !access || (!bingo.visible && !access.isManager)) {
+    const apiActor = bingo ? await getApiActor(userId, bingo.eventId) : null
+    const actor =
+      apiActor?.status === "ok" && apiActor.actor.role !== null
+        ? apiActor.actor
+        : null
+    // Draft Boards are for managers (`board:view-secret`).
+    if (
+      !bingo ||
+      !actor ||
+      (!bingo.visible && !can(actor, "board:view-secret"))
+    ) {
       return NextResponse.json({ error: "Bingo not found" }, { status: 404 })
     }
 
@@ -107,32 +118,4 @@ export async function GET(
       { status: 500 }
     )
   }
-}
-
-/**
- * Whether the user may read boards of the event at all (participant, manager
- * or creator) and whether they manage it. Null when they may not.
- */
-async function loadBoardAccess(eventId: string, userId: string) {
-  const [event, participant] = await Promise.all([
-    db.query.events.findFirst({
-      where: eq(events.id, eventId),
-      columns: { creatorId: true },
-    }),
-    db.query.eventParticipants.findFirst({
-      where: and(
-        eq(eventParticipants.eventId, eventId),
-        eq(eventParticipants.userId, userId)
-      ),
-      columns: { role: true },
-    }),
-  ])
-  if (!event) return null
-
-  const isManager =
-    event.creatorId === userId ||
-    participant?.role === "admin" ||
-    participant?.role === "management"
-  if (!participant && !isManager) return null
-  return { isManager }
 }

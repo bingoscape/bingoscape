@@ -1,3 +1,5 @@
+import { securityHeaders } from "./src/lib/security-headers.js"
+
 /**
  * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially useful
  * for Docker builds.
@@ -31,6 +33,8 @@ const config = {
       { protocol: "https", hostname: "runescape.wiki" },
     ],
   },
+  // nosniff and Referrer-Policy; the CSP is added per request by src/proxy.ts.
+  headers: securityHeaders,
   async rewrites() {
     return [
       {

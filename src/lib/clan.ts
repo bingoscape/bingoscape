@@ -3,14 +3,9 @@
  * so permission and invite-state decisions are made (and tested) in one place.
  */
 
-export type ClanRole = "admin" | "management" | "member" | "guest"
+import { CLAN_ROLES, type ClanRole } from "@/lib/authz/roles"
 
-export const CLAN_ROLES: readonly ClanRole[] = [
-  "admin",
-  "management",
-  "member",
-  "guest",
-]
+export { CLAN_ROLES, type ClanRole }
 
 export const CLAN_ROLE_LABELS: Record<ClanRole, string> = {
   admin: "Admin",
@@ -23,9 +18,14 @@ export function isClanRole(value: unknown): value is ClanRole {
   return CLAN_ROLES.includes(value as ClanRole)
 }
 
+/** Admins and managers of a Clan (a Clan role, not an Event role). */
+export function isClanManager(role: ClanRole | null | undefined): boolean {
+  return role === "admin" || role === "management"
+}
+
 /** Admins and managers can create, edit and revoke invite links. */
 export function canManageInvites(role: ClanRole | null | undefined): boolean {
-  return role === "admin" || role === "management"
+  return isClanManager(role)
 }
 
 /** Only admins can change another member's role. */
@@ -48,7 +48,16 @@ interface RoleChangeInput {
   adminCount: number
 }
 
-export type RuleResult = { ok: true } | { ok: false; error: string }
+export type RuleFailureCode =
+  | "FORBIDDEN"
+  | "NOT_A_MEMBER"
+  | "INVALID"
+  | "OWNER_PROTECTED"
+  | "LAST_ADMIN"
+
+export type RuleResult =
+  | { ok: true }
+  | { ok: false; error: string; code: RuleFailureCode }
 
 /**
  * Decides whether `actor` may set `target`'s role to `newRole`.
@@ -57,26 +66,42 @@ export type RuleResult = { ok: true } | { ok: false; error: string }
  */
 export function validateRoleChange(input: RoleChangeInput): RuleResult {
   if (!canChangeRoles(input.actorRole)) {
-    return { ok: false, error: "Only clan admins can change member roles" }
+    return {
+      ok: false,
+      error: "Only clan admins can change member roles",
+      code: "FORBIDDEN",
+    }
   }
   if (!input.targetRole) {
-    return { ok: false, error: "That player is not a member of this clan" }
+    return {
+      ok: false,
+      error: "That player is not a member of this clan",
+      code: "NOT_A_MEMBER",
+    }
   }
   if (!isClanRole(input.newRole)) {
-    return { ok: false, error: "Unknown role" }
+    return { ok: false, error: "Unknown role", code: "INVALID" }
   }
   if (input.targetRole === input.newRole) {
     return { ok: true }
   }
   if (input.ownerId && input.targetId === input.ownerId) {
-    return { ok: false, error: "The clan owner's role cannot be changed" }
+    return {
+      ok: false,
+      error: "The clan owner's role cannot be changed",
+      code: "OWNER_PROTECTED",
+    }
   }
   if (
     input.targetRole === "admin" &&
     input.newRole !== "admin" &&
     input.adminCount <= 1
   ) {
-    return { ok: false, error: "A clan needs at least one admin" }
+    return {
+      ok: false,
+      error: "A clan needs at least one admin",
+      code: "LAST_ADMIN",
+    }
   }
   return { ok: true }
 }

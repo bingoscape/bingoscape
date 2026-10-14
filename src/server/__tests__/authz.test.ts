@@ -3,25 +3,30 @@
  */
 import { db } from "@/server/db"
 import { getServerAuthSession } from "@/server/auth"
-import { getUserRole } from "@/app/actions/events"
+import { getEventActor } from "@/server/authz/actor"
 import {
   AuthzError,
   assertTeamLeaderOrManager,
   authzErrorMessage,
-  canReadTile,
-  requireBingoAdmin,
-  requireBingoAdminForGoal,
-  requireBingoAdminForGoalGroup,
-  requireBingoAdminForGoalValue,
-  requireBingoAdminForSubmission,
-  requireBingoAdminForTeamTileSubmission,
-  requireBingoAdminForTile,
-  requireEventManager,
+  requirePermissionForBingo,
+  requirePermissionForEvent,
+  requirePermissionForGoal,
+  requirePermissionForGoalGroup,
+  requirePermissionForGoalValue,
+  requirePermissionForSubmission,
+  requirePermissionForTeamTileSubmission,
+  requirePermissionForTile,
   requireTeamMemberOrManager,
 } from "@/server/authz"
+import { actorLookup } from "@/server/__tests__/helpers/mock-actor"
 
 jest.mock("@/server/auth", () => ({ getServerAuthSession: jest.fn() }))
-jest.mock("@/app/actions/events", () => ({ getUserRole: jest.fn() }))
+// The actor lookup is the seam: every guard resolves the caller through it.
+jest.mock("@/server/authz/actor", () => ({
+  getEventActor: jest.fn(),
+  getEventRole: jest.fn(),
+  isUuid: () => true,
+}))
 jest.mock("@/server/db", () => {
   const table = () => ({ findFirst: jest.fn() })
   return {
@@ -42,7 +47,14 @@ jest.mock("@/server/db", () => {
 })
 
 const session = getServerAuthSession as jest.Mock
-const role = getUserRole as jest.Mock
+const actor = getEventActor as jest.Mock
+/** The caller's standing in the Event, as the actor loader reports it. */
+const role = {
+  mockResolvedValue: (
+    r: string | null,
+    teams: { teamId: string; isLeader: boolean }[] = []
+  ) => actor.mockResolvedValue(actorLookup(r, { teams })),
+}
 const q = db.query as unknown as Record<string, { findFirst: jest.Mock }>
 
 const EVENT_ID = "event-from-db"
@@ -56,69 +68,69 @@ beforeEach(() => {
   session.mockResolvedValue({ user: { id: "user-1" } })
 })
 
-describe("requireEventManager", () => {
+describe("requirePermissionForEvent (board:manage)", () => {
   it("rejects anonymous callers", async () => {
     session.mockResolvedValue(null)
-    await expect(requireEventManager(EVENT_ID)).rejects.toThrow("Unauthorized")
-    expect(role).not.toHaveBeenCalled()
+    await expect(requirePermissionForEvent(EVENT_ID, "board:manage")).rejects.toThrow("Unauthorized")
+    expect(actor).not.toHaveBeenCalled()
   })
 
   it.each([["participant"], [null]])("rejects role %s", async (r) => {
     role.mockResolvedValue(r)
-    await expect(requireEventManager(EVENT_ID)).rejects.toBeInstanceOf(
+    await expect(requirePermissionForEvent(EVENT_ID, "board:manage")).rejects.toBeInstanceOf(
       AuthzError
     )
   })
 
   it.each([["admin"], ["management"]])("allows %s", async (r) => {
     role.mockResolvedValue(r)
-    await expect(requireEventManager(EVENT_ID)).resolves.toBe(EVENT_ID)
+    await expect(requirePermissionForEvent(EVENT_ID, "board:manage")).resolves.toBe(EVENT_ID)
   })
 })
 
 describe("event is derived from the database, never from the client", () => {
-  it("requireBingoAdmin checks the role for the Board's own Event", async () => {
+  it("requirePermissionForBingo checks the role for the Board's own Event", async () => {
     q.bingos!.findFirst.mockResolvedValue({ eventId: EVENT_ID })
     role.mockResolvedValue("admin")
-    await expect(requireBingoAdmin("bingo-1")).resolves.toBe(EVENT_ID)
-    expect(role).toHaveBeenCalledWith(EVENT_ID)
+    await expect(requirePermissionForBingo("bingo-1", "board:manage")).resolves.toBe(EVENT_ID)
+    expect(actor).toHaveBeenCalledWith(EVENT_ID)
   })
 
-  it("requireBingoAdminForTile checks the Tile's Event", async () => {
+  it("requirePermissionForTile checks the Tile's Event", async () => {
     q.tiles!.findFirst.mockResolvedValue({
       bingoId: "bingo-1",
       bingo: { eventId: EVENT_ID },
     })
     role.mockResolvedValue("management")
-    await expect(requireBingoAdminForTile("tile-1")).resolves.toBe(EVENT_ID)
-    expect(role).toHaveBeenCalledWith(EVENT_ID)
+    await expect(requirePermissionForTile("tile-1", "board:manage")).resolves.toBe(EVENT_ID)
+    expect(actor).toHaveBeenCalledWith(EVENT_ID)
   })
 
-  it("requireBingoAdminForGoal checks the Goal's Event", async () => {
+  it("requirePermissionForGoal checks the Goal's Event", async () => {
     q.goals!.findFirst.mockResolvedValue(goalWithEvent)
     role.mockResolvedValue("admin")
-    await expect(requireBingoAdminForGoal("goal-1")).resolves.toBe(EVENT_ID)
-    expect(role).toHaveBeenCalledWith(EVENT_ID)
+    await expect(requirePermissionForGoal("goal-1", "board:manage")).resolves.toBe(EVENT_ID)
+    expect(actor).toHaveBeenCalledWith(EVENT_ID)
   })
 
-  it("requireBingoAdminForGoalGroup checks the group's Event", async () => {
+  it("requirePermissionForGoalGroup checks the group's Event", async () => {
     q.goalGroups!.findFirst.mockResolvedValue(goalWithEvent)
     role.mockResolvedValue("admin")
-    await expect(requireBingoAdminForGoalGroup("group-1")).resolves.toBe(
+    await expect(requirePermissionForGoalGroup("group-1", "board:manage")).resolves.toBe(
       EVENT_ID
     )
   })
 
-  it("requireBingoAdminForGoalValue resolves through the Goal", async () => {
+  it("requirePermissionForGoalValue resolves through the Goal", async () => {
     q.goalValues!.findFirst.mockResolvedValue({ goalId: "goal-1" })
     q.goals!.findFirst.mockResolvedValue(goalWithEvent)
     role.mockResolvedValue("admin")
-    await expect(requireBingoAdminForGoalValue("value-1")).resolves.toBe(
+    await expect(requirePermissionForGoalValue("value-1", "board:manage")).resolves.toBe(
       EVENT_ID
     )
   })
 
-  it("requireBingoAdminForSubmission resolves through team tile submission and Tile", async () => {
+  it("requirePermissionForSubmission resolves through team tile submission and Tile", async () => {
     q.submissions!.findFirst.mockResolvedValue({
       teamTileSubmissionId: "tts-1",
     })
@@ -128,7 +140,7 @@ describe("event is derived from the database, never from the client", () => {
       bingo: { eventId: EVENT_ID },
     })
     role.mockResolvedValue("admin")
-    await expect(requireBingoAdminForSubmission("sub-1")).resolves.toBe(
+    await expect(requirePermissionForSubmission("sub-1", "submission:review")).resolves.toBe(
       EVENT_ID
     )
   })
@@ -147,13 +159,13 @@ describe("event is derived from the database, never from the client", () => {
     q.submissions!.findFirst.mockResolvedValue({ teamTileSubmissionId: "t" })
 
     const attempts = [
-      requireBingoAdmin("x"),
-      requireBingoAdminForTile("x"),
-      requireBingoAdminForGoal("x"),
-      requireBingoAdminForGoalGroup("x"),
-      requireBingoAdminForGoalValue("x"),
-      requireBingoAdminForTeamTileSubmission("x"),
-      requireBingoAdminForSubmission("x"),
+      requirePermissionForBingo("x", "board:manage"),
+      requirePermissionForTile("x", "board:manage"),
+      requirePermissionForGoal("x", "board:manage"),
+      requirePermissionForGoalGroup("x", "board:manage"),
+      requirePermissionForGoalValue("x", "board:manage"),
+      requirePermissionForTeamTileSubmission("x", "submission:review"),
+      requirePermissionForSubmission("x", "submission:review"),
     ]
     for (const attempt of attempts) {
       await expect(attempt).rejects.toThrow(/Forbidden/)
@@ -162,7 +174,7 @@ describe("event is derived from the database, never from the client", () => {
 
   it("rejects unknown resources", async () => {
     q.goals!.findFirst.mockResolvedValue(undefined)
-    await expect(requireBingoAdminForGoal("nope")).rejects.toThrow(
+    await expect(requirePermissionForGoal("nope", "board:manage")).rejects.toThrow(
       "Goal not found"
     )
   })
@@ -176,20 +188,25 @@ describe("requireTeamMemberOrManager", () => {
   it("allows managers without membership", async () => {
     role.mockResolvedValue("management")
     await expect(requireTeamMemberOrManager("team-1")).resolves.toBe(EVENT_ID)
-    expect(q.teamMembers!.findFirst).not.toHaveBeenCalled()
   })
 
   it("allows team members", async () => {
-    role.mockResolvedValue("participant")
-    q.teamMembers!.findFirst.mockResolvedValue({ id: "m" })
+    role.mockResolvedValue("participant", [
+      { teamId: "team-1", isLeader: false },
+    ])
     await expect(requireTeamMemberOrManager("team-1")).resolves.toBe(EVENT_ID)
   })
 
-  it("rejects other participants", async () => {
+  it("rejects other participants and members of other Teams", async () => {
     role.mockResolvedValue("participant")
-    q.teamMembers!.findFirst.mockResolvedValue(undefined)
     await expect(requireTeamMemberOrManager("team-1")).rejects.toThrow(
-      /not a member/
+      /Forbidden/
+    )
+    role.mockResolvedValue("participant", [
+      { teamId: "team-2", isLeader: true },
+    ])
+    await expect(requireTeamMemberOrManager("team-1")).rejects.toThrow(
+      /Forbidden/
     )
   })
 })
@@ -216,99 +233,29 @@ describe("assertTeamLeaderOrManager", () => {
   it("allows managers without membership", async () => {
     role.mockResolvedValue("management")
     await expect(assertTeamLeaderOrManager("team-1")).resolves.toBe(EVENT_ID)
-    expect(q.teamMembers!.findFirst).not.toHaveBeenCalled()
   })
 
   it("allows the team leader", async () => {
-    role.mockResolvedValue("participant")
-    q.teamMembers!.findFirst.mockResolvedValue({ isLeader: true })
+    role.mockResolvedValue("participant", [
+      { teamId: "team-1", isLeader: true },
+    ])
     await expect(assertTeamLeaderOrManager("team-1")).resolves.toBe(EVENT_ID)
   })
 
   it("rejects plain team members", async () => {
-    role.mockResolvedValue("participant")
-    q.teamMembers!.findFirst.mockResolvedValue({ isLeader: false })
+    role.mockResolvedValue("participant", [
+      { teamId: "team-1", isLeader: false },
+    ])
     await expect(assertTeamLeaderOrManager("team-1")).rejects.toThrow(
-      /team leader/
+      /Forbidden/
     )
   })
 
   it("rejects users who are not in the team", async () => {
     role.mockResolvedValue("participant")
-    q.teamMembers!.findFirst.mockResolvedValue(undefined)
     await expect(assertTeamLeaderOrManager("team-1")).rejects.toThrow(
-      /not a member/
+      /Forbidden/
     )
-  })
-})
-
-describe("canReadTile", () => {
-  const DAY = 24 * 60 * 60 * 1000
-  const tileOn = (
-    overrides: {
-      isHidden?: boolean
-      bingoType?: "standard" | "battleship"
-      startDate?: Date
-    } = {}
-  ) => ({
-    isHidden: overrides.isHidden ?? false,
-    bingo: {
-      eventId: EVENT_ID,
-      bingoType: overrides.bingoType ?? "standard",
-      event: { startDate: overrides.startDate ?? new Date(Date.now() - DAY) },
-    },
-  })
-
-  it("allows everyone to read visible Tiles", async () => {
-    q.tiles!.findFirst.mockResolvedValue(tileOn())
-    await expect(canReadTile("tile-1")).resolves.toBe(true)
-  })
-
-  it("hides the Tiles of a battleship board from non-managers until the start", async () => {
-    q.tiles!.findFirst.mockResolvedValue(
-      tileOn({ bingoType: "battleship", startDate: new Date(Date.now() + DAY) })
-    )
-    role.mockResolvedValue("participant")
-    await expect(canReadTile("tile-1")).resolves.toBe(false)
-    role.mockResolvedValue(null)
-    await expect(canReadTile("tile-1")).resolves.toBe(false)
-    role.mockResolvedValue("management")
-    await expect(canReadTile("tile-1")).resolves.toBe(true)
-  })
-
-  it("shows the Tiles of a started battleship board to everyone", async () => {
-    q.tiles!.findFirst.mockResolvedValue(
-      tileOn({ bingoType: "battleship", startDate: new Date(Date.now() - DAY) })
-    )
-    role.mockResolvedValue(null)
-    await expect(canReadTile("tile-1")).resolves.toBe(true)
-  })
-
-  it("never blinds a standard board, whatever its start date", async () => {
-    q.tiles!.findFirst.mockResolvedValue(
-      tileOn({ startDate: new Date(Date.now() + DAY) })
-    )
-    role.mockResolvedValue(null)
-    await expect(canReadTile("tile-1")).resolves.toBe(true)
-  })
-
-  it("hides hidden Tiles from non-managers", async () => {
-    q.tiles!.findFirst.mockResolvedValue(tileOn({ isHidden: true }))
-    role.mockResolvedValue("participant")
-    await expect(canReadTile("tile-1")).resolves.toBe(false)
-    role.mockResolvedValue(null)
-    await expect(canReadTile("tile-1")).resolves.toBe(false)
-  })
-
-  it("shows hidden Tiles to managers", async () => {
-    q.tiles!.findFirst.mockResolvedValue(tileOn({ isHidden: true }))
-    role.mockResolvedValue("admin")
-    await expect(canReadTile("tile-1")).resolves.toBe(true)
-  })
-
-  it("treats unknown Tiles as unreadable", async () => {
-    q.tiles!.findFirst.mockResolvedValue(undefined)
-    await expect(canReadTile("nope")).resolves.toBe(false)
   })
 })
 

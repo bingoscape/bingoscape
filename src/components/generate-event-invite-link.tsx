@@ -28,11 +28,11 @@ export function GenerateEventInviteLink({
 
   const handleGenerateInvite = async () => {
     try {
-      const invite = await generateEventInviteLink(eventId)
-      if (!invite) {
-        throw new Error("No invite has been created")
+      const result = await generateEventInviteLink(eventId)
+      if (!result.success) {
+        throw new Error(result.error)
       }
-      const link = `${window.location.origin}/events/join/${invite.inviteCode}`
+      const link = `${window.location.origin}/events/join/${result.invite.inviteCode}`
       setInviteLink(link)
       toast({
         title: "Invite link generated",
@@ -42,7 +42,10 @@ export function GenerateEventInviteLink({
       console.error(error)
       toast({
         title: "Error",
-        description: "Failed to generate invite link.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to generate invite link.",
         variant: "destructive",
       })
     }

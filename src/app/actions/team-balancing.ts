@@ -1,7 +1,6 @@
 "use server"
 
-import { isEventManager } from "@/server/authz"
-import { getServerAuthSession } from "@/server/auth"
+import { authorize, denial, hasPermission } from "@/server/authz"
 import { logger } from "@/lib/logger"
 import { db } from "@/server/db"
 import {
@@ -9,7 +8,7 @@ import {
   battleshipErrorMessage,
 } from "@/server/battleship"
 import { teams, eventParticipants, teamMembers } from "@/server/db/schema"
-import { eq, and } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import {
   getEventParticipantMetadata,
@@ -717,28 +716,8 @@ export async function generateBalancedTeams(
     }
   }
 ) {
-  const session = await getServerAuthSession()
-  if (!session?.user?.id) {
-    return { success: false, error: "Unauthorized: You must be logged in" }
-  }
-
-  // Check management rights
-  const participant = await db.query.eventParticipants.findFirst({
-    where: and(
-      eq(eventParticipants.eventId, eventId),
-      eq(eventParticipants.userId, session.user.id)
-    ),
-  })
-
-  if (
-    !participant ||
-    (participant.role !== "management" && participant.role !== "admin")
-  ) {
-    return {
-      success: false,
-      error: "Unauthorized: You must be a management user for this event",
-    }
-  }
+  const allowed = await authorize(eventId, "team:manage")
+  if (!allowed.success) return denial(allowed)
 
   // Get all event participants
   const allParticipants = await db.query.eventParticipants.findMany({
@@ -888,6 +867,7 @@ export async function generateBalancedTeams(
       const teamMemberInsertData: {
         teamId: string
         userId: string
+        eventId: string
         isLeader: boolean
       }[] = []
       for (
@@ -899,7 +879,12 @@ export async function generateBalancedTeams(
         const teamId = createdTeams[teamIdx]!.id
 
         for (const userId of teamUsers) {
-          teamMemberInsertData.push({ teamId, userId, isLeader: false })
+          teamMemberInsertData.push({
+            teamId,
+            eventId,
+            userId,
+            isLeader: false,
+          })
         }
       }
 
@@ -947,7 +932,8 @@ export async function generateBalancedTeams(
  * Calculate balance metrics for existing teams
  */
 export async function calculateTeamBalanceMetrics(eventId: string) {
-  if (!(await isEventManager(eventId))) return null
+  // Deliberate: a denial reads as null (see guards.ts).
+  if (!(await hasPermission(eventId, "stats:read"))) return null
 
   const existingTeams = await db.query.teams.findMany({
     where: eq(teams.eventId, eventId),

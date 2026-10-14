@@ -35,6 +35,7 @@ import {
   tiles,
   users,
 } from "@/server/db/schema"
+import type { ClanRole, EventRole } from "@/lib/authz/roles"
 import { requireSuperAdmin } from "@/lib/super-admin"
 import {
   ADMIN_PAGE_SIZE,
@@ -60,8 +61,7 @@ export interface Paged<T> {
   pageSize: number
 }
 
-export type ClanRole = "admin" | "management" | "member" | "guest"
-export type EventRole = "admin" | "management" | "participant"
+export type { ClanRole, EventRole }
 
 export interface UserSummary extends UserRef {
   image: string | null

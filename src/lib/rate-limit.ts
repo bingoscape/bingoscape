@@ -1,6 +1,12 @@
 /**
- * In-memory sliding-window rate limiter.
- * State is per server process; suitable for a single-instance deployment.
+ * Sliding-window rate limiting.
+ *
+ * DEPLOYMENT ASSUMPTION (decision 9 of epic #183 is unanswered): the app runs
+ * as a single instance, so the default store keeps its counters in process
+ * memory. They reset on restart and are not shared between instances. If the
+ * app is ever scaled out, implement `RateLimitStore` on a shared store (Redis,
+ * or a Postgres table) and install it with `setRateLimitStore` from
+ * `@/server/rate-limit`; no call site changes.
  */
 export interface RateLimitResult {
   allowed: boolean
@@ -8,15 +14,38 @@ export interface RateLimitResult {
   retryAfterSeconds: number
 }
 
-export function createRateLimiter(limit: number, windowMs: number) {
-  const hits = new Map<string, number[]>()
+/**
+ * Where hit counters live. `hit` records one request for `key` and answers
+ * whether it is within `limit` requests per `windowMs`. A blocked request is
+ * not recorded, so a client that keeps retrying does not extend its own ban.
+ * The result may be a promise so a networked store fits the same interface.
+ */
+export interface RateLimitStore {
+  hit(
+    key: string,
+    limit: number,
+    windowMs: number,
+    now?: number
+  ): RateLimitResult | Promise<RateLimitResult>
+}
 
-  return function check(key: string, now: number = Date.now()): RateLimitResult {
+/** Per-process store: a sliding window of hit timestamps per key. */
+export class InMemoryRateLimitStore implements RateLimitStore {
+  private readonly hits = new Map<string, { times: number[]; windowMs: number }>()
+
+  hit(
+    key: string,
+    limit: number,
+    windowMs: number,
+    now: number = Date.now()
+  ): RateLimitResult {
     const windowStart = now - windowMs
-    const recent = (hits.get(key) ?? []).filter((t) => t > windowStart)
+    const recent = (this.hits.get(key)?.times ?? []).filter(
+      (t) => t > windowStart
+    )
 
     if (recent.length >= limit) {
-      hits.set(key, recent)
+      this.hits.set(key, { times: recent, windowMs })
       const retryMs = recent[0]! + windowMs - now
       return {
         allowed: false,
@@ -25,15 +54,24 @@ export function createRateLimiter(limit: number, windowMs: number) {
     }
 
     recent.push(now)
-    hits.set(key, recent)
+    this.hits.set(key, { times: recent, windowMs })
 
-    // Opportunistic cleanup to bound memory
-    if (hits.size > 10_000) {
-      for (const [k, v] of hits) {
-        if (v.every((t) => t <= windowStart)) hits.delete(k)
+    // Opportunistic cleanup to bound memory: drop keys whose own window has
+    // fully passed.
+    if (this.hits.size > 10_000) {
+      for (const [k, v] of this.hits) {
+        if (v.times.every((t) => t <= now - v.windowMs)) this.hits.delete(k)
       }
     }
     return { allowed: true, retryAfterSeconds: 0 }
+  }
+}
+
+/** A synchronous limiter bound to its own in-memory store. */
+export function createRateLimiter(limit: number, windowMs: number) {
+  const store = new InMemoryRateLimitStore()
+  return function check(key: string, now: number = Date.now()): RateLimitResult {
+    return store.hit(key, limit, windowMs, now)
   }
 }
 

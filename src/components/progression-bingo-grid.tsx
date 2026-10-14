@@ -68,7 +68,8 @@ interface ProgressionBingoGridProps {
     tier: number
     xpRequired: number
   }>
-  userRole: "participant" | "management" | "admin"
+  /** May edit the Board (`board:manage`): hidden Tiles, layout. Computed on the server. */
+  isManagement: boolean
   bingoId: string
   onTilesUpdated?: () => void
   isEditMode?: boolean
@@ -692,7 +693,7 @@ export function ProgressionBingoGrid({
   onTileClick,
   tierProgress = [],
   tierXpRequirements,
-  userRole,
+  isManagement,
   bingoId,
   onTilesUpdated,
   isEditMode = false,
@@ -708,8 +709,6 @@ export function ProgressionBingoGrid({
   React.useEffect(() => {
     setIsEditing(isEditMode)
   }, [isEditMode])
-
-  const isManagement = userRole === "admin" || userRole === "management"
 
   // Update local state when props change
   React.useEffect(() => {

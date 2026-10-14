@@ -1,188 +1,51 @@
-/* eslint-disable */
-"use client"
-
-import { useState, useEffect, use } from "react"
-import { useRouter } from "next/navigation"
-import { getUserRole } from "@/app/actions/events"
-import { getTeamsByEventId } from "@/app/actions/team"
-import { getAllSubmissionsForTeam, updateTeamTileSubmissionStatus, updateSubmissionStatus, deleteSubmission } from "@/app/actions/bingo"
+import { notFound, redirect } from "next/navigation"
+import { getAllSubmissionsForTeam } from "@/app/actions/bingo"
 import { getBingoById } from "@/app/actions/getBingoById"
-
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { toast } from "@/hooks/use-toast"
-import { ArrowLeft, RefreshCw } from "lucide-react"
+import { getTeamsByEventId } from "@/app/actions/team"
+import { getServerAuthSession } from "@/server/auth"
+import { getEventCapabilities } from "@/server/authz"
 import { getEventById } from "@/server/queries/events"
-import type { BingoData, TeamTileSubmission } from "@/types/model"
-import { SubmissionsTab } from "@/components/submissions-tab"
-import { FullSizeImageDialog } from "@/components/full-size-image-dialog"
+import type { TeamTileSubmission } from "@/types/model"
+import { BingoSubmissionsClient } from "./submissions-client"
 
-export default function BingoSubmissionsPage(props: {
+/**
+ * Review the Submissions of one Board, for every Team. Fetched on the server;
+ * the client part holds the image viewer and the review actions. The (manage)
+ * layout lets managers in; this page asks for the permission it needs itself.
+ */
+export default async function BingoSubmissionsPage(props: {
   params: Promise<{ id: string; bingoId: string }>
 }) {
-  const params = use(props.params)
-  const { id: eventId, bingoId } = params
-  const router = useRouter()
-  
-  const [loading, setLoading] = useState(true)
-  const [bingo, setBingo] = useState<BingoData | null>(null)
-  const [teams, setTeams] = useState<any[]>([])
-  const [userRole, setUserRole] = useState<"participant" | "management" | "admin" | null>(null)
-  const [tileSubmissions, setTileSubmissions] = useState<TeamTileSubmission[]>([])
-  const [refreshKey, setRefreshKey] = useState(0)
-  const [fullSizeImage, setFullSizeImage] = useState<{ src: string; alt: string } | null>(null)
+  const { id: eventId, bingoId } = await props.params
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        const [eventData, teamsData, userRoleData, bingoData] = await Promise.all([
-          getEventById(eventId),
-          getTeamsByEventId(eventId),
-          getUserRole(eventId),
-          getBingoById(bingoId),
-        ])
+  const session = await getServerAuthSession()
+  if (!session?.user) notFound()
 
-        if (!eventData || !bingoData) {
-          router.push(`/events/${eventId}`)
-          return
-        }
+  const [data, capabilities] = await Promise.all([
+    getEventById(eventId),
+    getEventCapabilities(eventId),
+  ])
+  if (!data) notFound()
+  if (!capabilities.canReviewSubmissions) redirect(`/events/${eventId}`)
 
-        // Prevent access to hidden boards for non-management participants
-        if (!bingoData.visible && userRoleData !== "admin" && userRoleData !== "management") {
-          toast({ title: "Access Denied", description: "You do not have permission to view this board.", variant: "destructive" })
-          router.push(`/events/${eventId}`)
-          return
-        }
+  // The Board must exist, be readable and belong to this Event.
+  const bingo = await getBingoById(bingoId)
+  if (!bingo || bingo.eventId !== eventId) redirect(`/events/${eventId}`)
 
-        setBingo(bingoData)
-        setTeams(teamsData)
-        setUserRole(userRoleData)
-        
-        // Fetch submissions for all teams
-        const allTeamSubmissions: TeamTileSubmission[] = []
-        await Promise.all(
-          teamsData.map(async (team: any) => {
-            const teamSubMap = await getAllSubmissionsForTeam(bingoId, team.id)
-            Object.values(teamSubMap).forEach((subsArray) => {
-              if (Array.isArray(subsArray)) {
-                allTeamSubmissions.push(...subsArray)
-              }
-            })
-          })
-        )
-        
-        setTileSubmissions(allTeamSubmissions)
-      } catch (error) {
-        console.error("Error fetching data:", error)
-        toast({ title: "Error", description: "Failed to fetch data", variant: "destructive" })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData().catch(console.error)
-  }, [eventId, bingoId, router, refreshKey])
-
-  const handleRefresh = () => {
-    setRefreshKey((prev) => prev + 1)
-  }
-
-  const isAdminOrManagement = userRole === "admin" || userRole === "management"
+  const teams = await getTeamsByEventId(eventId)
+  const perTeam = await Promise.all(
+    teams.map((team) => getAllSubmissionsForTeam(bingoId, team.id))
+  )
+  const submissions: TeamTileSubmission[] = perTeam.flatMap((byTile) =>
+    Object.values(byTile).flatMap((list) => (Array.isArray(list) ? list : []))
+  )
 
   return (
-    <div className="container mx-auto px-4 py-4">
-      <div className="flex flex-col space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push(`/events/${eventId}`)}
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-2xl font-bold">
-              {bingo?.title} - Tile Submissions
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleRefresh}
-              title="Refresh"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {Array(6).fill(0).map((_, i) => (
-              <Skeleton key={i} className="h-64 w-full" />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-lg border border-border bg-card shadow-xs min-h-[60vh]">
-            <SubmissionsTab
-              selectedTile={null}
-              teamTileSubmissions={tileSubmissions}
-              teams={teams}
-              hasSufficientRights={isAdminOrManagement}
-              isAdminView={isAdminOrManagement}
-              currentTeamId={undefined}
-              isSubmissionsLocked={false}
-              selectedImage={null}
-              pastedImage={null}
-              isUploadingImage={false}
-              onImageChange={() => {}}
-              onImageSubmit={() => {}}
-              onFullSizeImageView={(src, alt) => setFullSizeImage({ src, alt })}
-              onTeamTileSubmissionStatusUpdate={async (id, status) => {
-                if (!id) return
-                try {
-                  const result = await updateTeamTileSubmissionStatus(id, status)
-                  if (result && 'success' in result && !result.success) throw new Error(result.error)
-                  toast({ title: "Success", description: "Tile status updated." })
-                } catch {
-                  toast({ title: "Error", description: "Failed to update tile.", variant: "destructive" })
-                }
-              }}
-              onSubmissionStatusUpdate={async (id, status, goalId, submissionValue) => {
-                try {
-                  const result = await updateSubmissionStatus(id, status, goalId, submissionValue)
-                  if (!result.success) throw new Error("error" in result ? result.error : "Failed to update submission")
-                  toast({ title: "Success", description: "Submission updated successfully." })
-                } catch (e) {
-                  const message = e instanceof Error ? e.message : "Failed to update submission."
-                  toast({ title: "Error", description: message, variant: "destructive" })
-                }
-              }}
-              onDeleteSubmission={async (id) => {
-                try {
-                  const result = await deleteSubmission(id)
-                  if (!result.success) throw new Error("error" in result ? result.error : "Failed to delete submission")
-                  toast({ title: "Success", description: "Submission deleted." })
-                } catch (e) {
-                  const message = e instanceof Error ? e.message : "Failed to delete submission."
-                  toast({ title: "Error", description: message, variant: "destructive" })
-                }
-              }}
-            />
-          </div>
-        )}
-      </div>
-
-      {fullSizeImage && (
-        <FullSizeImageDialog
-          isOpen={!!fullSizeImage}
-          onClose={() => setFullSizeImage(null)}
-          imageSrc={fullSizeImage.src}
-          imageAlt={fullSizeImage.alt}
-        />
-      )}
-    </div>
+    <BingoSubmissionsClient
+      eventId={eventId}
+      bingoTitle={bingo.title}
+      teams={teams}
+      teamTileSubmissions={submissions}
+    />
   )
 }

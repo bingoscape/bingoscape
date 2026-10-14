@@ -1,0 +1,355 @@
+import "server-only"
+
+import { db } from "@/server/db"
+import { logger } from "@/lib/logger"
+import {
+  goals,
+  goalGroups,
+  teamGoalProgress,
+  teamTileSubmissions,
+  tiles,
+} from "@/server/db/schema"
+import { eq, and, isNull, sql } from "drizzle-orm"
+import { completedAtOnComplete } from "@/lib/completed-at"
+import { revalidatePath } from "next/cache"
+import { unlockNextTierForTeam } from "@/server/tier-progression"
+
+/**
+ * Goal and Tile completion rules. Not a "use server" module: these helpers take
+ * a transaction and decide completion, so they must never be callable from the
+ * client.
+ */
+
+type DbOrTransaction = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+interface GoalEvaluationNode {
+  type: "goal" | "group"
+  id: string
+  isComplete: boolean
+  currentValue?: number
+  operator?: "AND" | "OR" | "SUM"
+  children?: GoalEvaluationNode[]
+}
+
+/**
+ * Evaluate if a goal is complete for a team
+ */
+async function evaluateGoal(
+  tx: DbOrTransaction,
+  goalId: string,
+  teamId: string
+): Promise<{ isComplete: boolean; currentValue: number }> {
+  const goal = await tx.query.goals.findFirst({
+    where: eq(goals.id, goalId),
+  })
+
+  if (!goal) return { isComplete: false, currentValue: 0 }
+
+  const progress = await tx.query.teamGoalProgress.findFirst({
+    where: and(
+      eq(teamGoalProgress.goalId, goalId),
+      eq(teamGoalProgress.teamId, teamId)
+    ),
+  })
+
+  return {
+    isComplete: (progress?.currentValue || 0) >= goal.targetValue,
+    currentValue: progress?.currentValue || 0,
+  }
+}
+
+/**
+ * Recursively evaluate a goal group
+ */
+export async function evaluateGroup(
+  tx: DbOrTransaction,
+  groupId: string,
+  teamId: string
+): Promise<GoalEvaluationNode> {
+  const group = await tx.query.goalGroups.findFirst({
+    where: eq(goalGroups.id, groupId),
+    with: {
+      childGroups: true,
+      goals: true,
+    },
+  })
+
+  if (!group) {
+    return {
+      type: "group",
+      id: groupId,
+      isComplete: false,
+      operator: "AND",
+      children: [],
+    }
+  }
+
+  const children: GoalEvaluationNode[] = []
+
+  // Evaluate child groups
+  for (const childGroup of group.childGroups) {
+    const childNode = await evaluateGroup(tx, childGroup.id, teamId)
+    children.push(childNode)
+  }
+
+  // Evaluate child goals
+  for (const childGoal of group.goals) {
+    const { isComplete, currentValue } = await evaluateGoal(tx, childGoal.id, teamId)
+    children.push({
+      type: "goal",
+      id: childGoal.id,
+      isComplete,
+      currentValue,
+    })
+  }
+
+  // Apply logical operator
+  let isComplete = false
+  let currentValue = 0
+  if (group.logicalOperator === "AND") {
+    isComplete =
+      children.length > 0 && children.every((child) => child.isComplete)
+    currentValue = isComplete ? 1 : 0
+  } else if (group.logicalOperator === "OR") {
+    // OR - check if at least minRequiredGoals are complete
+    const completedCount = children.filter((child) => child.isComplete).length
+    const minRequired = group.minRequiredGoals || 1 // Default to 1 for backwards compatibility
+    isComplete = completedCount >= minRequired
+    currentValue = isComplete ? 1 : 0
+  } else {
+    // SUM - pool uncapped progress from goals, and 1/0 from groups
+    for (const child of children) {
+      if (child.type === "goal") {
+        currentValue += child.currentValue || 0
+      } else {
+        currentValue += child.isComplete ? 1 : 0
+      }
+    }
+    const minRequired = group.minRequiredGoals || 1
+    isComplete = currentValue >= minRequired
+  }
+
+  return {
+    type: "group",
+    id: groupId,
+    isComplete,
+    currentValue,
+    operator: group.logicalOperator,
+    children,
+  }
+}
+
+/**
+ * Evaluate if a tile should be complete based on its goal tree
+ */
+export async function evaluateTileCompletion(
+  tx: DbOrTransaction,
+  tileId: string,
+  teamId: string
+): Promise<boolean> {
+  try {
+    // Get all root-level groups and goals for this tile
+    const rootGroups = await tx.query.goalGroups.findMany({
+      where: and(
+        eq(goalGroups.tileId, tileId),
+        isNull(goalGroups.parentGroupId)
+      ),
+    })
+
+    const rootGoals = await tx.query.goals.findMany({
+      where: and(eq(goals.tileId, tileId), isNull(goals.parentGroupId)),
+    })
+
+    // If there are no goals or groups, tile cannot be complete
+    if (rootGroups.length === 0 && rootGoals.length === 0) {
+      return false
+    }
+
+    const evaluationNodes: GoalEvaluationNode[] = []
+
+    // Evaluate root groups
+    for (const group of rootGroups) {
+      const node = await evaluateGroup(tx, group.id, teamId)
+      evaluationNodes.push(node)
+    }
+
+    // Evaluate root goals
+    for (const goal of rootGoals) {
+      const { isComplete, currentValue } = await evaluateGoal(tx, goal.id, teamId)
+      evaluationNodes.push({
+        type: "goal",
+        id: goal.id,
+        isComplete,
+        currentValue,
+      })
+    }
+
+    // All root-level items must be complete (implicit AND at root level)
+    return evaluationNodes.every((node) => node.isComplete)
+  } catch (error) {
+    logger.error({ error }, "Error evaluating tile completion:", error)
+    return false
+  }
+}
+
+/**
+ * Opens the next Tier(s) of a progression Board after a Tile of the Team
+ * completed. Completions that arrive without a session (RuneLite, trackers,
+ * goal progress) have no other place to do this.
+ */
+async function unlockTiersAfterCompletion(
+  tx: DbOrTransaction,
+  tileId: string,
+  teamId: string
+): Promise<number | null> {
+  try {
+    const tile = await tx.query.tiles.findFirst({
+      where: eq(tiles.id, tileId),
+      columns: { bingoId: true },
+    })
+    if (!tile) return null
+    return await unlockNextTierForTeam(tx, teamId, tile.bingoId)
+  } catch (error) {
+    // The completion itself stands; the next completion retries the unlock.
+    logger.error({ error }, "Error unlocking next tier after completion")
+    return null
+  }
+}
+
+/**
+ * Check if tile should auto-complete and create submission if needed.
+ * `tierUnlocked` is the highest Tier this completion opened, if any.
+ */
+export async function checkAndAutoCompleteTile(tx: DbOrTransaction, tileId: string, teamId: string) {
+  try {
+    // Check if tile is already submitted
+    const existingSubmission = await tx.query.teamTileSubmissions.findFirst({
+      where: and(
+        eq(teamTileSubmissions.tileId, tileId),
+        eq(teamTileSubmissions.teamId, teamId)
+      ),
+    })
+
+    // Evaluate if tile is complete
+    const isComplete = await evaluateTileCompletion(tx, tileId, teamId)
+
+    if (!isComplete) {
+      // Revert to incomplete if it was previously completed
+      if (existingSubmission?.status === "completed") {
+        await tx.update(teamTileSubmissions)
+          .set({
+            status: "incomplete",
+            completedAt: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(teamTileSubmissions.id, existingSubmission.id))
+      }
+      return { success: true, shouldComplete: false }
+    }
+
+    // If submission exists and is already completed, only the Tier unlock can
+    // still be missing (the unlock is idempotent)
+    if (existingSubmission?.status === "completed") {
+      const tierUnlocked = await unlockTiersAfterCompletion(tx, tileId, teamId)
+      if (tierUnlocked !== null) {
+        revalidatePath("/events/[id]", "layout")
+      }
+      return { success: true, alreadyApproved: true, tierUnlocked }
+    }
+
+    // If submission exists but not completed, update it to completed
+    if (existingSubmission) {
+      const [updatedSubmission] = await tx.update(teamTileSubmissions)
+        .set({
+          status: "completed",
+          completedAt: completedAtOnComplete,
+          updatedAt: new Date(),
+        })
+        .where(eq(teamTileSubmissions.id, existingSubmission.id))
+        .returning()
+
+      const tierUnlocked = await unlockTiersAfterCompletion(tx, tileId, teamId)
+
+      revalidatePath("/events/[id]", "layout")
+
+      return {
+        success: true,
+        shouldComplete: true,
+        autoCompleted: true,
+        wasUpdated: true,
+        tierUnlocked,
+        submission: updatedSubmission,
+      }
+    }
+
+    // No submission exists, create a new one with completed status
+    const [newSubmission] = await tx.insert(teamTileSubmissions)
+      .values({
+        tileId,
+        teamId,
+        status: "completed",
+        completedAt: sql`clock_timestamp()`,
+      })
+      .returning()
+
+    const tierUnlocked = await unlockTiersAfterCompletion(tx, tileId, teamId)
+
+    revalidatePath("/events/[id]", "layout")
+
+    return {
+      success: true,
+      shouldComplete: true,
+      autoCompleted: true,
+      wasCreated: true,
+      tierUnlocked,
+      submission: newSubmission,
+    }
+  } catch (error) {
+    logger.error({ error }, "Error checking tile auto-completion:", error)
+    return { success: false, error: "Failed to check tile completion" }
+  }
+}
+
+/**
+ * Get detailed evaluation tree for debugging/display
+ */
+export async function getDetailedEvaluation(
+  tx: DbOrTransaction,
+  tileId: string,
+  teamId: string
+): Promise<GoalEvaluationNode[]> {
+  try {
+    const rootGroups = await tx.query.goalGroups.findMany({
+      where: and(
+        eq(goalGroups.tileId, tileId),
+        isNull(goalGroups.parentGroupId)
+      ),
+    })
+
+    const rootGoals = await tx.query.goals.findMany({
+      where: and(eq(goals.tileId, tileId), isNull(goals.parentGroupId)),
+    })
+
+    const evaluationNodes: GoalEvaluationNode[] = []
+
+    for (const group of rootGroups) {
+      const node = await evaluateGroup(tx, group.id, teamId)
+      evaluationNodes.push(node)
+    }
+
+    for (const goal of rootGoals) {
+      const { isComplete, currentValue } = await evaluateGoal(tx, goal.id, teamId)
+      evaluationNodes.push({
+        type: "goal",
+        id: goal.id,
+        isComplete,
+        currentValue,
+      })
+    }
+
+    return evaluationNodes
+  } catch (error) {
+    logger.error({ error }, "Error getting detailed evaluation:", error)
+    return []
+  }
+}

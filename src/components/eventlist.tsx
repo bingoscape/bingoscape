@@ -6,7 +6,7 @@ import { CreateEventButton } from "./create-event-button"
 import { JoinEventForm } from "./join-event-form"
 import { JoinEventPopover } from "./join-event-popover"
 import { Calendar, FileJson, Trophy } from "lucide-react"
-import { type getEvents as getEventsType } from "@/server/queries/events"
+import type { getEvents as getEventsType } from "@/server/queries/events"
 import {
   categorizeEvents,
   countNeedsAttention,

@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm"
 
-import { getUserRole } from "@/app/actions/events"
 import { db } from "@/server/db"
+import { hasPermission } from "@/server/authz/guards"
 import { isBlindBoard } from "@/server/blind-board"
 import { bingos, tiles } from "@/server/db/schema"
 
@@ -13,12 +13,6 @@ import { bingos, tiles } from "@/server/db/schema"
  * This file is intentionally not a "use server" module: nothing here is
  * callable from the client.
  */
-
-/** True when the signed-in caller manages the Event (admin or management). */
-async function callerManagesEvent(eventId: string): Promise<boolean> {
-  const role = await getUserRole(eventId)
-  return role === "admin" || role === "management"
-}
 
 /** Whether the Board is blind for the signed-in caller. Unknown Boards are not. */
 export async function isBingoBlindForViewer(
@@ -38,7 +32,7 @@ export async function isBingoBlindForViewer(
   })
   if (!blindForNonManagers) return false
 
-  return !(await callerManagesEvent(bingo.eventId))
+  return !(await hasPermission(bingo.eventId, "board:view-secret"))
 }
 
 /** Like `isBingoBlindForViewer`, starting from a Tile. Unknown Tiles are not blind. */

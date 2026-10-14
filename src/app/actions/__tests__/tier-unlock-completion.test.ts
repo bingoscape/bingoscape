@@ -8,7 +8,7 @@ import {
   updateSubmissionStatusWithComment,
   updateTeamTileSubmissionStatus,
 } from "@/app/actions/bingo"
-import { checkAndAutoCompleteTile } from "@/app/actions/tile-completion"
+import { checkAndAutoCompleteTile } from "@/server/tile-completion"
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
 import {

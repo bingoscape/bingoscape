@@ -1,10 +1,12 @@
 "use server"
 
+import { publicUserSelect } from "@/server/db/public-user"
 import { eq, and, count, sql } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { revalidatePath } from "next/cache"
 
 import { getServerAuthSession } from "@/server/auth"
+import { addMember, changeRole, removeMember } from "@/server/authz/membership"
 import { db } from "@/server/db"
 import {
   clans,
@@ -22,19 +24,19 @@ import {
   isClanRole,
   parseClanInviteCode,
   resolveInviteState,
-  validateRoleChange,
   type ClanRole,
 } from "@/lib/clan"
-import { getUserRole } from "./events"
+import { authorize, denial, type ActionResult } from "@/server/authz"
 
 /**
  * Clan server actions. This file is the single source of truth for clan
  * mutations; read models for the clan pages live in `@/server/queries/clans`
  * (not server actions, so they are not callable from the browser).
  *
- * Mutations return `{ success, error? }` instead of throwing, except
- * `getUserClans` / `getClanMembersForEvent`, whose existing callers rely on
- * the throwing behaviour.
+ * Mutations return `{ success, error? }` instead of throwing; `getUserClans`
+ * returns an empty list for a signed-out caller. Clan roles are a separate
+ * ladder from Event roles (`@/lib/clan`); the Event permission checks live in
+ * `@/server/authz`.
  */
 
 export type ClanActionResult<T extends object = object> =
@@ -75,7 +77,9 @@ export async function createClan(
       const existingMainClan = await tx
         .select()
         .from(clanMembers)
-        .where(and(eq(clanMembers.userId, userId), eq(clanMembers.isMain, true)))
+        .where(
+          and(eq(clanMembers.userId, userId), eq(clanMembers.isMain, true))
+        )
         .limit(1)
 
       const [created] = await tx
@@ -87,12 +91,18 @@ export async function createClan(
         })
         .returning()
 
-      await tx.insert(clanMembers).values({
-        clanId: created!.id,
+      // The creator is the owner and the first admin.
+      const added = await addMember({
+        scope: "clan",
+        parentId: created!.id,
         userId,
-        isMain: existingMainClan.length === 0,
         role: "admin",
+        isMain: existingMainClan.length === 0,
+        actor: { kind: "system", userId },
+        reason: "clan created",
+        tx,
       })
+      if (!added.success) throw new Error(added.error)
 
       return created!
     })
@@ -120,9 +130,7 @@ const INVITE_ERRORS = {
  * only way into a clan. Everything happens in one transaction and the use is
  * claimed with a conditional UPDATE, so a limited invite can't be overspent.
  */
-export async function joinClanWithInvite(
-  rawCode: string
-): Promise<
+export async function joinClanWithInvite(rawCode: string): Promise<
   | { success: true; clanId: string; clanName: string; isMain: boolean }
   | {
       success: false
@@ -200,12 +208,27 @@ export async function joinClanWithInvite(
       }
 
       const isMain = memberships.length === 0
-      await tx.insert(clanMembers).values({
-        clanId: invite.clanId,
+      const joined = await addMember({
+        scope: "clan",
+        parentId: invite.clanId,
         userId,
         role: "member",
         isMain,
+        actor: { kind: "self", userId },
+        reason: "joined through a clan invite",
+        tx,
       })
+      if (!joined.success) {
+        if (joined.code === "ALREADY_MEMBER") {
+          return {
+            success: false as const,
+            error: INVITE_ERRORS["already-member"],
+            reason: "already-member" as const,
+            clanId: invite.clanId,
+          }
+        }
+        throw new Error(joined.error)
+      }
 
       return {
         success: true as const,
@@ -236,37 +259,24 @@ export async function leaveClan(clanId: string): Promise<ClanActionResult> {
   if (!userId) return fail(NOT_SIGNED_IN)
   if (!clanId) return fail("Clan not found")
 
-  try {
-    const result = await db.transaction(async (tx) => {
-      const clan = await tx.query.clans.findFirst({
-        where: eq(clans.id, clanId),
-      })
-      if (!clan) return fail("Clan not found")
-      if (clan.ownerId === userId) {
-        return fail("The clan owner can't leave the clan")
-      }
-
-      const removed = await tx
-        .delete(clanMembers)
-        .where(
-          and(eq(clanMembers.clanId, clanId), eq(clanMembers.userId, userId))
-        )
-        .returning({ id: clanMembers.id })
-      if (removed.length === 0) return fail("You're not a member of this clan")
-
-      return { success: true as const }
-    })
-
-    if (result.success) {
-      revalidatePath("/clans")
-      revalidatePath(`/clans/${clanId}`)
-      revalidatePath("/")
+  const result = await removeMember({
+    scope: "clan",
+    parentId: clanId,
+    userId,
+    actor: { kind: "self", userId },
+    reason: "left the clan",
+  })
+  if (!result.success) {
+    if (result.code === "NOT_A_MEMBER") {
+      return fail("You're not a member of this clan")
     }
-    return result
-  } catch (error) {
-    logger.error({ error }, "Failed to leave clan")
-    return fail("Failed to leave clan")
+    return fail(result.error)
   }
+
+  revalidatePath("/clans")
+  revalidatePath(`/clans/${clanId}`)
+  revalidatePath("/")
+  return { success: true }
 }
 
 export async function updateMemberRole(
@@ -279,61 +289,19 @@ export async function updateMemberRole(
   if (!clanId || !memberId) return fail("Member not found")
   if (!isClanRole(newRole)) return fail("Unknown role")
 
-  try {
-    const result = await db.transaction(async (tx) => {
-      const clan = await tx.query.clans.findFirst({
-        where: eq(clans.id, clanId),
-      })
-      if (!clan) return fail("Clan not found")
+  // The helper locks the Clan, so the owner and last-admin rules are checked
+  // against the admins as they are right now.
+  const result = await changeRole({
+    scope: "clan",
+    parentId: clanId,
+    userId: memberId,
+    newRole,
+    actor: { kind: "user", userId },
+  })
+  if (!result.success) return fail(result.error)
 
-      const actor = await tx.query.clanMembers.findFirst({
-        where: and(
-          eq(clanMembers.clanId, clanId),
-          eq(clanMembers.userId, userId)
-        ),
-      })
-      const target = await tx.query.clanMembers.findFirst({
-        where: and(
-          eq(clanMembers.clanId, clanId),
-          eq(clanMembers.userId, memberId)
-        ),
-      })
-      const [admins] = await tx
-        .select({ count: count() })
-        .from(clanMembers)
-        .where(
-          and(eq(clanMembers.clanId, clanId), eq(clanMembers.role, "admin"))
-        )
-
-      const verdict = validateRoleChange({
-        actorId: userId,
-        actorRole: actor?.role,
-        targetId: memberId,
-        targetRole: target?.role,
-        newRole,
-        ownerId: clan.ownerId,
-        adminCount: admins?.count ?? 0,
-      })
-      if (!verdict.ok) return fail(verdict.error)
-
-      await tx
-        .update(clanMembers)
-        .set({ role: newRole })
-        .where(
-          and(
-            eq(clanMembers.clanId, clanId),
-            eq(clanMembers.userId, memberId)
-          )
-        )
-      return { success: true as const }
-    })
-
-    if (result.success) revalidatePath(`/clans/${clanId}`)
-    return result
-  } catch (error) {
-    logger.error({ error }, "Failed to update clan member role")
-    return fail("Failed to update the member's role")
-  }
+  revalidatePath(`/clans/${clanId}`)
+  return { success: true }
 }
 
 // Clan invite management
@@ -508,16 +476,17 @@ export async function updateClanInviteLabel(
 }
 
 export async function getUserClans() {
+  // Deliberate: signed out reads as no Clans (see guards.ts).
   const session = await getServerAuthSession()
-  if (!session || !session.user) {
-    throw new Error("You must be logged in to view your clans")
-  }
+  if (!session || !session.user) return []
 
   const userClans = await db
     .select({
       clan: clans,
       isMain: clanMembers.isMain,
-      owner: users,
+      // Explicit columns: the result reaches client components, and a full
+      // users row carries the password hash.
+      owner: publicUserSelect,
       memberCount: sql<number>`(
         SELECT COUNT(*)
         FROM ${clanMembers} AS cm
@@ -537,17 +506,22 @@ export async function getUserClans() {
  * Get clan members that can be added to an event
  * Excludes members who are already event participants
  */
-export async function getClanMembersForEvent(eventId: string) {
-  const session = await getServerAuthSession()
-  if (!session?.user) {
-    throw new Error("Not authenticated")
-  }
-
-  // Check user has admin/management role for the event
-  const userRole = await getUserRole(eventId)
-  if (!userRole || !["admin", "management"].includes(userRole)) {
-    throw new Error("Not authorized to manage event participants")
-  }
+export async function getClanMembersForEvent(eventId: string): Promise<
+  ActionResult<{
+    members: {
+      id: string
+      name: string | null
+      runescapeName: string | null
+      image: string | null
+      role: ClanRole
+    }[]
+  }>
+> {
+  // Adding participants is a manager action (`participant:add`).
+  const allowed = await authorize(eventId, "participant:add", {
+    newRole: "participant",
+  })
+  if (!allowed.success) return denial(allowed)
 
   // Get the event and its clan
   const event = await db.query.events.findFirst({
@@ -558,12 +532,15 @@ export async function getClanMembersForEvent(eventId: string) {
     },
   })
 
-  if (!event) {
-    throw new Error("Event not found")
-  }
+  if (!event)
+    return { success: false, error: "Event not found", code: "NOT_FOUND" }
 
   if (!event.clanId) {
-    throw new Error("Event is not associated with a clan")
+    return {
+      success: false,
+      error: "Event is not associated with a clan",
+      code: "INVALID",
+    }
   }
 
   // Get clan members who are not already event participants
@@ -597,5 +574,5 @@ export async function getClanMembersForEvent(eventId: string) {
       END`
     )
 
-  return availableMembers
+  return { success: true, members: availableMembers }
 }

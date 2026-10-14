@@ -43,6 +43,8 @@ import {
 } from "lucide-react"
 import { updateParticipantRole, assignParticipantToTeam, updateParticipantBuyIn, removeParticipantFromEvent, getEventParticipants } from "@/app/actions/events"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
+import type { EventCapabilities } from "@/lib/authz/capabilities"
+import { eventRoleLabel, type EventRole } from "@/lib/authz/roles"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -143,7 +145,8 @@ interface EditRoleDialogProps {
   onClose: () => void
   participant: Participant | null
   onRoleChange: (participantId: string, newRole: string) => Promise<void>
-  currentUserRole: "admin" | "management" | "participant"
+  /** Roles the signed-in user may grant (computed on the server). */
+  assignableRoles: readonly EventRole[]
 }
 
 function EditRoleDialog({
@@ -151,7 +154,7 @@ function EditRoleDialog({
   onClose,
   participant,
   onRoleChange,
-  currentUserRole,
+  assignableRoles,
 }: EditRoleDialogProps) {
   const [selectedRole, setSelectedRole] = useState<string>("")
   const [isUpdating, setIsUpdating] = useState(false)
@@ -179,22 +182,6 @@ function EditRoleDialog({
     }
   }
 
-  const getAvailableRoles = () => {
-    if (currentUserRole === "admin") {
-      return [
-        { value: "admin", label: "Admin" },
-        { value: "management", label: "Management" },
-        { value: "participant", label: "Participant" },
-      ]
-    } else if (currentUserRole === "management") {
-      return [
-        { value: "management", label: "Management" },
-        { value: "participant", label: "Participant" },
-      ]
-    }
-    return []
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
@@ -210,9 +197,9 @@ function EditRoleDialog({
               <SelectValue placeholder="Select a role" />
             </SelectTrigger>
             <SelectContent>
-              {getAvailableRoles().map((role) => (
-                <SelectItem key={role.value} value={role.value}>
-                  {role.label}
+              {assignableRoles.map((role) => (
+                <SelectItem key={role} value={role}>
+                  {eventRoleLabel(role)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -328,8 +315,7 @@ interface ParticipantsTabProps {
   participants: Participant[]
   teams: Team[]
   minimumBuyIn: number
-  currentUserRole: "admin" | "management" | "participant"
-  isEventCreator: boolean
+  capabilities: EventCapabilities
   clanId: string | null
   onParticipantsChange: (participants: Participant[]) => void
 }
@@ -339,8 +325,7 @@ export function ParticipantsTab({
   participants: initialParticipants,
   teams,
   minimumBuyIn,
-  currentUserRole,
-  isEventCreator,
+  capabilities,
   clanId,
   onParticipantsChange,
 }: ParticipantsTabProps) {
@@ -378,7 +363,11 @@ export function ParticipantsTab({
     if (!participantToRemove) return
 
     try {
-      await removeParticipantFromEvent(eventId, participantToRemove.id)
+      const removed = await removeParticipantFromEvent(
+        eventId,
+        participantToRemove.id
+      )
+      if (!removed.success) throw new Error(removed.error)
       const updatedParticipants = participants.filter(
         (p) => p.id !== participantToRemove.id
       )
@@ -431,55 +420,28 @@ export function ParticipantsTab({
     }
   }
 
-  const canManageParticipant = (participant: Participant) => {
-    if (isEventCreator) return true
-    if (currentUserRole === "participant") return false
-    if (currentUserRole === "admin") return true
-    if (currentUserRole === "management") {
-      return participant.role !== "admin"
-    }
-    return false
-  }
+  // The server computed what this user may do; the server guards stay the
+  // authority. A row can be acted on when its role is one this user may
+  // remove (management cannot remove an admin).
+  const canManageParticipant = (participant: Participant) =>
+    capabilities.removableRoles.includes(participant.role)
 
-  const canChangeRoles = () => {
-    return (
-      isEventCreator ||
-      currentUserRole === "admin" ||
-      currentUserRole === "management"
-    )
-  }
+  const canChangeRoles = () => capabilities.canChangeRoles
 
-  const canChangeTeams = () => {
-    return (
-      isEventCreator ||
-      currentUserRole === "admin" ||
-      currentUserRole === "management"
-    )
-  }
+  const canChangeTeams = () => capabilities.canAssignTeams
 
-  const canRemoveParticipants = () => {
-    return (
-      isEventCreator ||
-      currentUserRole === "admin" ||
-      currentUserRole === "management"
-    )
-  }
+  const canRemoveParticipants = () => capabilities.canRemoveParticipants
 
-  const canEditBuyIns = () => {
-    return (
-      isEventCreator ||
-      currentUserRole === "admin" ||
-      currentUserRole === "management"
-    )
-  }
+  const canEditBuyIns = () => capabilities.canManageFinance
 
   const handleRoleChange = async (participantId: string, newRole: string) => {
     try {
-      await updateParticipantRole(
+      const changed = await updateParticipantRole(
         eventId,
         participantId,
         newRole as "admin" | "management" | "participant"
       )
+      if (!changed.success) throw new Error(changed.error)
       const updatedParticipants = participants.map((p) =>
         p.id === participantId
           ? { ...p, role: newRole as "admin" | "management" | "participant" }
@@ -495,7 +457,10 @@ export function ParticipantsTab({
       console.error("Error updating role:", error)
       toast({
         title: "Error",
-        description: "Failed to update participant role",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to update participant role",
         variant: "destructive",
       })
     }
@@ -508,6 +473,7 @@ export function ParticipantsTab({
         participantId,
         hasPaid
       )
+      if (!result.success) throw new Error(result.error)
       const updatedParticipants = participants.map((p) =>
         p.id === participantId ? { ...p, buyIn: result.buyInAmount || 0 } : p
       )
@@ -537,7 +503,12 @@ export function ParticipantsTab({
     teamId: string | null
   ) => {
     try {
-      await assignParticipantToTeam(eventId, participantId, teamId!)
+      const assigned = await assignParticipantToTeam(
+        eventId,
+        participantId,
+        teamId!
+      )
+      if (!assigned.success) throw new Error(assigned.error)
       const updatedParticipants = await getEventParticipants(eventId)
       setParticipants(updatedParticipants)
       onParticipantsChange(updatedParticipants)
@@ -551,7 +522,10 @@ export function ParticipantsTab({
       console.error("Error assigning team:", error)
       toast({
         title: "Error",
-        description: "Failed to update participant's team",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to update participant's team",
         variant: "destructive",
       })
     }
@@ -601,11 +575,14 @@ export function ParticipantsTab({
     if (selectedParticipants.size === 0) return
 
     try {
-      await Promise.all(
+      const results = await Promise.all(
         Array.from(selectedParticipants).map((id) =>
           removeParticipantFromEvent(eventId, id)
         )
       )
+      if (results.some((result) => !result.success)) {
+        throw new Error("Failed to remove some participants")
+      }
       const updatedParticipants = participants.filter(
         (p) => !selectedParticipants.has(p.id)
       )
@@ -1078,8 +1055,7 @@ export function ParticipantsTab({
   return (
     <div className="flex flex-col gap-6">
       {/* Add Clan Members button */}
-      {clanId &&
-        (currentUserRole === "admin" || currentUserRole === "management") && (
+      {clanId && capabilities.can["participant:add"] && (
           <div className="flex items-center justify-end">
             <Button
               variant="default"
@@ -1313,7 +1289,7 @@ export function ParticipantsTab({
         onClose={() => setEditRoleDialogOpen(false)}
         participant={participantToEdit}
         onRoleChange={handleRoleChange}
-        currentUserRole={currentUserRole}
+        assignableRoles={capabilities.assignableRoles}
       />
 
       <ChangeTeamDialog

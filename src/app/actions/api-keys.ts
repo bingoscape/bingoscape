@@ -4,65 +4,74 @@ import { db } from "@/server/db"
 import { apiKeys } from "@/server/db/schema"
 import { eq, and } from "drizzle-orm"
 import { getServerAuthSession } from "@/server/auth"
-import { nanoid } from "nanoid"
 import { z } from "zod"
 import { revalidatePath } from "next/cache"
 import { logger } from "@/lib/logger"
+import { createApiKeyForUser, revokeApiKeyForUser } from "@/server/api-keys"
 
 const createSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().optional(),
+  // Days until the key expires; empty / missing means it never expires.
+  expiresInDays: z.coerce.number().int().min(1).max(3650).optional(),
+  // A read-only key cannot upload submissions.
+  readOnly: z.boolean().default(false),
 })
 
 type CreateApiKeyState = {
-  success: boolean;
-  error?: string;
+  success: boolean
+  error?: string
   key?: {
-    id: string;
-    name: string;
-    description: string | null;
-    createdAt: Date;
-    key: string;
-  };
-} | null;
+    id: string
+    name: string
+    description: string | null
+    createdAt: Date
+    keyPrefix: string
+    /** The plaintext key, returned this once and never stored. */
+    key: string
+  }
+} | null
 
-export async function createApiKey(prevState: CreateApiKeyState, formData: FormData) {
+export async function createApiKey(
+  prevState: CreateApiKeyState,
+  formData: FormData
+): Promise<NonNullable<CreateApiKeyState>> {
   const session = await getServerAuthSession()
   if (!session?.user) {
     return { success: false, error: "Unauthorized" }
   }
 
   try {
-    const rawData = {
-      name: formData.get("name") as string,
-      description: formData.get("description") as string,
-    }
-    const { name, description } = createSchema.parse(rawData)
-    const key = `bsn_${nanoid(32)}`
+    const expiresRaw = formData.get("expiresInDays")
+    const { name, description, expiresInDays, readOnly } = createSchema.parse({
+      name: formData.get("name"),
+      description: formData.get("description") ?? undefined,
+      expiresInDays: expiresRaw ? expiresRaw : undefined,
+      readOnly: formData.get("readOnly") === "on",
+    })
 
-    const newKey = await db.transaction(async (tx) => {
-      const [inserted] = await tx
-        .insert(apiKeys)
-        .values({
-          userId: session.user.id,
-          name,
-          description: description || null,
-          key,
-          lastUsed: null,
-        })
-        .returning({
-          id: apiKeys.id,
-          name: apiKeys.name,
-          description: apiKeys.description,
-          createdAt: apiKeys.createdAt,
-          key: apiKeys.key,
-        })
-      return inserted
+    const created = await createApiKeyForUser(session.user.id, {
+      name,
+      description: description || null,
+      scopes: readOnly ? ["read"] : ["read", "submit"],
+      expiresAt: expiresInDays
+        ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000)
+        : null,
     })
 
     revalidatePath("/profile/api-keys")
     revalidatePath("/profile")
-    return { success: true, key: newKey }
+    return {
+      success: true,
+      key: {
+        id: created.id,
+        name: created.name,
+        description: created.description,
+        createdAt: created.createdAt,
+        keyPrefix: created.keyPrefix,
+        key: created.key,
+      },
+    }
   } catch (error) {
     logger.error({ error }, "Error creating API key:", error)
     if (error instanceof z.ZodError) {
@@ -72,6 +81,26 @@ export async function createApiKey(prevState: CreateApiKeyState, formData: FormD
   }
 }
 
+/** Revokes a key: it stops working at once but stays in the list. */
+export async function revokeApiKey(id: string) {
+  const session = await getServerAuthSession()
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  try {
+    const revoked = await revokeApiKeyForUser(session.user.id, id)
+    if (!revoked) return { success: false, error: "API key not found" }
+
+    revalidatePath("/profile/api-keys")
+    return { success: true }
+  } catch (error) {
+    logger.error({ error }, "Error revoking API key")
+    return { success: false, error: "Failed to revoke API key" }
+  }
+}
+
+/** Deletes a key for good (use `revokeApiKey` to keep the record). */
 export async function deleteApiKey(id: string) {
   const session = await getServerAuthSession()
   if (!session?.user) {

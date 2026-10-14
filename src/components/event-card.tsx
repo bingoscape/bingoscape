@@ -72,7 +72,11 @@ export function EventCard({
   const handleRequestSubmit = async () => {
     setIsSubmitting(true)
     try {
-      await requestToJoinEvent(eventData.event.id, requestMessage)
+      const result = await requestToJoinEvent(
+        eventData.event.id,
+        requestMessage
+      )
+      if (!result.success) throw new Error(result.error)
       toast({
         title: "Request submitted",
         description: "Your registration request has been submitted for review.",
@@ -189,7 +193,7 @@ export function EventCard({
                       </Link>
                     </CardTitle>
                     <GameTypeBadge gameType={eventData.event.gameType} />
-                    {eventData.event.role === "admin" && (
+                    {eventData.capabilities.isAdmin && (
                       <Badge variant="info">
                         Admin
                       </Badge>
@@ -400,7 +404,7 @@ export function EventCard({
           )}
       </div>
       <CardFooter className="flex flex-col gap-3 border-t pt-4">
-        {eventData.event.role === "admin" ? (
+        {eventData.capabilities.canEditEvent ? (
           <div className="relative z-10 flex w-full gap-3">
             <Button variant="secondary" className="w-full gap-2" asChild>
               <Link href={`/events/${eventData.event.id}/admin`}>

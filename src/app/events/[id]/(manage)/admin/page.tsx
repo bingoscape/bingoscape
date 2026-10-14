@@ -26,6 +26,7 @@ import {
 import { eq, and, sql } from "drizzle-orm"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
 import { getEventById } from "@/server/queries/events"
+import { hasPermission } from "@/server/authz"
 
 export default async function ManageEventPage(props: {
   params: Promise<{ id: UUID }>
@@ -43,10 +44,10 @@ export default async function ManageEventPage(props: {
     notFound()
   }
 
-  const { event, userRole } = eventData
+  const { event } = eventData
 
   // Ensure only event admins can access this page
-  if (userRole !== "admin") {
+  if (!(await hasPermission(event.id, "event:update"))) {
     notFound()
   }
 

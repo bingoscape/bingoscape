@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 import { NextRequest } from "next/server"
-import { eq } from "drizzle-orm"
+import { eq, inArray } from "drizzle-orm"
 import { getServerSession } from "next-auth"
 
 import * as notificationActions from "@/app/actions/notifications"
@@ -318,7 +318,12 @@ describe("discord webhooks", () => {
 
       expect(result.success).toBe(false)
       expect(fetchSpy).not.toHaveBeenCalled()
-      expect(await db.select().from(discordWebhooks)).toHaveLength(0)
+      expect(
+        await db
+          .select()
+          .from(discordWebhooks)
+          .where(inArray(discordWebhooks.eventId, [a.eventId, b.eventId]))
+      ).toHaveLength(0)
     }
   )
 
@@ -334,7 +339,7 @@ describe("discord webhooks", () => {
   it("never lets a client rewrite eventId or createdBy on update", async () => {
     signInAs(a.managerId)
     const created = await createDiscordWebhook(a.eventId, "x", GOOD)
-    const webhookId = created.webhook!.id
+    const webhookId = (created as { webhook: { id: string } }).webhook.id
 
     await updateDiscordWebhook(webhookId, {
       name: "renamed",
@@ -358,7 +363,7 @@ describe("discord webhooks", () => {
       fetchSpy.mockClear()
 
       signInAs(userOf(who))
-      const result = await testWebhook(created.webhook!.id)
+      const result = await testWebhook((created as { webhook: { id: string } }).webhook.id)
 
       expect(result.success).toBe(false)
       expect(fetchSpy).not.toHaveBeenCalled()
@@ -371,10 +376,10 @@ describe("discord webhooks", () => {
     await db
       .update(discordWebhooks)
       .set({ webhookUrl: "http://127.0.0.1:9/hook" })
-      .where(eq(discordWebhooks.id, created.webhook!.id))
+      .where(eq(discordWebhooks.id, (created as { webhook: { id: string } }).webhook.id))
     fetchSpy.mockClear()
 
-    const result = await testWebhook(created.webhook!.id)
+    const result = await testWebhook((created as { webhook: { id: string } }).webhook.id)
 
     expect(result.success).toBe(false)
     expect(fetchSpy).not.toHaveBeenCalled()
@@ -409,7 +414,7 @@ describe("board reads and writes", () => {
 
   it("keeps tier configuration from non-managers", async () => {
     signInAs(a.memberAId)
-    await expect(getTierXpRequirements(a.bingoId)).rejects.toThrow()
+    await expect(getTierXpRequirements(a.bingoId)).resolves.toEqual([])
 
     signInAs(a.managerId)
     await expect(getTierXpRequirements(a.bingoId)).resolves.toEqual([])
@@ -506,7 +511,7 @@ describe("manager-only metadata and team reads", () => {
       expect(await getEventParticipantMetadata(a.eventId)).toEqual([])
       expect(await calculateMetadataCoverage(a.eventId)).toBe(0)
       expect(await calculateTeamBalanceMetrics(a.eventId)).toBeNull()
-      await expect(getEventTeamStatistics(a.eventId)).rejects.toThrow()
+      expect(await getEventTeamStatistics(a.eventId)).toBeNull()
       expect(await getUnassignedParticipants(a.eventId)).toEqual([])
     }
   )

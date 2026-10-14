@@ -7,11 +7,11 @@ import { getServerAuthSession } from "@/server/auth"
 import { getEventById } from "@/server/queries/events"
 import { getMiniBoardTiles } from "@/app/actions/events"
 import { getBingoById } from "@/app/actions/getBingoById"
-import { getAllTeamPointsAndTotal, getEventStats } from "@/app/actions/stats"
+import { getAllTeamPointsAndTotal, getEventStats } from "@/server/queries/stats"
 import {
   getBingoItemStatistics,
   getEventItemStatistics,
-} from "@/app/actions/item-statistics"
+} from "@/server/queries/item-statistics"
 import {
   getPublicBingoDetails,
   getPublicWorkspaceData,

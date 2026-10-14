@@ -33,8 +33,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Key, Plus, Trash2, Copy } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { formatDistanceToNow } from "date-fns"
-import { createApiKey, deleteApiKey } from "@/app/actions/api-keys"
+import { createApiKey, deleteApiKey, revokeApiKey } from "@/app/actions/api-keys"
 import { useFormStatus } from "react-dom"
 
 interface ApiKey {
@@ -43,7 +44,12 @@ interface ApiKey {
   description: string | null
   createdAt: string
   lastUsed: string | null
-  key?: string // Only present when first created
+  /** First characters of the key; keys from before the hashing migration may lack it until first use. */
+  keyPrefix: string | null
+  scopes: string[]
+  expiresAt: string | null
+  revokedAt: string | null
+  status: "active" | "revoked" | "expired"
 }
 
 function CreateButton() {
@@ -88,13 +94,21 @@ export function ApiKeyManager({ initialKeys }: { initialKeys: ApiKey[] }) {
   const handleDeleteKey = () => {
     if (!keyToDelete) return
     startDeleteTransition(async () => {
-      const result = await deleteApiKey(keyToDelete)
+      // An active key is revoked (it stops working at once and stays in the
+      // list); an already revoked or expired one is removed for good.
+      const target = initialKeys.find((k) => k.id === keyToDelete)
+      const revoking = target?.status === "active"
+      const result = revoking
+        ? await revokeApiKey(keyToDelete)
+        : await deleteApiKey(keyToDelete)
       if (result.success) {
         setIsDeleteDialogOpen(false)
         setKeyToDelete(null)
         toast({
           title: "Success",
-          description: "API key deleted successfully",
+          description: revoking
+            ? "API key revoked"
+            : "API key deleted successfully",
         })
       } else {
         toast({
@@ -144,6 +158,26 @@ export function ApiKeyManager({ initialKeys }: { initialKeys: ApiKey[] }) {
                 <div className="grid gap-2">
                   <Label htmlFor="description">Description (Optional)</Label>
                   <Input id="description" name="description" placeholder="Used for my personal RuneLite client" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="expiresInDays">Expires</Label>
+                  <select
+                    id="expiresInDays"
+                    name="expiresInDays"
+                    defaultValue=""
+                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  >
+                    <option value="">Never</option>
+                    <option value="30">In 30 days</option>
+                    <option value="90">In 90 days</option>
+                    <option value="365">In 1 year</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input id="readOnly" name="readOnly" type="checkbox" />
+                  <Label htmlFor="readOnly">
+                    Read-only (cannot submit images or drops)
+                  </Label>
                 </div>
               </div>
               <DialogFooter>
@@ -204,6 +238,11 @@ export function ApiKeyManager({ initialKeys }: { initialKeys: ApiKey[] }) {
                     <CardTitle className="flex items-center text-lg">
                       <Key className="mr-2 h-5 w-5 text-muted-foreground" />
                       {key.name}
+                      {key.status !== "active" && (
+                        <Badge variant="outline" className="ml-2">
+                          {key.status === "revoked" ? "Revoked" : "Expired"}
+                        </Badge>
+                      )}
                     </CardTitle>
                     {key.description && (
                       <CardDescription className="mt-1">{key.description}</CardDescription>
@@ -222,16 +261,26 @@ export function ApiKeyManager({ initialKeys }: { initialKeys: ApiKey[] }) {
                         size="icon"
                         className="text-danger hover:bg-destructive/10"
                         onClick={() => setKeyToDelete(key.id)}
-                        aria-label="Delete API key"
+                        aria-label={
+                          key.status === "active"
+                            ? "Revoke API key"
+                            : "Delete API key"
+                        }
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Delete API Key</AlertDialogTitle>
+                        <AlertDialogTitle>
+                          {key.status === "active"
+                            ? "Revoke API Key"
+                            : "Delete API Key"}
+                        </AlertDialogTitle>
                         <AlertDialogDescription>
-                          Are you sure you want to delete this API key? This action cannot be undone and any applications using this key will no longer work.
+                          {key.status === "active"
+                            ? "Are you sure you want to revoke this API key? Any applications using it will stop working immediately. This cannot be undone."
+                            : "Remove this key from the list? This cannot be undone."}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -241,7 +290,13 @@ export function ApiKeyManager({ initialKeys }: { initialKeys: ApiKey[] }) {
                           onClick={handleDeleteKey}
                           disabled={isPendingDelete}
                         >
-                          {isPendingDelete ? "Deleting..." : "Delete"}
+                          {key.status === "active"
+                            ? isPendingDelete
+                              ? "Revoking..."
+                              : "Revoke"
+                            : isPendingDelete
+                              ? "Deleting..."
+                              : "Delete"}
                         </Button>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -251,6 +306,17 @@ export function ApiKeyManager({ initialKeys }: { initialKeys: ApiKey[] }) {
               <CardContent>
                 <div className="text-sm text-muted-foreground space-y-1">
                   <div className="flex items-center">
+                    <span className="font-medium w-24">Key:</span>
+                    <span className="font-mono">
+                      {key.keyPrefix ? `${key.keyPrefix}...` : "bsn_..."}
+                    </span>
+                    {!key.scopes.includes("submit") && (
+                      <Badge variant="secondary" className="ml-2">
+                        Read-only
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center">
                     <span className="font-medium w-24">Created:</span>
                     <span>
                       {formatDistanceToNow(new Date(key.createdAt), {
@@ -258,6 +324,18 @@ export function ApiKeyManager({ initialKeys }: { initialKeys: ApiKey[] }) {
                       })}
                     </span>
                   </div>
+                  {key.expiresAt && (
+                    <div className="flex items-center">
+                      <span className="font-medium w-24">
+                        {key.status === "expired" ? "Expired:" : "Expires:"}
+                      </span>
+                      <span>
+                        {formatDistanceToNow(new Date(key.expiresAt), {
+                          addSuffix: true,
+                        })}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center">
                     <span className="font-medium w-24">Last used:</span>
                     <span>

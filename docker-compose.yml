@@ -68,6 +68,10 @@ services:
       SUPER_ADMIN_EMAILS: ${SUPER_ADMIN_EMAILS:-}
       NODE_ENV: production
       CRON_SECRET: ${CRON_SECRET:-}
+      # Read policy for Event data: enforce (default) | relaxed. Read per request.
+      RBAC_READ_POLICY: ${RBAC_READ_POLICY:-}
+      # Content-Security-Policy mode: report-only (default) | enforce | off. Read per request.
+      CSP_MODE: ${CSP_MODE:-}
       NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:-}
 
       # Skip environment validation in container

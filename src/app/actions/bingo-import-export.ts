@@ -1,7 +1,5 @@
 "use server"
 
-
-
 import { db } from "@/server/db"
 import { logger } from "@/lib/logger"
 import {
@@ -20,9 +18,11 @@ import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getServerAuthSession } from "@/server/auth"
 import {
-  authzErrorMessage,
-  requireBingoAdmin,
-  requireEventManager,
+  actionFailure,
+  type ActionErrorCode,
+  type ActionResult,
+  requirePermissionForBingo,
+  requirePermissionForEvent,
 } from "@/server/authz"
 import type { UUID } from "crypto"
 import {
@@ -37,16 +37,16 @@ import generateOSRSCodePhrase from "@/lib/codephraseGenerator"
  */
 export async function exportBingoBoard(
   bingoId: string
-): Promise<ExportedBingo | { error: string }> {
+): Promise<ExportedBingo | { error: string; code?: ActionErrorCode }> {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
-    return { error: "Unauthorized" }
+    return { error: "Unauthorized", code: "UNAUTHENTICATED" }
   }
 
   try {
     // Exports include hidden Tiles and all Goals: managers only. The Event is
     // derived from the Board.
-    await requireBingoAdmin(bingoId)
+    await requirePermissionForBingo(bingoId, "board:manage")
 
     // Fetch the bingo with all its tiles, goals, tier requirements, and pattern bonuses
     const bingo = await db.query.bingos.findFirst({
@@ -71,12 +71,15 @@ export async function exportBingoBoard(
     })
 
     if (!bingo) {
-      return { error: "Bingo board not found" }
+      return { error: "Bingo board not found", code: "NOT_FOUND" }
     }
 
     // Ship rules and placements are not part of the export format yet.
     if (bingo.bingoType === "battleship") {
-      return { error: "Battleship boards cannot be exported yet" }
+      return {
+        error: "Battleship boards cannot be exported yet",
+        code: "INVALID",
+      }
     }
 
     let groupCounter = 1
@@ -125,47 +128,49 @@ export async function exportBingoBoard(
         index: tile.index,
         isHidden: tile.isHidden,
         tier: tile.tier,
-        goalGroups: tile.goalGroups?.map((group) => ({
-          localId: groupIdMap.get(group.id)!,
-          parentLocalId: group.parentGroupId
-            ? groupIdMap.get(group.parentGroupId)
-            : undefined,
-          name: group.name,
-          logicalOperator: group.logicalOperator,
-          minRequiredGoals: group.minRequiredGoals,
-          orderIndex: group.orderIndex,
-        })) || [],
-        goals: tile.goals?.map((goal) => ({
-          localId: goalIdMap.get(goal.id)!,
-          parentLocalId: goal.parentGroupId
-            ? groupIdMap.get(goal.parentGroupId)
-            : undefined,
-          description: goal.description,
-          targetValue: goal.targetValue,
-          goalType: goal.goalType,
-          orderIndex: goal.orderIndex,
-          itemGoal: goal.itemGoal
-            ? {
-                itemId: goal.itemGoal.itemId,
-                baseName: goal.itemGoal.baseName,
-                exactVariant: goal.itemGoal.exactVariant,
-                imageUrl: goal.itemGoal.imageUrl,
-              }
-            : undefined,
-          metricGoal: goal.metricGoal
-            ? {
-                metricType: goal.metricGoal.metricType,
-                metricName: goal.metricGoal.metricName,
-              }
-            : undefined,
-          goalValues:
-            goal.goalValues?.length > 0
-              ? goal.goalValues.map((gv) => ({
-                  value: gv.value,
-                  description: gv.description,
-                }))
+        goalGroups:
+          tile.goalGroups?.map((group) => ({
+            localId: groupIdMap.get(group.id)!,
+            parentLocalId: group.parentGroupId
+              ? groupIdMap.get(group.parentGroupId)
               : undefined,
-        })) || [],
+            name: group.name,
+            logicalOperator: group.logicalOperator,
+            minRequiredGoals: group.minRequiredGoals,
+            orderIndex: group.orderIndex,
+          })) || [],
+        goals:
+          tile.goals?.map((goal) => ({
+            localId: goalIdMap.get(goal.id)!,
+            parentLocalId: goal.parentGroupId
+              ? groupIdMap.get(goal.parentGroupId)
+              : undefined,
+            description: goal.description,
+            targetValue: goal.targetValue,
+            goalType: goal.goalType,
+            orderIndex: goal.orderIndex,
+            itemGoal: goal.itemGoal
+              ? {
+                  itemId: goal.itemGoal.itemId,
+                  baseName: goal.itemGoal.baseName,
+                  exactVariant: goal.itemGoal.exactVariant,
+                  imageUrl: goal.itemGoal.imageUrl,
+                }
+              : undefined,
+            metricGoal: goal.metricGoal
+              ? {
+                  metricType: goal.metricGoal.metricType,
+                  metricName: goal.metricGoal.metricName,
+                }
+              : undefined,
+            goalValues:
+              goal.goalValues?.length > 0
+                ? goal.goalValues.map((gv) => ({
+                    value: gv.value,
+                    description: gv.description,
+                  }))
+                : undefined,
+          })) || [],
       })),
       ...(bingo.bingoType === "progression" &&
         bingo.tierXpRequirements && {
@@ -195,7 +200,8 @@ export async function exportBingoBoard(
     return exportData
   } catch (error) {
     logger.error({ error }, "Error exporting bingo board:", error)
-    return { error: authzErrorMessage(error, "Failed to export bingo board") }
+    const failed = actionFailure(error, "Failed to export bingo board")
+    return { error: failed.error, code: failed.code }
   }
 }
 
@@ -205,7 +211,7 @@ export async function exportBingoBoard(
 export async function importBingoBoard(
   eventId: string,
   importData: unknown
-): Promise<{ success: boolean; bingoId?: string; error?: string }> {
+): Promise<ActionResult<{ bingoId?: string }>> {
   const session = await getServerAuthSession()
   if (!session || !session.user) {
     return { success: false, error: "Unauthorized" }
@@ -214,12 +220,9 @@ export async function importBingoBoard(
   // Importing creates a Board with Tiles and Goals: managers of the target
   // Event only.
   try {
-    await requireEventManager(eventId)
+    await requirePermissionForEvent(eventId, "board:manage")
   } catch (error) {
-    return {
-      success: false,
-      error: authzErrorMessage(error, "Failed to verify permissions"),
-    }
+    return actionFailure(error, "Failed to verify permissions")
   }
 
   const parsed = parseExportedBingo(importData)
@@ -234,7 +237,8 @@ export async function importBingoBoard(
   const { rows, columns } = validatedData.metadata
   const bingoType = validatedData.metadata.bingoType
   const isSquare = rows === columns
-  const tiersUnlockRequirement = validatedData.metadata.tiersUnlockRequirement ?? 5
+  const tiersUnlockRequirement =
+    validatedData.metadata.tiersUnlockRequirement ?? 5
   const mainDiagonalBonusXP = isSquare
     ? (validatedData.metadata.mainDiagonalBonusXP ?? 0)
     : 0
@@ -306,13 +310,18 @@ export async function importBingoBoard(
             progress = false
             for (let i = 0; i < pendingGroups.length; i++) {
               const group = pendingGroups[i]
-              
+
               if (!group) continue
 
               // We can safely insert if it has no parent, or if we've already inserted its parent
-              if (!group.parentLocalId || localToDbGroupId.has(group.parentLocalId)) {
-                const parentId = group.parentLocalId ? localToDbGroupId.get(group.parentLocalId) : null
-                
+              if (
+                !group.parentLocalId ||
+                localToDbGroupId.has(group.parentLocalId)
+              ) {
+                const parentId = group.parentLocalId
+                  ? localToDbGroupId.get(group.parentLocalId)
+                  : null
+
                 const [newGroup] = await tx
                   .insert(goalGroups)
                   .values({
@@ -349,7 +358,9 @@ export async function importBingoBoard(
               ? localToDbGroupId.get(goal.parentLocalId)
               : null
             if (goal.parentLocalId && !parentId) {
-              throw new Error("Goal references a group that could not be imported")
+              throw new Error(
+                "Goal references a group that could not be imported"
+              )
             }
 
             const [newGoal] = await tx
@@ -442,11 +453,13 @@ export async function importBingoBoard(
         validatedData.columnBonuses &&
         validatedData.columnBonuses.length > 0
       ) {
-        const columnBonusesToInsert = validatedData.columnBonuses.map((bonus) => ({
-          bingoId: newBingo.id,
-          columnIndex: bonus.columnIndex,
-          bonusXP: bonus.bonusXP,
-        }))
+        const columnBonusesToInsert = validatedData.columnBonuses.map(
+          (bonus) => ({
+            bingoId: newBingo.id,
+            columnIndex: bonus.columnIndex,
+            bonusXP: bonus.bonusXP,
+          })
+        )
 
         await tx.insert(columnBonuses).values(columnBonusesToInsert)
       }

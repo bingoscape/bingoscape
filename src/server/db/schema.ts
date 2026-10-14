@@ -3,6 +3,7 @@ import {
   type AnyPgColumn,
   bigint,
   boolean,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -12,6 +13,7 @@ import {
   real,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
   varchar,
@@ -20,23 +22,44 @@ import type { AdapterAccount } from "next-auth/adapters"
 
 export const createTable = pgTableCreator((name) => `bingoscape-next_${name}`)
 
-export const users = createTable("user", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: varchar("name", { length: 255 }),
-  email: varchar("email", { length: 255 }),
-  emailVerified: timestamp("email_verified", {
-    mode: "date",
-    withTimezone: true,
-  }).default(sql`CURRENT_TIMESTAMP`),
-  image: varchar("image", { length: 255 }),
-  runescapeName: varchar("runescapeName", { length: 255 }),
-  // Username field for Credentials provider authentication
-  // Nullable to support OAuth-only users (Discord, GitHub, Google)
-  username: varchar("username", { length: 50 }),
-  // Password field for Credentials provider authentication
-  // Nullable to support OAuth-only users (Discord, GitHub, Google)
-  password: varchar("password", { length: 255 }),
-})
+export const users = createTable(
+  "user",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: varchar("name", { length: 255 }),
+    email: varchar("email", { length: 255 }),
+    emailVerified: timestamp("email_verified", {
+      mode: "date",
+      withTimezone: true,
+    }).default(sql`CURRENT_TIMESTAMP`),
+    image: varchar("image", { length: 255 }),
+    runescapeName: varchar("runescapeName", { length: 255 }),
+    // Username field for Credentials provider authentication
+    // Nullable to support OAuth-only users (Discord, GitHub, Google)
+    username: varchar("username", { length: 50 }),
+    // Password field for Credentials provider authentication
+    // Nullable to support OAuth-only users (Discord, GitHub, Google)
+    password: varchar("password", { length: 255 }),
+    // Sessions (JWTs) issued before this instant are rejected (RBAC 7/8, #190).
+    // Bumped by "sign out everywhere"; NULL means never revoked. Nullable so
+    // the previous app version, which does not know the column, keeps working.
+    sessionRevokedAt: timestamp("session_revoked_at", { withTimezone: true }),
+    // The email address an OAuth provider vouched for at the last sign-in
+    // (normalised, lower case), NULL when the provider did not verify it or
+    // the user never signed in through a provider. The super-admin allowlist
+    // only honours an email that equals this column; `email_verified` cannot
+    // be used because it defaults to CURRENT_TIMESTAMP.
+    providerVerifiedEmail: varchar("provider_verified_email", { length: 255 }),
+  },
+  (table) => ({
+    // The app looks users up with `eq(users.username, name.toLowerCase())` and
+    // NextAuth with `eq(users.email, email)`, so the indexes cover the raw
+    // columns. Created by migration 0038 only when no duplicates exist (it
+    // skips them with a NOTICE otherwise); see docs/DATABASE-MIGRATION.md.
+    usernameUnique: uniqueIndex("users_username_unique").on(table.username),
+    emailUnique: uniqueIndex("users_email_unique").on(table.email),
+  })
+)
 
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
@@ -377,16 +400,27 @@ export const bingosRelations = relations(bingos, ({ one, many }) => ({
   ships: many(battleshipShips),
 }))
 
-export const teams = createTable("teams", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  eventId: uuid("event_id")
-    .notNull()
-    .references(() => events.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  trackerTeamName: varchar("tracker_team_name", { length: 255 }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-})
+export const teams = createTable(
+  "teams",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    trackerTeamName: varchar("tracker_team_name", { length: 255 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    // Target of the composite foreign key on team_members(team_id, event_id),
+    // which keeps team_members.event_id equal to the Team's Event.
+    idEventUnique: unique("teams_id_event_id_unique").on(
+      table.id,
+      table.eventId
+    ),
+  })
+)
 
 export const teamsRelations = relations(teams, ({ many, one }) => ({
   teamMembers: many(teamMembers),
@@ -399,18 +433,42 @@ export const teamsRelations = relations(teams, ({ many, one }) => ({
   battleshipShips: many(battleshipShips),
 }))
 
-export const teamMembers = createTable("team_members", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  teamId: uuid("team_id")
-    .notNull()
-    .references(() => teams.id, { onDelete: "cascade" }),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  isLeader: boolean("is_leader").default(false).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-})
+export const teamMembers = createTable(
+  "team_members",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    // Denormalised from teams.event_id so the database can enforce "a Player
+    // is on at most one Team per Event". Nullable while the previous app
+    // version (which does not set it) can still insert rows; becomes NOT NULL
+    // in the contract phase (RBAC 8/8).
+    eventId: uuid("event_id"),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    isLeader: boolean("is_leader").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    teamEventFk: foreignKey({
+      name: "team_members_team_event_fk",
+      columns: [table.teamId, table.eventId],
+      foreignColumns: [teams.id, teams.eventId],
+    }).onDelete("cascade"),
+    teamUserUnique: uniqueIndex("team_members_team_user_unique").on(
+      table.teamId,
+      table.userId
+    ),
+    eventUserUnique: uniqueIndex("team_members_event_user_unique").on(
+      table.eventId,
+      table.userId
+    ),
+    userIdx: index("team_members_user_idx").on(table.userId),
+  })
+)
 
 export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
   team: one(teams, {
@@ -634,52 +692,58 @@ export const teamTileSubmissionsRelations = relations(
   })
 )
 
-export const submissions = createTable("submissions", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  teamTileSubmissionId: uuid("team_tile_submission_id")
-    .notNull()
-    .references(() => teamTileSubmissions.id, { onDelete: "cascade" }),
-  imageId: uuid("image_id")
-    .notNull()
-    .references(() => images.id, { onDelete: "cascade" }),
-  // Add goalId to link submissions to specific goals
-  goalId: uuid("goal_id").references(() => goals.id, { onDelete: "set null" }),
-  // Add userId to track which user submitted the image
-  submittedBy: uuid("submitted_by")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  // Add submission value - can be from goalValues or custom
-  submissionValue: real("submission_value").default(1.0).notNull(), // The actual value assigned to this submission
-  // Add individual submission status
-  status: submissionStatusEnum("status").default("pending").notNull(),
-  reviewedBy: uuid("reviewed_by").references(() => users.id, {
-    onDelete: "set null",
-  }),
-  reviewedAt: timestamp("reviewed_at"),
-  // Auto-submission metadata fields
-  isAutoSubmission: boolean("is_auto_submission").default(false).notNull(),
-  sourceNpcId: integer("source_npc_id"), // NPC ID that dropped the item (nullable)
-  sourceName: varchar("source_name", { length: 255 }), // Name of source (NPC name, activity, etc.)
-  sourceItemId: integer("source_item_id"), // Item ID that triggered the submission
-  pluginAccountName: varchar("plugin_account_name", { length: 255 }), // Account name from plugin at time of submission
-  sourceType: varchar("source_type", { length: 100 }), // Type of source: "NPC loot", "Pickpocket", "Event reward", etc.
-  locationWorldX: integer("location_world_x"),
-  locationWorldY: integer("location_world_y"),
-  locationPlane: integer("location_plane"),
-  locationWorldNumber: integer("location_world_number"),
-  locationRegionId: integer("location_region_id"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  createdAtIdIdx: index("submission_created_at_id_idx").on(
-    table.createdAt,
-    table.id
-  ),
-  teamTileCreatedAtIdx: index("submission_team_tile_created_at_idx").on(
-    table.teamTileSubmissionId,
-    table.createdAt
-  ),
-}))
+export const submissions = createTable(
+  "submissions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    teamTileSubmissionId: uuid("team_tile_submission_id")
+      .notNull()
+      .references(() => teamTileSubmissions.id, { onDelete: "cascade" }),
+    imageId: uuid("image_id")
+      .notNull()
+      .references(() => images.id, { onDelete: "cascade" }),
+    // Add goalId to link submissions to specific goals
+    goalId: uuid("goal_id").references(() => goals.id, {
+      onDelete: "set null",
+    }),
+    // Add userId to track which user submitted the image
+    submittedBy: uuid("submitted_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // Add submission value - can be from goalValues or custom
+    submissionValue: real("submission_value").default(1.0).notNull(), // The actual value assigned to this submission
+    // Add individual submission status
+    status: submissionStatusEnum("status").default("pending").notNull(),
+    reviewedBy: uuid("reviewed_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    reviewedAt: timestamp("reviewed_at"),
+    // Auto-submission metadata fields
+    isAutoSubmission: boolean("is_auto_submission").default(false).notNull(),
+    sourceNpcId: integer("source_npc_id"), // NPC ID that dropped the item (nullable)
+    sourceName: varchar("source_name", { length: 255 }), // Name of source (NPC name, activity, etc.)
+    sourceItemId: integer("source_item_id"), // Item ID that triggered the submission
+    pluginAccountName: varchar("plugin_account_name", { length: 255 }), // Account name from plugin at time of submission
+    sourceType: varchar("source_type", { length: 100 }), // Type of source: "NPC loot", "Pickpocket", "Event reward", etc.
+    locationWorldX: integer("location_world_x"),
+    locationWorldY: integer("location_world_y"),
+    locationPlane: integer("location_plane"),
+    locationWorldNumber: integer("location_world_number"),
+    locationRegionId: integer("location_region_id"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    createdAtIdIdx: index("submission_created_at_id_idx").on(
+      table.createdAt,
+      table.id
+    ),
+    teamTileCreatedAtIdx: index("submission_team_tile_created_at_idx").on(
+      table.teamTileSubmissionId,
+      table.createdAt
+    ),
+  })
+)
 
 export const submissionComments = createTable("submission_comments", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -738,18 +802,32 @@ export const submissionsRelations = relations(submissions, ({ one, many }) => ({
   comments: many(submissionComments),
 }))
 
-export const eventParticipants = createTable("event_participants", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  eventId: uuid("event_id")
-    .notNull()
-    .references(() => events.id, { onDelete: "cascade" }),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  role: eventRoleEnum("role").default("participant").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-})
+export const eventParticipants = createTable(
+  "event_participants",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: eventRoleEnum("role").default("participant").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    eventUserUnique: uniqueIndex("event_participants_event_user_unique").on(
+      table.eventId,
+      table.userId
+    ),
+    userIdx: index("event_participants_user_idx").on(table.userId),
+    // "Which Events does this user manage?" without scanning every membership.
+    managerIdx: index("event_participants_manager_idx")
+      .on(table.userId, table.eventId)
+      .where(sql`${table.role} IN ('admin', 'management')`),
+  })
+)
 
 export const eventParticipantsRelations = relations(
   eventParticipants,
@@ -1184,17 +1262,36 @@ export const bingoTemplatesRelations = relations(bingoTemplates, ({ one }) => ({
 // Add this to your existing schema.ts file
 // This creates a new table for API keys
 
-export const apiKeys = createTable("api_keys", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 100 }).notNull(),
-  description: text("description"),
-  key: varchar("key", { length: 100 }).notNull().unique(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  lastUsed: timestamp("last_used"),
-})
+export const apiKeys = createTable(
+  "api_keys",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 100 }).notNull(),
+    description: text("description"),
+    // LEGACY plaintext key. New keys leave it NULL; rows created before
+    // migration 0040 (and by the previous app version) still carry it and are
+    // found by the dual-read in `@/lib/api-auth`. Dropped in RBAC 8/8.
+    key: varchar("key", { length: 100 }).unique(),
+    // SHA-256 (hex) of the key, and its first characters for display.
+    keyHash: varchar("key_hash", { length: 64 }),
+    keyPrefix: varchar("key_prefix", { length: 16 }),
+    // What the key may do (`API_KEY_SCOPES` in `@/lib/api-key`).
+    scopes: text("scopes")
+      .array()
+      .notNull()
+      .default(sql`ARRAY['read','submit']::text[]`),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    lastUsed: timestamp("last_used"),
+  },
+  (table) => ({
+    keyHashUnique: uniqueIndex("api_keys_key_hash_unique").on(table.keyHash),
+  })
+)
 
 export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
   user: one(users, {
@@ -1260,7 +1357,9 @@ export const adminAuditLog = createTable(
     ip: text("ip"),
   },
   (table) => ({
-    createdAtIdx: index("admin_audit_created_at_idx").on(table.createdAt.desc()),
+    createdAtIdx: index("admin_audit_created_at_idx").on(
+      table.createdAt.desc()
+    ),
     actorIdx: index("admin_audit_actor_idx").on(table.actorId),
     targetIdx: index("admin_audit_target_idx").on(
       table.targetType,
@@ -1359,3 +1458,197 @@ export const battleshipShipTilesRelations = relations(
     }),
   })
 )
+
+// ---------------------------------------------------------------------------
+// RBAC consolidation (epic #183), phase 2: quarantine, role ledger, audit log.
+//
+// None of these tables has a foreign key: rows must outlive the Events, Teams
+// and users they describe, and a user-erasure request is served by nulling the
+// user id columns (see docs/DATABASE-MIGRATION.md).
+//
+// The CHECK constraints on the enumerated columns (scope_type, action, source,
+// old_role / new_role per scope, outcome) exist only in migration 0038:
+// drizzle-kit 0.24 does not emit check() constraints, so they are written by
+// hand there. Keep the constant arrays below and that SQL in sync.
+// ---------------------------------------------------------------------------
+
+/**
+ * Event participants removed by migration 0038 because the same user was in
+ * the same Event more than once. Their buy-ins and donations were re-pointed to
+ * `keptParticipantId` before the row was deleted. Kept for manual review.
+ */
+export const eventParticipantsQuarantine = createTable(
+  "event_participants_quarantine",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    quarantinedAt: timestamp("quarantined_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    reason: text("reason").notNull(),
+    // Copy of the removed row.
+    originalId: uuid("original_id").notNull(),
+    eventId: uuid("event_id").notNull(),
+    userId: uuid("user_id").notNull(),
+    role: text("role").notNull(),
+    originalCreatedAt: timestamp("original_created_at").notNull(),
+    originalUpdatedAt: timestamp("original_updated_at").notNull(),
+    keptParticipantId: uuid("kept_participant_id").notNull(),
+  },
+  (table) => ({
+    originalIdUnique: uniqueIndex(
+      "event_participants_quarantine_original_id_unique"
+    ).on(table.originalId),
+  })
+)
+
+/**
+ * Team memberships removed by migration 0038 (the same user twice in one Team,
+ * or on several Teams of one Event). Moving a Player changes standings, so
+ * nothing is silently lost: restore by hand if the kept Team is wrong.
+ */
+export const teamMembersQuarantine = createTable(
+  "team_members_quarantine",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    quarantinedAt: timestamp("quarantined_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    reason: text("reason")
+      .$type<"duplicate_in_team" | "multiple_teams_in_event">()
+      .notNull(),
+    // Copy of the removed row.
+    originalId: uuid("original_id").notNull(),
+    teamId: uuid("team_id").notNull(),
+    eventId: uuid("event_id"),
+    userId: uuid("user_id").notNull(),
+    isLeader: boolean("is_leader").notNull(),
+    originalCreatedAt: timestamp("original_created_at").notNull(),
+    originalUpdatedAt: timestamp("original_updated_at").notNull(),
+    keptTeamMemberId: uuid("kept_team_member_id").notNull(),
+    keptTeamId: uuid("kept_team_id").notNull(),
+  },
+  (table) => ({
+    originalIdUnique: uniqueIndex(
+      "team_members_quarantine_original_id_unique"
+    ).on(table.originalId),
+  })
+)
+
+export const ROLE_CHANGE_SCOPE_TYPES = ["event", "clan"] as const
+export type RoleChangeScopeType = (typeof ROLE_CHANGE_SCOPE_TYPES)[number]
+
+/**
+ * `baseline`: seeded by the migration for a membership that already existed.
+ * `backfill`: the migration created the membership (creator admin row).
+ * `add` / `change` / `remove` / `transfer_ownership`: written by changeRole().
+ */
+export const ROLE_CHANGE_ACTIONS = [
+  "baseline",
+  "backfill",
+  "add",
+  "change",
+  "remove",
+  "transfer_ownership",
+] as const
+export type RoleChangeAction = (typeof ROLE_CHANGE_ACTIONS)[number]
+
+export const ROLE_CHANGE_SOURCES = [
+  "migration",
+  "app",
+  "api",
+  "super_admin",
+  "system",
+  // Written by the database trigger for a membership write that did not go
+  // through changeRole() (e.g. the previous app version).
+  "trigger",
+] as const
+export type RoleChangeSource = (typeof ROLE_CHANGE_SOURCES)[number]
+
+/**
+ * Relational ledger of every role (membership) change in an Event or Clan. The
+ * latest row per (scope, subject) must equal the live role: the reconciliation
+ * query in src/server/authz/verification.ts replays it. `seq` gives a total
+ * order (created_at is the transaction start time and can tie).
+ */
+export const roleChangeLog = createTable(
+  "role_change_log",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    seq: bigint("seq", { mode: "number" })
+      .generatedAlwaysAsIdentity()
+      .notNull(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    scopeType: text("scope_type").$type<RoleChangeScopeType>().notNull(),
+    scopeId: uuid("scope_id").notNull(),
+    // Nullable so that user erasure can anonymise a row.
+    subjectUserId: uuid("subject_user_id"),
+    actorUserId: uuid("actor_user_id"),
+    action: text("action").$type<RoleChangeAction>().notNull(),
+    // Event roles: admin | management | participant.
+    // Clan roles: admin | management | member | guest. NULL = no membership.
+    oldRole: text("old_role"),
+    newRole: text("new_role"),
+    source: text("source").$type<RoleChangeSource>().notNull(),
+    reason: text("reason"),
+    requestId: text("request_id"),
+  },
+  (table) => ({
+    scopeSubjectIdx: index("role_change_log_scope_subject_idx").on(
+      table.scopeType,
+      table.scopeId,
+      table.subjectUserId,
+      table.seq
+    ),
+    subjectIdx: index("role_change_log_subject_idx").on(table.subjectUserId),
+    actorIdx: index("role_change_log_actor_idx").on(table.actorUserId),
+    seqUnique: uniqueIndex("role_change_log_seq_unique").on(table.seq),
+  })
+)
+
+export type RoleChangeLogInsert = typeof roleChangeLog.$inferInsert
+export type RoleChangeLogRow = typeof roleChangeLog.$inferSelect
+
+export const EVENT_AUDIT_OUTCOMES = ["success", "denied", "failed"] as const
+export type EventAuditOutcome = (typeof EVENT_AUDIT_OUTCOMES)[number]
+
+/**
+ * Append-only record of denials and sensitive changes inside an Event (the
+ * Event-scoped counterpart of `admin_audit_log`). Rows are never updated
+ * except to anonymise a user (null `actor_user_id`), and are purged after
+ * EVENT_AUDIT_RETENTION_DAYS (src/server/authz/audit-log.ts; no purge job yet).
+ */
+export const eventAuditLog = createTable(
+  "event_audit_log",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    eventId: uuid("event_id"),
+    actorUserId: uuid("actor_user_id"),
+    // Dotted action name, e.g. "participant.role_change", "event.delete".
+    action: text("action").notNull(),
+    // The Permission that was checked, when the entry is about an authz check.
+    permission: text("permission"),
+    targetType: text("target_type"),
+    targetId: text("target_id"),
+    outcome: text("outcome").$type<EventAuditOutcome>().notNull(),
+    before: jsonb("before").$type<Record<string, unknown> | null>(),
+    after: jsonb("after").$type<Record<string, unknown> | null>(),
+    reason: text("reason"),
+    requestId: text("request_id"),
+  },
+  (table) => ({
+    eventIdx: index("event_audit_log_event_idx").on(
+      table.eventId,
+      table.createdAt.desc()
+    ),
+    actorIdx: index("event_audit_log_actor_idx").on(table.actorUserId),
+    createdAtIdx: index("event_audit_log_created_at_idx").on(table.createdAt),
+  })
+)
+
+export type EventAuditLogInsert = typeof eventAuditLog.$inferInsert
+export type EventAuditLogRow = typeof eventAuditLog.$inferSelect

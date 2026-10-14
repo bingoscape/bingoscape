@@ -17,7 +17,7 @@ import { validateApiKey } from "@/lib/api-auth"
 import { boardContentUnlockedSql } from "@/server/blind-board"
 import { z } from "zod"
 import { doesItemMatchBaseName } from "@/app/actions/osrs-items"
-import { checkAndAutoCompleteTile } from "@/app/actions/tile-completion"
+import { checkAndAutoCompleteTile } from "@/server/tile-completion"
 import { getTierLockForSubmit, tierLockedBody } from "@/server/tier-progression"
 
 // Zod schema for item data from RuneLite
@@ -88,7 +88,7 @@ interface MatchedGoal {
  */
 export async function POST(req: Request) {
   // Validate API key
-  const userId = await validateApiKey(req)
+  const userId = await validateApiKey(req, "submit")
   if (!userId) {
     return NextResponse.json({ error: "Invalid API key" }, { status: 401 })
   }

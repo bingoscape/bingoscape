@@ -1,12 +1,18 @@
 import { logger } from "@/lib/logger"
+import { checkApiKey } from "@/lib/api-auth"
+import { limitRequest } from "@/server/rate-limit"
 import { NextResponse } from "next/server"
 import { db } from "@/server/db"
-import { apiKeys, users } from "@/server/db/schema"
+import { users } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
 import { z } from "zod"
 
 // Verify an API key and return user information
 export async function POST(req: Request) {
+  // Unauthenticated by nature, so limited per client IP (stops key guessing).
+  const limited = await limitRequest("runeliteAuth", req)
+  if (limited) return limited
+
   try {
     // Parse request body
     const body = await req.json()
@@ -18,25 +24,13 @@ export async function POST(req: Request) {
 
     const { apiKey } = schema.parse(body)
 
-    // Look up the API key in the database
-    const [key] = await db
-      .select({
-        userId: apiKeys.userId,
-        name: apiKeys.name,
-      })
-      .from(apiKeys)
-      .where(eq(apiKeys.key, apiKey))
-      .limit(1)
-
-    if (!key) {
+    // Hash lookup (then the legacy plaintext column); revoked and expired
+    // keys are refused like unknown ones.
+    const check = await checkApiKey(apiKey, { scope: "read" })
+    if (!check.ok) {
       return NextResponse.json({ valid: false }, { status: 401 })
     }
-
-    // Update the last used timestamp
-    await db
-      .update(apiKeys)
-      .set({ lastUsed: new Date() })
-      .where(eq(apiKeys.key, apiKey))
+    const key = check.key
 
     // Get user information
     const user = await db.query.users.findFirst({

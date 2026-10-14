@@ -3,7 +3,7 @@ import { logger } from "@/lib/logger"
 import { db } from "@/server/db"
 import {
   tiles,
-  eventParticipants,
+  users,
   teamTileSubmissions,
   submissions,
   images,
@@ -12,6 +12,13 @@ import {
 } from "@/server/db/schema"
 import { eq, and, sql } from "drizzle-orm"
 import { validateApiKey } from "@/lib/api-auth"
+import {
+  assertCanSubmit,
+  SubmissionRejectedError,
+} from "@/lib/submission-guard"
+import { limitRequest } from "@/server/rate-limit"
+import { can } from "@/lib/authz/policy"
+import { getApiActor } from "@/server/authz/api"
 import { nanoid } from "nanoid"
 import fs from "fs/promises"
 import path from "path"
@@ -42,10 +49,12 @@ export async function POST(
 ) {
   const params = await props.params
   // Validate API key from Authorization header
-  const userId = await validateApiKey(req)
+  const userId = await validateApiKey(req, "submit")
   if (!userId) {
     return NextResponse.json({ error: "Invalid API key" }, { status: 401 })
   }
+  const limited = await limitRequest("upload", req, userId)
+  if (limited) return limited
 
   const { tileId } = params
 
@@ -75,30 +84,25 @@ export async function POST(
       return NextResponse.json({ error: "Tile not found" }, { status: 404 })
     }
 
-    // Check if user is a participant in this event
-    const participant = await db.query.eventParticipants.findFirst({
-      where: and(
-        eq(eventParticipants.eventId, tile.bingo.eventId),
-        eq(eventParticipants.userId, userId)
-      ),
-      with: {
-        user: { columns: { id: true, name: true, runescapeName: true } },
-      },
-    })
-
-    if (!participant) {
+    // The caller must take part in the Event (the same actor loader as the
+    // web app: the creator counts as admin).
+    const apiActor = await getApiActor(userId, tile.bingo.eventId)
+    if (apiActor.status !== "ok" || apiActor.actor.role === null) {
       return NextResponse.json(
         { error: "Not a participant in this event" },
         { status: 403 }
       )
     }
+    const participant = {
+      user: await db.query.users.findFirst({
+        where: eq(users.id, userId),
+        columns: { id: true, name: true, runescapeName: true },
+      }),
+    }
 
     // The Tiles of a battleship board are blind until its Event starts: they
     // look like missing Tiles to everybody but the Event's managers.
-    const callerIsManager =
-      participant.role === "admin" ||
-      participant.role === "management" ||
-      tile.bingo.event.creatorId === userId
+    const callerIsManager = can(apiActor.actor, "board:view-secret")
     if (
       isBlindBoard({
         bingoType: tile.bingo.bingoType,
@@ -165,11 +169,18 @@ export async function POST(
       )
     }
 
-    if (tile.bingo.locked) {
-      return NextResponse.json(
-        { error: "This bingo is locked. No submission possible" },
-        { status: 403 }
-      )
+    // Locked Board, file type and size: the gate shared with the manual
+    // submit action (src/lib/submission-guard.ts).
+    try {
+      assertCanSubmit({ board: tile.bingo, file: image })
+    } catch (error) {
+      if (error instanceof SubmissionRejectedError) {
+        return NextResponse.json(
+          { error: error.message, code: error.code },
+          { status: error.status }
+        )
+      }
+      throw error
     }
 
     const tierLock = await getTierLockForSubmit(
@@ -192,30 +203,6 @@ export async function POST(
       return NextResponse.json(
         { error: "Your submission has already been approved!" },
         { status: 423 }
-      )
-    }
-
-    // H5: Validate file type and size before writing to disk.
-    const ALLOWED_MIME_TYPES = [
-      "image/jpeg",
-      "image/png",
-      "image/gif",
-      "image/webp",
-    ]
-    const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25 MB
-    if (!ALLOWED_MIME_TYPES.includes(image.type)) {
-      return NextResponse.json(
-        {
-          error:
-            "Invalid file type. Only JPEG, PNG, GIF and WebP are accepted.",
-        },
-        { status: 400 }
-      )
-    }
-    if (image.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: "File too large. Maximum size is 25 MB." },
-        { status: 400 }
       )
     }
 
@@ -314,8 +301,8 @@ export async function POST(
         const teamColor = `hsl(${(userTeam.name.charCodeAt(0) * 10) % 360}, 70%, 50%)`
 
         const embedData = {
-          userName: participant.user.name ?? "Unknown",
-          runescapeName: participant.user.runescapeName,
+          userName: participant.user?.name ?? "Unknown",
+          runescapeName: participant.user?.runescapeName ?? null,
           teamName: userTeam.name,
           tileName: tile.title,
           tileDescription: tile.description,

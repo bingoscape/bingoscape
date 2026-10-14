@@ -4,7 +4,7 @@ import { and, eq, inArray } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { db } from "@/server/db"
 import { goalGroups, goals, tiles } from "@/server/db/schema"
-import { authzErrorMessage, requireBingoAdmin } from "@/server/authz"
+import { requirePermissionForBingo, actionFailure } from "@/server/authz"
 import { buildCopyPlan, type CopyPlan, type PlanNode } from "@/server/goal-copy"
 import {
   insertGoal,
@@ -110,7 +110,7 @@ export async function applyGoalsToTiles(
     if (typeof bingoId !== "string" || bingoId === "") {
       return { success: false, error: "Board not found" }
     }
-    await requireBingoAdmin(bingoId)
+    await requirePermissionForBingo(bingoId, "board:manage")
 
     if (
       !Array.isArray(tileIds) ||
@@ -211,9 +211,6 @@ export async function applyGoalsToTiles(
       return { success: false, error: error.message }
     }
     logger.error({ error }, "Error applying goals to tiles")
-    return {
-      success: false,
-      error: authzErrorMessage(error, "Failed to apply goals"),
-    }
+    return actionFailure(error, "Failed to apply goals")
   }
 }

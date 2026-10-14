@@ -2,6 +2,7 @@ import { db } from "@/server/db"
 import { logger } from "@/lib/logger"
 import { eventInvites } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
+import { limitRequest } from "@/server/rate-limit"
 
 // Improve error handling in the invite code API
 export async function GET(
@@ -9,6 +10,10 @@ export async function GET(
   props: { params: Promise<{ inviteCode: string }> }
 ) {
   const params = await props.params
+  // Public lookup of an invite code: limited per client IP to stop guessing.
+  const limited = await limitRequest("inviteRedeem", request)
+  if (limited) return limited
+
   try {
     const { inviteCode } = params
 

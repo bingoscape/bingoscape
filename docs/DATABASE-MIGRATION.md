@@ -300,6 +300,120 @@ gunzip -c backup.sql.gz | docker compose exec -T postgres psql -U postgres -d bi
 
 ---
 
+## RBAC 2/8 rollout (migration `0038_rbac_membership_integrity`)
+
+Phase 2 of the RBAC consolidation (epic #183, issue #185). Expand-only: no column or table is dropped, and the previous app version keeps working against the new schema (rollback of the app image is safe; the database is not reverted).
+
+**What it does**
+
+| Step | Effect |
+| ---- | ------ |
+| Participants | Removes duplicate `event_participants` rows (keeps the highest role, then the oldest), re-points their buy-ins and donations to the keeper, copies the removed rows to `event_participants_quarantine`, then adds unique `(event_id, user_id)`. |
+| Team members | Adds nullable `team_members.event_id`, backfills it from `teams`, removes duplicate rows (leader row first, then oldest) into `team_members_quarantine`, then adds unique `(team_id, user_id)` and unique `(event_id, user_id)` (a Player is on one Team per Event, as `CONTEXT.md` and the app already assume), and a composite foreign key `(team_id, event_id)` to `teams` that keeps `event_id` equal to the Team's Event. |
+| Indexes | `event_participants(user_id)`, partial `event_participants(user_id, event_id)` for `admin`/`management`, `team_members(user_id)`. Plain `CREATE INDEX`: drizzle runs a migration in one transaction, where `CONCURRENTLY` is not allowed. The tables are small, so the short write lock is acceptable. |
+| Creators | Inserts an `admin` participant row for every Event whose creator has none (ledger action `backfill`). Existing non-admin creator rows are left alone and reported by `creator_role_conflicts`. |
+| Ledger | New `role_change_log` (one `baseline` row per existing Event and Clan membership) and `event_audit_log`, both without foreign keys and with CHECK constraints on the enumerated columns. Not written by the app yet (RBAC 3/8). |
+| Users | Unique `users_username_unique` and `users_email_unique`, created **only if the column has no duplicates**; otherwise the migration logs a `NOTICE` and skips that index, so a deploy never fails on dirty user data. |
+
+Every statement is idempotent, so re-running the migration (`migrate.yml`) is a no-op.
+
+**Compatibility with the previous app version.** It inserts `team_members` without `event_id` (NULL is tolerated by every constraint) and inserts participants without `ON CONFLICT`; a racing duplicate join then fails with a unique violation instead of creating a duplicate row. The new app fills `event_id` and uses `ON CONFLICT DO NOTHING`. `NOT NULL` on `team_members.event_id` follows in RBAC 8/8, after re-running the backfill:
+
+```sql
+UPDATE "bingoscape-next_team_members" tm SET event_id = t.event_id
+FROM "bingoscape-next_teams" t WHERE tm.team_id = t.id AND tm.event_id IS NULL;
+```
+
+Memberships created by the previous app after this migration have no ledger row until migration 0039 (RBAC 3/8) baselines them; `ledger_drift` reports them until then.
+
+**Before deploying: verify on a restored production backup** (see `scripts/restore-db.sh`, or restore into a scratch database):
+
+```bash
+DATABASE_URL=postgres://.../scratch npm run db:verify-rbac   # before: the duplicate checks list the rows 0038 will clean up; the ledger and event_id checks print ERR (their tables do not exist yet)
+# run the migration against the scratch database, then:
+DATABASE_URL=postgres://.../scratch npm run db:verify-rbac   # after: no FAIL lines except documented exceptions
+```
+
+The checks live in `src/server/authz/verification.ts` (the same module becomes the ledger reconciliation job in RBAC 3/8). Documented exceptions after the migration, which are reported but never auto-fixed: `events_without_admin` (Events without a creator and without an admin), `creator_role_conflicts` (creator with an explicit non-admin role; the policy treats the creator as admin), `team_members_not_participants`, and the `warn` checks below.
+
+**Resolving duplicate usernames and emails.** The app lowercases usernames and looks them up with an exact match; NextAuth looks emails up exactly. The indexes therefore cover the raw columns. If `duplicate_usernames` / `duplicate_emails` return rows, the migration skipped the index. Fix the accounts (rename, merge by hand, or null the stale email), then create the index; `IF NOT EXISTS` makes this safe to repeat:
+
+```sql
+SELECT username, count(*) FROM "bingoscape-next_user" WHERE username IS NOT NULL GROUP BY 1 HAVING count(*) > 1;
+CREATE UNIQUE INDEX IF NOT EXISTS "users_username_unique" ON "bingoscape-next_user" ("username");
+CREATE UNIQUE INDEX IF NOT EXISTS "users_email_unique" ON "bingoscape-next_user" ("email");
+```
+
+Emails that differ only in letter case do not block the index; `duplicate_emails_ignoring_case` lists them for review.
+
+**Quarantine and rollback.** Nothing is lost silently: removed rows are in `event_participants_quarantine` and `team_members_quarantine` (with the id of the row that was kept and, for Teams, the kept Team). If a kept Team is wrong, move the Player back by hand and delete the quarantine row. To undo the data changes, restore the pre-deploy backup (`scripts/restore-db.sh`); rolling back only the app image leaves the new tables and constraints in place, which the previous version tolerates.
+
+**Retention and erasure.** `event_audit_log` and `role_change_log` are meant to be kept `EVENT_AUDIT_RETENTION_DAYS` (365, `src/server/authz/audit-log.ts`; pending the maintainer's answer on decision 10 of #183). No purge job exists yet. They hold user ids without foreign keys, so a user-erasure request is served by setting `actor_user_id` / `subject_user_id` to `NULL` on that user's rows.
+
+## RBAC 3/8 rollout (migration `0039_rbac_role_change_trigger`)
+
+Phase 3 of the RBAC consolidation (epic #183, issue #186). Add-first and compatible with the previous app version (rolling the app image back is safe; the database is not reverted).
+
+| Part | Effect |
+| ---- | ------ |
+| `role_change_log.source` | The CHECK constraint accepts the new source `trigger` (drop and re-add of `role_change_log_source_check`). |
+| Ledger catch-up | Memberships created, changed or removed by the previous app between 0038 and 0039 have no or a stale ledger entry. The migration writes one `baseline` / `backfill` / `remove` row (source `migration`) for each, so `ledger_drift` is empty right after the deploy. A second run finds nothing to do. |
+| Safety-net trigger | `AFTER INSERT OR UPDATE OF role OR DELETE` on `event_participants` and `clan_members` (function `bingoscape_next_log_membership_change`). It writes a ledger row with source `trigger` for any write that did not come through `changeRole()` and its siblings, for example the previous app version. |
+
+**No double logging.** The membership helper sets the transaction-local setting `app.audit_source` (`set_config(..., true)`) before it writes and inserts its own ledger row; the trigger returns early when the setting is non-empty. The helper resets the setting when its operation is done, so later writes in the same transaction are still caught. Deleting an Event, a Clan or a user cascades to the membership rows; the trigger skips those deletes (the parent or the user no longer exists), as does the reconciliation query.
+
+Every statement is idempotent. To switch the trigger off in an emergency: `ALTER TABLE "bingoscape-next_event_participants" DISABLE TRIGGER event_participants_role_ledger;` (and `clan_members_role_ledger` on `bingoscape-next_clan_members`); the next reconciliation run then reports ledger drift for writes made in the meantime.
+
+**Daily reconciliation.** The verification queries of `src/server/authz/verification.ts` run once a day through `GET /api/cron/rbac-reconcile` (bearer `CRON_SECRET`, like `/api/cron/unlock`). It answers `200` when every `error` check is empty and `500` with the first rows of each finding otherwise. `scripts/rbac-reconcile.sh` calls it from host cron, appends the result to `backups/rbac-reconcile.log` and posts failures to Discord when `BACKUP_ALERT_WEBHOOK_URL` is set in the server `.env` (the variable the backups already use). Install once on the server:
+
+```bash
+./scripts/setup-rbac-reconcile-cron.sh   # daily at 4:00 AM, after the 3:00 AM backup
+./scripts/rbac-reconcile.sh              # run it by hand
+```
+
+Without `CRON_SECRET` the route answers `401` and the script reports that it cannot run. Findings are fixed by hand (see "RBAC 2/8 rollout" for the duplicate and quarantine checks); the job never repairs data.
+
+**Ownership rules the app now enforces** (all in `src/server/authz/membership.ts`): an Event and a Clan always keep an admin; the Event creator and the Clan owner can be neither demoted nor removed (transfer ownership first); nobody grants or adds a role above their own; deleting an Event, granting the admin role and transferring ownership are owner-only. For an Event whose creator account is gone (`creator_id` is null), its oldest admin acts as the owner for the owner-only actions. Existing data that already violates an invariant is not changed; the reconciliation reports it (for example `events_without_admin`, `creator_role_conflicts`).
+
+## RBAC 7/8 rollout (migration `0040_credential_session_hygiene`)
+
+Phase 7 of the RBAC consolidation (epic #183, issue #190): credential and session hygiene. Add-first and compatible with the previous app version (rolling the app image back is safe; the database is not reverted). Every statement is idempotent.
+
+| Part | Effect |
+| ---- | ------ |
+| `api_keys.key` | `NOT NULL` is dropped (the `UNIQUE` constraint stays). New keys leave it `NULL`; the previous app always supplies it and reads it with `WHERE key = ...`, both unaffected. **The legacy plaintext column is not dropped or emptied**; that is RBAC 8/8. |
+| `api_keys.key_hash`, `key_prefix` | SHA-256 (lower-case hex) of the key and its first 8 characters. Unique index `api_keys_key_hash_unique`. |
+| Backfill | `UPDATE ... SET key_hash = encode(sha256(convert_to(key, 'UTF8')), 'hex'), key_prefix = left(key, 8)` for every existing key. PostgreSQL 11+ has the built-in `sha256(bytea)`, so **no `pgcrypto` extension is needed**. Keys the previous app creates after the migration have no hash; the new app backfills them on first use (see below). |
+| `api_keys.scopes`, `expires_at`, `revoked_at` | `scopes text[] NOT NULL DEFAULT '{read,submit}'`, so every existing key keeps full access; `expires_at` / `revoked_at` are nullable. |
+| `user.session_revoked_at` | Nullable. Sessions issued before this instant are rejected ("sign out everywhere"). NULL for everybody after the migration, so **no session is invalidated by the deploy**. |
+| `user.provider_verified_email` | Nullable. The email an OAuth provider vouched for at the last sign-in (see "Super admins" below). |
+
+**Dual-read of API keys (one release).** A key is looked up by its hash first; if there is no row, by the legacy `key` column. A legacy hit writes the hash and prefix back (`checkApiKey` in `src/lib/api-auth.ts`). Revocation, expiry and scope are checked on both paths, and a revoked row found by hash is never revived through its plaintext. Existing keys and RuneLite plugin clients keep working unchanged: the key format (`bsn_` + 32 characters) and the `Authorization: Bearer` header did not change.
+
+**Rolling back the app image.** Keys created by the new app have `key = NULL`, so the **previous app version cannot validate them** (it only knows the plaintext column). The owner has to create a new key after a rollback. Keys that existed before the deploy keep working on both versions. `revoked_at`, `expires_at` and `scopes` are unknown to the previous app: a key revoked or expired in the new app **works again** in the previous version until it is deleted. Delete the key instead of revoking it if a rollback is likely.
+
+**Rollout checklist.**
+
+```sql
+-- after the migration: every key that had a plaintext value has a hash
+SELECT count(*) FROM "bingoscape-next_api_keys" WHERE key IS NOT NULL AND key_hash IS NULL;  -- expect 0
+SELECT count(*) FROM "bingoscape-next_api_keys" WHERE key_hash IS NOT NULL AND key IS NULL;   -- keys created by the new app
+```
+
+RBAC 8/8 drops `api_keys.key` after one release; before that, run the first query again (keys created by the previous app after 0040 and never used are the only ones without a hash; they are backfilled on first use or can be backfilled with the `UPDATE` in the migration file).
+
+**Super admins must sign in through their provider once.** `SUPER_ADMIN_EMAILS` stays env-only (decision 2 of #183 is open), but an address on the list now only counts when it equals `users.provider_verified_email`, which the app sets at each OAuth sign-in from the provider's own verification flag (Discord `verified`, Google `email_verified`, GitHub public or verified primary email). It is deliberately **not backfilled**: `users.email_verified` defaults to `CURRENT_TIMESTAMP` and says nothing. Until a super admin has signed in with Discord, GitHub or Google after this deploy, `/super-admin` denies them (their normal account keeps working). Credentials accounts and unverified provider emails can never be super admins, which closes the case of a self-registered account carrying an allowlisted address. To grant by hand in an emergency: `UPDATE "bingoscape-next_user" SET provider_verified_email = lower(email) WHERE id = '<uuid>';`.
+
+**Sessions.** The JWT is now only a pointer to the user (id and issue time). On every request the user row is read by primary key (one lookup, memoised per request): a deleted account, or a token older than `session_revoked_at`, is rejected and its cookie cleared; the `runescapeName` in the session comes from the database, not from the token or from `useSession().update()`. The lifetime is explicit (30 days, extended at most once a day). Existing sessions stay valid. Setting a user's `session_revoked_at = now()` signs them out everywhere; the profile settings page has a button for it.
+
+**Rate limits and the proxy.** Limits are in `src/lib/rate-limit-policies.ts`. They assume **one app instance** (decision 9 of #183): counters live in process memory and reset on restart. For a client IP the app trusts only the **last** entry of `X-Forwarded-For`, i.e. the address the host nginx appended (`proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`, as in `docs/PRODUCTION-SETUP.md`). If nginx is ever configured differently, or another proxy sits in front of it, anonymous limits (sign-in, sign-up, `/api/runelite/auth`, invite lookups) apply per proxy address instead of per client.
+
+**Content-Security-Policy.** `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin` are sent on every response. The CSP ships as `Content-Security-Policy-Report-Only` by default because it was not verified against every page of the running app. Browse the main pages with the browser console open; when it shows no violations set `CSP_MODE=enforce` in the server `.env` (GitHub secret `CSP_MODE`) and restart the container, no rebuild needed. `CSP_MODE=off` removes the header.
+
+**Rollback of the schema** is not needed and not offered: the new columns are ignored by the previous app. To undo the data effects only, restore the pre-deploy backup (`scripts/restore-db.sh`).
+
+---
+
 ## Need Help?
 
 1. Check logs: `docker compose logs`

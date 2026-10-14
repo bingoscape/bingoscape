@@ -3,7 +3,8 @@
  */
 import { db } from "@/server/db"
 import { getServerAuthSession } from "@/server/auth"
-import { getUserRole } from "@/app/actions/events"
+import { getEventActor } from "@/server/authz/actor"
+import { actorLookup } from "@/server/__tests__/helpers/mock-actor"
 import {
   addGoal,
   createGoals,
@@ -14,7 +15,12 @@ import {
 import { goalGroups, goals, itemGoals, metricGoals } from "@/server/db/schema"
 
 jest.mock("@/server/auth", () => ({ getServerAuthSession: jest.fn() }))
-jest.mock("@/app/actions/events", () => ({ getUserRole: jest.fn() }))
+// The actor lookup is the seam: every guard resolves the caller through it.
+jest.mock("@/server/authz/actor", () => ({
+  getEventActor: jest.fn(),
+  getEventRole: jest.fn(),
+  isUuid: () => true,
+}))
 jest.mock("@/server/notifications", () => ({
   createNotification: jest.fn(),
 }))
@@ -35,7 +41,12 @@ jest.mock("@/server/db", () => {
 })
 
 const session = getServerAuthSession as jest.Mock
-const role = getUserRole as jest.Mock
+const actor = getEventActor as jest.Mock
+/** The caller's standing in the Event, as the actor loader reports it. */
+const role = {
+  mockResolvedValue: (r: string | null) =>
+    actor.mockResolvedValue(actorLookup(r)),
+}
 const mockDb = db as unknown as {
   query: Record<string, { findFirst: jest.Mock }>
   transaction: jest.Mock
@@ -175,7 +186,7 @@ describe("createGoals", () => {
       throw new Error("boom")
     })
     const result = await createGoals("tile-1", [genericGoal()])
-    expect(result).toEqual({ success: false, error: "Failed to create goals" })
+    expect(result).toMatchObject({ success: false, error: "Failed to create goals" })
   })
 
   describe("validation (nothing is written)", () => {
@@ -235,7 +246,7 @@ describe("createGoals", () => {
       const result = await createGoals("tile-1", [genericGoal()], {
         parentGroupId: "group-from-tile-2",
       })
-      expect(result).toEqual({ success: false, error: "Goal group not found" })
+      expect(result).toMatchObject({ success: false, error: "Goal group not found" })
       expect(mockDb.transaction).not.toHaveBeenCalled()
     })
 

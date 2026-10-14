@@ -394,9 +394,10 @@ export function AutoTeamGeneratorModal({
         for (let i = 0; i < numberOfTeams; i++) {
           const teamName = `${teamNamePrefix} ${existingTeams.length + i + 1}`
           const teamRes = await createTeam(eventId, teamName)
-          if (!teamRes?.success || !teamRes.data) {
-            throw new Error(teamRes?.error || "Failed to create team")
+          if (!teamRes.success) {
+            throw new Error(teamRes.error || "Failed to create team")
           }
+          if (!teamRes.data) throw new Error("Failed to create team")
           createdTeams.push(teamRes.data.id)
         }
 

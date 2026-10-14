@@ -82,7 +82,7 @@ export function EditEventModal({
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
-      await updateEvent(event.id, {
+      const result = await updateEvent(event.id, {
         title,
         description,
         startDate: fromZonedTime(
@@ -106,15 +106,19 @@ export function EditEventModal({
         public: isPublic,
         requiresApproval,
       })
+      if (!result.success) throw new Error(result.error)
       toast({
         title: "Event updated",
         description: "Your event has been updated successfully.",
       })
       onClose()
-    } catch (_error) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to update event. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to update event. Please try again.",
         variant: "destructive",
       })
     } finally {

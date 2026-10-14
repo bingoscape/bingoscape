@@ -4,14 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Target, BarChart3, Users, Copy, Check } from "lucide-react"
-import type { EventStatsData } from "@/app/actions/stats"
-import { EventRole } from "@/app/actions/events"
-import type { ItemStatistics } from "@/app/actions/item-statistics"
+import type { EventStatsData } from "@/server/queries/stats"
+import type { ItemStatistics } from "@/server/queries/item-statistics"
 import { EventTeamChart } from "@/components/event-team-chart"
 import { BingoBreakdownChart } from "@/components/bingo-breakdown-chart"
 import { ItemStatisticsDisplay } from "@/components/item-statistics-display"
 import { PatternCompletionTab } from "@/components/pattern-completion-tab"
-import type { EventPatternCompletionData } from "@/app/actions/event-pattern-completion"
+import type { EventPatternCompletionData } from "@/server/queries/event-pattern-completion"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
@@ -22,7 +21,6 @@ import { cn } from "@/lib/utils"
 interface EventStatsDisplayProps {
   eventStats: EventStatsData
   eventTitle: string
-  userRole: EventRole
   itemStatistics?: ItemStatistics
   patternCompletionData?: EventPatternCompletionData
 }

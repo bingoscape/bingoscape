@@ -63,7 +63,7 @@ export async function signIn(page: Page, username: string): Promise<void> {
 export async function seedEvent(options: {
   userId: string
   username: string
-  role: "admin" | "participant"
+  role: "admin" | "management" | "participant"
   boards: SeedBoard[]
   isPublic?: boolean
 }): Promise<SeededEvent> {
@@ -92,7 +92,9 @@ export async function seedEvent(options: {
     { id: teamIds[1]!, eventId, name: "Team Bravo" },
   ])
   if (role === "participant") {
-    await db.insert(teamMembers).values({ teamId: teamIds[0]!, userId })
+    await db
+      .insert(teamMembers)
+      .values({ teamId: teamIds[0]!, eventId, userId })
   }
 
   const seededBoards: SeededEvent["boards"] = []

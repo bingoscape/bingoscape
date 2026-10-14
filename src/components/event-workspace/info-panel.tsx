@@ -29,7 +29,8 @@ interface InfoPanelProps {
     columns: number
     codephrase: string
   } | null
-  isAdmin: boolean
+  /** May generate invite links (`event:invite`). */
+  canInvite: boolean
   /** Public view: no codephrase, no invite link, no share button. */
   readOnly?: boolean
 }
@@ -48,7 +49,7 @@ export function InfoPanel({
   isPublic,
   rules,
   board,
-  isAdmin,
+  canInvite,
   readOnly = false,
 }: InfoPanelProps) {
   return (
@@ -112,9 +113,9 @@ export function InfoPanel({
         </section>
       )}
 
-      {!readOnly && (isAdmin || isPublic) && (
+      {!readOnly && (canInvite || isPublic) && (
         <section aria-label="Share" className="flex flex-wrap gap-2">
-          {isAdmin && (
+          {canInvite && (
             <GenerateEventInviteLink eventId={eventId as UUID}>
               <Button variant="outline" size="sm" className="gap-2">
                 <Link2 aria-hidden="true" className="h-4 w-4" />

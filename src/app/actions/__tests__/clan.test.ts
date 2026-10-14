@@ -3,6 +3,7 @@
  */
 import { db } from "@/server/db"
 import { getServerAuthSession } from "@/server/auth"
+import { addMember, changeRole, removeMember } from "@/server/authz/membership"
 import {
   createClanInvite,
   deleteClanInvite,
@@ -14,6 +15,14 @@ import {
 } from "@/app/actions/clan"
 
 jest.mock("@/server/auth", () => ({ getServerAuthSession: jest.fn() }))
+// Role and membership rules (owner, last admin, who may change what) are
+// covered against a real database in src/server/__tests__/membership.test.ts;
+// here only the wiring of the actions is checked.
+jest.mock("@/server/authz/membership", () => ({
+  addMember: jest.fn(),
+  changeRole: jest.fn(),
+  removeMember: jest.fn(),
+}))
 jest.mock("@/app/actions/events", () => ({ getUserRole: jest.fn() }))
 jest.mock("nanoid", () => ({ nanoid: () => "newcode123" }))
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
@@ -23,6 +32,9 @@ jest.mock("@/lib/logger", () => ({
 jest.mock("@/server/db", () => ({ db: { transaction: jest.fn() } }))
 
 const session = getServerAuthSession as jest.Mock
+const mockAddMember = addMember as jest.Mock
+const mockChangeRole = changeRole as jest.Mock
+const mockRemoveMember = removeMember as jest.Mock
 const transaction = (db as unknown as { transaction: jest.Mock }).transaction
 
 /** Awaitable query-builder stub: every method returns itself. */
@@ -82,88 +94,81 @@ beforeEach(() => {
 })
 
 describe("updateMemberRole", () => {
-  const clan = { id: "c1", ownerId: "owner" }
-
   it("rejects signed-out callers without touching the db", async () => {
     session.mockResolvedValue(null)
     const result = await updateMemberRole("c1", "u2", "member")
     expect(result.success).toBe(false)
-    expect(transaction).not.toHaveBeenCalled()
+    expect(mockChangeRole).not.toHaveBeenCalled()
   })
 
-  it.each(["management", "member", "guest"])(
-    "rejects a %s caller (only admins change roles)",
-    async (role) => {
-      const { tx, queueMembers } = setup({ clan, adminCount: 2 })
-      queueMembers({ role }, { role: "guest" })
-      const result = await updateMemberRole("c1", "u2", "member")
-      expect(result).toEqual({
-        success: false,
-        error: "Only clan admins can change member roles",
-      })
-      expect(tx.update).not.toHaveBeenCalled()
-    }
-  )
-
-  it("lets an admin change another member's role", async () => {
-    const { tx, queueMembers } = setup({ clan, adminCount: 1 })
-    queueMembers({ role: "admin" }, { role: "member" })
+  it("changes the role through the membership helper as the caller", async () => {
+    mockChangeRole.mockResolvedValue({ success: true, changed: true })
     const result = await updateMemberRole("c1", "u2", "management")
     expect(result).toEqual({ success: true })
-    expect(tx.update).toHaveBeenCalledTimes(1)
+    expect(mockChangeRole).toHaveBeenCalledWith({
+      scope: "clan",
+      parentId: "c1",
+      userId: "u2",
+      newRole: "management",
+      actor: { kind: "user", userId: "actor" },
+    })
   })
 
-  it("protects the clan owner from demotion", async () => {
-    const { tx, queueMembers } = setup({ clan, adminCount: 3 })
-    queueMembers({ role: "admin" }, { role: "admin" })
-    const result = await updateMemberRole("c1", "owner", "member")
-    expect(result).toEqual({
+  it("passes a refusal of the helper on as the error", async () => {
+    mockChangeRole.mockResolvedValue({
+      success: false,
+      code: "OWNER_PROTECTED",
+      error: "The clan owner's role cannot be changed",
+    })
+    expect(await updateMemberRole("c1", "owner", "member")).toEqual({
       success: false,
       error: "The clan owner's role cannot be changed",
     })
-    expect(tx.update).not.toHaveBeenCalled()
-  })
-
-  it("never leaves the clan without an admin", async () => {
-    const { tx, queueMembers } = setup({ clan, adminCount: 1 })
-    queueMembers({ role: "admin" }, { role: "admin" })
-    const result = await updateMemberRole("c1", "u2", "member")
-    expect(result.success).toBe(false)
-    expect(tx.update).not.toHaveBeenCalled()
-  })
-
-  it("rejects a target who is not in the clan", async () => {
-    const { tx, queueMembers } = setup({ clan, adminCount: 2 })
-    queueMembers({ role: "admin" }, undefined)
-    const result = await updateMemberRole("c1", "stranger", "member")
-    expect(result.success).toBe(false)
-    expect(tx.update).not.toHaveBeenCalled()
   })
 
   it("rejects unknown roles before touching the db", async () => {
     const result = await updateMemberRole("c1", "u2", "owner" as never)
     expect(result.success).toBe(false)
-    expect(transaction).not.toHaveBeenCalled()
+    expect(mockChangeRole).not.toHaveBeenCalled()
   })
 })
 
 describe("leaveClan", () => {
-  it("blocks the owner", async () => {
-    const { tx } = setup({ clan: { id: "c1", ownerId: "actor" } })
-    const result = await leaveClan("c1")
-    expect(result.success).toBe(false)
-    expect(tx.delete).not.toHaveBeenCalled()
+  it("removes the caller's own membership", async () => {
+    mockRemoveMember.mockResolvedValue({ success: true, changed: true })
+    expect(await leaveClan("c1")).toEqual({ success: true })
+    expect(mockRemoveMember).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: "clan",
+        parentId: "c1",
+        userId: "actor",
+        actor: { kind: "self", userId: "actor" },
+      })
+    )
   })
 
-  it("lets a regular member leave", async () => {
-    const { tx } = setup({ clan: { id: "c1", ownerId: "owner" } })
-    expect(await leaveClan("c1")).toEqual({ success: true })
-    expect(tx.delete).toHaveBeenCalledTimes(1)
+  it("passes the owner block on as the error", async () => {
+    mockRemoveMember.mockResolvedValue({
+      success: false,
+      code: "OWNER_PROTECTED",
+      error: "The clan owner can't leave the clan",
+    })
+    expect(await leaveClan("c1")).toEqual({
+      success: false,
+      error: "The clan owner can't leave the clan",
+    })
   })
 
   it("reports when the caller was not a member", async () => {
-    setup({ clan: { id: "c1", ownerId: "owner" }, removed: [] })
-    expect((await leaveClan("c1")).success).toBe(false)
+    mockRemoveMember.mockResolvedValue({
+      success: false,
+      code: "NOT_A_MEMBER",
+      error: "Not a member of this clan",
+    })
+    expect(await leaveClan("c1")).toEqual({
+      success: false,
+      error: "You're not a member of this clan",
+    })
   })
 })
 
@@ -180,8 +185,12 @@ describe("joinClanWithInvite", () => {
     ...extra,
   })
 
+  beforeEach(() => {
+    mockAddMember.mockResolvedValue({ success: true, changed: true })
+  })
+
   it("accepts a pasted link and joins as a member", async () => {
-    const { tx } = setup({ invite: invite(), memberships: [{ clanId: "other" }] })
+    setup({ invite: invite(), memberships: [{ clanId: "other" }] })
     const result = await joinClanWithInvite(
       "https://bingoscape.org/clans/join?code=abc123"
     )
@@ -191,7 +200,16 @@ describe("joinClanWithInvite", () => {
       clanName: "Frogs",
       isMain: false,
     })
-    expect(tx.insert).toHaveBeenCalledTimes(1)
+    expect(mockAddMember).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: "clan",
+        parentId: "c1",
+        userId: "actor",
+        role: "member",
+        isMain: false,
+        actor: { kind: "self", userId: "actor" },
+      })
+    )
   })
 
   it("makes the first clan the main clan", async () => {
@@ -206,28 +224,28 @@ describe("joinClanWithInvite", () => {
     ["expired", invite({ expiresAt: new Date(0) }), "expired"],
     ["used up", invite({ maxUses: 2, currentUses: 2 }), "limit-reached"],
   ])("refuses a %s invite", async (_name, inv, reason) => {
-    const { tx } = setup({ invite: inv })
+    setup({ invite: inv })
     const result = await joinClanWithInvite("abc123")
     expect(result).toMatchObject({ success: false, reason })
-    expect(tx.insert).not.toHaveBeenCalled()
+    expect(mockAddMember).not.toHaveBeenCalled()
   })
 
   it("refuses when already a member and points at the clan", async () => {
-    const { tx } = setup({ invite: invite(), memberships: [{ clanId: "c1" }] })
+    setup({ invite: invite(), memberships: [{ clanId: "c1" }] })
     const result = await joinClanWithInvite("abc123")
     expect(result).toMatchObject({
       success: false,
       reason: "already-member",
       clanId: "c1",
     })
-    expect(tx.insert).not.toHaveBeenCalled()
+    expect(mockAddMember).not.toHaveBeenCalled()
   })
 
   it("does not overspend a limited invite when the claim loses a race", async () => {
-    const { tx } = setup({ invite: invite({ maxUses: 1 }), claimed: [] })
+    setup({ invite: invite({ maxUses: 1 }), claimed: [] })
     const result = await joinClanWithInvite("abc123")
     expect(result).toMatchObject({ success: false, reason: "limit-reached" })
-    expect(tx.insert).not.toHaveBeenCalled()
+    expect(mockAddMember).not.toHaveBeenCalled()
   })
 
   it("rejects unusable input without a transaction", async () => {

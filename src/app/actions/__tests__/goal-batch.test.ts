@@ -5,7 +5,8 @@ import { inArray } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { db } from "@/server/db"
 import { getServerAuthSession } from "@/server/auth"
-import { getUserRole } from "@/app/actions/events"
+import { getEventActor } from "@/server/authz/actor"
+import { actorLookup } from "@/server/__tests__/helpers/mock-actor"
 import {
   applyGoalsToTiles,
   type GoalBatchSource,
@@ -21,7 +22,12 @@ import {
 } from "@/server/db/schema"
 
 jest.mock("@/server/auth", () => ({ getServerAuthSession: jest.fn() }))
-jest.mock("@/app/actions/events", () => ({ getUserRole: jest.fn() }))
+// The actor lookup is the seam: every guard resolves the caller through it.
+jest.mock("@/server/authz/actor", () => ({
+  getEventActor: jest.fn(),
+  getEventRole: jest.fn(),
+  isUuid: () => true,
+}))
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
 jest.mock("@/lib/logger", () => ({
   logger: { error: jest.fn(), info: jest.fn(), warn: jest.fn() },
@@ -53,7 +59,12 @@ jest.mock("@/server/db", () => {
 })
 
 const session = getServerAuthSession as jest.Mock
-const role = getUserRole as jest.Mock
+const actor = getEventActor as jest.Mock
+/** The caller's standing in the Event, as the actor loader reports it. */
+const role = {
+  mockResolvedValue: (r: string | null) =>
+    actor.mockResolvedValue(actorLookup(r)),
+}
 const inArrayMock = inArray as unknown as jest.Mock
 const mockDb = db as unknown as {
   query: { bingos: { findFirst: jest.Mock } }
@@ -380,20 +391,20 @@ describe("applyGoalsToTiles: new goals", () => {
     it("rejects a caller who is not signed in", async () => {
       session.mockResolvedValue(null)
       const result = await applyGoalsToTiles(BINGO, ["t1"], newGoals(task()))
-      expect(result).toEqual({ success: false, error: "Unauthorized" })
+      expect(result).toMatchObject({ success: false, error: "Unauthorized" })
       expect(mockDb.transaction).not.toHaveBeenCalled()
     })
 
     it("rejects a board that does not exist", async () => {
       mockDb.query.bingos.findFirst.mockResolvedValue(undefined)
       const result = await applyGoalsToTiles(BINGO, ["t1"], newGoals(task()))
-      expect(result).toEqual({ success: false, error: "Bingo not found" })
+      expect(result).toMatchObject({ success: false, error: "Bingo not found" })
       expect(mockDb.transaction).not.toHaveBeenCalled()
     })
 
     it("checks the board, never an event id from the client", async () => {
       await applyGoalsToTiles(BINGO, ["t1"], newGoals(task()))
-      expect(role).toHaveBeenCalledWith("event-1")
+      expect(actor).toHaveBeenCalledWith("event-1")
     })
   })
 
@@ -491,7 +502,7 @@ describe("applyGoalsToTiles: new goals", () => {
 
     it("rejects an empty list of goals", async () => {
       const result = await applyGoalsToTiles(BINGO, ["t1"], newGoals())
-      expect(result).toEqual({ success: false, error: "No goals to create" })
+      expect(result).toMatchObject({ success: false, error: "No goals to create" })
     })
 
     it("rejects an empty selection", async () => {
@@ -541,7 +552,7 @@ describe("applyGoalsToTiles: new goals", () => {
         newGoals(item("Abyssal whip"))
       )
 
-      expect(result).toEqual({ success: false, error: "Failed to apply goals" })
+      expect(result).toMatchObject({ success: false, error: "Failed to apply goals" })
       // The error left the transaction callback, which is what rolls it back.
       expect(mockDb.transaction).toHaveBeenCalledTimes(1)
       expect(revalidatePath).not.toHaveBeenCalled()
@@ -552,7 +563,7 @@ describe("applyGoalsToTiles: new goals", () => {
       mockDb.transaction.mockRejectedValueOnce(new Error("connection lost"))
       await expect(
         applyGoalsToTiles(BINGO, ["t1"], newGoals(task()))
-      ).resolves.toEqual({ success: false, error: "Failed to apply goals" })
+      ).resolves.toMatchObject({ success: false, error: "Failed to apply goals" })
     })
   })
 })
@@ -808,7 +819,7 @@ describe("applyGoalsToTiles: copying a tile's goals", () => {
 
     const result = await applyGoalsToTiles(BINGO, ["t1", "t2"], copyOf("src"))
 
-    expect(result).toEqual({ success: false, error: "Failed to apply goals" })
+    expect(result).toMatchObject({ success: false, error: "Failed to apply goals" })
     expect(revalidatePath).not.toHaveBeenCalled()
   })
 })

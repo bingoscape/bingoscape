@@ -7,7 +7,8 @@ import { EventHeaderActions } from "@/components/event-header-actions"
 import { EventRulesSheet } from "@/components/event-rules-sheet"
 import { PrizePoolDisplay } from "@/components/prize-pool-display"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
-import type { EventRole, EventRule } from "@/app/actions/events"
+import type { EventRule } from "@/app/actions/events"
+import type { EventCapabilities } from "@/lib/authz/capabilities"
 import type { Event } from "@/types/model"
 
 interface EventSummaryBarProps {
@@ -26,7 +27,7 @@ interface EventSummaryBarProps {
   /** Rules sheet and admin menu; omitted in the public view. */
   members?: {
     event: Event
-    userRole: EventRole
+    capabilities: EventCapabilities
     rules: EventRule[]
     pendingRegistrationsCount: number
     userClans: Array<{ clan: { id: string; name: string } }>
@@ -52,9 +53,6 @@ export function EventSummaryBar({
   backLabel,
   members,
 }: EventSummaryBarProps) {
-  const isAdmin = members?.userRole === "admin"
-  const isManagement =
-    members?.userRole === "admin" || members?.userRole === "management"
   const tz = timezone || "UTC"
 
   const now = new Date()
@@ -134,12 +132,12 @@ export function EventSummaryBar({
           <EventRulesSheet
             eventId={eventId}
             initialRules={members.rules}
-            isAdmin={isAdmin}
+            canManageRules={members.capabilities.canManageRules}
           />
-          {isManagement && (
+          {members.capabilities.canViewManagerPages && (
             <EventHeaderActions
               eventId={eventId}
-              userRole={members.userRole as "admin" | "management"}
+              capabilities={members.capabilities}
               requiresApproval={members.event.requiresApproval}
               pendingRegistrationsCount={members.pendingRegistrationsCount}
               event={members.event}
