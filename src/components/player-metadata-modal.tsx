@@ -104,13 +104,6 @@ export function PlayerMetadataModal({
   const popularTimezones = getPopularTimezones()
   const timezonesByRegion = getTimezonesByRegion()
 
-  useEffect(() => {
-    if (isOpen) {
-      void loadMetadata()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, userId, eventId])
-
   const loadMetadata = async () => {
     setLoading(true)
     try {
@@ -156,6 +149,13 @@ export function PlayerMetadataModal({
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (isOpen) {
+      void loadMetadata()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, userId, eventId])
 
   const handleSave = async () => {
     setSaving(true)
