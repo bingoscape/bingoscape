@@ -19,8 +19,8 @@ We welcome contributions to BingoScape Next! This guide will help you get starte
 
 Before contributing, ensure you have:
 
-- **Node.js 18+** (LTS recommended)
-- **PostgreSQL 14+** (or Docker for local development)
+- **Node.js 24** (LTS recommended)
+- **PostgreSQL 18** (or Docker for local development)
 - **Git** (latest version)
 - **GitHub account** with SSH keys configured
 
@@ -43,11 +43,11 @@ We welcome contributions in these areas:
 
 ```bash
 # Fork the repository on GitHub, then clone your fork
-git clone git@github.com:YOUR_USERNAME/bingoscape-next.git
-cd bingoscape-next
+git clone git@github.com:YOUR_USERNAME/bingoscape.git
+cd bingoscape
 
 # Add upstream remote
-git remote add upstream git@github.com:bingoscape/bingoscape-next.git
+git remote add upstream git@github.com:bingoscape/bingoscape.git
 ```
 
 ### 2. Install Dependencies
@@ -60,9 +60,9 @@ npm install
 
 ```bash
 # Copy environment template
-cp .env.example .env.local
+cp .env.example .env
 
-# Edit .env.local with your configuration
+# Edit .env with your configuration
 # Minimum required: DATABASE_URL, NEXTAUTH_SECRET, Discord OAuth
 ```
 
@@ -72,7 +72,7 @@ cp .env.example .env.local
 
 ```bash
 # Install PostgreSQL locally, then:
-createdb bingoscape-next
+createdb bingoscape
 npm run db:migrate
 ```
 
@@ -80,7 +80,7 @@ npm run db:migrate
 
 ```bash
 # Start PostgreSQL with Docker
-docker-compose up -d
+docker compose up -d postgres
 npm run db:migrate
 ```
 
@@ -519,8 +519,8 @@ Contributors are recognized in several ways:
 
 ## Questions?
 
-- **General Questions**: [GitHub Discussions](https://github.com/bingoscape/bingoscape-next/discussions)
-- **Bug Reports**: [GitHub Issues](https://github.com/bingoscape/bingoscape-next/issues)
+- **General Questions**: [GitHub Discussions](https://github.com/bingoscape/bingoscape/discussions)
+- **Bug Reports**: [GitHub Issues](https://github.com/bingoscape/bingoscape/issues)
 - **Real-time Chat**: [Discord Community](https://discord.gg/bingoscape)
 
 Thank you for contributing to BingoScape Next! 🎯
