@@ -1,5 +1,4 @@
-import nextJest from "next/jest"
-import type { Config } from "jest"
+import nextJest from "next/jest.js"
 
 const createJestConfig = nextJest({
   // Provide the path to your Next.js app to load next.config.js and .env files in your test environment
@@ -7,7 +6,8 @@ const createJestConfig = nextJest({
 })
 
 // Add any custom config to be passed to Jest
-const customJestConfig: Config = {
+/** @type {import('jest').Config} */
+const customJestConfig = {
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
   coverageProvider: "v8",
   testEnvironment: "jsdom",
@@ -31,7 +31,8 @@ const createConfig = createJestConfig(customJestConfig)
 // path for transformation (a custom pattern cannot opt a package back in), so
 // override the resolved patterns to transform it. Needed by the `eventAction`
 // tests, which run the real client.
-const config = async (): Promise<Config> => {
+/** @returns {Promise<import('jest').Config>} */
+const config = async () => {
   const resolved = await createConfig()
   return {
     ...resolved,
