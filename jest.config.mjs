@@ -31,7 +31,8 @@ const createConfig = createJestConfig(customJestConfig)
 // path for transformation (a custom pattern cannot opt a package back in), so
 // override the resolved patterns to transform it. Needed by the `eventAction`
 // tests, which run the real client.
-const config = async (): Promise<Config> => {
+/** @returns {Promise<import('jest').Config>} */
+const config = async () => {
   const resolved = await createConfig()
   return {
     ...resolved,
