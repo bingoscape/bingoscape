@@ -1,0 +1,86 @@
+src/components/draft/team-roster-column.tsx
+  s_ef9e7db49e4fa3::t_f94adb8bf789ff 18-21,30-31,34,52-64,88-101
+tests/draft-live.spec.ts
+  s_ef9e7db49e4fa3::t_2664020f8844b4 86-91,101-104,137-140
+  s_ef9e7db49e4fa3::t_51a9c11705ed00 1-85,92-100,105-136,141-171
+src/hooks/__tests__/use-draft-stream.test.tsx
+  s_ef9e7db49e4fa3::t_c60b1799bde169 1-277
+src/server/__tests__/cross-event.test.ts
+  s_ef9e7db49e4fa3::t_d3017f8c1494a1 973-974
+src/server/draft/core.ts
+  s_ef9e7db49e4fa3::t_4fc8ff167c2e39 28,142-148
+src/components/draft/use-fresh-picks.ts
+  s_ef9e7db49e4fa3::t_ac824d9cd928a8 1-48
+src/server/draft/stream.ts
+  s_ef9e7db49e4fa3::t_f4004aced65ad5 1-224
+src/components/__tests__/draft-room.test.tsx
+  s_ef9e7db49e4fa3::t_871f5849c0e88a 1,3,5-13,25,27-28,30-41,43-44,47,56,64-66,79,82-85,165,179-238,240,242-425
+  s_ef9e7db49e4fa3::t_d3017f8c1494a1 239,241
+src/lib/rate-limit-policies.ts
+  s_ef9e7db49e4fa3::t_9e420eb0901f49 46-50
+src/server/draft/http.ts
+  s_ef9e7db49e4fa3::t_107fb90588cbe9 1-36
+src/lib/draft/live.ts
+  s_ef9e7db49e4fa3::t_4fc8ff167c2e39 97-99
+  s_ef9e7db49e4fa3::t_355eab1288c840 1-96,100-113
+src/lib/draft/__tests__/draft-fixtures.ts
+  s_ef9e7db49e4fa3::t_0f3efd6aa1f45a 1-106
+src/components/draft/connection-indicator.tsx
+  s_ef9e7db49e4fa3::t_25cf33affe34de 1-89
+src/components/draft/pick-log.tsx
+  s_ef9e7db49e4fa3::t_82f503115a4b60 12-21
+src/lib/draft/sse.ts
+  s_ef9e7db49e4fa3::t_b2feef40c4e7fa 1-49
+src/hooks/__tests__/fake-event-source.ts
+  s_ef9e7db49e4fa3::t_253f5a842391f0 1-48
+src/lib/draft/types.ts
+  s_ef9e7db49e4fa3::t_2adf85f982218c 163-177
+src/lib/draft/__tests__/live.test.ts
+  s_ef9e7db49e4fa3::t_83210cabd272e8 24-37
+  s_ef9e7db49e4fa3::t_624b42d9e4fbff 1-23,38-203
+src/hooks/use-draft-stream.ts
+  s_ef9e7db49e4fa3::t_934fd952cd321f 1-275
+src/server/draft/hub.ts
+  s_ef9e7db49e4fa3::t_b2feef40c4e7fa 1-204
+src/components/draft/player-pool.tsx
+  s_ef9e7db49e4fa3::t_871f5849c0e88a 3,32-37,40-44,52,56-118,129,131,175-179,188-192,197-204,217-222,226-241
+src/components/draft/draft-room.tsx
+  s_ef9e7db49e4fa3::t_f4004aced65ad5 3,7,9,12,19,21,33-42,44-49,58-62,65-66,69,71-75,88-99,101-103,105-111,114-115,120-136,138-140,145,152-163,170-179,188,222-228,234-239,242,260-263,281
+src/app/api/__tests__/draft-stream.test.ts
+  s_ef9e7db49e4fa3::t_4fc8ff167c2e39 1-436
+src/server/authz/registry.ts
+  s_ef9e7db49e4fa3::t_d3017f8c1494a1 433-435
+  s_ef9e7db49e4fa3::t_d2805307c6cf31 431-432
+src/app/api/events/[id]/draft/state/route.ts
+  s_ef9e7db49e4fa3::t_107fb90588cbe9 5,18-19,40-41
+src/app/api/events/[id]/draft/stream/route.ts
+  s_ef9e7db49e4fa3::t_b1cd46d15faa70 1-93
+src/server/draft/queries.ts
+  s_ef9e7db49e4fa3::t_4fc8ff167c2e39 11,95,107-145,247-251,254-255,257,262
+src/lib/draft/__tests__/sse.test.ts
+  s_ef9e7db49e4fa3::t_4080889dd1cf4f 1-21
+docs/PRODUCTION-SETUP.md
+  s_ef9e7db49e4fa3::t_2fb8a3c43a484f 537-566
+src/components/draft/turn-cues.tsx
+  s_ef9e7db49e4fa3::t_4fc8ff167c2e39 140-144
+  s_ef9e7db49e4fa3::t_1aed0794ccc5b9 1-76,78-139,145-179
+  s_ef9e7db49e4fa3::t_cf495efd6db440 77
+CHANGELOG.md
+  s_ef9e7db49e4fa3::t_2fb8a3c43a484f 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a39b8e20bb5420a5619f93ba1bd5e10125584538",
+  "prompts": {},
+  "sessions": {
+    "s_ef9e7db49e4fa3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f2ee1b5-009f-4522-8f4a-8ff1c514dfe0",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
