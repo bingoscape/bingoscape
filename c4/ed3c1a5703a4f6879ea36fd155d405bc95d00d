@@ -1,0 +1,36 @@
+src/app/actions/__tests__/participants-workflow.test.ts
+  s_e32e07509d7036::t_eedbe0b4b363ea 15,23,219,222-247,249-274
+  s_e32e07509d7036::t_83c4c58acbae70 220-221,248
+  s_e32e07509d7036::t_9b94e86b2f6173 275
+src/server/__tests__/participants-workflow-migration.test.ts
+  s_e32e07509d7036::t_4a516bf32fcc15 1-116,120-126,145-216,220-255,259-260
+  s_e32e07509d7036::t_ebc8d11e9261ba 117-119,127-144,217-219,256-258
+src/app/actions/events.ts
+  s_e32e07509d7036::t_b3b4209f59a063 826-836,1008-1017,1346-1357
+src/server/db/schema.ts
+  s_e32e07509d7036::t_5548b6db9be09e 184-187,239-240,343-355,454-512,1203-1223,1232-1249
+drizzle/0041_participants_workflow_expand.sql
+  s_e32e07509d7036::t_7365aecda29023 2-30,53-54,56-68,84-99,102
+  s_e32e07509d7036::t_5548b6db9be09e 31-52,69-83,100-101
+  s_e32e07509d7036::t_eda066c29d8930 1,55
+drizzle/meta/0041_snapshot.json
+  s_e32e07509d7036::t_4733ffabe66119 1-5149
+drizzle/meta/_journal.json
+  s_e32e07509d7036::t_e04bf0024da128 291-297
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c4ed3c1a5703a4f6879ea36fd155d405bc95d00d",
+  "prompts": {},
+  "sessions": {
+    "s_e32e07509d7036": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0f5dfb9a-3776-4ec4-a635-481b24c3d7ae",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
