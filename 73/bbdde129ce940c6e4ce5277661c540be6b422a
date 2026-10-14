@@ -1,0 +1,143 @@
+src/components/draft/player-pool.tsx
+  s_ef9e7db49e4fa3::t_c70af85cea834b 4,6,33-37,58,222-225,227-252,262
+src/lib/draft/__tests__/autopick.test.ts
+  s_ef9e7db49e4fa3::t_c27f8f0ee1f689 1-135
+src/lib/draft/__tests__/timer.test.ts
+  s_ef9e7db49e4fa3::t_3d783523a199cf 1-141
+docs/DATABASE-MIGRATION.md
+  s_ef9e7db49e4fa3::t_501eb24fbb2247 396-417
+src/server/draft/sweeper-boot.ts
+  s_ef9e7db49e4fa3::t_e52d8ffc8ccb55 1-13
+src/server/__tests__/draft-concurrency.test.ts
+  s_ef9e7db49e4fa3::t_3ab2678b82058a 10,74
+src/app/api/events/[id]/draft/state/route.ts
+  s_ef9e7db49e4fa3::t_2b215ae9b0f112 5-6,27-31,62,82
+src/components/draft/organizer-controls.tsx
+  s_ef9e7db49e4fa3::t_3e6aad7e156b56 5-13,20,29,39-42,105-114,161,165-172
+src/lib/draft/autopick.ts
+  s_ef9e7db49e4fa3::t_38ea6fb3964520 1-45,48-83
+  s_ef9e7db49e4fa3::t_c70af85cea834b 46-47
+src/lib/draft/view.ts
+  s_ef9e7db49e4fa3::t_8d80bf674e4553 1,73-74,83-85,95,107,151-197
+src/app/events/[id]/(member)/draft/page.tsx
+  s_ef9e7db49e4fa3::t_e081728bc5c99f 9-10,32-33,35-38,56
+src/server/draft/queries.ts
+  s_ef9e7db49e4fa3::t_d5da81b8e301be 3-13,21,30,122,137-139,156-181,191-228,247,249,264-266,273-274,285,287,390-418
+src/app/api/events/[id]/draft/stream/route.ts
+  s_ef9e7db49e4fa3::t_2b215ae9b0f112 4,55-56
+src/components/draft/team-roster-column.tsx
+  s_ef9e7db49e4fa3::t_00795aef4bd49e 9,47-57,93
+src/components/draft/pick-queue.tsx
+  s_ef9e7db49e4fa3::t_89b9a4ebffbaaf 1-90
+src/lib/draft/__tests__/timer-events.test.ts
+  s_ef9e7db49e4fa3::t_c70af85cea834b 150-152,169-175,192-194,261-264
+  s_ef9e7db49e4fa3::t_e3284bd7ff7fbf 1-149,153-168,176-191,195-260,265-354
+src/app/api/__tests__/draft-stream.test.ts
+  s_ef9e7db49e4fa3::t_daf86ab2d40c83 119,125
+  s_ef9e7db49e4fa3::t_2916037b81d45a 223-255
+src/app/actions/__tests__/draft.test.ts
+  s_ef9e7db49e4fa3::t_c820b2bfe5c47d 837-841
+  s_ef9e7db49e4fa3::t_daf86ab2d40c83 8,103
+src/lib/draft/constants.ts
+  s_ef9e7db49e4fa3::t_057def05cb7f50 34-39
+src/app/actions/draft.ts
+  s_ef9e7db49e4fa3::t_244083f601acd5 6,20-21,35-38,155-188,303-325
+src/server/__tests__/draft-timer-migration.test.ts
+  s_ef9e7db49e4fa3::t_c70af85cea834b 1-192
+src/server/__tests__/draft-timer.test.ts
+  s_ef9e7db49e4fa3::t_666c80be771604 1-950
+src/lib/draft/__tests__/setup.test.ts
+  s_ef9e7db49e4fa3::t_daf86ab2d40c83 28
+src/server/draft/expire.ts
+  s_ef9e7db49e4fa3::t_5627ff6b69b449 1-313
+src/server/db/schema.ts
+  s_ef9e7db49e4fa3::t_f98f47d6ebe2c0 1698-1699,1704-1705,1760-1761,1867-1869,1892-1933,1936-1939,1943
+src/app/api/__tests__/draft-state.test.ts
+  s_ef9e7db49e4fa3::t_c70af85cea834b 8,14,177-210
+src/server/draft/internal.ts
+  s_ef9e7db49e4fa3::t_c70af85cea834b 19
+  s_ef9e7db49e4fa3::t_0e21b6a7f1ddd1 1-18,20-209
+src/server/__tests__/cross-event.test.ts
+  s_ef9e7db49e4fa3::t_38c893de65515d 344-348,974-975
+src/server/__tests__/draft-integrity.test.ts
+  s_ef9e7db49e4fa3::t_daf86ab2d40c83 500-505
+src/components/draft/draft-setup-form.tsx
+  s_ef9e7db49e4fa3::t_38307d840c4614 69-70,101-105,134,200-201,221-226,246-260
+src/server/authz/registry.ts
+  s_ef9e7db49e4fa3::t_f98f47d6ebe2c0 224-231,429-433
+src/components/draft/turn-timer.tsx
+  s_ef9e7db49e4fa3::t_19b32bf6e9a6b6 1-114,116-125,128-143
+  s_ef9e7db49e4fa3::t_4eee2ae2553601 115,126-127
+src/components/draft/draft-room.tsx
+  s_ef9e7db49e4fa3::t_e081728bc5c99f 5,13,18,22,34-35,62,64,83-134,242-243,246-247,304-311,314-326,350-356
+src/lib/draft/setup.ts
+  s_ef9e7db49e4fa3::t_38c24aab56db40 34-43,63-67,82-85,93-98
+src/components/draft/on-the-clock-banner.tsx
+  s_ef9e7db49e4fa3::t_df77dbc80cd56d 95,104
+  s_ef9e7db49e4fa3::t_5b5369e44dde30 10,16-19,27-28,31-46,94,96-103,105-119
+src/components/draft/draft-alerts.tsx
+  s_ef9e7db49e4fa3::t_89b9a4ebffbaaf 1-33,38-54,59-60,64-73
+  s_ef9e7db49e4fa3::t_c70af85cea834b 34-37,55-58,61-63
+src/server/draft/stream.ts
+  s_ef9e7db49e4fa3::t_2b215ae9b0f112 10,91-105,229-233
+src/lib/draft/reducer.ts
+  s_ef9e7db49e4fa3::t_057def05cb7f50 6,32-34,38-66,103-107,116,133-140,144-150,152-157,159-164,181-182,194-202,207-208
+  s_ef9e7db49e4fa3::t_3170823b0be637 141-142
+src/server/draft/core.ts
+  s_ef9e7db49e4fa3::t_c70af85cea834b 11,17-18,21,34,45-68,90,163-164,329-330,334,336,348,358-363,367-383,386,390-405,407,409-410,412,427-430,434-435,438-439,445-448,453-454,456,495-496,500,502-504,507-509,511-538,540-567,575-578,580-591,593,598-603,621,626-629,634-648,650-652,655-656,658,664-665,710
+src/lib/draft/__tests__/draft-fixtures.ts
+  s_ef9e7db49e4fa3::t_8d80bf674e4553 103,105
+src/server/draft/clock.ts
+  s_ef9e7db49e4fa3::t_93115853523ab9 1-46
+src/instrumentation.ts
+  s_ef9e7db49e4fa3::t_c70af85cea834b 9-10
+  s_ef9e7db49e4fa3::t_e52d8ffc8ccb55 8,11
+  s_ef9e7db49e4fa3::t_b41829f72a0858 1-7,12-13
+drizzle/0042_team_draft_timer.sql
+  s_ef9e7db49e4fa3::t_9f6bde415046d3 1-64
+src/lib/draft/timer.ts
+  s_ef9e7db49e4fa3::t_8d80bf674e4553 1-76
+src/components/__tests__/turn-timer.test.tsx
+  s_ef9e7db49e4fa3::t_4bd77ad0cfb48e 1-153
+src/lib/draft/types.ts
+  s_ef9e7db49e4fa3::t_e7a6e5229fabf1 48-66,86-88,91,104-122,151-152,161-164,198-203,225-226
+  s_ef9e7db49e4fa3::t_3170823b0be637 89-90,228-232
+src/components/__tests__/draft-room-timer.test.tsx
+  s_ef9e7db49e4fa3::t_c70af85cea834b 1-351
+src/server/draft/turn.ts
+  s_ef9e7db49e4fa3::t_0c81774d11ed67 1-70,72-290
+  s_ef9e7db49e4fa3::t_c70af85cea834b 71
+src/components/draft/unassigned-list.tsx
+  s_ef9e7db49e4fa3::t_89b9a4ebffbaaf 1-44
+src/hooks/use-draft-stream.ts
+  s_ef9e7db49e4fa3::t_779440ea8de34a 80-84
+  s_ef9e7db49e4fa3::t_48c6673858e347 7,45-46,63-66,85-88,121-125,136,162,175,232-241,274,302
+src/lib/draft/live.ts
+  s_ef9e7db49e4fa3::t_a7e127fba38f9b 59-60
+  s_ef9e7db49e4fa3::t_057def05cb7f50 56-57
+  s_ef9e7db49e4fa3::t_8d80bf674e4553 30-31,46
+src/lib/draft/sse.ts
+  s_ef9e7db49e4fa3::t_2b215ae9b0f112 10-12,28
+drizzle/meta/0042_snapshot.json
+  s_ef9e7db49e4fa3::t_5f62cf3bd8386e 1-5826
+drizzle/meta/_journal.json
+  s_ef9e7db49e4fa3::t_8a0f2010f78912 298-304
+src/app/api/cron/draft-sweep/route.ts
+  s_ef9e7db49e4fa3::t_aabf0c1b9e2800 1-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "73bbdde129ce940c6e4ce5277661c540be6b422a",
+  "prompts": {},
+  "sessions": {
+    "s_ef9e7db49e4fa3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f2ee1b5-009f-4522-8f4a-8ff1c514dfe0",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
