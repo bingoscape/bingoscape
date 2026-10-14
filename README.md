@@ -67,7 +67,7 @@ Administration
 | Area            | Technology                                                                |
 | --------------- | ------------------------------------------------------------------------- |
 | Framework       | Next.js 16.4.0 (App Router, standalone output), React 19.3.0              |
-| Language        | TypeScript 5 (strict, `noUncheckedIndexedAccess`)                         |
+| Language        | TypeScript 7 (strict, `noUncheckedIndexedAccess`)                         |
 | Database        | PostgreSQL 18, Drizzle ORM 0.33, drizzle-kit 0.24, postgres.js            |
 | Authentication  | NextAuth.js 4: credentials, Discord, GitHub (optional), Google (optional) |
 | Validation      | Zod 3, `@t3-oss/env-nextjs` for environment variables                     |

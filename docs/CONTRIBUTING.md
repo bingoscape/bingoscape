@@ -93,6 +93,7 @@ The authoritative rules are in [AGENTS.md](../AGENTS.md). Domain vocabulary (Eve
 - Use `import type` for type-only imports and the `@/` alias for internal imports.
 - Generate ids with `nanoid()`.
 - Store monetary values (buy-ins, donations) as `bigint`.
+- `tsc` is TypeScript 7 (the `@typescript/native` dev dependency, an alias of `typescript@7`). The `typescript` dev dependency is an alias of `@typescript/typescript6`, because ESLint, ts-node and Jest need the JavaScript compiler API, which TypeScript 7 does not ship. `require("typescript")` therefore resolves to TypeScript 6, and `next build` type checks with its `tsc6` CLI. Do not replace either alias with a plain version range. Collapse the two into a single `typescript` dependency once typescript-eslint supports the TypeScript 7.1 API.
 
 ### Naming and structure
 

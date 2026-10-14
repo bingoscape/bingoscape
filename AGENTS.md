@@ -14,6 +14,7 @@
 ### Type checking
 
 - `npx tsc --noEmit` - Type check (also runs in CI; must pass)
+- `tsc` is TypeScript 7 (`@typescript/native` alias); `typescript` is an alias of `@typescript/typescript6` for ESLint, ts-node and Jest, and `next build` type checks via its `tsc6` CLI. Keep both aliases (see `docs/CONTRIBUTING.md`)
 
 ### Testing
 

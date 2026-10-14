@@ -118,6 +118,7 @@
     "@types/react-dom": "19.3.0",
     "@typescript-eslint/eslint-plugin": "^8.1.0",
     "@typescript-eslint/parser": "^8.1.0",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "cross-env": "^7.0.3",
     "drizzle-kit": "^0.24.0",
     "env-cmd": "^11.0.0",
@@ -133,7 +134,7 @@
     "shadcn": "^3.5.0",
     "tailwindcss": "^4.3.3",
     "ts-node": "^10.9.2",
-    "typescript": "~6.0.3"
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
   "ct3aMetadata": {
     "initVersion": "7.37.0"
