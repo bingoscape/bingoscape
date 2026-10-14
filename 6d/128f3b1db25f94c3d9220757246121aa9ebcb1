@@ -1,0 +1,21 @@
+.dockerignore
+  s_2aebdb4d5645da::t_93dc85f5161b55 83
+jest.config.mjs
+  s_2aebdb4d5645da::t_93dc85f5161b55 1-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6d128f3b1db25f94c3d9220757246121aa9ebcb1",
+  "prompts": {},
+  "sessions": {
+    "s_2aebdb4d5645da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9e280b93-4bc1-4d59-a11c-e6d1207080db",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
