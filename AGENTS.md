@@ -5,7 +5,7 @@
 ### Build & Quality
 
 - `npm run build` - Build Next.js application for production
-- `npm run lint` - Run ESLint (auto-fix with `npm run lint -- --fix`)
+- `npm run lint` - Run oxlint (`.oxlintrc.json`; auto-fix with `npm run lint -- --fix`). Warnings are allowed, errors fail
 - `npm run dev` - Start development server (port 3000)
 - `npm run dbg` - Start dev server with Node.js inspector for debugging
 - `npm start` - Start production server on port 3344
@@ -14,6 +14,7 @@
 ### Type checking
 
 - `npx tsc --noEmit` - Type check (also runs in CI; must pass)
+- TypeScript 7 (native compiler) is the single `typescript` dependency; `next build` uses it too. It has no JS compiler API, so do not add tools that need it (typescript-eslint, ts-node)
 
 ### Testing
 
@@ -112,14 +113,14 @@ Workflows are in `.github/workflows/`; details in `docs/GITHUB-ACTIONS.md`, secr
 - Prettier with tailwindcss plugin auto-formats on save
 - Tailwind classes are auto-sorted by the plugin
 - Agents must run `npm run lint -- --fix` after making changes
-- **NEVER** bypass ESLint errors (e.g., no `// eslint-disable` or `@ts-ignore`) unless it is a known false positive, which requires a justification comment next to the suppression
+- **NEVER** bypass oxlint errors (e.g., no `// oxlint-disable` / `// eslint-disable` or `@ts-ignore`) unless it is a known false positive, which requires a justification comment next to the suppression (oxlint honors both `oxlint-disable` and `eslint-disable` comments)
 
 ### TypeScript
 
 - Strict mode enabled with `noUncheckedIndexedAccess`
 - Use Drizzle type inference: `typeof table.$inferInsert` / `typeof table.$inferSelect`
 - Monetary values in database: use `bigint` type for precision
-- Non-null assertions allowed only where necessary (add eslint-disable comment)
+- Non-null assertions allowed only where necessary (add oxlint-disable comment)
 
 ### Naming Conventions
 
@@ -164,7 +165,7 @@ Workflows are in `.github/workflows/`; details in `docs/GITHUB-ACTIONS.md`, secr
 - Return typed success/error objects, never throw (unless critical)
 - Validate inputs at the beginning of functions
 - Use `getServerAuthSession()` for authentication
-- Check permissions with `authorize()` / `requirePermission()` (`@/server/authz`) before mutations; never compare a role string (ESLint `no-restricted-syntax` enforces it outside `src/lib/authz` and `src/server/authz`)
+- Check permissions with `authorize()` / `requirePermission()` (`@/server/authz`) before mutations; never compare a role string (the oxlint rule `rbac/no-role-comparison` enforces it outside `src/lib/authz` and `src/server/authz`)
 
 ### Component Patterns
 
@@ -186,7 +187,7 @@ Workflows are in `.github/workflows/`; details in `docs/GITHUB-ACTIONS.md`, secr
 
 ### Additional Notes
 
-- React 19.2.3 with Next.js 16.1.1 App Router
+- React 19.3.0 with Next.js 16.4.0 App Router
 - PostgreSQL database with Drizzle ORM
 - NextAuth for authentication (Discord OAuth + Credentials)
 - Use `nanoid()` for ID generation

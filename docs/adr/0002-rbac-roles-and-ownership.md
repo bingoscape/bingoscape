@@ -39,7 +39,7 @@ except roles, Event settings, invites, rules and the owner-only actions;
 route handlers and server pages ask `authorize`, `requirePermission` or
 `hasPermission` (`@/server/authz`); the registry (`registry.ts`) lists every
 public entry point with its permission or the reason it is public, and a test
-fails when one is missing. ESLint (`no-restricted-syntax`) forbids comparing a
+fails when one is missing. The oxlint rule `rbac/no-role-comparison` (`tools/oxlint/rbac-plugin.mjs`) forbids comparing a
 role string outside `src/lib/authz` and `src/server/authz`.
 
 ### Owner

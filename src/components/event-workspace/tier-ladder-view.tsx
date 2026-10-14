@@ -135,7 +135,11 @@ export function TierLadderView({
     if (!Number.isNaN(index)) setFocusIndex(index)
   }, [])
 
-  let running = 0
+  // Index of each band's first tile in the flattened grid order.
+  const bandStartIndexes = bands.reduce<number[]>((starts, band, i) => {
+    starts.push((starts[i - 1] ?? 0) + (bands[i - 1]?.tiles.length ?? 0))
+    return starts
+  }, [])
 
   return (
     <FitBoard
@@ -148,7 +152,7 @@ export function TierLadderView({
       onKeyDown={handleKeyDown}
       onFocus={handleFocus}
     >
-      {bands.map((band) => {
+      {bands.map((band, bandIndex) => {
         const status = getTierStatus(band.tier, tiles, currentTeamId, tierData)
         const earnedHere = getTierEarnedXp(tiles, currentTeamId, band.tier)
         const requiredHere = getEffectiveTierXpRequired(
@@ -157,8 +161,7 @@ export function TierLadderView({
           band.tier
         )
         const nextTier = bands.find((b) => b.tier > band.tier)?.tier
-        const startIndex = running
-        running += band.tiles.length
+        const startIndex = bandStartIndexes[bandIndex] ?? 0
 
         const rowGroups: Array<Array<{ tile: Tile; index: number }>> = []
         band.tiles.forEach((tile, i) => {

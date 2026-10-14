@@ -1,49 +1,67 @@
 /**
  * @jest-environment node
  *
- * The ESLint guard rails of RBAC 8/8 (#191) behave as documented: no role
- * string comparisons outside the policy, and explicit `columns` on user
- * relations. They replace the grep gate of phases 5 and 6. ESLint's flat config
- * is ESM, which Jest cannot load in-process, so each run is a child process on
- * stdin (one run per file location, one sample per line).
+ * The lint guard rails of RBAC 8/8 (#191) behave as documented: no role string
+ * comparisons outside the policy, and explicit `columns` on user relations.
+ * They are the oxlint plugin in tools/oxlint, scoped by .oxlintrc.json. Each
+ * run is a child process of the real oxlint binary on sample files in a
+ * temporary project that uses a copy of the repo's config, so the overrides
+ * (which paths are exempt) are tested too.
  */
 import { execFileSync } from "child_process"
+import fs from "fs"
+import os from "os"
 import path from "path"
 
 const ROOT = path.resolve(__dirname, "../../..")
-const ESLINT = path.join(ROOT, "node_modules/eslint/bin/eslint.js")
+const OXLINT = path.join(ROOT, "node_modules/oxlint/bin/oxlint")
 
-interface Message {
-  ruleId: string | null
-  line: number
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rbac-lint-"))
+afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }))
+
+// Comments are allowed in .oxlintrc.json, so strip them before parsing.
+const config = JSON.parse(
+  fs
+    .readFileSync(path.join(ROOT, ".oxlintrc.json"), "utf8")
+    .replace(/^\s*\/\/.*$/gm, "")
+)
+config.jsPlugins = [path.join(ROOT, "tools/oxlint/rbac-plugin.mjs")]
+fs.writeFileSync(path.join(tmp, ".oxlintrc.json"), JSON.stringify(config))
+
+interface Diagnostic {
+  code: string
+  labels: { span: { line: number } }[]
 }
 
-/** Lines of `lines` (1-based) on which `no-restricted-syntax` reports. */
+/** Lines of `lines` (1-based) that the RBAC rules report on. */
 function flaggedLines(filePath: string, lines: string[]): number[] {
+  const full = path.join(tmp, filePath)
+  fs.mkdirSync(path.dirname(full), { recursive: true })
+  fs.writeFileSync(full, lines.join("\n"))
   let stdout: string
   try {
     stdout = execFileSync(
       process.execPath,
       [
-        ESLINT,
-        "--stdin",
-        "--stdin-filename",
-        path.join(ROOT, filePath),
+        OXLINT,
+        "-c",
+        path.join(tmp, ".oxlintrc.json"),
         "--format",
         "json",
+        full,
       ],
-      { cwd: ROOT, input: lines.join("\n"), encoding: "utf8" }
+      { cwd: tmp, encoding: "utf8" }
     )
   } catch (error) {
-    // ESLint exits 1 when it reports errors; the JSON is on stdout.
+    // oxlint exits 1 when it reports errors; the JSON is on stdout.
     stdout = (error as { stdout: string }).stdout
   }
-  const [result] = JSON.parse(stdout) as [{ messages: Message[] }]
+  const { diagnostics } = JSON.parse(stdout) as { diagnostics: Diagnostic[] }
   return [
     ...new Set(
-      result.messages
-        .filter((m) => m.ruleId === "no-restricted-syntax")
-        .map((m) => m.line)
+      diagnostics
+        .filter((d) => d.code.startsWith("rbac("))
+        .map((d) => d.labels[0]!.span.line)
     ),
   ]
 }

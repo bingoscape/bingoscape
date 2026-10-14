@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The legacy plaintext `api_keys.key` column is dropped (keys without a hash are hashed first) together with the dual-read in `checkApiKey`; the unused `user_role` enum is dropped
   - Creators get an `admin` participant row if missing and are promoted if they hold a lower role, because the policy no longer treats the creator as admin by itself
   - `clan_invites.created_by` is nullable (it was `NOT NULL` with `ON DELETE SET NULL`, so deleting the user who created an invite failed); the invite now outlives its creator. `discord_webhooks.created_by` is `NOT NULL ... ON DELETE CASCADE`, consistent, and unchanged
-  - ESLint `no-restricted-syntax` guard rails (`eslint.config.mjs`): no `=== "admin"`, `!== "management"`, `case "admin":`, `.includes("admin")` or `["admin", "management"]` outside `src/lib/authz` and `src/server/authz` (tests and `schema.ts` excepted), and every `user` / `creator` / `reviewer` / `author` relation in a Drizzle `with:` needs explicit `columns`. `src/server/__tests__/lint-guard-rails.test.ts` pins the behaviour. The grep test `role-comparisons.test.ts` and its allowlist are gone
+  - Lint guard rails, the oxlint plugin `tools/oxlint/rbac-plugin.mjs` configured in `.oxlintrc.json` (oxlint has no `no-restricted-syntax`): no `=== "admin"`, `!== "management"`, `case "admin":`, `.includes("admin")` or `["admin", "management"]` outside `src/lib/authz` and `src/server/authz` (tests and `schema.ts` excepted), and every `user` / `creator` / `reviewer` / `author` relation in a Drizzle `with:` needs explicit `columns`. `src/server/__tests__/lint-guard-rails.test.ts` pins the behaviour. The grep test `role-comparisons.test.ts` and its allowlist are gone
   - `docs/adr/0002-rbac-roles-and-ownership.md` records the final role and ownership model; `CONTEXT.md` is updated
 - **RBAC 7/8 (#190): credential and session hygiene.** Migration 0040 (add-first, see `docs/DATABASE-MIGRATION.md`, "RBAC 7/8 rollout"):
   - API keys are stored as a SHA-256 hash plus an 8 character prefix and shown once at creation; they gain `expires_at`, `revoked_at` and scopes (`read`, `submit`). Lookup is by hash, then by the legacy plaintext column (a legacy hit backfills the hash), for one release. The key format and the RuneLite `Bearer` header are unchanged, existing keys keep working. The API keys page lists the prefix, status, expiry and scope, can set an expiry and a read-only key at creation, and revokes instead of deleting active keys (`revokeApiKey`)
@@ -81,7 +81,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `GET /api/runelite/bingos/{bingoId}` now serves battleship boards and requires the caller to be a participant or manager of the event (hidden boards: managers only); every other case answers `404`
 - `apiKeys.lastUsed` is written at most once a minute per key
 - Updated README.md to accurately reflect application capabilities
+- Rewrote README.md against the current code: Next.js 16 / React 19 / Node 24 / PostgreSQL 18, all three board types, the full environment variable reference, the Docker, CI and backup flow, testing, the RuneLite API 2.1 endpoints and the BSD 2-Clause license. Local database name is now `bingoscape` in `.env.example`, `start-database.sh` and the docs; `.env.example` no longer lists `?pgbouncer=true` or the unused `GE_PRICE_CACHE_TTL_MINUTES` and documents `WISEOLDMAN_API_KEY`
 - Enhanced project structure documentation
+- Reworked `docs/CONTRIBUTING.md`: current commands (`npm run lint -- --fix`, `npx tsc --noEmit`), the real Prettier style, the server action and authorization rules from AGENTS.md, migration compatibility rules, what CI runs and test setup (Docker required)
 - Improved contributing guidelines with code standards
 
 ### Fixed
@@ -245,6 +247,6 @@ The v1.1 update introduces progression bingo support while maintaining full back
 
 For questions, issues, or feature requests:
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/bingoscape/bingoscape-next/issues)
-- **GitHub Discussions**: [Community discussions and support](https://github.com/bingoscape/bingoscape-next/discussions)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/bingoscape/bingoscape/issues)
+- **GitHub Discussions**: [Community discussions and support](https://github.com/bingoscape/bingoscape/discussions)
 - **Discord**: [Join our community server](https://discord.gg/bingoscape)

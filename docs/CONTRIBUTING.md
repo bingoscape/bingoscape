@@ -1,526 +1,325 @@
 # Contributing to BingoScape Next
 
-We welcome contributions to BingoScape Next! This guide will help you get started with contributing to our OSRS bingo management platform.
+This guide covers how to set up the project, the conventions to follow, and how changes are reviewed. Coding conventions live in [AGENTS.md](../AGENTS.md). This document does not repeat them in full.
 
 ## Table of Contents
 
-- [Getting Started](#getting-started)
+- [Prerequisites](#prerequisites)
 - [Development Setup](#development-setup)
 - [Code Standards](#code-standards)
 - [Contribution Process](#contribution-process)
-- [Testing Guidelines](#testing-guidelines)
+- [Testing](#testing)
 - [Database Changes](#database-changes)
 - [Documentation](#documentation)
-- [Community Guidelines](#community-guidelines)
+- [Getting Help](#getting-help)
 
-## Getting Started
+## Prerequisites
 
-### Prerequisites
-
-Before contributing, ensure you have:
-
-- **Node.js 18+** (LTS recommended)
-- **PostgreSQL 14+** (or Docker for local development)
-- **Git** (latest version)
-- **GitHub account** with SSH keys configured
-
-### Areas for Contribution
-
-We welcome contributions in these areas:
-
-- 🐛 **Bug Fixes** - Resolve issues and improve stability
-- ✨ **New Features** - Enhance the bingo management system
-- 🎨 **UI/UX Improvements** - Enhance user experience and accessibility
-- 📚 **Documentation** - Improve guides, API docs, and code comments
-- 🧪 **Testing** - Add unit tests and E2E test coverage
-- 🔧 **Performance** - Optimize queries, reduce bundle size, improve loading
-- 🌐 **RuneLite Plugin** - Enhance game client integration
-- 🛡️ **Security** - Identify and fix security vulnerabilities
+- Node.js 24 and npm
+- PostgreSQL 18, either installed locally or started with Docker
+- Docker. `npm test` and `npm run test:e2e` start a PostgreSQL container through Testcontainers, so Docker must be running.
+- Git and a GitHub account
+- A Discord application for OAuth (`DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` are required by `src/env.js`)
 
 ## Development Setup
 
-### 1. Fork and Clone
+1. Fork the repository on GitHub, then clone your fork and add the upstream remote.
 
-```bash
-# Fork the repository on GitHub, then clone your fork
-git clone git@github.com:YOUR_USERNAME/bingoscape-next.git
-cd bingoscape-next
+   ```bash
+   git clone git@github.com:YOUR_USERNAME/bingoscape.git
+   cd bingoscape
+   git remote add upstream git@github.com:bingoscape/bingoscape.git
+   ```
 
-# Add upstream remote
-git remote add upstream git@github.com:bingoscape/bingoscape-next.git
-```
+2. Install dependencies.
 
-### 2. Install Dependencies
+   ```bash
+   npm install
+   ```
 
-```bash
-npm install
-```
+3. Create the environment file. The npm scripts load `.env` through `env-cmd`.
 
-### 3. Environment Setup
+   ```bash
+   cp .env.example .env
+   ```
 
-```bash
-# Copy environment template
-cp .env.example .env.local
+   Required variables: `DATABASE_URL`, `NEXTAUTH_URL`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`. `NEXTAUTH_SECRET` is required only when `NODE_ENV=production`. The full list is in the Configuration section of the [README](../README.md#configuration).
 
-# Edit .env.local with your configuration
-# Minimum required: DATABASE_URL, NEXTAUTH_SECRET, Discord OAuth
-```
+4. Start a database and apply the migrations.
 
-### 4. Database Setup
+   ```bash
+   # Option A: local PostgreSQL
+   createdb bingoscape
 
-**Option A: Local PostgreSQL**
+   # Option B: only the postgres service from docker-compose.yml
+   # (user postgres, password postgres, database bingoscape)
+   docker compose up -d postgres
 
-```bash
-# Install PostgreSQL locally, then:
-createdb bingoscape-next
-npm run db:migrate
-```
+   npm run db:migrate
+   ```
 
-**Option B: Docker**
+   Set `DATABASE_URL` in `.env` to match the database you chose. `./start-database.sh` is a third option that starts a standalone container using the credentials from `.env`.
 
-```bash
-# Start PostgreSQL with Docker
-docker-compose up -d
-npm run db:migrate
-```
+5. Start the development server and open http://localhost:3000.
 
-### 5. Start Development Server
+   ```bash
+   npm run dev
+   ```
 
-```bash
-npm run dev
-```
+6. Check the setup.
 
-Visit [http://localhost:3000](http://localhost:3000) to see the application.
-
-### 6. Verify Setup
-
-```bash
-# Run tests to ensure everything works
-npm run test
-npm run lint
-```
+   ```bash
+   npm run lint
+   npx tsc --noEmit
+   npm test
+   ```
 
 ## Code Standards
 
-### TypeScript Guidelines
+The authoritative rules are in [AGENTS.md](../AGENTS.md). Domain vocabulary (Event, Team, Board, Tile, Blind Tile, Submission, Goal, Tier) is defined in [CONTEXT.md](../CONTEXT.md). Use these terms in code, UI text and commit messages. The database calls a Board `bingos`.
 
-- **Strict Mode**: All code must pass TypeScript strict checks
-- **No `any` Types**: Use proper typing or `unknown` with type guards
-- **Type Exports**: Export types alongside implementations
-- **Interface Naming**: Use descriptive names (e.g., `EventData`, `BingoTile`)
+### Formatting and linting
+
+- Prettier (`prettier.config.js`) with `prettier-plugin-tailwindcss`: 2-space indentation, no semicolons, double quotes, trailing commas where valid in ES5 (`trailingComma: "es5"`), print width 80, LF line endings. Tailwind classes are sorted by the plugin.
+- Linting uses [oxlint](https://oxc.rs/docs/guide/usage/linter) (`.oxlintrc.json`) with the rules of the former Next.js `core-web-vitals` and TypeScript ESLint presets: React, React Hooks (including the React Compiler rules), Next.js, jsx-a11y, import and typescript-eslint rules. Unused variables warn unless the name starts with `_`. Warnings are allowed, errors fail the lint run. oxlint is not type-aware. Two RBAC guard rails live in a local oxlint JS plugin (`tools/oxlint/rbac-plugin.mjs`, enabled in `.oxlintrc.json`; JS plugins are alpha): `rbac/no-role-comparison` (no `"admin"` / `"management"` comparisons outside `src/lib/authz`, `src/server/authz`, the schema and tests) and `rbac/user-relation-columns` (a `user`/`creator`/`reviewer`/`author` relation in a Drizzle `with:` needs explicit `columns`).
+- In the editor, install the oxlint extension (VS Code: `oxc.oxc-vscode`) to see lint results while typing.
+- Run `npm run lint -- --fix` after making changes and `npx tsc --noEmit` before opening a pull request.
+- Do not bypass oxlint or the type checker with `oxlint-disable` / `eslint-disable` comments or `@ts-ignore` unless it is a known false positive. A suppression needs a justification comment next to it. oxlint honors both comment styles; the existing suppressions still use `eslint-disable` with the ESLint rule names (`react-hooks/*`, `@typescript-eslint/*`).
+
+### TypeScript
+
+- Strict mode with `noUncheckedIndexedAccess`. Handle `undefined` from indexed access.
+- Avoid `any`. Use proper types, or `unknown` with a type guard.
+- Use Drizzle inference: `typeof table.$inferInsert` and `typeof table.$inferSelect`.
+- Use `import type` for type-only imports and the `@/` alias for internal imports.
+- Generate ids with `nanoid()`.
+- Store monetary values (buy-ins, donations) as `bigint`.
+- TypeScript 7 (the native compiler) is the single `typescript` dev dependency. `tsc`, `next build` and `npx tsc --noEmit` all use it. It does not ship the JavaScript compiler API, so tools that need that API (typescript-eslint, ts-node) must not be added; this is why linting uses oxlint and the Jest config is a plain `jest.config.mjs`.
+- The `next` TypeScript language-service plugin in `tsconfig.json` is not loaded by TypeScript 7 (no plugin API). Next.js re-adds the entry on every build, so leave it in place.
+
+### Naming and structure
+
+- File names are kebab-case (`event-card.tsx`). Components are PascalCase, functions and variables are camelCase.
+- shadcn/ui primitives live in `src/components/ui/`. Business components live in `src/components/`.
+- Use `cn()` from `@/lib/utils` to merge class names.
+- Props use an `interface ComponentNameProps { ... }`.
+
+### Data fetching and state
+
+- Fetch data in Server Components with direct Drizzle queries and pass it to Client Components as props. Client-side fetching in `useEffect` is not allowed, except for polling or real-time updates.
+- Keep client state minimal: `useState` or `useReducer` for transient UI state, URL search parameters for state that is shared or bookmarked.
+- Global state managers (Redux, Zustand and similar) are not allowed.
+
+### Server actions
+
+Server actions live in `src/app/actions/` with the `"use server"` directive. They follow this pattern:
+
+- Authenticate and authorize first, using the helpers in `src/server/authz.ts` (for example `requireBingoAdmin`, `requireEventManager`, `assertTeamLeaderOrManager`). The helpers derive the Event from the database. Never trust an `eventId` sent by the client.
+- Validate inputs and return early with an error object.
+- Run all mutations inside `db.transaction()`.
+- Call `revalidatePath()` for the affected pages after a successful mutation.
+- Return `{ success: boolean, error?: string }` and do not throw. Log unexpected errors with `logger` from `@/lib/logger`.
 
 ```typescript
-// ✅ Good
-interface CreateEventData {
+"use server"
+
+import { eq } from "drizzle-orm"
+import { revalidatePath } from "next/cache"
+
+import { db } from "@/server/db"
+import { AuthzError, requireBingoAdmin } from "@/server/authz"
+import { bingos } from "@/server/db/schema"
+import { logger } from "@/lib/logger"
+
+type ActionResult = { success: boolean; error?: string }
+
+export async function renameBingo(
+  bingoId: string,
   title: string
-  startDate: Date
-  endDate: Date
-}
+): Promise<ActionResult> {
+  if (title.trim().length === 0) {
+    return { success: false, error: "Title is required" }
+  }
 
-export async function createEvent(
-  data: CreateEventData
-): Promise<ActionResult<Event>> {
-  // Implementation
-}
-
-// ❌ Bad
-export async function createEvent(data: any) {
-  // Implementation
-}
-```
-
-### Code Formatting
-
-We use **ESLint** and **Prettier** for consistent code formatting:
-
-```bash
-# Format code
-npm run lint:fix
-
-# Check formatting
-npm run lint
-```
-
-**Key Rules:**
-
-- 2-space indentation
-- Semicolons required
-- Single quotes for strings
-- Trailing commas in objects/arrays
-- No unused variables or imports
-
-### Component Guidelines
-
-**React Components:**
-
-```typescript
-// ✅ Good - Proper typing and component structure
-interface BingoTileProps {
-  tile: TileData
-  onSubmit: (tileId: string) => Promise<void>
-  isDisabled?: boolean
-}
-
-export function BingoTile({ tile, onSubmit, isDisabled = false }: BingoTileProps) {
-  return (
-    <div className="relative rounded-lg border-2 border-border">
-      {/* Component implementation */}
-    </div>
-  )
-}
-```
-
-**Server Actions:**
-
-```typescript
-// ✅ Good - Proper error handling and typing
-export async function createBingo(
-  formData: FormData
-): Promise<ActionResult<Bingo>> {
   try {
-    const validatedData = createBingoSchema.parse({
-      title: formData.get("title"),
-      eventId: formData.get("eventId"),
+    const eventId = await requireBingoAdmin(bingoId)
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(bingos)
+        .set({ title: title.trim() })
+        .where(eq(bingos.id, bingoId))
     })
 
-    const [bingo] = await db.insert(bingos).values(validatedData).returning()
-
-    revalidatePath(`/events/${validatedData.eventId}`)
-    return { success: true, data: bingo }
+    revalidatePath(`/events/${eventId}`, "layout")
+    return { success: true }
   } catch (error) {
-    console.error("Error creating bingo:", error)
-
-    if (error instanceof z.ZodError) {
-      return { success: false, error: "Invalid input data" }
+    if (error instanceof AuthzError) {
+      return { success: false, error: error.message }
     }
-
-    return { success: false, error: "Failed to create bingo" }
+    logger.error({ error, bingoId }, "Error renaming bingo")
+    return { success: false, error: "Failed to rename bingo" }
   }
 }
 ```
 
-### Database Guidelines
+A complete real example is `saveTeamShipPlacements` in `src/app/actions/battleship.ts`.
 
-**Schema Changes:**
+### Client components
 
-- Use Drizzle ORM for all database operations
-- Create migrations for schema changes
-- Include relations for complex queries
-- Use proper indexing for performance
+- Wrap async calls in `try`/`catch` and show failures with `toast()` from `@/hooks/use-toast` using `variant: "destructive"`.
+- Prefer optimistic UI updates.
 
-**Query Patterns:**
+### Database queries
 
-```typescript
-// ✅ Good - Use relations for complex queries
-const bingo = await db.query.bingos.findFirst({
-  where: eq(bingos.id, bingoId),
-  with: {
-    tiles: {
-      with: {
-        goals: true,
-        teamTileSubmissions: {
-          where: eq(teamTileSubmissions.teamId, teamId),
-        },
-      },
-    },
-  },
-})
-
-// ❌ Bad - Multiple separate queries
-const bingo = await db.select().from(bingos).where(eq(bingos.id, bingoId))
-const tiles = await db.select().from(tiles).where(eq(tiles.bingoId, bingoId))
-```
+Use Drizzle relational queries (`db.query.<table>.findFirst` with `with`) instead of several separate queries when you need related rows.
 
 ## Contribution Process
 
-### 1. Planning
+### Planning
 
-**For Bug Fixes:**
+- Check existing issues first. Open one if none exists and discuss the approach there.
+- For new features, open an issue or discussion and wait for maintainer feedback before starting. Consider breaking changes, in particular for the RuneLite API, which must stay backward compatible.
 
-- Check existing issues to avoid duplicates
-- Create issue if one doesn't exist
-- Discuss approach in issue comments
+### Branches
 
-**For New Features:**
-
-- Open issue or discussion first
-- Wait for maintainer approval before starting
-- Consider breaking changes and backwards compatibility
-
-### 2. Development Workflow
+Branch from an up-to-date `main`. Branch names follow the history: `feat/<topic>` and `fix/<topic>`, for example `feat/battleship-board` and `fix/tier-board-edits`.
 
 ```bash
-# 1. Update your fork
 git checkout main
 git pull upstream main
-git push origin main
+git checkout -b feat/your-topic
 
-# 2. Create feature branch
-git checkout -b feature/your-feature-name
-# or
-git checkout -b fix/issue-description
-
-# 3. Make your changes
-# ... code, test, commit ...
-
-# 4. Keep branch updated
+# keep the branch current
 git fetch upstream
 git rebase upstream/main
-
-# 5. Push changes
-git push origin feature/your-feature-name
 ```
 
-### 3. Commit Messages
+### Commit messages
 
-Use [Conventional Commits](https://www.conventionalcommits.org/) format:
+Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): description`.
+
+```
+feat(battleship): add the ship placement page
+fix(tiers): unlock the next tier after board edits
+fix(authz): scope reads and writes to the event
+feat(runelite): check access, rate-limit and ETag the board endpoint
+test(progression): cover tier visibility and the submit gate
+docs(changelog): add the RuneLite 2.1 changes
+perf(api-auth): write apiKeys.lastUsed at most once a minute
+```
+
+Types in use: `feat`, `fix`, `docs`, `test`, `perf`, `refactor`, `chore`. Scopes are free-form and name the area of the change. Frequent scopes in the history: `battleship`, `runelite`, `goals`, `tiers`, `progression`, `authz`, `board`, `readme`, `changelog`, `api`.
+
+### Pull requests
+
+CI (`.github/workflows/ci-cd.yml`) runs on every pull request to `main`: lint, `npx tsc --noEmit`, `npm test`, `docker compose config -q`, and a Docker build of the `runner` and `migrator` images. CI does not run the Playwright tests. Run them locally when your change affects user flows.
+
+Before opening a pull request, run:
 
 ```bash
-# Format: type(scope): description
-
-feat(bingo): add progression tier unlocking system
-fix(api): resolve race condition in submission uploads
-docs(readme): add RuneLite plugin setup instructions
-test(events): add integration tests for event creation
-style(ui): improve button hover states and animations
-refactor(db): optimize bingo query performance
-chore(deps): update Next.js to version 14.2.4
+npm run lint -- --fix
+npx tsc --noEmit
+npm test            # Docker must be running
+npm run test:e2e    # when user flows change; Docker and Chrome required
+npm run build:ci
 ```
 
-**Types:** `feat`, `fix`, `docs`, `test`, `style`, `refactor`, `chore`
+In the pull request:
 
-### 4. Pull Request Process
+- Use a descriptive title in Conventional Commits style and explain the motivation.
+- Reference related issues, for example `Fixes #123`.
+- Include screenshots for UI changes.
+- Add or update tests. Bug fixes need a regression test.
+- Update the documentation and the `[Unreleased]` section of [CHANGELOG.md](../CHANGELOG.md) when behavior changes.
+- State whether the change includes a database migration.
 
-**Before Submitting:**
-
-```bash
-# Run full test suite
-npm run test
-npm run test:e2e
-
-# Check code quality
-npm run lint
-npm run type-check
-
-# Build successfully
-npm run build
-```
-
-**PR Requirements:**
-
-- Descriptive title and description
-- Reference related issues (e.g., "Fixes #123")
-- Include screenshots for UI changes
-- Add tests for new functionality
-- Update documentation if needed
-
-**PR Template:**
-
-```markdown
-## Description
-
-Brief description of changes and motivation.
-
-## Type of Change
-
-- [ ] Bug fix (non-breaking change)
-- [ ] New feature (non-breaking change)
-- [ ] Breaking change (fix/feature that causes existing functionality to change)
-- [ ] Documentation update
+There is no pull request template in `.github/`. At least one maintainer review is required.
 
 ## Testing
 
-- [ ] Unit tests pass (`npm run test`)
-- [ ] E2E tests pass (`npm run test:e2e`)
-- [ ] Manual testing completed
+### Unit and integration tests (Jest)
 
-## Screenshots (if applicable)
-
-Add screenshots for UI changes.
-
-## Related Issues
-
-Fixes #(issue number)
-```
-
-### 5. Review Process
-
-- All PRs require at least one review from maintainers
-- Address review feedback promptly
-- Keep discussions focused and constructive
-- Be patient - reviews may take a few days
-
-## Testing Guidelines
-
-### Unit Tests (Jest)
-
-**Location:** `src/**/__tests__/` or `*.test.ts` files
+- Run with `npm test`. Run one file with `npm test -- <path>`, or filter with `npm test -- --testNamePattern="<pattern>"`.
+- Test files match `**/__tests__/**/*.test.[jt]s?(x)` and sit next to the code, for example `src/app/actions/__tests__/` and `src/components/__tests__/`.
+- Jest global setup starts a `postgres:15-alpine` container (`jest.global-setup.ts`) and sets `DATABASE_URL` for the run.
+- `@/env` and `@t3-oss/env-nextjs` are replaced by the mocks in `src/__mocks__/`.
+- Server action tests usually mock `@/server/auth`, `@/server/db`, `next/cache` and `@/lib/logger` with `jest.mock()`. Use `@jest-environment node` for server code. See `src/app/actions/__tests__/bingo-authz.test.ts`.
+- Mock the current date when a test depends on it.
+- Use `screen.getBy*` for positive assertions in component tests.
 
 ```typescript
-// Example component test
-import { render, screen } from '@testing-library/react'
-import { BingoTile } from '../bingo-tile'
+/**
+ * @jest-environment node
+ */
+import { getServerAuthSession } from "@/server/auth"
+import { renameBingo } from "@/app/actions/bingo-rename"
 
-describe('BingoTile', () => {
-  it('renders tile title correctly', () => {
-    const mockTile = {
-      id: '1',
-      title: 'Kill Zulrah',
-      description: 'Defeat Zulrah once'
-    }
+jest.mock("@/server/auth", () => ({ getServerAuthSession: jest.fn() }))
+jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
+jest.mock("@/lib/logger", () => ({
+  logger: { error: jest.fn(), info: jest.fn(), warn: jest.fn() },
+}))
 
-    render(<BingoTile tile={mockTile} />)
+const session = getServerAuthSession as jest.Mock
 
-    expect(screen.getByText('Kill Zulrah')).toBeInTheDocument()
+describe("renameBingo", () => {
+  it("rejects a signed-out caller", async () => {
+    session.mockResolvedValue(null)
+
+    const result = await renameBingo("bingo-1", "New title")
+
+    expect(result).toEqual({ success: false, error: "Unauthorized" })
   })
 })
 ```
 
-**Server Action Tests:**
+The module `bingo-rename` above is illustrative. A signed-out caller gets `Unauthorized` from `requireSession` in `src/server/authz.ts`.
 
-```typescript
-// Example server action test
-import { createBingo } from "../bingo"
+### End-to-end tests (Playwright)
 
-describe("createBingo", () => {
-  it("creates bingo with valid data", async () => {
-    const formData = new FormData()
-    formData.append("title", "Test Bingo")
-    formData.append("eventId", "event-1")
+- Run with `npm run test:e2e` (`test:e2e:ui` and `test:e2e:headed` are also available). Specs live in `tests/`.
+- `tests/global.setup.ts` starts a PostgreSQL container, pushes the schema, and starts the app on `http://localhost:3001`. The tests use Chrome.
+- `setupAuthBypass(page)` in `tests/utils/auth.ts` inserts a user in the database and signs in through the sign-in form with username and password, so no OAuth provider is needed. `tests/utils/seed-event.ts` seeds event data.
 
-    const result = await createBingo(formData)
+### Expectations
 
-    expect(result.success).toBe(true)
-    expect(result.data.title).toBe("Test Bingo")
-  })
-})
-```
-
-### E2E Tests (Playwright)
-
-**Location:** `tests/` directory
-
-```typescript
-// Example E2E test
-import { test, expect } from "@playwright/test"
-
-test("user can create new bingo event", async ({ page }) => {
-  await page.goto("/events")
-
-  await page.click("text=Create Event")
-  await page.fill('[name="title"]', "Test Event")
-  await page.fill('[name="description"]', "Test Description")
-  await page.click('button[type="submit"]')
-
-  await expect(page.locator("text=Test Event")).toBeVisible()
-})
-```
-
-### Test Requirements
-
-- **New Features**: Must include unit tests
-- **Bug Fixes**: Must include regression tests
-- **Server Actions**: Must test both success and error cases
-- **Components**: Must test key functionality and edge cases
-- **API Endpoints**: Must test authentication and validation
+- New behavior includes tests.
+- Server actions: test the success path, validation errors and the authorization failure, and check that nothing is written when the call is rejected.
+- API routes: test authentication, access checks and validation.
 
 ## Database Changes
 
-### Schema Migrations
+1. Edit `src/server/db/schema.ts`. Tables are created with `createTable`, which prefixes names with `bingoscape-next_`.
+2. Generate the migration with `npm run db:generate`.
+3. Review the generated SQL in `drizzle/` and commit it together with the schema change.
+4. Apply it locally with `npm run db:migrate`.
 
-When modifying the database schema:
+Rules:
 
-```bash
-# 1. Update schema.ts
-# Edit src/server/db/schema.ts
-
-# 2. Generate migration
-npm run db:generate
-
-# 3. Review generated SQL
-# Check drizzle/ directory for new migration files
-
-# 4. Test migration
-npm run db:migrate
-
-# 5. Update seed data if needed
-# Edit any seed scripts or test fixtures
-```
-
-### Migration Guidelines
-
-- **Backwards Compatibility**: Avoid breaking changes when possible
-- **Data Migration**: Include data migration scripts for complex changes
-- **Rollback Plan**: Document how to rollback if needed
-- **Testing**: Test migrations on copy of production data
+- Never use `npm run db:push` against production. It runs with `--force` and can delete data. Production uses `db:migrate`.
+- Migrations run on every deploy, before the new app version starts. A rollback restores the previous app image but does not revert the database. A migration must therefore stay compatible with the previous app version: add columns and tables first, and remove or rename them in a later release.
+- Take a backup before risky data changes (`./scripts/backup-db.sh`). Details are in the Database section of the [README](../README.md#database).
+- Wrap mutations in `db.transaction()`. Financial operations (buy-ins, donations) always use transactions.
 
 ## Documentation
 
-### When to Update Documentation
+Update documentation in the same pull request as the code change.
 
-**Required Updates:**
+| Change                              | Update                                                                                             |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------- |
+| New feature or setup change         | [README.md](../README.md)                                                                          |
+| RuneLite or web API change          | [docs/API.md](API.md) and `src/app/api/runelite/docs/route.ts`                                     |
+| New or changed environment variable | `src/env.js` (if validated), `.env.example`, README Configuration                                  |
+| User-visible change                 | `[Unreleased]` in [CHANGELOG.md](../CHANGELOG.md), Keep a Changelog format (Added, Changed, Fixed) |
+| New domain term                     | [CONTEXT.md](../CONTEXT.md)                                                                        |
+| Deployment, CI or secrets change    | [docs/GITHUB-ACTIONS.md](GITHUB-ACTIONS.md) and [docs/GITHUB-SECRETS.md](GITHUB-SECRETS.md)        |
 
-- New features or API changes → Update README, API docs
-- Configuration changes → Update .env.example, setup guides
-- Database changes → Update schema documentation
-- Bug fixes → Update troubleshooting guides
+## Getting Help
 
-### Documentation Standards
+- Questions: [GitHub Discussions](https://github.com/bingoscape/bingoscape/discussions)
+- Bugs and feature requests: [GitHub Issues](https://github.com/bingoscape/bingoscape/issues)
+- Chat: [Discord](https://discord.gg/bingoscape)
+- Issues labeled `good first issue` and `help wanted` are good starting points.
 
-- **Clear and Concise**: Write for developers of all levels
-- **Code Examples**: Include working examples
-- **Up-to-Date**: Keep documentation current with code changes
-- **Consistent Style**: Follow existing documentation patterns
-
-## Community Guidelines
-
-### Code of Conduct
-
-- **Be Respectful**: Treat all contributors with respect
-- **Be Inclusive**: Welcome newcomers and different perspectives
-- **Be Constructive**: Provide helpful feedback and suggestions
-- **Be Patient**: Understand that everyone has different experience levels
-
-### Communication Channels
-
-- **GitHub Issues**: Bug reports and feature requests
-- **GitHub Discussions**: General questions and discussions
-- **Discord**: Real-time community chat
-- **Pull Requests**: Code review and technical discussions
-
-### Getting Help
-
-**Stuck on Setup?**
-
-- Check existing issues and discussions
-- Ask in Discord #development channel
-- Create GitHub discussion with setup details
-
-**Need Code Review?**
-
-- Keep PRs focused and reasonably sized
-- Explain complex changes in PR description
-- Be responsive to feedback
-
-**Want to Contribute but Don't Know Where to Start?**
-
-- Check issues labeled `good first issue`
-- Look for `help wanted` labels
-- Ask in Discord what areas need help
-
-## Recognition
-
-Contributors are recognized in several ways:
-
-- **Contributors List**: Added to README.md
-- **Changelog**: Major contributions noted in releases
-- **Discord Role**: Special contributor role in community server
-- **Early Access**: Beta features and preview releases
-
-## Questions?
-
-- **General Questions**: [GitHub Discussions](https://github.com/bingoscape/bingoscape-next/discussions)
-- **Bug Reports**: [GitHub Issues](https://github.com/bingoscape/bingoscape-next/issues)
-- **Real-time Chat**: [Discord Community](https://discord.gg/bingoscape)
-
-Thank you for contributing to BingoScape Next! 🎯
+Be respectful and constructive in issues, reviews and discussions.
