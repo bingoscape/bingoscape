@@ -171,44 +171,53 @@ export function EventCommandPalette({
     },
   ]
 
-  // Team draft: the room (and its recap) for members, setup for managers.
+  // Team draft: the room for every member (also before a draft exists: it
+  // waits), its recap, and setup for managers.
   if (draft?.canView) {
-    if (draft.status === null) {
-      if (draft.canManage) {
-        actions.push({
-          id: "draft-setup",
-          icon: Swords,
-          label: "Set Up Team Draft",
-          description: "Let captains pick players into teams",
-          href: `/events/${eventId}/draft/setup`,
-          category: "participants",
-          keywords: ["draft", "team", "captain", "pick", "setup"],
-        })
-      }
-    } else {
+    if (draft.status === null && draft.canManage) {
       actions.push({
-        id: "draft",
+        id: "draft-setup",
         icon: Swords,
-        label: "Team Draft",
-        description:
-          draft.status === "in_progress"
-            ? "The draft is live: watch the picks"
-            : "Open the draft room",
-        href: `/events/${eventId}/draft`,
+        label: "Set Up Team Draft",
+        description: "Let captains pick players into teams",
+        href: `/events/${eventId}/draft/setup`,
         category: "participants",
-        keywords: ["draft", "team", "captain", "pick", "live", "spectate"],
+        keywords: ["draft", "team", "captain", "pick", "setup"],
       })
-      if (draft.status === "complete") {
-        actions.push({
-          id: "draft-recap",
-          icon: Trophy,
-          label: "Team Draft Recap",
-          description: "Final rosters, pick history and share image",
-          href: `/events/${eventId}/draft/recap`,
-          category: "participants",
-          keywords: ["draft", "recap", "rosters", "history", "share", "image"],
-        })
-      }
+    }
+    const finished = draft.status === "complete"
+    actions.push({
+      id: "draft",
+      icon: Swords,
+      label: finished ? "Team Draft" : "Join Live Draft",
+      description:
+        draft.status === "in_progress"
+          ? "The draft is live: watch the picks"
+          : draft.status === null
+            ? "Wait in the draft room: it opens when the draft is set up"
+            : "Open the draft room",
+      href: `/events/${eventId}/draft`,
+      category: "participants",
+      keywords: [
+        "draft",
+        "team",
+        "captain",
+        "pick",
+        "live",
+        "spectate",
+        "join",
+      ],
+    })
+    if (finished) {
+      actions.push({
+        id: "draft-recap",
+        icon: Trophy,
+        label: "Team Draft Recap",
+        description: "Final rosters, pick history and share image",
+        href: `/events/${eventId}/draft/recap`,
+        category: "participants",
+        keywords: ["draft", "recap", "rosters", "history", "share", "image"],
+      })
     }
   }
 
@@ -372,14 +381,14 @@ export function EventCommandPalette({
           <DialogTitle className="sr-only">
             Quick Actions Command Palette
           </DialogTitle>
-          <div className="relative flex items-center border-b bg-background">
-            <Search className="pointer-events-none absolute left-4 h-4 w-4 text-muted-foreground" />
+          <div className="bg-background relative flex items-center border-b">
+            <Search className="text-muted-foreground pointer-events-none absolute left-4 h-4 w-4" />
             <Input
               placeholder="Search actions or use keywords..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="h-12 border-0 pl-11 pr-20 text-base focus-visible:ring-0 focus-visible:ring-offset-0 sm:h-14"
+              className="h-12 border-0 pr-20 pl-11 text-base focus-visible:ring-0 focus-visible:ring-offset-0 sm:h-14"
               autoFocus
             />
             {search && (
@@ -395,14 +404,14 @@ export function EventCommandPalette({
             )}
           </div>
 
-          <div className="max-h-[min(400px,calc(100dvh-8rem))] overflow-y-auto overflow-x-hidden">
+          <div className="max-h-[min(400px,calc(100dvh-8rem))] overflow-x-hidden overflow-y-auto">
             {filteredActions.length === 0 ? (
               <div className="px-4 py-12 text-center">
-                <Search className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
-                <p className="mb-1 text-sm font-medium text-foreground">
+                <Search className="text-muted-foreground/50 mx-auto mb-3 h-12 w-12" />
+                <p className="text-foreground mb-1 text-sm font-medium">
                   No actions found
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Try searching with different keywords
                 </p>
               </div>
@@ -420,7 +429,7 @@ export function EventCommandPalette({
                       {!search && (
                         <div className="mb-1 px-3 py-2">
                           <h3
-                            className={`text-xs font-semibold uppercase tracking-wider ${metadata.color}`}
+                            className={`text-xs font-semibold tracking-wider uppercase ${metadata.color}`}
                           >
                             {metadata.label}
                           </h3>
@@ -469,7 +478,7 @@ export function EventCommandPalette({
                                   </div>
                                   {/* Only show description when not searching */}
                                   {!search && action.description && (
-                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                    <p className="text-muted-foreground mt-0.5 text-xs">
                                       {action.description}
                                     </p>
                                   )}
@@ -517,7 +526,7 @@ export function EventCommandPalette({
                               </div>
                               {/* Only show description when not searching */}
                               {!search && action.description && (
-                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                <p className="text-muted-foreground mt-0.5 text-xs">
                                   {action.description}
                                 </p>
                               )}
@@ -538,8 +547,8 @@ export function EventCommandPalette({
             )}
           </div>
 
-          <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-3">
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="bg-muted/30 flex items-center justify-between border-t px-4 py-3">
+            <div className="text-muted-foreground flex items-center gap-3 text-xs">
               <span className="flex items-center gap-1.5">
                 <Kbd>↑↓</Kbd>
                 Navigate
@@ -553,7 +562,7 @@ export function EventCommandPalette({
                 Close
               </span>
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-xs">
               {filteredActions.length}{" "}
               {filteredActions.length === 1 ? "action" : "actions"}
             </div>

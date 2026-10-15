@@ -38,7 +38,7 @@ function open(draft?: {
 describe("EventCommandPalette: team draft", () => {
   it("offers the draft room when the Event has a draft", () => {
     open({ status: "in_progress", canView: true, canManage: false })
-    expect(screen.getByText("Team Draft")).toBeInTheDocument()
+    expect(screen.getByText("Join Live Draft")).toBeInTheDocument()
     expect(
       screen.getByText("The draft is live: watch the picks")
     ).toBeInTheDocument()
@@ -50,22 +50,25 @@ describe("EventCommandPalette: team draft", () => {
     open({ status: "complete", canView: true, canManage: false })
     expect(screen.getByText("Team Draft")).toBeInTheDocument()
     expect(screen.getByText("Team Draft Recap")).toBeInTheDocument()
+    expect(screen.queryByText("Join Live Draft")).not.toBeInTheDocument()
   })
 
-  it("offers setup to a manager when there is no draft", () => {
+  it("offers setup and the room to a manager when there is no draft", () => {
     open({ status: null, canView: true, canManage: true })
     expect(screen.getByText("Set Up Team Draft")).toBeInTheDocument()
-    expect(screen.queryByText("Team Draft")).not.toBeInTheDocument()
+    expect(screen.getByText("Join Live Draft")).toBeInTheDocument()
   })
 
-  it("offers nothing without a draft to someone who cannot manage it", () => {
+  it("lets a member wait in the room when there is no draft yet", () => {
     open({ status: null, canView: true, canManage: false })
-    expect(screen.queryByText(/Team Draft/)).not.toBeInTheDocument()
+    expect(screen.getByText("Join Live Draft")).toBeInTheDocument()
+    expect(screen.queryByText("Set Up Team Draft")).not.toBeInTheDocument()
   })
 
   it("offers nothing to someone who cannot view the draft", () => {
     open({ status: "in_progress", canView: false, canManage: false })
     expect(screen.queryByText(/Team Draft/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Live Draft/)).not.toBeInTheDocument()
   })
 
   it("finds the draft by searching for it", () => {
@@ -73,7 +76,7 @@ describe("EventCommandPalette: team draft", () => {
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "spectate" },
     })
-    expect(screen.getByText("Team Draft")).toBeInTheDocument()
+    expect(screen.getByText("Join Live Draft")).toBeInTheDocument()
     expect(screen.queryByText("Event Statistics")).not.toBeInTheDocument()
   })
 })

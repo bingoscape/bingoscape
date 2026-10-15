@@ -1,9 +1,8 @@
-import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import { Breadcrumbs } from "@/components/breadcrumbs"
+import { DraftLobby } from "@/components/draft/draft-lobby"
 import { DraftRoom } from "@/components/draft/draft-room"
-import { Button } from "@/components/ui/button"
 import { getServerAuthSession } from "@/server/auth"
 import { getEventCapabilities } from "@/server/authz"
 import { settleExpiredDraft } from "@/server/draft/expire"
@@ -12,8 +11,10 @@ import { getEventById } from "@/server/queries/events"
 
 /**
  * The team draft room, for every member of the Event. The Server Component
- * loads the snapshot; `DraftRoom` keeps it current by polling the state
- * endpoint and calling `router.refresh()`.
+ * loads the snapshot; `DraftRoom` keeps it current (stream, polling as the
+ * fallback) and calls `router.refresh()` when the draft changes phase. Without
+ * a draft the page is a waiting room (`DraftLobby`) that refreshes itself when
+ * one is created.
  */
 export default async function EventDraftPage(props: {
   params: Promise<{ id: string }>
@@ -56,16 +57,7 @@ export default async function EventDraftPage(props: {
           initialQueue={initialQueue}
         />
       ) : (
-        <div className="rounded-sm border border-dashed p-8 text-center">
-          <p className="text-muted-foreground mb-4">
-            This event has no team draft.
-          </p>
-          {capabilities.canManageDraft && (
-            <Button asChild>
-              <Link href={`/events/${id}/draft/setup`}>Set up a draft</Link>
-            </Button>
-          )}
-        </div>
+        <DraftLobby eventId={id} canManage={capabilities.canManageDraft} />
       )}
     </main>
   )
