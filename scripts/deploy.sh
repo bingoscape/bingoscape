@@ -229,6 +229,19 @@ registry_login
 dc pull app migrate
 registry_logout
 
+# The chown in step 1 needs root or passwordless sudo and is best effort. If a
+# data directory is still not owned by UID 1001 the app cannot write to it (the
+# wiki image cache then answers 502), so fix it from a one-shot container that
+# runs as root and mounts the same volumes.
+needs_chown=0
+for data_dir in uploads osrs-image-cache; do
+    [ "$(stat -c %u "$APP_DIR/$data_dir" 2> /dev/null || echo 1001)" = "1001" ] || needs_chown=1
+done
+if [ "$needs_chown" = "1" ]; then
+    log "Fixing data directory ownership (UID 1001)"
+    dc run --rm --no-deps -T --user root --entrypoint chown app 1001:1001         /app/public/uploads /app/data/osrs-images         || log "WARNING: could not chown the data directories; run: sudo chown 1001:1001 $APP_DIR/uploads $APP_DIR/osrs-image-cache"
+fi
+
 # --- 4. pre-deploy backup -----------------------------------------------------
 if [ -n "$(docker ps -q --filter 'name=^bingoscape-postgres$' --filter status=running)" ]; then
     log "Creating pre-deploy database backup"
