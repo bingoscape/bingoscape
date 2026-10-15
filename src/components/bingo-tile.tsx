@@ -12,7 +12,7 @@ import {
 } from "@/lib/battleship-marks"
 import getRandomFrog from "@/lib/getRandomFrog"
 import { getTileTeamStatus } from "@/lib/tile-status"
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 
 interface BingoTileProps {
   tile: Tile
@@ -234,7 +234,7 @@ export const BingoTile = React.memo(function BingoTile({
           {tile.headerImage ? (
             <Image
               unoptimized
-              src={tile.headerImage || getRandomFrog()}
+              src={getOptimizedImageUrl(tile.headerImage || getRandomFrog())}
               alt=""
               fill
               sizes="120px"

@@ -23,7 +23,7 @@ import {
   CheckCircle2,
 } from "lucide-react"
 
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 import { toast } from "@/hooks/use-toast"
 import {
   HoverCard,
@@ -249,7 +249,7 @@ function SortableTile({
           {tile.headerImage && (
             <div className="h-28 w-full overflow-hidden">
               <Image
-                src={tile.headerImage || "/placeholder.svg"}
+                src={getOptimizedImageUrl(tile.headerImage)}
                 alt={tile.title}
                 width={176}
                 height={112}
@@ -1410,7 +1410,7 @@ export function ProgressionBingoGrid({
             {draggedTile.headerImage && (
               <div className="aspect-square overflow-hidden">
                 <Image
-                  src={draggedTile.headerImage || "/placeholder.svg"}
+                  src={getOptimizedImageUrl(draggedTile.headerImage)}
                   alt={draggedTile.title}
                   width={200}
                   height={200}

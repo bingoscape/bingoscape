@@ -20,7 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 import { FullSizeImageDialog } from "@/components/full-size-image-dialog"
 import { GoalsTab } from "@/components/goals-tab"
 import { SubmissionsTab } from "@/components/submissions-tab"
@@ -248,7 +248,7 @@ function TilePanelBody({
           {tile.headerImage ? (
             <Image
               unoptimized
-              src={tile.headerImage || getRandomFrog()}
+              src={getOptimizedImageUrl(tile.headerImage || getRandomFrog())}
               alt=""
               fill
               sizes="(min-width: 384px) 64px, 40px"

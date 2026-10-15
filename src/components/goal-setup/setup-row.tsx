@@ -26,7 +26,7 @@ import {
   tilePosition,
   type GoalChipData,
 } from "@/lib/goal-setup"
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 import type { Tile } from "@/types/model"
 import { GoalChips } from "./goal-chips"
 
@@ -146,7 +146,7 @@ export const SetupRow = memo(function SetupRow({
           {tile.headerImage ? (
             <Image
               unoptimized
-              src={tile.headerImage}
+              src={getOptimizedImageUrl(tile.headerImage)}
               alt=""
               width={32}
               height={32}

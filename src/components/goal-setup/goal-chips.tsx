@@ -3,7 +3,7 @@
 import Image from "next/image"
 import { BarChart2, Layers, Loader2, Package, Target } from "lucide-react"
 import type { GoalChipData } from "@/lib/goal-setup"
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 
 /** Chips shown before the rest is folded into "+N more". */
 const DEFAULT_MAX_CHIPS = 6
@@ -12,7 +12,7 @@ function ChipIcon({ chip }: { chip: GoalChipData }) {
   if (chip.kind === "item") {
     return chip.imageUrl ? (
       <Image
-        src={chip.imageUrl}
+        src={getOptimizedImageUrl(chip.imageUrl)}
         alt=""
         width={16}
         height={16}

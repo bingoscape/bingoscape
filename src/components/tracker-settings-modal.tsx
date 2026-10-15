@@ -38,6 +38,7 @@ import {
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import { getOptimizedImageUrl } from "@/lib/utils"
 
 interface TrackerSettingsModalProps {
   bingoId: string
@@ -460,7 +461,7 @@ export function TrackerSettingsModal({
                       <SelectItem key={m} value={m}>
                         <div className="flex items-center gap-2">
                           <Image
-                            src={getWikiIconUrl(m)}
+                            src={getOptimizedImageUrl(getWikiIconUrl(m))}
                             alt={m}
                             width={16}
                             height={16}

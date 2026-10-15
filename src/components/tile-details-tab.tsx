@@ -39,6 +39,7 @@ import { GoalProgressTree } from "./goal-progress-tree"
 import { CompactGoalTree } from "./compact-goal-tree"
 import { buildGoalTree, getTeamGoalProgress } from "@/lib/goal-tree"
 import type { Tile, Team } from "@/types/model"
+import { getOptimizedImageUrl } from "@/lib/utils"
 
 type EditableTileFields = {
   title: string
@@ -255,7 +256,7 @@ export function TileDetailsTab({
           >
             {isEditing && imagePreview && isValidImage ? (
               <Image
-                src={imagePreview}
+                src={getOptimizedImageUrl(imagePreview)}
                 alt="Header image preview"
                 fill
                 className="rounded-sm object-contain"
@@ -263,7 +264,9 @@ export function TileDetailsTab({
             ) : selectedTile?.headerImage &&
               isValidImageUrl(selectedTile.headerImage) ? (
               <Image
-                src={selectedTile.headerImage || getRandomFrog()}
+                src={getOptimizedImageUrl(
+                  selectedTile.headerImage || getRandomFrog()
+                )}
                 alt={selectedTile.title}
                 fill
                 className="rounded-sm object-contain"
@@ -449,7 +452,9 @@ export function TileDetailsTab({
                                   >
                                     <div className="relative mb-1 aspect-square">
                                       <Image
-                                        src={image.thumbnail || getRandomFrog()}
+                                        src={getOptimizedImageUrl(
+                                          image.thumbnail || getRandomFrog()
+                                        )}
                                         alt={image.title}
                                         fill
                                         className="object-contain"

@@ -5,7 +5,7 @@ import { BarChart2, Package, Target } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { formatNumber } from "@/lib/number-input"
 import { METRIC_GOAL_LABEL, getMetricTargetCopy } from "@/lib/osrs-metrics"
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 
 interface GoalRowContentProps {
   description: string
@@ -34,7 +34,7 @@ export function GoalRowContent({
       {item ? (
         <>
           <Image
-            src={item.imageUrl}
+            src={getOptimizedImageUrl(item.imageUrl)}
             alt={item.baseName}
             width={24}
             height={24}

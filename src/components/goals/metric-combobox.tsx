@@ -18,7 +18,7 @@ import {
   getMetricTargetCopy,
   getWikiIconUrl,
 } from "@/lib/osrs-metrics"
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 import type { MetricType } from "./types"
 
 interface MetricIconProps {
@@ -38,7 +38,7 @@ function MetricIcon({ metric }: MetricIconProps) {
       ) : (
         <Image
           fill
-          src={getWikiIconUrl(metric)}
+          src={getOptimizedImageUrl(getWikiIconUrl(metric))}
           alt=""
           sizes="28px"
           className="object-contain p-0.5"
