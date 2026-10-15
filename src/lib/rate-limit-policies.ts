@@ -53,6 +53,13 @@ export const RATE_LIMITS = {
    * user. The picture is drawn on the server, which costs some CPU.
    */
   draftRecapImage: { limit: 20, windowMs: MINUTE },
+  /**
+   * `GET /api/osrs-image/...` requests that miss the cache and would fetch
+   * from the OSRS Wiki, per client IP. Cache hits are not counted. Generous
+   * enough for a board of new images loaded at once, tight for a script that
+   * walks the key space.
+   */
+  osrsImageMiss: { limit: 120, windowMs: MINUTE },
 } as const satisfies Record<string, RateLimitPolicy>
 
 export type RateLimitPolicyName = keyof typeof RATE_LIMITS
