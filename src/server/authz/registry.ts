@@ -454,6 +454,9 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
   [`${R}events/invite/[inviteCode]/route.ts#GET`]: pub(
     "the invite code is the capability; returns the join card of the Event"
   ),
+  [`${R}osrs-image/[...key]/route.ts#GET`]: pub(
+    "read-through cache of public OSRS Wiki images; the key is validated against a fixed allowlist (src/lib/osrs-image.ts), the server builds the upstream URL, cache misses are rate limited per IP"
+  ),
   [`${R}super-admin/check/route.ts#GET`]: pub(
     "reports whether the caller is a super admin (false when signed out)"
   ),
