@@ -33,9 +33,6 @@ export function parseCspMode(raw) {
   return "report-only"
 }
 
-/** Hosts the browser loads images from or talks to besides the app itself. */
-const WIKI_HOSTS = ["https://oldschool.runescape.wiki", "https://runescape.wiki"]
-
 /**
  * The policy. Why each source:
  * - `script-src 'unsafe-inline'`: Next.js inlines its bootstrap/flight data
@@ -46,8 +43,8 @@ const WIKI_HOSTS = ["https://oldschool.runescape.wiki", "https://runescape.wiki"
  * - `img-src https:`: Tile and Event images come from the uploads, the OSRS
  *   wiki, Discord/GitHub avatars and Markdown descriptions that may embed any
  *   https image. Images cannot run script.
- * - `connect-src`: the app plus the wiki API the Tile editor queries from the
- *   browser (CORS, `origin=*`).
+ * - `connect-src`: the app only. The wiki image search runs on the server
+ *   (`searchWikiImages`), so the browser no longer calls the wiki API.
  * - no `form-action`: NextAuth sign-in posts a same-origin form that redirects
  *   to the OAuth provider, which Chrome checks against `form-action`.
  *
@@ -64,7 +61,7 @@ export function buildContentSecurityPolicy(options = {}) {
     ["style-src", "'self' 'unsafe-inline'"],
     ["img-src", "'self' data: blob: https:"],
     ["font-src", "'self' data:"],
-    ["connect-src", ["'self'", ...WIKI_HOSTS].join(" ")],
+    ["connect-src", "'self'"],
     ["media-src", "'self'"],
     ["worker-src", "'self' blob:"],
     ["manifest-src", "'self'"],

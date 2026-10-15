@@ -10,6 +10,8 @@ export interface RevalidateAdminTargets {
   userIds?: readonly string[]
   clanIds?: readonly string[]
   eventIds?: readonly string[]
+  /** The wiki image cache page (`/super-admin/image-cache`). */
+  imageCache?: boolean
 }
 
 export function adminPathsToRevalidate(
@@ -40,6 +42,7 @@ export function adminPathsToRevalidate(
       paths.add(`/events/${id}`)
     }
   }
+  if (targets.imageCache) paths.add("/super-admin/image-cache")
   // Users appear in public event and clan listings (members, participants).
   if (touched(targets.userIds)) {
     paths.add("/events")

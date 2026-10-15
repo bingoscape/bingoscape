@@ -164,10 +164,13 @@ command -v docker > /dev/null 2>&1 || die "docker not found"
 log "Deploying image tag: ${IMAGE_TAG}"
 
 # --- 1. install files ---------------------------------------------------------
-mkdir -p "$APP_DIR/uploads"
-# UID 1001 is the nextjs user inside the container. Directory only, not recursive.
-sudo -n chown 1001:1001 "$APP_DIR/uploads" 2> /dev/null || chown 1001:1001 "$APP_DIR/uploads" 2> /dev/null || true
-sudo -n chmod 775 "$APP_DIR/uploads" 2> /dev/null || chmod 775 "$APP_DIR/uploads" 2> /dev/null || true
+# Host directories mounted into the app container: uploads, and the OSRS Wiki image cache.
+for data_dir in uploads osrs-image-cache; do
+    mkdir -p "$APP_DIR/$data_dir"
+    # UID 1001 is the nextjs user inside the container. Directory only, not recursive.
+    sudo -n chown 1001:1001 "$APP_DIR/$data_dir" 2> /dev/null || chown 1001:1001 "$APP_DIR/$data_dir" 2> /dev/null || true
+    sudo -n chmod 775 "$APP_DIR/$data_dir" 2> /dev/null || chmod 775 "$APP_DIR/$data_dir" 2> /dev/null || true
+done
 
 # The rendered .env does not carry IMAGE_TAG. Keep the one of the running
 # deployment until the new app has really been started.

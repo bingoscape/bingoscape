@@ -8,7 +8,7 @@ import { userLabel } from "@/lib/super-admin-format"
  * and images never appear, and emails are always masked (`j***@domain`).
  */
 
-export type AuditTargetType = "user" | "clan" | "event"
+export type AuditTargetType = "user" | "clan" | "event" | "image"
 export type AuditOutcome = "success" | "denied" | "failed"
 
 export interface AuditDraft {
@@ -89,7 +89,10 @@ export function pickKeys(
 /** Target type for an action name such as `clan.member.role` -> `clan`. */
 export function targetTypeFromAction(action: string): AuditTargetType | null {
   const prefix = action.split(".")[0]
-  return prefix === "user" || prefix === "clan" || prefix === "event"
+  return prefix === "user" ||
+    prefix === "clan" ||
+    prefix === "event" ||
+    prefix === "image"
     ? prefix
     : null
 }
@@ -102,6 +105,8 @@ export function targetIdFromInput(input: unknown): string | null {
     const value = record[key]
     if (typeof value === "string") return value.slice(0, 64)
   }
+  // A wiki image cache key (`image.*` actions); keys are up to 512 characters.
+  if (typeof record.key === "string") return record.key.slice(0, 512)
   return null
 }
 

@@ -58,6 +58,10 @@ COPY --from=builder /app/public ./public
 # Create uploads directory with proper permissions
 RUN mkdir -p /app/public/uploads && chown -R nextjs:nodejs /app/public/uploads
 
+# OSRS Wiki image cache; docker-compose.yml mounts a host directory here
+RUN mkdir -p /app/data/osrs-images && chown -R nextjs:nodejs /app/data
+ENV OSRS_IMAGE_CACHE_DIR=/app/data/osrs-images
+
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

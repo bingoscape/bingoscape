@@ -69,8 +69,8 @@ describe("Content-Security-Policy", () => {
     expect(directive("img-src")).toContain("'self'")
     expect(directive("img-src")).toContain("https:")
     expect(directive("img-src")).toContain("data:")
-    // The Tile editor queries the wiki API from the browser.
-    expect(directive("connect-src")).toContain("https://oldschool.runescape.wiki")
+    // The wiki image search runs on the server: the browser only talks to the app.
+    expect(directive("connect-src")).toBe("connect-src 'self'")
     expect(directive("object-src")).toBe("object-src 'none'")
     expect(directive("base-uri")).toBe("base-uri 'self'")
     expect(directive("frame-ancestors")).toBe("frame-ancestors 'self'")

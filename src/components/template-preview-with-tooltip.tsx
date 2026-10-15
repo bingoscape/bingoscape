@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, EyeOff, Zap } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 import type {
   TemplatePreviewData,
   TemplatePreviewTile,
@@ -308,7 +308,7 @@ function TileButton({
         </span>
       ) : tile.headerImage ? (
         <Image
-          src={tile.headerImage}
+          src={getOptimizedImageUrl(tile.headerImage)}
           alt=""
           fill
           sizes="(min-width: 640px) 80px, 15vw"

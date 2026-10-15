@@ -15,6 +15,7 @@ import { formatGPValue } from "@/lib/format-gp"
 import { ItemValueCharts } from "@/components/item-value-charts"
 import { ItemTimelineCharts } from "@/components/item-timeline-charts"
 import Image from "next/image"
+import { getOptimizedImageUrl } from "@/lib/utils"
 
 interface ItemStatisticsDisplayProps {
   statistics: ItemStatistics
@@ -164,7 +165,7 @@ export function ItemStatisticsDisplay({
               <div className="flex items-center gap-4">
                 <div className="relative h-16 w-16 shrink-0">
                   <Image
-                    src={mostValuableItem.itemImageUrl}
+                    src={getOptimizedImageUrl(mostValuableItem.itemImageUrl)}
                     alt={mostValuableItem.itemName}
                     fill
                     className="object-contain"

@@ -1,7 +1,7 @@
 import Image from "next/image"
 import { EyeOff } from "lucide-react"
 
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 import type { TemplateCardPreview } from "@/lib/template-preview"
 
 /** Past these sizes cells are too small for images or tier numbers. */
@@ -72,7 +72,7 @@ export function TemplateMiniBoard({
           >
             {showImages && cell.headerImage ? (
               <Image
-                src={cell.headerImage}
+                src={getOptimizedImageUrl(cell.headerImage)}
                 alt=""
                 fill
                 sizes="48px"

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Image from "next/image"
 import { getMiniBoardTiles } from "@/app/actions/events"
 import { Lock, } from "lucide-react"
+import { getOptimizedImageUrl } from "@/lib/utils"
 
 interface MiniBoardProps {
   bingoId: string
@@ -115,7 +116,7 @@ export function MiniBoard({
           ) : tile.headerImage ? (
             <Image
               fill
-              src={tile.headerImage}
+              src={getOptimizedImageUrl(tile.headerImage)}
               alt={tile.title}
               className={`object-cover p-0.5 ${tile.isCompleted ? "saturate-110 brightness-110" : "opacity-90"}`}
             />

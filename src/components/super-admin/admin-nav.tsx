@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import {
   Calendar,
   History,
+  Images,
   LayoutDashboard,
   Shield,
   Users,
@@ -22,11 +23,12 @@ const NAV_ITEMS = [
   { href: "/super-admin/users", label: "Users", icon: Users },
   { href: "/super-admin/clans", label: "Clans", icon: Shield },
   { href: "/super-admin/events", label: "Events", icon: Calendar },
+  { href: "/super-admin/image-cache", label: "Images", icon: Images },
   { href: "/super-admin/audit", label: "Audit log", icon: History },
 ] as const
 
 /**
- * Section navigation. A left rail from `lg`, a five-up strip below that.
+ * Section navigation. A left rail from `lg`, a six-up strip below that.
  * The current section carries `aria-current="page"` (also for detail pages
  * inside the section) and a non-colour cue (bevel + bar).
  */
@@ -38,7 +40,7 @@ export function AdminNav() {
       <p className="text-muted-foreground mb-2 hidden px-3 text-xs font-medium tracking-wider uppercase lg:block">
         Super admin
       </p>
-      <ul className="osrs-panel grid grid-cols-5 gap-1 p-1 lg:flex lg:flex-col lg:gap-1 lg:p-2">
+      <ul className="osrs-panel grid grid-cols-6 gap-1 p-1 lg:flex lg:flex-col lg:gap-1 lg:p-2">
         {NAV_ITEMS.map((item) => {
           const active =
             "exact" in item && item.exact

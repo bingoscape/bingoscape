@@ -73,6 +73,13 @@ services:
       # Content-Security-Policy mode: report-only (default) | enforce | off. Read per request.
       CSP_MODE: ${CSP_MODE:-}
       NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:-}
+      # Contact (Discord handle) in the User-Agent of requests to the OSRS Wiki
+      OSRS_WIKI_CONTACT_EMAIL: ${OSRS_WIKI_CONTACT_EMAIL:-}
+      # Serve OSRS Wiki images from the image cache: true (default) | false.
+      # Read per request; false is the rollback of the render rewrite.
+      OSRS_IMAGE_PROXY: ${OSRS_IMAGE_PROXY:-}
+      # Where the OSRS Wiki image cache keeps its files (the volume below)
+      OSRS_IMAGE_CACHE_DIR: /app/data/osrs-images
 
       # Skip environment validation in container
       SKIP_ENV_VALIDATION: "1"
@@ -83,6 +90,9 @@ services:
       # Mount uploads directory from host system
       # Update the path on the left side to your desired host directory
       - ./uploads:/app/public/uploads:rw
+      # OSRS Wiki image cache. Kept out of uploads: that route applies the
+      # submission-image access policy. Created and chowned by scripts/deploy.sh
+      - ./osrs-image-cache:/app/data/osrs-images:rw
     logging: *default-logging
     networks:
       - bingoscape-network

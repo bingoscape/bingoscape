@@ -62,6 +62,13 @@ describe("safePreviewImage", () => {
     expect(safePreviewImage("javascript:alert(1)")).toBeNull()
     expect(safePreviewImage(null)).toBeNull()
   })
+
+  it("accepts the relative cache route of wiki images", () => {
+    expect(
+      safePreviewImage("/api/osrs-image/thumb/Sue.png/290px-Sue.png")
+    ).toBe("/api/osrs-image/thumb/Sue.png/290px-Sue.png")
+    expect(safePreviewImage("//evil.example.com/api/osrs-image/a.png")).toBeNull()
+  })
 })
 
 describe("buildDetailPreview", () => {

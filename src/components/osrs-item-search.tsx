@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button"
 import { getItemDisplayName, ItemOption } from "@/components/osrs-item-option"
 import { MIN_ITEM_QUERY_LENGTH, useOsrsItemSearch } from "@/hooks/use-osrs-item-search"
 import type { OsrsItem } from "@/types/osrs-items"
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 
 interface OsrsItemSearchProps {
   onItemSelect: (item: OsrsItem) => void
@@ -73,7 +73,7 @@ export function OsrsItemSearch({
               <div className="relative h-6 w-6 shrink-0">
                 <Image
                   fill
-                  src={selectedItem.imageUrl}
+                  src={getOptimizedImageUrl(selectedItem.imageUrl)}
                   alt={selectedItem.name}
                   className="object-contain"
                 />
@@ -202,7 +202,7 @@ export function OsrsItemSearchCompact({
       <div className="relative h-8 w-8 shrink-0">
         <Image
           fill
-          src={selectedItem.imageUrl}
+          src={getOptimizedImageUrl(selectedItem.imageUrl)}
           alt={selectedItem.name}
           className="object-cover"
         />

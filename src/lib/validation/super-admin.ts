@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { normalizeWikiImagePath } from "@/lib/osrs-image"
+
 /**
  * Input schemas for the super-admin mutations. Everything is `.strict()`:
  * unknown keys (`password`, `id`, `creatorId`, ...) are rejected, not ignored,
@@ -113,6 +115,28 @@ export const eventParticipantSchema = z
 
 export const updateEventParticipantRoleSchema = z
   .object({ eventId: uuid, userId: uuid, role: z.enum(EVENT_ROLES) })
+  .strict()
+
+/** A wiki image cache key (the path under `/images/`), in its canonical form. */
+const imageKey = z
+  .string()
+  .max(512, "Invalid key")
+  .transform((value, ctx) => {
+    const key = normalizeWikiImagePath(value)
+    if (key === null) {
+      ctx.addIssue({ code: "custom", message: "Not a wiki image key" })
+      return z.NEVER
+    }
+    return key
+  })
+
+export const imageKeySchema = z.object({ key: imageKey }).strict()
+
+export const refreshAllImagesSchema = z
+  .object({
+    /** Continue with the images that are still stale instead of marking all again. */
+    resume: z.boolean().optional(),
+  })
   .strict()
 
 /** One readable sentence for the first problem in a failed parse. */

@@ -405,6 +405,11 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
   [`${A}osrs-items.ts#getOsrsItemImageUrl`]: pub(CATALOGUE),
   [`${A}osrs-items.ts#doesItemMatchBaseName`]: pub(CATALOGUE),
 
+  // --- wiki image search (Tile editor) ------------------------------------
+  [`${A}wiki-image-search.ts#searchWikiImages`]: auth(
+    "spends requests to the wiki servers: signed-in users only, rate limited and cached"
+  ),
+
   // --- super admin --------------------------------------------------------
   [`${A}super-admin.ts#updateUser`]: superAdmin(SUPER_ADMIN),
   [`${A}super-admin.ts#deleteUser`]: superAdmin(SUPER_ADMIN),
@@ -416,6 +421,9 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
   [`${A}super-admin.ts#deleteEvent`]: superAdmin(SUPER_ADMIN),
   [`${A}super-admin.ts#removeEventParticipant`]: superAdmin(SUPER_ADMIN),
   [`${A}super-admin.ts#updateEventParticipantRole`]: superAdmin(SUPER_ADMIN),
+  [`${A}osrs-image-cache.ts#refreshImage`]: superAdmin(SUPER_ADMIN),
+  [`${A}osrs-image-cache.ts#refreshAllImages`]: superAdmin(SUPER_ADMIN),
+  [`${A}osrs-image-cache.ts#purgeImage`]: superAdmin(SUPER_ADMIN),
 
   // --- route handlers -----------------------------------------------------
   [`${R}auth/[...nextauth]/route.ts#GET`]: {
@@ -453,6 +461,9 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
   ),
   [`${R}events/invite/[inviteCode]/route.ts#GET`]: pub(
     "the invite code is the capability; returns the join card of the Event"
+  ),
+  [`${R}osrs-image/[...key]/route.ts#GET`]: pub(
+    "read-through cache of public OSRS Wiki images; the key is validated against a fixed allowlist (src/lib/osrs-image.ts), the server builds the upstream URL, cache misses are rate limited per IP"
   ),
   [`${R}super-admin/check/route.ts#GET`]: pub(
     "reports whether the caller is a super admin (false when signed out)"

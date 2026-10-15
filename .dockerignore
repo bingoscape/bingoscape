@@ -65,6 +65,10 @@ devops/
 # Uploads (handled via volume mount)
 public/uploads/
 
+# OSRS Wiki image cache (volume mount / local development)
+.data/
+osrs-image-cache/
+
 # Database
 # Note: drizzle/ is included for migrations
 *.db

@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -308,7 +308,7 @@ function CompactTreeNode({
                   <div className="relative h-4 w-4 shrink-0">
                     <Image
                       fill
-                      src={itemGoal.imageUrl}
+                      src={getOptimizedImageUrl(itemGoal.imageUrl)}
                       alt={itemGoal.baseName}
                       className="object-cover"
                     />
@@ -323,7 +323,7 @@ function CompactTreeNode({
                     <div className="relative h-4 w-4 shrink-0">
                       <Image
                         fill
-                        src={getWikiIconUrl(metricGoal.metricName)}
+                        src={getOptimizedImageUrl(getWikiIconUrl(metricGoal.metricName))}
                         alt={metricGoal.metricName}
                         className="object-cover"
                         onError={(e) => {

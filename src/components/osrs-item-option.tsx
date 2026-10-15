@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import type { OsrsItem } from "@/types/osrs-items"
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 
 /**
  * How an item is named in the UI. Variants are stored as "Dragon dagger#(p)";
@@ -28,7 +28,7 @@ export function ItemIcon({ item, className }: ItemIconProps) {
     >
       <Image
         fill
-        src={item.imageUrl}
+        src={getOptimizedImageUrl(item.imageUrl)}
         alt=""
         sizes="36px"
         className="object-contain p-0.5"

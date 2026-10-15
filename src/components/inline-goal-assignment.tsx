@@ -31,7 +31,7 @@ import {
   Plus,
   ArrowLeft,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 
 interface Goal {
   id: string
@@ -174,7 +174,7 @@ export function InlineGoalAssignment({
                         <div className="relative h-5 w-5 shrink-0">
                           <Image
                             fill
-                            src={itemGoal.imageUrl}
+                            src={getOptimizedImageUrl(itemGoal.imageUrl)}
                             alt={itemGoal.baseName}
                             className="object-cover"
                           />
@@ -221,7 +221,7 @@ export function InlineGoalAssignment({
               <div className="relative h-5 w-5 shrink-0">
                 <Image
                   fill
-                  src={selectedGoal.itemGoal.imageUrl}
+                  src={getOptimizedImageUrl(selectedGoal.itemGoal.imageUrl)}
                   alt={selectedGoal.itemGoal.baseName}
                   className="object-cover"
                 />
@@ -323,7 +323,7 @@ export function InlineGoalAssignment({
             <div className="relative h-5 w-5 shrink-0">
               <Image
                 fill
-                src={itemGoal.imageUrl}
+                src={getOptimizedImageUrl(itemGoal.imageUrl)}
                 alt={itemGoal.baseName}
                 className="object-cover"
               />
@@ -360,7 +360,7 @@ export function InlineGoalAssignment({
               <div className="relative h-4 w-4 shrink-0">
                 <Image
                   fill
-                  src={currentGoal.itemGoal.imageUrl}
+                  src={getOptimizedImageUrl(currentGoal.itemGoal.imageUrl)}
                   alt={currentGoal.itemGoal.baseName}
                   className="object-cover"
                 />
