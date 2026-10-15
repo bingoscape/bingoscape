@@ -1,0 +1,69 @@
+src/components/goal-setup/setup-row.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 29,149
+src/components/template-preview-with-tooltip.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 9,311
+src/app/templates/[id]/page.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 31,83-86
+src/components/inline-goal-assignment.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 34,177,224,326,363
+src/components/mini-board.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 7,119
+src/components/event-workspace/tile-panel.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 23,251
+src/components/osrs-item-option.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 5,31
+src/components/compact-goal-tree.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 4,311,326
+src/components/full-size-image-dialog.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 11,129
+src/components/goals/skill-grid.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 7,137
+src/components/tracker-settings-modal.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 41,464
+src/components/goals/metric-combobox.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 21,41
+src/components/goals/goal-row-content.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 8,37
+src/components/tile-details-tab.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 42,259,267-269,455-457
+src/components/tier-management-modal.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 35,373,486-488
+src/components/goal-setup/goal-chips.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 6,15
+src/components/goals/metric-select-items.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 6,25
+src/components/template-mini-board.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 4,75
+src/components/template-card.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 12,116-119
+src/components/progression-bingo-grid.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 26,252,1413
+src/components/bingo-tile.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 15,237
+src/components/__tests__/bingo-tile-image-proxy.test.tsx
+  s_416b87f1576e0e::t_9d3472de9b8435 1-69
+src/components/notification-bell.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 20,126-128
+src/components/osrs-item-search.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 23,76,205
+src/components/item-statistics-display.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 18,168
+src/components/goal-progress-tree.tsx
+  s_416b87f1576e0e::t_93c5d70b4120d3 36,385,400
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "579ba77f75b6c53cdbc2e1c5598f152318119ec2",
+  "prompts": {},
+  "sessions": {
+    "s_416b87f1576e0e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2271d1e9-7c90-43e2-9fac-7e7287ac3299",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
