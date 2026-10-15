@@ -1,0 +1,21 @@
+tests/utils/seed-event.ts
+  s_416b87f1576e0e::t_9739f015d1e5ce 23-24,133
+tests/osrs-image-proxy.spec.ts
+  s_416b87f1576e0e::t_9739f015d1e5ce 1-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a52205d367bff304602c4e5b5f4c33113559800a",
+  "prompts": {},
+  "sessions": {
+    "s_416b87f1576e0e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2271d1e9-7c90-43e2-9fac-7e7287ac3299",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
