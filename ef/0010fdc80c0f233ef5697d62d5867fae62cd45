@@ -1,0 +1,21 @@
+src/server/__tests__/osrs-image-cache.test.ts
+  s_416b87f1576e0e::t_2c8fd554924140 24,234-302
+src/server/osrs-image/cache.ts
+  s_416b87f1576e0e::t_b6238758c30a51 127-132,319-323,327-346,369
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ef0010fdc80c0f233ef5697d62d5867fae62cd45",
+  "prompts": {},
+  "sessions": {
+    "s_416b87f1576e0e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2271d1e9-7c90-43e2-9fac-7e7287ac3299",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
