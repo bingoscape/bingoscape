@@ -1,0 +1,20 @@
+docs/agents/issue-tracker.md
+  s_6f86b2146fae95::t_11ecff5b891af6 54-65
+  s_6f86b2146fae95::t_6bc13138dad20f 28-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f97639a2ffc4bdc8cc0fb5e4c281f9bd62a34417",
+  "prompts": {},
+  "sessions": {
+    "s_6f86b2146fae95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0c39c846-5da7-4fd9-86b1-499ab833db04",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
