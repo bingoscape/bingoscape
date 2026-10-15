@@ -124,6 +124,12 @@ type Upstream =
   | { kind: "not_found" }
   | { kind: "error"; reason: string }
 
+/** What `fetchUpstream` learned besides the outcome, for its log line. */
+interface UpstreamTrace {
+  /** HTTP status of the wiki's answer; null when there was none (timeout, network error). */
+  httpStatus: number | null
+}
+
 /** Waits for a free slot; the returned function gives it back. */
 class Semaphore {
   private readonly waiting: Array<() => void> = []
@@ -310,10 +316,34 @@ export function createOsrsImageCache(options: OsrsImageCacheOptions = {}) {
     return row
   }
 
-  /** Asks the wiki for one image. Never throws. */
+  /**
+   * Asks the wiki for one image and logs one line for it (key, HTTP status,
+   * bytes, duration), so the growth of the cache and every request to the wiki
+   * show up in `docker logs`. Never throws.
+   */
   async function fetchUpstream(
     key: string,
     validators?: { etag: string | null; lastModified: string | null }
+  ): Promise<Upstream> {
+    const started = Date.now()
+    const trace: UpstreamTrace = { httpStatus: null }
+    const upstream = await requestUpstream(key, validators, trace)
+    logger.info("OSRS image fetched from the wiki", {
+      key,
+      conditional: validators !== undefined,
+      result: upstream.kind,
+      httpStatus: trace.httpStatus,
+      bytes: upstream.kind === "image" ? upstream.bytes.length : 0,
+      durationMs: Date.now() - started,
+      ...(upstream.kind === "error" ? { reason: upstream.reason } : {}),
+    })
+    return upstream
+  }
+
+  async function requestUpstream(
+    key: string,
+    validators: { etag: string | null; lastModified: string | null } | undefined,
+    trace: UpstreamTrace
   ): Promise<Upstream> {
     // Built from the validated key only; the host is fixed.
     const url = `https://${OSRS_WIKI_HOST}/images/${key}`
@@ -336,6 +366,7 @@ export function createOsrsImageCache(options: OsrsImageCacheOptions = {}) {
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       })
 
+      trace.httpStatus = response.status
       if (response.status === 304 && validators) {
         return { kind: "not_modified" }
       }
@@ -489,11 +520,6 @@ export function createOsrsImageCache(options: OsrsImageCacheOptions = {}) {
         if (answered) return answered
 
         const upstream = await fetchUpstream(key)
-        logger.info("OSRS image fetched from the wiki", {
-          key,
-          result: upstream.kind,
-          ...(upstream.kind === "error" ? { reason: upstream.reason } : {}),
-        })
 
         if (upstream.kind === "image") {
           const saved = await saveImage(tx, key, row, upstream)
@@ -553,10 +579,6 @@ export function createOsrsImageCache(options: OsrsImageCacheOptions = {}) {
         if (!row || !current) {
           // Nothing usable to validate against: a plain fetch.
           const upstream = await fetchUpstream(key)
-          logger.info("OSRS image fetched from the wiki", {
-            key,
-            result: upstream.kind,
-          })
           if (upstream.kind === "image") {
             await saveImage(tx, key, row, upstream)
             return "fetched"
@@ -569,10 +591,6 @@ export function createOsrsImageCache(options: OsrsImageCacheOptions = {}) {
         const upstream = await fetchUpstream(key, {
           etag: row.etag,
           lastModified: row.lastModified,
-        })
-        logger.info("OSRS image refreshed from the wiki", {
-          key,
-          result: upstream.kind,
         })
         switch (upstream.kind) {
           case "not_modified":

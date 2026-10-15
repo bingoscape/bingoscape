@@ -570,6 +570,8 @@ You should see `retry: 2000`, the replayed `event: draft` frames immediately and
 
 ### Backup Database
 
+The backups below (and the scheduled ones from `scripts/backup-db.sh`) contain the database only. The OSRS Wiki image cache in `~/bingoscape/osrs-image-cache/` is regenerable and **not backed up**: after a restore or a lost directory, missing images are fetched from the wiki again on demand. See [OSRS-IMAGE-CACHE.md](OSRS-IMAGE-CACHE.md).
+
 ```bash
 # SSH into server
 ssh deploy@your-server-ip
@@ -967,7 +969,8 @@ docker compose exec -T postgres pg_dump -U bingoscapenext bingoscapenext > backu
 ~/bingoscape/                       # Application directory
 ├── docker-compose.yml             # Container orchestration
 ├── .env                           # Environment variables
-└── uploads/                       # User uploaded files
+├── uploads/                       # User uploaded files
+└── osrs-image-cache/              # OSRS Wiki image cache (regenerable, not backed up)
 ```
 
 ### Useful URLs

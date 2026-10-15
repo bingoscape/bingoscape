@@ -21,6 +21,7 @@ import {
   MAX_IMAGE_BYTES,
   sniffImageType,
 } from "@/server/osrs-image/cache"
+import { logger } from "@/lib/logger"
 import { PLACEHOLDER_PNG } from "@/server/osrs-image/placeholder"
 
 jest.mock("@/server/auth", () => ({ getServerAuthSession: jest.fn() }))
@@ -227,6 +228,75 @@ describe("getCachedImage: the first request", () => {
     )
     expect(fetchMock).toHaveBeenCalledTimes(6)
     expect(peak).toBe(2)
+  })
+})
+
+describe("getCachedImage: the fetch log", () => {
+  const fetchLines = () =>
+    (logger.info as jest.Mock).mock.calls.filter(
+      ([message]) => message === "OSRS image fetched from the wiki"
+    )
+
+  beforeEach(() => (logger.info as jest.Mock).mockClear())
+
+  it("logs one line per upstream fetch with key, status, bytes and duration", async () => {
+    const key = newKey()
+    const cache = makeCache(makeFetch(() => image(PNG)))
+    await cache.getCachedImage(key)
+    await cache.getCachedImage(key) // a hit: no upstream request, no line
+
+    expect(fetchLines()).toHaveLength(1)
+    expect(fetchLines()[0]![1]).toMatchObject({
+      key,
+      result: "image",
+      httpStatus: 200,
+      bytes: PNG.length,
+      conditional: false,
+    })
+    expect(fetchLines()[0]![1].durationMs).toEqual(expect.any(Number))
+  })
+
+  it("logs failed fetches and refreshes too", async () => {
+    const missing = newKey()
+    await makeCache(
+      makeFetch(() => new Response("nope", { status: 404 }))
+    ).getCachedImage(missing)
+    const broken = newKey()
+    await makeCache(
+      makeFetch(() => {
+        throw new Error("network down")
+      })
+    ).getCachedImage(broken)
+    const cached = newKey()
+    const cache = makeCache(makeFetch(() => new Response(null, { status: 304 })))
+    await makeCache(makeFetch(() => image(PNG, { ETag: '"a"' }))).getCachedImage(
+      cached
+    )
+    await cache.conditionalRefresh(cached)
+
+    const lines = fetchLines().map(([, context]) => context)
+    expect(lines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: missing,
+          result: "not_found",
+          httpStatus: 404,
+          bytes: 0,
+        }),
+        expect.objectContaining({
+          key: broken,
+          result: "error",
+          httpStatus: null,
+          reason: "network down",
+        }),
+        expect.objectContaining({
+          key: cached,
+          result: "not_modified",
+          httpStatus: 304,
+          conditional: true,
+        }),
+      ])
+    )
   })
 })
 
