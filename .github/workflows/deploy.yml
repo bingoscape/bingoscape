@@ -58,6 +58,7 @@ jobs:
           CSP_MODE: ${{ secrets.CSP_MODE }}
           NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
           OSRS_WIKI_CONTACT_EMAIL: ${{ secrets.OSRS_WIKI_CONTACT_EMAIL }}
+          OSRS_IMAGE_PROXY: ${{ secrets.OSRS_IMAGE_PROXY }}
         run: |
           set -euo pipefail
 
@@ -114,6 +115,7 @@ jobs:
           emit CSP_MODE "$CSP_MODE"
           emit NEXT_SERVER_ACTIONS_ENCRYPTION_KEY "$NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"
           emit OSRS_WIKI_CONTACT_EMAIL "$OSRS_WIKI_CONTACT_EMAIL"
+          emit OSRS_IMAGE_PROXY "$OSRS_IMAGE_PROXY"
           # IMAGE_TAG is added by scripts/deploy.sh on the server
           chmod 600 "$out"
 

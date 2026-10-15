@@ -137,9 +137,42 @@ export function keyToProxyUrl(key: string): string {
 }
 
 /**
+ * Global the root layout sets to `false` (an inline script in the document
+ * head) when the server runs with `OSRS_IMAGE_PROXY` off. Browsers cannot read
+ * a runtime env var, and `toProxyUrl` has to give the same answer when the
+ * server renders a component and when the browser hydrates it.
+ */
+export const PROXY_DISABLED_GLOBAL = "__OSRS_IMAGE_PROXY__"
+
+/** `OSRS_IMAGE_PROXY` values that switch the rewrite off. Unset means on. */
+const OFF_VALUES = new Set(["false", "0", "off", "no"])
+
+/** Whether an `OSRS_IMAGE_PROXY` env value leaves the render rewrite on. */
+export function parseImageProxyFlag(raw: string | undefined): boolean {
+  const value = raw?.trim().toLowerCase()
+  return value === undefined || !OFF_VALUES.has(value)
+}
+
+/**
+ * Whether wiki image URLs are rewritten to the cache route. Server code reads
+ * `OSRS_IMAGE_PROXY` (default on); browser code reads the global the layout
+ * sets from that same variable. Turning the flag off is the rollback of the
+ * render rewrite: stored values are wiki URLs either way.
+ */
+export function isImageProxyEnabled(): boolean {
+  if (typeof window !== "undefined") {
+    return (window as unknown as Record<string, unknown>)[
+      PROXY_DISABLED_GLOBAL
+    ] !== false
+  }
+  return parseImageProxyFlag(process.env.OSRS_IMAGE_PROXY)
+}
+
+/**
  * Rewrites an allowlisted OSRS Wiki image URL to its cached route
  * (`/api/osrs-image/<key>`). Anything else, a null or an empty value
- * included, is returned unchanged.
+ * included, is returned unchanged, and so is everything while
+ * `OSRS_IMAGE_PROXY` is off.
  */
 export function toProxyUrl(url: string): string
 export function toProxyUrl(url: string | null): string | null
@@ -148,7 +181,7 @@ export function toProxyUrl(
   url: string | null | undefined
 ): string | null | undefined
 export function toProxyUrl(url: string | null | undefined) {
-  if (!url) return url
+  if (!url || !isImageProxyEnabled()) return url
   const parsed = parseWikiImageUrl(url)
   return parsed ? keyToProxyUrl(parsed.key) : url
 }

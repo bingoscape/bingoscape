@@ -1,5 +1,8 @@
 import {
+  PROXY_DISABLED_GLOBAL,
+  isImageProxyEnabled,
   normalizeWikiImagePath,
+  parseImageProxyFlag,
   parseWikiImageUrl,
   toProxyUrl,
 } from "@/lib/osrs-image"
@@ -227,5 +230,34 @@ describe("toProxyUrl", () => {
     expect(toProxyUrl(null)).toBeNull()
     expect(toProxyUrl(undefined)).toBeUndefined()
     expect(toProxyUrl("")).toBe("")
+  })
+})
+
+describe("OSRS_IMAGE_PROXY flag", () => {
+  const url = `${BASE}/images/Great_Olm.png?f1081`
+  const global = window as unknown as Record<string, unknown>
+
+  afterEach(() => {
+    delete global[PROXY_DISABLED_GLOBAL]
+  })
+
+  it("defaults to on and only known off values switch it off", () => {
+    expect(parseImageProxyFlag(undefined)).toBe(true)
+    expect(parseImageProxyFlag("")).toBe(true)
+    expect(parseImageProxyFlag("true")).toBe(true)
+    expect(parseImageProxyFlag("1")).toBe(true)
+    for (const off of ["false", "FALSE", " 0 ", "off", "no"]) {
+      expect(parseImageProxyFlag(off)).toBe(false)
+    }
+  })
+
+  it("rewrites in the browser until the layout sets the global to false", () => {
+    expect(isImageProxyEnabled()).toBe(true)
+    expect(toProxyUrl(url)).toBe("/api/osrs-image/Great_Olm.png")
+
+    global[PROXY_DISABLED_GLOBAL] = false
+    expect(isImageProxyEnabled()).toBe(false)
+    expect(toProxyUrl(url)).toBe(url)
+    expect(toProxyUrl(null)).toBeNull()
   })
 })
