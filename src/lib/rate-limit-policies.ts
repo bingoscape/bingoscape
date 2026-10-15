@@ -36,6 +36,12 @@ export const RATE_LIMITS = {
   upload: { limit: 30, windowMs: MINUTE },
   /** Wise Old Man proxy actions, per user (they spend the server's WOM quota). */
   wiseOldMan: { limit: 20, windowMs: MINUTE },
+  /**
+   * Wiki image search of the Tile editor (`searchWikiImages`), per user. Each
+   * uncached search is up to two requests to the wiki; answers are cached, so
+   * this mostly limits a script varying the query.
+   */
+  wikiImageSearch: { limit: 20, windowMs: MINUTE },
   /** `POST /api/runelite/auth` (unauthenticated key check), per client IP. */
   runeliteAuth: { limit: 30, windowMs: MINUTE },
   /**

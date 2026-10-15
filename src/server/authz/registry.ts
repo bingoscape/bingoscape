@@ -405,6 +405,11 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
   [`${A}osrs-items.ts#getOsrsItemImageUrl`]: pub(CATALOGUE),
   [`${A}osrs-items.ts#doesItemMatchBaseName`]: pub(CATALOGUE),
 
+  // --- wiki image search (Tile editor) ------------------------------------
+  [`${A}wiki-image-search.ts#searchWikiImages`]: auth(
+    "spends requests to the wiki servers: signed-in users only, rate limited and cached"
+  ),
+
   // --- super admin --------------------------------------------------------
   [`${A}super-admin.ts#updateUser`]: superAdmin(SUPER_ADMIN),
   [`${A}super-admin.ts#deleteUser`]: superAdmin(SUPER_ADMIN),
