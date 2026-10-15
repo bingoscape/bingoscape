@@ -1,4 +1,5 @@
 import type { ExportedBingo } from "@/lib/bingo-template-schema"
+import { WIKI_HOSTS } from "@/lib/wiki-hosts"
 
 /**
  * Server-side preview payloads for templates.
@@ -10,10 +11,9 @@ import type { ExportedBingo } from "@/lib/bingo-template-schema"
 
 export const MASKED_TILE_TITLE = "???"
 
-/** Hosts `next.config.js` allows for `next/image`. */
+/** Hosts `next.config.mjs` allows for `next/image`. */
 const ALLOWED_IMAGE_HOSTS = new Set([
-  "oldschool.runescape.wiki",
-  "runescape.wiki",
+  ...WIKI_HOSTS,
   "cdn.discordapp.com",
   "avatars.discordapp.com",
   "avatars.githubusercontent.com",

@@ -12,6 +12,8 @@
  *   switchable by restarting the container.
  */
 
+import { WIKI_HOSTS } from "./wiki-hosts.js"
+
 /**
  * CSP mode, from the `CSP_MODE` env var:
  * - `report-only` (default) sends `Content-Security-Policy-Report-Only`: the
@@ -33,8 +35,8 @@ export function parseCspMode(raw) {
   return "report-only"
 }
 
-/** Hosts the browser loads images from or talks to besides the app itself. */
-const WIKI_HOSTS = ["https://oldschool.runescape.wiki", "https://runescape.wiki"]
+/** Origins the browser loads images from or talks to besides the app itself. */
+const WIKI_ORIGINS = WIKI_HOSTS.map((host) => `https://${host}`)
 
 /**
  * The policy. Why each source:
@@ -64,7 +66,7 @@ export function buildContentSecurityPolicy(options = {}) {
     ["style-src", "'self' 'unsafe-inline'"],
     ["img-src", "'self' data: blob: https:"],
     ["font-src", "'self' data:"],
-    ["connect-src", ["'self'", ...WIKI_HOSTS].join(" ")],
+    ["connect-src", ["'self'", ...WIKI_ORIGINS].join(" ")],
     ["media-src", "'self'"],
     ["worker-src", "'self' blob:"],
     ["manifest-src", "'self'"],
