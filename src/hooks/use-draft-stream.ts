@@ -6,7 +6,11 @@ import { useRouter } from "next/navigation"
 import { initialLiveState, liveReducer } from "@/lib/draft/live"
 import { clockOffsetMs as offsetBetween } from "@/lib/draft/timer"
 import { DRAFT_STREAM_EVENTS, type DraftByeReason } from "@/lib/draft/sse"
-import type { DraftLogEvent, DraftSnapshot } from "@/lib/draft/types"
+import type {
+  DraftLogEvent,
+  DraftSnapshot,
+  DraftStatus,
+} from "@/lib/draft/types"
 
 /**
  * `connecting`: the first connect. `live`: the stream is open. `reconnecting`:
@@ -52,6 +56,9 @@ interface StateBody {
  * 2/4, #216). The transport stays behind this hook so it can be swapped. It
  * stops all traffic once the draft is cancelled or applied.
  *
+ * - When the draft changes phase (it starts, completes, is applied or
+ *   cancelled) it calls `router.refresh()`: the Server Component's parts
+ *   (who may pick, the entry link, the empty state after a cancel) follow.
  * - The stream connects with `?since=<lastSeq>` of the rendered snapshot, so
  *   no event between render and subscribe is lost; the server replays what
  *   happened after it (or answers a snapshot when that is too much).
@@ -90,6 +97,22 @@ export function useDraftStream({ eventId, snapshot }: UseDraftStreamOptions) {
   // all traffic.
   const { status, applied } = live.state
   const enabled = status !== "cancelled" && !(status === "complete" && applied)
+
+  // The server rendered parts of the page depend on the phase of the draft
+  // (the viewer's `canPick` once the captains lead Teams, the header's badge,
+  // the room itself once it is cancelled): when it changes, refresh them.
+  const seenPhase = useRef({ status, applied })
+  useEffect(() => {
+    const previous = seenPhase.current
+    seenPhase.current = { status, applied }
+    const preStart = (s: DraftStatus) => s === "setup" || s === "open"
+    const changed =
+      (preStart(previous.status) && !preStart(status)) ||
+      (status === "cancelled" && previous.status !== "cancelled") ||
+      (status === "complete" && previous.status !== "complete") ||
+      (applied && !previous.applied)
+    if (changed) routerRef.current.refresh()
+  }, [status, applied])
 
   // A newer snapshot from the server (after router.refresh()) replaces the state.
   const [seenSnapshot, setSeenSnapshot] = useState(snapshot)

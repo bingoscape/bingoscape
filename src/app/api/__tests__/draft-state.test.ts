@@ -13,8 +13,10 @@ import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
 import { draftPoolEntries, draftTeamSlots, drafts } from "@/server/db/schema"
 import { resetRateLimits } from "@/server/rate-limit"
+import { createDraft, startDraft } from "@/server/draft/core"
 import {
   createDraftWorld,
+  draftSettings,
   startedDraft,
   type DraftWorld,
 } from "@/server/__tests__/helpers/draft-fixture"
@@ -89,6 +91,45 @@ describe("state", () => {
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({ draft: null })
     expect(response.headers.get("ETag")).toBeTruthy()
+  })
+
+  it("lets a waiting client see the draft appear and start (the lobby's contract)", async () => {
+    signInAs(w.players[0]!)
+    const none = await call(w.eventId)
+    const noneEtag = none.headers.get("ETag")!
+    expect((await none.json()).draft).toBeNull()
+    // Nothing happened: the waiting room costs a 304.
+    expect(
+      (await call(w.eventId, "", { "If-None-Match": noneEtag })).status
+    ).toBe(304)
+
+    // A manager creates the draft: the same ETag no longer matches.
+    const manager = await w.actorOf(w.manager)
+    const created = await db.transaction((tx) =>
+      createDraft(tx, {
+        eventId: w.eventId,
+        actor: manager,
+        settings: draftSettings(w),
+      })
+    )
+    if (!created.success) throw new Error(created.error)
+    const appeared = await call(w.eventId, "", { "If-None-Match": noneEtag })
+    expect(appeared.status).toBe(200)
+    const setupEtag = appeared.headers.get("ETag")!
+    expect(setupEtag).not.toBe(noneEtag)
+    expect((await appeared.json()).draft).toMatchObject({
+      draftId: created.draftId,
+      state: { status: "setup" },
+    })
+
+    // Starting it changes the answer again.
+    const started = await db.transaction((tx) =>
+      startDraft(tx, { draftId: created.draftId, actor: manager })
+    )
+    if (!started.success) throw new Error(started.error)
+    const running = await call(w.eventId, "", { "If-None-Match": setupEtag })
+    expect(running.status).toBe(200)
+    expect((await running.json()).draft.state.status).toBe("in_progress")
   })
 
   it("returns the snapshot with ratings, names and the order", async () => {

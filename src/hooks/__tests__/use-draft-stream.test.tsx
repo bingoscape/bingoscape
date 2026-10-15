@@ -1,4 +1,5 @@
 import { act, renderHook } from "@testing-library/react"
+import { useRouter } from "next/navigation"
 
 import {
   backoffDelay,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/draft/__tests__/draft-fixtures"
 
 const fetchMock = jest.fn()
+const refresh = jest.fn()
 
 const jsonResponse = (body: unknown, etag?: string) => ({
   ok: true,
@@ -49,6 +51,10 @@ beforeEach(() => {
   ;(global as unknown as { EventSource: unknown }).EventSource = FakeEventSource
   global.fetch = fetchMock as unknown as typeof fetch
   fetchMock.mockReset()
+  refresh.mockReset()
+  jest
+    .mocked(useRouter)
+    .mockReturnValue({ refresh } as unknown as ReturnType<typeof useRouter>)
   // By default nothing changed on the server.
   fetchMock.mockResolvedValue({
     ok: true,
@@ -273,5 +279,67 @@ describe("useDraftStream", () => {
     expect(result.current.live.state.status).toBe("cancelled")
     expect(result.current.active).toBe(false)
     expect(source.closed).toBe(true)
+  })
+
+  describe("router.refresh() on a change of phase", () => {
+    const at = "2026-01-01T00:00:00.000Z"
+    const event = (
+      seq: number,
+      type: "cancelled" | "completed" | "applied"
+    ): DraftLogEvent =>
+      ({
+        seq,
+        type,
+        actorUserId: "manager",
+        at,
+        payload:
+          type === "cancelled"
+            ? { deletedTeamIds: [], keptTeamIds: [] }
+            : type === "applied"
+              ? { applied: [], skipped: [] }
+              : {},
+      }) as DraftLogEvent
+
+    it("refreshes when a draft in setup starts, so the captains can pick", () => {
+      setup(snapshotOf([created]))
+      act(() => FakeEventSource.last.open())
+      expect(refresh).not.toHaveBeenCalled()
+      emitDraft(started)
+      expect(refresh).toHaveBeenCalledTimes(1)
+    })
+
+    it("refreshes when a missed start arrives as a snapshot, without looping", () => {
+      const { rerender } = setup(snapshotOf([created]))
+      expect(refresh).not.toHaveBeenCalled()
+      act(() => FakeEventSource.last.emit("reset", { draft: snapshot0 }))
+      expect(refresh).toHaveBeenCalledTimes(1)
+      // The refreshed page brings the same state again: no second refresh.
+      rerender({ snapshot: { ...snapshot0 } })
+      expect(refresh).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not refresh for picks or on the first render of a live draft", () => {
+      setup()
+      act(() => FakeEventSource.last.open())
+      emitDraft(pickEvent(1))
+      emitDraft(pickEvent(2))
+      expect(refresh).not.toHaveBeenCalled()
+    })
+
+    it("refreshes when the draft completes and when it is applied", () => {
+      setup()
+      act(() => FakeEventSource.last.open())
+      emitDraft(event(10, "completed"))
+      expect(refresh).toHaveBeenCalledTimes(1)
+      emitDraft(event(11, "applied"))
+      expect(refresh).toHaveBeenCalledTimes(2)
+    })
+
+    it("refreshes when the draft is cancelled", () => {
+      setup()
+      act(() => FakeEventSource.last.open())
+      emitDraft(event(10, "cancelled"))
+      expect(refresh).toHaveBeenCalledTimes(1)
+    })
   })
 })
