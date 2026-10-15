@@ -28,6 +28,7 @@ import type {
   DraftPoolStatus,
   DraftStatus,
 } from "../../lib/draft/constants"
+import type { OsrsImageCacheStatus } from "../../lib/osrs-image-cache-status"
 
 export const createTable = pgTableCreator((name) => `bingoscape-next_${name}`)
 
@@ -1982,3 +1983,37 @@ export const draftEvents = createTable(
 )
 
 export type DraftEventRow = typeof draftEvents.$inferSelect
+
+/**
+ * State of the OSRS Wiki image cache (epic #226). One row per wiki image: the
+ * `key` is the normalised path under `/images/` (see `src/lib/osrs-image.ts`),
+ * the file itself lives in the cache volume under `file_name`. `not_found` and
+ * `error` rows record a failed fetch; nothing asks the wiki again before
+ * `retry_after`. Only the image cache reads or writes this table. The CHECK
+ * constraint on `status` exists only in the migration (drizzle-kit 0.24 does
+ * not emit check()).
+ */
+export const osrsImageCache = createTable(
+  "osrs_image_cache",
+  {
+    key: text("key").primaryKey(),
+    status: text("status").$type<OsrsImageCacheStatus>().notNull(),
+    fileName: text("file_name"),
+    contentType: varchar("content_type", { length: 100 }),
+    bytes: integer("bytes"),
+    etag: text("etag"),
+    lastModified: text("last_modified"),
+    fetchedAt: timestamp("fetched_at", { mode: "date", withTimezone: true }),
+    refreshedAt: timestamp("refreshed_at", {
+      mode: "date",
+      withTimezone: true,
+    }),
+    attempts: integer("attempts").default(0).notNull(),
+    retryAfter: timestamp("retry_after", { mode: "date", withTimezone: true }),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+)
+
+export type OsrsImageCacheRow = typeof osrsImageCache.$inferSelect
