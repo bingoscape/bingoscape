@@ -57,6 +57,7 @@ jobs:
           RBAC_READ_POLICY: ${{ secrets.RBAC_READ_POLICY }}
           CSP_MODE: ${{ secrets.CSP_MODE }}
           NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
+          OSRS_WIKI_CONTACT_EMAIL: ${{ secrets.OSRS_WIKI_CONTACT_EMAIL }}
         run: |
           set -euo pipefail
 
@@ -112,6 +113,7 @@ jobs:
           emit RBAC_READ_POLICY "$RBAC_READ_POLICY"
           emit CSP_MODE "$CSP_MODE"
           emit NEXT_SERVER_ACTIONS_ENCRYPTION_KEY "$NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"
+          emit OSRS_WIKI_CONTACT_EMAIL "$OSRS_WIKI_CONTACT_EMAIL"
           # IMAGE_TAG is added by scripts/deploy.sh on the server
           chmod 600 "$out"
 
@@ -120,6 +122,9 @@ jobs:
           fi
           if [ -z "$NEXT_SERVER_ACTIONS_ENCRYPTION_KEY" ]; then
             echo "::warning::NEXT_SERVER_ACTIONS_ENCRYPTION_KEY is not set; server action IDs change on every build."
+          fi
+          if [ -z "$OSRS_WIKI_CONTACT_EMAIL" ]; then
+            echo "::warning::OSRS_WIKI_CONTACT_EMAIL is not set; requests to the OSRS Wiki identify as unknown@example.com."
           fi
 
       - name: Upload files to server

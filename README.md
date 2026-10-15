@@ -184,7 +184,8 @@ Variables are validated in `src/env.js`. Some are read directly from `process.en
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`   | no                   | Enables Google sign-in. Callback `{NEXTAUTH_URL}/api/auth/callback/google`.                                                                                            |
 | `SUPER_ADMIN_EMAILS`                         | no                   | Comma-separated super-admin emails, compared case-insensitively with the email stored in the database. If empty, nobody is a super admin.                              |
 | `CRON_SECRET`                                | for scheduled unlock | Bearer token for `GET /api/cron/unlock`. The route answers 401 when it is unset. `scripts/setup-unlock-cron.sh` sets up a cron job that calls it every minute.         |
-| `OSRS_WIKI_CONTACT_EMAIL`                    | recommended          | Contact address in the User-Agent of OSRS Wiki price requests. Defaults to `unknown@example.com`.                                                                      |
+| `OSRS_WIKI_CONTACT_EMAIL`                    | recommended          | Contact address in the User-Agent of requests to the OSRS Wiki (GE prices, wiki image cache). Defaults to `unknown@example.com`. In GitHub Actions it is a secret of the same name. |
+| `OSRS_IMAGE_CACHE_DIR`                       | no                   | Directory of the OSRS Wiki image cache. Defaults to `./.data/osrs-images`; `docker-compose.yml` sets `/app/data/osrs-images`.                                          |
 | `WISEOLDMAN_API_KEY`                         | no                   | Wise Old Man API key for higher rate limits.                                                                                                                           |
 | `NEXT_PUBLIC_BASE_URL`                       | no                   | Base URL used for public event page metadata. Defaults to `https://bingoscape.org`.                                                                                    |
 | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`         | production (Docker)  | Passed through by `docker-compose.yml`.                                                                                                                                |
@@ -280,6 +281,7 @@ Production runs as Docker containers on a Debian host behind nginx and certbot (
 - `scripts/deploy.sh` runs on the server: pull images, pre-deploy backup (skipped if PostgreSQL is not running yet), run migrations, replace only the app container, wait for a healthy `/api/uptime`, record the tag in `~/bingoscape/.deployed-tag`. A failure after the app was replaced restores the previous image.
 - `migrate.yml` runs migrations without a deploy. It is manual and requires typing `MIGRATE`.
 - Uploads are stored on the host in `./uploads`, mounted at `/app/public/uploads`.
+- The OSRS Wiki image cache directory is `./osrs-image-cache` on the host, mounted at `/app/data/osrs-images`. `scripts/deploy.sh` creates it with owner `1001`.
 - Dependabot opens weekly PRs for GitHub Actions, Docker base images (Node stays on major 24) and npm.
 
 Setup guides: [docs/PRODUCTION-SETUP.md](docs/PRODUCTION-SETUP.md), [docs/GITHUB-ACTIONS.md](docs/GITHUB-ACTIONS.md), [docs/GITHUB-SECRETS.md](docs/GITHUB-SECRETS.md), [docs/DEBIAN-USER-SETUP.md](docs/DEBIAN-USER-SETUP.md), [docs/DATABASE-MIGRATION.md](docs/DATABASE-MIGRATION.md).
