@@ -1,0 +1,25 @@
+src/app/api/osrs-image/[...key]/route.ts
+  s_416b87f1576e0e::t_3a9bbb6da4fd9c 107
+  s_416b87f1576e0e::t_29b8d252d21202 1-8,14-30,33-106,108-113
+  s_416b87f1576e0e::t_52403c08c86865 9-13,31-32
+src/app/api/__tests__/osrs-image-route.test.ts
+  s_416b87f1576e0e::t_4efc8e61a8cb3f 1-183
+src/server/authz/registry.ts
+  s_416b87f1576e0e::t_6b10e71c3f610d 457-459
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0e8e6913259245e958268b564a4d81024a003540",
+  "prompts": {},
+  "sessions": {
+    "s_416b87f1576e0e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2271d1e9-7c90-43e2-9fac-7e7287ac3299",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
