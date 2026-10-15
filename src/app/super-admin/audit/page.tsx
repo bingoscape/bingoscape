@@ -32,6 +32,7 @@ const TARGET_PATH: Record<string, string> = {
   user: "/super-admin/users",
   clan: "/super-admin/clans",
   event: "/super-admin/events",
+  image: "/super-admin/image-cache",
 }
 
 const OUTCOME_VARIANT = {
@@ -86,9 +87,19 @@ const columns: AdminColumn<AuditRow>[] = [
     cell: (row) => {
       const base = TARGET_PATH[row.targetType]
       const label = row.targetLabel ?? row.targetId ?? "Unknown"
-      // Deleted targets no longer have a page.
+      // Deleted targets no longer have a page; images have no detail page, the
+      // list is searched for the key; the bulk refresh targets the whole list.
       const linkable =
-        base && row.targetId && !row.action.endsWith(".delete")
+        base &&
+        row.targetId &&
+        !row.action.endsWith(".delete") &&
+        !row.action.endsWith(".purge")
+      const href =
+        row.targetType === "image"
+          ? row.action.startsWith("image.bulk.")
+            ? base
+            : `${base}?q=${encodeURIComponent(row.targetId ?? "")}`
+          : `${base}/${row.targetId}`
       return (
         <div className="min-w-0 text-sm">
           <span className="text-muted-foreground text-xs">
@@ -96,7 +107,7 @@ const columns: AdminColumn<AuditRow>[] = [
           </span>
           {linkable ? (
             <Link
-              href={`${base}/${row.targetId}`}
+              href={href ?? ""}
               className="underline-offset-4 hover:underline"
             >
               {label}
