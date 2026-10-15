@@ -1,0 +1,23 @@
+src/lib/osrs-ge-prices.ts
+  s_416b87f1576e0e::t_4ea184051380e3 9,44
+src/lib/osrs-wiki-client.ts
+  s_416b87f1576e0e::t_565d32f4092025 1-30
+src/lib/__tests__/osrs-wiki-client.test.ts
+  s_416b87f1576e0e::t_2a1b4c0b80361f 1-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "49b642bca8cd49613c67193a3eea3970f5c6c01a",
+  "prompts": {},
+  "sessions": {
+    "s_416b87f1576e0e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2271d1e9-7c90-43e2-9fac-7e7287ac3299",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
