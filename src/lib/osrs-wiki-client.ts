@@ -12,9 +12,9 @@ export const DEFAULT_OSRS_IMAGE_CACHE_DIR = "./.data/osrs-images"
 /** User-Agent for every request to a wiki server. */
 export function getWikiUserAgent(): string {
   // `||`: docker compose passes an unset secret through as an empty string.
-  const contactEmail =
+  const contact =
     process.env.OSRS_WIKI_CONTACT_EMAIL?.trim() || "unknown@example.com"
-  return `Bingoscape/1.0.0 - ${contactEmail}`
+  return `Bingoscape/1.0.0 - ${contact}`
 }
 
 /** Request headers every wiki request needs. */

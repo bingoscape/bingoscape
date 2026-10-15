@@ -67,7 +67,7 @@ beforeEach(() => {
   resetRateLimits()
   resetWikiSearchCache()
   mockedSession.mockResolvedValue({ user: { id: "user-1" } })
-  process.env.OSRS_WIKI_CONTACT_EMAIL = "ops@example.test"
+  process.env.OSRS_WIKI_CONTACT_EMAIL = "ops_handle"
 })
 
 describe("searchWikiImages", () => {
@@ -144,7 +144,7 @@ describe("searchWikiImages", () => {
     )
     for (const init of [searchInit, infoInit]) {
       expect(init.headers).toEqual({
-        "User-Agent": "Bingoscape/1.0.0 - ops@example.test",
+        "User-Agent": "Bingoscape/1.0.0 - ops_handle",
       })
     }
   })

@@ -12,11 +12,11 @@ afterEach(() => {
 })
 
 describe("getWikiUserAgent", () => {
-  it("puts the contact address from the env into the User-Agent", () => {
-    process.env.OSRS_WIKI_CONTACT_EMAIL = "ops@example.test"
-    expect(getWikiUserAgent()).toBe("Bingoscape/1.0.0 - ops@example.test")
+  it("puts the contact from the env into the User-Agent", () => {
+    process.env.OSRS_WIKI_CONTACT_EMAIL = "ops_handle"
+    expect(getWikiUserAgent()).toBe("Bingoscape/1.0.0 - ops_handle")
     expect(wikiRequestHeaders()).toEqual({
-      "User-Agent": "Bingoscape/1.0.0 - ops@example.test",
+      "User-Agent": "Bingoscape/1.0.0 - ops_handle",
     })
   })
 
