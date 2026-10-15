@@ -35,7 +35,7 @@ const MAX_PATH_LENGTH = 512
 
 /** `https://oldschool.runescape.wiki`, with nothing but `/`, `?` or `#` after it. */
 const ORIGIN = new RegExp(
-  `^https://${OSRS_WIKI_HOST.replaceAll(".", "\.")}(?=[/?#]|$)`,
+  `^https://${OSRS_WIKI_HOST.replaceAll(".", "\\.")}(?=[/?#]|$)`,
   "i"
 )
 

@@ -80,6 +80,7 @@ describe("parseWikiImageUrl", () => {
       "https://oldschool.runescape.wiki.evil.example/images/A.png",
     ],
     ["host prefix", "https://eviloldschool.runescape.wiki/images/A.png"],
+    ["unescaped dot", "https://oldschoolXrunescape.wiki/images/A.png"],
     ["userinfo", "https://user:pw@oldschool.runescape.wiki/images/A.png"],
     [
       "userinfo trick",
