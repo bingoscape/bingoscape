@@ -1,0 +1,33 @@
+docs/OSRS-IMAGE-CACHE.md
+  s_416b87f1576e0e::t_eca2fa2d6b2d88 1-85
+AGENTS.md
+  s_416b87f1576e0e::t_a9f1593fad365c 35,87,197
+docs/GITHUB-ACTIONS.md
+  s_416b87f1576e0e::t_febddd99fccd5a 158
+docs/PRODUCTION-SETUP.md
+  s_416b87f1576e0e::t_a9f1593fad365c 972-973
+  s_416b87f1576e0e::t_febddd99fccd5a 573-574
+docs/GITHUB-SECRETS.md
+  s_416b87f1576e0e::t_febddd99fccd5a 61
+.env.example
+  s_416b87f1576e0e::t_3a69807990f54d 123-125,133-134
+README.md
+  s_416b87f1576e0e::t_a9f1593fad365c 218,262,274,286,289,315
+  s_416b87f1576e0e::t_3a69807990f54d 189
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cdf94fe4f876e21435b0ac9d3389e4938331ee94",
+  "prompts": {},
+  "sessions": {
+    "s_416b87f1576e0e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2271d1e9-7c90-43e2-9fac-7e7287ac3299",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
