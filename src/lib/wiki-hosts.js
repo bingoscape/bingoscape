@@ -1,9 +1,9 @@
 /**
  * The RuneScape wiki hosts the app talks to, in one place.
  *
- * Plain ESM JavaScript so `next.config.mjs` and `security-headers.js` can
- * import it (they run before any TypeScript is compiled); the TypeScript
- * modules (`osrs-image.ts`, `template-preview.ts`) import it through `@/lib`.
+ * Plain ESM JavaScript so `next.config.mjs` can import it (it runs before any
+ * TypeScript is compiled); the TypeScript modules (`osrs-image.ts`,
+ * `template-preview.ts`, `wiki-image-search.ts`) import it through `@/lib`.
  */
 
 /**
@@ -15,7 +15,8 @@ export const OSRS_WIKI_HOST = "oldschool.runescape.wiki"
 
 /**
  * The RuneScape 3 wiki. Its images are still hotlinked and not cached (the
- * default RS3 images and the RS3 image search of the Tile editor use it).
+ * default RS3 images and the server-side RS3 image search of the Tile editor
+ * use it).
  */
 export const RS3_WIKI_HOST = "runescape.wiki"
 

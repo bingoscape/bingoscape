@@ -3,6 +3,7 @@
 
 import { useRouter } from "next/navigation"
 import { syncTrackerProgress } from "@/app/actions/tracker"
+import { searchWikiImages } from "@/app/actions/wiki-image-search"
 import { toast } from "@/hooks/use-toast"
 
 import { useCallback, useMemo } from "react"
@@ -39,6 +40,7 @@ import { GoalProgressTree } from "./goal-progress-tree"
 import { CompactGoalTree } from "./compact-goal-tree"
 import { buildGoalTree, getTeamGoalProgress } from "@/lib/goal-tree"
 import type { Tile, Team } from "@/types/model"
+import type { WikiImage } from "@/lib/wiki-image-search"
 import { getOptimizedImageUrl } from "@/lib/utils"
 
 type EditableTileFields = {
@@ -73,12 +75,6 @@ interface TileDetailsTabProps {
   onUpdateProgress: (goalId: string, teamId: string, newValue: number) => void
 }
 
-interface WikiImage {
-  title: string
-  url: string
-  thumbnail: string
-}
-
 function isValidImageUrl(url: string): boolean {
   try {
     const res = new URL(url)
@@ -105,13 +101,6 @@ export function TileDetailsTab({
   const [isEditing, setIsEditing] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isValidImage, setIsValidImage] = useState(true)
-
-  // Helper to get wiki API URL based on game type
-  const getWikiApiUrl = useCallback(() => {
-    return gameType === "osrs"
-      ? "https://oldschool.runescape.wiki/api.php"
-      : "https://runescape.wiki/api.php"
-  }, [gameType])
 
   // Wiki image search
   const [searchQuery, setSearchQuery] = useState("")
@@ -164,6 +153,8 @@ export function TileDetailsTab({
     [onEditTile]
   )
 
+  // The search runs on the server (`searchWikiImages`): cached, rate limited
+  // and with the wiki host fixed by the game. The browser never calls the wiki.
   const searchOSRSWikiImages = async () => {
     if (!searchQuery.trim()) return
 
@@ -171,46 +162,23 @@ export function TileDetailsTab({
     setSearchResults([])
 
     try {
-      const wikiApiUrl = getWikiApiUrl()
-      // Using the Wiki API to search for images
-      const apiUrl = `${wikiApiUrl}?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&srnamespace=6&format=json&origin=*`
-      const response = await fetch(apiUrl)
-
-      const data = await response.json()
-
-      if (data.query && data.query.search) {
-        const imagePromises = data.query.search.map(async (result: any) => {
-          const title = result.title.replace("File:", "")
-
-          // Get image info including URL
-          const imageInfoResponse = await fetch(
-            `${wikiApiUrl}?action=query&titles=${encodeURIComponent(
-              result.title
-            )}&prop=imageinfo&iiprop=url|thumburl&iiurlwidth=100&format=json&origin=*`
-          )
-
-          const imageData = await imageInfoResponse.json()
-          const pages = imageData.query.pages
-          const pageId = Object.keys(pages)[0]
-
-          if (pages[pageId!].imageinfo && pages[pageId!].imageinfo[0]) {
-            const imageInfo = pages[pageId!].imageinfo[0]
-            return {
-              title,
-              url: imageInfo.url,
-              thumbnail: imageInfo.thumburl,
-            }
-          }
-          return null
+      const result = await searchWikiImages(searchQuery, gameType)
+      if (result.success) {
+        setSearchResults(result.images)
+      } else {
+        toast({
+          title: "Wiki search failed",
+          description: result.error,
+          variant: "destructive",
         })
-
-        const images = (await Promise.all(imagePromises)).filter(
-          Boolean
-        ) as WikiImage[]
-        setSearchResults(images)
       }
     } catch (error) {
       console.error("Error searching Wiki:", error)
+      toast({
+        title: "Wiki search failed",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      })
     } finally {
       setIsSearching(false)
     }
