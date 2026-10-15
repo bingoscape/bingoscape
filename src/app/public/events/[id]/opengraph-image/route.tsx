@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og"
 import { logger } from "@/lib/logger"
+import { getInlineImageSrc } from "@/server/osrs-image/inline"
 import type { NextRequest } from "next/server"
 
 export const runtime = "nodejs"
@@ -41,6 +42,22 @@ export async function GET(
     const bingos = await getPublicBingos(params.id)
     const firstBingo =
       bingos.length > 0 ? await getPublicBingoDetails(bingos[0]!.id) : null
+
+    // Satori fetches `<img src>` itself: serve wiki images from the cache as
+    // data URIs (null: not available, the tile shows its title instead).
+    const tileImages = new Map<string, string | null>()
+    if (firstBingo) {
+      const urls = new Set(
+        firstBingo.tiles.flatMap((tile) =>
+          tile.headerImage ? [tile.headerImage] : []
+        )
+      )
+      await Promise.all(
+        [...urls].map(async (url) =>
+          tileImages.set(url, await getInlineImageSrc(url))
+        )
+      )
+    }
 
     return new ImageResponse(
       <div
@@ -251,10 +268,11 @@ export async function GET(
                             overflow: "hidden",
                           }}
                         >
-                          {tile?.headerImage ? (
+                          {tile?.headerImage &&
+                          tileImages.get(tile.headerImage) ? (
                             // oxlint-disable-next-line next/no-img-element -- rendered by Satori (ImageResponse), where next/image is unsupported
                             <img
-                              src={tile.headerImage}
+                              src={tileImages.get(tile.headerImage) ?? undefined}
                               alt={tile.title}
                               style={{
                                 width: "100%",
