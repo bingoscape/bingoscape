@@ -1,0 +1,23 @@
+src/app/public/events/[id]/opengraph-image/route.tsx
+  s_416b87f1576e0e::t_37a4a788ec2559 3,46-61,271-272,275
+src/server/osrs-image/inline.ts
+  s_416b87f1576e0e::t_37a4a788ec2559 1-41
+src/server/__tests__/osrs-image-inline.test.ts
+  s_416b87f1576e0e::t_db013c4b14cf6e 1-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "89b3bd58ce574e6e5bb26876ab4abd6a3d9062cf",
+  "prompts": {},
+  "sessions": {
+    "s_416b87f1576e0e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2271d1e9-7c90-43e2-9fac-7e7287ac3299",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
