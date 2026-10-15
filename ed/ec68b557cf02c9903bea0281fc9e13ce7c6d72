@@ -1,0 +1,27 @@
+src/components/tile-details-tab.tsx
+  s_416b87f1576e0e::t_95f3ea7ce862b3 6,43,156-157,165-172,177-181
+src/lib/__tests__/security-headers.test.ts
+  s_416b87f1576e0e::t_b29e9899d4b5dd 72-73
+src/lib/security-headers.js
+  s_416b87f1576e0e::t_b29e9899d4b5dd 46-47,64
+src/components/__tests__/tile-details-tab-wiki-search.test.tsx
+  s_416b87f1576e0e::t_452b7a91f41f14 1-117
+src/lib/wiki-hosts.js
+  s_416b87f1576e0e::t_aad027c7cae4e3 4-6,18-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "edec68b557cf02c9903bea0281fc9e13ce7c6d72",
+  "prompts": {},
+  "sessions": {
+    "s_416b87f1576e0e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2271d1e9-7c90-43e2-9fac-7e7287ac3299",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
