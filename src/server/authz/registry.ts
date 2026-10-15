@@ -416,6 +416,9 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
   [`${A}super-admin.ts#deleteEvent`]: superAdmin(SUPER_ADMIN),
   [`${A}super-admin.ts#removeEventParticipant`]: superAdmin(SUPER_ADMIN),
   [`${A}super-admin.ts#updateEventParticipantRole`]: superAdmin(SUPER_ADMIN),
+  [`${A}osrs-image-cache.ts#refreshImage`]: superAdmin(SUPER_ADMIN),
+  [`${A}osrs-image-cache.ts#refreshAllImages`]: superAdmin(SUPER_ADMIN),
+  [`${A}osrs-image-cache.ts#purgeImage`]: superAdmin(SUPER_ADMIN),
 
   // --- route handlers -----------------------------------------------------
   [`${R}auth/[...nextauth]/route.ts#GET`]: {
