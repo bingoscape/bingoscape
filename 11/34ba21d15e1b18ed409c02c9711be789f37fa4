@@ -1,0 +1,38 @@
+.dockerignore
+  s_416b87f1576e0e::t_ccde03e8804fb4 68-71
+.gitignore
+  s_416b87f1576e0e::t_ccde03e8804fb4 47-49
+docker-compose.yml
+  s_416b87f1576e0e::t_ccde03e8804fb4 76-79,90-92
+README.md
+  s_416b87f1576e0e::t_6079261ba9c1d5 187-188,284
+docs/GITHUB-SECRETS.md
+  s_416b87f1576e0e::t_ccde03e8804fb4 60
+.env.example
+  s_416b87f1576e0e::t_ccde03e8804fb4 119-124
+scripts/deploy.sh
+  s_416b87f1576e0e::t_ccde03e8804fb4 167-173
+.github/workflows/deploy.yml
+  s_416b87f1576e0e::t_ccde03e8804fb4 60,116,126-127
+  s_416b87f1576e0e::t_c444662f488832 128
+scripts/init-server.sh
+  s_416b87f1576e0e::t_ccde03e8804fb4 32-41
+Dockerfile
+  s_416b87f1576e0e::t_ccde03e8804fb4 61-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1134ba21d15e1b18ed409c02c9711be789f37fa4",
+  "prompts": {},
+  "sessions": {
+    "s_416b87f1576e0e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2271d1e9-7c90-43e2-9fac-7e7287ac3299",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
