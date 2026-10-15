@@ -4,6 +4,7 @@
 import fs from "node:fs"
 import path from "node:path"
 
+import { WIKI_HOSTS } from "@/lib/wiki-hosts"
 import {
   STATIC_SECURITY_HEADERS,
   buildContentSecurityPolicy,
@@ -94,6 +95,27 @@ describe("Content-Security-Policy", () => {
     expect(hosts.length).toBeGreaterThan(0)
     // img-src allows every https host, which includes all of them.
     expect(buildContentSecurityPolicy()).toContain("img-src 'self' data: blob: https:")
+  })
+
+  it("names no wiki host, so the OSRS_IMAGE_PROXY=false rollback needs no CSP change", () => {
+    const csp = buildContentSecurityPolicy()
+    for (const host of WIKI_HOSTS) expect(csp).not.toContain(host)
+    // The wiki images are served by the app itself now (same origin) ...
+    expect(csp).toContain("img-src 'self'")
+    // ... and with the flag off, wiki URLs are still covered by https:.
+    expect(csp).toContain("https:")
+  })
+
+  it("keeps the wiki hosts in remotePatterns: the optimiser needs them for the rollback and RS3", () => {
+    const config = fs.readFileSync(
+      path.resolve(__dirname, "../../../next.config.mjs"),
+      "utf8"
+    )
+    // remotePatterns is frozen at build time and cannot follow the runtime
+    // OSRS_IMAGE_PROXY flag, so the OSRS host stays (next/image would answer
+    // 400 for wiki URLs when the flag is off); RS3 images are not cached.
+    expect(config).toMatch(/hostname: OSRS_WIKI_HOST/)
+    expect(config).toMatch(/hostname: RS3_WIKI_HOST/)
   })
 })
 
