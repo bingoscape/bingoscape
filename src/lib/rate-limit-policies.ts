@@ -60,6 +60,18 @@ export const RATE_LIMITS = {
    * walks the key space.
    */
   osrsImageMiss: { limit: 120, windowMs: MINUTE },
+  /**
+   * Admin refresh of one cached wiki image (`refreshImage`), per admin. Each
+   * one is a request to the wiki; a human clicking through a list stays far
+   * below this.
+   */
+  osrsImageRefresh: { limit: 20, windowMs: MINUTE },
+  /**
+   * Starting or resuming the bulk refresh (`refreshAllImages`), per admin. A
+   * run is paced at about 1 request/s by itself; this only stops a start/stop
+   * loop from re-marking every image over and over.
+   */
+  osrsImageRefreshAll: { limit: 3, windowMs: HOUR },
 } as const satisfies Record<string, RateLimitPolicy>
 
 export type RateLimitPolicyName = keyof typeof RATE_LIMITS

@@ -595,7 +595,29 @@ export function createOsrsImageCache(options: OsrsImageCacheOptions = {}) {
     }
   }
 
-  return { getCachedImage, conditionalRefresh, resolveCacheFile }
+  /**
+   * Forgets one image (admin purge, phase 4): deletes the row and the file, so
+   * the next request fetches it again. Runs in the caller's transaction (the
+   * admin action's, so the audit row commits with it) under the same per-key
+   * lock as a fetch: a request that is fetching the key finishes first, one
+   * that arrives later waits and then fetches fresh. Returns the deleted row,
+   * or null when there was none.
+   */
+  async function purge(tx: Tx, key: string): Promise<OsrsImageCacheRow | null> {
+    await lockKey(tx, key)
+    const [row] = await tx
+      .delete(osrsImageCache)
+      .where(eq(osrsImageCache.key, key))
+      .returning()
+    if (!row) return null
+    if (row.fileName) {
+      const file = resolveCacheFile(row.fileName)
+      if (file) await fs.rm(file, { force: true })
+    }
+    return row
+  }
+
+  return { getCachedImage, conditionalRefresh, purge, resolveCacheFile }
 }
 
 const defaultCache = createOsrsImageCache()
@@ -605,3 +627,6 @@ export const getCachedImage = defaultCache.getCachedImage
 
 /** Revalidates a cached image against the wiki with a conditional request. */
 export const conditionalRefresh = defaultCache.conditionalRefresh
+
+/** Deletes a cached image (row and file) inside the given transaction. */
+export const purgeCachedImage = defaultCache.purge
