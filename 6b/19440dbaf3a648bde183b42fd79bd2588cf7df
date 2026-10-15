@@ -1,0 +1,33 @@
+src/server/super-admin/queries.ts
+  s_416b87f1576e0e::t_02c57498f6cd13 1332-1334
+  s_416b87f1576e0e::t_979fb537586b5e 33,1282-1331,1335-1409,1411
+  s_416b87f1576e0e::t_29c53405baf7f6 1410
+src/components/super-admin/image-cache-bulk-controls.tsx
+  s_416b87f1576e0e::t_966b48b0f42d31 1-93
+src/lib/super-admin-format.ts
+  s_416b87f1576e0e::t_db7ac504a71df6 86-106
+src/app/super-admin/audit/page.tsx
+  s_416b87f1576e0e::t_13ab4d65f946d1 35,90-91,93-102,110
+src/components/super-admin/admin-nav.tsx
+  s_416b87f1576e0e::t_830b6f43c6af45 8,26,31,43
+src/components/super-admin/image-cache-row-actions.tsx
+  s_416b87f1576e0e::t_966b48b0f42d31 1-140
+src/app/super-admin/image-cache/page.tsx
+  s_416b87f1576e0e::t_6c243a13a0128f 1-249
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6b19440dbaf3a648bde183b42fd79bd2588cf7df",
+  "prompts": {},
+  "sessions": {
+    "s_416b87f1576e0e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2271d1e9-7c90-43e2-9fac-7e7287ac3299",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
