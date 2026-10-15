@@ -1,0 +1,30 @@
+src/lib/wiki-hosts.js
+  s_416b87f1576e0e::t_95935cd39e7767 1-23
+src/lib/security-headers.js
+  s_416b87f1576e0e::t_95935cd39e7767 15-16,38-39,69
+src/lib/template-preview.ts
+  s_416b87f1576e0e::t_f40658db4867df 2,14,16
+next.config.mjs
+  s_416b87f1576e0e::t_f40658db4867df 2,32,34
+src/lib/osrs-image.ts
+  s_416b87f1576e0e::t_565d32f4092025 70-72,147-149
+  s_416b87f1576e0e::t_4ea184051380e3 1-69,73-146,150-154
+src/lib/__tests__/osrs-image.test.ts
+  s_416b87f1576e0e::t_ddd752f77614dd 1-231
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f303fc66a5220ea258d92b49906960f8bd2803f4",
+  "prompts": {},
+  "sessions": {
+    "s_416b87f1576e0e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2271d1e9-7c90-43e2-9fac-7e7287ac3299",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
