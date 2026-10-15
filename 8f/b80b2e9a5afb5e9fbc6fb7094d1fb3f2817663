@@ -1,0 +1,31 @@
+src/lib/osrs-wiki-client.ts
+  s_416b87f1576e0e::t_af7d55d1e263ee 15,17
+README.md
+  s_416b87f1576e0e::t_af7d55d1e263ee 187
+.env.example
+  s_416b87f1576e0e::t_af7d55d1e263ee 113,115,117
+src/app/actions/__tests__/wiki-image-search.test.ts
+  s_416b87f1576e0e::t_af7d55d1e263ee 70,147
+src/lib/__tests__/osrs-wiki-client.test.ts
+  s_416b87f1576e0e::t_af7d55d1e263ee 15-17,19
+docs/GITHUB-SECRETS.md
+  s_416b87f1576e0e::t_af7d55d1e263ee 61
+docker-compose.yml
+  s_416b87f1576e0e::t_af7d55d1e263ee 76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8fb80b2e9a5afb5e9fbc6fb7094d1fb3f2817663",
+  "prompts": {},
+  "sessions": {
+    "s_416b87f1576e0e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2271d1e9-7c90-43e2-9fac-7e7287ac3299",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
