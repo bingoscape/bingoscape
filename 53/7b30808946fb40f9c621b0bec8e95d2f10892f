@@ -1,0 +1,44 @@
+src/app/events/[id]/(member)/draft/page.tsx
+  s_ef9e7db49e4fa3::t_9c64bedc4dd738 4,14-17,60
+src/hooks/__tests__/use-draft-stream.test.tsx
+  s_ef9e7db49e4fa3::t_9ff0c4ac3a7055 19
+  s_ef9e7db49e4fa3::t_4ec162c635ef49 2
+  s_ef9e7db49e4fa3::t_ee26923230272f 54-57
+  s_ef9e7db49e4fa3::t_ca82e161da913c 283-344
+src/hooks/__tests__/use-draft-lobby.test.tsx
+  s_ef9e7db49e4fa3::t_79fff890824542 1-123
+src/components/event-command-palette.tsx
+  s_ef9e7db49e4fa3::t_6d1e749aafc4d1 174-175,177,179,181-197,199-217,219,384-385,391,407,410-411,414,432,481,529,550-551,565
+src/app/api/__tests__/draft-state.test.ts
+  s_ef9e7db49e4fa3::t_b7f29033ad8ca5 16,19,96-134
+src/hooks/use-draft-stream.ts
+  s_ef9e7db49e4fa3::t_9c64bedc4dd738 9-13,59-61,101-116
+src/components/draft/draft-entry-link.tsx
+  s_ef9e7db49e4fa3::t_da6a255d77286f 10,12,19-23,32-42,44-51,54
+src/components/draft/__tests__/draft-entry-link.test.tsx
+  s_ef9e7db49e4fa3::t_17677da0f95c91 1-74
+src/components/draft/draft-lobby.tsx
+  s_ef9e7db49e4fa3::t_9c64bedc4dd738 1-43
+src/components/__tests__/event-command-palette.test.tsx
+  s_ef9e7db49e4fa3::t_e4b3b0d9fe06bc 41,53,56,59,62,64-65,71,79
+src/hooks/use-draft-lobby.ts
+  s_ef9e7db49e4fa3::t_9c64bedc4dd738 1-66
+src/components/draft/__tests__/draft-lobby.test.tsx
+  s_ef9e7db49e4fa3::t_6d1e749aafc4d1 1-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "537b30808946fb40f9c621b0bec8e95d2f10892f",
+  "prompts": {},
+  "sessions": {
+    "s_ef9e7db49e4fa3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8f2ee1b5-009f-4522-8f4a-8ff1c514dfe0",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
