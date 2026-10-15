@@ -155,6 +155,7 @@ Create the key pair with `ssh-keygen -t ed25519 -C github-actions -f github_acti
 | `.deployed-tag`      | image tag of the last successful deploy                  |
 | `scripts/`           | copied by every deploy (backup, restore, deploy scripts) |
 | `uploads/`           | user uploads, mounted into the app container             |
+| `osrs-image-cache/`  | OSRS Wiki image cache (regenerable, not backed up)       |
 | `backups/`           | database backups                                         |
 
 Old images accumulate on the server (one per deployed tag). Clean up occasionally, e.g. `docker image prune -a --filter "until=720h"` (only removes images not used by a container).
