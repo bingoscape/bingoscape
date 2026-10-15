@@ -1,0 +1,31 @@
+src/server/db/schema.ts
+  s_416b87f1576e0e::t_849c80a6de25b9 31,1986-2019
+src/lib/osrs-image-cache-status.ts
+  s_416b87f1576e0e::t_849c80a6de25b9 1-8
+drizzle/0044_osrs_image_cache.sql
+  s_416b87f1576e0e::t_849c80a6de25b9 10-23
+  s_416b87f1576e0e::t_c887f03e7be280 1-9,24-29
+src/server/__tests__/osrs-image-cache-migration.test.ts
+  s_416b87f1576e0e::t_c887f03e7be280 1-37,43-123
+  s_416b87f1576e0e::t_565d32f4092025 38-42
+drizzle/meta/0044_snapshot.json
+  s_416b87f1576e0e::t_06ab01328bb63a 1-5917
+drizzle/meta/_journal.json
+  s_416b87f1576e0e::t_f4a9bfaf1020fb 312-318
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2812ca5fa9e9adb3732e29ad0de7e8b7501e3e36",
+  "prompts": {},
+  "sessions": {
+    "s_416b87f1576e0e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2271d1e9-7c90-43e2-9fac-7e7287ac3299",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
