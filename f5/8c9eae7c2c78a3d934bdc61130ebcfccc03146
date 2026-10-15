@@ -1,0 +1,41 @@
+docs/GITHUB-SECRETS.md
+  s_416b87f1576e0e::t_db013c4b14cf6e 60
+src/lib/utils.ts
+  s_416b87f1576e0e::t_8a675b25603cc9 4-5,10-14,20
+.github/workflows/deploy.yml
+  s_416b87f1576e0e::t_db013c4b14cf6e 61,118
+src/lib/__tests__/osrs-image-flag-server.test.ts
+  s_416b87f1576e0e::t_2d5cccff64ff7d 1-32
+src/lib/__tests__/template-preview.test.ts
+  s_416b87f1576e0e::t_2d5cccff64ff7d 65-71
+.env.example
+  s_416b87f1576e0e::t_db013c4b14cf6e 119-127
+src/lib/osrs-image.ts
+  s_416b87f1576e0e::t_2c4a438f84883f 139-170,174-175,184
+README.md
+  s_416b87f1576e0e::t_db013c4b14cf6e 188
+src/app/layout.tsx
+  s_416b87f1576e0e::t_4c34b4888da90e 2-5,50-52,56-64
+src/lib/__tests__/utils.test.ts
+  s_416b87f1576e0e::t_2d5cccff64ff7d 1-32
+docker-compose.yml
+  s_416b87f1576e0e::t_db013c4b14cf6e 78-80
+src/lib/__tests__/osrs-image.test.ts
+  s_416b87f1576e0e::t_2d5cccff64ff7d 2-3,5,235-263
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f58c9eae7c2c78a3d934bdc61130ebcfccc03146",
+  "prompts": {},
+  "sessions": {
+    "s_416b87f1576e0e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2271d1e9-7c90-43e2-9fac-7e7287ac3299",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
