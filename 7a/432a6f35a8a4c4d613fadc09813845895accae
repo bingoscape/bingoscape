@@ -1,0 +1,21 @@
+src/lib/__tests__/osrs-image.test.ts
+  s_416b87f1576e0e::t_26146dabd0566e 83
+src/lib/osrs-image.ts
+  s_416b87f1576e0e::t_0bf3c698ceeadf 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7a432a6f35a8a4c4d613fadc09813845895accae",
+  "prompts": {},
+  "sessions": {
+    "s_416b87f1576e0e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2271d1e9-7c90-43e2-9fac-7e7287ac3299",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Sebastian Schubert <sschubert932@gmail.com>"
+    }
+  }
+}
