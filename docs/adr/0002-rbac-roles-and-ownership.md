@@ -117,7 +117,7 @@ Actions return `{ success: true, ... }` or `{ success: false, error, code? }`
 | 5 | Codephrase | Visible to participants (`players`). **Decided**: players need it for the screenshot verification, ADR 0001. |
 | 6 | Management permissions | `management` edits buy-ins and donations but not roles. Kept. |
 | 7 | Submission comments | Managers write; managers and the owning Team read. Kept. |
-| 8 | Two Teams per Player per Event | No: unique `(event_id, user_id)` on `team_members`. Assumed from `CONTEXT.md` and the app, which already moved Players instead of adding them. |
+| 8 | Two Teams per Player per Event | No, no exceptions: unique `(event_id, user_id)` on `team_members`. **Decided**; the team draft and migration 0045 (`event_id` NOT NULL, quarantine of double memberships) rely on it. |
 | 9 | Deployment shape | One instance; rate-limit counters are in memory behind a `RateLimitStore` interface. |
 | 10 | Audit retention | 365 days (`EVENT_AUDIT_RETENTION_DAYS`), no purge job yet. Pending. |
 
