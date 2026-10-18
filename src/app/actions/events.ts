@@ -60,6 +60,7 @@ import { applyBlindBoard } from "@/server/blind-board"
 
 import type { EventCapabilities } from "@/lib/authz/capabilities"
 import type { Event } from "@/types/model"
+import { UserFacingError } from "@/lib/user-facing-error"
 
 export interface EventData {
   /** `role` is for display; decisions use `capabilities`. */
@@ -1003,7 +1004,7 @@ export async function updateParticipantBuyIn(
       })
 
       if (!event) {
-        throw new Error("Event not found")
+        throw new UserFacingError("Event not found")
       }
 
       // Find the eventParticipant
@@ -1015,7 +1016,7 @@ export async function updateParticipantBuyIn(
       })
 
       if (!eventParticipant) {
-        throw new Error("Participant not found for this event")
+        throw new UserFacingError("Participant not found for this event")
       }
 
       // Calculate buy-in amount: use minimum buy-in if paid, 0 if not paid
@@ -1053,11 +1054,9 @@ export async function updateParticipantBuyIn(
     return { success: true as const, buyInAmount }
   } catch (error) {
     logger.error({ error }, "Error updating participant buy-in:", error)
-    return failure(
-      error instanceof Error
-        ? error.message
-        : "Failed to update participant buy-in"
-    )
+    return error instanceof UserFacingError
+      ? failure(error.message)
+      : actionFailure(error, "Failed to update participant buy-in")
   }
 }
 

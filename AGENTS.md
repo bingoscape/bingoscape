@@ -29,8 +29,7 @@
 ### Database
 
 - `npm run db:generate` - Generate Drizzle migrations
-- `npm run db:push` - Push schema to database (force) - **⚠️ USE WITH CAUTION: Deletes data**
-- `npm run db:migrate` - Run database migrations - **✅ PREFERRED for production**
+- `npm run db:migrate` - Run database migrations - **✅ the only supported way to change a database** (`drizzle-kit push` is not supported: it fails on a migrated database)
 - `npm run db:studio` - Open Drizzle Studio
 - `npm run images:warm` - Optional: front-load the OSRS Wiki image cache (`-- --dry-run` prints counts only). Writes to the database and cache directory its env points at; see `docs/OSRS-IMAGE-CACHE.md`
 
@@ -80,7 +79,9 @@
 
 **Important Notes:**
 
-- ⚠️ **ALWAYS use `db:migrate` for production** - Never use `db:push` which has `--force` flag
+- ⚠️ **ALWAYS use `db:migrate`**; there is no `db:push` script (`drizzle-kit push` can drop data and fails on a migrated database)
+- CHECK constraints are SQL-only: write them by hand in the migration, do not model them with `check()` in `schema.ts`
+- Only return error messages that are written for the user (`UserFacingError`, `AuthzError`); a driver error (`DrizzleQueryError`) carries the SQL text and parameters, so log it and answer with a generic message (`actionFailure`)
 - ✅ Pre-deployment backups are **automatic** via the Deploy workflow (skipped only when the PostgreSQL container is not running yet)
 - ✅ Backup/restore scripts read `DB_NAME`/`DB_USER` from the server's `.env` (defaults match `docker-compose.yml`: `bingoscape` / `postgres`)
 - ✅ All backups are compressed SQL dumps (`.sql.gz` format)

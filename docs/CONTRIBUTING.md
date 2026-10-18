@@ -297,7 +297,7 @@ The module `bingo-rename` above is illustrative. A signed-out caller gets `Unaut
 
 Rules:
 
-- Never use `npm run db:push` against production. It runs with `--force` and can delete data. Production uses `db:migrate`.
+- Change databases with `npm run db:migrate` only. There is no `db:push` script: `drizzle-kit push` can drop data and fails on a migrated database.
 - Migrations run on every deploy, before the new app version starts. A rollback restores the previous app image but does not revert the database. A migration must therefore stay compatible with the previous app version: add columns and tables first, and remove or rename them in a later release.
 - Take a backup before risky data changes (`./scripts/backup-db.sh`). Details are in the Database section of the [README](../README.md#database).
 - Wrap mutations in `db.transaction()`. Financial operations (buy-ins, donations) always use transactions.

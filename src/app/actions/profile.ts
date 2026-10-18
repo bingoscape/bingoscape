@@ -6,6 +6,7 @@ import { users } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
 import { authenticatedAction } from "@/lib/safe-action"
 import { z } from "zod"
+import { UserFacingError } from "@/lib/user-facing-error"
 
 const updateProfileSchema = z.object({
   id: z.string(),
@@ -22,7 +23,7 @@ export const updateProfile = authenticatedAction
   .action(async ({ parsedInput: { id, runescapeName }, ctx: { user } }) => {
     // Ensure the user is only updating their own profile
     if (user.id !== id) {
-      throw new Error("Unauthorized to update this profile")
+      throw new UserFacingError("Unauthorized to update this profile")
     }
 
     try {
@@ -36,6 +37,6 @@ export const updateProfile = authenticatedAction
       return { success: true }
     } catch (error) {
       logger.error({ error }, "Error updating profile:", error)
-      throw new Error("Failed to update profile")
+      throw new UserFacingError("Failed to update profile")
     }
   })
