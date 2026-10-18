@@ -32,6 +32,7 @@
 - `npm run db:push` - Push schema to database (force) - **⚠️ USE WITH CAUTION: Deletes data**
 - `npm run db:migrate` - Run database migrations - **✅ PREFERRED for production**
 - `npm run db:studio` - Open Drizzle Studio
+- `npm run images:warm` - Optional: front-load the OSRS Wiki image cache (`-- --dry-run` prints counts only). Writes to the database and cache directory its env points at; see `docs/OSRS-IMAGE-CACHE.md`
 
 ### Database Backups & Recovery
 
@@ -83,6 +84,7 @@
 - ✅ Pre-deployment backups are **automatic** via the Deploy workflow (skipped only when the PostgreSQL container is not running yet)
 - ✅ Backup/restore scripts read `DB_NAME`/`DB_USER` from the server's `.env` (defaults match `docker-compose.yml`: `bingoscape` / `postgres`)
 - ✅ All backups are compressed SQL dumps (`.sql.gz` format)
+- ℹ️ The OSRS Wiki image cache (`~/bingoscape/osrs-image-cache`) is regenerable and **not backed up**; a restored database refetches missing files on demand (`docs/OSRS-IMAGE-CACHE.md`)
 - ✅ Backups are validated automatically (file size and gzip integrity)
 - ✅ Restore creates safety backup before overwriting data
 - 📊 Monitor logs regularly to ensure backups complete successfully
@@ -192,6 +194,7 @@ Workflows are in `.github/workflows/`; details in `docs/GITHUB-ACTIONS.md`, secr
 - NextAuth for authentication (Discord OAuth + Credentials)
 - Use `nanoid()` for ID generation
 - Images stored in `public/uploads/` with absolute paths in DB
+- **Do not store wiki images in `public/uploads`.** OSRS Wiki images live in their own cache volume (`OSRS_IMAGE_CACHE_DIR`, table `osrs_image_cache`) and are served by `/api/osrs-image/...`. The uploads route applies a submission-image access policy that would 404 them. Render wiki URLs through `getOptimizedImageUrl` / `toProxyUrl` and never hotlink them in new components. See `docs/OSRS-IMAGE-CACHE.md`
 - Console removed in production builds
 
 ## Agent skills

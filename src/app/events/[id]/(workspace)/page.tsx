@@ -21,7 +21,9 @@ import { InfoPanel } from "@/components/event-workspace/info-panel"
 import { PrizePanel } from "@/components/event-workspace/prize-panel"
 import { TeamsPanel } from "@/components/event-workspace/teams-panel"
 import { Skeleton } from "@/components/ui/skeleton"
+import { getDraftSummary } from "@/server/draft/queries"
 import { resolveWorkspaceSelection } from "@/lib/workspace-selection"
+import { getNow } from "@/lib/now"
 import {
   WORKSPACE_PREFS_COOKIE,
   parseWorkspacePrefs,
@@ -89,7 +91,7 @@ export default async function EventWorkspacePage(props: {
     teamId: firstParam(search.teamId),
   })
 
-  const now = new Date()
+  const now = getNow()
   const registrationOpen =
     !event.locked &&
     (!event.registrationDeadline || now <= new Date(event.registrationDeadline))
@@ -102,6 +104,7 @@ export default async function EventWorkspacePage(props: {
     selectableUsers,
     tierData,
     battleship,
+    draftSummary,
   ] = await Promise.all([
     calculateEventPrizePool(event.id),
     getEventRules(event.id),
@@ -119,6 +122,7 @@ export default async function EventWorkspacePage(props: {
           userId: session.user.id,
         })
       : Promise.resolve(null),
+    capabilities.canViewDraft ? getDraftSummary(event.id) : Promise.resolve(null),
   ])
 
   // Only the active Board's Tiles are needed on the client; switching Boards
@@ -163,6 +167,7 @@ export default async function EventWorkspacePage(props: {
             rules,
             pendingRegistrationsCount,
             userClans,
+            draftStatus: draftSummary?.status ?? null,
           }}
         />
       }

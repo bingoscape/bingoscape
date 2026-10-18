@@ -32,6 +32,7 @@ import { getBingoById } from "@/app/actions/getBingoById"
 
 import getRandomFrog from "@/lib/getRandomFrog"
 import type { TileData, Bingo } from "@/types/model"
+import { getOptimizedImageUrl } from "@/lib/utils"
 
 interface TierManagementModalProps {
   bingo: Bingo
@@ -369,7 +370,7 @@ export function TierManagementModal({
                                   <div className="relative h-12 w-12 shrink-0">
                                     <Image
                                       fill
-                                      src={tile.headerImage}
+                                      src={getOptimizedImageUrl(tile.headerImage)}
                                       alt={tile.title}
                                       className="rounded object-cover"
                                     />
@@ -482,7 +483,9 @@ export function TierManagementModal({
                             <div className="relative h-16 w-16 shrink-0">
                               <Image
                                 fill
-                                src={selectedTile.headerImage || getRandomFrog()}
+                                src={getOptimizedImageUrl(
+                                  selectedTile.headerImage || getRandomFrog()
+                                )}
                                 alt={selectedTile.title}
                                 className="rounded object-cover"
                               />

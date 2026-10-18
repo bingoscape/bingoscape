@@ -33,7 +33,7 @@ import {
 import type { GoalTreeNode } from "@/app/actions/goal-groups"
 import { getWikiIconUrl } from "@/lib/osrs-metrics"
 import { useState } from "react"
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 
 interface TeamProgress {
   goalId: string
@@ -382,7 +382,7 @@ function ProgressTreeNode({
                   <div className="relative h-4 w-4 shrink-0">
                     <Image
                       fill
-                      src={itemGoal.imageUrl}
+                      src={getOptimizedImageUrl(itemGoal.imageUrl)}
                       alt={itemGoal.baseName}
                       className="object-cover"
                     />
@@ -397,7 +397,7 @@ function ProgressTreeNode({
                     <div className="relative h-4 w-4 shrink-0">
                       <Image
                         fill
-                        src={getWikiIconUrl(metricGoal.metricName)}
+                        src={getOptimizedImageUrl(getWikiIconUrl(metricGoal.metricName))}
                         alt={metricGoal.metricName}
                         className="object-cover"
                         onError={(e) => {

@@ -38,6 +38,7 @@ import {
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import { getOptimizedImageUrl } from "@/lib/utils"
 
 interface TrackerSettingsModalProps {
   bingoId: string
@@ -101,14 +102,23 @@ export function TrackerSettingsModal({
     metric: string
     participations: { progress: { gained: number } }[]
   } | null>(null)
-  const [isLoadingStats, setIsLoadingStats] = useState(false)
+  // The competition whose stats are fetched, only while the modal is open
+  const statsCompetitionId = isOpen && womCompetitionId ? womCompetitionId : null
+  const [isLoadingStats, setIsLoadingStats] = useState(
+    statsCompetitionId !== null
+  )
+  const [prevStatsCompetitionId, setPrevStatsCompetitionId] =
+    useState(statsCompetitionId)
+  if (statsCompetitionId !== prevStatsCompetitionId) {
+    setPrevStatsCompetitionId(statsCompetitionId)
+    if (statsCompetitionId !== null) setIsLoadingStats(true)
+  }
   const [showCode, setShowCode] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
 
   useEffect(() => {
-    if (isOpen && womCompetitionId) {
-      setIsLoadingStats(true)
-      fetchCompetitionFromWOM(womCompetitionId)
+    if (statsCompetitionId !== null) {
+      fetchCompetitionFromWOM(statsCompetitionId)
         .then((result) => {
           if (result.success && result.data) {
             setStats(
@@ -122,7 +132,7 @@ export function TrackerSettingsModal({
         })
         .finally(() => setIsLoadingStats(false))
     }
-  }, [isOpen, womCompetitionId])
+  }, [statsCompetitionId])
 
   const handleUnlink = async () => {
     setIsSubmitting(true)
@@ -451,7 +461,7 @@ export function TrackerSettingsModal({
                       <SelectItem key={m} value={m}>
                         <div className="flex items-center gap-2">
                           <Image
-                            src={getWikiIconUrl(m)}
+                            src={getOptimizedImageUrl(getWikiIconUrl(m))}
                             alt={m}
                             width={16}
                             height={16}

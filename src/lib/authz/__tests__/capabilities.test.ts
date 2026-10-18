@@ -46,6 +46,9 @@ const NONE: Flags = {
   canAssignClan: false,
   canManageRules: false,
   canDeleteEvent: false,
+  canViewDraft: false,
+  canManageDraft: false,
+  canPick: false,
   assignableRoles: [],
   removableRoles: [],
 }
@@ -61,6 +64,8 @@ const MANAGER: Flags = {
   canReviewSubmissions: true,
   canManageTeams: true,
   canManageFinance: true,
+  canViewDraft: true,
+  canManageDraft: true,
   // Management cannot remove an admin.
   removableRoles: ["management", "participant"],
 }
@@ -83,7 +88,8 @@ describe("computeCapabilities: named capabilities per role", () => {
 
   it("gives a participant no manager page and no control", () => {
     const caps = computeCapabilities(actor("participant"))
-    expect(flagsOf(caps)).toEqual(NONE)
+    // Every member may open the draft room, nothing else.
+    expect(flagsOf(caps)).toEqual({ ...NONE, canViewDraft: true })
     expect(caps.role).toBe("participant")
     expect(caps.isManager).toBe(false)
   })
@@ -128,7 +134,24 @@ describe("computeCapabilities: named capabilities per role", () => {
     const caps = computeCapabilities(
       actor("participant", { teams: [{ teamId: "t1", isLeader: true }] })
     )
-    expect(flagsOf(caps)).toEqual(NONE)
+    // Leading a Team only adds the right to pick when it is that Team's turn.
+    expect(flagsOf(caps)).toEqual({
+      ...NONE,
+      canViewDraft: true,
+      canPick: true,
+    })
+  })
+
+  it("lets only a Team leader pick, and only managers manage the draft", () => {
+    const member = computeCapabilities(
+      actor("participant", { teams: [{ teamId: "t1", isLeader: false }] })
+    )
+    expect(member.canPick).toBe(false)
+    expect(member.canManageDraft).toBe(false)
+    // A manager who leads no Team cannot pick; they force a pick instead.
+    const manager = computeCapabilities(actor("management"))
+    expect(manager.canPick).toBe(false)
+    expect(manager.canManageDraft).toBe(true)
   })
 })
 

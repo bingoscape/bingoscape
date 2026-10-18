@@ -18,6 +18,7 @@ import * as battleship from "@/app/actions/battleship"
 import * as importExport from "@/app/actions/bingo-import-export"
 import * as bingo from "@/app/actions/bingo"
 import * as clan from "@/app/actions/clan"
+import * as draft from "@/app/actions/draft"
 import * as webhooks from "@/app/actions/discord-webhooks"
 import * as events from "@/app/actions/events"
 import * as submissionsRead from "@/app/actions/getSubmissions"
@@ -291,6 +292,68 @@ const CASES: Case[] = [
   {
     key: key("events.ts", "deleteEventRule"),
     call: (x) => events.deleteEventRule(x.event2Extra.ruleId, x.event2.id),
+    expect: "denied",
+  },
+  // --- team draft ---------------------------------------------------------
+  {
+    key: key("draft.ts", "createDraft"),
+    call: (x) =>
+      draft.createDraft({
+        eventId: x.event2.id,
+        orderType: "snake",
+        rounds: 2,
+        pickTimerSeconds: null,
+        onTimeout: "auto_pick",
+        autoPickRule: "best_rated",
+        captains: [
+          { userId: x.users.admin, teamName: "A" },
+          { userId: x.users.outsider, teamName: "B" },
+        ],
+      }),
+    expect: "denied",
+  },
+  {
+    key: key("draft.ts", "startDraft"),
+    call: (x) => draft.startDraft({ draftId: x.event2Extra.draftId }),
+    expect: "denied",
+  },
+  {
+    key: key("draft.ts", "pauseDraft"),
+    call: (x) => draft.pauseDraft({ draftId: x.event2Extra.draftId }),
+    expect: "denied",
+  },
+  {
+    key: key("draft.ts", "resumeDraft"),
+    call: (x) => draft.resumeDraft({ draftId: x.event2Extra.draftId }),
+    expect: "denied",
+  },
+  {
+    key: key("draft.ts", "cancelDraft"),
+    call: (x) => draft.cancelDraft({ draftId: x.event2Extra.draftId }),
+    expect: "denied",
+  },
+  {
+    key: key("draft.ts", "forcePick"),
+    call: (x) =>
+      draft.forcePick({
+        draftId: x.event2Extra.draftId,
+        poolEntryId: UNKNOWN_UUID,
+      }),
+    expect: "denied",
+  },
+  {
+    key: key("draft.ts", "skipTurn"),
+    call: (x) => draft.skipTurn({ draftId: x.event2Extra.draftId }),
+    expect: "denied",
+  },
+  {
+    key: key("draft.ts", "undoPick"),
+    call: (x) => draft.undoPick({ draftId: x.event2Extra.draftId }),
+    expect: "denied",
+  },
+  {
+    key: key("draft.ts", "applyDraft"),
+    call: (x) => draft.applyDraft({ draftId: x.event2Extra.draftId }),
     expect: "denied",
   },
   // --- clans --------------------------------------------------------------
@@ -908,6 +971,16 @@ const EXEMPT: Record<string, string> = {
     "always writes the caller's own row, and the attacker is a participant of Event 2",
   [key("templates.ts", "importTemplateIntoEvent")]:
     "needs a stored template; the permission is enforced by importBingoBoard, which has a case",
+  [key("draft.ts", "setPickQueue")]:
+    "draft:view: the attacker is a legitimate participant of Event 2; only a captain of a Team of the draft may queue (draft-timer.test.ts)",
+  [key("draft.ts", "makePick")]:
+    "draft:view: the attacker is a legitimate participant of Event 2; whether they may pick (only the on-turn captain) is covered in draft.test.ts and draft-concurrency.test.ts",
+  [`${R}events/[id]/draft/state/route.ts#GET`]:
+    "draft:view: the attacker is a legitimate participant of Event 2, so the read is allowed; non-members get 403 (draft-state.test.ts)",
+  [`${R}events/[id]/draft/recap-image/route.ts#GET`]:
+    "draft:view: the attacker is a legitimate participant of Event 2, so the read is allowed; non-members get 403 (draft-recap-image.test.ts)",
+  [`${R}events/[id]/draft/stream/route.ts#GET`]:
+    "draft:view: the attacker is a legitimate participant of Event 2, so the stream opens; non-members get 403 (draft-stream.test.ts)",
   [key("bingo.ts", "submitImage")]:
     "the case above stops at the missing image; the member / manager rules of the full path are covered in blind-board-submit.test.ts and bingo-authz.test.ts",
 }

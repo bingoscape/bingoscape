@@ -37,7 +37,7 @@ WITH inserted AS (
 )
 INSERT INTO "bingoscape-next_role_change_log"
   ("scope_type", "scope_id", "subject_user_id", "action", "old_role", "new_role", "source", "reason")
-SELECT 'event', i."event_id", i."user_id", 'backfill', NULL, 'admin', 'migration', 'creator admin row added by migration 0041'
+SELECT 'event', i."event_id", i."user_id", 'backfill', NULL, 'admin', 'migration', 'creator admin row added by migration 0045'
 FROM inserted i;--> statement-breakpoint
 WITH targets AS (
   SELECT ep."id", ep."event_id", ep."user_id", ep."role"::text AS "old_role"
@@ -53,7 +53,7 @@ WITH targets AS (
 )
 INSERT INTO "bingoscape-next_role_change_log"
   ("scope_type", "scope_id", "subject_user_id", "action", "old_role", "new_role", "source", "reason")
-SELECT 'event', t."event_id", t."user_id", 'change', t."old_role", 'admin', 'migration', 'creator promoted to admin by migration 0041'
+SELECT 'event', t."event_id", t."user_id", 'change', t."old_role", 'admin', 'migration', 'creator promoted to admin by migration 0045'
 FROM targets t
 INNER JOIN promoted p ON p."id" = t."id";--> statement-breakpoint
 SELECT set_config('app.audit_source', '', true);--> statement-breakpoint

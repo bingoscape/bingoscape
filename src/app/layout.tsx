@@ -1,4 +1,8 @@
 import { Navbar } from "@/components/navbar"
+import {
+  PROXY_DISABLED_GLOBAL,
+  parseImageProxyFlag,
+} from "@/lib/osrs-image"
 import { isSuperAdmin } from "@/lib/super-admin"
 import { RunescapeLinkPrompt } from "@/components/runescape-link-prompt"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -43,9 +47,21 @@ export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const isSuperAdminUser = await isSuperAdmin()
+  // Read per request (the layout is dynamic), so OSRS_IMAGE_PROXY=false only
+  // needs a restart. Client components read the global through toProxyUrl.
+  const imageProxyOff = !parseImageProxyFlag(process.env.OSRS_IMAGE_PROXY)
 
   return (
     <html lang="en" className={`${body.variable} ${pixel.variable}`} suppressHydrationWarning>
+      {imageProxyOff ? (
+        <head>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `window.${PROXY_DISABLED_GLOBAL}=false`,
+            }}
+          />
+        </head>
+      ) : null}
       <AuthProvider>
         <body>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>

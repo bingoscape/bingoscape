@@ -8,8 +8,12 @@ import { execSync } from "child_process"
 
 export default async function globalSetup() {
   console.log("Starting Jest PostgreSQL container...")
+  // Every test file opens its own connection pool (up to 10 connections) and
+  // jest workers outlive their files, so with many files and cores the default
+  // 100 connections run out ("too many clients already").
   const container = await new PostgreSqlContainer("postgres:15-alpine")
     .withDatabase("bingoscape_test")
+    .withCommand(["postgres", "-c", "max_connections=500"])
     .start()
 
   const dbUrl = container.getConnectionUri()

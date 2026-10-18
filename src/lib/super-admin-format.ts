@@ -83,3 +83,24 @@ export const EVENT_STATE_LABEL: Record<EventState, string> = {
   upcoming: "Upcoming",
   past: "Ended",
 }
+
+const DATE_TIME_FORMAT = new Intl.DateTimeFormat("en-GB", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "UTC",
+})
+
+/** Date and time, always UTC (the admin tables label the column "UTC"). */
+export function formatDateTime(date: Date | string): string {
+  return DATE_TIME_FORMAT.format(new Date(date))
+}
+
+/** `1.4 MB`, `812 B`. */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  const kb = bytes / 1024
+  if (kb < 1024) return `${kb.toFixed(1)} kB`
+  const mb = kb / 1024
+  if (mb < 1024) return `${mb.toFixed(1)} MB`
+  return `${(mb / 1024).toFixed(1)} GB`
+}

@@ -28,6 +28,7 @@ import {
   describeBoard,
   formatBoardSize,
 } from "@/lib/template-labels"
+import { getOptimizedImageUrl } from "@/lib/utils"
 
 export const metadata: Metadata = { title: "Template" }
 
@@ -79,7 +80,10 @@ export default async function TemplatePage(props: {
           <>
             <span className="flex items-center gap-1.5">
               <Avatar className="size-5">
-                <AvatarImage src={template.creatorImage} alt="" />
+                <AvatarImage
+                  src={getOptimizedImageUrl(template.creatorImage)}
+                  alt=""
+                />
                 <AvatarFallback>
                   {template.creatorName[0] ?? "U"}
                 </AvatarFallback>

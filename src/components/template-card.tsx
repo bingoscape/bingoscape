@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card"
 import { TemplateMiniBoard } from "@/components/template-mini-board"
 import { BINGO_TYPE_LABELS, formatBoardSize } from "@/lib/template-labels"
 import type { TemplateListItem } from "@/server/queries/templates"
+import { getOptimizedImageUrl } from "@/lib/utils"
 
 interface TemplateCardProps {
   template: TemplateListItem
@@ -112,7 +113,10 @@ export function TemplateCard({
         {variant === "gallery" ? (
           <span className="flex min-w-0 items-center gap-2">
             <Avatar className="size-5 shrink-0">
-              <AvatarImage src={template.creatorImage} alt="" />
+              <AvatarImage
+                src={getOptimizedImageUrl(template.creatorImage)}
+                alt=""
+              />
               <AvatarFallback>{template.creatorName[0] ?? "U"}</AvatarFallback>
             </Avatar>
             <span className="truncate">

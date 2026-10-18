@@ -164,10 +164,13 @@ command -v docker > /dev/null 2>&1 || die "docker not found"
 log "Deploying image tag: ${IMAGE_TAG}"
 
 # --- 1. install files ---------------------------------------------------------
-mkdir -p "$APP_DIR/uploads"
-# UID 1001 is the nextjs user inside the container. Directory only, not recursive.
-sudo -n chown 1001:1001 "$APP_DIR/uploads" 2> /dev/null || chown 1001:1001 "$APP_DIR/uploads" 2> /dev/null || true
-sudo -n chmod 775 "$APP_DIR/uploads" 2> /dev/null || chmod 775 "$APP_DIR/uploads" 2> /dev/null || true
+# Host directories mounted into the app container: uploads, and the OSRS Wiki image cache.
+for data_dir in uploads osrs-image-cache; do
+    mkdir -p "$APP_DIR/$data_dir"
+    # UID 1001 is the nextjs user inside the container. Directory only, not recursive.
+    sudo -n chown 1001:1001 "$APP_DIR/$data_dir" 2> /dev/null || chown 1001:1001 "$APP_DIR/$data_dir" 2> /dev/null || true
+    sudo -n chmod 775 "$APP_DIR/$data_dir" 2> /dev/null || chmod 775 "$APP_DIR/$data_dir" 2> /dev/null || true
+done
 
 # The rendered .env does not carry IMAGE_TAG. Keep the one of the running
 # deployment until the new app has really been started.
@@ -225,6 +228,19 @@ log "Pulling images"
 registry_login
 dc pull app migrate
 registry_logout
+
+# The chown in step 1 needs root or passwordless sudo and is best effort. If a
+# data directory is still not owned by UID 1001 the app cannot write to it (the
+# wiki image cache then answers 502), so fix it from a one-shot container that
+# runs as root and mounts the same volumes.
+needs_chown=0
+for data_dir in uploads osrs-image-cache; do
+    [ "$(stat -c %u "$APP_DIR/$data_dir" 2> /dev/null || echo 1001)" = "1001" ] || needs_chown=1
+done
+if [ "$needs_chown" = "1" ]; then
+    log "Fixing data directory ownership (UID 1001)"
+    dc run --rm --no-deps -T --user root --entrypoint chown app 1001:1001         /app/public/uploads /app/data/osrs-images         || log "WARNING: could not chown the data directories; run: sudo chown 1001:1001 $APP_DIR/uploads $APP_DIR/osrs-image-cache"
+fi
 
 # --- 4. pre-deploy backup -----------------------------------------------------
 if [ -n "$(docker ps -q --filter 'name=^bingoscape-postgres$' --filter status=running)" ]; then

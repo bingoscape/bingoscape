@@ -36,8 +36,48 @@ export const RATE_LIMITS = {
   upload: { limit: 30, windowMs: MINUTE },
   /** Wise Old Man proxy actions, per user (they spend the server's WOM quota). */
   wiseOldMan: { limit: 20, windowMs: MINUTE },
+  /**
+   * Wiki image search of the Tile editor (`searchWikiImages`), per user. Each
+   * uncached search is up to two requests to the wiki; answers are cached, so
+   * this mostly limits a script varying the query.
+   */
+  wikiImageSearch: { limit: 20, windowMs: MINUTE },
   /** `POST /api/runelite/auth` (unauthenticated key check), per client IP. */
   runeliteAuth: { limit: 30, windowMs: MINUTE },
+  /**
+   * Draft picks (`makePick`, `forcePick`), per user. A captain picks once per
+   * turn; this only stops a script from hammering the row lock.
+   */
+  draftPick: { limit: 60, windowMs: MINUTE },
+  /**
+   * Opening a draft stream (GET .../draft/stream), per user. A stream lives
+   * about 5 minutes, so this only stops a reconnect loop.
+   */
+  draftStream: { limit: 30, windowMs: MINUTE },
+  /**
+   * Rendering the "Share as image" recap (GET .../draft/recap-image), per
+   * user. The picture is drawn on the server, which costs some CPU.
+   */
+  draftRecapImage: { limit: 20, windowMs: MINUTE },
+  /**
+   * `GET /api/osrs-image/...` requests that miss the cache and would fetch
+   * from the OSRS Wiki, per client IP. Cache hits are not counted. Generous
+   * enough for a board of new images loaded at once, tight for a script that
+   * walks the key space.
+   */
+  osrsImageMiss: { limit: 120, windowMs: MINUTE },
+  /**
+   * Admin refresh of one cached wiki image (`refreshImage`), per admin. Each
+   * one is a request to the wiki; a human clicking through a list stays far
+   * below this.
+   */
+  osrsImageRefresh: { limit: 20, windowMs: MINUTE },
+  /**
+   * Starting or resuming the bulk refresh (`refreshAllImages`), per admin. A
+   * run is paced at about 1 request/s by itself; this only stops a start/stop
+   * loop from re-marking every image over and over.
+   */
+  osrsImageRefreshAll: { limit: 3, windowMs: HOUR },
 } as const satisfies Record<string, RateLimitPolicy>
 
 export type RateLimitPolicyName = keyof typeof RATE_LIMITS

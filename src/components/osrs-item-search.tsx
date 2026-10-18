@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 
-import { useState } from "react"
+import { useId, useState } from "react"
 import { Loader2, Search } from "lucide-react"
 import {
   Command,
@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button"
 import { getItemDisplayName, ItemOption } from "@/components/osrs-item-option"
 import { MIN_ITEM_QUERY_LENGTH, useOsrsItemSearch } from "@/hooks/use-osrs-item-search"
 import type { OsrsItem } from "@/types/osrs-items"
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 
 interface OsrsItemSearchProps {
   onItemSelect: (item: OsrsItem) => void
@@ -47,6 +47,7 @@ export function OsrsItemSearch({
 }: OsrsItemSearchProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
+  const listId = useId()
   const { ready, loading, items, failed } = useOsrsItemSearch(query)
 
   const handleSelect = (item: OsrsItem) => {
@@ -62,6 +63,7 @@ export function OsrsItemSearch({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-controls={listId}
           className={cn("w-full justify-between", className)}
           disabled={disabled}
           autoFocus={autoFocus}
@@ -71,7 +73,7 @@ export function OsrsItemSearch({
               <div className="relative h-6 w-6 shrink-0">
                 <Image
                   fill
-                  src={selectedItem.imageUrl}
+                  src={getOptimizedImageUrl(selectedItem.imageUrl)}
                   alt={selectedItem.name}
                   className="object-contain"
                 />
@@ -85,6 +87,7 @@ export function OsrsItemSearch({
         </Button>
       </PopoverTrigger>
       <PopoverContent
+        id={listId}
         className="w-[400px] max-w-[calc(100vw-1rem)] p-0"
         align="start"
         collisionPadding={8}
@@ -199,7 +202,7 @@ export function OsrsItemSearchCompact({
       <div className="relative h-8 w-8 shrink-0">
         <Image
           fill
-          src={selectedItem.imageUrl}
+          src={getOptimizedImageUrl(selectedItem.imageUrl)}
           alt={selectedItem.name}
           className="object-cover"
         />

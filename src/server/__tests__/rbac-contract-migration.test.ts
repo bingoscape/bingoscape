@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  *
- * Migration 0041 (RBAC 8/8, contract phase) applied to a real Postgres database
+ * Migration 0045 (RBAC 8/8, contract phase) applied to a real Postgres database
  * that is first brought to the state of migration 0040 and seeded the way the
  * previous app versions leave it. Each test gets its own throwaway database.
  */
@@ -16,7 +16,7 @@ import {
 
 import { createMigrationDb, type MigrationDb } from "./helpers/migration-db"
 
-const MIGRATION = "0041_rbac_contract"
+const MIGRATION = "0045_rbac_contract"
 const PREVIOUS = "0040_credential_session_hygiene"
 
 let mig: MigrationDb
@@ -104,7 +104,7 @@ const verifyAll = () =>
     RBAC_VERIFICATION_CHECKS
   )
 
-describe("migration 0041: creators", () => {
+describe("migration 0045: creators", () => {
   it("adds the missing admin row of a creator and promotes a creator with a lower role", async () => {
     const noRow = await user("noRow")
     const lowRole = await user("lowRole")
@@ -152,7 +152,7 @@ describe("migration 0041: creators", () => {
   })
 })
 
-describe("migration 0041: team_members.event_id NOT NULL", () => {
+describe("migration 0045: team_members.event_id NOT NULL", () => {
   it("backfills event_id, quarantines a duplicate Team of one Event, then enforces NOT NULL", async () => {
     const creator = await user("creator")
     const player = await user("player")
@@ -222,7 +222,7 @@ describe("migration 0041: team_members.event_id NOT NULL", () => {
   })
 })
 
-describe("migration 0041: api_keys", () => {
+describe("migration 0045: api_keys", () => {
   const insertLegacy = (userId: string, key: string, hash: string | null) =>
     sql`INSERT INTO "bingoscape-next_api_keys" (user_id, name, key, key_hash)
         VALUES (${userId}, 'k', ${key}, ${hash})`
@@ -268,7 +268,7 @@ describe("migration 0041: api_keys", () => {
   })
 })
 
-describe("migration 0041: clan_invites.created_by and the user_role enum", () => {
+describe("migration 0045: clan_invites.created_by and the user_role enum", () => {
   const typeExists = async () =>
     (await sql`SELECT 1 FROM pg_type WHERE typname = 'user_role'`).length > 0
 
@@ -307,7 +307,7 @@ describe("migration 0041: clan_invites.created_by and the user_role enum", () =>
   })
 })
 
-describe("migration 0041: whole", () => {
+describe("migration 0045: whole", () => {
   async function seedPreviousAppState() {
     const creator = await user("creator")
     const p = await user("p")

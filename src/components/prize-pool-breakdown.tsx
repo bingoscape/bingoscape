@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { calculateEventPrizePool } from "@/app/actions/events"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
@@ -26,28 +26,33 @@ export function PrizePoolBreakdown({
   className,
   initialData,
 }: PrizePoolBreakdownProps) {
-  const [fetchedData, setPrizePoolData] = useState<PrizePoolData | null>(null)
-  const [fetching, setLoading] = useState(!initialData)
+  // The last fetch and the Event it was for; no entry for the current Event
+  // means it is still loading.
+  const [fetched, setFetched] = useState<{
+    eventId: string
+    data: PrizePoolData | null
+  } | null>(null)
   // Server data (fresh on every refresh) wins over anything fetched here.
-  const prizePoolData = initialData ?? fetchedData
-  const loading = !initialData && fetching
-
-  const fetchPrizePoolData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await calculateEventPrizePool(eventId)
-      setPrizePoolData(data)
-    } catch (error) {
-      console.error("Error fetching prize pool data:", error)
-    } finally {
-      setLoading(false)
-    }
-  }, [eventId])
+  const prizePoolData = initialData ?? fetched?.data ?? null
+  const loading = !initialData && fetched?.eventId !== eventId
 
   useEffect(() => {
     if (initialData) return
-    void fetchPrizePoolData()
-  }, [fetchPrizePoolData, initialData])
+    let cancelled = false
+    calculateEventPrizePool(eventId)
+      .then((data) => {
+        if (!cancelled) setFetched({ eventId, data })
+      })
+      .catch((error) => {
+        console.error("Error fetching prize pool data:", error)
+        if (!cancelled) {
+          setFetched((prev) => ({ eventId, data: prev?.data ?? null }))
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [eventId, initialData])
 
   if (loading) {
     return (

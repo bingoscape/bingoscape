@@ -29,6 +29,16 @@ sudo chown 1001:1001 "$APP_DIR/uploads" 2>/dev/null || chown 1001:1001 "$APP_DIR
 sudo chmod 775 "$APP_DIR/uploads" 2>/dev/null || chmod 775 "$APP_DIR/uploads"
 echo "✅ Uploads directory created with proper permissions"
 
+# Create the OSRS Wiki image cache directory (mounted at /app/data/osrs-images)
+echo "📁 Setting up OSRS image cache directory..."
+mkdir -p "$APP_DIR/osrs-image-cache"
+sudo chown 1001:1001 "$APP_DIR/osrs-image-cache" 2>/dev/null || chown 1001:1001 "$APP_DIR/osrs-image-cache" || {
+  echo "⚠️  Warning: Could not set ownership to 1001:1001. Trying current user..."
+  chown $(whoami):$(whoami) "$APP_DIR/osrs-image-cache"
+}
+sudo chmod 775 "$APP_DIR/osrs-image-cache" 2>/dev/null || chmod 775 "$APP_DIR/osrs-image-cache"
+echo "✅ OSRS image cache directory created with proper permissions"
+
 # Create scripts directory
 echo "📁 Setting up scripts directory..."
 mkdir -p "$APP_DIR/scripts"

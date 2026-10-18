@@ -3,6 +3,7 @@
 import Image from "next/image"
 import { SelectItem } from "@/components/ui/select"
 import { getMetricIds, getMetricName, getWikiIconUrl } from "@/lib/osrs-metrics"
+import { getOptimizedImageUrl } from "@/lib/utils"
 
 interface MetricSelectItemsProps {
   /** "skill", "boss" or "activity"; any other value renders no options. */
@@ -21,7 +22,7 @@ export function MetricSelectItems({ metricType }: MetricSelectItemsProps) {
             <div className="relative h-4 w-4 shrink-0">
               <Image
                 fill
-                src={getWikiIconUrl(m)}
+                src={getOptimizedImageUrl(getWikiIconUrl(m))}
                 alt={getMetricName(m)}
                 className="object-cover"
                 onError={(e) => {

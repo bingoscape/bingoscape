@@ -16,6 +16,26 @@ export interface TimePickerInputProps extends Omit<
   onLeftFocus?: () => void
 }
 
+function formatPickerValue(
+  date: Date | undefined,
+  picker: TimePickerInputProps["picker"]
+): string {
+  if (!date) return ""
+  if (picker === "12hours") {
+    let h = date.getHours()
+    if (h === 0) h = 12
+    if (h > 12) h -= 12
+    return h.toString().padStart(2, "0")
+  }
+  if (picker === "hours") {
+    return date.getHours().toString().padStart(2, "0")
+  }
+  if (picker === "minutes") {
+    return date.getMinutes().toString().padStart(2, "0")
+  }
+  return date.getSeconds().toString().padStart(2, "0")
+}
+
 export const TimePickerInput = React.forwardRef<
   HTMLInputElement,
   TimePickerInputProps
@@ -34,44 +54,16 @@ export const TimePickerInput = React.forwardRef<
     },
     ref
   ) => {
-    const [value, setValue] = React.useState<string>(() => {
-      if (!date) return ""
-      if (picker === "12hours") {
-        let h = date.getHours()
-        if (h === 0) h = 12
-        if (h > 12) h -= 12
-        return h.toString().padStart(2, "0")
-      }
-      if (picker === "hours") {
-        return date.getHours().toString().padStart(2, "0")
-      }
-      if (picker === "minutes") {
-        return date.getMinutes().toString().padStart(2, "0")
-      }
-      if (picker === "seconds") {
-        return date.getSeconds().toString().padStart(2, "0")
-      }
-      return ""
-    })
+    const [value, setValue] = React.useState<string>(() =>
+      formatPickerValue(date, picker)
+    )
 
-    React.useEffect(() => {
-      if (!date) {
-        setValue("")
-        return
-      }
-      if (picker === "12hours") {
-        let h = date.getHours()
-        if (h === 0) h = 12
-        if (h > 12) h -= 12
-        setValue(h.toString().padStart(2, "0"))
-      } else if (picker === "hours") {
-        setValue(date.getHours().toString().padStart(2, "0"))
-      } else if (picker === "minutes") {
-        setValue(date.getMinutes().toString().padStart(2, "0"))
-      } else if (picker === "seconds") {
-        setValue(date.getSeconds().toString().padStart(2, "0"))
-      }
-    }, [date, picker])
+    // Show the new date (or picker) unless the user is mid-edit of the same one
+    const [syncedFrom, setSyncedFrom] = React.useState({ date, picker })
+    if (syncedFrom.date !== date || syncedFrom.picker !== picker) {
+      setSyncedFrom({ date, picker })
+      setValue(formatPickerValue(date, picker))
+    }
 
     const calculateNewValue = (key: string) => {
       if (key === "ArrowUp") return 1

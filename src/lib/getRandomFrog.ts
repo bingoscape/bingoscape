@@ -1,3 +1,16 @@
+/** OSRS default images (frogs); the image cache warm-up lists them too. */
+export const OSRS_FROG_IMAGES = [
+  "https://oldschool.runescape.wiki/images/thumb/Giant_frog.png/800px-Giant_frog.png?a8fe4",
+  "https://oldschool.runescape.wiki/images/thumb/Frog_%28Zanaris%29.png/640px-Frog_%28Zanaris%29.png?dd7fd",
+  "https://oldschool.runescape.wiki/images/thumb/Swamp_frog.png/800px-Swamp_frog.png?696de",
+  "https://oldschool.runescape.wiki/images/thumb/Gary.png/1200px-Gary.png?8ced3",
+  "https://oldschool.runescape.wiki/images/thumb/Sue.png/290px-Sue.png?290bd",
+  "https://oldschool.runescape.wiki/images/thumb/Plague_frog.png/800px-Plague_frog.png?c1e76",
+  "https://oldschool.runescape.wiki/images/thumb/Cuthbert.png/1200px-Cuthbert.png?ab9b5",
+  "https://oldschool.runescape.wiki/images/thumb/Dave.png/290px-Dave.png?d30e8",
+  "https://oldschool.runescape.wiki/images/thumb/Frog_%28Ruins_of_Camdozaal%29.png/200px-Frog_%28Ruins_of_Camdozaal%29.png?6ae5e",
+]
+
 export default function getRandomFrog(
   gameType: "osrs" | "rs3" = "osrs"
 ): string {
@@ -17,18 +30,5 @@ export default function getRandomFrog(
     return rs3Images[Math.floor(Math.random() * rs3Images.length)]!
   }
 
-  // OSRS default images - frogs
-  const osrsImages = [
-    "https://oldschool.runescape.wiki/images/thumb/Giant_frog.png/800px-Giant_frog.png?a8fe4",
-    "https://oldschool.runescape.wiki/images/thumb/Frog_%28Zanaris%29.png/640px-Frog_%28Zanaris%29.png?dd7fd",
-    "https://oldschool.runescape.wiki/images/thumb/Swamp_frog.png/800px-Swamp_frog.png?696de",
-    "https://oldschool.runescape.wiki/images/thumb/Gary.png/1200px-Gary.png?8ced3",
-    "https://oldschool.runescape.wiki/images/thumb/Sue.png/290px-Sue.png?290bd",
-    "https://oldschool.runescape.wiki/images/thumb/Plague_frog.png/800px-Plague_frog.png?c1e76",
-    "https://oldschool.runescape.wiki/images/thumb/Cuthbert.png/1200px-Cuthbert.png?ab9b5",
-    "https://oldschool.runescape.wiki/images/thumb/Dave.png/290px-Dave.png?d30e8",
-    "https://oldschool.runescape.wiki/images/thumb/Frog_%28Ruins_of_Camdozaal%29.png/200px-Frog_%28Ruins_of_Camdozaal%29.png?6ae5e",
-  ]
-
-  return osrsImages[Math.floor(Math.random() * osrsImages.length)]!
+  return OSRS_FROG_IMAGES[Math.floor(Math.random() * OSRS_FROG_IMAGES.length)]!
 }

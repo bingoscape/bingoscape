@@ -20,6 +20,8 @@ export interface SeedBoard {
   bingoType?: "standard" | "progression"
   /** Tile indices that are hidden placeholders. */
   hidden?: number[]
+  /** Header image stored on every visible Tile. */
+  headerImage?: string
 }
 
 export interface SeededEvent {
@@ -128,6 +130,7 @@ export async function seedEvent(options: {
         weight: 1 + (index % 5),
         index,
         isHidden: hidden.has(index),
+        headerImage: hidden.has(index) ? null : (board.headerImage ?? null),
         // progression boards: one tier per row
         tier:
           board.bingoType === "progression"

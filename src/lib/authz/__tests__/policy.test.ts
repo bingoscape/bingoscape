@@ -61,6 +61,8 @@ const MANAGER_CAN: Permission[] = [
   "submission:comment",
   "submission:read-comments",
   "submission:create-on-behalf",
+  "draft:view",
+  "draft:manage",
 ]
 const ADMIN_ONLY: Permission[] = [
   "event:update",
@@ -79,7 +81,7 @@ const OWNER_ONLY: Permission[] = [
 const EXPECTED: Record<EventRole, Permission[]> = {
   admin: [...MANAGER_CAN, ...ADMIN_ONLY],
   management: MANAGER_CAN,
-  participant: ["event:view", "player-metadata:write-own"],
+  participant: ["event:view", "player-metadata:write-own", "draft:view"],
 }
 
 describe("role -> permission matrix (no resource)", () => {
@@ -207,6 +209,33 @@ describe("Team scoped permissions", () => {
     ] as const) {
       expect(can(leader, permission, { teamId: TEAM_A })).toBe(false)
     }
+  })
+
+  it("only the leader of the on-turn Team holds draft:pick, whatever the Event role", () => {
+    expect(can(leader, "draft:pick", { teamId: TEAM_A })).toBe(true)
+    expect(can(leader, "draft:pick", { teamId: TEAM_B })).toBe(false)
+    expect(can(member, "draft:pick", { teamId: TEAM_A })).toBe(false)
+    // No resource, no pick: the on-turn Team is part of the question.
+    expect(can(leader, "draft:pick")).toBe(false)
+    for (const role of ["admin", "management", "participant"] as const) {
+      expect(can(actor(role), "draft:pick")).toBe(false)
+      expect(can(actor(role), "draft:pick", { teamId: TEAM_A })).toBe(false)
+    }
+    expect(
+      can(actor("admin", { isOwner: true }), "draft:pick", { teamId: TEAM_A })
+    ).toBe(false)
+  })
+
+  it("every member may view the draft; only managers manage it", () => {
+    for (const role of ["admin", "management", "participant"] as const) {
+      expect(can(actor(role), "draft:view")).toBe(true)
+    }
+    expect(can(actor("admin"), "draft:manage")).toBe(true)
+    expect(can(actor("management"), "draft:manage")).toBe(true)
+    expect(can(actor("participant"), "draft:manage")).toBe(false)
+    // Leading a Team does not manage the draft.
+    expect(can(leader, "draft:manage", { teamId: TEAM_A })).toBe(false)
+    expect(can(null, "draft:view")).toBe(false)
   })
 
   it("a manager needs no Team membership", () => {

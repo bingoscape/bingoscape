@@ -15,6 +15,7 @@ import {
   type RoleFilter,
 } from "@/lib/dashboard-events"
 import { cn } from "@/lib/utils"
+import { getNow } from "@/lib/now"
 
 interface EventListProps {
   userId: string
@@ -95,7 +96,7 @@ export default function EventList({
 }: EventListProps) {
   const allEvents = initialEvents
   const hasEvents = allEvents.length > 0
-  const now = new Date()
+  const now = getNow()
 
   const visibleEvents = filterEventsByRole(allEvents, roleFilter)
   const categorized = categorizeEvents(visibleEvents, now)

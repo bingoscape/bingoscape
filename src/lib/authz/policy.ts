@@ -15,7 +15,7 @@ export interface ActorTeam {
 /**
  * The signed-in user, as seen by one Event. `role` is the user's participant
  * row and nothing else: the creator has an `admin` row (written when the Event
- * is created, guaranteed by migrations 0038 and 0041 and checked by the
+ * is created, guaranteed by migrations 0038 and 0045 and checked by the
  * `creator_without_participant_row` / `creator_role_conflicts` verification
  * queries), so nothing special-cases the creator.
  */

@@ -58,7 +58,14 @@ export function DonationManagementModal({
   onDonationsUpdated,
 }: DonationManagementModalProps) {
   const [donations, setDonations] = useState<Donation[]>([])
-  const [loading, setLoading] = useState(false)
+  // The participant whose donations are fetched, only while the modal is open
+  const donationsKey = isOpen ? `${eventId}:${participantId}` : null
+  const [loading, setLoading] = useState(donationsKey !== null)
+  const [prevDonationsKey, setPrevDonationsKey] = useState(donationsKey)
+  if (donationsKey !== prevDonationsKey) {
+    setPrevDonationsKey(donationsKey)
+    if (donationsKey !== null) setLoading(true)
+  }
   const [isAddingDonation, setIsAddingDonation] = useState(false)
   const [editingDonation, setEditingDonation] = useState<Donation | null>(null)
   const [newDonation, setNewDonation] = useState({
@@ -66,31 +73,37 @@ export function DonationManagementModal({
     description: "",
   })
 
-  const fetchDonations = useCallback(async () => {
+  // The loading flag is already set when the fetch is triggered by opening
+  const loadDonations = useCallback(
+    () =>
+      getParticipantDonations(eventId, participantId)
+        .then((donationsData) => {
+          setDonations(donationsData)
+        })
+        .catch((error) => {
+          console.error("Error fetching donations:", error)
+          toast({
+            title: "Error",
+            description: "Failed to load donations",
+            variant: "destructive",
+          })
+        })
+        .finally(() => {
+          setLoading(false)
+        }),
+    [eventId, participantId]
+  )
+
+  const fetchDonations = async () => {
     setLoading(true)
-    try {
-      const donationsData = await getParticipantDonations(
-        eventId,
-        participantId
-      )
-      setDonations(donationsData)
-    } catch (error) {
-      console.error("Error fetching donations:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load donations",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [eventId, participantId])
+    await loadDonations()
+  }
 
   useEffect(() => {
     if (isOpen) {
-      void fetchDonations()
+      void loadDonations()
     }
-  }, [isOpen, fetchDonations])
+  }, [isOpen, loadDonations])
 
   const handleAddDonation = async () => {
     if (!newDonation.amount || Number(newDonation.amount) <= 0) {

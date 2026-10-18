@@ -37,6 +37,7 @@ export { getApiActor, type ApiActorLookup } from "./api"
 export {
   assertGoalInEvent,
   eventIdOfBingo,
+  eventIdOfDraft,
   eventIdOfGoal,
   eventIdOfGoalGroup,
   eventIdOfGoalValue,

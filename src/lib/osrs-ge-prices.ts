@@ -6,6 +6,7 @@
  */
 
 import { logger } from "@/lib/logger"
+import { wikiRequestHeaders } from "@/lib/osrs-wiki-client"
 
 // Type definitions for GE API responses
 interface GEPriceData {
@@ -32,16 +33,6 @@ const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 let lastFullFetch: number | null = null
 
 /**
- * Get User-Agent string for API requests
- * Uses environment variable for contact info as required by Wiki API
- */
-function getUserAgent(): string {
-  const contactEmail =
-    process.env.OSRS_WIKI_CONTACT_EMAIL ?? "unknown@example.com"
-  return `Bingoscape/1.0.0 - ${contactEmail}`
-}
-
-/**
  * Fetch all GE prices from OSRS Wiki API
  * Uses single /latest call for all items (best practice per API docs)
  */
@@ -50,9 +41,7 @@ async function fetchAllGEPrices(): Promise<Map<number, CachedPrice>> {
     const response = await fetch(
       "https://prices.runescape.wiki/api/v1/osrs/latest",
       {
-        headers: {
-          "User-Agent": getUserAgent(),
-        },
+        headers: wikiRequestHeaders(),
       }
     )
 

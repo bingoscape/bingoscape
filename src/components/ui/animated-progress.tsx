@@ -27,33 +27,38 @@ const AnimatedProgress = React.forwardRef<
     ref
   ) => {
     const [animatedValue, setAnimatedValue] = React.useState(0)
+    // Where the animation currently is, so a new target continues from there
+    const currentValueRef = React.useRef(0)
 
     React.useEffect(() => {
-      if (animate) {
-        const startTime = Date.now()
-        const startValue = animatedValue
-        const endValue = Math.min(100, Math.max(0, value))
+      if (!animate) return
 
-        const animateProgress = () => {
-          const elapsed = Date.now() - startTime
-          const progress = Math.min(1, elapsed / duration)
+      const startTime = Date.now()
+      const startValue = currentValueRef.current
+      const endValue = Math.min(100, Math.max(0, value))
+      let frame = 0
 
-          // Use easing function for smooth animation
-          const eased = 1 - Math.pow(1 - progress, 3)
-          const currentValue = startValue + (endValue - startValue) * eased
+      const animateProgress = () => {
+        const elapsed = Date.now() - startTime
+        const progress = Math.min(1, elapsed / duration)
 
-          setAnimatedValue(currentValue)
+        // Use easing function for smooth animation
+        const eased = 1 - Math.pow(1 - progress, 3)
+        const currentValue = startValue + (endValue - startValue) * eased
 
-          if (progress < 1) {
-            requestAnimationFrame(animateProgress)
-          }
+        currentValueRef.current = currentValue
+        setAnimatedValue(currentValue)
+
+        if (progress < 1) {
+          frame = requestAnimationFrame(animateProgress)
         }
-
-        requestAnimationFrame(animateProgress)
-      } else {
-        setAnimatedValue(value)
       }
-    }, [value, animate, duration, animatedValue])
+
+      frame = requestAnimationFrame(animateProgress)
+      return () => cancelAnimationFrame(frame)
+    }, [value, animate, duration])
+
+    const shownValue = animate ? animatedValue : value
 
     return (
       <div
@@ -69,7 +74,7 @@ const AnimatedProgress = React.forwardRef<
             "h-full w-full flex-1 bg-success shadow-[inset_0_1px_0_rgb(255_255_255/0.35)] transition-all duration-300 ease-out",
             indicatorClassName
           )}
-          style={{ transform: `translateX(-${100 - animatedValue}%)` }}
+          style={{ transform: `translateX(-${100 - shownValue}%)` }}
         />
       </div>
     )

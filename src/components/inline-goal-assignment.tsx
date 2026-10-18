@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -31,7 +31,7 @@ import {
   Plus,
   ArrowLeft,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 
 interface Goal {
   id: string
@@ -90,8 +90,14 @@ export function InlineGoalAssignment({
   const [predefinedValue, setPredefinedValue] = useState<string>("")
   const [isSaving, setIsSaving] = useState(false)
 
-  // Sync with current goal when it changes
-  useEffect(() => {
+  // Sync with current goal when it changes (or the popover opens/closes)
+  const [synced, setSynced] = useState({ currentGoalId, currentValue, open })
+  if (
+    synced.currentGoalId !== currentGoalId ||
+    synced.currentValue !== currentValue ||
+    synced.open !== open
+  ) {
+    setSynced({ currentGoalId, currentValue, open })
     setSelectedGoalId(currentGoalId ?? null)
     setSubmissionValue(currentValue?.toString() ?? "1")
 
@@ -100,7 +106,7 @@ export function InlineGoalAssignment({
       setStep("goal")
       setPredefinedValue("")
     }
-  }, [currentGoalId, currentValue, open])
+  }
 
   const handleSave = async (overrideGoalId?: string | null, overrideValue?: number) => {
     const goalToSave = overrideGoalId !== undefined ? overrideGoalId : selectedGoalId
@@ -168,7 +174,7 @@ export function InlineGoalAssignment({
                         <div className="relative h-5 w-5 shrink-0">
                           <Image
                             fill
-                            src={itemGoal.imageUrl}
+                            src={getOptimizedImageUrl(itemGoal.imageUrl)}
                             alt={itemGoal.baseName}
                             className="object-cover"
                           />
@@ -215,7 +221,7 @@ export function InlineGoalAssignment({
               <div className="relative h-5 w-5 shrink-0">
                 <Image
                   fill
-                  src={selectedGoal.itemGoal.imageUrl}
+                  src={getOptimizedImageUrl(selectedGoal.itemGoal.imageUrl)}
                   alt={selectedGoal.itemGoal.baseName}
                   className="object-cover"
                 />
@@ -317,7 +323,7 @@ export function InlineGoalAssignment({
             <div className="relative h-5 w-5 shrink-0">
               <Image
                 fill
-                src={itemGoal.imageUrl}
+                src={getOptimizedImageUrl(itemGoal.imageUrl)}
                 alt={itemGoal.baseName}
                 className="object-cover"
               />
@@ -354,7 +360,7 @@ export function InlineGoalAssignment({
               <div className="relative h-4 w-4 shrink-0">
                 <Image
                   fill
-                  src={currentGoal.itemGoal.imageUrl}
+                  src={getOptimizedImageUrl(currentGoal.itemGoal.imageUrl)}
                   alt={currentGoal.itemGoal.baseName}
                   className="object-cover"
                 />

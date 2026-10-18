@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -109,7 +109,10 @@ export function CreateBingoModal({
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  useEffect(() => {
+  // Reset the form whenever the modal opens (including mounting open)
+  const [prevIsOpen, setPrevIsOpen] = useState(false)
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen)
     if (isOpen) {
       setCodephrase(generateOSRSCodePhrase())
       setStep(1)
@@ -130,7 +133,7 @@ export function CreateBingoModal({
       setScheduledUnlockDate(undefined)
       setError(null)
     }
-  }, [isOpen])
+  }
 
   const handleNext = () => {
     // Basic validation

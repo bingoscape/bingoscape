@@ -8,6 +8,7 @@ import { Dialog, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ResponsiveDialogContent } from "@/components/responsive-dialog"
 import { Button } from "@/components/ui/button"
 import getRandomFrog from "@/lib/getRandomFrog"
+import { getOptimizedImageUrl } from "@/lib/utils"
 
 interface FullSizeImageDialogProps {
   isOpen: boolean
@@ -125,7 +126,7 @@ export function FullSizeImageDialog({
             }}
           >
             <Image
-              src={imageSrc || getRandomFrog()}
+              src={getOptimizedImageUrl(imageSrc || getRandomFrog())}
               alt={imageAlt}
               fill
               style={{ objectFit: "contain" }}

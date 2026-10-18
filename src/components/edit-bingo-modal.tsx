@@ -82,7 +82,18 @@ export function EditBingoModal({
   })
 
   const [patternData, setPatternData] = useState<BingoPatternData | null>(null)
-  const [isLoadingPattern, setIsLoadingPattern] = useState(false)
+  // The Bingo whose pattern bonuses are fetched: only standard boards have
+  // them, and only while the modal is open.
+  const patternBingoId =
+    isOpen && bingo.bingoType === "standard" ? bingo.id : null
+  const [isLoadingPattern, setIsLoadingPattern] = useState(
+    patternBingoId !== null
+  )
+  const [prevPatternBingoId, setPrevPatternBingoId] = useState(patternBingoId)
+  if (patternBingoId !== prevPatternBingoId) {
+    setPrevPatternBingoId(patternBingoId)
+    if (patternBingoId !== null) setIsLoadingPattern(true)
+  }
   const [rowBonuses, setRowBonuses] = useState<Record<number, number>>({})
   const [columnBonuses, setColumnBonuses] = useState<Record<number, number>>({})
   const [mainDiagonalBonus, setMainDiagonalBonus] = useState(0)
@@ -95,12 +106,10 @@ export function EditBingoModal({
   const isBattleship = bingo.bingoType === "battleship" && !!battleship
   const rulesLocked = battleship?.started ?? false
 
-  // Fetch pattern bonus data when modal opens. Only standard boards have
-  // pattern bonuses.
+  // Fetch pattern bonus data when modal opens.
   useEffect(() => {
-    if (isOpen && bingo.bingoType === "standard") {
-      setIsLoadingPattern(true)
-      void getBingoWithPatternBonuses(bingo.id).then((result) => {
+    if (patternBingoId !== null) {
+      void getBingoWithPatternBonuses(patternBingoId).then((result) => {
         if (result.success && result.data) {
           const data = result.data
           setPatternData({
@@ -135,7 +144,7 @@ export function EditBingoModal({
         setIsLoadingPattern(false)
       })
     }
-  }, [isOpen, bingo.id, bingo.bingoType])
+  }, [patternBingoId])
 
   // Reset only when the modal opens so a refresh of `bingo` mid-edit
   // doesn't wipe what the user is typing.

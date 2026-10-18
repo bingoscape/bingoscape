@@ -23,7 +23,7 @@ import {
   CheckCircle2,
 } from "lucide-react"
 
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 import { toast } from "@/hooks/use-toast"
 import {
   HoverCard,
@@ -249,7 +249,7 @@ function SortableTile({
           {tile.headerImage && (
             <div className="h-28 w-full overflow-hidden">
               <Image
-                src={tile.headerImage || "/placeholder.svg"}
+                src={getOptimizedImageUrl(tile.headerImage)}
                 alt={tile.title}
                 width={176}
                 height={112}
@@ -687,6 +687,16 @@ function DroppableTierHeader({
   )
 }
 
+function tierXpRequirementsToRecord(
+  requirements: ProgressionBingoGridProps["tierXpRequirements"]
+): Record<number, number> {
+  const reqObj: Record<number, number> = {}
+  requirements.forEach((req) => {
+    reqObj[req.tier] = req.xpRequired
+  })
+  return reqObj
+}
+
 export function ProgressionBingoGrid({
   tiles,
   currentTeamId,
@@ -703,26 +713,29 @@ export function ProgressionBingoGrid({
   const [draggedTile, setDraggedTile] = useState<Tile | null>(null)
   const [localTierXpRequirements, setLocalTierXpRequirements] = useState<
     Record<number, number>
-  >({})
+  >(() => tierXpRequirementsToRecord(tierXpRequirements))
 
   // Sync isEditing with parent's edit mode
-  React.useEffect(() => {
+  const [syncedIsEditMode, setSyncedIsEditMode] = useState(isEditMode)
+  if (syncedIsEditMode !== isEditMode) {
+    setSyncedIsEditMode(isEditMode)
     setIsEditing(isEditMode)
-  }, [isEditMode])
+  }
 
   // Update local state when props change
-  React.useEffect(() => {
+  const [syncedTiles, setSyncedTiles] = useState(tiles)
+  if (syncedTiles !== tiles) {
+    setSyncedTiles(tiles)
     setLocalTiles(tiles)
-  }, [tiles])
+  }
 
   // Convert tier requirements to object
-  React.useEffect(() => {
-    const reqObj: Record<number, number> = {}
-    tierXpRequirements.forEach((req) => {
-      reqObj[req.tier] = req.xpRequired
-    })
-    setLocalTierXpRequirements(reqObj)
-  }, [tierXpRequirements])
+  const [syncedTierXpRequirements, setSyncedTierXpRequirements] =
+    useState(tierXpRequirements)
+  if (syncedTierXpRequirements !== tierXpRequirements) {
+    setSyncedTierXpRequirements(tierXpRequirements)
+    setLocalTierXpRequirements(tierXpRequirementsToRecord(tierXpRequirements))
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -1397,7 +1410,7 @@ export function ProgressionBingoGrid({
             {draggedTile.headerImage && (
               <div className="aspect-square overflow-hidden">
                 <Image
-                  src={draggedTile.headerImage || "/placeholder.svg"}
+                  src={getOptimizedImageUrl(draggedTile.headerImage)}
                   alt={draggedTile.title}
                   width={200}
                   height={200}

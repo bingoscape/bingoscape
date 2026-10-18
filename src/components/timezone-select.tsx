@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useId, useState } from "react"
 import { Check, ChevronsUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -32,6 +32,7 @@ export function TimezoneSelect({
   onValueChange,
 }: TimezoneSelectProps) {
   const [open, setOpen] = useState(false)
+  const listId = useId()
 
   return (
     // modal so the list can scroll and be dismissed inside a Dialog
@@ -43,6 +44,7 @@ export function TimezoneSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-controls={listId}
           className="w-full min-w-0 justify-between font-normal"
         >
           <span className="truncate">{value || "Select timezone"}</span>
@@ -50,6 +52,7 @@ export function TimezoneSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent
+        id={listId}
         className="w-(--radix-popover-trigger-width) max-w-[calc(100vw-1rem)] p-0"
         align="start"
         collisionPadding={8}

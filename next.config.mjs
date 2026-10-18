@@ -1,4 +1,5 @@
 import { securityHeaders } from "./src/lib/security-headers.js"
+import { OSRS_WIKI_HOST, RS3_WIKI_HOST } from "./src/lib/wiki-hosts.js"
 
 /**
  * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially useful
@@ -27,10 +28,16 @@ const config = {
       { protocol: "https", hostname: "avatars.discordapp.com" },
       // GitHub OAuth profile pictures
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
-      // Old School RuneScape wiki images (tile header images, frog images, etc.)
-      { protocol: "https", hostname: "oldschool.runescape.wiki" },
-      // RuneScape 3 wiki images
-      { protocol: "https", hostname: "runescape.wiki" },
+      // Old School RuneScape wiki images. With the image cache on
+      // (OSRS_IMAGE_PROXY, the default) the app renders them from
+      // /api/osrs-image/..., so nothing is optimised from this host. The entry
+      // stays for the rollback flag: with OSRS_IMAGE_PROXY=false stored wiki
+      // URLs are rendered as they are, and the optimiser of every <Image> that
+      // is not `unoptimized` would answer 400 without it. remotePatterns is
+      // frozen at build time, so it cannot follow the flag.
+      { protocol: "https", hostname: OSRS_WIKI_HOST },
+      // RuneScape 3 wiki images (still hotlinked, not cached)
+      { protocol: "https", hostname: RS3_WIKI_HOST },
     ],
   },
   // nosniff and Referrer-Policy; the CSP is added per request by src/proxy.ts.

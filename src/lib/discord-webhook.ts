@@ -1,7 +1,7 @@
 import { logger } from "@/lib/logger"
 import { isDiscordWebhookUrl } from "@/lib/discord-webhook-url"
 
-interface DiscordEmbed {
+export interface DiscordEmbed {
   title?: string
   description?: string
   color?: number
@@ -327,3 +327,180 @@ export function createTileCompleteEmbed(data: TileCompleteEmbedData): DiscordEmb
   }
 }
 
+
+// ---------------------------------------------------------------------------
+// Team draft embeds (epic #214, phase 4/4 #218)
+// ---------------------------------------------------------------------------
+
+/** Discord limits: 25 fields, 1024 characters per field value. */
+const EMBED_FIELD_LIMIT = 25
+const EMBED_VALUE_LIMIT = 1024
+
+/** Keeps a name from being read as Discord markdown. */
+function escapeMarkdown(text: string): string {
+  return text.replace(/([\\*_~`|>])/g, "\\$1")
+}
+
+function clip(text: string, limit: number): string {
+  return text.length <= limit ? text : `${text.slice(0, limit - 1)}…`
+}
+
+export interface DraftRosterEmbedTeam {
+  teamName: string
+  captainName: string
+  /** The drafted players in pick order. */
+  players: string[]
+}
+
+export interface DraftStartedEmbedData {
+  eventTitle: string
+  /** Teams in the order of the first round. */
+  teams: { teamName: string; captainName: string }[]
+  poolSize: number
+  rounds: number
+  /** "Snake", "Linear" or "Random snake". */
+  orderLabel: string
+  /** Seconds per pick; null: no timer. */
+  pickTimerSeconds: number | null
+}
+
+/** Embed sent when the draft starts: the teams in pick order and the pool. */
+export function createDraftStartedEmbed(
+  data: DraftStartedEmbedData
+): DiscordEmbed {
+  const order = data.teams
+    .map(
+      (team, i) =>
+        `${i + 1}. **${escapeMarkdown(team.teamName)}** (captain ${escapeMarkdown(team.captainName)})`
+    )
+    .join("\n")
+  return {
+    title: "🏁 Team draft started",
+    description: clip(order, 4000),
+    color: 0x5865f2,
+    fields: [
+      { name: "👥 Pool", value: `${data.poolSize} players`, inline: true },
+      { name: "🔁 Rounds", value: String(data.rounds), inline: true },
+      { name: "↕️ Order", value: data.orderLabel, inline: true },
+      {
+        name: "⏱️ Pick timer",
+        value:
+          data.pickTimerSeconds === null
+            ? "No timer"
+            : `${data.pickTimerSeconds} seconds`,
+        inline: true,
+      },
+    ],
+    footer: { text: data.eventTitle },
+    timestamp: new Date().toISOString(),
+  }
+}
+
+export interface DraftPickEmbedData {
+  eventTitle: string
+  pickNo: number
+  totalPicks: number
+  round: number
+  teamName: string
+  /** `hsl(...)` string, see `getTeamHslColor`. */
+  teamColor: string
+  playerName: string
+  /** Rating out of 100; null: unrated. */
+  rating: number | null
+  /** "forced" (a manager picked), "timer" (auto-pick), or null (the captain). */
+  madeBy: "forced" | "timer" | null
+}
+
+/** Embed sent for each pick. */
+export function createDraftPickEmbed(data: DraftPickEmbedData): DiscordEmbed {
+  const how =
+    data.madeBy === "timer"
+      ? "Auto-picked when the timer ran out"
+      : data.madeBy === "forced"
+        ? "Picked by an organizer"
+        : "Picked by the captain"
+  return {
+    title: `🎯 Pick #${data.pickNo}: ${escapeMarkdown(data.playerName)}`,
+    description: `**${escapeMarkdown(data.teamName)}** drafted **${escapeMarkdown(data.playerName)}**`,
+    color: hslStringToHex(data.teamColor),
+    fields: [
+      { name: "🏆 Team", value: escapeMarkdown(data.teamName), inline: true },
+      { name: "🔁 Round", value: String(data.round), inline: true },
+      {
+        name: "⭐ Rating",
+        value: data.rating === null ? "Unrated" : `${data.rating}/100`,
+        inline: true,
+      },
+      { name: "🧾 How", value: how, inline: false },
+    ],
+    footer: {
+      text: `${data.eventTitle} • pick ${data.pickNo} of ${data.totalPicks}`,
+    },
+    timestamp: new Date().toISOString(),
+  }
+}
+
+export interface DraftUndoEmbedData {
+  eventTitle: string
+  pickNo: number
+  teamName: string
+  playerName: string
+}
+
+/** Embed sent when an organizer takes the last pick back. */
+export function createDraftUndoEmbed(data: DraftUndoEmbedData): DiscordEmbed {
+  return {
+    title: `↩️ Pick #${data.pickNo} undone`,
+    description: `**${escapeMarkdown(data.playerName)}** is back in the pool and **${escapeMarkdown(data.teamName)}** is on the clock again.`,
+    color: 0xed4245,
+    footer: { text: data.eventTitle },
+    timestamp: new Date().toISOString(),
+  }
+}
+
+function rosterFields(teams: DraftRosterEmbedTeam[]) {
+  return teams.slice(0, EMBED_FIELD_LIMIT).map((team) => ({
+    name: `🏆 ${clip(escapeMarkdown(team.teamName), 200)}`,
+    value: clip(
+      [
+        `👑 ${escapeMarkdown(team.captainName)}`,
+        ...team.players.map((name) => `• ${escapeMarkdown(name)}`),
+      ].join("\n"),
+      EMBED_VALUE_LIMIT
+    ),
+    inline: true,
+  }))
+}
+
+export interface DraftRostersEmbedData {
+  eventTitle: string
+  teams: DraftRosterEmbedTeam[]
+}
+
+/** Embed sent when the last pick is made: the final rosters. */
+export function createDraftCompleteEmbed(
+  data: DraftRostersEmbedData
+): DiscordEmbed {
+  return {
+    title: "✅ Team draft complete",
+    description: "Every pick is in. An organizer still has to apply the teams.",
+    color: 0x57f287,
+    fields: rosterFields(data.teams),
+    footer: { text: data.eventTitle },
+    timestamp: new Date().toISOString(),
+  }
+}
+
+/** Embed sent when an organizer applies the draft: the teams are final. */
+export function createDraftAppliedEmbed(
+  data: DraftRostersEmbedData
+): DiscordEmbed {
+  return {
+    title: "📣 Teams are set",
+    description: "The drafted players have joined their teams.",
+    color: 0xffd700,
+    fields: rosterFields(data.teams),
+    footer: { text: data.eventTitle },
+    timestamp: new Date().toISOString(),
+  }
+}

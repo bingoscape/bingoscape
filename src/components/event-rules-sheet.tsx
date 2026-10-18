@@ -43,9 +43,11 @@ export function EventRulesSheet({
   const editInputRef = useRef<HTMLInputElement>(null)
 
   // Keep local rules in sync when the sheet is re-opened with fresh props
-  useEffect(() => {
+  const [syncedRules, setSyncedRules] = useState(initialRules)
+  if (syncedRules !== initialRules) {
+    setSyncedRules(initialRules)
     setRules(initialRules)
-  }, [initialRules])
+  }
 
   // Focus the edit input whenever editing starts on a rule
   useEffect(() => {

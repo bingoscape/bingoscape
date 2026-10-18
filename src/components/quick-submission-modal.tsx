@@ -58,7 +58,9 @@ export function QuickSubmissionModal({
   const { data: session } = useSession()
 
   // Reset state when modal closes
-  useEffect(() => {
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen)
+  if (prevIsOpen !== isOpen) {
+    setPrevIsOpen(isOpen)
     if (!isOpen) {
       setSelectedTile(null)
       setSelectedImage(null)
@@ -67,7 +69,7 @@ export function QuickSubmissionModal({
       setSelectableUsers([])
       setSelectedUserId(undefined)
     }
-  }, [isOpen])
+  }
 
   // Fetch selectable users when modal opens
   useEffect(() => {

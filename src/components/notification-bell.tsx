@@ -17,6 +17,7 @@ import Link from "next/link"
 import Image from "next/image"
 import getRandomFrog from "@/lib/getRandomFrog"
 import { toast } from "@/hooks/use-toast"
+import { getOptimizedImageUrl } from "@/lib/utils"
 
 interface Notification {
   id: string
@@ -122,7 +123,9 @@ export function NotificationBell({ userId }: { userId: string }) {
                   {/* Tile image placeholder */}
                   <div className="relative h-12 w-12 shrink-0 osrs-slot sm:h-24 sm:w-24">
                     <Image
-                      src={notification.tileImage ?? getRandomFrog()}
+                      src={getOptimizedImageUrl(
+                        notification.tileImage ?? getRandomFrog()
+                      )}
                       alt="Tile"
                       fill
                       sizes="(min-width: 640px) 96px, 48px"

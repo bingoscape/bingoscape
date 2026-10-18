@@ -128,7 +128,7 @@ LIMIT 200`,
   {
     id: "creator_role_conflicts",
     description:
-      "Event creators whose participant role is not admin (the policy gives the creator no implicit admin; migration 0041 promotes them)",
+      "Event creators whose participant role is not admin (the policy gives the creator no implicit admin; migration 0045 promotes them)",
     severity: "error",
     sql: `SELECT e.id AS event_id, e.creator_id, ep.role AS explicit_role
 FROM ${T.events} e
@@ -149,7 +149,7 @@ LIMIT 200`,
   {
     id: "team_members_missing_event_id",
     description:
-      "team_members rows without event_id (written by a pre-0038 app version; migration 0041 backfills them and sets NOT NULL)",
+      "team_members rows without event_id (written by a pre-0038 app version; migration 0045 backfills them and sets NOT NULL)",
     severity: "warn",
     sql: `SELECT id AS team_member_id, team_id, user_id
 FROM ${T.teamMembers}

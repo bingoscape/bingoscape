@@ -33,9 +33,6 @@ export function parseCspMode(raw) {
   return "report-only"
 }
 
-/** Hosts the browser loads images from or talks to besides the app itself. */
-const WIKI_HOSTS = ["https://oldschool.runescape.wiki", "https://runescape.wiki"]
-
 /**
  * The policy. Why each source:
  * - `script-src 'unsafe-inline'`: Next.js inlines its bootstrap/flight data
@@ -43,11 +40,16 @@ const WIKI_HOSTS = ["https://oldschool.runescape.wiki", "https://runescape.wiki"
  *   dynamic rendering of every page. (`'unsafe-eval'` only in development, for
  *   React's debugging tools.)
  * - `style-src 'unsafe-inline'`: Tailwind/Radix/Recharts set inline styles.
- * - `img-src https:`: Tile and Event images come from the uploads, the OSRS
- *   wiki, Discord/GitHub avatars and Markdown descriptions that may embed any
- *   https image. Images cannot run script.
- * - `connect-src`: the app plus the wiki API the Tile editor queries from the
- *   browser (CORS, `origin=*`).
+ * - `img-src https:`: Tile and Event images come from the uploads, the image
+ *   cache (same origin), Discord/GitHub avatars, RS3 wiki images (still
+ *   hotlinked) and Markdown descriptions that may embed any https image.
+ *   Images cannot run script. No wiki host is named on purpose: with the image
+ *   cache the browser no longer needs `oldschool.runescape.wiki`, but the
+ *   generic `https:` stays for the sources above, and it also keeps the
+ *   `OSRS_IMAGE_PROXY=false` rollback (wiki URLs rendered directly) working
+ *   without a CSP change.
+ * - `connect-src`: the app only. The wiki image search runs on the server
+ *   (`searchWikiImages`), so the browser no longer calls the wiki API.
  * - no `form-action`: NextAuth sign-in posts a same-origin form that redirects
  *   to the OAuth provider, which Chrome checks against `form-action`.
  *
@@ -64,7 +66,7 @@ export function buildContentSecurityPolicy(options = {}) {
     ["style-src", "'self' 'unsafe-inline'"],
     ["img-src", "'self' data: blob: https:"],
     ["font-src", "'self' data:"],
-    ["connect-src", ["'self'", ...WIKI_HOSTS].join(" ")],
+    ["connect-src", "'self'"],
     ["media-src", "'self'"],
     ["worker-src", "'self' blob:"],
     ["manifest-src", "'self'"],

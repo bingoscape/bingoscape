@@ -30,6 +30,7 @@ import {
   submissions,
   teamMembers,
   adminAuditLog,
+  osrsImageCache,
   teamTileSubmissions,
   teams,
   tiles,
@@ -1276,5 +1277,135 @@ export async function listAuditLog(
     totalPages,
     page,
     pageSize: ADMIN_PAGE_SIZE,
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Wiki image cache                                                            */
+/* -------------------------------------------------------------------------- */
+
+export const IMAGE_CACHE_LIST_CONFIG = {
+  sortKeys: [
+    "key",
+    "status",
+    "size",
+    "fetched",
+    "refreshed",
+    "attempts",
+    "retry",
+  ],
+  defaultSort: "fetched",
+  defaultDir: "desc",
+  filters: ["ok", "not_found", "error", "stale"],
+} as const satisfies ListConfig<
+  "key" | "status" | "size" | "fetched" | "refreshed" | "attempts" | "retry"
+>
+
+export type ImageCacheSortKey = (typeof IMAGE_CACHE_LIST_CONFIG.sortKeys)[number]
+
+export interface ImageCacheRow {
+  key: string
+  status: "ok" | "not_found" | "error"
+  bytes: number | null
+  fetchedAt: Date | null
+  refreshedAt: Date | null
+  attempts: number
+  retryAfter: Date | null
+}
+
+/** A cached image the next bulk refresh would visit: `ok` and `refreshed_at` NULL. */
+const staleImage = and(
+  eq(osrsImageCache.status, "ok"),
+  isNull(osrsImageCache.refreshedAt)
+)
+
+/** Paginated rows of `osrs_image_cache`; `q` matches the key. Filter `stale` = waiting for a refresh. */
+export async function listImageCache(
+  params: ListParams<ImageCacheSortKey>
+): Promise<Paged<ImageCacheRow>> {
+  await requireSuperAdmin()
+
+  const where = and(
+    params.q ? ilike(osrsImageCache.key, containsPattern(params.q)) : undefined,
+    params.filter === "stale"
+      ? staleImage
+      : params.filter === "ok" ||
+          params.filter === "not_found" ||
+          params.filter === "error"
+        ? eq(osrsImageCache.status, params.filter)
+        : undefined
+  )
+
+  const [totalRow] = await db
+    .select({ total: count() })
+    .from(osrsImageCache)
+    .where(where)
+  const totalCount = totalRow?.total ?? 0
+  const { totalPages, page, offset } = paginate(totalCount, params.page)
+
+  const sortExpr = {
+    key: osrsImageCache.key,
+    status: osrsImageCache.status,
+    size: osrsImageCache.bytes,
+    fetched: osrsImageCache.fetchedAt,
+    refreshed: osrsImageCache.refreshedAt,
+    attempts: osrsImageCache.attempts,
+    retry: osrsImageCache.retryAfter,
+  }[params.sort]
+
+  const rows = await db
+    .select({
+      key: osrsImageCache.key,
+      status: osrsImageCache.status,
+      bytes: osrsImageCache.bytes,
+      fetchedAt: osrsImageCache.fetchedAt,
+      refreshedAt: osrsImageCache.refreshedAt,
+      attempts: osrsImageCache.attempts,
+      retryAfter: osrsImageCache.retryAfter,
+    })
+    .from(osrsImageCache)
+    .where(where)
+    .orderBy(...orderBy(sortExpr, params.dir, osrsImageCache.key))
+    .limit(ADMIN_PAGE_SIZE)
+    .offset(offset)
+
+  return { rows, totalCount, totalPages, page, pageSize: ADMIN_PAGE_SIZE }
+}
+
+export interface ImageCacheSummary {
+  ok: number
+  notFound: number
+  error: number
+  /** Cached images waiting for a refresh (marked stale by "Refresh all"). */
+  stale: number
+  /** Size of all cached files. */
+  totalBytes: number
+}
+
+export async function getImageCacheSummary(): Promise<ImageCacheSummary> {
+  await requireSuperAdmin()
+
+  const [row] = await db
+    .select({
+      ok: sqlCount(sql`count(*) filter (where ${osrsImageCache.status} = 'ok')`),
+      notFound: sqlCount(
+        sql`count(*) filter (where ${osrsImageCache.status} = 'not_found')`
+      ),
+      error: sqlCount(
+        sql`count(*) filter (where ${osrsImageCache.status} = 'error')`
+      ),
+      stale: sqlCount(
+        sql`count(*) filter (where ${osrsImageCache.status} = 'ok' and ${osrsImageCache.refreshedAt} is null)`
+      ),
+      totalBytes: sqlCount(sql`coalesce(sum(${osrsImageCache.bytes}), 0)`),
+    })
+    .from(osrsImageCache)
+
+  return {
+    ok: row?.ok ?? 0,
+    notFound: row?.notFound ?? 0,
+    error: row?.error ?? 0,
+    stale: row?.stale ?? 0,
+    totalBytes: row?.totalBytes ?? 0,
   }
 }

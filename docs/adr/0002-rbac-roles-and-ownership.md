@@ -46,7 +46,7 @@ role string outside `src/lib/authz` and `src/server/authz`.
 
 `events.creator_id` and `clans.owner_id` are the owner pointers; no new enum
 value. The owner always also has an `admin` row (created with the Event, backfilled
-by migrations 0038 and 0041). The role of an actor is exactly their row: since
+by migrations 0038 and 0045). The role of an actor is exactly their row: since
 RBAC 8/8 the creator is no longer counted as admin without one, and the
 `creator_without_participant_row` / `creator_role_conflicts` verification checks
 report any fault. Owner-only: delete the Event, grant the admin role (to a new or
@@ -96,7 +96,7 @@ not comparisons.
 
 API keys are stored as SHA-256 hashes with an 8 character display prefix, with
 scopes, expiry and revocation; the legacy plaintext column and its dual-read are
-gone (migration 0041). Sessions are a pointer to the user row, checked per
+gone (migration 0045). Sessions are a pointer to the user row, checked per
 request, with "sign out everywhere". Super-admin allowlist entries count only for
 an email the OAuth provider verified.
 
@@ -124,7 +124,7 @@ Actions return `{ success: true, ... }` or `{ success: false, error, code? }`
 ## Consequences
 
 - A creator row without `admin` is now a data fault (no implicit admin). Migration
-  0041 repairs existing ones; the reconciliation reports new ones.
+  0045 repairs existing ones; the reconciliation reports new ones.
 - `discord_webhooks.created_by` is `NOT NULL ... ON DELETE CASCADE`: consistent,
   but deleting the user who created a webhook removes the Event's webhook.
   Left as is; making it nullable with `SET NULL` is the alternative if webhooks

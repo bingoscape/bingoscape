@@ -3,12 +3,15 @@ import { ArrowLeft, Coins, Trophy, Users } from "lucide-react"
 import { formatInTimeZone } from "date-fns-tz"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { DraftEntryLink } from "@/components/draft/draft-entry-link"
 import { EventHeaderActions } from "@/components/event-header-actions"
 import { EventRulesSheet } from "@/components/event-rules-sheet"
 import { PrizePoolDisplay } from "@/components/prize-pool-display"
 import formatRunescapeGold from "@/lib/formatRunescapeGold"
+import { getNow } from "@/lib/now"
 import type { EventRule } from "@/app/actions/events"
 import type { EventCapabilities } from "@/lib/authz/capabilities"
+import type { DraftStatus } from "@/lib/draft/types"
 import type { Event } from "@/types/model"
 
 interface EventSummaryBarProps {
@@ -31,6 +34,8 @@ interface EventSummaryBarProps {
     rules: EventRule[]
     pendingRegistrationsCount: number
     userClans: Array<{ clan: { id: string; name: string } }>
+    /** Status of the Event's live team draft, null when it has none. */
+    draftStatus: DraftStatus | null
   }
 }
 
@@ -55,7 +60,7 @@ export function EventSummaryBar({
 }: EventSummaryBarProps) {
   const tz = timezone || "UTC"
 
-  const now = new Date()
+  const now = getNow()
   const startDate = new Date(start)
   const endDate = new Date(end)
   const status: "upcoming" | "active" | "completed" =
@@ -129,6 +134,12 @@ export function EventSummaryBar({
 
       {members && (
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          <DraftEntryLink
+            eventId={eventId}
+            status={members.draftStatus}
+            canView={members.capabilities.canViewDraft}
+            canManage={members.capabilities.canManageDraft}
+          />
           <EventRulesSheet
             eventId={eventId}
             initialRules={members.rules}
@@ -142,6 +153,7 @@ export function EventSummaryBar({
               pendingRegistrationsCount={members.pendingRegistrationsCount}
               event={members.event}
               userClans={members.userClans}
+              draftStatus={members.draftStatus}
             />
           )}
         </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useId } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -87,6 +87,7 @@ export function PlayerMetadataModal({
   const [fetching, setFetching] = useState(false)
   const [lastFetched, setLastFetched] = useState<Date | null>(null)
   const [timezoneOpen, setTimezoneOpen] = useState(false)
+  const timezoneListId = useId()
   const [formData, setFormData] = useState({
     ehp: "",
     ehb: "",
@@ -512,6 +513,7 @@ export function PlayerMetadataModal({
                     variant="outline"
                     role="combobox"
                     aria-expanded={timezoneOpen}
+                    aria-controls={timezoneListId}
                     className="w-full justify-between"
                   >
                     {formData.timezone
@@ -530,6 +532,7 @@ export function PlayerMetadataModal({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent
+                  id={timezoneListId}
                   className="w-(--radix-popover-trigger-width) max-w-[calc(100vw-1rem)] p-0"
                   align="start"
                   collisionPadding={8}

@@ -1,0 +1,205 @@
+import { DRAFT_AFK_THRESHOLD } from "./constants"
+import { slotFor } from "./order"
+import type {
+  DraftPlayerInfo,
+  DraftPoolState,
+  DraftSlotState,
+  DraftState,
+} from "./types"
+
+/**
+ * Derived views of a draft for the room: whose turn it is, rosters, and the
+ * filtered pool. Pure, so the components stay thin and these are unit tested.
+ */
+
+export const POOL_SORTS = ["rating", "name"] as const
+export type PoolSort = (typeof POOL_SORTS)[number]
+
+export const DRAFT_TABS = ["pool", "teams", "log"] as const
+export type DraftTab = (typeof DRAFT_TABS)[number]
+
+export function isPoolSort(value: unknown): value is PoolSort {
+  return POOL_SORTS.includes(value as PoolSort)
+}
+
+export function isDraftTab(value: unknown): value is DraftTab {
+  return DRAFT_TABS.includes(value as DraftTab)
+}
+
+/** The name to show for a player; deleted accounts have no info at all. */
+export function playerLabel(info: DraftPlayerInfo | undefined): string {
+  return info?.runescapeName || info?.name || "Unknown player"
+}
+
+/** 0..1 as a whole number out of 100, or null for an unrated player. */
+export function ratingPoints(rating: number | null): number | null {
+  return rating === null ? null : Math.round(rating * 100)
+}
+
+/**
+ * The slot that picks next, or null when no pick is due (the draft has not
+ * started, is complete or cancelled). A paused draft still names its slot.
+ */
+export function onTurnSlot(state: DraftState): DraftSlotState | null {
+  if (state.status !== "in_progress" && state.status !== "paused") return null
+  if (state.slots.length === 0 || !state.permutation) return null
+  const position = slotFor(
+    state.currentPickNo,
+    state.slots.length,
+    state.orderType,
+    state.permutation
+  )
+  return state.slots.find((slot) => slot.position === position) ?? null
+}
+
+export function currentRound(state: DraftState): number {
+  if (state.slots.length === 0) return 1
+  return Math.floor((state.currentPickNo - 1) / state.slots.length) + 1
+}
+
+export function totalPickCount(state: DraftState): number {
+  return state.rounds * state.slots.length
+}
+
+export interface RosterEntry {
+  userId: string | null
+  /** Pick number; null for the captain. */
+  pickNo: number | null
+  round: number | null
+  captain: boolean
+  rating: number | null
+  auto: boolean
+  forced: boolean
+  /** The player left the Event after being drafted (snapshot only). */
+  leftEvent: boolean
+}
+
+/** The captain followed by the players the slot picked, in pick order. */
+export function rosterOf(
+  state: DraftState,
+  slot: DraftSlotState
+): RosterEntry[] {
+  const ratingOf = new Map(state.pool.map((p) => [p.poolEntryId, p.rating]))
+  const leftOf = new Map(
+    state.pool.map((p) => [p.poolEntryId, p.leftEvent === true])
+  )
+  return [
+    {
+      userId: slot.captainUserId,
+      pickNo: null,
+      round: null,
+      captain: true,
+      rating: null,
+      auto: false,
+      forced: false,
+      leftEvent: false,
+    },
+    ...state.picks
+      .filter((pick) => pick.slotId === slot.slotId)
+      .map((pick) => ({
+        userId: pick.userId,
+        pickNo: pick.pickNo,
+        round: pick.round,
+        captain: false,
+        rating: ratingOf.get(pick.poolEntryId) ?? null,
+        auto: pick.auto,
+        forced: pick.forced,
+        leftEvent: leftOf.get(pick.poolEntryId) ?? false,
+      })),
+  ]
+}
+
+export interface PoolFilter {
+  q: string
+  /** A skill level, or "" for any. */
+  skill: string
+  sort: PoolSort
+}
+
+/** Available players matching the search and skill filter, sorted. */
+export function filterPool(
+  pool: readonly DraftPoolState[],
+  players: ReadonlyMap<string, DraftPlayerInfo>,
+  filter: PoolFilter
+): DraftPoolState[] {
+  const needle = filter.q.trim().toLowerCase()
+  const label = (entry: DraftPoolState) =>
+    playerLabel(entry.userId ? players.get(entry.userId) : undefined)
+  const matches = pool.filter((entry) => {
+    if (entry.status !== "available") return false
+    const info = entry.userId ? players.get(entry.userId) : undefined
+    if (filter.skill && info?.skillLevel !== filter.skill) return false
+    if (!needle) return true
+    return (
+      label(entry).toLowerCase().includes(needle) ||
+      (info?.name ?? "").toLowerCase().includes(needle)
+    )
+  })
+  const byName = (a: DraftPoolState, b: DraftPoolState) =>
+    label(a).localeCompare(label(b), undefined, { sensitivity: "base" })
+  return matches.sort((a, b) => {
+    if (filter.sort === "name") return byName(a, b)
+    // Highest rating first, unrated last, ties by name.
+    if (a.rating === null && b.rating !== null) return 1
+    if (a.rating !== null && b.rating === null) return -1
+    if (a.rating !== null && b.rating !== null && a.rating !== b.rating) {
+      return b.rating - a.rating
+    }
+    return byName(a, b)
+  })
+}
+
+/** Captains who let the timer run out `DRAFT_AFK_THRESHOLD` turns in a row. */
+export function awaySlots(state: DraftState): DraftSlotState[] {
+  return state.slots.filter(
+    (slot) => slot.consecutiveTimeouts >= DRAFT_AFK_THRESHOLD
+  )
+}
+
+/** Players drafted who have since left the Event: the manager has to step in. */
+export function draftedWhoLeft(state: DraftState): DraftPoolState[] {
+  return state.pool.filter(
+    (entry) => entry.status === "drafted" && entry.leftEvent === true
+  )
+}
+
+export interface UnassignedPlayer {
+  userId: string
+  kind: "not_picked" | "late_joiner"
+}
+
+/**
+ * Participants no team will get: pool players nobody picked (known once the
+ * draft is complete) and those who joined after the start (the pool is frozen
+ * then). The manager places them by hand.
+ */
+export function unassignedPlayers(
+  state: DraftState,
+  lateJoiners: readonly string[]
+): UnassignedPlayer[] {
+  const notPicked =
+    state.status === "complete"
+      ? state.pool.flatMap((entry) =>
+          entry.status === "available" &&
+          entry.userId !== null &&
+          entry.leftEvent !== true
+            ? [{ userId: entry.userId, kind: "not_picked" as const }]
+            : []
+        )
+      : []
+  return [
+    ...notPicked,
+    ...lateJoiners.map((userId) => ({
+      userId,
+      kind: "late_joiner" as const,
+    })),
+  ]
+}
+
+/** "12s", "1m 05s": how long a pick took. */
+export function formatSeconds(seconds: number): string {
+  const whole = Math.round(seconds)
+  if (whole < 60) return `${whole}s`
+  const minutes = Math.floor(whole / 60)
+  return `${minutes}m ${String(whole % 60).padStart(2, "0")}s`
+}

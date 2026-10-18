@@ -4,7 +4,7 @@ import { useId, useRef } from "react"
 import Image from "next/image"
 import { Check } from "lucide-react"
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group"
-import { cn } from "@/lib/utils"
+import { cn, getOptimizedImageUrl } from "@/lib/utils"
 import { getMetricIds, getMetricName, getWikiIconUrl } from "@/lib/osrs-metrics"
 
 /** Wise Old Man's skill ids in the order of the in-game skills tab (overall first). */
@@ -134,7 +134,7 @@ export function SkillGrid({
               <span className="relative block h-6 w-6 shrink-0">
                 <Image
                   fill
-                  src={getWikiIconUrl(skill)}
+                  src={getOptimizedImageUrl(getWikiIconUrl(skill))}
                   alt=""
                   sizes="24px"
                   className="object-contain"
