@@ -1315,9 +1315,10 @@ export const discordWebhooks = createTable("discord_webhooks", {
   name: varchar("name", { length: 255 }).notNull(),
   webhookUrl: text("webhook_url").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
-  createdBy: uuid("created_by")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+  // Nullable: the webhook belongs to the Event and outlives whoever created it.
+  createdBy: uuid("created_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })

@@ -1,8 +1,7 @@
 # 0002: Roles, ownership and the audit trail (RBAC epic #183)
 
-Status: **accepted.** Decisions 3 to 5, 8, 9 and 10 were confirmed by the
-maintainer; the one open question is whether `discord_webhooks.created_by` should
-survive its creator (see Consequences). This record is the end state of the
+Status: **accepted.** Decisions 3 to 5 and 8 to 10 and the fate of
+`discord_webhooks.created_by` were confirmed by the maintainer. This record is the end state of the
 eight phases of epic #183 (#184 to #191). It supersedes nothing;
 `0001-read-visibility-defaults.md` covers decisions 3 to 5 in detail.
 
@@ -126,10 +125,10 @@ Actions return `{ success: true, ... }` or `{ success: false, error, code? }`
 
 - A creator row without `admin` is now a data fault (no implicit admin). Migration
   0045 repairs existing ones; the reconciliation reports new ones.
-- `discord_webhooks.created_by` is `NOT NULL ... ON DELETE CASCADE`: consistent,
-  but deleting the user who created a webhook removes the Event's webhook.
-  Left as is; making it nullable with `SET NULL` is the alternative if webhooks
-  should outlive their creator.
+- `discord_webhooks.created_by` was `NOT NULL ... ON DELETE CASCADE`, so deleting
+  the user who created a webhook removed the Event's webhook and its Discord
+  posts stopped without notice. Decided: it is now nullable with `ON DELETE SET
+  NULL` (migration 0045), the webhook belongs to the Event.
 - `clan_invites.created_by` was `NOT NULL ... ON DELETE SET NULL`, which made
   deleting the creator of an invite fail. It is now nullable: an invite belongs
   to the Clan and outlives whoever created it (the UI already shows "Unknown").

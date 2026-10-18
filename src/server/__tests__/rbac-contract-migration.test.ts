@@ -307,6 +307,36 @@ describe("migration 0045: clan_invites.created_by and the user_role enum", () =>
   })
 })
 
+describe("migration 0045: discord_webhooks.created_by", () => {
+  async function webhook(creatorId: string) {
+    const owner = await user("eventOwner")
+    const eventId = await event("E", owner)
+    await sql`
+      INSERT INTO "bingoscape-next_discord_webhooks" (event_id, name, webhook_url, created_by)
+      VALUES (${eventId}, 'w', 'https://discord.com/api/webhooks/1/x', ${creatorId})`
+  }
+
+  it("removed the webhook with its creator before the migration", async () => {
+    const creator = await user("hookCreator")
+    await webhook(creator)
+    await sql`DELETE FROM "bingoscape-next_user" WHERE id = ${creator}`
+    expect(await sql`SELECT 1 FROM "bingoscape-next_discord_webhooks"`).toEqual(
+      []
+    )
+  })
+
+  it("keeps the webhook and clears created_by when its creator is deleted", async () => {
+    const creator = await user("hookCreator")
+    await webhook(creator)
+
+    await mig.apply(MIGRATION)
+    await sql`DELETE FROM "bingoscape-next_user" WHERE id = ${creator}`
+
+    const rows = await sql`SELECT created_by FROM "bingoscape-next_discord_webhooks"`
+    expect(rows).toEqual([expect.objectContaining({ created_by: null })])
+  })
+})
+
 describe("migration 0045: whole", () => {
   async function seedPreviousAppState() {
     const creator = await user("creator")
@@ -351,6 +381,7 @@ describe("migration 0045: whole", () => {
     const tables = [
       "bingoscape-next_api_keys",
       "bingoscape-next_clan_invites",
+      "bingoscape-next_discord_webhooks",
       "bingoscape-next_team_members",
       "bingoscape-next_event_participants",
     ]
