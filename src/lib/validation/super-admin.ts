@@ -1,5 +1,6 @@
 import { z } from "zod"
 
+import { CLAN_ROLES, EVENT_ROLES } from "@/lib/authz/roles"
 import { normalizeWikiImagePath } from "@/lib/osrs-image"
 
 /**
@@ -10,8 +11,7 @@ import { normalizeWikiImagePath } from "@/lib/osrs-image"
  * Pure module (zod only) so the schemas can be unit tested without a DB.
  */
 
-export const CLAN_ROLES = ["admin", "management", "member", "guest"] as const
-export const EVENT_ROLES = ["admin", "management", "participant"] as const
+export { CLAN_ROLES, EVENT_ROLES }
 
 const uuid = z.string().uuid("Invalid id")
 

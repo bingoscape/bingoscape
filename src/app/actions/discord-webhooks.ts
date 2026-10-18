@@ -24,7 +24,7 @@ export interface DiscordWebhook {
   name: string
   webhookUrl: string
   isActive: boolean
-  createdBy: string
+  createdBy: string | null
   createdAt: Date
   updatedAt: Date
 }

@@ -39,11 +39,11 @@ const facts = (
   signedIn = a !== null
 ): EventReadFacts => ({ actor: a, signedIn, eventPublic })
 
-describe("defaults pending maintainer confirmation", () => {
-  it("preserve what the application did before the policy", () => {
+describe("read decisions", () => {
+  it("keep the pre-policy defaults, except uploads which follow the Event's visibility", () => {
     expect(READ_DECISIONS).toEqual({
       nonPublicEventForNonMembers: "link-holders",
-      uploads: "public-url",
+      uploads: "follow-event-visibility",
       codephrase: "players",
     })
     expect(DEFAULT_READ_POLICY_MODE).toBe("enforce")

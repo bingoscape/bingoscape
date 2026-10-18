@@ -316,6 +316,13 @@
       "when": 1792055841578,
       "tag": "0044_osrs_image_cache",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1792351364261,
+      "tag": "0045_rbac_contract",
+      "breakpoints": true
     }
   ]
 }

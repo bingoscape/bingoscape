@@ -127,6 +127,9 @@ export function FullSizeImageDialog({
           >
             <Image
               src={getOptimizedImageUrl(imageSrc || getRandomFrog())}
+              // /_next/image fetches without the session cookie, which
+              // /api/uploads needs when it follows the Event's visibility.
+              unoptimized={imageSrc?.includes("/uploads/")}
               alt={imageAlt}
               fill
               style={{ objectFit: "contain" }}

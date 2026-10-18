@@ -3,7 +3,13 @@
  * so permission and invite-state decisions are made (and tested) in one place.
  */
 
-import { CLAN_ROLES, type ClanRole } from "@/lib/authz/roles"
+import {
+  CLAN_ROLES,
+  isAdminRole,
+  isLastAdmin,
+  isManagerRole,
+  type ClanRole,
+} from "@/lib/authz/roles"
 
 export { CLAN_ROLES, type ClanRole }
 
@@ -15,12 +21,12 @@ export const CLAN_ROLE_LABELS: Record<ClanRole, string> = {
 }
 
 export function isClanRole(value: unknown): value is ClanRole {
-  return CLAN_ROLES.includes(value as ClanRole)
+  return (CLAN_ROLES as readonly unknown[]).includes(value)
 }
 
 /** Admins and managers of a Clan (a Clan role, not an Event role). */
 export function isClanManager(role: ClanRole | null | undefined): boolean {
-  return role === "admin" || role === "management"
+  return isManagerRole(role)
 }
 
 /** Admins and managers can create, edit and revoke invite links. */
@@ -30,7 +36,7 @@ export function canManageInvites(role: ClanRole | null | undefined): boolean {
 
 /** Only admins can change another member's role. */
 export function canChangeRoles(role: ClanRole | null | undefined): boolean {
-  return role === "admin"
+  return isAdminRole(role)
 }
 
 export const MAX_INVITE_LABEL_LENGTH = 100
@@ -92,11 +98,7 @@ export function validateRoleChange(input: RoleChangeInput): RuleResult {
       code: "OWNER_PROTECTED",
     }
   }
-  if (
-    input.targetRole === "admin" &&
-    input.newRole !== "admin" &&
-    input.adminCount <= 1
-  ) {
+  if (isLastAdmin(input.targetRole, input.adminCount) && !isAdminRole(input.newRole)) {
     return {
       ok: false,
       error: "A clan needs at least one admin",

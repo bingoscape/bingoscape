@@ -17,7 +17,7 @@ import { getReadPolicyMode, getTileReadAccess } from "./read"
  * Who may fetch an uploaded Submission image from `/api/uploads` (decision 4 of
  * the RBAC epic, `READ_DECISIONS.uploads`).
  *
- * - `public-url` (default, what the application did before): anybody holding
+ * - `public-url` (what the application did before the policy): anybody holding
  *   the unguessable URL; the response is cached publicly for a year.
  * - `follow-event-visibility`: only those who may see the Submission in the
  *   Event: its managers and, for participants, the Submissions of a Tile they

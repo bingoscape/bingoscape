@@ -348,7 +348,7 @@ Emails that differ only in letter case do not block the index; `duplicate_emails
 
 **Quarantine and rollback.** Nothing is lost silently: removed rows are in `event_participants_quarantine` and `team_members_quarantine` (with the id of the row that was kept and, for Teams, the kept Team). If a kept Team is wrong, move the Player back by hand and delete the quarantine row. To undo the data changes, restore the pre-deploy backup (`scripts/restore-db.sh`); rolling back only the app image leaves the new tables and constraints in place, which the previous version tolerates.
 
-**Retention and erasure.** `event_audit_log` and `role_change_log` are meant to be kept `EVENT_AUDIT_RETENTION_DAYS` (365, `src/server/authz/audit-log.ts`; pending the maintainer's answer on decision 10 of #183). No purge job exists yet. They hold user ids without foreign keys, so a user-erasure request is served by setting `actor_user_id` / `subject_user_id` to `NULL` on that user's rows.
+**Retention and erasure.** `event_audit_log` is meant to be kept `EVENT_AUDIT_RETENTION_DAYS` (365, `src/server/authz/audit-log.ts`); no purge job exists yet (#242). `role_change_log` is kept: replaying it must give the live roles. They hold user ids without foreign keys, so a user-erasure request is served by setting `actor_user_id` / `subject_user_id` to `NULL` on that user's rows.
 
 ## RBAC 3/8 rollout (migration `0039_rbac_role_change_trigger`)
 
@@ -465,6 +465,53 @@ RBAC 8/8 drops `api_keys.key` after one release; before that, run the first quer
 **Content-Security-Policy.** `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin` are sent on every response. The CSP ships as `Content-Security-Policy-Report-Only` by default because it was not verified against every page of the running app. Browse the main pages with the browser console open; when it shows no violations set `CSP_MODE=enforce` in the server `.env` (GitHub secret `CSP_MODE`) and restart the container, no rebuild needed. `CSP_MODE=off` removes the header.
 
 **Rollback of the schema** is not needed and not offered: the new columns are ignored by the previous app. To undo the data effects only, restore the pre-deploy backup (`scripts/restore-db.sh`).
+
+## RBAC 8/8 rollout (migration `0045_rbac_contract`)
+
+Phase 8 of the RBAC consolidation (epic #183, issue #191): the **contract** phase.
+
+> **Do not deploy this release until RBAC 2/8 to 7/8 (migrations 0038 to 0040 and the apps that go with them) have been running in production for at least one release.** Migrations run before the app swap and a rollback does not revert the database, so this migration removes things the previous app version still relies on. Deploy it as a release of its own, with a fresh pre-deploy backup (the deploy workflow takes one), and only after the "Before deploying" checks below are clean.
+
+| Part | Effect |
+| ---- | ------ |
+| Creators | Inserts an `admin` participant row for every Event whose creator has none, and promotes a creator who holds a lower role to `admin` (ledger entries `backfill` / `change`, source `migration`). The app no longer counts the creator as admin without a row, so this must hold for every Event before the new app starts. Events without a creator are left alone. |
+| `team_members.event_id` | Quarantines (into `team_members_quarantine`, reason `multiple_teams_in_event`) a Player the pre-0038 app put on two Teams of one Event (keeps the leader row, then the oldest), runs the backfill again, then `SET NOT NULL`. If a NULL were to remain, the step is skipped with a `NOTICE` instead of failing the deploy. |
+| `api_keys.key` | Hashes every key that still has no `key_hash` (the same `sha256()` as 0040, no `pgcrypto`), then drops the plaintext column and its unique constraint. If a key still had no hash afterwards the column is kept with a `NOTICE`. |
+| `clan_invites.created_by` | `DROP NOT NULL`. The foreign key already said `ON DELETE SET NULL`, so deleting the user who created an invite failed; the invite now survives its creator (the UI shows "Unknown"). `discord_webhooks.created_by` gets the same treatment (it was `NOT NULL ... ON DELETE CASCADE`, so the Event's webhook vanished with its creator): nullable, foreign key `ON DELETE SET NULL`. The previous app version always writes it and never reads it, so it tolerates the change. |
+| `user_role` enum | `DROP TYPE IF EXISTS` (no column uses it). Skipped with a `NOTICE` if something still depends on it. |
+
+Every statement is idempotent: running `migrate.yml` again is a no-op. A step whose precondition is not met is skipped with a `NOTICE`, never aborts the deploy; the verification queries then report it.
+
+**Before deploying** (on a restored production backup, and again on production):
+
+```bash
+DATABASE_URL=postgres://.../scratch npm run db:verify-rbac   # no FAIL line, apart from documented exceptions
+```
+
+```sql
+-- creators the migration will repair (expect the same count afterwards: 0)
+SELECT count(*) FROM "bingoscape-next_events" e WHERE e.creator_id IS NOT NULL AND NOT EXISTS (
+  SELECT 1 FROM "bingoscape-next_event_participants" ep
+  WHERE ep.event_id = e.id AND ep.user_id = e.creator_id AND ep.role = 'admin');
+-- team_members.event_id: re-run the backfill, then expect 0
+UPDATE "bingoscape-next_team_members" tm SET event_id = t.event_id
+FROM "bingoscape-next_teams" t WHERE tm.team_id = t.id AND tm.event_id IS NULL;
+SELECT count(*) FROM "bingoscape-next_team_members" WHERE event_id IS NULL;
+-- API keys: every key has a hash, expect 0
+SELECT count(*) FROM "bingoscape-next_api_keys" WHERE key IS NOT NULL AND key_hash IS NULL;
+```
+
+The `UPDATE` above is the same backfill the migration runs (without the duplicate quarantine); running it by hand first only shortens the migration. Check `team_members_quarantine` after the migration for rows with reason `multiple_teams_in_event` and move a Player back by hand if the wrong Team was kept.
+
+**Compatibility.**
+
+- The app of this release needs the schema of 0045 (it no longer reads `api_keys.key` and always writes `team_members.event_id`). It does not run correctly on a database before 0038.
+- **Rolling the app image back after 0045** to the RBAC 2/8 to 7/8 versions works: they write `event_id` and hash API keys. The one rough edge: the RBAC 7/8 app falls back to a query on the dropped `key` column when a key is not found by its hash, so an unknown or mistyped key makes that query fail (a 401 or a 500, depending on the route) instead of answering "unknown"; every real key still works. Rolling back to a version older than RBAC 2/8 does **not** work (it inserts `team_members` without `event_id`, which is now rejected, and writes `api_keys.key`).
+- The database is not reverted by an app rollback. To undo the data effects, restore the pre-deploy backup (`scripts/restore-db.sh`).
+
+**The creator shortcut is gone.** An Event's creator holds exactly the role of their participant row (`admin`, guaranteed by Event creation, by migrations 0038 and 0045, by the owner rules in `src/server/authz/membership.ts`, and monitored daily by the `creator_without_participant_row` and `creator_role_conflicts` checks of the reconciliation job). A creator without an admin row would see the Event on the dashboard but cannot act in it, so treat a finding of those two checks as an incident and repair it with `changeRole`/the SQL above. The ownership pointer (`events.creator_id`, `isOwner`) is unchanged.
+
+**Lint guard rails.** `npm run lint` now fails on role string comparisons outside `src/lib/authz` and `src/server/authz`, and on user relations without `columns` in Drizzle `with:` queries (`eslint.config.mjs`).
 
 ---
 

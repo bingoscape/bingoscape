@@ -311,17 +311,27 @@ describe("buildEventActor", () => {
     ["management"],
     ["admin"],
   ])(
-    "the creator counts as admin whatever their participant row says (%s)",
+    "the creator is the owner and holds exactly the role of their row (%s)",
     (participantRole) => {
       const result = buildEventActor({
         ...base,
         creatorId: "u",
         participantRole,
       })
-      expect(result.role).toBe("admin")
+      expect(result.role).toBe(participantRole)
       expect(result.isOwner).toBe(true)
     }
   )
+
+  it("a creator without a participant row cannot act (no implicit admin)", () => {
+    const orphan = buildEventActor({
+      ...base,
+      creatorId: "u",
+      participantRole: null,
+    })
+    expect(can(orphan, "event:update")).toBe(false)
+    expect(can(orphan, "event:delete")).toBe(false)
+  })
 
   it("keeps the participant role for everybody else", () => {
     expect(

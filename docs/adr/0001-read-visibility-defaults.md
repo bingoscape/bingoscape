@@ -1,8 +1,8 @@
 # 0001: Read visibility defaults (RBAC epic #183, decisions 3-5)
 
-Status: **default pending maintainer confirmation.** Each default below is what
-the application did before the read policy (#187) existed. Nothing here is a
-decision yet; the point of this record is that changing one is a one-line edit.
+Status: **decided** (3 to 5). Each section says what was chosen and why; where
+the choice kept the pre-policy behaviour (#187) it says so. Changing any of them
+is a one-line edit.
 
 ## Context
 
@@ -46,7 +46,11 @@ verification code is managers only.
 
 ## Decision 3: non-public Events, link holders or members only
 
-- **Today / default (`link-holders`):** a signed-in user who has the link of a
+**Decided: `link-holders`.** A non-public Event is "unlisted": organisers share
+its link (for example in Discord) and managers approve join requests. It is not
+an invite-only secret, so the join card has to be visible to link holders.
+
+- **`link-holders`:** a signed-in user who has the link of a
   non-public Event gets the join card (title, dates, registration state, the
   join button) and nothing else (`getEventById` used to load the whole Event for
   them but the Event page only used the card). `getEventById` now returns the
@@ -60,24 +64,37 @@ verification code is managers only.
 
 ## Decision 4: uploads
 
-- **Today / default (`public-url`):** any `/api/uploads/<file>` URL is served to
-  whoever holds it, with `Cache-Control: public, max-age=31536000, immutable`.
-  The file names are random (`nanoid`), so the URL is the secret.
-- Alternative (`follow-event-visibility`): the file is served only to those who
-  may see the Submission it belongs to (managers; participants for a Tile they
-  may read, on a battleship Board only their own Team's), cached privately for
-  an hour. A file no Submission refers to answers 404. Unauthenticated callers
-  are refused, so a Discord embed or a pasted link no longer works for
-  outsiders.
+**Decided: `follow-event-visibility`.**
+
+- The file is served only to those who may see the Submission it belongs to
+  (managers; participants for a Tile they may read, on a battleship Board only
+  their own Team's), cached privately for an hour. A file no Submission refers
+  to answers 404. Unauthenticated callers are refused, so a pasted link no
+  longer works for outsiders.
+- Discord posts are not affected: the webhook attaches the image bytes
+  (`attachment://`, `src/lib/discord-webhook.ts`), Discord keeps its own copy.
+- `/_next/image` fetches local images without the session cookie, so Submission
+  images are rendered `unoptimized` (`submissions-tab.tsx`,
+  `full-size-image-dialog.tsx`); the browser then requests `/api/uploads`
+  itself, with its cookie. Do not render a Submission image through the
+  optimiser.
+- Alternative (`public-url`, what the application did before): any
+  `/api/uploads/<file>` URL is served to whoever holds it, with
+  `Cache-Control: public, max-age=31536000, immutable`; the random file name is
+  the secret.
 - Change: `READ_DECISIONS.uploads`.
 
 ## Decision 5: codephrase
 
-- **Today / default (`players`):** managers and participants see a Board's
-  codephrase (the Event page shows it in the info panel); everybody else never
-  does, and the public pages blank it.
-- Alternative (`managers`): managers only. The info panel then shows an empty
-  codephrase to players.
+**Decided: `players`.**
+
+- Managers and participants see a Board's codephrase (the Event page shows it in
+  the info panel, `GET /api/runelite/bingos/[bingoId]` returns it to the
+  companion plugin); everybody else never does, and the public pages blank it.
+- Why: players need it. It is shown in the plugin, in chat or written down, and
+  has to be readable on the screenshot so that a drop can be tied to this Event.
+  It proves provenance, it is not a secret from the players.
+- Alternative (`managers`): managers only. Rejected, it would break that flow.
 - Change: `READ_DECISIONS.codephrase`.
 
 ## Rollout flag

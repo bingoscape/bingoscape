@@ -175,17 +175,31 @@ describe("computeCapabilities: shape", () => {
 describe("capabilitiesForMembership", () => {
   const base = { userId: "u1", eventId: "e1" }
 
-  it("treats the creator as the admin owner, whatever their participant row says", () => {
+  it("makes the creator with the admin row the owner with every admin capability", () => {
     const caps = capabilitiesForMembership({
       ...base,
       creatorId: "u1",
-      participantRole: null,
+      participantRole: "admin",
     })
     expect(caps).toMatchObject({
       role: "admin",
       isOwner: true,
       canEditEvent: true,
       canDeleteEvent: true,
+    })
+  })
+
+  it("gives a creator without a participant row ownership but no capability", () => {
+    const caps = capabilitiesForMembership({
+      ...base,
+      creatorId: "u1",
+      participantRole: null,
+    })
+    expect(caps).toMatchObject({
+      role: null,
+      isOwner: true,
+      canEditEvent: false,
+      canDeleteEvent: false,
     })
   })
 

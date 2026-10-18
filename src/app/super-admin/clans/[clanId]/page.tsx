@@ -28,6 +28,7 @@ import {
 } from "@/components/super-admin/membership-actions"
 import { PageHeader } from "@/components/super-admin/page-header"
 import { Stat } from "@/components/super-admin/stat"
+import { isLastAdmin } from "@/lib/authz/roles"
 import { UserAvatar } from "@/components/super-admin/user-avatar"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -322,7 +323,7 @@ async function MembersTab({
               confirmText: userConfirmText(member.user),
               role: member.role,
             }}
-            isLastAdmin={member.role === "admin" && data.adminCount === 1}
+            isLastAdmin={isLastAdmin(member.role, data.adminCount)}
             lockedReason={
               member.isOwner
                 ? "Owner. Transfer ownership via Edit clan first."

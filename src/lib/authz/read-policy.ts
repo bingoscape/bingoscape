@@ -8,7 +8,7 @@ import { can, type EventActor } from "./policy"
  * Vocabulary
  *
  * - A **read level** says how the viewer stands towards the Event:
- *   `manager` (admin / management / creator), `member` (any other participant,
+ *   `manager` (admin / management; the creator is an admin), `member` (any other participant,
  *   or a member of one of its Teams), `public` (not a member, but the Event is
  *   public), `summary` (a signed-in non-member of a non-public Event: they hold
  *   the link and get the join card), `none`.
@@ -58,20 +58,22 @@ export function parseReadPolicyMode(
 export interface ReadDecisions {
   /**
    * Decision 3. What a signed-in non-member gets from a non-public Event.
-   * `link-holders`: the join card (title, dates, registration state), as the
-   * Event page shows today. `members-only`: nothing, the Event does not exist
+   * `link-holders` (decided): the join card (title, dates, registration state),
+   * as the Event page shows today. `members-only`: nothing, the Event does not exist
    * for them (they can still join through an invite code).
    */
   nonPublicEventForNonMembers: "link-holders" | "members-only"
   /**
    * Decision 4. Who may fetch a Submission image from `/api/uploads`.
+   * `follow-event-visibility` (decided): only those who may see the Submission.
    * `public-url`: anybody holding the (unguessable) URL, cached for a year, as
-   * today. `follow-event-visibility`: only those who may see the Submission.
+   * before the read policy existed.
    */
   uploads: "public-url" | "follow-event-visibility"
   /**
-   * Decision 5. Who sees a Board's codephrase. `players`: managers and the
-   * Event's participants, as today. `managers`: managers only.
+   * Decision 5. Who sees a Board's codephrase. `players` (decided): managers
+   * and the Event's participants, who need it for the screenshot check.
+   * `managers`: managers only.
    */
   codephrase: "players" | "managers"
 }
@@ -83,7 +85,7 @@ export interface ReadDecisions {
  */
 export const READ_DECISIONS: ReadDecisions = {
   nonPublicEventForNonMembers: "link-holders",
-  uploads: "public-url",
+  uploads: "follow-event-visibility",
   codephrase: "players",
 }
 

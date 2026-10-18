@@ -13,16 +13,21 @@ export interface ActorTeam {
 }
 
 /**
- * The signed-in user, as seen by one Event. `role` already has "the creator
- * counts as admin" applied (see `buildEventActor`), so nothing else needs to
- * special-case the creator.
+ * The signed-in user, as seen by one Event. `role` is the user's participant
+ * row and nothing else: the creator has an `admin` row (written when the Event
+ * is created, guaranteed by migrations 0038 and 0045 and checked by the
+ * `creator_without_participant_row` / `creator_role_conflicts` verification
+ * queries), so nothing special-cases the creator.
  */
 export interface EventActor {
   userId: string
   eventId: string
   /** Effective role; null when the user takes no part in the Event. */
   role: EventRole | null
-  /** True for the Event creator (`events.creator_id`). */
+  /**
+   * True for the Event owner: the creator (`events.creator_id`), or the oldest
+   * admin of an Event whose creator account is gone.
+   */
   isOwner: boolean
   teams: readonly ActorTeam[]
 }
@@ -52,11 +57,11 @@ interface ActorFacts {
 }
 
 /**
- * The one place that normalises "the creator counts as admin": whatever the
- * creator's participant row says (or even if they have none), the effective
- * role is `admin` and `isOwner` is set. Without a creator the oldest admin
- * (`ownerFallbackId`) is the owner, so owner-only actions never become
- * unreachable.
+ * The role is the participant row; ownership is a separate pointer. The owner
+ * is the creator, or, without a creator, the oldest admin (`ownerFallbackId`),
+ * so owner-only actions never become unreachable. An owner always has an
+ * `admin` row; if one does not (a data fault the verification queries report),
+ * they hold no role and cannot act, instead of silently counting as admin.
  */
 export function buildEventActor(facts: ActorFacts): EventActor {
   const ownerId = facts.creatorId ?? facts.ownerFallbackId ?? null
@@ -64,7 +69,7 @@ export function buildEventActor(facts: ActorFacts): EventActor {
   return {
     userId: facts.userId,
     eventId: facts.eventId,
-    role: isOwner ? "admin" : facts.participantRole,
+    role: facts.participantRole,
     isOwner,
     teams: facts.teams ?? [],
   }

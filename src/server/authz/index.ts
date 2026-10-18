@@ -10,7 +10,7 @@
  * - `resolve.ts` Event from Board / Tile / Goal / Submission / Team, and
  *                `requirePermissionFor<Resource>`
  * - `read.ts`    read policy: canReadEvent / Board / Tile / Team
- * - `compat.ts`  Team and Submission comment guards
+ * - `team-guards.ts` Team and Submission comment guards
  *
  * The pure policy lives in `@/lib/authz`. `eventAction` (next-safe-action) is
  * imported from `@/server/authz/action` so this entry point stays light.
@@ -63,7 +63,7 @@ export {
   assertTeamLeaderOrManager,
   requireSubmissionCommentReader,
   requireTeamMemberOrManager,
-} from "./compat"
+} from "./team-guards"
 export {
   canReadBoard,
   canReadEvent,

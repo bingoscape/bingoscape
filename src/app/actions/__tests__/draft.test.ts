@@ -415,16 +415,25 @@ describe("startDraft", () => {
     const draftId = await create()
     await db
       .delete(eventParticipants)
-      .where(
-        inArray(eventParticipants.userId, [...w.players, w.owner, w.manager])
-      )
-    // The creator counts as admin without a participant row.
+      .where(inArray(eventParticipants.userId, [...w.players, w.manager]))
+    // The owner keeps their admin row, so they are the last participant: put
+    // them on a Team so nobody is left in the pool.
+    const [ownerTeam] = await db
+      .insert(teams)
+      .values({ eventId: w.eventId, name: "Owner" })
+      .returning({ id: teams.id })
+    await db.insert(teamMembers).values({
+      teamId: ownerTeam!.id,
+      eventId: w.eventId,
+      userId: w.owner,
+    })
     signInAs(w.owner)
     expect(await startDraft({ draftId })).toMatchObject({
       success: false,
       error: "There are no players left to draft",
     })
-    expect(await teamsOfEvent()).toEqual([])
+    // The failed start rolled back: only the Team made above exists.
+    expect((await teamsOfEvent()).map((t) => t.name)).toEqual(["Owner"])
   })
 
   it("does not act across Events", async () => {

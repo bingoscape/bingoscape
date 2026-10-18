@@ -891,6 +891,7 @@ export function SubmissionsTab({
                         <div className={`relative h-12 rounded-md overflow-hidden shrink-0 border border-border/50 ${stacked ? "w-14" : "w-16"}`}>
                           <Image
                             src={getOptimizedImageUrl(submission.image.path)}
+                            unoptimized
                             alt="thumb"
                             fill
                             className="object-cover"
@@ -997,6 +998,7 @@ export function SubmissionsTab({
                         >
                           <Image
                             src={getOptimizedImageUrl(submission.image.path)}
+                            unoptimized
                             alt="Submission"
                             fill
                             className="object-contain transition-transform group-hover:scale-[1.02]"
@@ -1122,6 +1124,7 @@ export function SubmissionsTab({
                       <div className="relative aspect-video">
                         <Image
                           src={getOptimizedImageUrl(submission.image.path)}
+                          unoptimized
                           alt="Submission"
                           fill
                           className="cursor-pointer object-cover transition-opacity hover:opacity-90"

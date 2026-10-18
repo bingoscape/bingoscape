@@ -457,7 +457,7 @@ describe("battleship board over the RuneLite API", () => {
       // The manager also plays, in team A.
       await db
         .insert(teamMembers)
-        .values({ teamId: fx.teamAId, userId: fx.managerId })
+        .values({ teamId: fx.teamAId, eventId: fx.eventId, userId: fx.managerId })
     })
 
     it.each([

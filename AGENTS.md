@@ -167,7 +167,7 @@ Workflows are in `.github/workflows/`; details in `docs/GITHUB-ACTIONS.md`, secr
 - Return typed success/error objects, never throw (unless critical)
 - Validate inputs at the beginning of functions
 - Use `getServerAuthSession()` for authentication
-- Check permissions with `getUserRole()` before mutations
+- Check permissions with `authorize()` / `requirePermission()` (`@/server/authz`) before mutations; never compare a role string (the oxlint rule `rbac/no-role-comparison` enforces it outside `src/lib/authz` and `src/server/authz`)
 
 ### Component Patterns
 

@@ -15,8 +15,8 @@ export type ApiActorLookup =
 
 /**
  * Loads the actor for the owner of the request's API key in the Event. The
- * creator counts as admin, exactly as for a signed-in user (one actor loader
- * for both). Pass a user id instead of the request when the route already
+ * role is the participant row, exactly as for a signed-in user (one actor
+ * loader for both). Pass a user id instead of the request when the route already
  * validated the key (it needs the user for rate limiting before the Event is
  * known), so the key is looked up once.
  *

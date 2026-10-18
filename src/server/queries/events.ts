@@ -227,10 +227,7 @@ export async function getEvents(userId: string): Promise<EventData[]> {
 
     // Identify which events the user manages
     const managedEventIds = userEvents
-      .filter(
-        (e) =>
-          e.creatorId === userId || isManagerRole(e.eventParticipants[0]?.role)
-      )
+      .filter((e) => isManagerRole(e.eventParticipants[0]?.role))
       .map((e) => e.id)
 
     // 2. Manager Data (if any managed events)
@@ -373,9 +370,7 @@ export async function getEvents(userId: string): Promise<EventData[]> {
         completedTilesCount.find((r) => r.teamId === t.teamId)?.count ?? 0
 
       const teamEvent = userEvents.find((e) => e.id === t.eventId)
-      const isManager =
-        teamEvent?.creatorId === userId ||
-        isManagerRole(teamEvent?.eventParticipants[0]?.role)
+      const isManager = isManagerRole(teamEvent?.eventParticipants[0]?.role)
       // Progress counts completions across every Board, so the total must too
       // (hidden Boards only count for managers).
       const totalTiles = (teamEvent?.bingos ?? [])
@@ -396,10 +391,7 @@ export async function getEvents(userId: string): Promise<EventData[]> {
     }
 
     const eventData = userEvents.map((event) => {
-      const role =
-        event.creatorId === userId
-          ? "admin"
-          : (event.eventParticipants[0]?.role ?? "participant")
+      const role = event.eventParticipants[0]?.role ?? "participant"
 
       const basePrizePool = event.basePrizePool
       const totalBuyIns = buyInsMap.get(event.id) ?? 0
