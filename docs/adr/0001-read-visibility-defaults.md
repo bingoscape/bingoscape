@@ -60,15 +60,24 @@ verification code is managers only.
 
 ## Decision 4: uploads
 
-- **Today / default (`public-url`):** any `/api/uploads/<file>` URL is served to
-  whoever holds it, with `Cache-Control: public, max-age=31536000, immutable`.
-  The file names are random (`nanoid`), so the URL is the secret.
-- Alternative (`follow-event-visibility`): the file is served only to those who
-  may see the Submission it belongs to (managers; participants for a Tile they
-  may read, on a battleship Board only their own Team's), cached privately for
-  an hour. A file no Submission refers to answers 404. Unauthenticated callers
-  are refused, so a Discord embed or a pasted link no longer works for
-  outsiders.
+**Decided: `follow-event-visibility`.**
+
+- The file is served only to those who may see the Submission it belongs to
+  (managers; participants for a Tile they may read, on a battleship Board only
+  their own Team's), cached privately for an hour. A file no Submission refers
+  to answers 404. Unauthenticated callers are refused, so a pasted link no
+  longer works for outsiders.
+- Discord posts are not affected: the webhook attaches the image bytes
+  (`attachment://`, `src/lib/discord-webhook.ts`), Discord keeps its own copy.
+- `/_next/image` fetches local images without the session cookie, so Submission
+  images are rendered `unoptimized` (`submissions-tab.tsx`,
+  `full-size-image-dialog.tsx`); the browser then requests `/api/uploads`
+  itself, with its cookie. Do not render a Submission image through the
+  optimiser.
+- Alternative (`public-url`, what the application did before): any
+  `/api/uploads/<file>` URL is served to whoever holds it, with
+  `Cache-Control: public, max-age=31536000, immutable`; the random file name is
+  the secret.
 - Change: `READ_DECISIONS.uploads`.
 
 ## Decision 5: codephrase

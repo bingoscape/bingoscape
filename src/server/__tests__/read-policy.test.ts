@@ -656,13 +656,15 @@ const relative = (path: string) => path.replace(/^\/uploads\//, "")
 
 describe("uploads", () => {
   it.each(ALL_VIEWERS)(
-    "are served by public URL by default (%s)",
+    "are served by public URL in public-url mode (%s)",
     async (viewer) => {
-      signInAs(viewer)
-      const access = await getUploadAccess(relative(fx.imagePath))
-      expect(access.allowed).toBe(true)
-      expect(access.cacheControl).toContain("public")
-      expect((await getUploadAccess("does-not-exist")).allowed).toBe(true)
+      await withDecisions({ uploads: "public-url" }, async () => {
+        signInAs(viewer)
+        const access = await getUploadAccess(relative(fx.imagePath))
+        expect(access.allowed).toBe(true)
+        expect(access.cacheControl).toContain("public")
+        expect((await getUploadAccess("does-not-exist")).allowed).toBe(true)
+      })
     }
   )
 

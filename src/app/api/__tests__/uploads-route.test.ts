@@ -43,7 +43,7 @@ afterAll(async () => {
 })
 
 afterEach(() => {
-  READ_DECISIONS.uploads = "public-url"
+  READ_DECISIONS.uploads = "follow-event-visibility"
 })
 
 async function fetchUpload(imagePath: string, userId: string | null) {
@@ -54,7 +54,8 @@ async function fetchUpload(imagePath: string, userId: string | null) {
 }
 
 describe("GET /api/uploads", () => {
-  it("serves a Submission image to anybody holding the URL by default (decision 4)", async () => {
+  it("serves a Submission image to anybody holding the URL in public-url mode (decision 4)", async () => {
+    READ_DECISIONS.uploads = "public-url"
     const response = await fetchUpload(fx.imagePath, null)
     expect(response.status).toBe(200)
     expect(response.headers.get("Cache-Control")).toBe(
@@ -62,10 +63,7 @@ describe("GET /api/uploads", () => {
     )
   })
 
-  describe("when images follow the Event's visibility", () => {
-    beforeEach(() => {
-      READ_DECISIONS.uploads = "follow-event-visibility"
-    })
+  describe("when images follow the Event's visibility (the default)", () => {
 
     it("does not serve them to anonymous callers and outsiders", async () => {
       expect((await fetchUpload(fx.imagePath, null)).status).toBe(404)

@@ -65,8 +65,9 @@ export interface ReadDecisions {
   nonPublicEventForNonMembers: "link-holders" | "members-only"
   /**
    * Decision 4. Who may fetch a Submission image from `/api/uploads`.
+   * `follow-event-visibility` (decided): only those who may see the Submission.
    * `public-url`: anybody holding the (unguessable) URL, cached for a year, as
-   * today. `follow-event-visibility`: only those who may see the Submission.
+   * before the read policy existed.
    */
   uploads: "public-url" | "follow-event-visibility"
   /**
@@ -83,7 +84,7 @@ export interface ReadDecisions {
  */
 export const READ_DECISIONS: ReadDecisions = {
   nonPublicEventForNonMembers: "link-holders",
-  uploads: "public-url",
+  uploads: "follow-event-visibility",
   codephrase: "players",
 }
 
