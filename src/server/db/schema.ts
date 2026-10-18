@@ -1624,7 +1624,7 @@ export type EventAuditOutcome = (typeof EVENT_AUDIT_OUTCOMES)[number]
  * Append-only record of denials and sensitive changes inside an Event (the
  * Event-scoped counterpart of `admin_audit_log`). Rows are never updated
  * except to anonymise a user (null `actor_user_id`), and are purged after
- * EVENT_AUDIT_RETENTION_DAYS (src/server/authz/audit-log.ts; no purge job yet).
+ * EVENT_AUDIT_RETENTION_DAYS (src/server/authz/audit-log.ts; the purge job is #242).
  */
 export const eventAuditLog = createTable(
   "event_audit_log",

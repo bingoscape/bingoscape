@@ -348,7 +348,7 @@ Emails that differ only in letter case do not block the index; `duplicate_emails
 
 **Quarantine and rollback.** Nothing is lost silently: removed rows are in `event_participants_quarantine` and `team_members_quarantine` (with the id of the row that was kept and, for Teams, the kept Team). If a kept Team is wrong, move the Player back by hand and delete the quarantine row. To undo the data changes, restore the pre-deploy backup (`scripts/restore-db.sh`); rolling back only the app image leaves the new tables and constraints in place, which the previous version tolerates.
 
-**Retention and erasure.** `event_audit_log` and `role_change_log` are meant to be kept `EVENT_AUDIT_RETENTION_DAYS` (365, `src/server/authz/audit-log.ts`; pending the maintainer's answer on decision 10 of #183). No purge job exists yet. They hold user ids without foreign keys, so a user-erasure request is served by setting `actor_user_id` / `subject_user_id` to `NULL` on that user's rows.
+**Retention and erasure.** `event_audit_log` is meant to be kept `EVENT_AUDIT_RETENTION_DAYS` (365, `src/server/authz/audit-log.ts`); no purge job exists yet (#242). `role_change_log` is kept: replaying it must give the live roles. They hold user ids without foreign keys, so a user-erasure request is served by setting `actor_user_id` / `subject_user_id` to `NULL` on that user's rows.
 
 ## RBAC 3/8 rollout (migration `0039_rbac_role_change_trigger`)
 

@@ -1,7 +1,8 @@
 # 0002: Roles, ownership and the audit trail (RBAC epic #183)
 
-Status: **accepted for the parts that are code; the parts marked "assumed" are
-defaults pending maintainer confirmation.** This record is the end state of the
+Status: **accepted.** Decisions 3 to 5, 8, 9 and 10 were confirmed by the
+maintainer; the one open question is whether `discord_webhooks.created_by` should
+survive its creator (see Consequences). This record is the end state of the
 eight phases of epic #183 (#184 to #191). It supersedes nothing;
 `0001-read-visibility-defaults.md` covers decisions 3 to 5 in detail.
 
@@ -106,9 +107,9 @@ Actions return `{ success: true, ... }` or `{ success: false, error, code? }`
 (`UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `INVALID`, `CONFLICT`, `FAILED`,
 `RATE_LIMITED`); reads answer the empty value instead of throwing.
 
-## Open decisions of #183 and the defaults that were assumed
+## Decisions of #183 and what was chosen
 
-| # | Question | Assumed (current behaviour) |
+| # | Question | Outcome |
 | - | -------- | --------------------------- |
 | 1 | Owner and a deleted creator | `creator_id` stays the pointer plus an admin row; owner-only actions are delete, grant admin, transfer; with no creator the oldest admin owns the Event; at least one admin always remains. **Implemented.** |
 | 2 | Super admin inside an Event | Env-only allowlist (`SUPER_ADMIN_EMAILS`), reached through `/super-admin`; entries need a provider-verified email. A table with expiry was **not** built. |
@@ -119,7 +120,7 @@ Actions return `{ success: true, ... }` or `{ success: false, error, code? }`
 | 7 | Submission comments | Managers write; managers and the owning Team read. Kept. |
 | 8 | Two Teams per Player per Event | No, no exceptions: unique `(event_id, user_id)` on `team_members`. **Decided**; the team draft and migration 0045 (`event_id` NOT NULL, quarantine of double memberships) rely on it. |
 | 9 | Deployment shape | One instance, no scale-out planned (about 950 registered users); rate-limit counters are in memory behind a `RateLimitStore` interface, so a restart resets them. **Decided.** |
-| 10 | Audit retention | 365 days (`EVENT_AUDIT_RETENTION_DAYS`), no purge job yet. Pending. |
+| 10 | Audit retention | `event_audit_log`: 365 days (`EVENT_AUDIT_RETENTION_DAYS`); the purge job is follow-up #242. `role_change_log`: kept, because replaying it must give the live roles; erasure nulls its user columns. **Decided.** |
 
 ## Consequences
 
