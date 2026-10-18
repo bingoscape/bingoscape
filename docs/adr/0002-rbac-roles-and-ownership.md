@@ -112,7 +112,7 @@ Actions return `{ success: true, ... }` or `{ success: false, error, code? }`
 | - | -------- | --------------------------- |
 | 1 | Owner and a deleted creator | `creator_id` stays the pointer plus an admin row; owner-only actions are delete, grant admin, transfer; with no creator the oldest admin owns the Event; at least one admin always remains. **Implemented.** |
 | 2 | Super admin inside an Event | Env-only allowlist (`SUPER_ADMIN_EMAILS`), reached through `/super-admin`; entries need a provider-verified email. A table with expiry was **not** built. |
-| 3 | Non-public Events | Link holders get the join card only (`link-holders`). Pending confirmation, ADR 0001. |
+| 3 | Non-public Events | Link holders get the join card only (`link-holders`). **Decided**: non-public means unlisted, not invite-only, ADR 0001. |
 | 4 | Uploads | Follow the Event's visibility (`follow-event-visibility`). **Decided**, ADR 0001. |
 | 5 | Codephrase | Visible to participants (`players`). **Decided**: players need it for the screenshot verification, ADR 0001. |
 | 6 | Management permissions | `management` edits buy-ins and donations but not roles. Kept. |

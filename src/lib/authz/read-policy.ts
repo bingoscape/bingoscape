@@ -58,8 +58,8 @@ export function parseReadPolicyMode(
 export interface ReadDecisions {
   /**
    * Decision 3. What a signed-in non-member gets from a non-public Event.
-   * `link-holders`: the join card (title, dates, registration state), as the
-   * Event page shows today. `members-only`: nothing, the Event does not exist
+   * `link-holders` (decided): the join card (title, dates, registration state),
+   * as the Event page shows today. `members-only`: nothing, the Event does not exist
    * for them (they can still join through an invite code).
    */
   nonPublicEventForNonMembers: "link-holders" | "members-only"

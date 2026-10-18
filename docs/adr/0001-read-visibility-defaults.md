@@ -1,9 +1,8 @@
 # 0001: Read visibility defaults (RBAC epic #183, decisions 3-5)
 
-Status: **decisions 4 and 5 are decided; decision 3 is a default pending
-maintainer confirmation.** Where a default is marked "decided" it is what the
-maintainers confirmed; otherwise it is what the application did before the read
-policy (#187) existed. Changing any of them is a one-line edit.
+Status: **decided** (3 to 5). Each section says what was chosen and why; where
+the choice kept the pre-policy behaviour (#187) it says so. Changing any of them
+is a one-line edit.
 
 ## Context
 
@@ -47,7 +46,11 @@ verification code is managers only.
 
 ## Decision 3: non-public Events, link holders or members only
 
-- **Today / default (`link-holders`):** a signed-in user who has the link of a
+**Decided: `link-holders`.** A non-public Event is "unlisted": organisers share
+its link (for example in Discord) and managers approve join requests. It is not
+an invite-only secret, so the join card has to be visible to link holders.
+
+- **`link-holders`:** a signed-in user who has the link of a
   non-public Event gets the join card (title, dates, registration state, the
   join button) and nothing else (`getEventById` used to load the whole Event for
   them but the Event page only used the card). `getEventById` now returns the
