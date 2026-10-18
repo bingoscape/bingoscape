@@ -71,8 +71,9 @@ export interface ReadDecisions {
    */
   uploads: "public-url" | "follow-event-visibility"
   /**
-   * Decision 5. Who sees a Board's codephrase. `players`: managers and the
-   * Event's participants, as today. `managers`: managers only.
+   * Decision 5. Who sees a Board's codephrase. `players` (decided): managers
+   * and the Event's participants, who need it for the screenshot check.
+   * `managers`: managers only.
    */
   codephrase: "players" | "managers"
 }

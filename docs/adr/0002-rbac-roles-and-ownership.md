@@ -114,7 +114,7 @@ Actions return `{ success: true, ... }` or `{ success: false, error, code? }`
 | 2 | Super admin inside an Event | Env-only allowlist (`SUPER_ADMIN_EMAILS`), reached through `/super-admin`; entries need a provider-verified email. A table with expiry was **not** built. |
 | 3 | Non-public Events | Link holders get the join card only (`link-holders`). Pending confirmation, ADR 0001. |
 | 4 | Uploads | Follow the Event's visibility (`follow-event-visibility`). **Decided**, ADR 0001. |
-| 5 | Codephrase | Visible to participants (`players`). Pending confirmation, ADR 0001. |
+| 5 | Codephrase | Visible to participants (`players`). **Decided**: players need it for the screenshot verification, ADR 0001. |
 | 6 | Management permissions | `management` edits buy-ins and donations but not roles. Kept. |
 | 7 | Submission comments | Managers write; managers and the owning Team read. Kept. |
 | 8 | Two Teams per Player per Event | No: unique `(event_id, user_id)` on `team_members`. Assumed from `CONTEXT.md` and the app, which already moved Players instead of adding them. |

@@ -1,8 +1,9 @@
 # 0001: Read visibility defaults (RBAC epic #183, decisions 3-5)
 
-Status: **default pending maintainer confirmation.** Each default below is what
-the application did before the read policy (#187) existed. Nothing here is a
-decision yet; the point of this record is that changing one is a one-line edit.
+Status: **decisions 4 and 5 are decided; decision 3 is a default pending
+maintainer confirmation.** Where a default is marked "decided" it is what the
+maintainers confirmed; otherwise it is what the application did before the read
+policy (#187) existed. Changing any of them is a one-line edit.
 
 ## Context
 
@@ -82,11 +83,15 @@ verification code is managers only.
 
 ## Decision 5: codephrase
 
-- **Today / default (`players`):** managers and participants see a Board's
-  codephrase (the Event page shows it in the info panel); everybody else never
-  does, and the public pages blank it.
-- Alternative (`managers`): managers only. The info panel then shows an empty
-  codephrase to players.
+**Decided: `players`.**
+
+- Managers and participants see a Board's codephrase (the Event page shows it in
+  the info panel, `GET /api/runelite/bingos/[bingoId]` returns it to the
+  companion plugin); everybody else never does, and the public pages blank it.
+- Why: players need it. It is shown in the plugin, in chat or written down, and
+  has to be readable on the screenshot so that a drop can be tied to this Event.
+  It proves provenance, it is not a secret from the players.
+- Alternative (`managers`): managers only. Rejected, it would break that flow.
 - Change: `READ_DECISIONS.codephrase`.
 
 ## Rollout flag
