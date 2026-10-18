@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Drizzle upgrade (#27): drizzle-orm 0.33 -> 0.45.4, drizzle-kit 0.24 -> 0.31.11.** No schema change (`drizzle-kit generate` reports none), no migration, the `migrator` image applies all migrations. `esbuild` is now a declared devDependency (three npm scripts use it). Driver errors arrive as `DrizzleQueryError` and their message holds the SQL text and parameters, so `actionClient` (`src/lib/safe-action.ts`) and the submission, import, buy-in and profile actions only send messages of `UserFacingError` / `AuthzError` to the client and log everything else; new `UserFacingError` in `src/lib/user-facing-error.ts`. Removed the `db:push` script (`drizzle-kit push` fails on a migrated database, use `db:migrate`)
 - **RBAC 8/8 (#191): contract phase and guard rails.** **Do not deploy before RBAC 2/8 to 7/8 (migrations 0038 to 0040) have been live for at least one release**; see `docs/DATABASE-MIGRATION.md`, "RBAC 8/8 rollout". Migration 0045 (idempotent, defensive):
   - `team_members.event_id` is `NOT NULL` (the backfill runs again first; a Player the old app put on two Teams of one Event is moved to `team_members_quarantine`)
   - The legacy plaintext `api_keys.key` column is dropped (keys without a hash are hashed first) together with the dual-read in `checkApiKey`; the unused `user_role` enum is dropped

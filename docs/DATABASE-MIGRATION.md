@@ -387,7 +387,7 @@ Team draft 1/4 (epic #214, issue #215). Expand-only and compatible with the prev
 | `draft_pick` | A pick. Unique `(draft_id, pick_no)` and `(draft_id, pool_entry_id)`; composite foreign keys keep the slot and the pool entry inside the pick's draft. |
 | `draft_event` | Append-only log with an identity `seq`, written in the same transaction as the change it records. |
 
-Enumerated columns are `text` with CHECK constraints (status, order type, timeout behaviour, auto-pick rule, pool status, ranges); drizzle-kit 0.24 does not emit CHECKs, so they are added by hand at the end of the file. References to users are `ON DELETE SET NULL` (a draft survives the erasure of an account); `draft_event.actor_user_id` has no foreign key at all so a row can be anonymised.
+Enumerated columns are `text` with CHECK constraints (status, order type, timeout behaviour, auto-pick rule, pool status, ranges); CHECK constraints are deliberately SQL-only (not modelled with `check()` in `schema.ts`, otherwise `db:generate` would add the existing ones again), so they are added by hand at the end of the file. References to users are `ON DELETE SET NULL` (a draft survives the erasure of an account); `draft_event.actor_user_id` has no foreign key at all so a row can be anonymised.
 
 **Compatibility.** Nothing reads or writes these tables before the new app runs, and the new app only writes `team_members` through `src/server/authz/team-membership.ts`, with `event_id` set (the same as every other writer since 0038). The previous app version keeps inserting `team_members` without `event_id`; the draft's "already on a Team" check joins through `teams` for that reason.
 

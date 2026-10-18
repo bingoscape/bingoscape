@@ -68,7 +68,7 @@ Administration
 | --------------- | ------------------------------------------------------------------------- |
 | Framework       | Next.js 16.4.0 (App Router, standalone output), React 19.3.0              |
 | Language        | TypeScript 7 (strict, `noUncheckedIndexedAccess`)                         |
-| Database        | PostgreSQL 18, Drizzle ORM 0.33, drizzle-kit 0.24, postgres.js            |
+| Database        | PostgreSQL 18, Drizzle ORM 0.45, drizzle-kit 0.31, postgres.js          |
 | Authentication  | NextAuth.js 4: credentials, Discord, GitHub (optional), Google (optional) |
 | Validation      | Zod 3, `@t3-oss/env-nextjs` for environment variables                     |
 | UI              | Tailwind CSS 4, shadcn/ui on Radix UI, Framer Motion, Chart.js, Recharts  |
@@ -212,7 +212,6 @@ Variables are validated in `src/env.js`. Some are read directly from `process.en
 | `npm run test:e2e`              | Playwright tests. `test:e2e:ui` and `test:e2e:headed` are also available. |
 | `npm run db:generate`           | Generate a Drizzle migration from schema changes.                         |
 | `npm run db:migrate`            | Apply migrations. Use this in production.                                 |
-| `npm run db:push`               | Push the schema with `--force`. Can delete data. Not for production.      |
 | `npm run db:studio`             | Open Drizzle Studio.                                                      |
 | `npm run db:backfill-templates` | Fill template metadata with `scripts/backfill-template-metadata.ts`.      |
 | `npm run images:warm`           | Optional: pre-fill the OSRS Wiki image cache (`-- --dry-run` for counts). |

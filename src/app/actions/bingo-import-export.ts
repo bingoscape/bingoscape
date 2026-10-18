@@ -31,6 +31,7 @@ import {
 } from "@/lib/bingo-template-schema"
 import type { ExportedBingo } from "@/lib/bingo-template-schema"
 import generateOSRSCodePhrase from "@/lib/codephraseGenerator"
+import { UserFacingError } from "@/lib/user-facing-error"
 
 /**
  * Export a bingo board to a JSON format that can be imported later
@@ -274,7 +275,7 @@ export async function importBingoBoard(
         .returning()
 
       if (!newBingo) {
-        throw new Error("Failed to create bingo board")
+        throw new UserFacingError("Failed to create bingo board")
       }
 
       // Create all the tiles
@@ -294,7 +295,7 @@ export async function importBingoBoard(
           .returning()
 
         if (!newTile) {
-          throw new Error("Failed to create tile")
+          throw new UserFacingError("Failed to create tile")
         }
 
         const localToDbGroupId = new Map<string, string>()
@@ -345,7 +346,7 @@ export async function importBingoBoard(
           }
 
           if (pendingGroups.length > 0) {
-            throw new Error(
+            throw new UserFacingError(
               "Goal groups contain a circular or unresolvable parent reference"
             )
           }
@@ -358,7 +359,7 @@ export async function importBingoBoard(
               ? localToDbGroupId.get(goal.parentLocalId)
               : null
             if (goal.parentLocalId && !parentId) {
-              throw new Error(
+              throw new UserFacingError(
                 "Goal references a group that could not be imported"
               )
             }
@@ -471,11 +472,10 @@ export async function importBingoBoard(
     })
   } catch (error) {
     logger.error({ error }, "Error importing bingo board:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error ? error.message : "Failed to import bingo board",
+    if (error instanceof UserFacingError) {
+      return { success: false, error: error.message }
     }
+    return actionFailure(error, "Failed to import bingo board")
   }
 }
 

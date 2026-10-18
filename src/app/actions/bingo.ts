@@ -97,6 +97,7 @@ import {
   type DbOrTransaction,
 } from "@/server/tier-progression"
 import type { SelectableUser } from "@/types/model"
+import { UserFacingError } from "@/lib/user-facing-error"
 import {
   insertGoal,
   metricGoalDescription,
@@ -1146,7 +1147,7 @@ export async function submitImage(formData: FormData) {
     const onBehalfOfUserId = formData.get("onBehalfOfUserId") as string | null
 
     if (!tileId || !teamId || !image) {
-      throw new Error("Missing required fields")
+      throw new UserFacingError("Missing required fields")
     }
 
     // Get session first to validate user
@@ -1171,7 +1172,7 @@ export async function submitImage(formData: FormData) {
       .execute()
 
     if (tileResult.length === 0) {
-      throw new Error("Tile not found")
+      throw new UserFacingError("Tile not found")
     }
 
     const tile = tileResult[0]!
@@ -1185,7 +1186,7 @@ export async function submitImage(formData: FormData) {
     })
 
     if (!bingoResult) {
-      throw new Error("Bingo not found")
+      throw new UserFacingError("Bingo not found")
     }
 
     // Determine the target user for the submission
@@ -1200,7 +1201,7 @@ export async function submitImage(formData: FormData) {
         bingoResult.eventId
       )
       if (!canSubmit) {
-        throw new Error(
+        throw new UserFacingError(
           "You do not have permission to submit on behalf of this user"
         )
       }
@@ -1264,7 +1265,7 @@ export async function submitImage(formData: FormData) {
       .execute()
 
     if (teamResult.length === 0) {
-      throw new Error("Team not found")
+      throw new UserFacingError("Team not found")
     }
 
     const team = teamResult[0]!
@@ -1273,7 +1274,7 @@ export async function submitImage(formData: FormData) {
     // the caller must be a member of that Team (or manage the Event). Hidden
     // Tiles can only be submitted to by managers.
     if (team.eventId !== bingoResult.eventId) {
-      throw new Error("Team does not belong to this event")
+      throw new UserFacingError("Team does not belong to this event")
     }
     const callerIsManager = await hasPermission(
       bingoResult.eventId,
@@ -1288,7 +1289,7 @@ export async function submitImage(formData: FormData) {
         isManager: false,
       })
       if (tile.isHidden || blind) {
-        throw new Error("Tile not found")
+        throw new UserFacingError("Tile not found")
       }
       // `submission:create` for this Team: a member of it (managers are
       // handled above).
@@ -1480,9 +1481,9 @@ export async function submitImage(formData: FormData) {
     )
     // The messages thrown above are written for the user; AuthzError keeps its
     // code.
-    return error instanceof AuthzError
-      ? actionFailure(error, error.message)
-      : failure((error as Error).message)
+    return error instanceof UserFacingError
+      ? failure(error.message)
+      : actionFailure(error, "Failed to submit image")
   }
 }
 
@@ -1958,7 +1959,7 @@ export async function deleteSubmission(submissionId: string) {
         .where(eq(submissions.id, submissionId))
 
       if (!submission) {
-        throw new Error("Submission not found")
+        throw new UserFacingError("Submission not found")
       }
 
       // Fetch team submission to get the teamId for progress recalculation
@@ -2033,9 +2034,9 @@ export async function deleteSubmission(submissionId: string) {
     })
   } catch (error) {
     logger.error({ error }, "Error deleting submission")
-    return error instanceof AuthzError
-      ? actionFailure(error, error.message)
-      : failure((error as Error).message)
+    return error instanceof UserFacingError
+      ? failure(error.message)
+      : actionFailure(error, "Failed to delete submission")
   }
 }
 

@@ -1476,7 +1476,8 @@ export const battleshipShipTilesRelations = relations(
 //
 // The CHECK constraints on the enumerated columns (scope_type, action, source,
 // old_role / new_role per scope, outcome) exist only in migration 0038:
-// drizzle-kit 0.24 does not emit check() constraints, so they are written by
+// CHECK constraints are deliberately SQL-only (modelling existing ones with
+// check() would make `db:generate` add them again), so they are written by
 // hand there. Keep the constant arrays below and that SQL in sync.
 // ---------------------------------------------------------------------------
 
@@ -1988,8 +1989,8 @@ export type DraftEventRow = typeof draftEvents.$inferSelect
  * the file itself lives in the cache volume under `file_name`. `not_found` and
  * `error` rows record a failed fetch; nothing asks the wiki again before
  * `retry_after`. Only the image cache reads or writes this table. The CHECK
- * constraint on `status` exists only in the migration (drizzle-kit 0.24 does
- * not emit check()).
+ * constraint on `status` exists only in the migration (CHECKs are
+ * deliberately SQL-only).
  */
 export const osrsImageCache = createTable(
   "osrs_image_cache",
