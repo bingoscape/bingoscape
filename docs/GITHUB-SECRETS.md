@@ -36,9 +36,11 @@ The defaults are those of `docker-compose.yml`. `scripts/backup-db.sh` and `scri
 
 ### Authentication Configuration
 
+The names are kept from NextAuth; Better Auth reads them as `secret` and `baseURL` (`src/server/auth.ts`). OAuth callback URLs are unchanged: `{NEXTAUTH_URL}/api/auth/callback/<provider>`.
+
 | Secret Name       | Description                | Example Value            | How to Generate           |
 | ----------------- | -------------------------- | ------------------------ | ------------------------- |
-| `NEXTAUTH_SECRET` | NextAuth.js encryption key | `base64-encoded-string`  | `openssl rand -base64 32` |
+| `NEXTAUTH_SECRET` | Better Auth signing secret | `base64-encoded-string`  | `openssl rand -base64 32` |
 | `NEXTAUTH_URL`    | Application URL            | `https://bingoscape.org` | Your domain               |
 
 ### OAuth Providers (Required)
@@ -278,7 +280,7 @@ Names that must exist: `DB_PASSWORD`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `DISCOR
 
 ### Invalid NEXTAUTH_SECRET
 
-**Error:** `Invalid NextAuth secret`
+**Error:** `BETTER_AUTH_SECRET is missing` (Better Auth names its own variable; this app passes `NEXTAUTH_SECRET`)
 
 **Solution:**
 Generate a new secret:
@@ -307,7 +309,7 @@ Update the `NEXTAUTH_SECRET` secret in GitHub.
 ### Generate Secrets Commands
 
 ```bash
-# NextAuth Secret
+# Auth secret (NEXTAUTH_SECRET)
 openssl rand -base64 32
 
 # Database Password
@@ -350,5 +352,5 @@ gh secret set SECRET_NAME
 - [GitHub Actions Secrets Documentation](https://docs.github.com/en/actions/security-guides/encrypted-secrets)
 - [Environment Protection Rules](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment)
 - [GitHub CLI Secret Management](https://cli.github.com/manual/gh_secret)
-- [NextAuth.js Configuration](https://next-auth.js.org/configuration/options)
+- [Better Auth Options](https://www.better-auth.com/docs/reference/options)
 - [Discord Developer Portal](https://discord.com/developers/docs)
