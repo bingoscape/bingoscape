@@ -239,10 +239,9 @@ The RuneLite plugin ([BingoScape Companion on the Plugin Hub](https://runelite.n
 | GET    | `/api/runelite/bingos/{bingoId}`                | Board payload. Supports `ETag` and `If-None-Match` (304). Rate limit 60 requests per minute per user. |
 | POST   | `/api/runelite/tiles/{tileId}/submissions`      | Submit a screenshot (`multipart/form-data`, field `image`).                                           |
 | POST   | `/api/runelite/tiles/{tileId}/auto-submissions` | Automatic submission.                                                                                 |
-| POST   | `/api/runelite/items/check`                     | Check items against goals.                                                                            |
 | GET    | `/api/runelite/team-drops`                      | Team drops.                                                                                           |
 | GET    | `/api/runelite/team-tile-completions`           | Team tile completions.                                                                                |
-| GET    | `/api/runelite/docs`                            | Machine-readable API description (version 2.1.0).                                                     |
+| GET    | `/api/runelite/docs`                            | Machine-readable API description (version 3.0.0).                                                     |
 
 API version 2.1 is additive. Board payloads carry `apiVersion: "2.1"`, progression tiers and locked-tile stubs, and a `battleship` block with blind-tile redaction. Error codes `TIER_LOCKED`, `BOARD_BLIND` and `EVENT_NOT_STARTED` were added. Full request and response details are in [docs/API.md](docs/API.md).
 
