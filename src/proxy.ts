@@ -1,17 +1,23 @@
-import { getToken } from "next-auth/jwt"
+import { getSessionCookie } from "better-auth/cookies"
 import { NextRequest, NextResponse } from "next/server"
 
 import { cspHeader, parseCspMode } from "@/lib/security-headers"
 
-const PROTECTED = ["/events", "/clans", "/profile", "/super-admin", "/templates"]
+const PROTECTED = [
+  "/events",
+  "/clans",
+  "/profile",
+  "/super-admin",
+  "/templates",
+]
 
 export async function proxy(request: NextRequest) {
   const startTime = Date.now()
   const pathname = request.nextUrl.pathname
   const isProtected = PROTECTED.some((p) => pathname.startsWith(p))
   if (isProtected) {
-    const token = await getToken({ req: request })
-    if (!token) {
+    // Cookie presence only; pages still check the real session.
+    if (!getSessionCookie(request)) {
       const signIn = new URL("/sign-in", request.url)
       // Keep the query string so deep links like /clans/join?code=... survive sign-in.
       signIn.searchParams.set("callbackUrl", pathname + request.nextUrl.search)
@@ -41,4 +47,3 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 }
-

@@ -18,7 +18,6 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core"
-import type { AdapterAccount } from "next-auth/adapters"
 
 // Relative (not `@/`) so drizzle-kit can load this file; a plain module.
 import type {
@@ -50,9 +49,8 @@ export const users = createTable(
     // Password field for Credentials provider authentication
     // Nullable to support OAuth-only users (Discord, GitHub, Google)
     password: varchar("password", { length: 255 }),
-    // Sessions (JWTs) issued before this instant are rejected (RBAC 7/8, #190).
-    // Bumped by "sign out everywhere"; NULL means never revoked. Nullable so
-    // the previous app version, which does not know the column, keeps working.
+    // Read by the NextAuth app only (JWT revocation, RBAC 7/8, #190). Better
+    // Auth deletes session rows instead; the column goes in phase 4 (#254).
     sessionRevokedAt: timestamp("session_revoked_at", { withTimezone: true }),
     // The email address an OAuth provider vouched for at the last sign-in
     // (normalised, lower case), NULL when the provider did not verify it or
@@ -107,7 +105,8 @@ export const accounts = createTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     type: varchar("type", { length: 255 })
-      .$type<AdapterAccount["type"]>()
+      // NextAuth's account types (old table, dropped in phase 4).
+      .$type<"oauth" | "oidc" | "email" | "webauthn">()
       .notNull(),
     provider: varchar("provider", { length: 255 }).notNull(),
     providerAccountId: varchar("provider_account_id", {

@@ -4,7 +4,7 @@ import { hashPassword } from "@/lib/password"
 import { logger } from "@/lib/logger"
 import { signUpSchema, type SignUpInput } from "@/lib/validation/auth"
 import { db } from "@/server/db"
-import { users } from "@/server/db/schema"
+import { authAccounts, users } from "@/server/db/schema"
 import { limitAction } from "@/server/rate-limit"
 import { eq } from "drizzle-orm"
 import { ZodError } from "zod"
@@ -41,18 +41,29 @@ export async function registerUser(input: SignUpInput) {
     // Hash password with bcrypt
     const hashedPassword = await hashPassword(validated.password)
 
-    // Create user in database
-    const [newUser] = await db
-      .insert(users)
-      .values({
-        username: validated.username.toLowerCase(),
+    // The user plus its Better Auth credential account (`accountId` is the
+    // user id), written directly: Better Auth's sign-up needs an email, and
+    // this one has none (epic #250, decision 9).
+    const newUser = await db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(users)
+        .values({
+          username: validated.username.toLowerCase(),
+          name: validated.username, // Use username as default name
+          runescapeName: validated.runescapeName ?? null,
+          email: null, // Not required for credentials auth
+          emailVerified: null,
+        })
+        .returning({ id: users.id })
+      if (!created) return undefined
+      await tx.insert(authAccounts).values({
+        userId: created.id,
+        providerId: "credential",
+        accountId: created.id,
         password: hashedPassword,
-        name: validated.username, // Use username as default name
-        runescapeName: validated.runescapeName ?? null,
-        email: null, // Not required for credentials auth
-        emailVerified: null,
       })
-      .returning({ id: users.id })
+      return created
+    })
 
     if (!newUser) {
       return {

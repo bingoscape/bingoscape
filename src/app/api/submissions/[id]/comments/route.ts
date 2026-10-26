@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { logger } from "@/lib/logger"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/server/auth"
+import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
 import {
   AuthzError,
@@ -24,7 +23,9 @@ const createCommentSchema = z.object({
  * owns the Submission. The Event is derived from the Submission. Returns an
  * error response when the caller is not allowed.
  */
-async function authorizeWrite(submissionId: string): Promise<NextResponse | null> {
+async function authorizeWrite(
+  submissionId: string
+): Promise<NextResponse | null> {
   try {
     await requirePermissionForSubmission(submissionId, "submission:comment")
     return null
@@ -46,7 +47,7 @@ export async function GET(
 ) {
   const params = await props.params
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerAuthSession()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
@@ -108,7 +109,7 @@ export async function POST(
 ) {
   const params = await props.params
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerAuthSession()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
