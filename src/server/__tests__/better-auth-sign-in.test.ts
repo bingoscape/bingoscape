@@ -8,7 +8,7 @@
 import { and, eq, inArray } from "drizzle-orm"
 
 import { registerUser } from "@/app/actions/auth"
-import { hashPassword } from "@/lib/password"
+import { hashPassword, verifyPassword } from "@/lib/password"
 import { RATE_LIMITS } from "@/lib/rate-limit-policies"
 import { db } from "@/server/db"
 import { authAccounts, users } from "@/server/db/schema"
@@ -24,6 +24,14 @@ jest.mock("next/headers", () => ({
   headers: async () => new Headers(),
   cookies: async () => ({ set: jest.fn() }),
 }))
+// Spy-able wrappers around the real bcrypt helpers.
+jest.mock("@/lib/password", () => {
+  const actual = jest.requireActual("@/lib/password")
+  return {
+    hashPassword: jest.fn(actual.hashPassword),
+    verifyPassword: jest.fn(actual.verifyPassword),
+  }
+})
 jest.mock("@/lib/logger", () => ({
   logger: {
     error: jest.fn(),
@@ -91,6 +99,19 @@ describe("username sign-in", () => {
     expect(
       (await signInByUsername(username, PASSWORD, "198.51.100.8")).status
     ).toBe(200)
+  })
+})
+
+describe("email sign-in", () => {
+  it("is disabled and hashes no password", async () => {
+    jest.mocked(hashPassword).mockClear()
+    jest.mocked(verifyPassword).mockClear()
+    const response = await authRequest("/sign-in/email", {
+      body: { email: `nobody-${suffix}@example.test`, password: PASSWORD },
+    })
+    expect(response.status).toBe(404)
+    expect(hashPassword).not.toHaveBeenCalled()
+    expect(verifyPassword).not.toHaveBeenCalled()
   })
 })
 

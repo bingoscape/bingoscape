@@ -76,6 +76,8 @@ export const auth = betterAuth({
   // Endpoints the app does not use. Account changes go through server actions
   // with the app's own validation, never through these.
   disabledPaths: [
+    // Password users have no email; open, it would bcrypt-hash unthrottled.
+    "/sign-in/email",
     "/update-user",
     "/change-email",
     "/change-password",
