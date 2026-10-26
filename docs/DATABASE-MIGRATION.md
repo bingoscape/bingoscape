@@ -439,7 +439,7 @@ Phase 7 of the RBAC consolidation (epic #183, issue #190): credential and sessio
 | `api_keys.key_hash`, `key_prefix` | SHA-256 (lower-case hex) of the key and its first 8 characters. Unique index `api_keys_key_hash_unique`. |
 | Backfill | `UPDATE ... SET key_hash = encode(sha256(convert_to(key, 'UTF8')), 'hex'), key_prefix = left(key, 8)` for every existing key. PostgreSQL 11+ has the built-in `sha256(bytea)`, so **no `pgcrypto` extension is needed**. Keys the previous app creates after the migration have no hash; the new app backfills them on first use (see below). |
 | `api_keys.scopes`, `expires_at`, `revoked_at` | `scopes text[] NOT NULL DEFAULT '{read,submit}'`, so every existing key keeps full access; `expires_at` / `revoked_at` are nullable. |
-| `user.session_revoked_at` | Nullable. Sessions issued before this instant are rejected ("sign out everywhere"). NULL for everybody after the migration, so **no session is invalidated by the deploy**. |
+| `user.session_revoked_at` | Nullable. Sessions issued before this instant are rejected ("sign out everywhere"). NULL for everybody after the migration, so **no session is invalidated by the deploy**. Dropped again in Better Auth 4b (0047). |
 | `user.provider_verified_email` | Nullable. The email an OAuth provider vouched for at the last sign-in (see "Super admins" below). |
 
 **Dual-read of API keys (one release).** A key is looked up by its hash first; if there is no row, by the legacy `key` column. A legacy hit writes the hash and prefix back (`checkApiKey` in `src/lib/api-auth.ts`). Revocation, expiry and scope are checked on both paths, and a revoked row found by hash is never revived through its plaintext. Existing keys and RuneLite plugin clients keep working unchanged: the key format (`bsn_` + 32 characters) and the `Authorization: Bearer` header did not change.
@@ -512,6 +512,50 @@ The `UPDATE` above is the same backfill the migration runs (without the duplicat
 **The creator shortcut is gone.** An Event's creator holds exactly the role of their participant row (`admin`, guaranteed by Event creation, by migrations 0038 and 0045, by the owner rules in `src/server/authz/membership.ts`, and monitored daily by the `creator_without_participant_row` and `creator_role_conflicts` checks of the reconciliation job). A creator without an admin row would see the Event on the dashboard but cannot act in it, so treat a finding of those two checks as an incident and repair it with `changeRole`/the SQL above. The ownership pointer (`events.creator_id`, `isOwner`) is unchanged.
 
 **Lint guard rails.** `npm run lint` now fails on role string comparisons outside `src/lib/authz` and `src/server/authz`, and on user relations without `columns` in Drizzle `with:` queries (`eslint.config.mjs`).
+
+## Better Auth 4b rollout (migration `0047_better_auth_contract`)
+
+Release B of phase 4 of the move to Better Auth (epic #250, issue #260): the **contract** phase. Release A (#254) already removed every use of what this drops, without changing the database.
+
+> **Do not deploy this release until Better Auth 4a (#254) has been running in production for at least one release with no rollback.** Migrations run before the app swap and a rollback does not revert the database: images up to and including 3/4 still name the dropped user columns in their Drizzle schema and stop working after this migration. Deploy it as a release of its own, with a fresh pre-deploy backup (the deploy workflow takes one), and only after the check below is clean.
+
+| Part                                             | Effect                                                                                                                                                                                                                                                                             |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `account`                                        | Copies every NextAuth OAuth account that has no `auth_account` row (same provider and provider account id) with the INSERT of 0046, then drops the table. If a row is still missing afterwards, the table is kept with a `NOTICE`.                                                 |
+| `user.password`                                  | Copies every password that has no `credential` row in `auth_account` (account id = user id) with the INSERT of 0046, then drops the column. A user whose `credential` row exists but has no hash cannot be copied (the copy never overwrites): the column is kept with a `NOTICE`. |
+| `session`, `verification_token`                  | Dropped. `session` only held expired rows of an earlier database-session setup; `verification_token` was never written.                                                                                                                                                            |
+| `user.session_revoked_at`, `user.email_verified` | Dropped. Better Auth deletes session rows instead of checking a revocation time; it uses `is_email_verified`, the super-admin allowlist `provider_verified_email`.                                                                                                                 |
+
+Every statement is idempotent: running `migrate.yml` again is a no-op. A drop whose data is not all in `auth_account` is skipped with a `NOTICE` and never aborts the deploy; once the cause is fixed, running the migration again (`migrate.yml`) performs it. No password and no OAuth link is lost.
+
+**Before deploying** (read-only; on a restored production backup, and again on production). The first two counts are the rows the migration would have to copy; after the cutover they should be 0. A non-zero count is not data loss (the migration copies those rows), but find out why first: it means a NextAuth app wrote after 0046.
+
+```sql
+-- OAuth accounts without a Better Auth row (expect 0)
+SELECT count(*) FROM "bingoscape-next_account" a WHERE NOT EXISTS (
+  SELECT 1 FROM "bingoscape-next_auth_account" n
+  WHERE n.provider_id = a.provider AND n.account_id = a.provider_account_id);
+-- passwords without a credential account holding a hash (expect 0)
+SELECT count(*) FROM "bingoscape-next_user" u WHERE u.password IS NOT NULL AND NOT EXISTS (
+  SELECT 1 FROM "bingoscape-next_auth_account" n
+  WHERE n.user_id = u.id AND n.provider_id = 'credential' AND n.password IS NOT NULL);
+-- of those, passwords the copy cannot add (a credential row without a hash is
+-- in the way): the migration keeps user.password for them (expect 0)
+SELECT count(*) FROM "bingoscape-next_user" u WHERE u.password IS NOT NULL AND NOT EXISTS (
+  SELECT 1 FROM "bingoscape-next_auth_account" n
+  WHERE n.user_id = u.id AND n.provider_id = 'credential' AND n.password IS NOT NULL)
+AND EXISTS (
+  SELECT 1 FROM "bingoscape-next_auth_account" n
+  WHERE n.provider_id = 'credential' AND n.account_id = u.id::text);
+```
+
+**After deploying:** check the migration log for `Better Auth 4b:` notices. `copied ...` says what was copied; `... kept` means a drop was skipped (fix the cause, then run `migrate.yml` again).
+
+**Compatibility.**
+
+- Neither this app nor the 4a app uses the dropped tables or columns, so the 4a app keeps running between the migration and the app swap, and **rolling back to the 4a image works**. `/unlink-account` is disabled since 4a, so no account unlinked after the cutover can be copied back.
+- **Rolling back to 3/4 or older does not work**: the Drizzle schema of those images still names `user.password`, `email_verified` and `session_revoked_at`, so every full-row user query and every user insert fails once the columns are gone.
+- The database is not reverted by an app rollback. To undo the drops, restore the pre-deploy backup (`scripts/restore-db.sh`).
 
 ---
 

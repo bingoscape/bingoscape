@@ -488,11 +488,12 @@ describe("migration 0038: dirty data", () => {
   it("leaves the same indexes and columns as `drizzle-kit push` of the schema", async () => {
     await mig.apply(MIGRATION)
     // The pushed schema is the end state: it also has the columns of 0040
-    // (RBAC 7/8), the contract of 0045 (RBAC 8/8, event_id NOT NULL) and the
-    // user columns of 0046 (Better Auth 2/4).
+    // (RBAC 7/8), the contract of 0045 (RBAC 8/8, event_id NOT NULL), the
+    // user columns of 0046 (Better Auth 2/4) and the drops of 0047 (4b).
     await mig.apply("0040_credential_session_hygiene")
     await mig.apply("0045_rbac_contract")
     await mig.apply("0046_better_auth_expand")
+    await mig.apply("0047_better_auth_contract")
     const tables = [
       "bingoscape-next_event_participants",
       "bingoscape-next_team_members",
@@ -514,21 +515,9 @@ describe("migration 0038: dirty data", () => {
           FROM information_schema.columns WHERE table_name IN ${client(tables)} ORDER BY 1`
       ).map((x) => x.c),
     })
-    // Still in the database, no longer in the schema (Better Auth 4a); #260
-    // drops them, then this goes back to a strict comparison.
-    const notInSchema = [
-      "bingoscape-next_user.email_verified:timestamp with time zone:YES",
-      "bingoscape-next_user.password:character varying:YES",
-      "bingoscape-next_user.session_revoked_at:timestamp with time zone:YES",
-    ]
-    const migrated = await shape(sql)
-    expect(migrated.columns).toEqual(expect.arrayContaining(notInSchema))
     const pushed = postgres(process.env.DATABASE_URL!, { max: 1 })
     try {
-      expect({
-        ...migrated,
-        columns: migrated.columns.filter((c) => !notInSchema.includes(c)),
-      }).toEqual(await shape(pushed))
+      expect(await shape(sql)).toEqual(await shape(pushed))
     } finally {
       await pushed.end()
     }
