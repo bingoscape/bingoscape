@@ -155,6 +155,31 @@ describe("registerUser", () => {
   })
 })
 
+describe("account unlinking", () => {
+  it("refuses POST /unlink-account and keeps the link", async () => {
+    const username = `unlink-${suffix}`
+    const userId = await seedPasswordUser(username)
+    const [link] = await db
+      .insert(authAccounts)
+      .values({ userId, providerId: "discord", accountId: `d-unlink-${suffix}` })
+      .returning({ id: authAccounts.id })
+    const { cookie } = await signInByUsername(username, PASSWORD)
+
+    const response = await authRequest("/unlink-account", {
+      body: { accountId: link!.id },
+      cookie,
+    })
+
+    expect(response.status).toBe(404)
+    expect(
+      await db
+        .select({ id: authAccounts.id })
+        .from(authAccounts)
+        .where(eq(authAccounts.id, link!.id))
+    ).toHaveLength(1)
+  })
+})
+
 describe("sign-up through Better Auth", () => {
   it("refuses POST /sign-up/email, so input cannot set providerVerifiedEmail", async () => {
     const email = `admin-${suffix}@example.test`
