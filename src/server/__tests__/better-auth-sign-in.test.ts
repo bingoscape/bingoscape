@@ -60,12 +60,12 @@ beforeAll(async () => {
   cheapHash = await bcrypt.hash(PASSWORD, 4)
 })
 
-/** A password user the way phase 2 left it: hash on the user and the credential account. */
+/** A password user: the bcrypt hash lives on the credential account. */
 async function seedPasswordUser(username: string) {
   const hash = cheapHash
   const [user] = await db
     .insert(users)
-    .values({ name: username, username, password: hash })
+    .values({ name: username, username })
     .returning({ id: users.id })
   created.push(user!.id)
   await db.insert(authAccounts).values({
@@ -152,6 +152,31 @@ describe("registerUser", () => {
     ])
 
     expect((await signInByUsername(username, PASSWORD)).status).toBe(200)
+  })
+})
+
+describe("account unlinking", () => {
+  it("refuses POST /unlink-account and keeps the link", async () => {
+    const username = `unlink-${suffix}`
+    const userId = await seedPasswordUser(username)
+    const [link] = await db
+      .insert(authAccounts)
+      .values({ userId, providerId: "discord", accountId: `d-unlink-${suffix}` })
+      .returning({ id: authAccounts.id })
+    const { cookie } = await signInByUsername(username, PASSWORD)
+
+    const response = await authRequest("/unlink-account", {
+      body: { accountId: link!.id },
+      cookie,
+    })
+
+    expect(response.status).toBe(404)
+    expect(
+      await db
+        .select({ id: authAccounts.id })
+        .from(authAccounts)
+        .where(eq(authAccounts.id, link!.id))
+    ).toHaveLength(1)
   })
 })
 

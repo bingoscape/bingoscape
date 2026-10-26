@@ -83,6 +83,8 @@ export const auth = betterAuth({
     "/change-password",
     "/delete-user",
     "/is-username-available",
+    // No unlink UI, and #260's copy-before-drop would bring an unlinked account back.
+    "/unlink-account",
   ],
   user: {
     fields: { emailVerified: "isEmailVerified" },

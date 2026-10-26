@@ -69,7 +69,7 @@ Administration
 | Framework       | Next.js 16.4.0 (App Router, standalone output), React 19.3.0              |
 | Language        | TypeScript 7 (strict, `noUncheckedIndexedAccess`)                         |
 | Database        | PostgreSQL 18, Drizzle ORM 0.45, drizzle-kit 0.31, postgres.js          |
-| Authentication  | NextAuth.js 4: credentials, Discord, GitHub (optional), Google (optional) |
+| Authentication  | Better Auth: username/password, Discord, GitHub (optional), Google (optional) |
 | Validation      | Zod 3, `@t3-oss/env-nextjs` for environment variables                     |
 | UI              | Tailwind CSS 4, shadcn/ui on Radix UI, Framer Motion, Chart.js, Recharts  |
 | Images          | sharp                                                                     |

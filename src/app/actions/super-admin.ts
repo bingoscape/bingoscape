@@ -53,7 +53,7 @@ import {
  * `src/server/super-admin/queries.ts` and are intentionally not exported here.
  *
  * Each field written by an update is listed explicitly below, so columns such
- * as `password`, `username`, `id`, `creatorId`, `image` or `emailVerified`
+ * as `username`, `id`, `creatorId`, `image` or `isEmailVerified`
  * can never be written from this module.
  */
 

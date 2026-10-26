@@ -9,7 +9,6 @@ import {
   jsonb,
   pgEnum,
   pgTableCreator,
-  primaryKey,
   real,
   text,
   timestamp,
@@ -37,29 +36,17 @@ export const users = createTable(
     id: uuid("id").defaultRandom().primaryKey(),
     name: varchar("name", { length: 255 }),
     email: varchar("email", { length: 255 }),
-    emailVerified: timestamp("email_verified", {
-      mode: "date",
-      withTimezone: true,
-    }).default(sql`CURRENT_TIMESTAMP`),
     image: varchar("image", { length: 255 }),
     runescapeName: varchar("runescapeName", { length: 255 }),
     // Username field for Credentials provider authentication
     // Nullable to support OAuth-only users (Discord, GitHub, Google)
     username: varchar("username", { length: 50 }),
-    // Password field for Credentials provider authentication
-    // Nullable to support OAuth-only users (Discord, GitHub, Google)
-    password: varchar("password", { length: 255 }),
-    // Read by the NextAuth app only (JWT revocation, RBAC 7/8, #190). Better
-    // Auth deletes session rows instead; the column goes in phase 4 (#254).
-    sessionRevokedAt: timestamp("session_revoked_at", { withTimezone: true }),
     // The email address an OAuth provider vouched for at the last sign-in
     // (normalised, lower case), NULL when the provider did not verify it or
     // the user never signed in through a provider. The super-admin allowlist
-    // only honours an email that equals this column; `email_verified` cannot
-    // be used because it defaults to CURRENT_TIMESTAMP.
+    // only honours an email that equals this column.
     providerVerifiedEmail: varchar("provider_verified_email", { length: 255 }),
-    // Better Auth's boolean `emailVerified` (epic #250); the timestamp above
-    // stays for NextAuth until the contract phase.
+    // Better Auth's boolean `emailVerified` (epic #250).
     isEmailVerified: boolean("is_email_verified").default(false).notNull(),
     createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .defaultNow()
@@ -70,7 +57,7 @@ export const users = createTable(
   },
   (table) => ({
     // The app looks users up with `eq(users.username, name.toLowerCase())` and
-    // NextAuth with `eq(users.email, email)`, so the indexes cover the raw
+    // Better Auth with `eq(users.email, email)`, so the indexes cover the raw
     // columns. Created by migration 0038 only when no duplicates exist (it
     // skips them with a NOTICE otherwise); see docs/DATABASE-MIGRATION.md.
     usernameUnique: uniqueIndex("users_username_unique").on(table.username),
@@ -79,7 +66,6 @@ export const users = createTable(
 )
 
 export const usersRelations = relations(users, ({ many }) => ({
-  accounts: many(accounts),
   eventParticipants: many(eventParticipants),
   teamMembers: many(teamMembers),
   createdEvents: many(events),
@@ -98,81 +84,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   playerMetadata: many(playerMetadata),
 }))
 
-export const accounts = createTable(
-  "account",
-  {
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    type: varchar("type", { length: 255 })
-      // NextAuth's account types (old table, dropped in phase 4).
-      .$type<"oauth" | "oidc" | "email" | "webauthn">()
-      .notNull(),
-    provider: varchar("provider", { length: 255 }).notNull(),
-    providerAccountId: varchar("provider_account_id", {
-      length: 255,
-    }).notNull(),
-    refresh_token: text("refresh_token"),
-    access_token: text("access_token"),
-    expires_at: integer("expires_at"),
-    token_type: varchar("token_type", { length: 255 }),
-    scope: varchar("scope", { length: 255 }),
-    id_token: text("id_token"),
-    session_state: varchar("session_state", { length: 255 }),
-  },
-  (account) => ({
-    compoundKey: primaryKey({
-      columns: [account.provider, account.providerAccountId],
-    }),
-    userIdIdx: index("account_user_id_idx").on(account.userId),
-  })
-)
-
-export const accountsRelations = relations(accounts, ({ one }) => ({
-  user: one(users, { fields: [accounts.userId], references: [users.id] }),
-}))
-
-export const sessions = createTable(
-  "session",
-  {
-    sessionToken: varchar("session_token", { length: 255 })
-      .notNull()
-      .primaryKey(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    expires: timestamp("expires", {
-      mode: "date",
-      withTimezone: true,
-    }).notNull(),
-  },
-  (session) => ({
-    userIdIdx: index("session_user_id_idx").on(session.userId),
-  })
-)
-
-export const sessionsRelations = relations(sessions, ({ one }) => ({
-  user: one(users, { fields: [sessions.userId], references: [users.id] }),
-}))
-
-export const verificationTokens = createTable(
-  "verification_token",
-  {
-    identifier: varchar("identifier", { length: 255 }).notNull(),
-    token: varchar("token", { length: 255 }).notNull(),
-    expires: timestamp("expires", {
-      mode: "date",
-      withTimezone: true,
-    }).notNull(),
-  },
-  (vt) => ({
-    compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
-  })
-)
-
 // Better Auth tables (epic #250). Property names are Better Auth's field
-// names, so only the `user` table needs a field mapping. The NextAuth tables
-// above stay until the contract phase; scripts/auth-copy.sql fills these.
+// names, so only the `user` table needs a field mapping.
 
 export const authAccounts = createTable(
   "auth_account",

@@ -14,7 +14,7 @@ import { AlertTriangle } from "lucide-react"
 async function getProfileData(userId: string) {
   // 1. Get user basic info
   // Explicit columns: the profile goes to client components, and a full
-  // users row carries the password hash.
+  // users row carries the email and username.
   const user = await db.query.users.findFirst({
     where: eq(users.id, userId),
     columns: PUBLIC_USER_COLUMNS,

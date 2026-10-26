@@ -48,7 +48,6 @@ function signInAs(userId: string | null) {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000
-const PASSWORD_HASH = "$2b$10$abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQ"
 
 /**
  * Event A: creator, one admin, one management member, two players (one on a
@@ -71,7 +70,6 @@ async function seed() {
       ].map((name) => ({
         name,
         email: `${name}-${suffix}@example.test`,
-        password: PASSWORD_HASH,
       }))
     )
     .returning({ id: users.id, email: users.email })
@@ -455,7 +453,7 @@ describe("manager-only reads", () => {
     })
   })
 
-  it("registration requests never carry the password hash", async () => {
+  it("registration requests never carry a full users row", async () => {
     await withDb(async () => {
       const f = await seed()
       signInAs(f.idOf("manager"))
@@ -463,8 +461,8 @@ describe("manager-only reads", () => {
       const requests = await getRegistrationRequests(f.eventA)
 
       expect(requests).toHaveLength(1)
-      expect(JSON.stringify(requests)).not.toContain(PASSWORD_HASH)
-      expect(JSON.stringify(requests)).not.toContain("password")
+      expect(JSON.stringify(requests)).not.toContain("username")
+      expect(JSON.stringify(requests)).not.toContain("providerVerifiedEmail")
     })
   })
 })

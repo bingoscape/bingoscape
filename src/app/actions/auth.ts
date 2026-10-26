@@ -52,7 +52,6 @@ export async function registerUser(input: SignUpInput) {
           name: validated.username, // Use username as default name
           runescapeName: validated.runescapeName ?? null,
           email: null, // Not required for credentials auth
-          emailVerified: null,
         })
         .returning({ id: users.id })
       if (!created) return undefined
