@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { signOut } from "next-auth/react"
 
 import { revokeAllSessions } from "@/app/actions/user"
 import { Button } from "@/components/ui/button"
+import { signOut } from "@/lib/auth-client"
 import { toast } from "@/hooks/use-toast"
 
 export function SignOutEverywhere() {
@@ -22,7 +22,8 @@ export function SignOutEverywhere() {
         })
         return
       }
-      await signOut({ callbackUrl: "/sign-in" })
+      await signOut()
+      window.location.assign("/sign-in")
     } catch {
       toast({
         title: "Error",

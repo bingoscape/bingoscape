@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { DiscordLogoIcon } from "@radix-ui/react-icons"
-import { signIn, signOut, useSession } from "next-auth/react"
+import { signIn, signOut, useSession } from "@/lib/auth-client"
 import Link from "next/link"
 import { safeCallbackUrl } from "@/lib/safe-callback-url"
 
@@ -42,19 +42,18 @@ export function LoginCard() {
     setIsLoading(true)
 
     try {
-      const result = await signIn("credentials", {
+      const { error } = await signIn.username({
         username: formData.username,
         password: formData.password,
-        redirect: false,
       })
 
-      if (result?.error) {
+      if (error) {
         setError(
-          result.error === "RATE_LIMITED"
+          error.code === "RATE_LIMITED"
             ? "Too many sign-in attempts. Please wait a few minutes and try again."
             : "Invalid username or password"
         )
-      } else if (result?.ok) {
+      } else {
         router.push(callbackUrl)
         router.refresh()
       }
@@ -77,7 +76,7 @@ export function LoginCard() {
           <p className="text-center">Signed in as {session.user?.email}</p>
         </CardContent>
         <CardFooter>
-          <Button className="w-full" onClick={() => signOut()}>
+          <Button className="w-full" onClick={() => void signOut()}>
             Sign out
           </Button>
         </CardFooter>
@@ -95,7 +94,7 @@ export function LoginCard() {
         {justRegistered && (
           <div
             role="status"
-            className="rounded-sm border border-success bg-success/15 p-3 text-sm text-success"
+            className="border-success bg-success/15 text-success rounded-sm border p-3 text-sm"
           >
             Account created successfully! Please sign in below.
           </div>
@@ -104,7 +103,7 @@ export function LoginCard() {
         {error && (
           <div
             role="alert"
-            className="rounded-sm border border-danger bg-destructive/15 p-3 text-sm text-danger"
+            className="border-danger bg-destructive/15 text-danger rounded-sm border p-3 text-sm"
           >
             {error}
           </div>
@@ -153,7 +152,7 @@ export function LoginCard() {
             <Separator />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">
+            <span className="bg-card text-muted-foreground px-2">
               Or continue with
             </span>
           </div>
@@ -161,7 +160,12 @@ export function LoginCard() {
 
         <div className="grid gap-2">
           <Button
-            onClick={() => void signIn("discord", { callbackUrl })}
+            onClick={() =>
+              void signIn.social({
+                provider: "discord",
+                callbackURL: callbackUrl,
+              })
+            }
             className="w-full"
             variant="outline"
           >
@@ -169,7 +173,12 @@ export function LoginCard() {
             Discord
           </Button>
           <Button
-            onClick={() => void signIn("google")}
+            onClick={() =>
+              void signIn.social({
+                provider: "google",
+                callbackURL: callbackUrl,
+              })
+            }
             className="w-full"
             variant="outline"
             disabled
@@ -194,9 +203,12 @@ export function LoginCard() {
         </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-2">
-        <p className="text-center text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-center text-sm">
           Don&apos;t have an account?{" "}
-          <Link href="/sign-up" className="font-medium text-primary underline-offset-4 hover:underline">
+          <Link
+            href="/sign-up"
+            className="text-primary font-medium underline-offset-4 hover:underline"
+          >
             Sign up
           </Link>
         </p>

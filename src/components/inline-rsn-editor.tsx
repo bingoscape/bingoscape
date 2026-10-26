@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { useSession } from "next-auth/react"
+import { useSession } from "@/lib/auth-client"
 import { useAction } from "next-safe-action/hooks"
 import { updateProfile } from "@/app/actions/profile"
 import { toast } from "@/hooks/use-toast"
@@ -22,7 +22,7 @@ interface InlineRsnEditorProps {
 }
 
 export function InlineRsnEditor({ userId, initialRsn, fallbackName }: InlineRsnEditorProps) {
-  const { update } = useSession()
+  const { refetch } = useSession()
   const [isEditing, setIsEditing] = useState(false)
   const [rsn, setRsn] = useState(initialRsn ?? "")
   const inputRef = useRef<HTMLInputElement>(null)
@@ -36,7 +36,7 @@ export function InlineRsnEditor({ userId, initialRsn, fallbackName }: InlineRsnE
   const { execute, isExecuting } = useAction(updateProfile, {
     onSuccess: ({ data }) => {
       if (data?.success) {
-        update()
+        void refetch()
         setIsEditing(false)
         toast({
           title: "Profile updated",

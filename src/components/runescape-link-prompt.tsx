@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useSession } from "next-auth/react"
+import { useSession } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 import {
   Dialog,
@@ -18,7 +18,7 @@ import { toast } from "@/hooks/use-toast"
 import { linkRunescapeAccount } from "@/app/actions/user"
 
 export function RunescapeLinkPrompt() {
-  const { data: session, update } = useSession()
+  const { data: session, refetch } = useSession()
   const [isOpen, setIsOpen] = useState(false)
   const [runescapeName, setRunescapeName] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -42,7 +42,7 @@ export function RunescapeLinkPrompt() {
 
     try {
       await linkRunescapeAccount(runescapeName)
-      await update({ runescapeName })
+      await refetch()
       setIsOpen(false)
       toast({
         title: "Account Linked",
