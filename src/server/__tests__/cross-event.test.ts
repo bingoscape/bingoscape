@@ -12,7 +12,6 @@
  */
 import { eq } from "drizzle-orm"
 import { NextRequest } from "next/server"
-import { getServerSession } from "next-auth"
 
 import * as battleship from "@/app/actions/battleship"
 import * as importExport from "@/app/actions/bingo-import-export"
@@ -63,9 +62,7 @@ import {
 
 jest.mock("@/server/auth", () => ({
   getServerAuthSession: jest.fn(),
-  authOptions: {},
 }))
-jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
 jest.mock("next/cache", () => ({
   revalidatePath: jest.fn(),
   unstable_noStore: jest.fn(),
@@ -80,7 +77,6 @@ jest.mock("@/lib/logger", () => ({
 }))
 
 const session = getServerAuthSession as jest.Mock
-const routeSession = getServerSession as jest.Mock
 
 let f: CrossEventFixture
 let fetchSpy: jest.SpyInstance
@@ -99,7 +95,6 @@ afterAll(async () => {
 function signInAs(userId: string | null) {
   const value = userId ? { user: { id: userId } } : null
   session.mockResolvedValue(value)
-  routeSession.mockResolvedValue(value)
 }
 
 // ---------------------------------------------------------------------------

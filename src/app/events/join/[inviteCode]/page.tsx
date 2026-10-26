@@ -5,8 +5,11 @@ import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
-import { joinEventViaInvite, getUserRegistrationStatus } from "@/app/actions/events"
-import { useSession, signIn } from "next-auth/react"
+import {
+  joinEventViaInvite,
+  getUserRegistrationStatus,
+} from "@/app/actions/events"
+import { useSession } from "@/lib/auth-client"
 import { Loader2 } from "lucide-react"
 import {
   Card,
@@ -34,7 +37,12 @@ export default function JoinEventPage(props: {
     responseMessage?: string
   } | null>(null)
   const router = useRouter()
-  const { status } = useSession()
+  const { data: session, isPending } = useSession()
+  const status = isPending
+    ? "loading"
+    : session
+      ? "authenticated"
+      : "unauthenticated"
   const { inviteCode } = params
 
   useEffect(() => {
@@ -42,11 +50,9 @@ export default function JoinEventPage(props: {
     if (status === "unauthenticated") {
       // Use the current URL as the callback URL
       const callbackUrl = `/events/join/${inviteCode}`
-      signIn(undefined, { callbackUrl }).catch((err) =>
-        console.error("Sign in failed", err)
-      )
+      router.push(`/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`)
     }
-  }, [inviteCode, status])
+  }, [inviteCode, status, router])
 
   useEffect(() => {
     // Check if the user is already registered for this event

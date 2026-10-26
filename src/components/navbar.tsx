@@ -1,6 +1,6 @@
 "use client"
 
-import { signOut, useSession } from "next-auth/react"
+import { signOut, useSession } from "@/lib/auth-client"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -47,7 +47,7 @@ const navFocus =
   "focus-visible:ring-2 focus-visible:ring-osrs-yellow focus-visible:ring-offset-1 focus-visible:ring-offset-osrs-stone-800 focus-visible:outline-hidden"
 
 export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
-  const { data: session, status } = useSession()
+  const { data: session, isPending } = useSession()
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
 
@@ -150,7 +150,7 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
             </ul>
           )}
         </div>
-        {status === "loading" ? (
+        {isPending ? (
           <div className="flex items-center gap-3">
             <div className="bg-osrs-stone-700 hidden h-8 w-20 animate-pulse rounded-sm md:block" />
             <div className="bg-osrs-stone-700 h-8 w-8 animate-pulse rounded-full" />
@@ -211,7 +211,9 @@ export function Navbar({ isSuperAdminUser = false }: NavbarProps) {
                 <ThemeMenuItems className="sm:hidden" />
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => signOut()}
+                  onClick={() =>
+                    void signOut().then(() => window.location.reload())
+                  }
                   className="text-danger focus:text-danger flex items-center"
                 >
                   <LogOut className="mr-2 h-4 w-4" />

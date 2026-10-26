@@ -19,7 +19,7 @@ BingoScape Next supports two authentication methods depending on the client type
 
 ### Session-based Authentication (Web UI)
 
-The web application uses NextAuth.js with Discord OAuth for user authentication. Sessions are automatically managed by the framework.
+The web application uses Better Auth (username/password, Discord, GitHub and Google). Sessions are database rows behind a session cookie.
 
 ```typescript
 // Server-side session access
@@ -504,10 +504,10 @@ Serves uploaded images and files with proper content types and caching headers.
 
 ### Authentication
 
-#### NextAuth Endpoints
+#### Better Auth Endpoints
 
 ```http
-GET/POST /api/auth/{...nextauth}
+GET/POST /api/auth/{...all}
 ```
 
 Handles OAuth flows, session management, and authentication callbacks.

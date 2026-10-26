@@ -1,6 +1,6 @@
 /**
  * Whether an OAuth provider vouched for the email address of a profile.
- * Pure helpers over the raw profile payloads; used by the NextAuth provider
+ * Pure helpers over the raw profile payloads; used by the Better Auth provider
  * mappers (`@/server/auth`) and the tests.
  */
 
@@ -14,19 +14,6 @@ export function googleEmailVerified(profile: {
   email_verified?: unknown
 }): boolean {
   return profile.email_verified === true
-}
-
-/**
- * GitHub: an email on the public `/user` profile is verified (GitHub only
- * lets verified addresses be public). Otherwise the address comes from
- * `/user/emails`, whose `verified` flag decides.
- */
-export function githubEmailVerified(
-  publicEmail: string | null | undefined,
-  listed: { email: string; primary?: boolean; verified?: boolean } | undefined
-): boolean {
-  if (publicEmail) return true
-  return listed?.verified === true
 }
 
 /**

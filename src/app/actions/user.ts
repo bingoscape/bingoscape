@@ -2,7 +2,7 @@
 
 import { getServerAuthSession } from "@/server/auth"
 import { db } from "@/server/db"
-import { users } from "@/server/db/schema"
+import { authSessions, users } from "@/server/db/schema"
 import { eq } from "drizzle-orm"
 import { logger } from "@/lib/logger"
 
@@ -21,9 +21,9 @@ export async function linkRunescapeAccount(runescapeName: string) {
 }
 
 /**
- * "Sign out everywhere": every session (JWT) issued before now stops working,
- * on every device, including the one that calls this. The client signs out
- * afterwards.
+ * "Sign out everywhere": deletes every session of the user, on every device,
+ * including the one that calls this. The client signs out afterwards to clear
+ * its cookie.
  */
 export async function revokeAllSessions() {
   const session = await getServerAuthSession()
@@ -33,10 +33,7 @@ export async function revokeAllSessions() {
 
   try {
     await db.transaction((tx) =>
-      tx
-        .update(users)
-        .set({ sessionRevokedAt: new Date() })
-        .where(eq(users.id, session.user.id))
+      tx.delete(authSessions).where(eq(authSessions.userId, session.user.id))
     )
     return { success: true as const }
   } catch (error) {

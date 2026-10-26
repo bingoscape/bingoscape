@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useSession } from "next-auth/react"
+import { useSession } from "@/lib/auth-client"
 import {
   Card,
   CardContent,
@@ -26,13 +26,13 @@ interface User {
 }
 
 export function UpdateRsnForm({ user }: { user: User }) {
-  const { update } = useSession()
+  const { refetch } = useSession()
   const [rsn, setRsn] = useState(user.runescapeName ?? "")
 
   const { execute, isExecuting } = useAction(updateProfile, {
     onSuccess: ({ data }) => {
       if (data?.success) {
-        update()
+        void refetch()
         toast({
           title: "Profile updated",
           description: "Your profile has been successfully updated.",
@@ -45,7 +45,7 @@ export function UpdateRsnForm({ user }: { user: User }) {
         description: error.serverError || "Failed to update profile",
         variant: "destructive",
       })
-    }
+    },
   })
 
   return (
@@ -55,10 +55,10 @@ export function UpdateRsnForm({ user }: { user: User }) {
         <CardDescription>Update your profile information here.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form 
+        <form
           action={() => {
             execute({ id: user.id, runescapeName: rsn })
-          }} 
+          }}
           className="space-y-6"
         >
           <div className="flex items-center space-x-4">
@@ -69,7 +69,7 @@ export function UpdateRsnForm({ user }: { user: User }) {
               />
               <AvatarFallback>{user.name?.[0] ?? "U"}</AvatarFallback>
             </Avatar>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-muted-foreground text-sm">
               Profile picture is synced with Discord.
             </div>
           </div>
@@ -85,7 +85,7 @@ export function UpdateRsnForm({ user }: { user: User }) {
               pattern="^[a-zA-Z0-9 ]{1,12}$"
               title="Maximum 12 characters, alphanumeric and spaces only"
             />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Maximum 12 characters, alphanumeric and spaces only.
             </p>
           </div>

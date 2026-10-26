@@ -23,7 +23,7 @@ import type { Permission } from "@/lib/authz/permissions"
  *                    standing in the Event (`getApiActor`).
  * - `super-admin`    behind the super-admin guard (`adminAction`).
  * - `secret`         protected by a shared secret (cron).
- * - `framework`      handled by a library (NextAuth).
+ * - `framework`      handled by a library (Better Auth).
  */
 /**
  * A `permission` entry whose `note` starts with "via " or "enforced by " names
@@ -419,13 +419,13 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
   [`${A}osrs-image-cache.ts#purgeImage`]: superAdmin(SUPER_ADMIN),
 
   // --- route handlers -----------------------------------------------------
-  [`${R}auth/[...nextauth]/route.ts#GET`]: {
+  [`${R}auth/[...all]/route.ts#GET`]: {
     kind: "framework",
-    reason: "NextAuth handles its own sign-in and session endpoints",
+    reason: "Better Auth handles its own sign-in and session endpoints",
   },
-  [`${R}auth/[...nextauth]/route.ts#POST`]: {
+  [`${R}auth/[...all]/route.ts#POST`]: {
     kind: "framework",
-    reason: "NextAuth handles its own sign-in and session endpoints",
+    reason: "Better Auth handles its own sign-in and session endpoints",
   },
   [`${R}cron/draft-sweep/route.ts#GET`]: {
     kind: "secret",

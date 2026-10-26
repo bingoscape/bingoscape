@@ -7,7 +7,6 @@ import { isSuperAdmin } from "@/lib/super-admin"
 import { RunescapeLinkPrompt } from "@/components/runescape-link-prompt"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
-import { AuthProvider } from "@/server/sessionwrapper"
 import "@/styles/globals.css"
 import "@mdxeditor/editor/style.css"
 
@@ -62,16 +61,14 @@ export default async function RootLayout({
           />
         </head>
       ) : null}
-      <AuthProvider>
-        <body>
-          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-            <Navbar isSuperAdminUser={isSuperAdminUser} />
-            <RunescapeLinkPrompt />
-            {children}
-            <Toaster />
-          </ThemeProvider>
-        </body>
-      </AuthProvider>
+      <body>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <Navbar isSuperAdminUser={isSuperAdminUser} />
+          <RunescapeLinkPrompt />
+          {children}
+          <Toaster />
+        </ThemeProvider>
+      </body>
     </html>
   )
 }

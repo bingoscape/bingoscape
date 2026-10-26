@@ -3,7 +3,7 @@ import { Navbar } from "@/components/navbar"
 
 const mockUseSession = jest.fn()
 
-jest.mock("next-auth/react", () => ({
+jest.mock("@/lib/auth-client", () => ({
   useSession: () => mockUseSession(),
   signOut: jest.fn(),
 }))
@@ -19,7 +19,7 @@ jest.mock("@/components/mode-toggle", () => ({
 
 describe("Navbar", () => {
   it("offers only Log in and Sign up, with no menu, when logged out", () => {
-    mockUseSession.mockReturnValue({ data: null, status: "unauthenticated" })
+    mockUseSession.mockReturnValue({ data: null, isPending: false })
     render(<Navbar />)
 
     expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute(
@@ -38,7 +38,7 @@ describe("Navbar", () => {
   it("shows the menu, merged Events link and account menu when logged in", () => {
     mockUseSession.mockReturnValue({
       data: { user: { id: "u1", name: "Zezima", image: null } },
-      status: "authenticated",
+      isPending: false,
     })
     render(<Navbar />)
 
@@ -60,7 +60,7 @@ describe("Navbar", () => {
   it("links the wordmark home and shows the Admin Panel only to super admins", () => {
     mockUseSession.mockReturnValue({
       data: { user: { id: "u1", name: "Zezima", image: null } },
-      status: "authenticated",
+      isPending: false,
     })
     const { rerender } = render(<Navbar />)
 

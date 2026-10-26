@@ -15,7 +15,7 @@ import type { ActionFailure } from "@/server/authz/guards"
 
 /**
  * Applies the named rate limits (`@/lib/rate-limit-policies`) to server
- * actions, route handlers and the NextAuth callbacks (RBAC 7/8, #190).
+ * actions, route handlers and the Better Auth sign-in hook (RBAC 7/8, #190).
  *
  * Single-instance assumption: the default store is in process memory (see
  * `@/lib/rate-limit`). Swap in a shared store with `setRateLimitStore` if the
@@ -89,7 +89,7 @@ export async function checkRateLimit(
   }
 }
 
-/** The error NextAuth `authorize` throws for a blocked sign-in; the form shows a message for it. */
+/** The error code of a blocked sign-in (Better Auth `hooks.before`); the form shows a message for it. */
 export const RATE_LIMITED_ERROR = "RATE_LIMITED"
 
 export const RATE_LIMITED_MESSAGE = "Too many requests. Please try again later."
