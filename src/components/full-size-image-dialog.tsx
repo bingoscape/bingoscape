@@ -120,9 +120,9 @@ export function FullSizeImageDialog({
               transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
               transition: isDragging ? "none" : "transform 0.2s ease-out",
               transformOrigin: "center",
-              width: "100%",
-              height: "100%",
-              position: "relative",
+              // height: 100% resolves to 0 inside the flex-1 container, so pin to its edges
+              position: "absolute",
+              inset: 0,
             }}
           >
             <Image
