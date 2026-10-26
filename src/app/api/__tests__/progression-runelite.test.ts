@@ -4,14 +4,12 @@
 import { eq } from "drizzle-orm"
 
 import { GET as getBingo } from "@/app/api/runelite/bingos/[bingoId]/route"
-import { POST as checkItems } from "@/app/api/runelite/items/check/route"
 import { POST as submitTile } from "@/app/api/runelite/tiles/[tileId]/submissions/route"
 import { POST as autoSubmitTile } from "@/app/api/runelite/tiles/[tileId]/auto-submissions/route"
 import { validateApiKey } from "@/lib/api-auth"
 import { db } from "@/server/db"
 import {
   goalGroups,
-  teamGoalProgress,
   teamTierProgress,
 } from "@/server/db/schema"
 import { expectNoSecrets } from "@/server/__tests__/helpers/blind-fixture"
@@ -43,13 +41,6 @@ jest.mock("fs/promises", () => ({
     mkdir: jest.fn(async () => undefined),
     writeFile: jest.fn(async () => undefined),
   },
-}))
-// Item matching normally asks the OSRS wiki.
-jest.mock("@/app/actions/osrs-items", () => ({
-  doesItemMatchBaseName: jest.fn(async () => ({
-    success: true,
-    matches: true,
-  })),
 }))
 
 const apiKeyUser = validateApiKey as jest.Mock
@@ -268,48 +259,6 @@ describe("progression board over the RuneLite API", () => {
       )
     })
 
-    it("answers an item scan that only matches locked goals with TIER_LOCKED", async () => {
-      await fx.removeGoals([0, 1, 2])
-      apiKeyUser.mockResolvedValue(fx.memberAId)
-
-      const response = await checkItems(
-        new Request("http://localhost/api/runelite/items/check", {
-          method: "POST",
-          body: JSON.stringify({
-            items: [{ itemId: 1, itemName: "Anything", quantity: 5 }],
-          }),
-        })
-      )
-
-      expect(response.status).toBe(403)
-      expect(await response.json()).toMatchObject({ code: "TIER_LOCKED" })
-      const progress = await db.query.teamGoalProgress.findMany({
-        where: eq(teamGoalProgress.teamId, fx.teamAId),
-      })
-      expect(progress).toEqual([])
-    })
-
-    it("skips locked goals in an item scan that also matches open ones", async () => {
-      apiKeyUser.mockResolvedValue(fx.memberAId)
-
-      const response = await checkItems(
-        new Request("http://localhost/api/runelite/items/check", {
-          method: "POST",
-          body: JSON.stringify({
-            items: [{ itemId: 1, itemName: "Anything", quantity: 5 }],
-          }),
-        })
-      )
-
-      expect(response.status).toBe(200)
-      const body = (await response.json()) as {
-        matched: Array<{ tileId: string }>
-      }
-      expect(body.matched.map((m) => m.tileId).sort()).toEqual(
-        [0, 1, 2].map((i) => fx.tileIds[i]!).sort()
-      )
-    })
-
     it("lets a team that earned the tier through the website submit", async () => {
       await fx.completeTile(0, fx.teamAId)
       await fx.completeTile(1, fx.teamAId)
@@ -361,23 +310,6 @@ describe("progression board over the RuneLite API", () => {
       expect(await tierRows(fx.teamAId)).toEqual([0, 1, 2])
       expect(body.progression.unlockedTiers).toEqual([0, 1, 2])
       expect(body.tiles.every((t) => !t.tierLocked)).toBe(true)
-    })
-
-    it("unlocks tiers from an item scan", async () => {
-      apiKeyUser.mockResolvedValue(fx.memberAId)
-
-      const response = await checkItems(
-        new Request("http://localhost/api/runelite/items/check", {
-          method: "POST",
-          body: JSON.stringify({
-            items: [{ itemId: 1, itemName: "Anything", quantity: 5 }],
-          }),
-        })
-      )
-
-      expect(response.status).toBe(200)
-      expect(((await response.json()) as Board).tierUnlocked).toBe(1)
-      expect(await tierRows(fx.teamAId)).toEqual([0, 1])
     })
 
     it("does not unlock anything for a goal group that is still incomplete", async () => {

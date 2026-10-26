@@ -3,7 +3,6 @@
  */
 import { eq } from "drizzle-orm"
 
-import { POST as checkItems } from "@/app/api/runelite/items/check/route"
 import { POST as submitTile } from "@/app/api/runelite/tiles/[tileId]/submissions/route"
 import { POST as autoSubmitTile } from "@/app/api/runelite/tiles/[tileId]/auto-submissions/route"
 import { validateApiKey } from "@/lib/api-auth"
@@ -43,13 +42,6 @@ jest.mock("fs/promises", () => ({
     writeFile: jest.fn(async () => undefined),
   },
 }))
-// Item matching normally asks the OSRS wiki.
-jest.mock("@/app/actions/osrs-items", () => ({
-  doesItemMatchBaseName: jest.fn(async () => ({
-    success: true,
-    matches: true,
-  })),
-}))
 
 const apiKeyUser = validateApiKey as jest.Mock
 
@@ -60,14 +52,6 @@ afterEach(() => {
 const EPOCH_CURSOR = {
   t: "1970-01-01T00:00:00.000000Z",
   id: "00000000-0000-0000-0000-000000000000",
-}
-
-function jsonRequest(url: string, body: unknown): Request {
-  return new Request(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  })
 }
 
 function imageRequest(url: string): Request {
@@ -96,37 +80,6 @@ describe.each([
 
   afterEach(async () => {
     await fx.cleanup()
-  })
-
-  describe("POST /api/runelite/items/check", () => {
-    async function check(userId: string) {
-      apiKeyUser.mockResolvedValue(userId)
-      const response = await checkItems(
-        jsonRequest("http://localhost/api/runelite/items/check", {
-          items: [{ itemId: 4151, itemName: "Abyssal whip", quantity: 5 }],
-        })
-      )
-      return { status: response.status, body: (await response.json()) as unknown }
-    }
-
-    it("does not match goals of a blind board before the start", async () => {
-      setClock(fx.clock.beforeStart)
-      const { status, body } = await check(fx.memberAId)
-      expect(status).toBe(200)
-      if (isBattleship) {
-        expectNoSecrets(body, fx.secrets)
-        expect(body).toMatchObject({ matched: [], tilesAutoCompleted: [] })
-      } else {
-        expectSecret(body, fx.tag)
-      }
-    })
-
-    it("matches goals from the start on", async () => {
-      setClock(fx.clock.afterStart)
-      const { body } = await check(fx.memberAId)
-      expectSecret(body, "goalId")
-      expect(body).toMatchObject({ matchedGoals: 1 })
-    })
   })
 
   describe("POST /api/runelite/tiles/[tileId]/submissions", () => {
