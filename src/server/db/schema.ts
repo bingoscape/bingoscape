@@ -60,6 +60,15 @@ export const users = createTable(
     // only honours an email that equals this column; `email_verified` cannot
     // be used because it defaults to CURRENT_TIMESTAMP.
     providerVerifiedEmail: varchar("provider_verified_email", { length: 255 }),
+    // Better Auth's boolean `emailVerified` (epic #250); the timestamp above
+    // stays for NextAuth until the contract phase.
+    isEmailVerified: boolean("is_email_verified").default(false).notNull(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (table) => ({
     // The app looks users up with `eq(users.username, name.toLowerCase())` and
@@ -159,6 +168,101 @@ export const verificationTokens = createTable(
   },
   (vt) => ({
     compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
+  })
+)
+
+// Better Auth tables (epic #250). Property names are Better Auth's field
+// names, so only the `user` table needs a field mapping. The NextAuth tables
+// above stay until the contract phase; scripts/auth-copy.sql fills these.
+
+export const authAccounts = createTable(
+  "auth_account",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // "credential" for username/password sign-in, else the OAuth provider.
+    providerId: varchar("provider_id", { length: 255 }).notNull(),
+    // The provider's account id; the user id for "credential".
+    accountId: varchar("account_id", { length: 255 }).notNull(),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", {
+      mode: "date",
+      withTimezone: true,
+    }),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
+      mode: "date",
+      withTimezone: true,
+    }),
+    scope: text("scope"),
+    password: varchar("password", { length: 255 }),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (account) => ({
+    // One local account per provider identity; the copy relies on it.
+    providerAccountUnique: uniqueIndex("auth_account_provider_account_unique").on(
+      account.providerId,
+      account.accountId
+    ),
+    userIdIdx: index("auth_account_user_id_idx").on(account.userId),
+  })
+)
+
+export const authSessions = createTable(
+  "auth_session",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    token: varchar("token", { length: 255 }).notNull().unique(),
+    expiresAt: timestamp("expires_at", {
+      mode: "date",
+      withTimezone: true,
+    }).notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (session) => ({
+    userIdIdx: index("auth_session_user_id_idx").on(session.userId),
+  })
+)
+
+export const authVerifications = createTable(
+  "auth_verification",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: timestamp("expires_at", {
+      mode: "date",
+      withTimezone: true,
+    }).notNull(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (verification) => ({
+    identifierIdx: index("auth_verification_identifier_idx").on(
+      verification.identifier
+    ),
   })
 )
 

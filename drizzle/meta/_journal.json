@@ -323,6 +323,13 @@
       "when": 1792351364261,
       "tag": "0045_rbac_contract",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1793047663229,
+      "tag": "0046_better_auth_expand",
+      "breakpoints": true
     }
   ]
 }
