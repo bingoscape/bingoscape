@@ -3,7 +3,6 @@
  */
 import { NextRequest } from "next/server"
 import { eq, inArray } from "drizzle-orm"
-import { getServerSession } from "next-auth"
 
 import * as notificationActions from "@/app/actions/notifications"
 import {
@@ -53,9 +52,7 @@ import {
 
 jest.mock("@/server/auth", () => ({
   getServerAuthSession: jest.fn(),
-  authOptions: {},
 }))
-jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
 jest.mock("@/lib/logger", () => ({
   logger: {
@@ -67,12 +64,10 @@ jest.mock("@/lib/logger", () => ({
 }))
 
 const session = getServerAuthSession as jest.Mock
-const routeSession = getServerSession as jest.Mock
 
 function signInAs(userId: string | null) {
   const value = userId ? { user: { id: userId } } : null
   session.mockResolvedValue(value)
-  routeSession.mockResolvedValue(value)
 }
 
 let a: BlindFixture

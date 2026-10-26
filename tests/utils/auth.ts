@@ -1,6 +1,6 @@
 import { Page } from "@playwright/test"
 import { db } from "../../src/server/db"
-import { users } from "../../src/server/db/schema"
+import { authAccounts, users } from "../../src/server/db/schema"
 
 import { hashPassword } from "../../src/lib/password"
 
@@ -11,7 +11,7 @@ import { hashPassword } from "../../src/lib/password"
 export async function setupAuthBypass(page: Page) {
   const userId = crypto.randomUUID()
   const passwordHash = await hashPassword("password123")
-  
+
   // Seed user
   await db.insert(users).values({
     id: userId,
@@ -21,13 +21,20 @@ export async function setupAuthBypass(page: Page) {
     runescapeName: "E2EScaper",
     password: passwordHash,
   })
+  // Better Auth signs in against the credential account, not users.password.
+  await db.insert(authAccounts).values({
+    userId,
+    providerId: "credential",
+    accountId: userId,
+    password: passwordHash,
+  })
 
   // Log in via UI
   await page.goto("/sign-in")
   await page.fill('input[id="username"]', "e2escaper")
   await page.fill('input[id="password"]', "password123")
   await page.click('button[type="submit"]')
-  
+
   // Wait for login to complete and redirect to home
   await page.waitForURL("**/")
 

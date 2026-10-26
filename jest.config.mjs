@@ -37,7 +37,7 @@ const config = async () => {
   return {
     ...resolved,
     transformIgnorePatterns: [
-      "/node_modules/(?!(next-safe-action)/)",
+      "/node_modules/(?!(next-safe-action|better-auth|@better-auth|better-call|@better-fetch|jose|@noble|nanostores|defu|rou3|kysely)/)",
       "^.+\\.module\\.(css|sass|scss)$",
     ],
   }

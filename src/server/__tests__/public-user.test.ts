@@ -28,8 +28,11 @@ const FILES = sourceFiles(SRC).map((file) => ({
 
 describe("users rows stay on the server", () => {
   it("never selects the whole users table as a nested value (`owner: users`)", () => {
-    const offenders = FILES.filter(({ text }) =>
-      /^\s*(?!usersTable\b)\w+:\s*users,?\s*$/m.test(text)
+    // Better Auth's adapter table mapping (`user: users`) is not a select.
+    const offenders = FILES.filter(
+      ({ file, text }) =>
+        file !== path.join("server", "auth.ts") &&
+        /^\s*\w+:\s*users,?\s*$/m.test(text)
     ).map((f) => f.file)
     expect(offenders).toEqual([])
   })
