@@ -5,6 +5,7 @@
  * bcrypt hashes phase 2 copied, the sign-in rate limit, `registerUser`, the
  * closed `/sign-up/email`, and OAuth sign-in for profiles without an email.
  */
+import bcrypt from "bcryptjs"
 import { and, eq, inArray } from "drizzle-orm"
 
 import { registerUser } from "@/app/actions/auth"
@@ -52,9 +53,16 @@ afterAll(async () => {
     await db.delete(users).where(inArray(users.id, created))
 })
 
+// A real bcrypt hash at the lowest cost: verifying cost-12 hashes on every
+// rate-limit attempt is too slow for CI.
+let cheapHash: string
+beforeAll(async () => {
+  cheapHash = await bcrypt.hash(PASSWORD, 4)
+})
+
 /** A password user the way phase 2 left it: hash on the user and the credential account. */
 async function seedPasswordUser(username: string) {
-  const hash = await hashPassword(PASSWORD)
+  const hash = cheapHash
   const [user] = await db
     .insert(users)
     .values({ name: username, username, password: hash })
