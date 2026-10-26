@@ -481,9 +481,6 @@ export const POLICY_REGISTRY: Readonly<Record<string, PolicyEntry>> = {
     "participants and managers of the Event; drafts for managers",
     ["board:view-secret"]
   ),
-  [`${R}runelite/items/check/route.ts#POST`]: apiKey(
-    "only the Events the API key's owner takes part in"
-  ),
   [`${R}runelite/team-drops/route.ts#GET`]: apiKey(
     "only the drops of the owner's own Teams"
   ),

@@ -3,10 +3,12 @@ import { NextResponse } from "next/server"
 // API documentation for the RuneLite plugin
 export async function GET() {
   const apiDocs = {
-    version: "2.1.0",
+    version: "3.0.0",
     baseUrl: "/api/runelite",
     description: "API for the BingoScape RuneLite plugin",
     changelog: {
+      "3.0.0":
+        "Breaking. Removed POST /items/check: no client used it, and it raised goal progress from an item list the caller typed, without a screenshot or review.",
       "2.1.0":
         "Additive. Board payloads carry apiVersion '2.1', tiles[].tierLocked and tiles[].isBlind, progression.tiers[] and a battleship block. /events lists all board types. GET /bingos/{bingoId} serves battleship boards, requires event access, supports ETag/If-None-Match and is rate limited to 60 requests/minute per user. Submission responses carry tierUnlocked and shot. New error codes TIER_LOCKED, BOARD_BLIND and EVENT_NOT_STARTED.",
       "2.0.0":
@@ -181,49 +183,6 @@ export async function GET() {
           tierUnlocked:
             "number | null - Highest tier newly unlocked by this request",
           shot: "{ tileId: string, result: 'hit' | 'miss' | 'sunk' } | null - Battleship only: what the completion did to the team's marks. Null when no tile was newly marked",
-        },
-      },
-      {
-        path: "/items/check",
-        method: "POST",
-        description:
-          "Match a list of items against the item goals of the user's events and update progress. Goals on blind battleship tiles and in locked progression tiers do not progress. Answers 403 TIER_LOCKED only when every matching goal is in a locked tier.",
-        request: {
-          body: {
-            items: [
-              { itemId: "number", itemName: "string", quantity: "number" },
-            ],
-            eventIds: "string[] (optional)",
-          },
-        },
-        response: {
-          success: "boolean",
-          matched: [
-            {
-              goalId: "string",
-              itemName: "string",
-              baseName: "string",
-              previousValue: "number",
-              newValue: "number",
-              targetValue: "number",
-              isComplete: "boolean",
-              tileId: "string",
-              eventId: "string",
-            },
-          ],
-          tilesAutoCompleted: "string[]",
-          tierUnlocked:
-            "number | null - Highest tier newly unlocked by this call",
-          scannedItems: "number",
-          matchedGoals: "number",
-        },
-        errors: {
-          "403": {
-            success: false,
-            code: "TIER_LOCKED",
-            tier: "number",
-            xpNeeded: "number",
-          },
         },
       },
       {

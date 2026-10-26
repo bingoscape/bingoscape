@@ -41,7 +41,7 @@ Authorization: Bearer bsn_your_api_key_here
 
 **API Key Format:** `bsn_` prefix followed by a unique identifier (unchanged).
 
-**Key lifecycle.** The server stores only a SHA-256 hash and the first 8 characters of a key. The full key is shown **once**, when it is created (web UI or `POST /api/runelite/keys`); lose it and create a new one. A key can carry an expiry (`expiresAt`), can be revoked (`revokedAt`) and has scopes: `read` (every read route, `POST /api/runelite/auth`) and `submit` (`POST .../submissions`, `POST .../auto-submissions`, `POST /api/runelite/items/check`). Keys created before this change and keys created in the web UI without a choice have both scopes. An expired, revoked, unknown or insufficiently scoped key is answered like an invalid one: `401 { "error": "Invalid API key" }`.
+**Key lifecycle.** The server stores only a SHA-256 hash and the first 8 characters of a key. The full key is shown **once**, when it is created (web UI or `POST /api/runelite/keys`); lose it and create a new one. A key can carry an expiry (`expiresAt`), can be revoked (`revokedAt`) and has scopes: `read` (every read route, `POST /api/runelite/auth`) and `submit` (`POST .../submissions` and `POST .../auto-submissions`). Keys created before this change and keys created in the web UI without a choice have both scopes. An expired, revoked, unknown or insufficiently scoped key is answered like an invalid one: `401 { "error": "Invalid API key" }`.
 
 ## RuneLite Plugin API
 
@@ -459,57 +459,13 @@ The server matches the metadata against the tile's goals and updates progress. I
 - `tierUnlocked`: the highest tier **newly** unlocked by this request, or `null`. A completion can unlock more than one tier in a row (a tier whose requirement is already met opens right away); you get the highest.
 - `shot`: battleship boards only. What the completion did to the team's marks: `"hit"`, `"miss"` or `"sunk"` (the shot that sinks the last tile of a ship reports `"sunk"`). `null` on other boards, when the request did not complete a tile, or when the tile was already marked.
 
-#### Check Items
-
-```http
-POST /api/runelite/items/check
-Authorization: Bearer bsn_your_api_key_here
-Content-Type: application/json
-
-{
-  "items": [{ "itemId": 4710, "itemName": "Ahrim's staff", "quantity": 1 }],
-  "eventIds": ["event-uuid"]
-}
-```
-
-Matches the items against the item goals of the caller's events and updates progress. Goals on blind battleship tiles and on tiles in locked progression tiers do not progress.
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "matched": [
-    {
-      "goalId": "goal-uuid",
-      "itemName": "Ahrim's staff",
-      "baseName": "Ahrim's staff",
-      "previousValue": 0,
-      "newValue": 1,
-      "targetValue": 1,
-      "isComplete": true,
-      "tileId": "tile-uuid",
-      "eventId": "event-uuid"
-    }
-  ],
-  "tilesAutoCompleted": ["tile-uuid"],
-  "tierUnlocked": 1,
-  "scannedItems": 1,
-  "matchedGoals": 1
-}
-```
-
-`tierUnlocked` is the highest tier newly unlocked by this call, or `null`.
-
-**`TIER_LOCKED`:** when every goal an item matched is in a locked tier, nothing can count and the call answers `403` with `{ "success": false, "error": "...", "code": "TIER_LOCKED", "tier": 1, "xpNeeded": 3 }` (the lock of the first locked match). If at least one match is open, the call succeeds and the locked matches are skipped.
-
 ### Progression and Battleship Error Codes
 
 Error bodies of the submission routes carry a stable `code` next to the human readable `error`. Match on `code`, not on the message.
 
 | `code` | Status | Routes | Meaning |
 | --- | --- | --- | --- |
-| `TIER_LOCKED` | `403` | submissions, auto-submissions, items/check | The tile's tier is locked. Extra fields: `tier` (the locked tier) and `xpNeeded` (XP still missing in the tier below) |
+| `TIER_LOCKED` | `403` | submissions, auto-submissions | The tile's tier is locked. Extra fields: `tier` (the locked tier) and `xpNeeded` (XP still missing in the tier below) |
 | `BOARD_BLIND` | `404` | submissions, auto-submissions | Tile of a battleship board that has not started, requested by someone who does not manage the event. It looks like a missing tile on purpose |
 | `EVENT_NOT_STARTED` | `403` | submissions, auto-submissions | Battleship submit before the event's start date |
 
@@ -846,6 +802,7 @@ For API support and questions:
 
 ## Changelog
 
+- **v3.0.0** (RuneLite API) - Removed `POST /api/runelite/items/check`. No client used it, and it raised goal progress from an item list the caller typed, without a screenshot or review.
 - **v2.1.0** (RuneLite API) - `apiVersion: "2.1"` on every board payload. `/events` lists all board types. `GET /bingos/{id}` serves battleship boards, checks event access, and supports `ETag` / `If-None-Match`, with a 60/min rate limit. Added `tiles[].tierLocked`, `tiles[].isBlind`, `progression.tiers[]` and the `battleship` block. Submission responses carry `tierUnlocked` and `shot`. New error codes `TIER_LOCKED`, `BOARD_BLIND`, `EVENT_NOT_STARTED`. All changes are additive.
 - **v1.1.0** - Added progression bingo support to export/import API
 - **v1.0.0** - Initial API release with RuneLite plugin support
