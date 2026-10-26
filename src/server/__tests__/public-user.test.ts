@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  *
- * Grep gate: a full `users` row carries the password hash, so source files must
+ * Grep gate: a full `users` row carries the email and username, so source files must
  * not select it into a value that is returned to a client.
  */
 import fs from "node:fs"

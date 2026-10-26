@@ -162,7 +162,7 @@ export type UserSortKey = (typeof USER_LIST_CONFIG.sortKeys)[number]
 
 export interface UserListRow extends UserSummary {
   email: string | null
-  emailVerified: Date | null
+  emailVerified: boolean
   clanMemberships: number
   createdEvents: number
   ownedClans: number
@@ -203,7 +203,7 @@ export async function listUsers(
       email: users.email,
       runescapeName: users.runescapeName,
       image: users.image,
-      emailVerified: users.emailVerified,
+      emailVerified: users.isEmailVerified,
       clanMemberships: sqlCount(
         sql`select count(*) from ${clanMembers} where ${clanMembers.userId} = ${users.id}`
       ),
@@ -227,7 +227,7 @@ export async function listUsers(
 }
 
 export interface UserDetail {
-  user: UserSummary & { email: string | null; emailVerified: Date | null }
+  user: UserSummary & { email: string | null; emailVerified: boolean }
   clans: {
     clanId: string
     clanName: string
@@ -263,7 +263,7 @@ export async function getUserDetail(
       email: users.email,
       runescapeName: users.runescapeName,
       image: users.image,
-      emailVerified: users.emailVerified,
+      emailVerified: users.isEmailVerified,
     })
     .from(users)
     .where(eq(users.id, userId))

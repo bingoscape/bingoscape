@@ -514,9 +514,21 @@ describe("migration 0038: dirty data", () => {
           FROM information_schema.columns WHERE table_name IN ${client(tables)} ORDER BY 1`
       ).map((x) => x.c),
     })
+    // Still in the database, no longer in the schema (Better Auth 4a); #260
+    // drops them, then this goes back to a strict comparison.
+    const notInSchema = [
+      "bingoscape-next_user.email_verified:timestamp with time zone:YES",
+      "bingoscape-next_user.password:character varying:YES",
+      "bingoscape-next_user.session_revoked_at:timestamp with time zone:YES",
+    ]
+    const migrated = await shape(sql)
+    expect(migrated.columns).toEqual(expect.arrayContaining(notInSchema))
     const pushed = postgres(process.env.DATABASE_URL!, { max: 1 })
     try {
-      expect(await shape(sql)).toEqual(await shape(pushed))
+      expect({
+        ...migrated,
+        columns: migrated.columns.filter((c) => !notInSchema.includes(c)),
+      }).toEqual(await shape(pushed))
     } finally {
       await pushed.end()
     }

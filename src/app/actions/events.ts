@@ -245,7 +245,7 @@ export async function createEvent(formData: FormData) {
   }
 }
 
-/** Never load a full users row for a response: it carries the password hash. */
+/** Never load a full users row for a response: it carries the username and verified email. */
 const USER_PUBLIC_COLUMNS = {
   columns: {
     id: true,

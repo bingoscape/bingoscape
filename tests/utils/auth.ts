@@ -19,9 +19,8 @@ export async function setupAuthBypass(page: Page) {
     email: "e2e@example.com",
     username: "e2escaper",
     runescapeName: "E2EScaper",
-    password: passwordHash,
   })
-  // Better Auth signs in against the credential account, not users.password.
+  // Better Auth signs in against the credential account.
   await db.insert(authAccounts).values({
     userId,
     providerId: "credential",

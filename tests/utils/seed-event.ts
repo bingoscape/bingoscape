@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test"
 import { db } from "../../src/server/db"
 import {
+  authAccounts,
   bingos,
   eventParticipants,
   events,
@@ -43,6 +44,12 @@ export async function createUser(username: string): Promise<string> {
     email: `${username}@example.com`,
     username,
     runescapeName: username,
+  })
+  // Better Auth signs in against the credential account.
+  await db.insert(authAccounts).values({
+    userId,
+    providerId: "credential",
+    accountId: userId,
     password: await hashPassword("password123"),
   })
   return userId

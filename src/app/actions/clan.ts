@@ -485,7 +485,7 @@ export async function getUserClans() {
       clan: clans,
       isMain: clanMembers.isMain,
       // Explicit columns: the result reaches client components, and a full
-      // users row carries the password hash.
+      // users row carries the email and username.
       owner: publicUserSelect,
       memberCount: sql<number>`(
         SELECT COUNT(*)
