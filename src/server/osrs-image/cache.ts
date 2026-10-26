@@ -236,8 +236,11 @@ export function createOsrsImageCache(options: OsrsImageCacheOptions = {}) {
   const doFetch: typeof fetch = (input, init) =>
     (options.fetch ?? globalThis.fetch)(input, init)
   const now = options.now ?? (() => new Date())
+  // The cache dir comes from OSRS_IMAGE_CACHE_DIR at runtime, so Turbopack cannot trace it.
   const cacheDir = () =>
-    path.resolve(options.cacheDir ?? getOsrsImageCacheDir())
+    path.resolve(
+      /*turbopackIgnore: true*/ options.cacheDir ?? getOsrsImageCacheDir()
+    )
   const limiter = new Semaphore(
     options.maxConcurrentFetches ?? DEFAULT_MAX_CONCURRENT_FETCHES
   )
@@ -250,7 +253,7 @@ export function createOsrsImageCache(options: OsrsImageCacheOptions = {}) {
   function resolveCacheFile(fileName: string): string | null {
     if (!FILE_NAME.test(fileName)) return null
     const dir = cacheDir()
-    const resolved = path.resolve(dir, fileName)
+    const resolved = path.resolve(/*turbopackIgnore: true*/ dir, fileName)
     return resolved.startsWith(dir + path.sep) ? resolved : null
   }
 
@@ -342,7 +345,9 @@ export function createOsrsImageCache(options: OsrsImageCacheOptions = {}) {
 
   async function requestUpstream(
     key: string,
-    validators: { etag: string | null; lastModified: string | null } | undefined,
+    validators:
+      | { etag: string | null; lastModified: string | null }
+      | undefined,
     trace: UpstreamTrace
   ): Promise<Upstream> {
     // Built from the validated key only; the host is fixed.
@@ -425,8 +430,11 @@ export function createOsrsImageCache(options: OsrsImageCacheOptions = {}) {
     const dir = cacheDir()
     await fs.mkdir(dir, { recursive: true })
     const fileName = `${fileStem(key)}.${IMAGE_TYPES[type]}`
-    const target = path.join(dir, fileName)
-    const temp = path.join(dir, `.tmp-${randomUUID()}`)
+    const target = path.join(/*turbopackIgnore: true*/ dir, fileName)
+    const temp = path.join(
+      /*turbopackIgnore: true*/ dir,
+      `.tmp-${randomUUID()}`
+    )
     try {
       await fs.writeFile(temp, bytes, { flag: "wx" })
       await fs.rename(temp, target)
